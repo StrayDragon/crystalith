@@ -1,17 +1,15 @@
-# backend (v2 Transition)
+# backend (v1 reference tree)
 
-> **v1 Python reference SSOT**: `backend/py/` is the Python v1 implementation (FastAPI + pydantic-ai + SQLAlchemy + ChromaDB).
-> It is **preserved as-is** during v2 rewrite for behavior reference.
-> Do NOT modify v1 code unless it's a critical fix that also applies to the v2 design.
+> **v1 Python reference SSOT**: `backend/py/` (FastAPI + pydantic-ai + SQLAlchemy + ChromaDB).
+> Preserved as-is during v2 rewrite for behavior reference.
+> Do NOT modify v1 code unless a critical fix also applies to the v2 design.
 
-## v2 Target
+## v2 lives elsewhere
 
-The Python backend is being rewritten in Bun + TypeScript:
-- `server/` — Bun + Elysia + Drizzle ORM + Vercel AI SDK + sqlite-vec
-- Same business features, different implementation
+The active backend is **`apps/server/`** (Bun + Elysia + Drizzle + AI SDK + sqlite-vec).
 
-See root `AGENTS.md` and `llmanspec/changes/` for the full plan.
+See root `AGENTS.md`, `apps/server/AGENTS.md`, and `PROGRESS.v2.md`.
 
-## v1 Reference
+## v1 docs
 
-For v1 Python-specific development documentation, see `backend/py/AGENTS.md`.
+Python-specific notes: `backend/py/AGENTS.md`.

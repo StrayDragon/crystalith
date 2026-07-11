@@ -583,7 +583,7 @@
         {
           "req_id": "r1",
           "title": "Repo provides a clear contribution entrypoint",
-          "statement": "仓库 MUST 提供可发现的贡献入口（`CONTRIBUTING.md` 或等价路径），并包含最小开发/测试/提交指导。"
+          "statement": "仓库 MUST 提供可发现的贡献入口（`README.md` + `AGENTS.md`；或 `CONTRIBUTING.md` 等价物），并包含最小开发/测试/提交指导。"
         },
         {
           "req_id": "r2",

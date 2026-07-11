@@ -264,7 +264,10 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
         console.error('[source-extras] qa-to-source embedding failed:', error);
         db()
           .update(sources)
-          .set({ status: 'failed', errorMessage: error instanceof Error ? error.message : 'Embedding failed' })
+          .set({
+            status: 'failed',
+            errorMessage: error instanceof Error ? error.message : 'Embedding failed',
+          })
           .where(eq(sources.id, newSource.id))
           .run();
         throw new Error('Failed to embed QA source');

@@ -3,11 +3,10 @@
  */
 
 import { Select, Option, Typography, Chip, Alert } from '@material-tailwind/react';
-import { CloudQueue as CloudIcon, Computer as LocalIcon } from '@mui/icons-material';
-import { useState, useEffect, useCallback, type ReactElement } from 'react';
+import { CloudQueue as CloudIcon } from '@mui/icons-material';
+import { useState, useEffect, useCallback } from 'react';
 
 import { api } from '../../../../api/eden';
-import { LAYER_LEVELS } from '../../../../shared/layer';
 
 interface ModelsListResponse {
   models: Array<{ id: string; name: string; provider: string; capabilities: string[] }>;
@@ -61,9 +60,7 @@ export function ModelSelector({
         });
         if (fetchErr) throw fetchErr;
         if (!cancelled) {
-          setModelsData(
-            data as unknown as ModelsListResponse,
-          );
+          setModelsData(data as unknown as ModelsListResponse);
         }
       } catch (error) {
         if (!cancelled) {
@@ -120,9 +117,6 @@ export function ModelSelector({
       </Alert>
     );
   }
-
-  // Extract model IDs from the models array
-  const modelIds = modelsData.models.map((model) => model.id);
 
   return (
     <div className={`space-y-1.5 ${className}`}>

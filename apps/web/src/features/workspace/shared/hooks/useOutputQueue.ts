@@ -87,14 +87,6 @@ function parseSseMessage(event: Event) {
   }
 }
 
-function isAbortSignalCompatibleWithRequest(signal: AbortSignal): boolean {
-  try {
-    return Boolean(new Request('http://localhost', { signal }));
-  } catch {
-    return false;
-  }
-}
-
 function hasSlidesStageCompleted(stage: SlidesStreamStage, draft: SlidesDraftSnapshot): boolean {
   if (draft.status !== 'idle') return false;
   if (stage === 'outline') {
@@ -232,7 +224,6 @@ export function useOutputQueue({
   const outputRunningRef = useRef(false);
   const runNextOutputJobRef = useRef<() => void>(() => {});
   const outputAbortControllersRef = useRef(new Map<string, AbortController>());
-  const requestSupportsAbortSignalRef = useRef<boolean | null>(null);
 
   const {
     data: outputsData,
@@ -413,15 +404,6 @@ export function useOutputQueue({
     async (job: OutputQueueJob) => {
       const abortController = new AbortController();
       outputAbortControllersRef.current.set(job.id, abortController);
-      let requestSignal: AbortSignal | undefined = undefined;
-      if (requestSupportsAbortSignalRef.current === null) {
-        requestSupportsAbortSignalRef.current = isAbortSignalCompatibleWithRequest(
-          abortController.signal,
-        );
-      }
-      if (requestSupportsAbortSignalRef.current) {
-        requestSignal = abortController.signal;
-      }
 
       const isCancelled = () => {
         const current = outputQueueRef.current.find((item) => item.id === job.id);

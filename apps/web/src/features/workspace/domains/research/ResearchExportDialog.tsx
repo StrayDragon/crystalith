@@ -130,11 +130,13 @@ function ResearchExportDialog({ session, onClose, onExportComplete }: ResearchEx
         .map((item) => item.url)
         .filter((url): url is string => typeof url === 'string' && url.length > 0);
 
-      const { data: result, error: exportErr } = await api.v2.research({ id: session.id }).export.post({
-        export_type: exportTarget,
-        include_report: includeReport,
-        include_results: selectedRefs.length > 0,
-      } as any);
+      const { data: result, error: exportErr } = await api.v2
+        .research({ id: session.id })
+        .export.post({
+          export_type: exportTarget,
+          include_report: includeReport,
+          include_results: selectedRefs.length > 0,
+        } as any);
       if (exportErr) throw exportErr;
       const data = result as any;
 

@@ -31,10 +31,7 @@ export const DEFAULT_CHUNKER_CONFIG: ChunkerConfig = {
 /**
  * Split text into chunks with configurable size and overlap.
  */
-export function chunkText(
-  text: string,
-  config?: ChunkerConfig,
-): ChunkResult[] {
+export function chunkText(text: string, config?: ChunkerConfig): ChunkResult[] {
   const { maxLen, overlap } = config ?? resolveChunkerConfig();
   const paragraphs = text
     .split(/\n\n+/)

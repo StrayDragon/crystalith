@@ -82,7 +82,8 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
 
       // Verify session exists AND belongs to notebook (c39 gap fix)
       const session = db().select().from(sessions).where(eq(sessions.id, sid)).get();
-      if (!session || session.notebookId !== nid) throw new NotFoundError(`Session ${sid} not found`);
+      if (!session || session.notebookId !== nid)
+        throw new NotFoundError(`Session ${sid} not found`);
 
       const rows = db()
         .select()
@@ -105,7 +106,8 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
       const nid = Number(params.nid);
       const sid = Number(params.sid);
       const session = db().select().from(sessions).where(eq(sessions.id, sid)).get();
-      if (!session || session.notebookId !== nid) throw new NotFoundError(`Session ${sid} not found`);
+      if (!session || session.notebookId !== nid)
+        throw new NotFoundError(`Session ${sid} not found`);
 
       const row = db()
         .insert(messages)

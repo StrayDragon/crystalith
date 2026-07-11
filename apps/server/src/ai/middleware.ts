@@ -46,10 +46,7 @@ function resolveRetryOptions(opts?: Partial<RetryOptions>): RetryOptions {
 }
 
 /** Wrap a model with retry middleware. */
-export function withRetry(
-  model: LanguageModelV4,
-  opts?: Partial<RetryOptions>,
-): LanguageModelV4 {
+export function withRetry(model: LanguageModelV4, opts?: Partial<RetryOptions>): LanguageModelV4 {
   const config = resolveRetryOptions(opts);
 
   return wrapLanguageModel({
@@ -110,7 +107,10 @@ function computeDelay(error: unknown, attempt: number, opts: RetryOptions): numb
  */
 function extractRetryAfter(error: unknown): number | undefined {
   if (!error || typeof error !== 'object') return undefined;
-  const err = error as { responseHeaders?: Record<string, string>; headers?: Record<string, string> };
+  const err = error as {
+    responseHeaders?: Record<string, string>;
+    headers?: Record<string, string>;
+  };
   const headers = err.responseHeaders ?? err.headers;
   if (!headers) return undefined;
 
@@ -124,7 +124,7 @@ function extractRetryAfter(error: unknown): number | undefined {
   // HTTP-date: parse and compute remaining seconds
   const date = new Date(value);
   if (!isNaN(date.getTime())) {
-  return Math.max(0, date.getTime() - Date.now());
+    return Math.max(0, date.getTime() - Date.now());
   }
   return undefined;
 }

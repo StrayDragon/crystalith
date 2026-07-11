@@ -55,7 +55,11 @@ export function useTasks() {
         .notebooks({ nid: activeNotebookId })
         .tasks.get();
       if (fetchErr) throw fetchErr;
-      setTaskState({ tasks: (data ?? []) as unknown as unknown as TaskItem[], isLoading: false, error: '' });
+      setTaskState({
+        tasks: (data ?? []) as unknown as unknown as TaskItem[],
+        isLoading: false,
+        error: '',
+      });
       return (data ?? []) as unknown as unknown as TaskItem[];
     } catch {
       setTaskState((prev) => ({

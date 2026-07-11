@@ -19,35 +19,36 @@ export function useGraphSessionDetail() {
   const [isLoading, setIsLoading] = useState(false);
   const loadedSessionIds = useRef<Set<number>>(new Set());
 
-  const fetchMessages = useCallback(
-    async (notebookId: number, sessionId: number) => {
-      isLoading;
-      setMessages;
-      const key = `${notebookId}:${sessionId}`;
-      if (loadedSessionIds.current.has(sessionId)) return;
-      loadedSessionIds.current.add(sessionId);
+  const fetchMessages = useCallback(async (notebookId: number, sessionId: number) => {
+    if (loadedSessionIds.current.has(sessionId)) return;
+    loadedSessionIds.current.add(sessionId);
 
-      setIsLoading(true);
-      try {
-        const { data, error } = await api.v2
-          .notebooks({ nid: notebookId })
-          .sessions({ sid: sessionId })
+    setIsLoading(true);
+    try {
+      const { data, error } = await api.v2
+        .notebooks({ nid: notebookId })
+        .sessions({ sid: sessionId })
         .messages.get({ query: { offset: 0, limit: 200 } });
-        if (error) throw error;
-        const msgs = (data ?? []).map((item: Record<string, unknown>) => normalizeMessage(item as Parameters<typeof normalizeMessage>[0]));
-        setMessages(msgs);
-      } catch {
-        // Ignore errors on graph session detail fetch
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [],
-  );
+      if (error) throw error;
+      const msgs = (data ?? []).map((item: Record<string, unknown>) =>
+        normalizeMessage(item as Parameters<typeof normalizeMessage>[0]),
+      );
+      setMessages(msgs);
+    } catch {
+      // Ignore errors on graph session detail fetch
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const openSessionDetail = useCallback((target: GraphSessionTarget) => {
     // eslint-disable-next-line
-    const summary: SessionSummary = { id: target.id, title: target.title ?? '', createdAt: target.createdAt ?? '', updatedAt: target.updatedAt ?? '' };
+    const summary: SessionSummary = {
+      id: target.id,
+      title: target.title ?? '',
+      createdAt: target.createdAt ?? '',
+      updatedAt: target.updatedAt ?? '',
+    };
     setSelectedSession(summary);
     setIsOpen(true);
   }, []);

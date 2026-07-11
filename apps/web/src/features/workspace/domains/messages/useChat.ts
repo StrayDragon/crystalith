@@ -124,7 +124,11 @@ export function useChat({
       return;
     }
     if (!data) return;
-    const normalized = data.filter((item: Record<string, unknown>) => item.role !== 'system').map((item: Record<string, unknown>) => normalizeMessage(item as unknown as Parameters<typeof normalizeMessage>[0]));
+    const normalized = data
+      .filter((item: Record<string, unknown>) => item.role !== 'system')
+      .map((item: Record<string, unknown>) =>
+        normalizeMessage(item as unknown as Parameters<typeof normalizeMessage>[0]),
+      );
     const scopeMap = new Map<string, (typeof messagesRef.current)[number]['citationScope']>();
     for (const message of messagesRef.current) {
       if (message.role !== 'assistant') continue;
@@ -401,7 +405,9 @@ export function useChat({
       if (qaErr) throw qaErr;
       const result = qaResult!;
 
-      const normalizedCitations = ((result as Record<string, unknown>).citations as unknown[] ?? []).map((c: unknown) => normalizeCitation(c as Parameters<typeof normalizeCitation>[0]));
+      const normalizedCitations = (
+        ((result as Record<string, unknown>).citations as unknown[]) ?? []
+      ).map((c: unknown) => normalizeCitation(c as Parameters<typeof normalizeCitation>[0]));
       const messageId =
         typeof result.message_id === 'number' &&
         Number.isFinite(result.message_id) &&

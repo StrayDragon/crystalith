@@ -4,50 +4,50 @@
 
 ## 状态看板
 
-| #   | Change                 | 状态                                                                             |
-| :-- | :--------------------- | :------------------------------------------------------------------------------- |
-| c00 | server-foundation      | ✅ DONE                                                                          |
-| c01 | data-layer             | ✅ DONE                                                                          |
-| c02 | ai-runtime             | ✅ DONE                                                                          |
-| c03 | frontend-eden          | ✅ DONE                                                                          |
-| c04 | core-crud              | ✅ DONE                                                                          |
-| c05 | rag-embed              | ✅ DONE                                                                          |
-| c06 | rag-registry           | ✅ DONE                                                                          |
-| c07 | qa-pipeline            | ✅ DONE                                                                          |
-| c08 | research-agent         | ✅ DONE                                                                          |
-| c09 | outputs-generation     | ✅ DONE                                                                          |
-| c10 | models-management      | ✅ DONE                                                                          |
-| c11 | eval-harness           | ✅ DONE                                                                          |
-| c12 | analysis-studio-refine | ✅ DONE                                                                          |
-| c15 | bdd-tests              | ✅ DONE                                                                          |
-| c16 | rag-foundations        | ✅ DONE                                                                          |
-| c17 | qa-citations           | ✅ DONE                                                                          |
-| c18 | source-dedup-safety    | ✅ DONE                                                                          |
-| c19 | task-queue             | ✅ DONE (Semaphore + TaskQueue + crash-recovery)                                 |
-| c20 | outputs-refine         | ✅ DONE                                                                          |
-| c21 | web-extractors         | ✅ DONE                                                                          |
-| c22 | research-agent         | 🔄 WIP (cyclic 骨架✅; resume失效/export stub/hitl缺modify → GAP-BOARD G4/G5/G6) |
-| c23 | studio-analysis        | ✅ DONE                                                                          |
-| c24 | pipeline-integration   | ✅ DONE (WS-A✅ / WS-B✅ / WS-C✅)                                               |
-| c25 | ssrf-config            | ✅ DONE (本会话)                                                                 |
-| c26 | citation-context       | ✅ DONE (本会话)                                                                 |
-| c27 | outputs-rag            | ✅ DONE (本会话)                                                                 |
-| c28 | analysis-vector        | ✅ DONE (前agent)                                                                |
-| c29 | refine-revert          | ✅ DONE (前agent)                                                                |
-| c30 | sync-embedding         | ✅ DONE (前agent)                                                                |
-| c31 | qa-noevidence          | ✅ DONE (本会话)                                                                 |
-| c32 | studio-persist         | ✅ DONE (本会话)                                                                 |
-| c33 | source-extras          | ✅ DONE (本会话)                                                                 |
-| c34 | sessions-convert       | ✅ DONE (本会话)                                                                 |
-| c35 | frontend-migration     | ✅ DONE                                                                          |
-| c36 | align-qa-pipeline      | ✅ DONE (确定性检索/no-evidence 5reason/export/confidence/source_ids)            |
-| c37 | align-research-agent   | ✅ DONE (resume推断/skip推进/finish生成report/delete/SSE命名事件)                |
-| c38 | align-outputs-pipeline | ✅ DONE (source_ids RAG接通/citation mapping/postprocess/export markdown)        |
-| c39 | align-sources-sessions | ✅ DONE (竞态修复/dedup默认prompt/tags校验/link模式/QA向量/sessions补全)         |
-| c40 | align-shared-infra     | ✅ DONE (config typed/retry Retry-After/searchVectors source_ids)                |
-| c41 | ts-upgrade             | ✅ DONE (TS ^5→^7, Go-native tsc, tsconfig unified)                              |
-| c13 | distribution           | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                          |
-| c14 | cleanup-delivery       | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                          |
+| #   | Change                 | 状态                                                                                         |
+| :-- | :--------------------- | :------------------------------------------------------------------------------------------- |
+| c00 | server-foundation      | ✅ DONE                                                                                      |
+| c01 | data-layer             | ✅ DONE                                                                                      |
+| c02 | ai-runtime             | ✅ DONE                                                                                      |
+| c03 | frontend-eden          | ✅ DONE                                                                                      |
+| c04 | core-crud              | ✅ DONE                                                                                      |
+| c05 | rag-embed              | ✅ DONE                                                                                      |
+| c06 | rag-registry           | ✅ DONE                                                                                      |
+| c07 | qa-pipeline            | ✅ DONE                                                                                      |
+| c08 | research-agent         | ✅ DONE                                                                                      |
+| c09 | outputs-generation     | ✅ DONE                                                                                      |
+| c10 | models-management      | ✅ DONE                                                                                      |
+| c11 | eval-harness           | ✅ DONE                                                                                      |
+| c12 | analysis-studio-refine | ✅ DONE                                                                                      |
+| c15 | bdd-tests              | ✅ DONE                                                                                      |
+| c16 | rag-foundations        | ✅ DONE                                                                                      |
+| c17 | qa-citations           | ✅ DONE                                                                                      |
+| c18 | source-dedup-safety    | ✅ DONE                                                                                      |
+| c19 | task-queue             | ✅ DONE (Semaphore + TaskQueue + crash-recovery)                                             |
+| c20 | outputs-refine         | ✅ DONE                                                                                      |
+| c21 | web-extractors         | ✅ DONE                                                                                      |
+| c22 | research-agent         | ✅ DONE (parity via c24-B + c37; ToolLoopAgent/toolApproval 仍为延迟改进，见 c24 未勾 tasks) |
+| c23 | studio-analysis        | ✅ DONE                                                                                      |
+| c24 | pipeline-integration   | ✅ DONE (WS-A✅ / WS-B✅ / WS-C✅)                                                           |
+| c25 | ssrf-config            | ✅ DONE (本会话)                                                                             |
+| c26 | citation-context       | ✅ DONE (本会话)                                                                             |
+| c27 | outputs-rag            | ✅ DONE (本会话)                                                                             |
+| c28 | analysis-vector        | ✅ DONE (前agent)                                                                            |
+| c29 | refine-revert          | ✅ DONE (前agent)                                                                            |
+| c30 | sync-embedding         | ✅ DONE (前agent)                                                                            |
+| c31 | qa-noevidence          | ✅ DONE (本会话)                                                                             |
+| c32 | studio-persist         | ✅ DONE (本会话)                                                                             |
+| c33 | source-extras          | ✅ DONE (本会话)                                                                             |
+| c34 | sessions-convert       | ✅ DONE (本会话)                                                                             |
+| c35 | frontend-migration     | ✅ DONE                                                                                      |
+| c36 | align-qa-pipeline      | ✅ DONE (确定性检索/no-evidence 5reason/export/confidence/source_ids)                        |
+| c37 | align-research-agent   | ✅ DONE (resume推断/skip推进/finish生成report/delete/SSE命名事件)                            |
+| c38 | align-outputs-pipeline | ✅ DONE (source_ids RAG接通/citation mapping/postprocess/export markdown)                    |
+| c39 | align-sources-sessions | ✅ DONE (竞态修复/dedup默认prompt/tags校验/link模式/QA向量/sessions补全)                     |
+| c40 | align-shared-infra     | ✅ DONE (config typed/retry Retry-After/searchVectors source_ids)                            |
+| c41 | ts-upgrade             | ✅ DONE (TS ^5→^7, Go-native tsc, tsconfig unified)                                          |
+| c13 | distribution           | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                      |
+| c14 | cleanup-delivery       | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                      |
 
 <!-- LEGEND: ✅ DONE | 🔄 WIP | ⬜ TODO | ⏸️ BLOCKED -->
 
@@ -66,70 +66,72 @@
 
 ### 按功能域对比
 
-> ⚠️ **2026-07-10 全面复核**: 完成度列已按端点级 + 行为级对拍校正。此前看板的 ✅ 标记过于乐观。
-> 完成度图例: ✅ 对齐 | 🟡 部分对齐(见备注) | 🔴 实质性偏移/缺失
+> ⚠️ **历史审计快照（2026-07-10）** — 下列完成度/备注反映当时对拍，**已被 c24–c40 + 三轮复核覆盖**。
+> 当前真实缺口以 **「当前批次 / 第三轮复核」** 与 **GAP-BOARD 状态** 为准，勿用本表驱动实现。
+> 完成度图例（快照当时）: ✅ 对齐 | 🟡 部分对齐 | 🔴 实质性偏移/缺失
 
-| #   | 功能域                | v1行数 | v2行数 | 完成度 | 备注(行为级对拍)                                                                                                          |
-| :-- | :-------------------- | -----: | -----: | :----: | :------------------------------------------------------------------------------------------------------------------------ |
-| 1   | notebooks             |    257 |    135 |   ✅   | 端点齐全; v2 有 eden bug(`id`/`nid`)                                                                                      |
-| 2   | sessions              |    675 |    200 |   🟡   | 缺 GET 单个 + convert-to-output 端点(2 个)                                                                                |
-| 3   | messages              |    216 |    124 |   ✅   |                                                                                                                           |
-| 4   | citations             |    136 |     37 |   🔴   | v2 是 echo 端点; v1 邻域证据审查(/context)缺失 → c26                                                                      |
-| 5   | **QA pipeline**       |  1,311 |    552 |   🟡   | confidence✅; **架构不同**(agent tool-call vs v1确定性检索); 5 个 no-evidence reason 仅产出 1; 缺 context_stats/export    |
-| 6   | **research agent**    |  2,834 |    925 |   🟡   | cyclic 骨架✅; **resume 失效**(从头重跑); HITL 忽略 modify/skip; export 是 JSON dump; 缺 delete/start/modify 端点         |
-| 7   | outputs               |  1,023 |    437 |   🟡   | 10 types✅; **无 RAG 检索**(全 chunk dump 爆上下文)/无 citations/无修复循环 → c27                                         |
-| 8   | **refine**            |    321 |    138 |   🔴   | **换产品**: v2 是纯文本变换器(expand/rewrite/translate); v1 是 citation-aware RAG 摘要器 → **决定回退对齐 v1**            |
-| 9   | **studio**            |  1,686 |    344 |   🟡   | two-stage✅+theme✅; **无 Slidev 落盘**(只存 DB); 无 RAG; 无 output sync; 缺 PATCH/PUT 端点(草稿编辑+HITL编辑)            |
-| 10  | **analysis**          |    427 |    698 |   🔴   | contradiction✅; **clustering/correlation 向量 KNN→关键词 TF 降级**(sqlite-vec 无法 SELECT 向量) → c28                    |
-| 11  | commands              |     75 |     64 |   ✅   |                                                                                                                           |
-| 12  | models mgmt           |    112 |     55 |   🟡   | 缺 GET 单个 model 端点(1 个)                                                                                              |
-| 13  | templates             |    332 |    120 |   ✅   | v2独占 CRUD(v1 无 HTTP 端点)                                                                                              |
-| 14  | prompt presets        |    268 |    111 |   ✅   | v2独占 CRUD(v1 无 HTTP 端点)                                                                                              |
-| 15  | sources CRUD+ingest   |  2,867 |    979 |   🟡   | dedup✅+SSRF✅+upload✅; **缺 3 端点**(summary/per-source-qa/qa-to-source); **异步 embedding**(ready-before-vectors 竞态) |
-| 16  | **source connectors** |  1,272 |    195 | 🟡15%  | **TODO stub sync**; 缺 snapshot/sync-apply/import-scope(3 端点)                                                           |
-| 17  | tasks/queue           |    595 |    531 |   ✅   | Semaphore+TaskQueue+crash-recovery✅; refine 已分发✅; document_parse✅                                                   |
-| 18  | workspace             |    274 |     63 |   ✅   |                                                                                                                           |
-| 19  | **eval harness**      |      0 |    598 |   ✅   | **v2独占**: Golden Dataset + LLM-as-Judge                                                                                 |
+| #   | 功能域                | v1行数 | v2行数 | 完成度(快照) | 备注(2026-07-10 当时)                               |
+| :-- | :-------------------- | -----: | -----: | :----------: | :-------------------------------------------------- |
+| 1   | notebooks             |    257 |    135 |      ✅      | 端点齐全; v2 有 eden bug(`id`/`nid`)                |
+| 2   | sessions              |    675 |    200 |      🟡      | 缺 GET 单个 + convert-to-output → 后由 c34/c39 处理 |
+| 3   | messages              |    216 |    124 |      ✅      |                                                     |
+| 4   | citations             |    136 |     37 |      🔴      | echo 端点; /context 缺失 → c26                      |
+| 5   | **QA pipeline**       |  1,311 |    552 |      🟡      | 后由 c31/c36 对齐                                   |
+| 6   | **research agent**    |  2,834 |    925 |      🟡      | 后由 c24-B/c37 对齐；ToolLoopAgent 仍延迟           |
+| 7   | outputs               |  1,023 |    437 |      🟡      | 后由 c27/c38 对齐                                   |
+| 8   | **refine**            |    321 |    138 |      🔴      | 后由 c29 回退对齐 v1                                |
+| 9   | **studio**            |  1,686 |    344 |      🟡      | 后由 c32/c23 处理落盘与端点                         |
+| 10  | **analysis**          |    427 |    698 |      🔴      | 后由 c28 向量策略；第三轮仍有 relations P0          |
+| 11  | commands              |     75 |     64 |      ✅      |                                                     |
+| 12  | models mgmt           |    112 |     55 |      🟡      | 缺 GET 单个等细节见第三轮 P1                        |
+| 13  | templates             |    332 |    120 |      ✅      | v2独占 CRUD                                         |
+| 14  | prompt presets        |    268 |    111 |      ✅      | v2独占 CRUD                                         |
+| 15  | sources CRUD+ingest   |  2,867 |    979 |      🟡      | 后由 c30/c33/c39 处理                               |
+| 16  | **source connectors** |  1,272 |    195 |    🟡15%     | **仍开放** → G14 / c13                              |
+| 17  | tasks/queue           |    595 |    531 |      ✅      |                                                     |
+| 18  | workspace             |    274 |     63 |      ✅      |                                                     |
+| 19  | **eval harness**      |      0 |    598 |      ✅      | v2独占                                              |
 
 ### shared 基础设施对比
 
-| 模块                     | v1行数 | v2行数 |                         覆盖度                         |
+> 同上：2026-07-10 快照。Config/SSRF → c25；向量 SELECT → c28。以 CURRENT 为准。
+
+| 模块                     | v1行数 | v2行数 |                      覆盖度(快照)                      |
 | :----------------------- | -----: | -----: | :----------------------------------------------------: |
 | AI (provider/retry)      | ~1,800 |   ~430 |                           ✅                           |
 | DB (models/ORM)          | ~1,200 |   ~796 |     ✅ (v2 21表非20: strategy_configs 在 registry)     |
 | RAG (embed/search/cache) | ~1,300 | ~1,200 | ✅ (v2更丰富: multi-query/diversity/hybrid/page-index) |
-| Config                   | ~2,500 |    226 |      🔴 只解析 models 段; ~15 维配置被忽略 → c25       |
+| Config                   | ~2,500 |   ~226 |            快照🔴 → 后由 c25/c40 消费更多段            |
 | Web-extractors           | ~1,100 |   ~350 |             ✅ jina/firecrawl/readability              |
-| Vector store             |   ~900 |    117 |     ⚠️ sqlite-vec 无法 SELECT 取回向量 → c28 根因      |
+| Vector store             |   ~900 |    117 |               快照⚠️ → c28 处理向量取回                |
 | Parsers                  | ~1,200 |    150 |      🟡 PDF+HTML+text 核心✅; 缺 csv/audio/video       |
-| Net (SSRF/URL)           |   ~220 |   ~180 |         🟡 白名单字段死代码(config 无效) → c25         |
-| Plugins                  |   ~900 |      0 |                       ⬜ 留待c13                       |
+| Net (SSRF/URL)           |   ~220 |   ~180 |                快照🟡 → c25 接通白名单                 |
+| Plugins                  |   ~900 |      0 |                      ⬜ 留待 c13                       |
 
 ### 前端迁移状态 (apps/web)
 
-> **2026-07-10 复核**: c03 "DONE" 仅指 eden 脚手架就绪,实际功能迁移 ~13%。
+> **2026-07-11 更新**: c35 完成后运行时以 eden 为主；`api/generated/` 仍有类型-only 引用，**删除推迟到 c14**。
 
-| 层面                                                | 状态                                                                                                                    |
-| :-------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------- |
-| eden 脚手架 (`api/eden.ts`)                         | ✅                                                                                                                      |
-| 旧生成客户端 (`api/generated/`, 118 个 v1 路径引用) | ❌ 仍在,74 处调用                                                                                                       |
-| 已迁移功能域                                        | notebooks / sessions / templates / prompt-presets (4个CRUD壳)                                                           |
-| 未迁移功能域                                        | **chat/QA / sources / research / analysis / refine / studio / outputs / tasks / citations / commands** (全部 AI/流式域) |
-| v1 硬编码 URL                                       | 7 处 (`/v1/...` SSE/export,v2 server 不挂 /v1 → 全 404)                                                                 |
-| typecheck                                           | 207 errors (196 = .ts 后缀噪音; ~11 真实 bug,含 eden `id`/`nid` 错误)                                                   |
-| 可用性                                              | workspace 渲染但 AI 功能全部不可用(打 /v1 → 404)                                                                        |
+| 层面                            | 状态                                           |
+| :------------------------------ | :--------------------------------------------- |
+| eden 脚手架 (`api/eden.ts`)     | ✅                                             |
+| 旧生成客户端 (`api/generated/`) | 🟡 残留类型 import（~18 处）；c14 迁类型后删除 |
+| 功能域 API                      | ✅ c35：多数域已迁 eden；细节见第三轮 P1       |
+| typecheck (web)                 | 🟡 ~22–23 pre-existing errors                  |
+| 可用性                          | workspace + AI 域走 v2；残留兼容差异见 CURRENT |
 
-### 关键结论(2026-07-10 校正)
+### 关键结论（快照 2026-07-10 → 后续消化）
 
-1. **代码量3.4:1** — TypeScript+Bun表达力更高,但"代码少"≠"行为对齐"
-2. **20 router 全挂载,但 19 个 v1 端点静默缺失**(跨 8 个域)
-3. **research resume 失效** — /resume 从头重跑,丢失已累积结果(此前误标为"骨架对齐")
-4. **refine 是换产品** — v2 纯文本变换器 vs v1 citation-aware RAG 摘要器 → 决定回退对齐
-5. **analysis 降级** — 向量KNN→关键词TF(sqlite-vec 无法 SELECT 向量) → c28
-6. **前端实际只迁 ~13%** — c03 标记 DONE 误导;AI/流式域全部仍打 /v1 → 404
-7. **异步 embedding 竞态** — v2 source 标记 ready 时向量可能未写入,v1 同步写入
-8. **studio 无落盘** — Slidev markdown 只存 DB,预览不可用
+1. **代码量3.4:1** — 仍成立；"代码少"≠"行为对齐" 仍成立
+2. ~~19 个端点静默缺失~~ → 多数由 c26–c34 / c36–c40 补齐；残留见第三轮 P1/P2
+3. ~~research resume 失效~~ → c24-B / c37
+4. ~~refine 换产品~~ → c29
+5. ~~analysis 向量降级~~ → c28；第三轮仍有 relations P0
+6. ~~前端只迁 ~13%~~ → c35；generated 类型清理 → c14
+7. ~~异步 embedding 竞态~~ → c30 / c39
+8. ~~studio 无落盘~~ → c32
 9. **v2独占**: eval harness + templates/prompt-presets CRUD + RAG strategies registry
+10. **仍开放**: G14 source-connectors（c13）；c13/c14 等人授权；第三轮 P0/P1
 
 ## 当前批次
 
@@ -187,28 +189,21 @@ field shape / 路径差异 / 排序 / filename / 分页 / RAG 编排器 / SLIDES
 | G11 | studio-endpoints   | 🟡 缺4端点(草稿编辑+HITL手动改outline/markdown)           | `studio/api.py`                           | **c32 ✅** (合并) | P1     | ✅ DONE     |
 | G12 | sources-endpoints  | 🟡 缺3端点(summary/per-source-qa/qa-to-source)            | `sources/api.py`+`qa/api.py`              | **c33 ✅**        | P1     | ✅ DONE     |
 | G13 | sessions-endpoints | 🟡 缺2端点(GET单个+convert-to-output)                     | `sessions/api.py`                         | **c34 ✅**        | P2     | ✅ DONE     |
-| G14 | source-connectors  | 🟡 sync是TODO stub,缺snapshot/apply/import-scope          | `source_connectors/api.py`                | c13 或独立        | P2     | ⬜          |
-| G15 | ssrf-config        | 🟡 白名单字段死代码(config不解析)                         | `config.py`                               | c25               | P2     | ⬜ 已有提案 |
+| G14 | source-connectors  | 🟡 sync是TODO stub,缺snapshot/apply/import-scope          | `source_connectors/api.py`                | c13 或独立        | P2     | ⬜ 唯一开放 |
+| G15 | ssrf-config        | 🟡 白名单字段死代码(config不解析)                         | `config.py`                               | **c25** ✅        | P2     | ✅ DONE     |
 | G16 | frontend           | ✅ 前端 API 迁移完成 (19/21 域, typecheck 207→23 ↓89%)    | (整个前端)                                | **c35** ✅        | P0     | ✅ DONE     |
 
 ### GAP-BOARD 状态总结
 
-16 项中 15 项已清零（P0 6/6 ✅, P1 6/6 ✅, P2 3/4, G14 留待 c13）
+**15/16 清零**（P0 6/6 ✅, P1 6/6 ✅, P2 3/4）。**仅剩 G14**（source-connectors → c13）。
 
-> ⚠️ **2026-07-10 全面对拍校正**: 上述多个 ✅ 标记经深度代码对拍后发现"实现但未接通"。
-> c36-c40 是对拍产出的修正提案，覆盖此前误标 DONE 的 gap（尤其 G3竞态复发/G4-G6 research/G7 outputs/G9 no-evidence）。
-> GAP-BOARD 的 ✅ 表示"端点/功能存在"，c36-c40 的范围是"行为逻辑完全对齐 v1"。
+> ⚠️ **对拍说明**: 早期 ✅ 曾表示「端点存在」而非「行为对齐」。c36–c40 补行为对齐。
+> `llman sdd list`: c25–c27 的 tasks.md 可能仍未勾选/未 archive（实现与 tasks 卫生不同步）——**不要仅凭本表 archive**。
 
-仅剩 1 项：
-
-- **G14** (P2): source-connectors sync → c13 阶段完成（Tauri native 文件系统集成时）
-
-✅ G16 (前端迁移) 已清零。GAP-BOARD 16/16 全部完成。
-
-| 上次 Agent | c36-c40 + 两轮 P0/P1 修复 + 第三轮复核 |
-| 上次操作 | **c41 TS 7.0.2 升级完成 + 三轮完整复核**: c36-c40 实现 → 第二轮复核修 4P0+18P1 → 第三轮复核确认全部 HOLD，新发现 1P0(analysis relations) + ~15P1 + ~20P2。残留 gap 主要是细节级兼容差异。**c41**: typescript ^5→^7, Go 原生 tsc ~10x 加速, tsconfig 统一 moduleResolution, 修 8 个 TS 7.0 回归。 |
-| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13阶段）。(2) **React**: 暂锁18.2.0。(3) **c13/c14 等人工授权**。(4) 残留 P1 是否继续修 vs 推迟。(5) oxlint warning 非阻塞。 |
-| 已知问题 | **🔴 P0(1)**: analysis relations 非 chunk-level edges。**🟡 P1(~15)**: 见 CURRENT 段。**🟡 P2/P3(~20)**: 可推迟。**🟡 P1**: web typecheck 22 errors (pre-existing)。**🟡 P1**: v2无auth（c13）。 |
+| 上次 Agent | 文档卫生 + PROGRESS 矛盾清理 |
+| 上次操作 | **doc**: 重写 root/backend AGENTS + README；新增 `apps/server/AGENTS.md`；删除过时 `GAP-REPORT.v1v2.md`；c14 tasks 明确 generated 类型迁移后再删；PROGRESS 域对比表标为历史快照，修正 G14/G15/c22 状态矛盾。 |
+| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13）。(2) **React**: 暂锁18.2.0。(3) **c13/c14 等人工授权**。(4) 残留 P1 是否继续修 vs 推迟。(5) c24–c27 / c36–c40 SDD archive 卫生（tasks 与实现不一致时暂缓）。 |
+| 已知问题 | **🔴 P0(1)**: analysis relations 非 chunk-level edges。**🟡 P1(~15)**: 见 CURRENT 段。**🟡 P2/P3(~20)**: 可推迟。**🟡**: web typecheck ~22 errors。**🟡**: v2无auth（c13）。**🟡**: `api/generated/` 类型残留 → c14。 |
 | 质量门禁 | `bun test` (server) → 209 pass / 2 fail（网络测试）。`bun typecheck` (server) ✅。`bun test tests/bdd/` → 21 pass ✅。 |
 
 ---
@@ -278,13 +273,13 @@ const KNOWN: Record<string, { sdk: string; factory: string }> = {
 
 AI SDK v7 已原生覆盖所有 AI 需求，**不引入任何第三方 agent/工作流框架**：
 
-| AI SDK v7 能力                      | 替代                              | 现状                                        |
-| :---------------------------------- | :-------------------------------- | :------------------------------------------ |
-| `ToolLoopAgent`                     | Pi agent-core、自建 Agent runtime | 🟡 research 尚未接线（c24-B 目标）          |
-| `WorkflowAgent` + Workflow Patterns | Mastra workflows、LangGraph.js    | ⬜ 未使用                                   |
-| `toolApproval: 'user-approval'`     | 手写 HITL、DB 轮询                | 🟡 **当前 research 用 DB 轮询**，c24-B 切换 |
-| `generateObject({ schema: Zod })`   | pydantic-ai `output_type`         | ✅ 已用                                     |
-| `streamText` / `fullStream`         | 手写 SSE 轮询                     | ✅ 已用                                     |
+| AI SDK v7 能力                      | 替代                              | 现状                                                                                     |
+| :---------------------------------- | :-------------------------------- | :--------------------------------------------------------------------------------------- |
+| `ToolLoopAgent`                     | Pi agent-core、自建 Agent runtime | 🟡 research 仍可用 DB 轮询 HITL；切 toolApproval 为延迟改进（c24 未勾 tasks / post-c13） |
+| `WorkflowAgent` + Workflow Patterns | Mastra workflows、LangGraph.js    | ⬜ 未使用                                                                                |
+| `toolApproval: 'user-approval'`     | 手写 HITL、DB 轮询                | 🟡 **当前 research 用 DB 轮询**；事件驱动为可选改进，非 v1 parity 阻塞                   |
+| `generateObject({ schema: Zod })`   | pydantic-ai `output_type`         | ✅ 已用                                                                                  |
+| `streamText` / `fullStream`         | 手写 SSE 轮询                     | ✅ 已用                                                                                  |
 
 **禁用列表：** ❌ 不引入 Pi agent-core、Mastra、LangGraph.js、XState、Inngest、Temporal 等任何第三方 agent/工作流/图库。
 
@@ -378,7 +373,7 @@ apps/server/src/
 - ❌ 修改 `backend/py/`
 - ❌ switch-case 硬编码 provider
 - ❌ 未读完所有 design.md 就开始实现
-- ❌ 重新调研已有结论的领域（先查 PROGRESS.v2.md 和 UPGRADES/ 存档）
+- ❌ 重新调研已有结论的领域（先查 PROGRESS.v2.md；过时的 GAP-REPORT 已删除）
 
 ## Agent 执行流程
 

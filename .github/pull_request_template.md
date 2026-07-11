@@ -13,13 +13,11 @@ Describe what changed and why.
 
 ## Testing / 测试
 
-- [ ] `cd frontend/web && bun run test:ci`
-- [ ] `cd frontend/web && bun run typecheck`
-- [ ] `cd frontend/web && bun run lint`
-
-<!-- TODO: add server tests when v2 scaffolded:
-- [ ] `cd server && bun test`
--->
+- [ ] `cd apps/web && bun run test:ci`
+- [ ] `cd apps/web && bun run typecheck`
+- [ ] `cd apps/web && bun run lint`
+- [ ] `cd apps/server && bun test`（若改动 server）
+- [ ] `bun typecheck`（根工作区，若跨包）
 
 Results:
 
@@ -28,8 +26,5 @@ Results:
 ## Checklist / 自检清单
 
 - [ ] No secrets or tokens committed
-- [ ] Docs updated (if needed)
-
-<!-- TODO: add eden RPC types check when v2 scaffolded -->
-
+- [ ] Docs updated (if needed) — see `AGENTS.md` / `PROGRESS.v2.md`
 - [ ] Critical-path UI copy is centralized via `t()` (avoid new hardcoded strings) / 关键路径文案集中管理（避免新增硬编码）

@@ -111,13 +111,27 @@ export function useSources() {
           sourceListQuery.tag ?? '',
         ]
       : null,
-    () => api.v2.notebooks({ nid: activeNotebookId! }).sources.get({ query: sourceListQuery as any } as any).then(r => { if (r.error) throw r.error; return r.data ?? []; }),
+    () =>
+      api.v2
+        .notebooks({ nid: activeNotebookId! })
+        .sources.get({ query: sourceListQuery as any } as any)
+        .then((r) => {
+          if (r.error) throw r.error;
+          return r.data ?? [];
+        }),
     { revalidateOnFocus: false },
   );
 
   const { data: tagsData, mutate: mutateTags } = useSWR<SourceTagRead[]>(
     activeNotebookId && isConnected ? ['workspace/source-tags', activeNotebookId] : null,
-    () => api.v2.notebooks({ nid: activeNotebookId! }).sources.tags.get().then(r => { if (r.error) throw r.error; return (r.data ?? []) as any; }),
+    () =>
+      api.v2
+        .notebooks({ nid: activeNotebookId! })
+        .sources.tags.get()
+        .then((r) => {
+          if (r.error) throw r.error;
+          return (r.data ?? []) as any;
+        }),
     { revalidateOnFocus: false },
   );
 
@@ -242,7 +256,10 @@ export function useSources() {
           );
           try {
             // eslint-disable-next-line no-await-in-loop -- Upload queue + dedup confirmation requires serial execution.
-            await api.v2.sources.upload.post({ file } as any).then(r => { if (r.error) throw r.error; return r.data as any; });
+            await api.v2.sources.upload.post({ file } as any).then((r) => {
+              if (r.error) throw r.error;
+              return r.data as any;
+            });
             successCount += 1;
             setUploadQueue((prev) =>
               prev.map((item) => (item.id === queueId ? { ...item, status: 'success' } : item)),
@@ -267,7 +284,12 @@ export function useSources() {
               const dedup_action = reuse ? 'reuse' : 'create_new';
               try {
                 // eslint-disable-next-line no-await-in-loop -- Keep per-file UI updates and dedup flow serial.
-                await api.v2.sources.upload.post({ file } as any, { query: { dedup_action } } as any).then(r => { if (r.error) throw r.error; return r.data as any; });
+                await api.v2.sources.upload
+                  .post({ file } as any, { query: { dedup_action } } as any)
+                  .then((r) => {
+                    if (r.error) throw r.error;
+                    return r.data as any;
+                  });
                 successCount += 1;
                 setUploadQueue((prev) =>
                   prev.map((item) =>
@@ -374,7 +396,9 @@ export function useSources() {
       setSearchState('loading');
 
       try {
-        const { data: response, error: srErr } = await api.v2.notebooks({ nid: activeNotebookId }).sources.search.post({ query: trimmed, engine, mode } as any) as any;
+        const { data: response, error: srErr } = (await api.v2
+          .notebooks({ nid: activeNotebookId })
+          .sources.search.post({ query: trimmed, engine, mode } as any)) as any;
         if (srErr) throw srErr;
         const results = response.results ?? [];
         let notice = '';
@@ -436,7 +460,9 @@ export function useSources() {
       }
       setRemoveState('loading');
       try {
-        const { error: delBatchErr } = await api.v2.notebooks({ nid: activeNotebookId }).sources.batch.delete.post({ source_ids: sourceIds } as any) as any;
+        const { error: delBatchErr } = (await api.v2
+          .notebooks({ nid: activeNotebookId })
+          .sources.batch.delete.post({ source_ids: sourceIds } as any)) as any;
         if (delBatchErr) throw delBatchErr;
         await mutate();
         toast.success('来源删除成功');
@@ -463,7 +489,10 @@ export function useSources() {
       }
       setRemoveState('loading');
       try {
-        await (api.v2.sources({ id: sourceId }).delete() as any).then((r: any) => { if (r.error) throw r.error; return r.data as any; });
+        await (api.v2.sources({ id: sourceId }).delete() as any).then((r: any) => {
+          if (r.error) throw r.error;
+          return r.data as any;
+        });
         await mutate();
         toast.success('来源删除成功');
         return true;
@@ -491,7 +520,9 @@ export function useSources() {
 
       setBatchReembedState('loading');
       try {
-        const { data: result, error: breErr } = await (api.v2.notebooks({ nid: activeNotebookId }) as any).sources.batch['re-embed'].post({ source_ids: sourceIds } as any);
+        const { data: result, error: breErr } = await (
+          api.v2.notebooks({ nid: activeNotebookId }) as any
+        ).sources.batch['re-embed'].post({ source_ids: sourceIds } as any);
         if (breErr) throw breErr;
         await mutate();
         if (result.failed_count > 0) {
@@ -515,7 +546,9 @@ export function useSources() {
       if (!isConnected || !activeNotebookId) return null;
       setTagMutationState('loading');
       try {
-        const { data: tag, error: ctErr } = await api.v2.notebooks({ nid: activeNotebookId }).sources.tags.post({ name } as any) as any;
+        const { data: tag, error: ctErr } = (await api.v2
+          .notebooks({ nid: activeNotebookId })
+          .sources.tags.post({ name } as any)) as any;
         if (ctErr) throw ctErr;
         await mutateTags();
         await mutate();
@@ -536,7 +569,10 @@ export function useSources() {
       if (!isConnected || !activeNotebookId) return null;
       setTagMutationState('loading');
       try {
-        const { data: tag, error: utErr } = await api.v2.notebooks({ nid: activeNotebookId }).sources.tags({ tid: tagId }).patch({ name } as any) as any;
+        const { data: tag, error: utErr } = (await api.v2
+          .notebooks({ nid: activeNotebookId })
+          .sources.tags({ tid: tagId })
+          .patch({ name } as any)) as any;
         if (utErr) throw utErr;
         await mutateTags();
         await mutate();
@@ -557,7 +593,10 @@ export function useSources() {
       if (!isConnected || !activeNotebookId) return false;
       setTagMutationState('loading');
       try {
-        const { error: dtErr } = await api.v2.notebooks({ nid: activeNotebookId }).sources.tags({ tid: tagId }).delete() as any;
+        const { error: dtErr } = (await api.v2
+          .notebooks({ nid: activeNotebookId })
+          .sources.tags({ tid: tagId })
+          .delete()) as any;
         if (dtErr) throw dtErr;
         await mutateTags();
         await mutate();
@@ -581,7 +620,9 @@ export function useSources() {
       if (!isConnected || !activeNotebookId || !sourceIds.length) return false;
       setTagMutationState('loading');
       try {
-        const { error: atErr } = await (api.v2.notebooks({ nid: activeNotebookId }).sources.tags({ tid: tagId }) as any).sources.post({ source_ids: sourceIds } as any);
+        const { error: atErr } = await (
+          api.v2.notebooks({ nid: activeNotebookId }).sources.tags({ tid: tagId }) as any
+        ).sources.post({ source_ids: sourceIds } as any);
         if (atErr) throw atErr;
         await mutateTags();
         await mutate();
@@ -602,7 +643,9 @@ export function useSources() {
       if (!isConnected || !activeNotebookId || !sourceIds.length) return false;
       setTagMutationState('loading');
       try {
-        const { error: rtErr } = await (api.v2.notebooks({ nid: activeNotebookId }) as any).sources.tags({ tid: tagId }).sources.delete({ source_ids: sourceIds } as any);
+        const { error: rtErr } = await (api.v2.notebooks({ nid: activeNotebookId }) as any).sources
+          .tags({ tid: tagId })
+          .sources.delete({ source_ids: sourceIds } as any);
         if (rtErr) throw rtErr;
         await mutateTags();
         await mutate();
@@ -626,7 +669,9 @@ export function useSources() {
         return;
       }
       try {
-        const { data: result, error: coErr } = await api.v2.outputs({ id: outputId })['convert-to-source'].post() as any;
+        const { data: result, error: coErr } = (await api.v2
+          .outputs({ id: outputId })
+          ['convert-to-source'].post()) as any;
         if (coErr) throw coErr;
         await mutate();
         toast.success(`已转换为来源：${result.filename}（${result.chunk_count} 个分块）`);
@@ -652,8 +697,20 @@ export function useSources() {
       }
       const call = async (dedup_action?: 'reuse' | 'create_new') => {
         const q = dedup_action ? { dedup_action } : undefined;
-        const body = { url, mode, title: options?.title, snippet: options?.snippet, extractor: options?.extractor };
-        const request = (async () => { const r = await (api.v2.notebooks({ nid: activeNotebookId }) as any).sources['from-url'].post(body as any, q ? { query: q } as any : undefined) as any; if (r.error) throw r.error; return r.data as any; })();
+        const body = {
+          url,
+          mode,
+          title: options?.title,
+          snippet: options?.snippet,
+          extractor: options?.extractor,
+        };
+        const request = (async () => {
+          const r = (await (api.v2.notebooks({ nid: activeNotebookId }) as any).sources[
+            'from-url'
+          ].post(body as any, q ? ({ query: q } as any) : undefined)) as any;
+          if (r.error) throw r.error;
+          return r.data as any;
+        })();
         if (mode === 'fetch') {
           return withTimeout(
             request,
@@ -700,7 +757,14 @@ export function useSources() {
     mutate: mutateExtractors,
   } = useSWR<ExtractorsListResponse>(
     activeNotebookId && isConnected ? ['workspace/extractors', activeNotebookId] : null,
-    () => api.v2.notebooks({ nid: activeNotebookId! }).extractors.get().then(r => { if (r.error) throw r.error; return r.data as any; }),
+    () =>
+      api.v2
+        .notebooks({ nid: activeNotebookId! })
+        .extractors.get()
+        .then((r) => {
+          if (r.error) throw r.error;
+          return r.data as any;
+        }),
     { revalidateOnFocus: false },
   );
 
@@ -734,7 +798,9 @@ export function useSources() {
       if (!activeNotebookId) {
         throw new Error('请先创建笔记本');
       }
-      const { error: peErr } = await api.v2.notebooks({ nid: activeNotebookId }).extractors.patch(patch as any) as any;
+      const { error: peErr } = (await api.v2
+        .notebooks({ nid: activeNotebookId })
+        .extractors.patch(patch as any)) as any;
       if (peErr) throw peErr;
       await mutateExtractors();
     },
@@ -755,8 +821,11 @@ export function useSources() {
       if (!activeNotebookId) {
         throw new Error('请先创建笔记本');
       }
-      const { data: result, error: csErr } = await api.v2.notebooks({ nid: activeNotebookId }).sources({ sid: sourceId })["qa-to-source"].post({ messages } as any) as any;
-        if (csErr) throw csErr;
+      const { data: result, error: csErr } = (await api.v2
+        .notebooks({ nid: activeNotebookId })
+        .sources({ sid: sourceId })
+        ['qa-to-source'].post({ messages } as any)) as any;
+      if (csErr) throw csErr;
       await mutate();
       return result;
     },
@@ -774,7 +843,7 @@ export function useSources() {
         return;
       }
       try {
-        const { error: reErr } = await api.v2.sources({ id: sourceId })['re-embed'].post() as any;
+        const { error: reErr } = (await api.v2.sources({ id: sourceId })['re-embed'].post()) as any;
         if (reErr) throw reErr;
         toast.success('已重新嵌入来源');
         await mutate();
