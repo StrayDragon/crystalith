@@ -108,11 +108,12 @@ function parsePromptDirective(
   question: string,
   bodyPreset?: string,
 ): { preset: string; question: string } {
-  const match = question.match(/^\/prompt:(\w+)\s+/);
+  // v1 presets.py:9-12: [a-z0-9_-]{1,32}, case-insensitive, lowercased
+  const match = question.match(/^\/prompt:([a-z0-9_-]{1,32})\s+/i);
   if (match) {
-    return { preset: match[1]!, question: question.slice(match[0].length) };
+    return { preset: match[1]!.toLowerCase(), question: question.slice(match[0].length) };
   }
-  return { preset: bodyPreset ?? 'default', question };
+  return { preset: (bodyPreset ?? 'default').toLowerCase(), question };
 }
 
 /** Validate notebook exists + optional session/source_ids ownership (v1 qa/api.py). */

@@ -112,12 +112,21 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
     // 2. Parse
     const result = await parser!.parse(input.buffer, input.filename);
 
-    // 3. Chunk the text using the v1-aligned chunker (800 chars / 100 overlap).
-    const chunked = chunkText(result.text);
+    // 3. Chunk: use parser-provided pages (per-chunk metadata like csv_row_start)
+    //    when available; otherwise fall back to the generic chunker.
+    const chunked: Array<{ index: number; text: string; metadata?: Record<string, unknown> }> =
+      result.pages && result.pages.length > 0
+        ? result.pages.map((p, i) => ({
+            index: i,
+            text: p.text,
+            metadata: p.metadata,
+          }))
+        : chunkText(result.text).map((c) => ({ index: c.index, text: c.text }));
 
     // 4. Insert chunk rows
     let offset = 0;
     for (const c of chunked) {
+      const chunkMetadata = c.metadata ?? result.metadata ?? null;
       db()
         .insert(chunks)
         .values({
@@ -126,7 +135,7 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
           text: c.text,
           startOffset: offset,
           endOffset: offset + c.text.length,
-          metadata: result.metadata ?? null,
+          metadata: chunkMetadata as Record<string, unknown> | null,
         })
         .run();
       offset += c.text.length + 1; // +1 for the separator

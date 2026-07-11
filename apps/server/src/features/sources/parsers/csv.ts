@@ -1,7 +1,9 @@
 // CSV parser — produces markdown-table chunks with row metadata.
 //
 // c46: ports v1 parsers/csv.py — 50 rows/chunk, 200 char cell truncation,
-// csv_row_start/csv_row_end metadata. Replaces the previous text pass-through.
+// csv_row_start/csv_row_end metadata per chunk.
+// c46-fix: returns pages[] so the pipeline can create per-chunk rows with
+// individual metadata (instead of re-chunking via generic chunkText).
 import type { Parser, ParseResult } from '../parser-registry.ts';
 
 const MAX_ROWS_PER_CHUNK = 50;
@@ -95,23 +97,31 @@ export const csvParser: Parser = {
 
     const dataRows = rows.slice(1);
 
-    // Chunk into groups of MAX_ROWS_PER_CHUNK
-    const chunks: string[] = [];
-    for (let i = 0; i < dataRows.length; i += MAX_ROWS_PER_CHUNK) {
-      const chunkRows = dataRows.slice(i, i + MAX_ROWS_PER_CHUNK);
-      const table = rowsToMarkdownTable(header, chunkRows);
-      chunks.push(table);
+    // Chunk into groups of MAX_ROWS_PER_CHUNK — each becomes a page with
+    // csv_row_start/csv_row_end metadata (v1 csv.py:48-55).
+    const pages: { text: string; metadata: Record<string, unknown> }[] = [];
+    for (let start = 0; start < dataRows.length; start += MAX_ROWS_PER_CHUNK) {
+      const end = Math.min(dataRows.length, start + MAX_ROWS_PER_CHUNK);
+      const block = dataRows.slice(start, end);
+      const tableText = rowsToMarkdownTable(header, block);
+      pages.push({
+        text: tableText,
+        metadata: {
+          csv_row_start: start + 1, // 1-based (v1)
+          csv_row_end: end,
+        },
+      });
     }
 
-    const fullText = chunks.join('\n\n');
-
+    // Also set full text + top-level metadata for backward compat
     return {
-      text: fullText,
+      text: pages.map((p) => p.text).join('\n\n'),
+      pages,
       metadata: {
         parser: 'csv',
         row_count: dataRows.length,
         column_count: header.length,
-        chunk_count: chunks.length,
+        chunk_count: pages.length,
       },
     };
   },

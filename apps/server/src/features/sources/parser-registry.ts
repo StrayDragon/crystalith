@@ -4,7 +4,7 @@
 // from file extension/magic bytes and select the right parser.
 export interface ParsePage {
   text: string;
-  metadata?: { page?: number };
+  metadata?: Record<string, unknown>;
 }
 
 export interface ParseResult {
