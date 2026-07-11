@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "structural-refinement-for-generated-results"
 purpose: 让生成结果成为可持续打磨的结构对象：暴露结构单元、支持局部 refinement、显式表达变更范围与操作类型，并记录改良历史以支持追溯。
 valid_scope[2]: src/,tests/
-requirements[12]{req_id,title,statement}:
+requirements[16]{req_id,title,statement}:
   r1,结果必须暴露可被改良的结构单元,系统 MUST 为生成结果暴露可识别的结构单元，以支持后续 refinement。
   r2,系统必须支持局部 refinement 动作,系统 MUST 允许基于已有结果上下文执行局部改良动作，而不是只能整篇重生成。
   r3,局部 refinement 与整篇重生成必须有清楚边界,系统 MUST 明确哪些改良请求适合局部完成，哪些必须回到整篇重生成路径。
@@ -15,7 +15,11 @@ requirements[12]{req_id,title,statement}:
   r9,Refine citations MUST include enriched fields,系统 MUST 在 refine 返回的 citations 中包含 source_name(hydrate filename) 与 snippet(先 strip 再截 200 字符) 与 page_number(从 chunk metadata 提取) 与 paragraph_index(从 chunk metadata 提取)
   r10,Refine context MUST use full text numbered format,"系统 MUST 用完整未截断的 chunk text 构建 LLM context 格式为 N-based 编号的 Source filename chunk index 与 text 块 以空行连接"
   r11,Refine error handling MUST use correct status codes,系统 MUST 在 notebook 不存在时返回 404 与 format 非法或 source_ids 未知时返回 400 与任务取消时返回 409 与任务失败时返回 500
-scenarios[15]{req_id,id,given,when,then}:
+  "research-report-rich-prompt","Research report MUST use structured 6-section prompt",research report 生成 MUST 使用 v1 结构化 REPORT_SYSTEM_PROMPT（Executive Summary/Background/Key Findings/Analysis/Recommendations/References 六段），MUST NOT 用一行通用 prompt
+  "research-ai-failure-fallback",Research MUST have AI failure fallbacks for plan and analyze,"research plan/analyze 失败时 MUST 有 fallback（plan→2-query fallback；analyze→coverage heuristic），MUST NOT 直接中止整个 run"
+  "research-waiting-heartbeat",Research SSE MUST emit waiting heartbeat while awaiting approval,research stream 在 status=waiting_user 时 MUST 定期重发 waiting 事件作为心跳，MUST NOT 只发一次
+  "research-lock-renewal",Research MUST renew lock during long runs,research agent loop MUST 定期续期 lock，防止长任务（>10min）被 cleanupExpiredLocks 误杀
+scenarios[19]{req_id,id,given,when,then}:
   r1,用户查看可改良结果,"",用户打开一个支持 refinement 的结果,系统 SHALL 能标识可被操作的结构单元
   r2,用户只重写结果中的一个部分,"",用户对某个结构单元发起改良请求,系统 SHALL 仅对该作用范围执行 refinement
   r3,某个改良请求超出局部边界,"",用户请求的改动超出单个结构单元可承载范围,系统 SHALL 引导其进入整篇重生成或更高层改写流程
@@ -31,3 +35,7 @@ scenarios[15]{req_id,id,given,when,then}:
   r9,"refine-citation-snippet-strip",检索到的 chunk text 含首尾空白,构建 citation snippet,系统 SHALL 先 trim 再 slice 0 到 200 字符
   r10,"refine-context-full-text",检索返回多个 chunk,构建 LLM context,"系统 SHALL 用完整未截断 text 并以 N-based 编号 Source filename chunk index 格式拼接"
   r11,"refine-task-cancelled",单格式 refine 任务在队列中被取消,waitForCompletion 抛出 Task cancelled,系统 SHALL 返回 409 Task cancelled
+  "research-report-rich-prompt","finish-generates-report",客户端 finish research,report 生成,系统 SHALL 使用 6 段结构化 prompt 生成 report
+  "research-ai-failure-fallback","plan-throws",planSearches 抛出错误,agent loop,"系统 SHALL 使用 fallback 2-query plan 继续而非中止 run"
+  "research-waiting-heartbeat","awaiting-approval",status=waiting_user 持续中,stream poll loop,系统 SHALL 每次 poll 重发 waiting 事件
+  "research-lock-renewal","long-running-iteration",单次迭代超过 5min,agent loop,系统 SHALL 续期 lock 防止过期

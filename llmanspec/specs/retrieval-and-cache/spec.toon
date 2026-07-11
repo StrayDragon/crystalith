@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "retrieval-and-cache"
 purpose: 定义共享检索策略与缓存失效模型，覆盖 outputs/slides/qa/refine 等路径的统一检索行为。该规范强调检索上下文一致性与可预测缓存失效，避免跨路径出现“同输入不同上下文”的漂移。
 valid_scope[2]: src/,tests/
-requirements[11]{req_id,title,statement}:
+requirements[12]{req_id,title,statement}:
   r1,Retrieval strategy is shared across generation paths,outputs 与 slides MUST 复用同一检索策略族（预算、去重、多样性、融合）。
   r2,Retrieval context obeys token budget,检索上下文 MUST 受 token budget 约束，超预算时 MUST 截断或压缩。
   r3,"Multi-query retrieval is bounded","启用 multi-query 时 MUST 受 seed 上限、融合策略与去重规则约束。"
@@ -14,7 +14,8 @@ requirements[11]{req_id,title,statement}:
   r9,Context window enforces token budget,"检索上下文组装 MUST 受 token budget 约束，超预算时按优先级截断（history→retrieval→recent→system→query）。token 计数 MUST 使用 gpt-tokenizer（cl100k_base）。MUST NOT 用字符数截断替代 token 截断。"
   r10,"Multi-query expansion with RRF fusion","检索 MUST 支持 multi-query 扩展：按 output_type 生成 query seeds，多查询结果 RRF (k=60) 融合。MUST 受 seed_cap 限制避免无界扩展。"
   r11,EpochCache wired to strategies and source mutations,EpochCache MUST 接线到各策略 retrieve()。源增删改 MUST bump sources_epoch，向量重嵌 MUST bump vector_epoch。缓存 key MUST 包含 epoch 版本。MUST NOT 零调用（死代码）。
-scenarios[11]{req_id,id,given,when,then}:
+  "studio-rag-through-registry",Studio retrieval MUST go through the unified RAG registry,studio 生成检索 MUST 通过统一 ragRegistry.retrieveWith 走 embed/fusion/diversity 路径，MUST NOT 用原始文本 slice 截断（对齐 qa/outputs/refine 的检索路径一致性）
+scenarios[12]{req_id,id,given,when,then}:
   r1,"shared-retrieval-across-paths","",outputs 与 slides 路径执行检索,系统 SHALL 复用同一检索策略族（预算/去重/多样性/融合）
   r2,"context-truncates-when-over-budget","",组装的检索上下文超过 token budget,系统 SHALL 截断或压缩上下文以满足预算约束
   r3,"multi-query-remains-bounded","","启用 multi-query 检索",系统 SHALL 遵守 seed 上限、融合策略与去重规则以保持有界
@@ -26,3 +27,4 @@ scenarios[11]{req_id,id,given,when,then}:
   r9,happy,检索上下文 5000 token 但预算 4000,组装上下文,按优先级截断至 4000 token 内，system+query 保留
   r10,happy,FAQ 类型输出 + 用户查询,"multi-query 扩展","生成 2-3 个 seed query，各检索后 RRF 融合 top 结果"
   r11,happy,notebook 新增源后检索,EpochCache 查询,sources_epoch 变更，缓存失效，重新检索
+  "studio-rag-through-registry","generation-retrieves-context",studio 生成需要上下文,检索阶段,系统 SHALL 调用 ragRegistry.retrieveWith 而非直接 join chunks+sources 后 slice
