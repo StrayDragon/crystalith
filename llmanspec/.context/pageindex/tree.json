@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "spec_hash": "69b2349642d66fcae55d1d879f0500fa00204ccebe29e2802e520b4dec00291e",
-  "build_timestamp": "2026-07-13T02:08:35.954213670+00:00",
+  "spec_hash": "c296288cb0c03a4e16b7826f62aa3653a74e7726589acbea3b12c735430bbd46",
+  "build_timestamp": "2026-07-13T12:00:09.895243631+00:00",
   "chat_model": "",
   "docs": [
     {
@@ -507,6 +507,11 @@
           "req_id": "r_outputs_citations",
           "title": "Outputs citations attached",
           "statement": "结构化输出生成 MUST 把检索到的 chunk 作为 citations 附到生成结果以支持证据追溯"
+        },
+        {
+          "req_id": "context-stats-defined-in-shared",
+          "title": "ContextStats type MUST be defined in packages/shared not server-local",
+          "statement": "The ContextStats type MUST be defined in packages/shared/src/schemas (consistent with the project Zod SSOT rule) and MUST NOT be defined only in apps/server/src/features/qa/retrieve-and-judge.ts as a server-local interface. The current server-local definition violates the AGENTS.md rule that forbids redefining types outside packages/shared. This type also provides the contract for the frontend to display token budget information."
         }
       ]
     },
@@ -1109,6 +1114,11 @@
           "req_id": "vector-search-source-filter",
           "title": "Vector search MUST support source_ids filtering",
           "statement": "向量检索 MUST 支持通过 source_ids 参数将 KNN 搜索范围限定到指定 source 子集"
+        },
+        {
+          "req_id": "context-must-actually-truncate-when-over-budget",
+          "title": "Context assembly MUST actually truncate or compress when over token budget (not just set a flag)",
+          "statement": "When the assembled retrieval context exceeds the token budget the system MUST actually truncate or compress the context to fit the budget (preserving the highest-priority blocks and partially trimming the boundary block) and MUST NOT merely set a compressed boolean flag while passing the full untruncated context through to the LLM. The truncation MUST follow the v1 _truncate_blocks priority order (history then retrieval then recent then system then query) and use gpt-tokenizer token counting. Current retrieve-and-judge.ts computes compressed=true but never acts on it, leaving the context oversized and risking context-window overflow on large notebooks."
         }
       ]
     },
@@ -1982,6 +1992,16 @@
           "req_id": "research-sse-named-events",
           "title": "Research SSE MUST emit named events",
           "statement": "research 流式端点 MUST 发送带 event: 字段的命名 SSE 事件"
+        },
+        {
+          "req_id": "error-envelope-actually-emitted-by-routes",
+          "title": "Server routes MUST emit the ErrorEnvelope shape not ad-hoc error objects",
+          "statement": "All non-SSE error responses MUST return the ErrorEnvelope shape defined in packages/shared (error_code plus message plus optional details plus optional retry_after). MUST NOT return ad-hoc shapes such as {error: string} or {error plus error_code} or {error plus max_bytes plus uploaded_bytes}. Current feature routers return at least 5 ad-hoc shapes using field name error instead of canonical message, violating existing r3."
+        },
+        {
+          "req_id": "shared-error-envelope-helper",
+          "title": "Server MUST provide a shared error-response helper consuming ErrorEnvelopeSchema",
+          "statement": "The system MUST provide a shared helper (sendError or setError) that consumes the ErrorEnvelopeSchema from packages/shared and centralizes the HTTP status to error_code mapping (400 maps to INVALID_REQUEST plus 404 maps to NOT_FOUND plus 409 maps to CONFLICT plus 422 maps to SCHEMA_VALIDATION_FAILED plus 429 maps to RATE_LIMITED plus 503 maps to MODEL_ERROR). Feature routers MUST return errors via this helper rather than constructing ad-hoc error bodies inline."
         }
       ]
     },
