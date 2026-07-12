@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "spec_hash": "83ceb03e5328e8ca48a8a4127895d4b4ee053f526a0476c2d9b8f4dc21257d2d",
-  "build_timestamp": "2026-07-09T10:08:25.982108055+00:00",
-  "chat_model": "Qwen3.6-35B-A3B/UD-Q5_K_XL-think-coding",
+  "spec_hash": "88029308456803bdb1c2223eadb673042f4ff41120819966039f2b16518ce063",
+  "build_timestamp": "2026-07-12T03:01:27.628477809+00:00",
+  "chat_model": "",
   "docs": [
     {
       "spec_id": "architecture-core",
@@ -37,6 +37,11 @@
           "req_id": "r6",
           "title": "Workspace state uses sliced Zustand stores",
           "statement": "复杂工作区状态 MUST 按 slice 组织并通过 selector 访问，避免全局重渲染与循环依赖。"
+        },
+        {
+          "req_id": "r7",
+          "title": "TypeScript toolchain version",
+          "statement": "项目 MUST 使用 typescript@^7（Go 原生编译器 tsgo），确保 ~10x 类型检查加速。三个 workspace（server/web/shared）MUST 统一使用 `\"typescript\": \"^7\"` 作为 devDependency。tsconfig 中 moduleResolution MUST 统一为小写 `\"bundler\"`。"
         }
       ]
     },
@@ -176,6 +181,16 @@
           "req_id": "r7",
           "title": "Stats persists plain answer text and shared UI state",
           "statement": "当 `stats` preset 生成合法的结构化结果时，系统 MUST： - 将 `fallback_markdown` 持久化为 assistant `content` - 通过 session `shared_state.ui` 提供图表/表格 mounts - 不再依赖 `chat_ui_envelope_enabled` 或在 `content` 中嵌入 envelope"
+        },
+        {
+          "req_id": "preset-inline-directive",
+          "title": "QA MUST parse /prompt: directive from question text",
+          "statement": "QA MUST 从 question 文本解析 /prompt:<preset> 前缀指令（如 /prompt:stats <query>），MUST NOT 只接受 body preset 字段"
+        },
+        {
+          "req_id": "preset-stats",
+          "title": "QA MUST support stats preset with chart and table JSON",
+          "statement": "QA MUST 支持 stats preset，产出 chart+table 结构化 JSON（STATS_SYSTEM_PROMPT + StatsChart/StatsTable schema），MUST NOT 缺失该 preset"
         }
       ]
     },
@@ -259,6 +274,16 @@
           "req_id": "r6",
           "title": "Data migration is one-time at v2 launch",
           "statement": "历史 v1 数据 (SQLite/ChromaDB) MUST 通过一次性迁移脚本导入 v2 数据库。迁移脚本 MUST 可重复执行且记录完成标记。v2 启动后 MUST NOT 尝试读取旧格式数据。"
+        },
+        {
+          "req_id": "r_correlation_vector",
+          "title": "Correlation vector KNN",
+          "statement": "analysis 相关性检测 MUST 使用向量 KNN 检索 而非关键词 TF 余弦 以保证语义级相关性质量 检索 MUST 排除同 source 且设最小相似度阈值"
+        },
+        {
+          "req_id": "r_clustering_vector",
+          "title": "Clustering embedding vectors",
+          "statement": "analysis 聚类 MUST 基于 embedding 向量 而非关键词 TF 向量 做质心聚类以保证语义级聚类质量"
         }
       ]
     },
@@ -295,6 +320,32 @@
           "req_id": "r6",
           "title": "工作区必须提供进入 evidence review 的稳定入口",
           "statement": "系统 MUST 在工作区为结果提供稳定的 evidence review 入口，避免审阅能力变成零散不可发现的隐藏功能。"
+        },
+        {
+          "req_id": "evidence-low-similarity-strip",
+          "title": "Low similarity evidence review MUST strip citations",
+          "statement": "evidence 审查在 low_similarity 判定下 MUST 返回空 citations 列表，因为低相似度证据不应作为引用呈现给用户"
+        }
+      ]
+    },
+    {
+      "spec_id": "frontend-eden-migration",
+      "purpose": "TBD - created by archiving change c35-add-v2-frontend-migration. Update purpose after archive.",
+      "reqs": [
+        {
+          "req_id": "fm1",
+          "title": "Frontend API Client",
+          "statement": "The frontend MUST use eden treaty for all backend HTTP calls and MUST NOT import from api/generated/."
+        },
+        {
+          "req_id": "fm2",
+          "title": "Streaming Endpoints",
+          "statement": "Streaming endpoints MUST use fetch() with manual SSE parsing against /v2/* URLs; SSE URLs MUST NOT reference /v1/."
+        },
+        {
+          "req_id": "fm3",
+          "title": "Code Cleanup",
+          "statement": "The api/generated/ directory MUST be deleted after all references are migrated."
         }
       ]
     },
@@ -341,6 +392,36 @@
           "req_id": "r8",
           "title": "Tool output types require a corresponding OutputTypePlugin",
           "statement": "对于 FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING 等“工具输出类型”，系统 MUST 要求存在可用的 `OutputTypePlugin` 才能生成结构化输出；当插件缺失/禁用/加载失败时，生成请求 MUST 失败并返回可执行的恢复提示。 错误响应 MUST 使用统一错误信封（`error_code`, `message`, `details?`, `retry_after?`），且： - HTTP status SHOULD 为 409（或等价“能力不可用”语义） - `details` MUST 包含 `output_type` 与推荐的 `required_plugin_id`（例如 `output-faq`） - `message` MUST 可直接面向用户显示"
+        },
+        {
+          "req_id": "outputs-citation-tree-mapping",
+          "title": "Citations MUST be recursively mapped into the content tree and persisted",
+          "statement": "outputs 生成管线 MUST 递归遍历 content 对象，把每个 citations 数字索引数组替换为完整 Citation dict（v1 _map_citations 等价），并持久化映射后的 content；同时返回扁平 citations 数组"
+        },
+        {
+          "req_id": "outputs-rag-failure-propagation",
+          "title": "Outputs retrieval failure MUST propagate not dump all chunks",
+          "statement": "outputs 检索失败时 MUST 抛出错误使请求失败，MUST NOT 回退为选取 notebook 全部 chunk（违背检索子集意图）"
+        },
+        {
+          "req_id": "outputs-postprocess-field-level",
+          "title": "Postprocess MUST do per-type field-level backfill",
+          "statement": "outputs 后处理 MUST 对每个输出类型逐字段补默认值（如 GUIDE 的 examples/exercises、MINDMAP 的 children），而非仅做顶层空检查后整体替换"
+        },
+        {
+          "req_id": "qa-context-stats-fields",
+          "title": "ContextStats MUST use v1 field names",
+          "statement": "QA ContextStats MUST 使用 v1 字段名 total_tokens/system_tokens/history_tokens/retrieval_tokens/query_tokens/max_tokens/compressed，MUST NOT 使用无后缀的 total/system 等"
+        },
+        {
+          "req_id": "qa-inline-citation-fallback",
+          "title": "QA MUST ensure inline citations when missing",
+          "statement": "QA answer 无 [N] 形式内联引用时 MUST 追加 [1] 兜底标记（对齐 v1 _ensure_inline_citations）"
+        },
+        {
+          "req_id": "qa-low-similarity-empty",
+          "title": "Low similarity no-evidence MUST return empty citations",
+          "statement": "当 no_evidence_reason 为 low_similarity 时 MUST 返回 citations=[] 空数组，MUST NOT 返回检索到的 citations"
         }
       ]
     },
@@ -573,6 +654,21 @@
           "req_id": "r5",
           "title": "Rendering priority is deterministic",
           "statement": "渲染优先级 MUST 为 `frontend_bundle renderer > GenericOutputRenderer > Raw JSON`： - `frontend_bundle renderer`：由后端在 `/v1/workspace/tools` 返回的 `frontend_bundle` 声明驱动加载与渲染 - `GenericOutputRenderer`：由后端返回的 `render_descriptor` 驱动的声明式渲染 - `Raw JSON`：最终安全回退"
+        },
+        {
+          "req_id": "outputs-response-contract",
+          "title": "POST outputs MUST return OutputRead contract",
+          "statement": "POST /v2/outputs MUST 返回 v1 OutputRead 兼容的 snake_case 实体（id/notebook_id/type/prompt/chunk_ids/content/created_at/updated_at），MUST NOT 返回 camelCase PipelineResult"
+        },
+        {
+          "req_id": "outputs-export-fields",
+          "title": "Export JSON citations and sources MUST match v1 fields",
+          "statement": "GET /outputs/:id/export?format=json 的 citations MUST 包含 chunk_index/page_number/paragraph_index/score；sources MUST 使用 {source_id,source_name,mime_type,parser_type} 字段名"
+        },
+        {
+          "req_id": "outputs-error-mapping",
+          "title": "Output generation errors MUST map to granular HTTP codes",
+          "statement": "输出生成错误 MUST 映射到细分 HTTP 状态码：model 不可用→503、schema 校验失败→422、值错误→400，MUST NOT 统一返回 500"
         }
       ]
     },
@@ -818,6 +914,11 @@
           "req_id": "r11",
           "title": "EpochCache wired to strategies and source mutations",
           "statement": "EpochCache MUST 接线到各策略 retrieve()。源增删改 MUST bump sources_epoch，向量重嵌 MUST bump vector_epoch。缓存 key MUST 包含 epoch 版本。MUST NOT 零调用（死代码）。"
+        },
+        {
+          "req_id": "studio-rag-through-registry",
+          "title": "Studio retrieval MUST go through the unified RAG registry",
+          "statement": "studio 生成检索 MUST 通过统一 ragRegistry.retrieveWith 走 embed/fusion/diversity 路径，MUST NOT 用原始文本 slice 截断（对齐 qa/outputs/refine 的检索路径一致性）"
         }
       ]
     },
@@ -911,6 +1012,16 @@
           "req_id": "r6",
           "title": "v1 sync_check 使用轻量快照差异规则",
           "statement": "系统 MUST 使用确定性的轻量规则识别快照差异，以支持中大型 vault 的同步检查。"
+        },
+        {
+          "req_id": "connector-binding-schema-validation",
+          "title": "Connector binding creation MUST validate connection_config against JSON schema",
+          "statement": "创建 connector binding 时 MUST 对 connection_config 做 JSON schema 校验，校验失败 MUST 返回 400（CONNECTOR_CONFIG_INVALID）"
+        },
+        {
+          "req_id": "connector-unavailable-409",
+          "title": "Unavailable connector MUST return 409 with install hint",
+          "statement": "connector 不可用时 MUST 返回 409（CONNECTOR_UNAVAILABLE）含 hint 和 plugin_diagnostic，MUST NOT 返回 404"
         }
       ]
     },
@@ -952,6 +1063,16 @@
           "req_id": "r7",
           "title": "Core-only ingestion profile is minimal and explicit",
           "statement": "在 core-only 安装形态下，系统 MUST 至少支持 txt/md/markdown/csv 的 ingestion；其他格式 MUST 被视为不可用增强能力（需通过插件安装/启用提供）。"
+        },
+        {
+          "req_id": "r2_sync",
+          "title": "Ready MUST follow synchronous embedding",
+          "statement": "系统 MUST 在标记来源 ready 之前同步完成向量写入 不得使用 fire-and-forget embedding embedding 失败时 MUST 将来源标记为 failed 而非 ready"
+        },
+        {
+          "req_id": "csv-parser-markdown-table",
+          "title": "CSV parser MUST produce markdown-table chunks with row metadata",
+          "statement": "CSV 解析 MUST 使用专用 CSVParser 产出 markdown-table 格式分块（50 rows/chunk，200 char cell 截断），并在 chunk metadata 中记录 csv_row_start/csv_row_end，MUST NOT 把 CSV 当纯文本 pass-through"
         }
       ]
     },
@@ -1003,6 +1124,21 @@
           "req_id": "r9",
           "title": "Optional source dedup does not silently drop data",
           "statement": "系统 MAY 支持来源去重，但在命中去重时 MUST 不得静默丢弃用户导入请求。"
+        },
+        {
+          "req_id": "sources-reembed-requires-failed",
+          "title": "Re-embed MUST require FAILED status",
+          "statement": "POST /sources/:id/re-embed MUST 校验 source 状态为 failed，非 failed MUST 返回 400"
+        },
+        {
+          "req_id": "sources-batch-per-item-results",
+          "title": "Batch endpoints MUST return per-item results",
+          "statement": "batch re-embed 和 batch delete MUST 返回 per-item results 数组（含 error_code/message），且 batch delete MUST 使用 DELETE 方法"
+        },
+        {
+          "req_id": "tag-binding-response-and-ownership",
+          "title": "Tag binding MUST return v1 response shape and verify ownership",
+          "statement": "tag binding MUST 返回 {count, results:[SourceBatchItemResult]} 结构，且 DELETE binding MUST 校验 source 属于该 notebook"
         }
       ]
     },
@@ -1034,6 +1170,16 @@
           "req_id": "r5",
           "title": "Conversion follows source lifecycle and epoch rules",
           "statement": "任何创建新来源的转换路径 MUST 遵循 source 状态机与 epoch 失效规则。"
+        },
+        {
+          "req_id": "summary-qa-error-and-ownership",
+          "title": "Summary and per-source QA MUST return 400 for not-ready and verify notebook ownership",
+          "statement": "summary 和 per-source QA 端点在 source 未 ready 时 MUST 返回 400（非 404），且 MUST 校验 source 属于 URL 中的 notebook"
+        },
+        {
+          "req_id": "qa-to-source-contract",
+          "title": "qa-to-source MUST accept messages list contract",
+          "statement": "qa-to-source 端点 MUST 接受 messages:[QAMessage] 列表并格式化为 markdown（对齐 v1 convert_source_qa_to_source），MUST NOT 只接受单轮 {question, answer}"
         }
       ]
     },
@@ -1100,6 +1246,16 @@
           "req_id": "r12",
           "title": "Extractor selection errors are diagnosable",
           "statement": "当用户在 fetch 模式显式指定某 extractor 但其不可用（未安装/禁用/依赖缺失/服务不可达）时，系统 MUST 返回稳定错误语义或按策略回退；无论哪种路径，系统 MUST 输出可诊断信息说明发生了什么与如何恢复。"
+        },
+        {
+          "req_id": "sources-search-web",
+          "title": "Sources search MUST perform real web search",
+          "statement": "POST /sources/search MUST 调用 web search 引擎（SearXNG）返回真实 web 结果，MUST NOT 返回 notebook 内向量匹配作为 placeholder"
+        },
+        {
+          "req_id": "sources-dedup-config-gated",
+          "title": "Dedup MUST be gated by config",
+          "statement": "sources 去重 MUST 受 config source_ingestion.dedup.enabled 门控，为 false 时 MUST 跳过 dedup 直接创建新 source"
         }
       ]
     },
@@ -1131,6 +1287,61 @@
           "req_id": "r5",
           "title": "局部改良必须保留未改动部分并记录改良历史",
           "statement": "系统 MUST 在局部改良写回时保留未改动部分的内容稳定，并记录改良动作、范围与时间线，以支持持续打磨与可追溯性。"
+        },
+        {
+          "req_id": "r2a",
+          "title": "Refine MUST retrieve via vector search",
+          "statement": "系统 MUST 在 refine 请求携带 source_ids 时通过向量检索从相关 chunk 获取上下文 并附 citations 返回 而非拼接全部 chunk 文本或接受字面 text 输入"
+        },
+        {
+          "req_id": "r6",
+          "title": "Refine MUST support three summary formats",
+          "statement": "系统 MUST 支持 paragraph 段落摘要 与 bullets 要点列表 与 structured 结构化 title/bullets/terms 三种 refine 格式 每种格式有对应的 LLM 指令和后处理"
+        },
+        {
+          "req_id": "r7",
+          "title": "Refine MUST support batch multi-format concurrency",
+          "statement": "系统 MUST 提供 batch refine 端点 一次请求对多个格式并发生成 共享同一检索上下文与 citations"
+        },
+        {
+          "req_id": "r8",
+          "title": "Refine MUST validate request bounds",
+          "statement": "系统 MUST 校验 prompt 非空 与 format 属于允许集合 与 source_ids 为正整数且去重且在 notebook 内存在 与 top_k 在 1 到 20 与 min_score 在 0 到 1 否则返回 400"
+        },
+        {
+          "req_id": "r9",
+          "title": "Refine citations MUST include enriched fields",
+          "statement": "系统 MUST 在 refine 返回的 citations 中包含 source_name(hydrate filename) 与 snippet(先 strip 再截 200 字符) 与 page_number(从 chunk metadata 提取) 与 paragraph_index(从 chunk metadata 提取)"
+        },
+        {
+          "req_id": "r10",
+          "title": "Refine context MUST use full text numbered format",
+          "statement": "系统 MUST 用完整未截断的 chunk text 构建 LLM context 格式为 N-based 编号的 Source filename chunk index 与 text 块 以空行连接"
+        },
+        {
+          "req_id": "r11",
+          "title": "Refine error handling MUST use correct status codes",
+          "statement": "系统 MUST 在 notebook 不存在时返回 404 与 format 非法或 source_ids 未知时返回 400 与任务取消时返回 409 与任务失败时返回 500"
+        },
+        {
+          "req_id": "research-report-rich-prompt",
+          "title": "Research report MUST use structured 6-section prompt",
+          "statement": "research report 生成 MUST 使用 v1 结构化 REPORT_SYSTEM_PROMPT（Executive Summary/Background/Key Findings/Analysis/Recommendations/References 六段），MUST NOT 用一行通用 prompt"
+        },
+        {
+          "req_id": "research-ai-failure-fallback",
+          "title": "Research MUST have AI failure fallbacks for plan and analyze",
+          "statement": "research plan/analyze 失败时 MUST 有 fallback（plan→2-query fallback；analyze→coverage heuristic），MUST NOT 直接中止整个 run"
+        },
+        {
+          "req_id": "research-waiting-heartbeat",
+          "title": "Research SSE MUST emit waiting heartbeat while awaiting approval",
+          "statement": "research stream 在 status=waiting_user 时 MUST 定期重发 waiting 事件作为心跳，MUST NOT 只发一次"
+        },
+        {
+          "req_id": "research-lock-renewal",
+          "title": "Research MUST renew lock during long runs",
+          "statement": "research agent loop MUST 定期续期 lock，防止长任务（>10min）被 cleanupExpiredLocks 误杀"
         }
       ]
     },
@@ -1223,6 +1434,21 @@
           "req_id": "r8",
           "title": "Slides UI availability follows tools contract",
           "statement": "Studio slides 相关 UI（工具卡片、dialog、入口动作）MUST 以 `/v1/workspace/tools` 返回的 `SLIDES` tool 作为可用性唯一来源，不得依赖硬编码假设 slides 默认存在。"
+        },
+        {
+          "req_id": "studio-sse-streaming",
+          "title": "Outline and markdown generation MUST stream via SSE",
+          "statement": "studio outline 和 markdown 生成 MUST 通过 SSE 端点流式返回 progress/toolcall/busy/done/error 事件，MUST NOT 返回同步 JSON（对齐 v1 /drafts/:id/outline/stream 与 /markdown/stream）"
+        },
+        {
+          "req_id": "studio-latest-draft",
+          "title": "Studio MUST provide drafts/latest endpoint",
+          "statement": "studio MUST 提供 GET 端点返回 notebook 下按 updated_at desc 的最新 draft，MUST NOT 缺失该端点"
+        },
+        {
+          "req_id": "studio-stale-running-guard",
+          "title": "Studio MUST clear stale RUNNING status and guard concurrent generation",
+          "statement": "studio MUST 清理超过阈值（10min）的 RUNNING 状态 draft，并发生成时 MUST 返回 busy 事件而非覆盖"
         }
       ]
     },
@@ -1295,6 +1521,11 @@
           "req_id": "r5",
           "title": "Extractor plugins provide structured errors",
           "statement": "提取器插件在失败时 MUST 抛出结构化错误（至少包含 error_code/message，且可选包含 extractor/url），以便 core 能区分“可重试失败/不可用/配置缺失”并做出一致的降级与提示。"
+        },
+        {
+          "req_id": "extractors-full-response",
+          "title": "GET extractors MUST return full ExtractorsListResponse",
+          "statement": "GET /extractors MUST 返回完整 ExtractorsListResponse（每提取器 available/display_name/priority/requires_api_key/recovery_hint + default_extractor + fallback_enabled），MUST NOT 只返回存储的策略行"
         }
       ]
     },
