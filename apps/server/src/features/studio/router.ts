@@ -100,6 +100,8 @@ function serializeSlide(row: typeof studioSlides.$inferSelect) {
   return {
     id: row.id,
     notebook_id: row.notebookId,
+    // c51: v1 SlideDraftRead (api.py:76-94) includes output_id + generation_config
+    output_id: row.outputId ?? null,
     title: row.title,
     prompt: row.prompt,
     engine: row.engine,
@@ -107,6 +109,7 @@ function serializeSlide(row: typeof studioSlides.$inferSelect) {
     source_ids: row.sourceIds,
     outline: row.outline,
     markdown: row.markdown,
+    generation_config: row.generationConfig ?? null,
     stage: row.stage,
     status: row.status,
     error_message: row.errorMessage,
@@ -305,7 +308,7 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     const id = Number(params.id);
     const slide = getSlideOrThrow(id);
 
-    return createSseResponse(id, async (emit) => {
+    return createSseResponse(id, async (emit, ctx) => {
       emit('progress', { stage: 'outline', progress: 5, message: '开始生成大纲' });
       const context = await getContext(slide);
       db()
@@ -314,6 +317,8 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
         .where(eq(studioSlides.id, id))
         .run();
 
+      // c51: emit toolcall before the generation stage (v1 api.py:401)
+      emit('toolcall', { tool: 'slides_generate_outline', slide_id: id });
       const outline = await generateOutline(slide, context);
       emit('progress', { stage: 'outline', progress: 90, message: '大纲生成完成' });
       db()
@@ -321,7 +326,8 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
         .set({ outline: outline as Record<string, unknown>, stage: 'outline', status: 'idle' })
         .where(eq(studioSlides.id, id))
         .run();
-      emit('done', serializeSlide(getSlideOrThrow(id)));
+      // c51: done payload = {trace_id, slide_id} (v1 api.py:428)
+      emit('done', { trace_id: ctx.trace_id, slide_id: id });
     });
   })
 
@@ -331,7 +337,7 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     const slide = getSlideOrThrow(id);
     if (!slide.outline) throw new NotFoundError(`Slide ${id} has no outline`);
 
-    return createSseResponse(id, async (emit) => {
+    return createSseResponse(id, async (emit, ctx) => {
       emit('progress', { stage: 'markdown', progress: 5, message: '开始生成幻灯片' });
       const context = await getContext(slide);
       db()
@@ -340,6 +346,8 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
         .where(eq(studioSlides.id, id))
         .run();
 
+      // c51: emit toolcall before the generation stage (v1 api.py:506)
+      emit('toolcall', { tool: 'slides_generate_markdown', slide_id: id });
       const markdown = await generateMarkdown(slide, context, (delta) => {
         emit('progress', { stage: 'markdown', delta });
       });
@@ -351,7 +359,8 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
         .run();
       writeSlideFile(slide.notebookId, id, markdown);
       syncSlideOutput(slide, markdown);
-      emit('done', serializeSlide(getSlideOrThrow(id)));
+      // c51: done payload = {trace_id, slide_id} (v1 api.py:538)
+      emit('done', { trace_id: ctx.trace_id, slide_id: id });
     });
   });
 
