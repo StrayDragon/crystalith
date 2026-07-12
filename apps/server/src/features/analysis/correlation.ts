@@ -1,18 +1,26 @@
-// Correlation detection — embedding-vector cosine similarity (c28 — restored from v1).
+// Correlation detection — per-entry vector-KNN index query (c47 — restored from v1).
 //
-// For each chunk entry, compute pairwise cosine similarity against all other
-// entries (excluding same-source pairs). Collect high-similarity pairs as
-// "similar" relations, de-duplicated and capped at maxRelations.
+// For each chunk entry, query the sqlite-vec KNN index (searchVectors) for the
+// top_k nearest neighbors, excluding same-source pairs, and collect high-
+// similarity pairs as "similar" relations, de-duplicated and capped at
+// maxRelations.
 //
 // v1 reference: features/analysis/correlation.py (detect_relations).
-// v1 uses per-entry KNN search (vector_store.search top_k=20); since v2 now
-// has all vectors in memory via getStoredVectors, pairwise cosine is simpler
-// and equivalent for desktop-scale datasets.
+// v1 calls `vector_store.search(top_k=20, min_score=0.7, exclude_source_ids=...)`
+// per entry; v2 mirrors that via the existing searchVectors KNN index query
+// (db/vectors.ts:79) which RAG and research also use. Earlier c28 code did an
+// in-memory brute-force pairwise cosine — c47 re-aligns to the KNN path so the
+// edge set and score semantics match v1 (score = 1 - distance).
+
+import type { RelationType } from '@crystalith/shared';
+
+import type { Orm } from '../../db/index.ts';
+import { searchVectors } from '../../db/vectors.ts';
 
 export interface Relation {
   sourceChunkId: number;
   targetChunkId: number;
-  relationType: 'similar' | 'contradicts';
+  relationType: RelationType;
   score: number;
 }
 
@@ -23,62 +31,53 @@ export interface VectorChunkMeta {
   vector: Float32Array;
 }
 
-function cosineSimilarity(left: Float32Array, right: Float32Array): number {
-  if (left.length !== right.length) return 0;
-  let dot = 0;
-  let leftNorm = 0;
-  let rightNorm = 0;
-  for (let i = 0; i < left.length; i++) {
-    dot += left[i]! * right[i]!;
-    leftNorm += left[i]! * left[i]!;
-    rightNorm += right[i]! * right[i]!;
-  }
-  if (leftNorm === 0 || rightNorm === 0) return 0;
-  return dot / (Math.sqrt(leftNorm) * Math.sqrt(rightNorm));
-}
-
 /**
- * Detect similar chunk pairs via embedding-vector cosine similarity.
+ * Detect similar chunk pairs via per-entry vector-KNN index query.
  *
- * For each entry, compare against all others (excluding same-source pairs).
- * Collect unique pairs with score >= minScore, sorted by score descending.
+ * For each entry, query the KNN index (searchVectors) for its nearest
+ * neighbors, convert distance → score (1 - distance, matching v1 chroma
+ * semantics), drop same-source hits and sub-min_score hits, then collect
+ * unique pairs sorted by score descending.
  *
  * Mirrors v1 detect_relations (min_score=0.7, top_k=20, exclude_source_ids,
- * max_relations=200). The pairwise approach replaces v1's per-entry KNN but
- * produces the same "similar" relation set.
+ * max_relations=200).
  */
-export function detectRelations(
+export async function detectRelations(
   entries: VectorChunkMeta[],
-  _notebookId: number,
+  notebookId: number,
+  orm: Orm,
   options: {
     minScore?: number;
     maxRelations?: number;
     topK?: number;
   } = {},
-): Relation[] {
+): Promise<Relation[]> {
   const { minScore = 0.7, maxRelations = 200, topK = 20 } = options;
   if (maxRelations <= 0 || topK <= 0 || entries.length < 2) return [];
 
+  const entriesByChunk = new Map<number, VectorChunkMeta>(
+    entries.map((e) => [e.chunkId, e]),
+  );
   const relationMap = new Map<string, Relation>();
 
   for (const entry of entries) {
-    let neighbors = 0; // cap per-entry matches at topK (v1 behavior)
+    // Per-entry KNN query against the sqlite-vec index (v1 parity). We do not
+    // pass sourceIds (that is an *include* filter in searchVectors); instead
+    // we over-fetch then post-filter to exclude the entry's own source —
+    // mirroring v1's exclude_source_ids=[entry.source_id].
+    const hits = searchVectors(orm, entry.vector, notebookId, topK);
 
-    // Sort others by similarity to this entry (descending), take top_k.
-    const scored: Array<{ other: VectorChunkMeta; score: number }> = [];
-    for (const other of entries) {
-      if (other.chunkId === entry.chunkId) continue;
-      if (other.sourceId === entry.sourceId) continue;
-      scored.push({ other, score: cosineSimilarity(entry.vector, other.vector) });
-    }
-    scored.sort((a, b) => b.score - a.score);
+    for (const hit of hits) {
+      const target = entriesByChunk.get(hit.rowid);
+      if (target === undefined) continue; // hit not in our entry set
+      if (target.sourceId === entry.sourceId) continue; // exclude same-source
 
-    for (const { other, score } of scored) {
-      if (neighbors >= topK) break;
-      if (score < minScore) break;
+      // v1 chroma cosine space: score = 1 - distance (chroma.py:136).
+      const score = 1 - hit.distance;
+      if (score < minScore) continue;
 
-      const leftChunkId = Math.min(entry.chunkId, other.chunkId);
-      const rightChunkId = Math.max(entry.chunkId, other.chunkId);
+      const leftChunkId = Math.min(entry.chunkId, target.chunkId);
+      const rightChunkId = Math.max(entry.chunkId, target.chunkId);
       const key = `${leftChunkId}-${rightChunkId}`;
 
       const existing = relationMap.get(key);
@@ -90,7 +89,6 @@ export function detectRelations(
         relationType: 'similar',
         score,
       });
-      neighbors++;
     }
   }
 

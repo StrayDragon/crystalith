@@ -48,9 +48,9 @@
 | c41 | ts-upgrade             | ✅ DONE (TS ^5→^7, Go-native tsc, tsconfig unified)                                          |
 | c42 | outputs-contract       | ✅ DONE (OutputRead契约/citation树映射持久化/RAG失败传播/字段级postprocess/错误码)           |
 | c43 | studio-sse-rag         | ✅ DONE (SSE流式端点/ragRegistry接入/drafts-latest/stale清理/preview/frontmatter确定性)      |
-| c44 | sources-search-extract | ✅ DONE (web search真实现/extractors完整响应/dedup配置门控/re-embed强制FAILED/400+归属)     |
-| c45 | qa-context-citations   | ✅ DONE (ContextStats字段对齐/inline citation兜底/low_similarity空citations/prompt指令)     |
-| c46 | parsers-research       | ✅ DONE (CSV markdown-table parser/report富prompt/AI失败fallback/lock续期/dedup增强)        |
+| c44 | sources-search-extract | ✅ DONE (web search真实现/extractors完整响应/dedup配置门控/re-embed强制FAILED/400+归属)      |
+| c45 | qa-context-citations   | ✅ DONE (ContextStats字段对齐/inline citation兜底/low_similarity空citations/prompt指令)      |
+| c46 | parsers-research       | ✅ DONE (CSV markdown-table parser/report富prompt/AI失败fallback/lock续期/dedup增强)         |
 | c13 | distribution           | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                      |
 | c14 | cleanup-delivery       | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                      |
 
@@ -151,13 +151,13 @@
 
 ### 本会话实现（c42–c46）
 
-| Change | 域 | P0 修复 | P1 修复 |
-| ------ | -- | ------- | ------- |
-| **c42** | Outputs | POST 返回 OutputRead 契约；citations 递归映射进 content 树并持久化 | RAG 失败传播；字段级 postprocess；export citations 字段补全；错误码 503/422/400 |
-| **c43** | Studio | SSE 流式端点（outline/markdown stream）；getContext 接入 ragRegistry | drafts/latest；stale-RUNNING 清理；preview 文件；generation_config 解释；frontmatter 确定性 |
-| **c44** | Sources | /search 接入真 web search（SearXNG）；/extractors 完整 ExtractorsListResponse | dedup 配置门控；re-embed 强制 FAILED；summary/QA 400+归属；connector 不可用 409 |
-| **c45** | QA | ContextStats 字段名对齐 v1（total_tokens 等 + compressed） | inline citation 兜底；low_similarity 空 citations；/prompt: 指令解析 |
-| **c46** | Parsers+Research | CSV 专用 parser（markdown-table 分块） | report 6 段富 prompt；AI 失败 fallback；lock 续期；search dedup 增强 |
+| Change  | 域               | P0 修复                                                                       | P1 修复                                                                                     |
+| ------- | ---------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| **c42** | Outputs          | POST 返回 OutputRead 契约；citations 递归映射进 content 树并持久化            | RAG 失败传播；字段级 postprocess；export citations 字段补全；错误码 503/422/400             |
+| **c43** | Studio           | SSE 流式端点（outline/markdown stream）；getContext 接入 ragRegistry          | drafts/latest；stale-RUNNING 清理；preview 文件；generation_config 解释；frontmatter 确定性 |
+| **c44** | Sources          | /search 接入真 web search（SearXNG）；/extractors 完整 ExtractorsListResponse | dedup 配置门控；re-embed 强制 FAILED；summary/QA 400+归属；connector 不可用 409             |
+| **c45** | QA               | ContextStats 字段名对齐 v1（total_tokens 等 + compressed）                    | inline citation 兜底；low_similarity 空 citations；/prompt: 指令解析                        |
+| **c46** | Parsers+Research | CSV 专用 parser（markdown-table 分块）                                        | report 6 段富 prompt；AI 失败 fallback；lock 续期；search dedup 增强                        |
 
 ### SDD 归档状态
 
@@ -168,28 +168,28 @@ c42–c46 已全部 archive（`llman sdd archive run`），spec deltas 合并到
 
 28 项验证中 25 项直接通过，3 项有偏差——**已全部修复**（commit `d3ffdd7c`）：
 
-| 偏差 | 严重度 | 修复 |
-| ---- | ------ | ---- |
-| MINDMAP fallback 用 `title` 而非 v1 的 `label` 键（渲染 bug） | 中 | 改为 `label`；完整重写 fallback 对齐 v1 `output_graph.py:198-287` |
-| Fallback 缺 `citations:[]` + 用 raw errorMsg | 中 | 所有叶子加 `citations: []`；用友好提示 `"⚠️ AI 模型生成失败..."` |
-| 错误码用字符串匹配（fragile） | 中 | 改用 AI SDK typed exceptions（`TypeValidationError`→422, `NoSuchModelError`→503 等） |
-| CSV 缺 `csv_row_start/end` metadata | 低 | parser 返回 `pages[]`；pipeline 优先用 pages 而非 `chunkText` |
-| `/prompt:` regex 大小写不一致 | 低 | 对齐 v1: `[a-z0-9_-]{1,32}` + case-insensitive + `toLowerCase()` |
+| 偏差                                                          | 严重度 | 修复                                                                                 |
+| ------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------ |
+| MINDMAP fallback 用 `title` 而非 v1 的 `label` 键（渲染 bug） | 中     | 改为 `label`；完整重写 fallback 对齐 v1 `output_graph.py:198-287`                    |
+| Fallback 缺 `citations:[]` + 用 raw errorMsg                  | 中     | 所有叶子加 `citations: []`；用友好提示 `"⚠️ AI 模型生成失败..."`                     |
+| 错误码用字符串匹配（fragile）                                 | 中     | 改用 AI SDK typed exceptions（`TypeValidationError`→422, `NoSuchModelError`→503 等） |
+| CSV 缺 `csv_row_start/end` metadata                           | 低     | parser 返回 `pages[]`；pipeline 优先用 pages 而非 `chunkText`                        |
+| `/prompt:` regex 大小写不一致                                 | 低     | 对齐 v1: `[a-z0-9_-]{1,32}` + case-insensitive + `toLowerCase()`                     |
 
 ### QA 架构审查（cl-codebase-cleanup skill + 3 个并行 Explore agent）
 
 使用 cl-codebase-cleanup skill 的 7 类代码债务框架审查 c42–c46 新代码。
 发现 7 个 HIGH + 12 个 MEDIUM + 18 个 LOW——**7 个 HIGH 已全部修复**（commit `2fa63263`）：
 
-| # | 问题 | 严重度 | 修复 | 新模块 |
-| - | ---- | ------ | ---- | ------ |
-| H1 | `/search` 不传 host → 永远返回空结果（**功能 bug**） | HIGH | `searchWeb` 默认调 `getSearxngHost()`；`webSearchTool.execute` 委托 `searchWeb` | `web-search.ts` |
-| H2 | extractors 硬编码在 router + 读错配置源(env vs config) | HIGH | `listExtractorMetadata()` 在 factory.ts，用 extractor 的 `isAvailable(config)` | `factory.ts` |
-| H3 | connector 409 抛 plain object 非 Error | HIGH | `ConnectorUnavailableError extends Error` | `source-connectors/router.ts` |
-| H4 | agent.ts ↔ router.ts 循环依赖 | HIGH | lock 函数提取到独立模块 | **`research/lock.ts`** |
-| H5 | 两个 SSE 端点 ~90% 重复 | HIGH | `createSseResponse()` 共享 headers/busy guard/error handling | **`studio/service.ts`** |
-| H6 | POST 与 SSE 重复生成逻辑 | HIGH | `generateOutline()`/`generateMarkdown()` 共享核心；router 643→~190 行 | `studio/service.ts` |
-| H7 | non-streaming /qa 生成 SSE 再解析回来（脆弱） | HIGH | `generateQaDirect()` 用 `generateText` 直接返回 | `qa/handler.ts` |
+| #   | 问题                                                   | 严重度 | 修复                                                                            | 新模块                        |
+| --- | ------------------------------------------------------ | ------ | ------------------------------------------------------------------------------- | ----------------------------- |
+| H1  | `/search` 不传 host → 永远返回空结果（**功能 bug**）   | HIGH   | `searchWeb` 默认调 `getSearxngHost()`；`webSearchTool.execute` 委托 `searchWeb` | `web-search.ts`               |
+| H2  | extractors 硬编码在 router + 读错配置源(env vs config) | HIGH   | `listExtractorMetadata()` 在 factory.ts，用 extractor 的 `isAvailable(config)`  | `factory.ts`                  |
+| H3  | connector 409 抛 plain object 非 Error                 | HIGH   | `ConnectorUnavailableError extends Error`                                       | `source-connectors/router.ts` |
+| H4  | agent.ts ↔ router.ts 循环依赖                          | HIGH   | lock 函数提取到独立模块                                                         | **`research/lock.ts`**        |
+| H5  | 两个 SSE 端点 ~90% 重复                                | HIGH   | `createSseResponse()` 共享 headers/busy guard/error handling                    | **`studio/service.ts`**       |
+| H6  | POST 与 SSE 重复生成逻辑                               | HIGH   | `generateOutline()`/`generateMarkdown()` 共享核心；router 643→~190 行           | `studio/service.ts`           |
+| H7  | non-streaming /qa 生成 SSE 再解析回来（脆弱）          | HIGH   | `generateQaDirect()` 用 `generateText` 直接返回                                 | `qa/handler.ts`               |
 
 **MEDIUM 未修（可后置）**：citation hydration 重复 3 处；ContextStats 未定义在 shared；错误 envelope 不一致；streamNoEvidence 不走 ensureInlineCitations；dedup 块重复；batch re-embed 跳过 FAILED 门控；SLIDES 缺 postprocess case。
 
