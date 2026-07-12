@@ -182,30 +182,42 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Convert session to source (c34: chunk + embed + vector — v1 behavior; c39: ownership + 201)
-  .post('/notebooks/:nid/sessions/:sid/convert-to-source', async ({ params, set }) => {
+  .post('/notebooks/:nid/sessions/:sid/convert-to-source', async ({ params, body, set }) => {
     const nid = Number(params.nid);
     const sid = Number(params.sid);
     const sessionRow = db().select().from(sessions).where(eq(sessions.id, sid)).get();
     if (!sessionRow || sessionRow.notebookId !== nid) notFound(sid);
 
-    const msgRows = db()
+    // c52: honor message_ids filter (v1 api.py:257-268). When provided, only
+    // convert the listed messages; missing ids → 404.
+    const { message_ids } = (body ?? {}) as { message_ids?: number[] };
+    let msgRows = db()
       .select()
       .from(messages)
       .where(eq(messages.sessionId, sid))
       .orderBy(messages.createdAt)
       .all();
+    if (message_ids && message_ids.length > 0) {
+      const wanted = new Set(message_ids);
+      // v1 api.py:262-268: 404 if any requested id is missing in the session
+      const missing = message_ids.filter((id) => !msgRows.some((m) => m.id === id));
+      if (missing.length > 0) {
+        throw new NotFoundError(`Message(s) not found in session: ${missing.join(', ')}`);
+      }
+      msgRows = msgRows.filter((m) => wanted.has(m.id));
+    }
 
     if (msgRows.length === 0) {
       throw new NotFoundError('No messages found in session');
     }
 
-    // Build markdown text
+    // c52: v1 text format (api.py:110-123) — Chinese role labels + \n\n join.
     const text = msgRows
       .map((m) => {
-        const role = m.role === 'assistant' ? 'Assistant' : 'User';
+        const role = m.role === 'assistant' ? '助手' : '用户';
         return `**${role}**: ${m.content}`;
       })
-      .join('\n\n---\n\n');
+      .join('\n\n');
 
     const title = sessionRow.title ?? `会话_${sid}`;
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -295,28 +307,37 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
     const sessionRow = db().select().from(sessions).where(eq(sessions.id, sid)).get();
     if (!sessionRow || sessionRow.notebookId !== nid) notFound(sid);
 
-    const { output_type } = body as { output_type: string };
+    const { output_type, message_ids } = (body ?? {}) as {
+      output_type: string;
+      message_ids?: number[];
+    };
     if (!['PARAGRAPH', 'BULLETS', 'STRUCTURED'].includes(output_type)) {
       throw new NotFoundError(`Unsupported output type: ${output_type}`);
     }
 
-    const msgRows = db()
+    // c52: honor message_ids filter (v1 api.py:417-428)
+    let msgRows = db()
       .select()
       .from(messages)
       .where(eq(messages.sessionId, sid))
       .orderBy(messages.createdAt)
       .all();
+    if (message_ids && message_ids.length > 0) {
+      const wanted = new Set(message_ids);
+      const missing = message_ids.filter((id) => !msgRows.some((m) => m.id === id));
+      if (missing.length > 0) {
+        throw new NotFoundError(`Message(s) not found in session: ${missing.join(', ')}`);
+      }
+      msgRows = msgRows.filter((m) => wanted.has(m.id));
+    }
 
     if (msgRows.length === 0) {
       throw new NotFoundError('No messages found in session');
     }
 
-    const textContent = msgRows
-      .map((m) => {
-        const role = m.role === 'assistant' ? 'Assistant' : 'User';
-        return `[${role}] ${m.content}`;
-      })
-      .join('\n');
+    // c52: v1 text format (api.py:438 text_format="raw") — plain content, no
+    // role prefix. Was: [Assistant]/[User] prefixed per line.
+    const textContent = msgRows.map((m) => m.content).join('\n');
 
     const title = sessionRow.title ?? `会话_${sid}`;
 
