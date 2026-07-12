@@ -439,18 +439,26 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     const nid = Number(params.nid);
     const tid = Number(params.tid);
     const { source_ids } = body as { source_ids: number[] };
-    // Idempotent: skip already-assigned (v1 api_tags.py)
+    // c53: per-item diagnostics (v1 api_tags.py:142-185 SourceBatchItemResult).
+    // Was: silent continue on missing source + only counts returned.
+    const results: Array<{
+      source_id: number;
+      ok: boolean;
+      message?: string;
+      error_code?: string;
+    }> = [];
     let applied = 0;
     let skipped = 0;
     for (const sid of source_ids) {
-      // Verify source exists in notebook
       const src = db()
         .select({ id: sources.id })
         .from(sources)
         .where(and(eq(sources.id, sid), eq(sources.notebookId, nid)))
         .get();
-      if (!src) continue; // source doesn't exist in this notebook
-      // Check if already assigned
+      if (!src) {
+        results.push({ source_id: sid, ok: false, error_code: 'SOURCE_NOT_FOUND' });
+        continue;
+      }
       const existing = db()
         .select()
         .from(sourceTagMap)
@@ -458,12 +466,14 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         .get();
       if (existing) {
         skipped++;
+        results.push({ source_id: sid, ok: true, message: 'already assigned' });
         continue;
       }
       db().insert(sourceTagMap).values({ sourceId: sid, tagId: tid }).run();
       applied++;
+      results.push({ source_id: sid, ok: true });
     }
-    return { tag_id: tid, source_ids, applied, skipped };
+    return { tag_id: tid, source_ids, applied, skipped, results };
   })
 
   .delete('/notebooks/:nid/sources/tags/:tid/sources', ({ params, body }) => {
@@ -471,7 +481,13 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     void _nid;
     const tid = Number(params.tid);
     const { source_ids } = body as { source_ids: number[] };
-    // Idempotent: report how many were actually removed (v1 api_tags.py)
+    // c53: per-item diagnostics (v1 api_tags.py:142-185)
+    const results: Array<{
+      source_id: number;
+      ok: boolean;
+      message?: string;
+      error_code?: string;
+    }> = [];
     let removed = 0;
     let skipped = 0;
     for (const sid of source_ids) {
@@ -482,6 +498,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         .get();
       if (!existing) {
         skipped++;
+        results.push({ source_id: sid, ok: true, message: 'not assigned' });
         continue;
       }
       db()
@@ -489,8 +506,9 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
         .run();
       removed++;
+      results.push({ source_id: sid, ok: true });
     }
-    return { tag_id: tid, source_ids, removed, skipped };
+    return { tag_id: tid, source_ids, removed, skipped, results };
   })
 
   // Get source chunks

@@ -225,15 +225,34 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
     // c44: verify notebook ownership (v1 api_qa.py:221)
     if (source.notebookId !== nid) throw new NotFoundError(`Source ${sid} not found`);
 
-    const { question, answer } = body as { question: string; answer: string };
-    if (!question?.trim() || !answer?.trim()) {
-      throw new NotFoundError('question and answer are required');
-    }
+    // c53: accept multi-turn messages list (v1 api_qa.py:186-209,204-209) OR
+    // the single-turn {question, answer} shortcut. Multi-turn formats a full
+    // transcript; single-turn wraps the one Q/A pair.
+    const { question, answer, messages } = body as {
+      question?: string;
+      answer?: string;
+      messages?: Array<{ role: 'user' | 'assistant'; content: string }>;
+    };
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `QA_${source.filename}_${timestamp}.md`;
 
-    const text = `# Q&A: ${question.trim()}\n\n**Question**: ${question.trim()}\n\n**Answer**: ${answer.trim()}\n\n*Based on source: ${source.filename}*`;
+    let text: string;
+    if (messages && messages.length > 0) {
+      // Multi-turn transcript (v1 api_qa.py:186-201 format)
+      const turns = messages
+        .map((m) => {
+          const label = m.role === 'assistant' ? '助手' : '用户';
+          return `**${label}**: ${m.content}`;
+        })
+        .join('\n\n');
+      text = `# Q&A\n\n${turns}\n\n*Based on source: ${source.filename}*`;
+    } else {
+      if (!question?.trim() || !answer?.trim()) {
+        throw new NotFoundError('question and answer are required (or provide messages)');
+      }
+      text = `# Q&A: ${question.trim()}\n\n**Question**: ${question.trim()}\n\n**Answer**: ${answer.trim()}\n\n*Based on source: ${source.filename}*`;
+    }
 
     const newSource = db()
       .insert(sources)

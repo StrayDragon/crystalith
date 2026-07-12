@@ -46,15 +46,20 @@ export const citationsRouter = new Elysia({ prefix: '/v2' })
     };
   })
 
-  // Neighborhood evidence review (c26)
-  .get('/citations/context', async ({ query }) => {
+  // c53: Neighborhood evidence review — path now nests under notebook
+  // (v1 api.py:13 prefix /v1/notebooks/{notebook_id}/citations; c26 proposal
+  // promised /v2/notebooks/:nid/citations/context). BREAKING: was flat
+  // /v2/citations/context?notebook_id=. Defaults before/after = 1 (v1 api.py:61-62).
+  .get('/notebooks/:nid/citations/context', async ({ params, query }) => {
+    const notebookId = Number(params.nid);
+    if (!notebookId) throw new NotFoundError('notebook_id path param required');
+
     const q = query as {
       chunk_id?: string;
       source_id?: string;
       chunk_index?: string;
       before?: string;
       after?: string;
-      notebook_id?: string;
     };
 
     const hasChunkId = q.chunk_id !== undefined && q.chunk_id !== '';
@@ -78,16 +83,9 @@ export const citationsRouter = new Elysia({ prefix: '/v2' })
       });
     }
 
-    const notebookId = Number(q.notebook_id);
-    if (!notebookId) {
-      return new Response(JSON.stringify({ detail: 'notebook_id query param required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    const before = Math.max(0, Math.min(5, Number(q.before ?? 2)));
-    const after = Math.max(0, Math.min(5, Number(q.after ?? 2)));
+    // c53: default before/after = 1 (v1 api.py:61-62 Query(1, ge=0, le=5))
+    const before = Math.max(0, Math.min(5, Number(q.before ?? 1)));
+    const after = Math.max(0, Math.min(5, Number(q.after ?? 1)));
 
     let chunkId: number | undefined;
     let sourceId: number | undefined;

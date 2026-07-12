@@ -129,6 +129,37 @@ class ConnectorUnavailableError extends Error {
   }
 }
 
+/**
+ * c53: lightweight JSON-schema validation for connection_config (v1 api.py:77-98
+ * uses jsonschema Draft7Validator; here we check the subset our built-in
+ * connectors declare: type=object, required keys present + non-empty strings,
+ * no unknown properties when additionalProperties:false).
+ * Returns null on success, or an error message string on failure.
+ */
+function validateConnectionConfig(
+  config: Record<string, unknown>,
+  schema: Record<string, unknown> | null,
+): string | null {
+  if (!schema) return null; // no schema → accept anything
+  if (schema.type === 'object' && typeof config !== 'object') {
+    return 'connection_config must be an object';
+  }
+  const required = Array.isArray(schema.required) ? (schema.required as string[]) : [];
+  for (const key of required) {
+    const v = config[key];
+    if (v === undefined || v === null || (typeof v === 'string' && v.trim() === '')) {
+      return `connection_config missing required field: ${key}`;
+    }
+  }
+  if (schema.additionalProperties === false) {
+    const allowed = new Set(Object.keys((schema.properties as Record<string, unknown>) ?? {}));
+    for (const key of Object.keys(config)) {
+      if (!allowed.has(key)) return `connection_config unknown field: ${key}`;
+    }
+  }
+  return null;
+}
+
 function apiError(
   set: { status?: number | string },
   status: number,
@@ -222,12 +253,25 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
     requireNotebook(nid);
 
     const connectorId = String(params.connectorId ?? '').trim();
-    getConnectorOr404(connectorId);
+    const connector = getConnectorOr404(connectorId);
 
     const { connection_config } = (body ?? {}) as {
       connection_config?: Record<string, unknown>;
     };
     const config = connection_config ?? {};
+
+    // c53: validate connection_config against the connector's JSON schema
+    // (v1 api.py:77-98,199-200 Draft7Validator). Malformed → 400.
+    const validationError = validateConnectionConfig(config, connector.connection_config_schema);
+    if (validationError) {
+      return new Response(
+        JSON.stringify({ detail: validationError, error_code: 'INVALID_CONFIG' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+    }
 
     const binding = db()
       .insert(sourceConnectorBindings)

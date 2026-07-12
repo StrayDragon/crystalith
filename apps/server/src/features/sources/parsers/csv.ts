@@ -61,16 +61,29 @@ function parseCsvRows(text: string): string[][] {
   return rows;
 }
 
-/** Truncate a cell to MAX_CELL_CHARS. */
+/**
+ * c53: escape a cell for markdown-table safety (v1 csv.py:61-67).
+ * Pipes become \|, newlines become spaces. MUST run before truncation.
+ */
+function escapeCell(cell: string): string {
+  return cell.replaceAll('|', '\\|').replaceAll(/\r?\n/g, ' ');
+}
+
+/** c53: truncate a cell to MAX_CELL_CHARS using the … ellipsis (v1 csv.py:66). */
 function truncateCell(cell: string): string {
-  return cell.length > MAX_CELL_CHARS ? cell.slice(0, MAX_CELL_CHARS) + '...' : cell;
+  return cell.length > MAX_CELL_CHARS ? cell.slice(0, MAX_CELL_CHARS) + '…' : cell;
+}
+
+/** c53: escape + truncate, in that order (v1 csv.py:61-67). */
+function formatCell(cell: string): string {
+  return truncateCell(escapeCell(cell));
 }
 
 /** Convert rows to a markdown table string. */
 function rowsToMarkdownTable(header: string[], rows: string[][]): string {
-  const headerLine = `| ${header.map(truncateCell).join(' | ')} |`;
+  const headerLine = `| ${header.map(formatCell).join(' | ')} |`;
   const separator = `| ${header.map(() => '---').join(' | ')} |`;
-  const dataLines = rows.map((row) => `| ${row.map((c) => truncateCell(c ?? '')).join(' | ')} |`);
+  const dataLines = rows.map((row) => `| ${row.map((c) => formatCell(c ?? '')).join(' | ')} |`);
   return [headerLine, separator, ...dataLines].join('\n');
 }
 
