@@ -3,6 +3,8 @@ import type { ChatTurn, Citation } from '@crystalith/shared';
 import { generateText } from 'ai';
 
 import { streamQaResponse } from '../../ai/stream.ts';
+import { countTokens } from '../../ai/tokenizer.ts';
+import { parseStatsPresetOutput } from './presets.ts';
 // QA handler — deterministic retrieval + streamText generation.
 //
 // c36: aligned with v1 `run_qa_pipeline`. The retrieval+judgment is now
@@ -10,6 +12,10 @@ import { streamQaResponse } from '../../ai/stream.ts';
 // found, the no-evidence answer is streamed directly without an LLM call.
 // When evidence is found, the retrieved context is injected into the system
 // prompt and streamText generates the answer with inline citations.
+//
+// c48: stats preset routes through a dedicated JSON-parse path (v1
+// api.py:289-304,457-504): generate → parseStatsPresetOutput → use
+// fallback_markdown as the answer.
 import {
   retrieveAndJudge,
   noEvidenceAnswerForReason,
@@ -60,6 +66,8 @@ export interface QaHandlerOptions {
   minScore?: number;
   /** Scope retrieval to specific sources (v1 source_ids). */
   sourceIds?: number[];
+  /** c48: resolved preset id — 'stats' routes through JSON-parse path. */
+  preset?: string;
   /** Lifecycle hook for the provisional assistant message (includes citations). */
   onMessageSettled?: (
     accumulatedText: string,
@@ -102,6 +110,28 @@ export async function streamQa(opts: QaHandlerOptions): Promise<Response> {
   if (!judgment.evidence) {
     const answer = noEvidenceAnswerForReason(judgment.reason ?? null);
     return streamNoEvidence(answer, judgment, opts);
+  }
+
+  // c48: stats preset (v1 api.py:457-504) — generate full text non-streamed,
+  // parse JSON, then stream fallback_markdown in chunks. Falls through to
+  // normal streaming generation if JSON parsing fails.
+  if (opts.preset === 'stats') {
+    const systemWithContext = `${opts.systemPrompt}\n\nSource material:\n${judgment.context}`;
+    try {
+      const { text } = await generateText({
+        model: opts.model,
+        system: systemWithContext,
+        messages: [...opts.history, { role: 'user' as const, content: opts.question }],
+      });
+      const parsed = parseStatsPresetOutput(text);
+      if (parsed) {
+        const answer = ensureInlineCitations(parsed.fallback_markdown, judgment.citations);
+        return streamStatsAnswer(answer, judgment, opts);
+      }
+      // parse failed → fall through to normal streaming with the raw text's system
+    } catch {
+      // generation failed → fall through to normal streaming (will re-generate)
+    }
   }
 
   // Step 3: Evidence found → generate with context injection
@@ -175,9 +205,63 @@ function streamNoEvidence(answer: string, judgment: JudgeResult, opts: QaHandler
   });
 }
 
-/** Rough token estimate (~4 chars/token). */
+/**
+ * c48: Stream a stats-preset answer (evidence=true) as SSE. The answer was
+ * already generated+parsed non-streamed; here we emit it in 240-char chunks
+ * (v1 chunk_size, api.py:478-484) then a done event with full metadata.
+ */
+function streamStatsAnswer(
+  answer: string,
+  judgment: JudgeResult,
+  opts: QaHandlerOptions,
+): Response {
+  const encoder = new TextEncoder();
+  const chunkSize = 240;
+
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      const emit = (event: string, data: unknown) => {
+        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+      };
+
+      try {
+        if (opts.messageId !== undefined) {
+          emit('state_snapshot', { message_id: opts.messageId });
+        }
+        for (let i = 0; i < answer.length; i += chunkSize) {
+          emit('chunk', { text: answer.slice(i, i + chunkSize) });
+        }
+        emit('done', {
+          message_id: opts.messageId ?? null,
+          citations: judgment.citations,
+          confidence: judgment.confidence,
+          evidence: true,
+          no_evidence_reason: null,
+          context: judgment.contextStats,
+          created_at: new Date().toISOString(),
+          tool_calls: [],
+        });
+        opts.onMessageSettled?.(answer, false, judgment.citations);
+      } catch {
+        opts.onMessageSettled?.('', true);
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  });
+}
+
+/** c48: real token count via gpt-tokenizer (was char estimate). */
 function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
+  return countTokens(text);
 }
 
 // ---------------------------------------------------------------------------
@@ -235,8 +319,18 @@ export async function generateQaDirect(opts: QaHandlerOptions): Promise<QaDirect
     messages: [...opts.history, { role: 'user' as const, content: opts.question }],
   });
 
+  // c48: stats preset — parse JSON output and use fallback_markdown as the
+  // answer (v1 api.py:289-304). If parsing fails, fall through to normal text.
+  let answerText = text;
+  if (opts.preset === 'stats') {
+    const parsed = parseStatsPresetOutput(text);
+    if (parsed) {
+      answerText = parsed.fallback_markdown;
+    }
+  }
+
   // Apply inline citation fallback
-  const finalText = ensureInlineCitations(text, judgment.citations);
+  const finalText = ensureInlineCitations(answerText, judgment.citations);
   opts.onMessageSettled?.(finalText, false, judgment.citations);
 
   return {

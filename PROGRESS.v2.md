@@ -51,6 +51,13 @@
 | c44 | sources-search-extract | ✅ DONE (web search真实现/extractors完整响应/dedup配置门控/re-embed强制FAILED/400+归属)      |
 | c45 | qa-context-citations   | ✅ DONE (ContextStats字段对齐/inline citation兜底/low_similarity空citations/prompt指令)      |
 | c46 | parsers-research       | ✅ DONE (CSV markdown-table parser/report富prompt/AI失败fallback/lock续期/dedup增强)         |
+| c47 | analysis-relations-knn | ✅ DONE (本会话: relations 回归 KNN/score=1-distance/topics去ghost/RelationType→shared)       |
+| c48 | qa-determinism-export  | ✅ DONE (本会话: multiQuery确定性/stats preset/ContextStats真token/export page·para+sources) |
+| c49 | research-dedup-report-sse | 🔄 提案 (本会话: 跨迭代dedup/双report prompt/SSE status·thinking/resume plan/note类型)   |
+| c50 | outputs-slides-guard   | 🔄 提案 (本会话: SLIDES 400守卫/source_id校验/citation sanitize/LLM repair loop)            |
+| c51 | studio-response-shape  | 🔄 提案 (本会话: serializeSlide字段/SSE done+toolcall/outputId FK/stale清理)                |
+| c52 | models-sessions-parity | 🔄 提案 (本会话: providers envelope/provider过滤/message_ids/convert文本格式)              |
+| c53 | sources-citations-contract | 🔄 提案 (本会话: qa-to-source多轮/tag per-item/CSV转义/citations路径BREAKING/connector校验) |
 | c13 | distribution           | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                      |
 | c14 | cleanup-delivery       | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                      |
 
@@ -86,7 +93,7 @@
 | 7   | outputs               |  1,023 |    437 |      🟡      | 后由 c27/c38 对齐                                   |
 | 8   | **refine**            |    321 |    138 |      🔴      | 后由 c29 回退对齐 v1                                |
 | 9   | **studio**            |  1,686 |    344 |      🟡      | 后由 c32/c23 处理落盘与端点                         |
-| 10  | **analysis**          |    427 |    698 |      🔴      | 后由 c28 向量策略；第三轮仍有 relations P0          |
+| 10  | **analysis**          |    427 |    698 |      🔴      | 后由 c28 向量策略；relations P0 由 c47 解决 (KNN+score语义) |
 | 11  | commands              |     75 |     64 |      ✅      |                                                     |
 | 12  | models mgmt           |    112 |     55 |      🟡      | 缺 GET 单个等细节见第三轮 P1                        |
 | 13  | templates             |    332 |    120 |      ✅      | v2独占 CRUD                                         |
@@ -141,6 +148,65 @@
 ## 当前批次
 
 <!-- CURRENT -->
+
+**2026-07-12 第四轮深度复核 + c47–c53 提案 + c47/c48 实现+归档。1 P0 (analysis relations) + 5×P1 (qa) 清零，5 个 P1 批次提案待实现。**
+
+### 复核方法
+
+派出 8 个并行 Explore agent 对照 `backend/py` SSOT 逐域复核 v2 实现，然后**亲自抽样验证 6 个最关键 P0/P1 声明**（全部属实）。核对 PROGRESS 多处标 ✅ 但 tasks over-reported 或 c45/c46 自陈 deferral 的真实情况。
+
+### 核对结论
+
+**原报告"已修复"中真正对齐的** ✅:
+- refine (c29) 核心 citation-aware RAG 真对齐
+- sources 同步 embedding 竞态 (G3 P0) 真修了（`pipeline.ts:144-157` await + ready-after-embed）
+- source-connectors (G14) 实为**完整移植**（非"最小管线"）—— sync/snapshot/apply/import-scope 全在
+- outputs OutputRead 契约/citation 树映射/RAG 失败传播 真对齐
+
+**发现的真实偏离**: 1 P0 + ~20 P1 跨 7 域。
+
+### 本会话产出
+
+| Change | 域 | 严重度 | 内容 | 状态 |
+| ------ | -- | ------ | ---- | ---- |
+| **c47** | analysis | **P0** | relations 回归 KNN（暴力cosine→searchVectors）+ score=1-distance + topics去ghost + RelationType→shared | ✅ DONE + archived |
+| **c48** | qa | 5×P1 | multiQuery确定性 + stats preset + ContextStats真token + export page/para + sources shape | ✅ DONE + archived |
+| c49 | research | 5×P1 | 跨迭代dedup + 双report prompt统一 + SSE status/thinking + resume plan + note类型 | 🔄 提案 |
+| c50 | outputs | 4×P1 | SLIDES 400守卫 + source_id校验 + citation sanitize + LLM repair loop | 🔄 提案 |
+| c51 | studio | 5×P1 | serializeSlide字段 + SSE done/toolcall + outputId FK + stale清理 | 🔄 提案 |
+| c52 | models+sessions | 5×P1 | providers envelope + provider过滤 + message_ids + convert文本格式 | 🔄 提案 |
+| c53 | sources+citations | 6×P1 | qa-to-source多轮 + tag per-item + CSV转义 + citations路径BREAKING + connector校验 | 🔄 提案 |
+
+### c47 实现详情（P0，已归档）
+
+- `correlation.ts` 重写：内存暴力 pairwise cosine → per-entry `searchVectors` KNN；`score = 1 - hit.distance`（v1 chroma 语义）；`Relation` 类型用 `@crystalith/shared` 的 `RelationType`
+- `router.ts`：调用点改 `await detectRelations(entries, nid, db())`；移除 `chunk_ids:[]` 幽灵 topic 注入，改放 `narrative.topics`
+- `test/analysis/correlation.test.ts` 重写为真实 DB 集成测试（用 `vec_chunks` 索引，6 测试全过）
+- archive：+3 requirements 合并到 `knowledge-curation-and-freshness` spec
+
+### c48 实现详情（5×P1，已归档）
+
+- `retrieve-and-judge.ts`: `multiQuery: true` → `false`（确定性单 embed，对齐 v1 service.py:319-327）；ContextStats 改用 `countTokens`（gpt-tokenizer）真实计数 + `compressed = totalTokens > maxTokens`
+- `presets.ts`: 新增 `stats` preset（STATS_SYSTEM_PROMPT verbatim 移植 v1 presets.py:59-66）+ StatsChart/StatsTable 类型 + `parseStatsPresetOutput`（v1 presets.py:67-83）
+- `handler.ts`: `preset` 线程化；stats 路径在 generateQaDirect 与 streamQa 都实现（生成→parse→fallback_markdown 作答；流式按 240-char chunk，对齐 v1 api.py:457-504）
+- `router.ts` export: citation 行补 page/para + Notebook ID 行；JSON sources meta 改 {source_id, source_name, mime_type, parser_type} + notebook-scoped + cited-but-deleted fallback + 顶层 notebook_id
+- archive：+4 requirements 合并到 `generation-presets-and-constraints` (3) + `retrieval-and-cache` (1)
+
+### 质量门禁
+
+- Server test: **209 pass / 2 fail**（research 网络 + URL 超时，非回归，与基线一致）
+- Server typecheck: **✅ pass**
+- SDD: c47 + c48 **archived**（+7 reqs 合并）；c49–c53 提案 valid（0 failures）；validate-all → 55 passed / 0 failed
+- 下一阶段: 逐个实现 c49–c53（无 inter-dependencies，可独立 apply）
+
+### GAP-BOARD 更新
+
+- analysis relations P0（PROGRESS 长期标注"第三轮仍有 relations P0"）由 c47 清零
+- c46 "未做"区的 5 项（export note 类型/finish 后台/waiting 心跳等）正式追踪到 c49
+- c45/c46 自陈 deferral 的 stats preset / ContextStats 真token 由 c48 清零
+- 残留 P1 现分散在 c49–c53 正式追踪，不再是"后置项"
+
+---
 
 **2026-07-11 第三轮深度复核 + c42–c46 实现 + 验证审计 + QA 架构审查。全部 8 P0 清零，28/28 验证通过，7/7 HIGH 架构修复完成。**
 
