@@ -112,6 +112,17 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
     if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
 
+    // c50: reject SLIDES — v1 api.py:205-206 returns 400 "Use slides endpoints
+    // for SLIDES output". SLIDES has its own studio pipeline; the generic
+    // outputs pipeline has no SLIDES postprocess/isContentEmpty case.
+    if (String(type).toUpperCase() === 'SLIDES') {
+      set.status = 400;
+      return {
+        error: 'Use slides endpoints for SLIDES output',
+        error_code: 'OUTPUT_TYPE_USE_STUDIO',
+      };
+    }
+
     // c38 gap fix: source_ids is required when chunk_ids is not provided (v1 api.py:292-293)
     const resolvedSourceIds = source_ids ? (source_ids as number[]).map(Number) : undefined;
     const resolvedChunkIds = chunk_ids ? (chunk_ids as number[]).map(Number) : undefined;
