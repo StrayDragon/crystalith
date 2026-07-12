@@ -108,9 +108,12 @@ export function clearStaleRunning(id: number): boolean {
   if (!slide || slide.status !== 'running') return true;
   const updatedAt = new Date(slide.updatedAt).getTime();
   if (Date.now() - updatedAt > SLIDE_STALE_MS) {
+    // c51: v1 _clear_stale_running_status (api.py:107-118) sets status=IDLE +
+    // clears error_message (None). Was: set a non-empty error string, which
+    // made stale-cleared slides show an error in v2 where v1 shows none.
     db()
       .update(studioSlides)
-      .set({ status: 'idle', errorMessage: 'stale running status cleared' })
+      .set({ status: 'idle', errorMessage: null })
       .where(eq(studioSlides.id, id))
       .run();
     return true;
@@ -131,29 +134,53 @@ export function writeSlideFile(notebookId: number, slideId: number, markdown: st
   writeFileSync(join(previewDir, 'slides.md'), markdown, 'utf-8');
 }
 
+/**
+ * c51: sync the slide to an Output row, writing the studioSlides.outputId FK
+ * (v1 _sync_output, api.py:194-229) + full content schema
+ * {title, engine, outline, markdown, slide_id}. Was: matched by
+ * prompt='studio:<id>' and never wrote the outputId FK (left it null),
+ * and used a partial content shape {title, markdown, stage}.
+ */
 export function syncSlideOutput(slide: typeof studioSlides.$inferSelect, markdown: string): void {
-  const existingOutput = db()
-    .select()
-    .from(outputs)
-    .where(eq(outputs.prompt, `studio:${slide.id}`))
-    .get();
+  // Reuse existing output if the slide already has an outputId FK, else look
+  // up by the studio:<id> prompt convention (for slides created pre-c51).
+  let outputId = slide.outputId ?? null;
+  if (!outputId) {
+    const legacy = db()
+      .select()
+      .from(outputs)
+      .where(eq(outputs.prompt, `studio:${slide.id}`))
+      .get();
+    outputId = legacy?.id ?? null;
+  }
 
-  if (existingOutput) {
-    db()
-      .update(outputs)
-      .set({ content: { title: slide.title, markdown, stage: 'markdown' } })
-      .where(eq(outputs.id, existingOutput.id))
-      .run();
+  const content = {
+    title: slide.title,
+    engine: slide.engine,
+    outline: slide.outline,
+    markdown,
+    slide_id: slide.id,
+  };
+
+  if (outputId) {
+    db().update(outputs).set({ content }).where(eq(outputs.id, outputId)).run();
   } else {
-    db()
+    const inserted = db()
       .insert(outputs)
       .values({
         notebookId: slide.notebookId,
         type: 'SLIDES',
         prompt: `studio:${slide.id}`,
-        content: { title: slide.title, markdown, stage: 'markdown' },
+        content,
       })
-      .run();
+      .returning()
+      .get();
+    outputId = inserted.id;
+  }
+
+  // c51: write the FK so slide→output joins work (column existed but was never set)
+  if (slide.outputId !== outputId) {
+    db().update(studioSlides).set({ outputId }).where(eq(studioSlides.id, slide.id)).run();
   }
 }
 
@@ -226,27 +253,44 @@ export async function generateMarkdown(
 
 export type SseEmit = (event: string, data: unknown) => void;
 
+/** c51: context handed to the SSE run callback — trace_id for event correlation. */
+export interface SseContext {
+  /** Per-request trace id; MUST be included in every event payload (v1 api.py:428,538). */
+  trace_id: string;
+  /** The slide id. */
+  slide_id: number;
+}
+
 /**
  * Create an SSE response with shared headers, busy guard, and error handling.
- * The `run` callback receives an `emit` function and can yield progress/done/error events.
- * Errors are caught and emitted as `error` events, then the stream closes.
+ * The `run` callback receives an `emit` function + context (trace_id) and can
+ * yield progress/toolcall/done/error events. Errors are caught and emitted as
+ * `error` events, then the stream closes.
+ *
+ * c51: generates a trace_id per request; the done payload is {trace_id, slide_id}
+ * (v1 api.py:428,538), not a full serialized slide.
  */
 export function createSseResponse(
   slideId: number,
-  run: (emit: SseEmit) => Promise<void>,
+  run: (emit: SseEmit, ctx: SseContext) => Promise<void>,
 ): Response {
+  const trace_id = crypto.randomUUID();
+  const ctx: SseContext = { trace_id, slide_id: slideId };
   const sse = (event: string, data: unknown): string =>
-    `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+    `event: ${event}\ndata: ${JSON.stringify({ trace_id, ...(data as object) })}\n\n`;
 
   // Check busy guard before starting stream
   if (!clearStaleRunning(slideId)) {
-    return new Response(sse('busy', { message: '演示正在生成中，请稍后重试。' }), {
-      headers: {
-        'content-type': 'text/event-stream',
-        'cache-control': 'no-cache',
-        'x-accel-buffering': 'no',
+    return new Response(
+      sse('busy', { message: '演示正在生成中，请稍后重试。', slide_id: slideId }),
+      {
+        headers: {
+          'content-type': 'text/event-stream',
+          'cache-control': 'no-cache',
+          'x-accel-buffering': 'no',
+        },
       },
-    });
+    );
   }
 
   const stream = new ReadableStream<Uint8Array>({
@@ -256,9 +300,9 @@ export function createSseResponse(
         controller.enqueue(encoder.encode(sse(event, data)));
       };
       try {
-        await run(emit);
+        await run(emit, ctx);
       } catch (error) {
-        emit('error', { message: String(error) });
+        emit('error', { message: String(error), slide_id: slideId });
       }
       controller.close();
     },

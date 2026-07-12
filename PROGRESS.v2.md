@@ -55,7 +55,7 @@
 | c48 | qa-determinism-export  | ✅ DONE (本会话: multiQuery确定性/stats preset/ContextStats真token/export page·para+sources) |
 | c49 | research-dedup-report-sse | ✅ DONE (本会话: 跨迭代dedup/双report 6段prompt/SSE status·thinking/resume plan/note STRUCTURED) |
 | c50 | outputs-slides-guard   | ✅ DONE (本会话: SLIDES 400守卫/source_id校验/citation sanitize/LLM repair loop)            |
-| c51 | studio-response-shape  | 🔄 提案 (本会话: serializeSlide字段/SSE done+toolcall/outputId FK/stale清理)                |
+| c51 | studio-response-shape  | ✅ DONE (本会话: serializeSlide字段/SSE done·trace_id·toolcall/outputId FK/stale清理)       |
 | c52 | models-sessions-parity | 🔄 提案 (本会话: providers envelope/provider过滤/message_ids/convert文本格式)              |
 | c53 | sources-citations-contract | 🔄 提案 (本会话: qa-to-source多轮/tag per-item/CSV转义/citations路径BREAKING/connector校验) |
 | c13 | distribution           | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                      |
@@ -149,7 +149,7 @@
 
 <!-- CURRENT -->
 
-**2026-07-12 第四轮深度复核 + c47–c53 提案 + c47/c48/c49/c50 实现+归档。1 P0 (analysis relations) + 14×P1 (qa + research + outputs) 清零，3 个 P1 批次提案待实现。**
+**2026-07-12 第四轮深度复核 + c47–c53 提案 + c47/c48/c49/c50/c51 实现+归档。1 P0 (analysis relations) + 19×P1 (qa + research + outputs + studio) 清零，2 个 P1 批次提案待实现。**
 
 ### 复核方法
 
@@ -173,7 +173,7 @@
 | **c48** | qa | 5×P1 | multiQuery确定性 + stats preset + ContextStats真token + export page/para + sources shape | ✅ DONE + archived |
 | **c49** | research | 5×P1 | 跨迭代dedup + 双report 6段prompt统一 + SSE status/thinking + resume plan + note STRUCTURED | ✅ DONE + archived |
 | **c50** | outputs | 4×P1 | SLIDES 400守卫 + source_id校验 + citation sanitize + LLM repair loop | ✅ DONE + archived |
-| c51 | studio | 5×P1 | serializeSlide字段 + SSE done/toolcall + outputId FK + stale清理 | 🔄 提案 |
+| **c51** | studio | 5×P1 | serializeSlide字段 + SSE done·trace_id·toolcall + outputId FK + stale清理 | ✅ DONE + archived |
 | c52 | models+sessions | 5×P1 | providers envelope + provider过滤 + message_ids + convert文本格式 | 🔄 提案 |
 | c53 | sources+citations | 6×P1 | qa-to-source多轮 + tag per-item + CSV转义 + citations路径BREAKING + connector校验 | 🔄 提案 |
 
