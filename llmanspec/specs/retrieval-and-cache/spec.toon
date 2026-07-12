@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "retrieval-and-cache"
 purpose: 定义共享检索策略与缓存失效模型，覆盖 outputs/slides/qa/refine 等路径的统一检索行为。该规范强调检索上下文一致性与可预测缓存失效，避免跨路径出现“同输入不同上下文”的漂移。
 valid_scope[2]: src/,tests/
-requirements[15]{req_id,title,statement}:
+requirements[16]{req_id,title,statement}:
   r1,Retrieval strategy is shared across generation paths,outputs 与 slides MUST 复用同一检索策略族（预算、去重、多样性、融合）。
   r2,Retrieval context obeys token budget,检索上下文 MUST 受 token budget 约束，超预算时 MUST 截断或压缩。
   r3,"Multi-query retrieval is bounded","启用 multi-query 时 MUST 受 seed 上限、融合策略与去重规则约束。"
@@ -18,7 +18,8 @@ requirements[15]{req_id,title,statement}:
   "qa-retrieval-must-be-deterministic","QA retrieval MUST be deterministic single-embed (no multi-query expansion)","QA 检索 MUST 使用确定性单次 embed 检索路径（与 v1 service.py:319-327 单次 embed_batch + 单次 cached_vector_search 对齐），MUST NOT 在 QA 检索路径硬编码 multiQuery:true（当前 retrieve-and-judge.ts:139 违反此约束，会经 multi-query seed 扩张 + RRF fusion 改变边集与 score 语义）"
   "qa-source-scoping",QA retrieval MUST support source_ids filtering,QA 检索路径 MUST 支持通过 source_ids 参数将检索范围限定到指定 source 子集，并支持可配置的 min_score 阈值作为证据门控
   "vector-search-source-filter",Vector search MUST support source_ids filtering,向量检索 MUST 支持通过 source_ids 参数将 KNN 搜索范围限定到指定 source 子集
-scenarios[15]{req_id,id,given,when,then}:
+  "context-must-actually-truncate-when-over-budget",Context assembly MUST actually truncate or compress when over token budget (not just set a flag),"When the assembled retrieval context exceeds the token budget the system MUST actually truncate or compress the context to fit the budget (preserving the highest-priority blocks and partially trimming the boundary block) and MUST NOT merely set a compressed boolean flag while passing the full untruncated context through to the LLM. The truncation MUST follow the v1 _truncate_blocks priority order (history then retrieval then recent then system then query) and use gpt-tokenizer token counting. Current retrieve-and-judge.ts computes compressed=true but never acts on it, leaving the context oversized and risking context-window overflow on large notebooks."
+scenarios[18]{req_id,id,given,when,then}:
   r1,"shared-retrieval-across-paths","",outputs 与 slides 路径执行检索,系统 SHALL 复用同一检索策略族（预算/去重/多样性/融合）
   r2,"context-truncates-when-over-budget","",组装的检索上下文超过 token budget,系统 SHALL 截断或压缩上下文以满足预算约束
   r3,"multi-query-remains-bounded","","启用 multi-query 检索",系统 SHALL 遵守 seed 上限、融合策略与去重规则以保持有界
@@ -34,3 +35,6 @@ scenarios[15]{req_id,id,given,when,then}:
   "qa-retrieval-must-be-deterministic","deterministic-retrieval",同一 question + 同一组 source_ids + 同一 embedding,系统执行 QA 检索两次,两次产出 SHALL 完全一致（无 seed 扩张、无 RRF 归一化），且与 v1 单次 embed 路径产出可比
   "qa-source-scoping","scoped-retrieval",notebook 有 3 个 source,"用户指定 source_ids=[1,2] 提问",系统 SHALL 仅在 source 1 和 2 的 chunk 范围内检索
   "vector-search-source-filter","scoped-knn",notebook 有多个 source 的向量,"searchVectors 传入 sourceIds=[2,3]",系统 SHALL 仅返回 source 2 和 3 的 KNN 结果
+  "context-must-actually-truncate-when-over-budget","over-budget-truncates",the assembled retrieval context token count exceeds the configured max_tokens budget,the system builds the context for LLM generation,"the context passed to the LLM MUST be truncated to fit the budget (preserving highest-priority blocks and partially trimming the boundary block) and the compressed flag MUST be true"
+  "context-must-actually-truncate-when-over-budget","under-budget-passthrough",the assembled context is within the budget,the system builds the context,no truncation MUST occur and compressed MUST be false and the context MUST pass through unchanged
+  "context-must-actually-truncate-when-over-budget","priority-order-and-token-counting",the context exceeds budget and must shed tokens,selecting which blocks to drop or trim,"the system MUST follow the v1 priority order (history then retrieval then recent then system then query) and MUST use gpt-tokenizer token counts not character counts"
