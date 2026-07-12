@@ -36,6 +36,14 @@ export interface ResearchState {
   iteration: number;
   maxIterations: number;
   results: ResearchResult[];
+  /**
+   * c49: restored search plan (from persisted steps on resume) + resume status.
+   * When resumeStatus is waiting_user/searching AND searchPlan is present,
+   * runResearchCore skips re-planning and jumps to HITL/search (v1
+   * _start_node_for_status, graph.py:1013-1028).
+   */
+  searchPlan?: SearchPlan | null;
+  resumeStatus?: 'planning' | 'searching' | 'analyzing' | 'waiting_user' | null;
 }
 
 export interface ResearchResult {
@@ -175,7 +183,9 @@ async function executeSearches(
   );
 
   await Promise.all(tasks);
-  const deduped = deduplicateResults(allResults);
+  // c49: seed dedup from state.results (accumulated across iterations) so
+  // duplicates don't reappear in later iterations (v1 graph.py:518,551).
+  const deduped = deduplicateResults(allResults, state.results);
 
   // Record search step (c37 gap fix: v1 graph.py:573-587 records search results)
   db()
@@ -262,9 +272,23 @@ function titleSimilarity(a: string, b: string): number {
   return common / Math.max(wordsA.size, wordsB.size);
 }
 
-function deduplicateResults(results: ResearchResult[]): ResearchResult[] {
+/**
+ * c49: deduplicate results, seeding the seen-set from accumulated results so
+ * duplicates are dropped across iterations (v1 graph.py:517-562 seeds from
+ * state.all_results). Before c49 the seen-set was empty — duplicates from
+ * iteration 1 reappeared in iteration 2.
+ */
+function deduplicateResults(
+  results: ResearchResult[],
+  accumulated: ResearchResult[] = [],
+): ResearchResult[] {
   const seenUrls = new Set<string>();
   const seenTitles: string[] = [];
+  // Seed from accumulated results (v1 graph.py:518,551)
+  for (const r of accumulated) {
+    seenUrls.add(normalizeUrl(r.url));
+    if (r.title) seenTitles.push(r.title);
+  }
   return results.filter((r) => {
     const urlKey = normalizeUrl(r.url);
     if (seenUrls.has(urlKey)) return false;
@@ -282,6 +306,47 @@ function deduplicateResults(results: ResearchResult[]): ResearchResult[] {
 // Report generation (streamText → eagerly drain → persist + replay)
 // ---------------------------------------------------------------------------
 
+/**
+ * c49: REPORT_SYSTEM_PROMPT — v1 6-section structured template (graph.py:94-128).
+ * Shared by both generateReport (normal completion) and generateFinalReport
+ * (finish path) so both produce the same 6-section structure.
+ */
+const REPORT_SYSTEM_PROMPT = `You are an expert research analyst writing a comprehensive research report.
+
+Your report should be well-structured, insightful, and actionable. Follow this template:
+
+## Report Structure:
+
+1. **Executive Summary** (2-3 sentences)
+   - Key findings and main takeaway
+
+2. **Background & Context**
+   - Why this topic matters
+   - Current landscape
+
+3. **Key Findings** (3-5 main points)
+   - Each finding with supporting evidence
+   - Include source references [1], [2], etc.
+
+4. **Analysis & Insights**
+   - Patterns and trends observed
+   - Implications and significance
+
+5. **Recommendations** (if applicable)
+   - Actionable next steps
+   - Areas for further research
+
+6. **References**
+   - Numbered list of sources cited
+
+## Guidelines:
+- Write in clear, professional language
+- Use Markdown formatting (headers, lists, bold, links)
+- Be objective and evidence-based
+- Cite sources using [n] notation
+- Keep the report focused and concise (500-1500 words)
+- Write in the same language as the research topic`;
+
 async function generateReport(
   state: ResearchState,
   signal: AbortSignal,
@@ -295,8 +360,10 @@ async function generateReport(
 
   const result = streamText({
     model,
-    system: `You are a research report writer. Produce a comprehensive markdown report.`,
-    prompt: `Topic: ${state.topic}\n\nResults:\n${context}\n\nWrite a detailed report with executive summary, findings, and conclusions.`,
+    // c49: use the shared 6-section REPORT_SYSTEM_PROMPT (was a 1-line minimal prompt;
+    // only generateFinalReport had the rich prompt before — now both paths align to v1).
+    system: REPORT_SYSTEM_PROMPT,
+    prompt: `Topic: ${state.topic}\n\nResults:\n${context}\n\nWrite a detailed report following the structure above.`,
     abortSignal: signal,
   });
 
@@ -320,40 +387,66 @@ export async function runResearchCore(
   signal: AbortSignal,
 ): Promise<{ reportStream: AsyncIterable<string> } | null> {
   const sessionId = state.sessionId;
+  // c49: resume start-node selection (v1 _start_node_for_status, graph.py:1013-1028).
+  // On the first loop iteration, if resuming at waiting_user/searching with a
+  // restored plan, skip re-planning and jump straight to HITL/search.
+  let resumeSkipPlan = state.resumeStatus === 'waiting_user' && !!state.searchPlan;
+  let resumeSkipHitl = state.resumeStatus === 'searching' && !!state.searchPlan;
 
   for (let iter = state.iteration; iter <= state.maxIterations && !signal.aborted; iter++) {
     state.iteration = iter;
     // c46: renew lock each iteration to prevent expiry on long runs (v1 _extend_lock_periodically)
     renewLock(sessionId);
-    db()
-      .update(researchSessions)
-      .set({ status: 'planning', currentIteration: iter })
-      .where(eq(researchSessions.id, sessionId))
-      .run();
 
-    // 1. Plan
+    // c49: decide the start node for this iteration (resume-aware).
+    // - resumeSkipPlan (first iter only): jump to HITL with restored plan
+    // - resumeSkipHitl (first iter only): jump straight to search with restored plan
+    // - default: re-plan from scratch
     let plan: SearchPlan;
-    try {
-      plan = await planSearches(state, signal);
-    } catch {
-      // c46: fallback 2-query plan (v1 graph.py:225-236) — don't abort the run
-      plan = {
-        queries: [
-          { query: state.topic, engine: 'Web', priority: 1, reason: 'fallback' },
-          { query: `${state.topic} overview`, engine: 'Web', priority: 2, reason: 'fallback' },
-        ],
-        reasoning: 'Fallback plan (AI planning failed)',
-      };
+    if (resumeSkipPlan || resumeSkipHitl) {
+      plan = state.searchPlan!;
+    } else {
+      db()
+        .update(researchSessions)
+        .set({ status: 'planning', currentIteration: iter })
+        .where(eq(researchSessions.id, sessionId))
+        .run();
+
+      // 1. Plan
+      try {
+        plan = await planSearches(state, signal);
+      } catch {
+        // c46: fallback 2-query plan (v1 graph.py:225-236) — don't abort the run
+        plan = {
+          queries: [
+            { query: state.topic, engine: 'Web', priority: 1, reason: 'fallback' },
+            { query: `${state.topic} overview`, engine: 'Web', priority: 2, reason: 'fallback' },
+          ],
+          reasoning: 'Fallback plan (AI planning failed)',
+        };
+      }
+    }
+    // Resume flags only apply to the first iteration — capture the skip-hitl
+    // decision before resetting the flag.
+    const skipHitlThisIter = resumeSkipHitl;
+    resumeSkipPlan = false;
+    resumeSkipHitl = false;
+
+    // 2. HITL (skip on resume from searching — user already approved)
+    let decision: HitlDecision;
+    if (skipHitlThisIter) {
+      // Already approved before resume — jump straight to search execution
+      decision = { action: 'approve', plan };
+    } else {
+      db()
+        .update(researchSessions)
+        .set({ status: 'waiting_user' })
+        .where(eq(researchSessions.id, sessionId))
+        .run();
+
+      decision = await waitForApproval(state, plan, signal);
     }
 
-    // 2. HITL
-    db()
-      .update(researchSessions)
-      .set({ status: 'waiting_user' })
-      .where(eq(researchSessions.id, sessionId))
-      .run();
-
-    const decision = await waitForApproval(state, plan, signal);
     if (signal.aborted || decision.action === 'cancel') break;
     if (decision.action === 'finish') {
       // finish endpoint already generated+persisted the report — do not overwrite
@@ -494,8 +587,11 @@ export async function runResearch(
 /**
  * Resume a previously-started research session from its persisted state.
  *
- * Reads `currentIteration` and `aggregatedResults` from the DB so the
- * agent continues where it left off instead of restarting from iteration 1.
+ * Reads `currentIteration`, `aggregatedResults`, status, AND restores the
+ * in-flight search plan (c49: v1 `_extract_plan_from_steps`,
+ * graph.py:945-972, 1009) so the agent continues where it left off —
+ * including presenting the existing plan at waiting_user instead of
+ * regenerating it (v1 `_start_node_for_status`, graph.py:1013-1028).
  *
  * Corresponds to v1 `_build_state_from_session` → `run_research_graph_from_session`.
  */
@@ -511,15 +607,24 @@ export async function runResearchFromState(
   if (!session) return null;
 
   const aggregatedResults = (session.aggregatedResults ?? []) as ResearchResult[];
+  const iteration = session.currentIteration ?? 1;
+
+  // c49: restore the in-flight plan + resume status so runResearchCore can
+  // skip re-planning when resuming at waiting_user/searching (v1 parity).
+  const searchPlan = extractPlanFromSteps(sessionId, iteration);
+  const resumeStatus =
+    session.status === 'waiting_user' || session.status === 'searching' ? session.status : null;
 
   return runResearchCore(
     {
       sessionId,
       notebookId: session.notebookId,
       topic: session.topic,
-      iteration: session.currentIteration ?? 1,
+      iteration,
       maxIterations: session.maxIterations,
       results: aggregatedResults,
+      searchPlan,
+      resumeStatus,
     },
     signal,
   );
@@ -545,42 +650,8 @@ export async function generateFinalReport(state: ResearchState): Promise<string>
 
   const result = streamText({
     model,
-    // c46: v1 REPORT_SYSTEM_PROMPT (graph.py:94-128) — 6-section structured template
-    system: `You are an expert research analyst writing a comprehensive research report.
-
-Your report should be well-structured, insightful, and actionable. Follow this template:
-
-## Report Structure:
-
-1. **Executive Summary** (2-3 sentences)
-   - Key findings and main takeaway
-
-2. **Background & Context**
-   - Why this topic matters
-   - Current landscape
-
-3. **Key Findings** (3-5 main points)
-   - Each finding with supporting evidence
-   - Include source references [1], [2], etc.
-
-4. **Analysis & Insights**
-   - Patterns and trends observed
-   - Implications and significance
-
-5. **Recommendations** (if applicable)
-   - Actionable next steps
-   - Areas for further research
-
-6. **References**
-   - Numbered list of sources cited
-
-## Guidelines:
-- Write in clear, professional language
-- Use Markdown formatting (headers, lists, bold, links)
-- Be objective and evidence-based
-- Cite sources using [n] notation
-- Keep the report focused and concise (500-1500 words)
-- Write in the same language as the research topic`,
+    // c49: shared REPORT_SYSTEM_PROMPT (was inline duplicate; now both paths use one constant)
+    system: REPORT_SYSTEM_PROMPT,
     prompt: `Topic: ${state.topic}\n\nResults:\n${context}\n\nWrite a detailed report following the structure above.`,
   });
 
@@ -631,6 +702,61 @@ function loadLatestUserInput(sessionId: number): { action: string; plan?: Search
   if (!action) return null;
   const plan = data.plan as SearchPlan | undefined;
   return { action, plan };
+}
+
+/**
+ * c49: restore the in-flight search plan from persisted steps (v1
+ * `_extract_plan_from_steps`, graph.py:945-972). Prefers a user-modified plan
+ * for the target iteration, falls back to the latest generated PLAN step.
+ */
+function extractPlanFromSteps(sessionId: number, iteration: number): SearchPlan | null {
+  const steps = db()
+    .select()
+    .from(researchSteps)
+    .where(eq(researchSteps.sessionId, sessionId))
+    .orderBy(researchSteps.id)
+    .all()
+    .filter((s) => s.iteration === iteration);
+
+  // Prefer user-modified plan (reversed = latest first)
+  for (let i = steps.length - 1; i >= 0; i--) {
+    const s = steps[i]!;
+    if (s.type === 'user_input' && s.inputData && typeof s.inputData === 'object') {
+      const data = s.inputData as Record<string, unknown>;
+      if (data.action === 'modify' && typeof data.plan === 'object') {
+        const plan = parseSearchPlan(data.plan as Record<string, unknown>);
+        if (plan) return plan;
+      }
+    }
+  }
+  // Fall back to latest PLAN step output
+  for (let i = steps.length - 1; i >= 0; i--) {
+    const s = steps[i]!;
+    if (s.type === 'plan' && s.outputData && typeof s.outputData === 'object') {
+      const plan = parseSearchPlan(s.outputData as Record<string, unknown>);
+      if (plan) return plan;
+    }
+  }
+  return null;
+}
+
+/** Parse a persisted plan payload into a SearchPlan (defensive). */
+function parseSearchPlan(payload: Record<string, unknown>): SearchPlan | null {
+  const queries = Array.isArray(payload.queries) ? payload.queries : [];
+  const parsed = queries
+    .filter((q): q is Record<string, unknown> => typeof q === 'object' && q !== null)
+    .map((q) => ({
+      query: typeof q.query === 'string' ? q.query : '',
+      engine: typeof q.engine === 'string' ? q.engine : 'Web',
+      priority: typeof q.priority === 'number' ? q.priority : 1,
+      reason: typeof q.reason === 'string' ? q.reason : '',
+    }))
+    .filter((q) => q.query.length > 0);
+  if (parsed.length === 0) return null;
+  return {
+    queries: parsed,
+    reasoning: typeof payload.reasoning === 'string' ? payload.reasoning : '',
+  };
 }
 
 /**

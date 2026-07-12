@@ -598,16 +598,22 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     ].join('\n');
 
     if (export_type === 'note') {
-      // Create an Output record (v1 api.py:1431-1463)
+      // c49: create an Output with type=STRUCTURED + v1 content shape
+      // (v1 api.py:1434-1448: type=OutputType.STRUCTURED, content={title,text,metadata})
       const output = db()
         .insert(outputs)
         .values({
           notebookId: row.notebookId,
-          type: 'BRIEFING',
+          type: 'STRUCTURED',
           prompt: `research:${id}`,
           content: {
             title: `研究报告：${row.topic}`,
-            sections: [{ heading: '报告', points: [{ text: row.finalReport }] }],
+            text: row.finalReport,
+            metadata: {
+              research_id: id,
+              research_topic: row.topic,
+              export_timestamp: timestamp,
+            },
           },
         })
         .returning()
@@ -692,6 +698,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     return new ReadableStream({
       start(controller) {
         let lastStepId = 0;
+        let lastStatus: string | null = null;
         let closed = false;
         const encoder = new TextEncoder();
 
@@ -717,7 +724,22 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
               .get();
             if (!current) break;
 
-            // Emit status changes
+            // c49: emit `status` event on every status transition (v1 api.py:1037-1058).
+            // Before c49 the poll only derived events from new step rows, so pure
+            // status transitions (planning→waiting_user→searching) were invisible.
+            if (current.status !== lastStatus) {
+              const prev = lastStatus;
+              lastStatus = current.status;
+              emit('status', {
+                type: 'status',
+                status: current.status,
+                previous: prev,
+                iteration: current.currentIteration,
+                message: statusMessage(current.status),
+              });
+            }
+
+            // Emit step-derived events
             const steps = db()
               .select()
               .from(researchSteps)
@@ -781,7 +803,54 @@ function deriveNamedEvent(step: typeof researchSteps.$inferSelect): {
     case 'summary':
       return { event: 'report', data: { ...base, type: 'report' } };
     default:
-      return { event: 'thinking', data: { iteration: step.iteration, type: 'thinking' } };
+      // c49: rich thinking — carry the step's output as a message so frontends
+      // can show reasoning/insight text instead of an empty thinking event
+      // (v1 api.py:1102-1186 emits per-step thinking with message text).
+      return {
+        event: 'thinking',
+        data: {
+          iteration: step.iteration,
+          type: 'thinking',
+          step_type: step.type,
+          message: thinkingMessageForStep(step),
+          data: step.outputData,
+        },
+      };
+  }
+}
+
+/**
+ * c49: derive a human-readable thinking message from a step (v1 api.py:1102-1186
+ * emits rich thinking per step). Pulls summary/reasoning from outputData when
+ * present, falls back to a type-based label.
+ */
+function thinkingMessageForStep(step: typeof researchSteps.$inferSelect): string {
+  const out = step.outputData as Record<string, unknown> | null;
+  if (out && typeof out.summary === 'string') return out.summary;
+  if (out && typeof out.reasoning === 'string') return out.reasoning;
+  return step.type || '思考中';
+}
+
+/**
+ * c49: localized status messages (v1 api.py:1044-1050 status_messages map).
+ * Surface a human-readable description of each status transition.
+ */
+function statusMessage(status: string): string {
+  switch (status) {
+    case 'planning':
+      return '正在规划搜索策略';
+    case 'waiting_user':
+      return '等待用户审批搜索计划';
+    case 'searching':
+      return '正在执行搜索';
+    case 'analyzing':
+      return '正在分析结果并生成报告';
+    case 'completed':
+      return '研究完成';
+    case 'cancelled':
+      return '研究已取消';
+    default:
+      return status;
   }
 }
 
