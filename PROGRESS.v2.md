@@ -53,7 +53,7 @@
 | c46 | parsers-research       | ✅ DONE (CSV markdown-table parser/report富prompt/AI失败fallback/lock续期/dedup增强)         |
 | c47 | analysis-relations-knn | ✅ DONE (本会话: relations 回归 KNN/score=1-distance/topics去ghost/RelationType→shared)       |
 | c48 | qa-determinism-export  | ✅ DONE (本会话: multiQuery确定性/stats preset/ContextStats真token/export page·para+sources) |
-| c49 | research-dedup-report-sse | 🔄 提案 (本会话: 跨迭代dedup/双report prompt/SSE status·thinking/resume plan/note类型)   |
+| c49 | research-dedup-report-sse | ✅ DONE (本会话: 跨迭代dedup/双report 6段prompt/SSE status·thinking/resume plan/note STRUCTURED) |
 | c50 | outputs-slides-guard   | 🔄 提案 (本会话: SLIDES 400守卫/source_id校验/citation sanitize/LLM repair loop)            |
 | c51 | studio-response-shape  | 🔄 提案 (本会话: serializeSlide字段/SSE done+toolcall/outputId FK/stale清理)                |
 | c52 | models-sessions-parity | 🔄 提案 (本会话: providers envelope/provider过滤/message_ids/convert文本格式)              |
@@ -149,7 +149,7 @@
 
 <!-- CURRENT -->
 
-**2026-07-12 第四轮深度复核 + c47–c53 提案 + c47/c48 实现+归档。1 P0 (analysis relations) + 5×P1 (qa) 清零，5 个 P1 批次提案待实现。**
+**2026-07-12 第四轮深度复核 + c47–c53 提案 + c47/c48/c49 实现+归档。1 P0 (analysis relations) + 10×P1 (qa + research) 清零，4 个 P1 批次提案待实现。**
 
 ### 复核方法
 
@@ -171,7 +171,7 @@
 | ------ | -- | ------ | ---- | ---- |
 | **c47** | analysis | **P0** | relations 回归 KNN（暴力cosine→searchVectors）+ score=1-distance + topics去ghost + RelationType→shared | ✅ DONE + archived |
 | **c48** | qa | 5×P1 | multiQuery确定性 + stats preset + ContextStats真token + export page/para + sources shape | ✅ DONE + archived |
-| c49 | research | 5×P1 | 跨迭代dedup + 双report prompt统一 + SSE status/thinking + resume plan + note类型 | 🔄 提案 |
+| **c49** | research | 5×P1 | 跨迭代dedup + 双report 6段prompt统一 + SSE status/thinking + resume plan + note STRUCTURED | ✅ DONE + archived |
 | c50 | outputs | 4×P1 | SLIDES 400守卫 + source_id校验 + citation sanitize + LLM repair loop | 🔄 提案 |
 | c51 | studio | 5×P1 | serializeSlide字段 + SSE done/toolcall + outputId FK + stale清理 | 🔄 提案 |
 | c52 | models+sessions | 5×P1 | providers envelope + provider过滤 + message_ids + convert文本格式 | 🔄 提案 |
