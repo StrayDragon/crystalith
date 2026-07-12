@@ -134,8 +134,8 @@ export const analysisRouter = new Elysia({ prefix: '/v2' }).post('/analysis', as
   // Phase 1: Topic clustering (embedding vectors)
   const topics = clusterTopics(vectorEntries);
 
-  // Phase 2: Relation detection (embedding cosine similarity)
-  const relations = detectRelations(vectorEntries, notebookId);
+  // Phase 2: Relation detection (per-entry vector KNN, c47 — v1 parity)
+  const relations = await detectRelations(vectorEntries, notebookId, db());
 
   // Phase 3: Contradiction detection (LLM pairwise on top similar pairs)
   const contradictions = await detectContradictions(relations, chunkTextMap);
@@ -156,8 +156,10 @@ export const analysisRouter = new Elysia({ prefix: '/v2' }).post('/analysis', as
 
   // Primary response matches v1 AnalysisResult (types.py) + shared AnalysisResultSchema:
   // chunk-level snake_case edges. LLM narrative is additive under `narrative`.
-  const topicByName = new Map(topics.map((t) => [t.name, t]));
-  const mergedTopics = topics.map((t) => {
+  // c47: `topics` MUST carry non-empty chunk_ids from real clustering; LLM-only
+  // topics (no matching cluster) go under `narrative.topics`, not `topics`.
+  const computedTopicNames = new Set(topics.map((t) => t.name));
+  const topicsResult = topics.map((t) => {
     const llm = object.topics.find((lt) => lt.name === t.name);
     return {
       id: t.id,
@@ -167,18 +169,14 @@ export const analysisRouter = new Elysia({ prefix: '/v2' }).post('/analysis', as
       summary: llm?.summary,
     };
   });
-  // Include any LLM-only topics that didn't match computed clusters
-  for (const lt of object.topics) {
-    if (!topicByName.has(lt.name)) {
-      mergedTopics.push({
-        id: `llm-${lt.name}`,
-        name: lt.name,
-        chunk_ids: [],
-        keywords: lt.keywords,
-        summary: lt.summary,
-      });
-    }
-  }
+  // LLM-only topics (no matching computed cluster) → narrative, not topics.
+  const llmOnlyTopics = object.topics
+    .filter((lt) => !computedTopicNames.has(lt.name))
+    .map((lt) => ({
+      name: lt.name,
+      keywords: lt.keywords,
+      summary: lt.summary,
+    }));
 
   const toApiRelation = (r: (typeof relations)[number]) => ({
     source_chunk_id: r.sourceChunkId,
@@ -188,11 +186,12 @@ export const analysisRouter = new Elysia({ prefix: '/v2' }).post('/analysis', as
   });
 
   return {
-    topics: mergedTopics,
+    topics: topicsResult,
     relations: relations.map(toApiRelation),
     contradictions: contradictions.map(toApiRelation),
     summary: object.summary,
     narrative: {
+      topics: llmOnlyTopics,
       relations: object.relations,
       contradictions: object.contradictions,
     },
