@@ -1,0 +1,9 @@
+kind: llman.sdd.delta
+ops[3]{op,req_id,title,statement,from,to,name}:
+  add_requirement,studio-serialize-must-include-output-id-and-config,"Studio slide serialization MUST include output_id and generation_config","studio slide 序列化（serializeSlide）MUST 返回 output_id 与 generation_config 字段（对齐 v1 SlideDraftRead, api.py:76-94），当前 v2 router.ts:51-67 两者都缺；前端读 output_id 做 slide→output 跳转、读 generation_config 复用配置时会拿到 undefined",null,null,null
+  add_requirement,studio-sse-done-payload-must-carry-trace-id,"Studio SSE done event MUST carry trace_id and slide_id (not full slide)","studio SSE 的 done 事件 payload MUST 为 {trace_id, slide_id}（对齐 v1 api.py:428 与 538），MUST NOT 直接序列化整个 slide（当前 router.ts:218 与 240 emit('done', serializeSlide(...))）；且所有 SSE 事件 SHALL 携带 trace_id 以支持关联/可观测性（当前 v2 完全无 trace_id）",null,null,null
+  add_requirement,studio-sse-must-emit-toolcall-event,"Studio SSE MUST emit toolcall event before each generation stage","studio SSE SHALL 在 outline/markdown 各生成阶段前发 toolcall 事件（对齐 v1 api.py:401 slides_generate_outline, api.py:506 slides_generate_markdown），当前 v2 完全不发 toolcall；前端依赖此事件做工具调用展示/埋点时会缺失",null,null,null
+op_scenarios[3]{req_id,id,given,when,then}:
+  studio-serialize-must-include-output-id-and-config,read-output-id,"前端读 slide.output_id 做 slide→output 跳转","系统返回 slide","serializeSlide SHALL 包含 output_id（含 null）与 generation_config 字段"
+  studio-sse-done-payload-must-carry-trace-id,sse-done-trace,"SSE 流结束","系统发 done 事件","done payload SHALL 为 {trace_id, slide_id}，所有事件 SHALL 带 trace_id"
+  studio-sse-must-emit-toolcall-event,sse-toolcall,"outline/markdown 生成阶段开始前","系统推送 SSE","SHALL 发 toolcall 事件（slides_generate_outline / slides_generate_markdown）"

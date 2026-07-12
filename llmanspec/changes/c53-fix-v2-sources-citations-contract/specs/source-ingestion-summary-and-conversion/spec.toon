@@ -1,0 +1,9 @@
+kind: llman.sdd.delta
+ops[3]{op,req_id,title,statement,from,to,name}:
+  add_requirement,qa-to-source-must-accept-multi-turn-messages,"qa-to-source conversion MUST accept multi-turn messages list (not single-turn pair)","qa-to-source 转换 MUST 接受 messages: list[QAMessage] 多轮历史并格式化为完整 transcript（对齐 v1 api.py:186-209 与 204-209），MUST NOT 只接受单轮 {question, answer}；当前 v2 source-extras.router.ts:228-231 只接受单轮，多轮 QA 历史无法转换。c44 tasks 明确 deferral",null,null,null
+  add_requirement,tag-binding-must-return-per-item-diagnostics,"Tag assign/remove MUST return per-item results with error_code","tag 批量 assign/remove MUST 返回 per-item 结果 {source_id, ok, message, error_code}（对齐 v1 api_tags.py:142-185 与 180-184 的 SourceBatchItemResult 列表），缺失 source SHALL 报 SOURCE_NOT_FOUND 而非静默 continue；当前 v2 router.ts:461 与 488 只返回 {applied, skipped} 计数，router.ts:447 缺失 source 静默 continue。消费方拿不到 per-item 诊断",null,null,null
+  add_requirement,csv-parser-must-escape-cells,"CSV parser MUST escape pipes and newlines in markdown-table cells","CSV parser MUST 转义 markdown-table 单元格中的 |（转义为 \\|）、换行（转义）、截断用 … 省略号（对齐 v1 csv.py:61-67）；当前 v2 parsers/csv.ts:64-67 与 70-76 不转义 pipe/换行且用 ...（三个点）。含 | 或换行的单元格会破坏 v2 产出的 markdown table",null,null,null
+op_scenarios[3]{req_id,id,given,when,then}:
+  qa-to-source-must-accept-multi-turn-messages,multi-turn-convert,"客户端发送多轮 messages 历史","系统执行 qa-to-source","SHALL 格式化完整 transcript 并转换（与 v1 一致）"
+  tag-binding-must-return-per-item-diagnostics,tag-binding-missing-source,"批量 assign 中某 source_id 不存在","系统返回结果","SHALL 在 results 里报 {source_id, ok:false, error_code:SOURCE_NOT_FOUND}（非静默跳过）"
+  csv-parser-must-escape-cells,csv-cell-with-pipe,"CSV 单元格含 | 字符","parser 产出 markdown-table","SHALL 转义为 \\|（不破坏 table 结构）"

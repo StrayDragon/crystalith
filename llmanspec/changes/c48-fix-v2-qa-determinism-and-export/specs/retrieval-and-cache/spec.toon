@@ -1,0 +1,5 @@
+kind: llman.sdd.delta
+ops[1]{op,req_id,title,statement,from,to,name}:
+  add_requirement,qa-retrieval-must-be-deterministic,"QA retrieval MUST be deterministic single-embed (no multi-query expansion)",QA 检索 MUST 使用确定性单次 embed 检索路径（与 v1 service.py:319-327 单次 embed_batch + 单次 cached_vector_search 对齐），MUST NOT 在 QA 检索路径硬编码 multiQuery:true（当前 retrieve-and-judge.ts:139 违反此约束，会经 multi-query seed 扩张 + RRF fusion 改变边集与 score 语义）,null,null,null
+op_scenarios[1]{req_id,id,given,when,then}:
+  qa-retrieval-must-be-deterministic,deterministic-retrieval,"同一 question + 同一组 source_ids + 同一 embedding","系统执行 QA 检索两次","两次产出 SHALL 完全一致（无 seed 扩张、无 RRF 归一化），且与 v1 单次 embed 路径产出可比"
