@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "workspace-api-contract"
 purpose: 定义前后端协作所依赖的稳定 API 契约：版本前缀、错误信封、核心端点稳定字段与 SSE 事件最小形状。
 valid_scope[2]: src/,tests/
-requirements[26]{req_id,title,statement}:
+requirements[34]{req_id,title,statement}:
   r1,API major version prefix is stable,对外 API MUST 使用 `/v1` 前缀；同一 major 内保持兼容。
   r2,"Optional API key authentication is supported for self-host","自托管部署 MUST 支持可选的 API key 鉴权基线：当配置了鉴权密钥时，所有 `/v1/**` 端点 MUST 要求 `Authorization: Bearer <token>`（或等价 API key 头）；未配置密钥时系统 MAY 允许匿名访问以保持本地开发低摩擦。"
   r3,"Non-SSE errors use unified envelope","非 SSE 错误响应 MUST 使用统一结构：`error_code`, `message`, `details?`, `retry_after?`。"
@@ -29,7 +29,15 @@ requirements[26]{req_id,title,statement}:
   "sessions-convert-must-honor-message-ids","Sessions convert-to-source and convert-to-output MUST honor message_ids filter","sessions 的 convert-to-source 与 convert-to-output MUST 接受 message_ids 过滤（对齐 v1 api.py:34-41 与 51-57 与 257-268 与 417-428）：仅转换指定消息，缺失 id 时 404；当前 v2 router.ts:185（convert-to-source）无 request body schema、总是转换所有消息，router.ts:298（convert-to-output）只读 output_type 不读 message_ids。多轮历史无法选择性转换"
   "sessions-convert-text-format-must-align-v1",Sessions convert text format MUST match v1 role labels and separators,"sessions convert 的文本格式 MUST 对齐 v1：(1) convert-to-source 用中文角色标签 **用户**:/**助手**: + \\n\\n 分隔（v1 api.py:110-123），当前 v2 router.ts:203-208 用英文 **Assistant**:/**User**: + \\n\\n---\\n\\n。(2) convert-to-output 用 raw 文本（无角色前缀，v1 text_format=raw, api.py:438），当前 v2 router.ts:314-319 加 [Assistant]/[User] 前缀。跨版本导出内容 diff 噪音"
   "models-response-default-shape-must-align-v1","Models response MUST put defaults on envelope (not inline per-model) for list endpoint","models 列表端点 MUST 把 default_chat/default_embedding 放在 envelope 顶层（对齐 v1 api.py:42-43 与 96-97），GET single 不返回 default 信息（对齐 v1 get_model 返回裸 ModelRead）；当前 v2 router.ts:53-54 给每个 model 挂 is_default_chat/is_default_embedding，GET single 也内联默认标记，与 v1 契约不一致"
-scenarios[34]{req_id,id,given,when,then}:
+  "qa-export-endpoint",API MUST provide QA export endpoint,系统 MUST 提供 QA 导出端点支持 markdown 和 json 两种格式
+  "qa-sse-done-shape",QA done SSE event MUST include evidence and context fields,QA 流式 done 事件 MUST 包含 evidence 和 context 和 created_at 字段
+  "qa-response-confidence-field","QA non-streaming response MUST include confidence and evidence",QA 非流式响应 MUST 在 body 中包含 confidence 和 evidence 字段
+  "research-resume-infer-state",Resume MUST infer state from persisted steps,research resume 端点 MUST 通过检查已持久化的 steps 推断恢复状态和迭代号，而非强制从头重跑
+  "research-control-actions-record-steps",Control endpoints MUST record steps and resume,research 的 approve/modify/skip/finish/cancel 端点 MUST 记录对应的 user_input step 并确保后台 resume
+  "research-finish-generates-report",Finish MUST trigger report generation,research finish 端点 MUST 在标记 COMPLETED 后触发最终报告生成并持久化
+  "research-delete-endpoint",API MUST provide research delete endpoint,系统 MUST 提供 research 删除端点，在删除前取消运行中的研究
+  "research-sse-named-events",Research SSE MUST emit named events,"research 流式端点 MUST 发送带 event: 字段的命名 SSE 事件"
+scenarios[42]{req_id,id,given,when,then}:
   r1,"client-targets-stable-major-prefix","",客户端调用对外 API,端点 SHALL 使用 `/v1` 前缀且在同一 major 内保持兼容
   r2,"auth-enabled-requires-bearer-token-for-v1","",运维启用鉴权并配置了 API key,客户端请求任意 `/v1/**` 端点若未携带有效 token SHALL 返回 401
   r2,"health-endpoints-remain-accessible-without-auth","",运维启用鉴权并配置了 API key,`/health` 与 `/health/dependencies` SHALL 保持匿名可访问以支持探活与运维诊断
@@ -64,3 +72,11 @@ scenarios[34]{req_id,id,given,when,then}:
   "sessions-convert-must-honor-message-ids","convert-subset","客户端传 message_ids=[1,3] 转换","系统执行 convert-to-source/output",SHALL 仅转换消息 1 与 3；缺失 id → 404
   "sessions-convert-text-format-must-align-v1","convert-text-format",用户转换 session 为 source/output,系统生成文本,"source 用中文角色标签 + \\n\\n；output 用 raw 文本（与 v1 一致）"
   "models-response-default-shape-must-align-v1","defaults-envelope",前端读 GET /models 的默认 model,系统返回 list,default_chat/default_embedding SHALL 在 envelope 顶层（非每 model 内联）
+  "qa-export-endpoint","markdown-export",一个 session 有 assistant 回答,客户端请求 GET /v2/qa/export?session_id=X&format=markdown,"系统 SHALL 返回 text/markdown 内容含 question/answer/citations 三段结构及 Content-Disposition header"
+  "qa-sse-done-shape","done-event-fields",QA 流式完成,done 事件发出,事件 payload SHALL 包含 evidence 和 context 和 created_at 和 confidence 和 citations 和 message_id
+  "qa-response-confidence-field","non-streaming-response",客户端发送非流式 QA 请求,响应返回,响应 body SHALL 包含 confidence 和 evidence 字段
+  "research-resume-infer-state","resume-after-search",研究在第 2 轮搜索后中断,用户调 resume,系统 SHALL 推断 SEARCHING 状态和 iteration=2，从断点恢复而非重跑
+  "research-control-actions-record-steps","skip-action",研究在 WAITING_USER 等待用户决策,用户调 skip,系统 SHALL 记录 skip step 并推进 iteration 然后恢复
+  "research-finish-generates-report","finish-with-results",研究积累了多轮搜索结果,用户调 finish,系统 SHALL 生成最终报告并存入 finalReport 字段
+  "research-delete-endpoint","delete-running",研究正在运行,用户调 delete,系统 SHALL 先取消运行中的研究再删除记录
+  "research-sse-named-events","plan-ready-event",研究生成了搜索计划,SSE 流发出 plan_ready,"事件 SHALL 包含 event: plan_ready 行"

@@ -2,11 +2,13 @@ kind: llman.sdd.spec
 name: "bdd-test-harness"
 purpose: 定义 Crystalith v2 的中文 BDD 端到端测试体系：基于 @cucumber/gherkin 的轻量 runner + bun test 桥接，移植 v1 的中文 .feature 场景，覆盖 API 端点行为回归。
 valid_scope[2]: src/,tests/
-requirements[3]{req_id,title,statement}:
+requirements[4]{req_id,title,statement}:
   r1,中文 BDD 测试解析器,"MUST 提供基于 @cucumber/gherkin 的 BDD 测试 runner，MUST 支持 # language: zh-CN 的 .feature 文件解析，MUST 与 bun test 集成。"
   r2,v1 Feature 文件移植,MUST 移植 17 个 .feature 文件从 backend/py/tests/bdd/features/，MUST 仅修改路径前缀 /v1 到 /v2，MUST 保持中文场景描述不变。
   r3,端到端回归门禁,"MUST 将 BDD 测试加入 pre-commit 门禁，MUST 覆盖全部 16 个功能域的 API 端点行为。"
-scenarios[3]{req_id,id,given,when,then}:
+  r_integration_tests,"Cross-module integration test suite",系统 MUST 提供 AI SDK mock 驱动的集成测试套件 覆盖 QA 与 sources 与 refine 与 outputs 与 research 与 studio 全流程 作为 v2 发布质量门禁
+scenarios[4]{req_id,id,given,when,then}:
   r1,s1,"Gherkin .feature 文件使用 # language: zh-CN 声明",运行 bun test tests/bdd/,系统解析中文 功能/场景/假如/当/那么 关键词，生成对应的 test() block
   r2,s2,17 个 .feature 文件已从 v1 复制,运行 apps/server/tests/bdd/features/ 下的测试,所有场景的 API 路径为 /v2/ 前缀，与原 v1 行为一致
   r3,s3,核心 CRUD 域 (notebooks/sessions/messages/tasks/workspace) 的 feature 已注册,运行 bun test tests/bdd/,核心域全绿 (21 pass / 0 fail)；LLM 依赖域在白名单中 skip 不产生 fail
+  r_integration_tests,qa_full_flow,mock AI 与向量库就绪,运行 qa 集成测试,系统 SHALL 完成检索与生成与置信度与 citations 全流程断言通过

@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "source-ingestion-upload-and-url"
 purpose: 定义通过上传文件与 URL 创建来源的契约：格式支持、校验、异常语义、网页抓取安全与提取器策略。该规范强调输入错误可预测且安全默认值优先，避免在抓取路径引入 SSRF 风险。
 valid_scope[2]: src/,tests/
-requirements[14]{req_id,title,statement}:
+requirements[16]{req_id,title,statement}:
   r1,Upload endpoint returns created source on success,上传成功 MUST 返回 201 与来源对象；失败语义区分 400/415/500。
   r2,"Supported formats are parser-driven",支持类型 MUST 由 parser 能力决定；无匹配 parser 的文件 MUST 返回 415 且不创建来源。
   r3,上传端点必须保留受支持写作工具的 Markdown 语义,对于标准 Markdown 上传，系统 MUST 在进入 `chunk / embed / store` 之前执行语义预处理，以兼容常见写作工具的 Markdown 扩展语法，并将可提取的文档元数据写入 source metadata。
@@ -17,7 +17,9 @@ requirements[14]{req_id,title,statement}:
   r12,Extractor selection errors are diagnosable,当用户在 fetch 模式显式指定某 extractor 但其不可用（未安装/禁用/依赖缺失/服务不可达）时，系统 MUST 返回稳定错误语义或按策略回退；无论哪种路径，系统 MUST 输出可诊断信息说明发生了什么与如何恢复。
   "sources-search-web",Sources search MUST perform real web search,POST /sources/search MUST 调用 web search 引擎（SearXNG）返回真实 web 结果，MUST NOT 返回 notebook 内向量匹配作为 placeholder
   "sources-dedup-config-gated",Dedup MUST be gated by config,sources 去重 MUST 受 config source_ingestion.dedup.enabled 门控，为 false 时 MUST 跳过 dedup 直接创建新 source
-scenarios[16]{req_id,id,given,when,then}:
+  r_ssrf_config,SSRF policy driven by config,系统 MUST 从配置解析 hostAllowlist 与 domainAllowlist 与 cidrAllowlist 与 allowlist_only 为 SsrfPolicy 并应用于 URL fetch 校验。无配置时 MUST 回退默认姿态 (拒绝私网与元数据 IP)。
+  r_upload_size_config,Upload size limit configurable,系统 MUST 从配置读取上传大小上限。无配置时 MUST 默认 50MB。
+scenarios[18]{req_id,id,given,when,then}:
   r1,"upload-success-returns-created-source","",用户上传一个可解析且可索引的文件,系统 SHALL 返回 201 与创建的来源对象
   r2,"unsupported-format-is-rejected","",用户上传一个无匹配 parser 的文件,系统 SHALL 返回 415 且不创建来源
   r3,"上传-obsidian-风格-wikilink-时进行标准化","","用户上传一个 `.md` / `text/markdown` 文件，内容包含 `[[page]]` 或 `[[page|alias]]`",系统 SHALL 将其转换为标准 Markdown 链接文本后再进行 chunking
@@ -34,3 +36,5 @@ scenarios[16]{req_id,id,given,when,then}:
   r12,"preferred-extractor-unavailable-is-explained","",用户指定 `preferred_extractor=X` 但 X 不可用,系统 SHALL 返回明确的不可用原因（或在回退后返回回退链路的诊断信息）
   "sources-search-web","client-searches",客户端请求 /sources/search 带查询词,搜索执行,系统 SHALL 返回 web search 结果而非 notebook 内向量匹配
   "sources-dedup-config-gated","dedup-disabled",config dedup.enabled=false,上传重复内容 source,系统 SHALL 跳过 dedup 直接创建新 source
+  r_ssrf_config,allowlist_only_blocks,配置了 allowlist_only=true 且 hostAllowlist 含 trusted.com,用户从非白名单主机 fetch URL,系统 SHALL 拒绝该 fetch
+  r_upload_size_config,over_limit_rejected,配置上传上限 10MB,用户上传 20MB 文件,系统 SHALL 拒绝 (413)

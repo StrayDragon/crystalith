@@ -2,15 +2,19 @@ kind: llman.sdd.spec
 name: "cross-type-result-transformations"
 purpose: 支持有限、明确、可解释的跨类型结果演化路径：从已有结果触发转换，保留 lineage 与映射边界（保留/重建），并在不支持的路径上回退为重新生成，避免“万物互转”的脆弱承诺。
 valid_scope[2]: src/,tests/
-requirements[5]{req_id,title,statement}:
+requirements[7]{req_id,title,statement}:
   r1,系统必须显式声明受支持的跨类型转换路径,系统 MUST 以显式能力清单声明受支持的跨类型转换路径，而不是暗示任意类型都可互转。
   r2,跨类型转换必须保留 lineage 与映射边界,系统 MUST 记录跨类型转换的 lineage，并明确保留与丢弃边界。
   r3,不受支持的路径必须回退为重新生成,系统 MUST 在不支持直接转换的情况下回退为重新生成，而不是提供不可靠的伪转换。
   r4,系统必须提供显式的转换动作并返回新结果,系统 MUST 提供显式的跨类型转换动作，并在成功时返回一个新的结果对象与可追溯的转换记录。
   r5,转换请求与结果元数据必须显式表达目标类型与映射摘要,系统 MUST 在转换请求与结果元数据中显式表达目标类型，并提供可理解的映射摘要（保留/重建边界）用于 UI 展示。
-scenarios[5]{req_id,id,given,when,then}:
+  "session-get-single",API MUST provide GET single session,系统 MUST 提供 GET 单个 session 端点返回完整 session 信息
+  "session-convert-citation-chunks","Session convert-to-output MUST collect chunk_ids from citations","session convert-to-output MUST 从消息 citations 中收集 chunk_ids 并附加到创建的 output"
+scenarios[7]{req_id,id,given,when,then}:
   r1,用户查看某个结果可执行的转换动作,"",用户查看一个已有结果,系统 SHALL 只展示该结果受支持的转换路径
   r2,用户将一种结果转换为另一种类型,"",用户执行一次受支持的跨类型转换,系统 SHALL 记录来源结果与目标结果之间的 lineage
   r3,用户尝试执行未定义的转换路径,"",用户请求一个未被支持的跨类型转换,系统 SHALL 明确提示该路径不受支持
   r4,用户执行一次受支持的转换,"",用户从某个结果发起一次受支持的跨类型转换,系统 SHALL 生成目标类型的新结果对象
   r5,"ui-展示转换预期","",用户在执行转换前查看该转换的影响,系统 SHALL 能提供该 route 的保留/重建摘要
+  "session-get-single","fetch-session",一个 session 存在,客户端请求 GET 单个 session,系统 SHALL 返回该 session 的完整信息
+  "session-convert-citation-chunks","convert-with-citations",session 消息含 citations,"convert-to-output 调用",系统 SHALL 从 citations 收集 chunk_ids 附加到 output

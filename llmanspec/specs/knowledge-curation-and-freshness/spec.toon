@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "knowledge-curation-and-freshness"
 purpose: 为长期知识库提供治理信号与维护建议：freshness（新鲜度/过时风险）、duplicate candidates（重复候选）、maintenance suggestions（维护建议）与显式动作（ignore/re_ingest/re_embed/review），避免知识库随时间劣化。
 valid_scope[2]: src/,tests/
-requirements[11]{req_id,title,statement}:
+requirements[15]{req_id,title,statement}:
   r1,来源对象必须暴露 freshness 信号,系统 MUST 为接入后的来源对象提供 freshness 信号，以支持长期维护。
   r2,系统必须提供重复候选而不是自动合并,系统 MUST 以候选形式呈现重复内容判断，而不是直接自动合并对象。
   r3,维护建议必须显式触发后续动作,系统 MUST 将维护建议与后续动作解耦，避免治理信号直接隐式改写来源状态。
@@ -14,7 +14,11 @@ requirements[11]{req_id,title,statement}:
   "research-sse-must-emit-status-and-thinking",Research SSE MUST emit status events and rich thinking payloads like v1,"research SSE 事件流 MUST 对齐 v1 覆盖度：(1) SHALL 在每次状态转换时发 status 事件（v1 api.py:1037-1058）；当前 v2 完全不发 status。(2) SHALL 发富 thinking 事件（状态消息 api.py:1044-1050、迭代变更 1060-1071、每步 reasoning/insight/decision 1102-1186）；当前 v2 把非 plan/search/analyze/summary 步骤塌缩成无消息的 thinking（router.ts:783-785）。前端依赖 status/thinking 维护 UI 状态时会回归"
   "research-resume-must-restore-plan","Research resume MUST restore the in-flight search plan and start node","research resume（runResearchFromState）MUST 还原暂停时的 search_plan 与起始节点：(1) SHALL 从持久化 steps 还原 search_plan（v1 _extract_plan_from_steps, graph.py:945-972 与 1009）；当前 agent.ts:502-526 只还原 iteration+results，总是重新 planSearches。(2) SHALL 支持 start-node 选择（v1 _start_node_for_status, graph.py:1013-1028）使 waiting_user/searching 状态跳过重规划直接进入 WaitForApproval/ExecuteSearches。否则 resume 一个 waiting_user 会话会重新生成 plan 而非展示用户即将审批的那个"
   "research-export-note-must-use-structured-type",Research export note MUST use STRUCTURED output type with v1 content schema,"research export 的 note 类型 MUST 用 OutputType=STRUCTURED + content={title, text, metadata}（v1 api.py:1434-1448），MUST NOT 用 BRIEFING + {title, sections:[{heading, points}]}（当前 router.ts:606-611）。两者 type 与 content schema 均不兼容，跨版本不可比"
-scenarios[12]{req_id,id,given,when,then}:
+  r_tool_approval,Research HITL via toolApproval,"研究智能体 MUST 使用 AI SDK v7 toolApproval user-approval 实现事件驱动审批 替代 DB 轮询"
+  r_resume_with_state,Research resume preserves state,研究 resume MUST 从 aggregatedResults 与 currentIteration 重建 ResearchState 而非从空结果重跑
+  r_export_to_source,Research export creates source,研究 export MUST 将 report 经 chunk 与 embed 与 vector 写入并创建 source 而非仅返回原始 JSON
+  r_modify_action,Research HITL modify action,研究 MUST 支持 modify 动作 接受修改后的 SearchPlan 记录 step 并 resume
+scenarios[16]{req_id,id,given,when,then}:
   r1,用户查看某个来源是否过旧,"",用户查看已接入的来源对象,系统 SHALL 能返回该对象的 freshness 状态或提示
   r2,系统发现高相似来源,"",系统识别出可能重复的来源对象,系统 SHALL 返回 duplicate candidates
   r3,用户处理维护建议,"",用户收到某个来源的维护建议,系统 SHALL 明确该建议对应的可选动作
@@ -27,3 +31,7 @@ scenarios[12]{req_id,id,given,when,then}:
   "research-sse-must-emit-status-and-thinking","sse-status-event",research 状态从 planning 转 waiting_user,SSE 流推送事件,SHALL 发 status 事件；前端 SHALL 能据 status 更新 UI 状态
   "research-resume-must-restore-plan","resume-with-plan",session 处 waiting_user 且有未审批 plan,客户端触发 resume,SHALL 展示原 plan（而非重新生成）；SHALL 跳过重规划直接进入 WaitForApproval
   "research-export-note-must-use-structured-type","export-note",用户导出 research 为 note 类型,系统创建 Output,"Output.type SHALL 为 STRUCTURED + content={title,text,metadata}（与 v1 一致）"
+  r_tool_approval,no_db_polling,研究运行至 plan 阶段,agent 等待用户审批,系统 SHALL 通过 toolApproval 事件而非 DB 轮询阻塞
+  r_resume_with_state,resume_keeps_results,研究已积累结果后取消,用户请求 resume,系统 SHALL 从上次 iteration 与累积结果续接
+  r_export_to_source,export_creates_source,研究完成有 final report,用户请求 export,系统 SHALL 创建 source 并 chunk 与 embed 写入
+  r_modify_action,modify_then_resume,研究等待审批,用户提交修改后的 plan,系统 SHALL 记录修改并 resume 执行新 plan
