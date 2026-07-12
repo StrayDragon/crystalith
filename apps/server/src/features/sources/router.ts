@@ -16,7 +16,12 @@ import {
 import { deleteSourceVectors } from '../../db/vectors.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
-import { config, getDedupEnabled, getSecurityPolicy, getUploadMaxBytes } from '../../shared/config.ts';
+import {
+  config,
+  getDedupEnabled,
+  getSecurityPolicy,
+  getUploadMaxBytes,
+} from '../../shared/config.ts';
 import { listExtractorMetadata } from '../../shared/extraction/factory.ts';
 import { extractUrl } from '../../shared/extraction/factory.ts';
 import { validateUrlForFetch } from '../../shared/net/url-safety.ts';

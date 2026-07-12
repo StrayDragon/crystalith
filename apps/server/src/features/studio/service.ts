@@ -1,10 +1,11 @@
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 // Studio service — shared generation logic + SSE helper.
 //
 // Extracted from router.ts (H5+H6 fix) to eliminate duplication between
 // POST and SSE stream endpoints for outline + markdown generation.
 import { generateObject, streamText } from 'ai';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -175,7 +176,8 @@ export async function generateOutline(
   const { object: outline } = await generateObject({
     model,
     schema: SlideOutlineSchema,
-    system: 'You are a presentation designer. Create a slide outline with title and bullet points for each slide.',
+    system:
+      'You are a presentation designer. Create a slide outline with title and bullet points for each slide.',
     prompt: `Create a slide outline based on:\n\nTitle: ${slide.title || 'Presentation'}\n\nContent:\n${context}\n\n${slide.prompt ? `Additional instructions: ${slide.prompt}` : ''}`,
   });
 

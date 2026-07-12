@@ -306,9 +306,7 @@ function generateFallbackContent(type: string, error?: unknown): Record<string, 
       };
     case 'TIMELINE':
       return {
-        events: [
-          { date: '—', event: title || errorNote, description: errorNote, citations: [] },
-        ],
+        events: [{ date: '—', event: title || errorNote, description: errorNote, citations: [] }],
         _fallback,
       };
     case 'MINDMAP':
@@ -332,9 +330,7 @@ function generateFallbackContent(type: string, error?: unknown): Record<string, 
       };
     case 'BRIEFING':
       return {
-        sections: [
-          { heading: title || '生成失败', points: [{ text: errorNote, citations: [] }] },
-        ],
+        sections: [{ heading: title || '生成失败', points: [{ text: errorNote, citations: [] }] }],
         _fallback,
       };
     case 'PARAGRAPH':

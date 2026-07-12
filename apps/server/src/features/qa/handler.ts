@@ -1,7 +1,7 @@
 import type { LanguageModelV4 } from '@ai-sdk/provider';
 import type { ChatTurn, Citation } from '@crystalith/shared';
-
 import { generateText } from 'ai';
+
 import { streamQaResponse } from '../../ai/stream.ts';
 // QA handler — deterministic retrieval + streamText generation.
 //

@@ -70,9 +70,7 @@ function truncateCell(cell: string): string {
 function rowsToMarkdownTable(header: string[], rows: string[][]): string {
   const headerLine = `| ${header.map(truncateCell).join(' | ')} |`;
   const separator = `| ${header.map(() => '---').join(' | ')} |`;
-  const dataLines = rows.map(
-    (row) => `| ${row.map((c) => truncateCell(c ?? '')).join(' | ')} |`,
-  );
+  const dataLines = rows.map((row) => `| ${row.map((c) => truncateCell(c ?? '')).join(' | ')} |`);
   return [headerLine, separator, ...dataLines].join('\n');
 }
 
