@@ -12,6 +12,7 @@ import type { Citation } from '@crystalith/shared';
 // not, the no-evidence answer is returned directly without an LLM call.
 import { and, eq, inArray } from 'drizzle-orm';
 
+import { countTokens } from '../../ai/tokenizer.ts';
 import { db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { ragRegistry } from '../../rag/registry.ts';
@@ -110,12 +111,15 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
   const topK = opts.topK ?? 5;
   const minScore = opts.minScore ?? EVIDENCE_THRESHOLD_DEFAULT;
   const maxTokens = opts.maxTokens ?? 8000;
+  // c48: real token counts via gpt-tokenizer (v1 TokenCounter, service.py:254-271).
+  const queryTokens = countTokens(opts.question);
+  const historyTokens = opts.historyTokens ?? 0;
   const emptyStats: ContextStats = {
-    total_tokens: opts.historyTokens ?? 0,
+    total_tokens: historyTokens + queryTokens,
     system_tokens: 0,
-    history_tokens: opts.historyTokens ?? 0,
+    history_tokens: historyTokens,
     retrieval_tokens: 0,
-    query_tokens: Math.ceil(opts.question.length / 4),
+    query_tokens: queryTokens,
     max_tokens: maxTokens,
     compressed: false,
   };
@@ -136,7 +140,12 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
       topK,
       minScore,
       sourceIds: normalizedSourceIds,
-      multiQuery: true,
+      // c48: deterministic single-embed retrieval — do NOT enable multiQuery.
+      // v1 service.py:319-327 embeds the question once and runs a single
+      // cached_vector_search (no seed expansion / RRF fusion). multiQuery would
+      // change the edge set and normalize scores via RRF, making the low_similarity
+      // gate and confidence incomparable with v1.
+      multiQuery: false,
     });
   } catch {
     // Embedding/search failure — treat as no_vector_hits
@@ -235,21 +244,24 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
   const confidence = computeConfidence(citations, notebookSourceCount, topK);
 
   // Step 12: Evidence found
-  const retrievalTokens = Math.ceil(context.length / 4);
+  // c48: real token counts (v1 TokenCounter, service.py:254-271) + compression
+  // flag when history + retrieval would exceed max_tokens (v1 ContextWindow).
+  const retrievalTokens = countTokens(context);
+  const totalTokens = historyTokens + retrievalTokens + queryTokens;
+  const compressed = totalTokens > maxTokens;
   return {
     evidence: true,
     citations,
     context,
     confidence,
     contextStats: {
-      total_tokens:
-        (opts.historyTokens ?? 0) + retrievalTokens + Math.ceil(opts.question.length / 4),
+      total_tokens: totalTokens,
       system_tokens: 0,
-      history_tokens: opts.historyTokens ?? 0,
+      history_tokens: historyTokens,
       retrieval_tokens: retrievalTokens,
-      query_tokens: Math.ceil(opts.question.length / 4),
+      query_tokens: queryTokens,
       max_tokens: maxTokens,
-      compressed: false,
+      compressed,
     },
   };
 }

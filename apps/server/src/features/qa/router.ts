@@ -215,6 +215,7 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       topK: top_k,
       minScore: min_score,
       sourceIds: source_ids,
+      preset,
       onMessageSettled: (text, _failed, citations) => {
         if (messageId) {
           db()
@@ -298,6 +299,7 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       topK: top_k,
       minScore: min_score,
       sourceIds: source_ids,
+      preset,
       onMessageSettled: (text, failed, citations) => {
         if (!messageId) return;
         if (failed || text.trim() === '') {
@@ -356,27 +358,62 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
 
     const citations = (assistantMessage.citations as unknown[] | null) ?? [];
 
-    // Build sources metadata
-    const sourceIds = [
+    // c48: resolve notebook_id from session (v1 export is notebook-scoped,
+    // api.py:669 filters sources by notebook_id) for sources meta + top-level.
+    const sessionRow = db().select().from(sessions).where(eq(sessions.id, sessionId)).get();
+    const notebookId = sessionRow?.notebookId;
+
+    // c48: sources meta — v1 QAExportSource shape {source_id, source_name,
+    // mime_type, parser_type}, notebook-scoped, with cited-but-deleted
+    // fallback entries (v1 api.py:576-595 _build_sources_meta).
+    const citedSourceIds = [
       ...new Set(
         citations
           .map((c) => (c as { source_id?: number }).source_id)
           .filter((id): id is number => typeof id === 'number'),
       ),
     ];
-    const sourceRows = sourceIds.length
-      ? db().select().from(sources).where(inArray(sources.id, sourceIds)).all()
-      : [];
-    const sourcesMeta = sourceRows.map((s) => ({
-      id: s.id,
-      filename: s.filename,
-      status: s.status,
-    }));
+    const fallbackNames = new Map<number, string>();
+    for (const c of citations) {
+      const cit = c as { source_id?: number; source_name?: string };
+      if (typeof cit.source_id === 'number')
+        fallbackNames.set(cit.source_id, cit.source_name ?? '未知来源');
+    }
+    const sourceRows =
+      citedSourceIds.length && notebookId !== undefined
+        ? db()
+            .select()
+            .from(sources)
+            .where(and(inArray(sources.id, citedSourceIds), eq(sources.notebookId, notebookId)))
+            .all()
+        : [];
+    const foundIds = new Set(sourceRows.map((s) => s.id));
+    const sourcesMeta = [
+      // Existing sources (notebook-scoped)
+      ...sourceRows.map((s) => ({
+        source_id: s.id,
+        source_name: s.filename,
+        mime_type: s.mimeType,
+        parser_type: s.parserType,
+      })),
+      // Fallback entries for cited-but-deleted sources (v1 api.py:584-595)
+      ...citedSourceIds
+        .filter((id) => !foundIds.has(id))
+        .sort((a, b) => a - b)
+        .map((id) => ({
+          source_id: id,
+          source_name: fallbackNames.get(id) ?? '未知来源',
+          mime_type: null,
+          parser_type: null,
+        })),
+    ];
 
     const exportedAt = new Date().toISOString();
 
     if (format === 'json') {
+      // c48: JSON — add notebook_id (v1 api.py:679); sources meta in v1 shape.
       return {
+        notebook_id: notebookId,
         session_id: sessionId,
         message_id: assistantMessage.id,
         question,
@@ -387,20 +424,31 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       };
     }
 
-    // Markdown format (v1 _format_citation_line + 3-section structure)
+    // c48: markdown citation line — v1 _format_citation_line (api.py:599-610):
+    // [i] name · chunk N · page N · para N + blockquote snippet.
     const citationLines = citations.map((c, i) => {
-      const cit = c as { source_name?: string; chunk_index?: number; snippet?: string };
+      const cit = c as {
+        source_name?: string;
+        chunk_index?: number;
+        page_number?: number | null;
+        paragraph_index?: number | null;
+        snippet?: string;
+      };
       const parts = [`[${i + 1}] ${cit.source_name ?? 'unknown'}`];
       if (typeof cit.chunk_index === 'number') parts.push(`chunk ${cit.chunk_index}`);
+      if (cit.page_number != null) parts.push(`page ${cit.page_number}`);
+      if (cit.paragraph_index != null) parts.push(`para ${cit.paragraph_index}`);
       const prefix = parts.join(' · ');
       const snippet = cit.snippet?.trim();
       return snippet ? `${prefix}\n> ${snippet}` : prefix;
     });
     const citationsBlock = citationLines.length ? citationLines.join('\n\n') : '无引用';
 
+    // c48: add `- Notebook ID:` line (v1 api.py:698).
     const markdown = [
       `# QA Export #${assistantMessage.id}`,
       '',
+      `- Notebook ID: ${notebookId ?? '?'}`,
       `- Session ID: ${sessionId}`,
       `- Message ID: ${assistantMessage.id}`,
       `- Exported At: ${exportedAt}`,
