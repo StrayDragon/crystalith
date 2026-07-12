@@ -70,6 +70,32 @@ interface ChunkRow {
  *  - No chunkIds, no sourceIds → RAG across whole notebook (c27)
  */
 export async function runOutputPipeline(input: PipelineInput): Promise<PipelineResult> {
+  // c50: validate source_id ownership before retrieval (v1 _validate_source_ids,
+  // output_graph.py:151-176 — unknown/foreign source_id → ValueError → 400).
+  // Done here (not the router) so the typed 400 path in router.ts catches the
+  // "retrieval" keyword in the thrown message.
+  if (input.sourceIds && input.sourceIds.length > 0) {
+    const owned = db()
+      .select({ id: sources.id })
+      .from(sources)
+      .where(inArray(sources.id, input.sourceIds))
+      .all()
+      .filter((s) => {
+        // sources table has notebookId; we filtered by id, now check notebook
+        const row = db()
+          .select({ notebookId: sources.notebookId })
+          .from(sources)
+          .where(eq(sources.id, s.id))
+          .get();
+        return row?.notebookId === input.notebookId;
+      });
+    if (owned.length !== input.sourceIds.length) {
+      throw new Error(
+        'Output retrieval failed: Unknown source_id in source_ids (not in this notebook)',
+      );
+    }
+  }
+
   let chunkRows: ChunkRow[];
 
   if (input.chunkIds && input.chunkIds.length > 0) {
@@ -139,6 +165,21 @@ async function finishPipeline(
     object = generateFallbackContent(input.type, error);
   }
 
+  // c50: LLM repair loop (v1 output_graph.py:595-719 PostprocessOutput node).
+  // When preference=quality AND needs_repair detects salvageable-but-incomplete
+  // output, run a second generateObject pass to try to fix it before falling
+  // back. Falls back gracefully if the repair pass also fails.
+  if (input.preference === 'quality' && needsRepair(input.type, object)) {
+    try {
+      const repaired = await generateOutputByType(input.model, input.type, context, input.prompt);
+      if (!needsRepair(input.type, repaired)) {
+        object = repaired; // accept the repaired output
+      }
+    } catch {
+      // repair pass failed — keep the original object (will fallback in postprocess)
+    }
+  }
+
   // Postprocess: ensure minimum content + warnings (v1 output_postprocess.py:349-379)
   const { content: postprocessed, warnings } = postprocessOutput(object, input.type);
 
@@ -146,9 +187,23 @@ async function finishPipeline(
   // v1 output_graph.py:722-742. Build a citation map (1-based index → Citation).
   const { citations, citationMap } = buildCitationMap(chunkRows);
 
+  // c50: sanitize citation indices BEFORE mapping (v1 sanitize_citations_indices,
+  // output_postprocess.py:293-346). Strips out-of-range/duplicate/non-integer
+  // indices from the raw `citations` arrays so mapping only resolves valid ones.
+  const sanitized = sanitizeCitationsIndices(postprocessed, citations.length);
+  const allWarnings = [...warnings, ...sanitized.warnings];
+
   // c42: recursively map citations INTO the content tree (v1 _map_citations).
   // Replaces numeric [1,3] arrays with full Citation dicts, then persists the mapped content.
-  const mappedContent = mapCitationsIntoContent(postprocessed, citationMap, citations);
+  const mappedContent = mapCitationsIntoContent(sanitized.sanitized, citationMap, citations);
+
+  // c50: mark _postprocessed when sanitization or fallback occurred
+  // (v1 output_postprocess.py:377 sets _postprocessed:true on all content).
+  const finalContent = markPostprocessed(
+    mappedContent,
+    sanitized.changed || warnings.length > 0,
+    allWarnings,
+  );
 
   // Persist — content now has resolved citation objects (not bare integers)
   const row = db()
@@ -158,7 +213,7 @@ async function finishPipeline(
       type: input.type,
       prompt: input.prompt ?? null,
       chunkIds: chunkRows.map((c) => c.id),
-      content: mappedContent as Record<string, unknown>,
+      content: finalContent as Record<string, unknown>,
     })
     .returning()
     .get();
@@ -166,10 +221,10 @@ async function finishPipeline(
   return {
     outputId: row.id,
     type: input.type,
-    content: mappedContent,
+    content: finalContent,
     chunkCount: chunkRows.length,
     citations,
-    warnings,
+    warnings: allWarnings,
   };
 }
 
@@ -251,6 +306,49 @@ function ensureMinimumContentFields(
       break;
   }
   return content;
+}
+
+/**
+ * c50: detect whether generated output has salvageable-but-incomplete content
+ * worth a second LLM pass (v1 `needs_repair`, output_postprocess.py:192-290).
+ *
+ * Returns false for fallback content (already errored) — no point repairing.
+ * Returns true when the content is structurally present but has blank/missing
+ * required fields (e.g. empty question text, missing module title).
+ */
+function needsRepair(type: string, content: unknown): boolean {
+  if (!content || typeof content !== 'object' || Array.isArray(content)) return true;
+  const c = content as Record<string, unknown>;
+  if (c._fallback === true) return false; // already a fallback — don't repair
+  const isBlank = (v: unknown): boolean => typeof v !== 'string' || v.trim() === '';
+  const items = c.items;
+  switch (type) {
+    case 'FAQ':
+    case 'BULLETS':
+      if (!Array.isArray(items) || items.length === 0) return true;
+      return items.some(
+        (it) =>
+          !it ||
+          typeof it !== 'object' ||
+          isBlank((it as Record<string, unknown>).question) ||
+          isBlank((it as Record<string, unknown>).answer) ||
+          isBlank((it as Record<string, unknown>).text),
+      );
+    case 'TIMELINE':
+      return !Array.isArray(c.events) || c.events.length === 0;
+    case 'QUIZ':
+      return !Array.isArray(c.questions) || c.questions.length === 0;
+    case 'GUIDE':
+      return !Array.isArray(c.modules) || c.modules.length === 0;
+    case 'BRIEFING':
+      return !Array.isArray(c.sections) || c.sections.length === 0;
+    case 'MINDMAP':
+      return !c.root || typeof c.root !== 'object';
+    case 'PARAGRAPH':
+      return isBlank(c.text);
+    default:
+      return false;
+  }
 }
 
 /** Check if the content object has meaningful data for its type. */
@@ -439,6 +537,110 @@ function mapCitationsIntoContent(
         result[key] = mapCitationsIntoContent(value, citationMap, fallback);
       }
     }
+    return result;
+  }
+  return content;
+}
+
+// ---------------------------------------------------------------------------
+// c50: citation index sanitization (v1 output_postprocess.py:293-346) +
+// _postprocessed marker (v1 output_postprocess.py:377).
+// ---------------------------------------------------------------------------
+
+interface SanitizeResult {
+  changed: boolean;
+  warnings: string[];
+}
+
+/**
+ * c50: recursively sanitize citation indices in the raw content tree BEFORE
+ * mapCitationsIntoContent resolves them. Strips out-of-range, duplicate, and
+ * non-integer indices (v1 sanitize_citations_indices, output_postprocess.py:293-346).
+ *
+ * Operates on the numeric `citations` arrays (e.g. [1, 99, 1, "x"] → [1]) so
+ * downstream mapping only sees valid indices. Returns whether anything changed
+ * + warnings for the consumer.
+ */
+function sanitizeCitationsIndices(
+  payload: unknown,
+  citationsCount: number,
+): SanitizeResult & { sanitized: unknown } {
+  const warnings: string[] = [];
+  let changed = false;
+  const sanitized = sanitizeRecursive(payload, citationsCount, warnings, () => {
+    changed = true;
+  });
+  return { changed, warnings, sanitized };
+}
+
+function sanitizeRecursive(
+  payload: unknown,
+  maxIndex: number,
+  warnings: string[],
+  markChanged: () => void,
+): unknown {
+  if (Array.isArray(payload)) {
+    return payload.map((item) => sanitizeRecursive(item, maxIndex, warnings, markChanged));
+  }
+  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(payload as Record<string, unknown>)) {
+      if (key === 'citations' && Array.isArray(value)) {
+        const { clean, didChange } = sanitizeCitationList(value, maxIndex);
+        if (didChange) {
+          markChanged();
+          warnings.push('citation indices sanitized (out-of-range/duplicate/non-integer removed)');
+        }
+        result[key] = clean;
+      } else {
+        result[key] = sanitizeRecursive(value, maxIndex, warnings, markChanged);
+      }
+    }
+    return result;
+  }
+  return payload;
+}
+
+/** Sanitize a single citation index list (v1 _sanitize_citation_list). */
+function sanitizeCitationList(
+  value: unknown[],
+  maxIndex: number,
+): { clean: number[]; didChange: boolean } {
+  if (maxIndex <= 0) return { clean: [], didChange: value.length > 0 };
+  const seen = new Set<number>();
+  const clean: number[] = [];
+  let didChange = false;
+  for (const item of value) {
+    if (typeof item !== 'number' || !Number.isInteger(item)) {
+      didChange = true;
+      continue;
+    }
+    if (item <= 0 || item > maxIndex) {
+      didChange = true; // out of range
+      continue;
+    }
+    if (seen.has(item)) {
+      didChange = true; // duplicate
+      continue;
+    }
+    seen.add(item);
+    clean.push(item);
+  }
+  if (!didChange && clean.length !== value.length) didChange = true;
+  return { clean, didChange };
+}
+
+/**
+ * c50: mark the content tree with `_postprocessed: true` when sanitization or
+ * fallback occurred (v1 output_postprocess.py:377 sets it on all content).
+ * `_warnings` carries the human-readable list of what was postprocessed.
+ */
+function markPostprocessed(content: unknown, postprocessed: boolean, warnings: string[]): unknown {
+  if (!postprocessed || warnings.length === 0) return content;
+  if (content && typeof content === 'object' && !Array.isArray(content)) {
+    const result = { ...(content as Record<string, unknown>) };
+    result._postprocessed = true;
+    result._warnings = warnings;
     return result;
   }
   return content;
