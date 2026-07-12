@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "output-rendering-and-typing"
 purpose: 定义输出在前端的类型建模与渲染契约：typed payload 判别联合、运行时 guard、通用渲染器与回退路径。该规范确保新输出类型不会破坏渲染链路，并为未知输出提供安全降级。
 valid_scope[2]: src/,tests/
-requirements[10]{req_id,title,statement}:
+requirements[12]{req_id,title,statement}:
   r1,Output payload is modeled as discriminated union,前端 MUST 以 `output.type` 作为判别字段建模 payload，保证类型 narrowing 可用；当输出类型来自插件且客户端未知时，类型系统 MUST 提供一个 “unknown/other” 分支以避免编译期与运行期崩溃。
   r2,Runtime decode provides safe fallback,运行时 decoder/guard MUST 在 shape 不匹配时回退到 raw/unknown 渲染，不得崩溃。
   r3,GenericOutputRenderer supports canonical layouts,通用渲染器 MUST 支持规范布局类型与字段描述符递归渲染。
@@ -13,7 +13,9 @@ requirements[10]{req_id,title,statement}:
   "outputs-error-mapping",Output generation errors MUST map to granular HTTP codes,输出生成错误 MUST 映射到细分 HTTP 状态码：model 不可用→503、schema 校验失败→422、值错误→400，MUST NOT 统一返回 500
   "outputs-slides-must-be-rejected-at-outputs-endpoint",Outputs endpoint MUST reject SLIDES type with 400 (use studio endpoints),"outputs 生成端点 MUST 对 type=SLIDES 返回 400 并提示使用 studio slides 端点（对齐 v1 api.py:205-206 'Use slides endpoints for SLIDES output'），MUST NOT 把 SLIDES 路由进通用 outputs pipeline；当前 v2 router.ts:97-180 接受 SLIDES 并走 runOutputPipeline，导致 SLIDES content 既无 postprocess backfill（pipeline.ts:220-252 缺 SLIDES case）也无 isContentEmpty 判定（pipeline.ts:258-276 缺 SLIDES case）。这是 PROGRESS.v2.md 标注 'SLIDES 缺 postprocess case' 的根因——v1 根本不让 SLIDES 进此路径"
   "outputs-source-id-must-be-validated",Outputs pipeline MUST validate source_id existence and notebook ownership,"outputs 生成端点 MUST 校验 source_ids 中的每个 id 都属于该 notebook（对齐 v1 _validate_source_ids, output_graph.py:151-176，未知 id 抛 ValueError→400 'Unknown source_id in source_ids'），MUST NOT 直接把 sourceIds 透传给 ragRegistry.retrieveWith 而不校验；当前 v2 pipeline.ts 不校验，source_id 不存在或不属于 notebook 时静默检索空结果而非 400"
-scenarios[11]{req_id,id,given,when,then}:
+  "outputs-export-format",Export MUST support markdown and json formats,outputs 导出端点 MUST 支持 format=markdown 和 format=json 两种格式，markdown 路径 MUST 按输出类型渲染为可读 markdown
+  "outputs-convert-type-aware","Convert-to-source MUST use type-aware rendering","outputs convert-to-source MUST 使用逐类型 markdown 渲染而非原始 JSON 序列化，并按段落分块嵌入"
+scenarios[13]{req_id,id,given,when,then}:
   r1,"type-narrowing-supports-unknown-plugin-output-types","",前端收到一个带有未知 `output.type` 的输出 payload（未在客户端枚举/联合类型中声明）,系统 SHALL 将其归入 unknown 分支并进入安全降级渲染路径
   r2,"unknown-output-shape-does-not-crash-ui","",输出 payload 的 shape 与预期类型不匹配,系统 SHALL 回退到 raw/unknown 渲染并保持 UI 不崩溃
   r3,"render-canonical-layout","",输出使用规范布局与字段描述符,GenericOutputRenderer SHALL 能递归渲染该布局
@@ -25,3 +27,5 @@ scenarios[11]{req_id,id,given,when,then}:
   "outputs-error-mapping","model-unavailable",配置的 model 不可用,生成阶段,系统 SHALL 返回 503 而非 500
   "outputs-slides-must-be-rejected-at-outputs-endpoint","slides-rejected",客户端 POST /outputs type=SLIDES,系统处理请求,SHALL 返回 400 并提示用 studio slides 端点
   "outputs-source-id-must-be-validated","unknown-source-id",客户端传 source_ids 含不属于本 notebook 的 id,系统校验 source_ids,SHALL 返回 400（而非静默检索空结果）
+  "outputs-export-format","markdown-export",一个 FAQ 类型 output 存在,客户端请求 format=markdown,系统 SHALL 返回按 FAQ 格式渲染的 markdown 文本
+  "outputs-convert-type-aware","convert-timeline",一个 TIMELINE 类型 output 转换为 source,"convert-to-source 调用",系统 SHALL 先渲染为 timeline markdown 再分块嵌入
