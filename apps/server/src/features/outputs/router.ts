@@ -1,3 +1,4 @@
+import { NoSuchModelError, TypeValidationError, APICallError, NoObjectGeneratedError } from 'ai';
 // Outputs router — /v2/outputs CRUD + generation.
 //
 //   POST   /v2/outputs           — Generate a new output
@@ -7,7 +8,6 @@
 import { desc, eq, inArray } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
-import { NoSuchModelError, TypeValidationError, APICallError, NoObjectGeneratedError } from 'ai';
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';

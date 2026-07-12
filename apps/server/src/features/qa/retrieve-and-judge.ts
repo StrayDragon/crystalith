@@ -242,7 +242,8 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
     context,
     confidence,
     contextStats: {
-      total_tokens: (opts.historyTokens ?? 0) + retrievalTokens + Math.ceil(opts.question.length / 4),
+      total_tokens:
+        (opts.historyTokens ?? 0) + retrievalTokens + Math.ceil(opts.question.length / 4),
       system_tokens: 0,
       history_tokens: opts.historyTokens ?? 0,
       retrieval_tokens: retrievalTokens,

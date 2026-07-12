@@ -276,7 +276,7 @@ export function getUploadMaxBytes(): number {
  * Defaults to true when absent (v1 default).
  */
 export function getDedupEnabled(): boolean {
-  const ingestion = (config().raw.source_ingestion as Record<string, unknown> | undefined);
+  const ingestion = config().raw.source_ingestion as Record<string, unknown> | undefined;
   const dedup = ingestion?.dedup as Record<string, unknown> | undefined;
   const enabled = dedup?.enabled;
   return enabled !== false; // default true

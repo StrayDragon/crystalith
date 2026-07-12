@@ -12,10 +12,7 @@ import { researchSessions } from '../../db/schema.ts';
 
 const LOCK_TTL_MS = 10 * 60 * 1000;
 
-export function isLockHeld(
-  row: { lockExpiresAt: Date | null },
-  now: Date = new Date(),
-): boolean {
+export function isLockHeld(row: { lockExpiresAt: Date | null }, now: Date = new Date()): boolean {
   return row.lockExpiresAt !== null && row.lockExpiresAt > now;
 }
 

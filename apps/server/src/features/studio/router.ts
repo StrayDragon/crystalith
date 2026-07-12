@@ -34,14 +34,62 @@ import {
 // ---------------------------------------------------------------------------
 
 const apiDocs: OpenApiRoute[] = [
-  { path: '/v2/studio/slides', method: 'post', summary: 'Create a slide draft', tags: ['studio'], responses: { 201: { description: 'Created slide draft' } } },
-  { path: '/v2/studio/slides', method: 'get', summary: 'List slide drafts for a notebook', tags: ['studio'], responses: { 200: { description: 'Slide draft list' } } },
-  { path: '/v2/studio/slides/:id', method: 'get', summary: 'Get a slide draft', tags: ['studio'], responses: { 200: { description: 'Slide draft details' } } },
-  { path: '/v2/studio/slides/:id', method: 'patch', summary: 'Update slide draft fields', tags: ['studio'], responses: { 200: { description: 'Draft updated' } } },
-  { path: '/v2/studio/slides/:id/outline', method: 'post', summary: 'Generate outline via AI (stage 1)', tags: ['studio'], responses: { 200: { description: 'Outline generated' } } },
-  { path: '/v2/studio/slides/:id/outline', method: 'put', summary: 'Edit outline manually (HITL review)', tags: ['studio'], responses: { 200: { description: 'Outline updated' } } },
-  { path: '/v2/studio/slides/:id/markdown', method: 'post', summary: 'Generate markdown from outline via AI (stage 2)', tags: ['studio'], responses: { 200: { description: 'Markdown generated' } } },
-  { path: '/v2/studio/slides/:id/markdown', method: 'put', summary: 'Edit markdown manually + Slidev persist + output sync (HITL)', tags: ['studio'], responses: { 200: { description: 'Markdown updated and persisted' } } },
+  {
+    path: '/v2/studio/slides',
+    method: 'post',
+    summary: 'Create a slide draft',
+    tags: ['studio'],
+    responses: { 201: { description: 'Created slide draft' } },
+  },
+  {
+    path: '/v2/studio/slides',
+    method: 'get',
+    summary: 'List slide drafts for a notebook',
+    tags: ['studio'],
+    responses: { 200: { description: 'Slide draft list' } },
+  },
+  {
+    path: '/v2/studio/slides/:id',
+    method: 'get',
+    summary: 'Get a slide draft',
+    tags: ['studio'],
+    responses: { 200: { description: 'Slide draft details' } },
+  },
+  {
+    path: '/v2/studio/slides/:id',
+    method: 'patch',
+    summary: 'Update slide draft fields',
+    tags: ['studio'],
+    responses: { 200: { description: 'Draft updated' } },
+  },
+  {
+    path: '/v2/studio/slides/:id/outline',
+    method: 'post',
+    summary: 'Generate outline via AI (stage 1)',
+    tags: ['studio'],
+    responses: { 200: { description: 'Outline generated' } },
+  },
+  {
+    path: '/v2/studio/slides/:id/outline',
+    method: 'put',
+    summary: 'Edit outline manually (HITL review)',
+    tags: ['studio'],
+    responses: { 200: { description: 'Outline updated' } },
+  },
+  {
+    path: '/v2/studio/slides/:id/markdown',
+    method: 'post',
+    summary: 'Generate markdown from outline via AI (stage 2)',
+    tags: ['studio'],
+    responses: { 200: { description: 'Markdown generated' } },
+  },
+  {
+    path: '/v2/studio/slides/:id/markdown',
+    method: 'put',
+    summary: 'Edit markdown manually + Slidev persist + output sync (HITL)',
+    tags: ['studio'],
+    responses: { 200: { description: 'Markdown updated and persisted' } },
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -86,7 +134,10 @@ function requireSourceIds(raw: unknown): number[] {
 export const studioRouter = new Elysia({ prefix: '/v2' })
   // Create slide draft
   .post('/studio/slides', ({ body }) => {
-    const { notebook_id, title, prompt, source_ids, generation_config } = body as Record<string, unknown>;
+    const { notebook_id, title, prompt, source_ids, generation_config } = body as Record<
+      string,
+      unknown
+    >;
     const notebookId = Number(notebook_id);
     if (!notebookId) throw new Error('notebook_id required');
 
@@ -113,7 +164,12 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
   .get('/studio/slides', ({ query }) => {
     const notebookId = Number((query as { notebook_id?: string }).notebook_id);
     if (!notebookId) throw new NotFoundError('notebook_id required');
-    return db().select().from(studioSlides).where(eq(studioSlides.notebookId, notebookId)).all().map(serializeSlide);
+    return db()
+      .select()
+      .from(studioSlides)
+      .where(eq(studioSlides.notebookId, notebookId))
+      .all()
+      .map(serializeSlide);
   })
 
   // Get slide draft
@@ -123,7 +179,12 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
   .get('/studio/slides/latest', ({ query }) => {
     const notebookId = Number((query as { notebook_id?: string }).notebook_id);
     if (!notebookId) throw new NotFoundError('notebook_id required');
-    const row = db().select().from(studioSlides).where(eq(studioSlides.notebookId, notebookId)).orderBy(desc(studioSlides.updatedAt)).get();
+    const row = db()
+      .select()
+      .from(studioSlides)
+      .where(eq(studioSlides.notebookId, notebookId))
+      .orderBy(desc(studioSlides.updatedAt))
+      .get();
     if (!row) throw new NotFoundError('Slide draft not found');
     return serializeSlide(row);
   })
@@ -137,7 +198,8 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     if (title !== undefined) updateData.title = String(title);
     if (prompt !== undefined) updateData.prompt = String(prompt);
     if (source_ids !== undefined) updateData.sourceIds = requireSourceIds(source_ids);
-    if (generation_config !== undefined) updateData.generationConfig = generation_config as Record<string, unknown>;
+    if (generation_config !== undefined)
+      updateData.generationConfig = generation_config as Record<string, unknown>;
     updateData.errorMessage = null;
     db().update(studioSlides).set(updateData).where(eq(studioSlides.id, id)).run();
     return serializeSlide(getSlideOrThrow(id));
@@ -150,13 +212,25 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     if (!clearStaleRunning(id)) return { event: 'busy', message: '演示正在生成中，请稍后重试。' };
 
     const context = await getContext(slide);
-    db().update(studioSlides).set({ status: 'running', stage: 'outline' }).where(eq(studioSlides.id, id)).run();
+    db()
+      .update(studioSlides)
+      .set({ status: 'running', stage: 'outline' })
+      .where(eq(studioSlides.id, id))
+      .run();
     try {
       const outline = await generateOutline(slide, context);
-      db().update(studioSlides).set({ outline: outline as Record<string, unknown>, stage: 'outline', status: 'idle' }).where(eq(studioSlides.id, id)).run();
+      db()
+        .update(studioSlides)
+        .set({ outline: outline as Record<string, unknown>, stage: 'outline', status: 'idle' })
+        .where(eq(studioSlides.id, id))
+        .run();
       return serializeSlide(getSlideOrThrow(id));
     } catch (error) {
-      db().update(studioSlides).set({ status: 'error', errorMessage: String(error) }).where(eq(studioSlides.id, id)).run();
+      db()
+        .update(studioSlides)
+        .set({ status: 'error', errorMessage: String(error) })
+        .where(eq(studioSlides.id, id))
+        .run();
       throw error;
     }
   })
@@ -166,7 +240,11 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     const id = Number(params.id);
     getSlideOrThrow(id);
     const { outline } = body as { outline: Record<string, unknown> };
-    db().update(studioSlides).set({ outline, stage: 'outline', status: 'idle', errorMessage: null }).where(eq(studioSlides.id, id)).run();
+    db()
+      .update(studioSlides)
+      .set({ outline, stage: 'outline', status: 'idle', errorMessage: null })
+      .where(eq(studioSlides.id, id))
+      .run();
     return serializeSlide(getSlideOrThrow(id));
   })
 
@@ -178,15 +256,27 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     if (!clearStaleRunning(id)) return { event: 'busy', message: '演示正在生成中，请稍后重试。' };
 
     const context = await getContext(slide);
-    db().update(studioSlides).set({ status: 'running', stage: 'markdown' }).where(eq(studioSlides.id, id)).run();
+    db()
+      .update(studioSlides)
+      .set({ status: 'running', stage: 'markdown' })
+      .where(eq(studioSlides.id, id))
+      .run();
     try {
       const markdown = await generateMarkdown(slide, context);
-      db().update(studioSlides).set({ markdown, stage: 'markdown', status: 'idle' }).where(eq(studioSlides.id, id)).run();
+      db()
+        .update(studioSlides)
+        .set({ markdown, stage: 'markdown', status: 'idle' })
+        .where(eq(studioSlides.id, id))
+        .run();
       writeSlideFile(slide.notebookId, id, markdown);
       syncSlideOutput(slide, markdown);
       return serializeSlide(getSlideOrThrow(id));
     } catch (error) {
-      db().update(studioSlides).set({ status: 'error', errorMessage: String(error) }).where(eq(studioSlides.id, id)).run();
+      db()
+        .update(studioSlides)
+        .set({ status: 'error', errorMessage: String(error) })
+        .where(eq(studioSlides.id, id))
+        .run();
       throw error;
     }
   })
@@ -196,9 +286,17 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     const id = Number(params.id);
     const slide = getSlideOrThrow(id);
     const { markdown } = body as { markdown: string };
-    try { writeSlideFile(slide.notebookId, id, markdown); } catch (error) { console.error('[studio] slidev file write failed:', error); }
+    try {
+      writeSlideFile(slide.notebookId, id, markdown);
+    } catch (error) {
+      console.error('[studio] slidev file write failed:', error);
+    }
     syncSlideOutput(slide, markdown);
-    db().update(studioSlides).set({ markdown, stage: 'markdown', status: 'idle', errorMessage: null }).where(eq(studioSlides.id, id)).run();
+    db()
+      .update(studioSlides)
+      .set({ markdown, stage: 'markdown', status: 'idle', errorMessage: null })
+      .where(eq(studioSlides.id, id))
+      .run();
     return serializeSlide(getSlideOrThrow(id));
   })
 
@@ -210,11 +308,19 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     return createSseResponse(id, async (emit) => {
       emit('progress', { stage: 'outline', progress: 5, message: '开始生成大纲' });
       const context = await getContext(slide);
-      db().update(studioSlides).set({ status: 'running', stage: 'outline' }).where(eq(studioSlides.id, id)).run();
+      db()
+        .update(studioSlides)
+        .set({ status: 'running', stage: 'outline' })
+        .where(eq(studioSlides.id, id))
+        .run();
 
       const outline = await generateOutline(slide, context);
       emit('progress', { stage: 'outline', progress: 90, message: '大纲生成完成' });
-      db().update(studioSlides).set({ outline: outline as Record<string, unknown>, stage: 'outline', status: 'idle' }).where(eq(studioSlides.id, id)).run();
+      db()
+        .update(studioSlides)
+        .set({ outline: outline as Record<string, unknown>, stage: 'outline', status: 'idle' })
+        .where(eq(studioSlides.id, id))
+        .run();
       emit('done', serializeSlide(getSlideOrThrow(id)));
     });
   })
@@ -228,13 +334,21 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     return createSseResponse(id, async (emit) => {
       emit('progress', { stage: 'markdown', progress: 5, message: '开始生成幻灯片' });
       const context = await getContext(slide);
-      db().update(studioSlides).set({ status: 'running', stage: 'markdown' }).where(eq(studioSlides.id, id)).run();
+      db()
+        .update(studioSlides)
+        .set({ status: 'running', stage: 'markdown' })
+        .where(eq(studioSlides.id, id))
+        .run();
 
       const markdown = await generateMarkdown(slide, context, (delta) => {
         emit('progress', { stage: 'markdown', delta });
       });
 
-      db().update(studioSlides).set({ markdown, stage: 'markdown', status: 'idle' }).where(eq(studioSlides.id, id)).run();
+      db()
+        .update(studioSlides)
+        .set({ markdown, stage: 'markdown', status: 'idle' })
+        .where(eq(studioSlides.id, id))
+        .run();
       writeSlideFile(slide.notebookId, id, markdown);
       syncSlideOutput(slide, markdown);
       emit('done', serializeSlide(getSlideOrThrow(id)));
