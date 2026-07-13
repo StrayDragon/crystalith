@@ -22,8 +22,7 @@ import {
   getSecurityPolicy,
   getUploadMaxBytes,
 } from '../../shared/config.ts';
-import { listExtractorMetadata } from '../../shared/extraction/factory.ts';
-import { extractUrl } from '../../shared/extraction/factory.ts';
+import { extractUrl, listExtractorMetadata } from '../../shared/extraction/factory.ts';
 import { validateUrlForFetch } from '../../shared/net/url-safety.ts';
 import { uploadDedupKey, urlDedupKey } from './dedup.ts';
 import { listParsers } from './parser-registry.ts';
@@ -569,8 +568,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   // c44: Search sources via real web search (v1 run_search_graph + SearXNG)
-  .post('/notebooks/:nid/sources/search', async ({ params, body }) => {
-    const nid = Number(params.nid);
+  .post('/notebooks/:nid/sources/search', async ({ body }) => {
     const { query, engine } = body as { query: string; engine?: string };
     const results: Array<{
       title: string;

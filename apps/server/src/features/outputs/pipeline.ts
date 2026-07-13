@@ -13,6 +13,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { db } from '../../db/index.ts';
 import { chunks, outputs, sources } from '../../db/schema.ts';
 import type { ChunkResult } from '../../rag/types.ts';
+import { hydrateCitations } from '../../shared/citations.ts';
 import { generateOutputByType, buildOutputQuery, type ToolOutputType } from './generator.ts';
 
 export type GenerationPreference = 'quality' | 'speed';
@@ -454,6 +455,11 @@ function generateFallbackContent(type: string, error?: unknown): Record<string, 
 /**
  * Build a 1-based citation map from retrieved chunks (v1 _build_citation).
  * Returns { citations: flat array, citationMap: index → Citation }.
+ *
+ * Citation hydration delegates to the shared `hydrateCitations` helper
+ * (`shared/citations.ts`); behavior is unchanged from the previously-inlined
+ * version: snippet NOT trimmed, page/paragraph via the strict
+ * `typeof === 'number'` predicate (no string coercion).
  */
 function buildCitationMap(chunkRows: ChunkRow[]): {
   citations: Citation[];
@@ -461,46 +467,17 @@ function buildCitationMap(chunkRows: ChunkRow[]): {
 } {
   if (chunkRows.length === 0) return { citations: [], citationMap: new Map() };
 
-  // Hydrate source names
-  const sourceIds = [...new Set(chunkRows.map((c) => c.sourceId))];
-  const sourceRows = db()
-    .select({ id: sources.id, filename: sources.filename })
-    .from(sources)
-    .where(inArray(sources.id, sourceIds))
-    .all();
-  const sourceMap = new Map(sourceRows.map((s) => [s.id, s.filename]));
-
-  // Hydrate chunk metadata for page/paragraph
-  const chunkMetaRows = db()
-    .select({ id: chunks.id, metadata: chunks.metadata })
-    .from(chunks)
-    .where(
-      inArray(
-        chunks.id,
-        chunkRows.map((c) => c.id),
-      ),
-    )
-    .all();
-  const chunkMetaMap = new Map(chunkMetaRows.map((c) => [c.id, c.metadata]));
+  const retrieved = chunkRows.map((c) => ({
+    chunk_id: c.id,
+    source_id: c.sourceId,
+    chunk_index: c.chunkIndex,
+    text: c.text,
+    score: c.score,
+  }));
+  const citations = hydrateCitations(retrieved);
 
   const citationMap = new Map<number, Citation>();
-  const citations: Citation[] = chunkRows.map((c, i) => {
-    const meta = (chunkMetaMap.get(c.id) ?? {}) as Record<string, unknown>;
-    const pageNumber = typeof meta.page === 'number' ? meta.page : null;
-    const paragraphIndex = typeof meta.paragraph_index === 'number' ? meta.paragraph_index : null;
-    const citation: Citation = {
-      source_id: c.sourceId,
-      source_name: sourceMap.get(c.sourceId) ?? 'unknown',
-      chunk_id: c.id,
-      chunk_index: c.chunkIndex + 1, // v1 1-based
-      page_number: pageNumber,
-      paragraph_index: paragraphIndex,
-      snippet: c.text.slice(0, 200),
-      score: c.score,
-    };
-    citationMap.set(i + 1, citation); // 1-based index
-    return citation;
-  });
+  citations.forEach((citation, i) => citationMap.set(i + 1, citation)); // 1-based index
 
   return { citations, citationMap };
 }

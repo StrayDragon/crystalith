@@ -105,24 +105,11 @@ export function applyFormat(
 }
 
 // ---------------------------------------------------------------------------
-// extractPageNumber / extractParagraphIndex (v1 shared/utils/chunk.py:11-22)
-//
-// v1 reads chunk.metadata["page"] / ["paragraph_index"]. Returns null if
-// absent or non-numeric.
+// NOTE: `extractPageNumber` / `extractParagraphIndex` previously lived here
+// (v1 shared/utils/chunk.py:11-22) and were used only by retrieve.ts during
+// citation hydration. That logic now lives in the shared helper
+// `shared/citations.ts` (`hydrateCitations` with `coercePageNumber: true`),
+// so these exports were removed as dead code. The coercive Number()+isFinite
+// predicate they implemented is reproduced verbatim by `extractNumber` in
+// that helper.
 // ---------------------------------------------------------------------------
-
-export function extractPageNumber(metadata: unknown): number | null {
-  if (metadata && typeof metadata === 'object' && 'page' in metadata) {
-    const val = Number((metadata as Record<string, unknown>).page);
-    return Number.isFinite(val) ? val : null;
-  }
-  return null;
-}
-
-export function extractParagraphIndex(metadata: unknown): number | null {
-  if (metadata && typeof metadata === 'object' && 'paragraph_index' in metadata) {
-    const val = Number((metadata as Record<string, unknown>).paragraph_index);
-    return Number.isFinite(val) ? val : null;
-  }
-  return null;
-}

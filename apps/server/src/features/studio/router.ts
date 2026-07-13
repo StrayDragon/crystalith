@@ -19,7 +19,6 @@ import { db } from '../../db/index.ts';
 import { notebooks, studioSlides } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import {
-  SlideOutlineSchema,
   clearStaleRunning,
   createSseResponse,
   generateMarkdown,

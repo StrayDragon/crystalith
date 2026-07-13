@@ -436,8 +436,10 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       };
       const parts = [`[${i + 1}] ${cit.source_name ?? 'unknown'}`];
       if (typeof cit.chunk_index === 'number') parts.push(`chunk ${cit.chunk_index}`);
-      if (cit.page_number != null) parts.push(`page ${cit.page_number}`);
-      if (cit.paragraph_index != null) parts.push(`para ${cit.paragraph_index}`);
+      if (cit.page_number !== null && cit.page_number !== undefined)
+        parts.push(`page ${cit.page_number}`);
+      if (cit.paragraph_index !== null && cit.paragraph_index !== undefined)
+        parts.push(`para ${cit.paragraph_index}`);
       const prefix = parts.join(' · ');
       const snippet = cit.snippet?.trim();
       return snippet ? `${prefix}\n> ${snippet}` : prefix;

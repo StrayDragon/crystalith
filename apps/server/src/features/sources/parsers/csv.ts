@@ -41,7 +41,7 @@ function parseCsvRows(text: string): string[][] {
         if (char === '\r' && text[i + 1] === '\n') i++;
         currentRow.push(currentField);
         currentField = '';
-        if (currentRow.length > 0 && currentRow.some((f) => f !== '')) {
+        if (currentRow.some((f) => f !== '')) {
           rows.push(currentRow);
         }
         currentRow = [];
