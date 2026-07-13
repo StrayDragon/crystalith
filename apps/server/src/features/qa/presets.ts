@@ -30,7 +30,7 @@ export const PRESETS: Record<string, QAPreset> = {
     systemPrompt: `You are a helpful RAG assistant. Answer the user's question based on the provided context.
 
 Rules:
-1. Base your answer on the retrieved sources — cite them using [Source: N] notation.
+1. Base your answer on the retrieved sources — cite them using [N] notation (e.g., [1], [2]).
 2. If the context doesn't contain enough information, say so honestly.
 3. Use the 'retrieveSources' tool to search for relevant information before answering.
 4. Be concise and precise.
