@@ -22,6 +22,7 @@ import {
   getSecurityPolicy,
   getUploadMaxBytes,
 } from '../../shared/config.ts';
+import { ErrorCode, sendError } from '../../shared/errors.ts';
 import { extractUrl, listExtractorMetadata } from '../../shared/extraction/factory.ts';
 import { validateUrlForFetch } from '../../shared/net/url-safety.ts';
 import { uploadDedupKey, urlDedupKey } from './dedup.ts';
@@ -243,8 +244,10 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     // Upload size limit (configurable, default 50 MB).
     const maxBytes = getUploadMaxBytes();
     if (file.size > maxBytes) {
-      set.status = 413;
-      return { error: 'Payload Too Large', max_bytes: maxBytes, uploaded_bytes: file.size };
+      return sendError(set, ErrorCode.PAYLOAD_TOO_LARGE, 'Payload Too Large', {
+        max_bytes: maxBytes,
+        uploaded_bytes: file.size,
+      });
     }
 
     const buffer = new Uint8Array(await file.arrayBuffer());
@@ -259,8 +262,9 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         .get();
       if (hit) {
         if (dedupAction === 'prompt') {
-          set.status = 409;
-          return { error_code: 'SOURCE_DEDUP_HIT', existing_source_id: hit.id };
+          return sendError(set, ErrorCode.CONFLICT, 'Source dedup hit', {
+            existing_source_id: hit.id,
+          });
         }
         if (dedupAction === 'reuse') {
           const existing = db().select().from(sources).where(eq(sources.id, hit.id)).get();
@@ -355,7 +359,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     const rawName = (body as { name: string }).name?.trim().slice(0, 64);
     if (!rawName) {
       set.status = 400;
-      return { error: 'Tag name is required' };
+      return sendError(set, ErrorCode.INVALID_REQUEST, 'Tag name is required');
     }
     // Uniqueness check (case-insensitive, v1 api_tags.py:56-63)
     const existing = db()
@@ -365,8 +369,9 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       .all()
       .find((t) => t.name.toLowerCase() === rawName.toLowerCase());
     if (existing) {
-      set.status = 409;
-      return { error: 'Tag name already exists', existing_tag_id: existing.id };
+      return sendError(set, ErrorCode.CONFLICT, 'Tag name already exists', {
+        existing_tag_id: existing.id,
+      });
     }
     const row = db()
       .insert(sourceTags)
@@ -388,7 +393,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     const rawName = (body as { name: string }).name?.trim().slice(0, 64);
     if (!rawName) {
       set.status = 400;
-      return { error: 'Tag name is required' };
+      return sendError(set, ErrorCode.INVALID_REQUEST, 'Tag name is required');
     }
     // Ownership check (v1 api_tags.py:81)
     const existing = db()
@@ -405,8 +410,9 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       .all()
       .find((t) => t.id !== tid && t.name.toLowerCase() === rawName.toLowerCase());
     if (conflict) {
-      set.status = 409;
-      return { error: 'Tag name already exists', existing_tag_id: conflict.id };
+      return sendError(set, ErrorCode.CONFLICT, 'Tag name already exists', {
+        existing_tag_id: conflict.id,
+      });
     }
     db().update(sourceTags).set({ name: rawName }).where(eq(sourceTags.id, tid)).run();
     const updated = db().select().from(sourceTags).where(eq(sourceTags.id, tid)).get();
@@ -673,8 +679,9 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     try {
       await validateUrlForFetch(url, getSecurityPolicy());
     } catch (error) {
-      set.status = 422;
-      return { error: 'SSRF blocked', reason: (error as Error).message };
+      return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, 'SSRF blocked', {
+        reason: (error as Error).message,
+      });
     }
 
     // c44: Dedup check — gated by config (v1 source_ingestion.dedup.enabled)
@@ -687,8 +694,9 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         .get();
       if (hit) {
         if (dedupAction === 'prompt') {
-          set.status = 409;
-          return { error_code: 'SOURCE_DEDUP_HIT', existing_source_id: hit.id };
+          return sendError(set, ErrorCode.CONFLICT, 'Source dedup hit', {
+            existing_source_id: hit.id,
+          });
         }
         if (dedupAction === 'reuse') {
           const existing = db().select().from(sources).where(eq(sources.id, hit.id)).get();
@@ -762,8 +770,9 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       try {
         await validateUrlForFetch(url, getSecurityPolicy());
       } catch (error) {
-        set.status = 422;
-        return { error: 'SSRF blocked on fallback', reason: (error as Error).message };
+        return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, 'SSRF blocked on fallback', {
+          reason: (error as Error).message,
+        });
       }
       const response = await fetch(url);
       const html = await response.text();

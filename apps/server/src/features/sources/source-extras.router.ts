@@ -12,6 +12,7 @@ import { db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
+import { ErrorCode, sendError } from '../../shared/errors.ts';
 
 const apiDocs: OpenApiRoute[] = [
   {
@@ -100,8 +101,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
     if (source.notebookId !== nid) throw new NotFoundError(`Source ${sid} not found`);
     // c44: "not ready" → 400 (v1 api_summary.py:86)
     if (source.status !== 'ready') {
-      set.status = 400;
-      return { error: 'Source is not ready' };
+      return sendError(set, ErrorCode.INVALID_REQUEST, 'Source is not ready');
     }
 
     const chunkRows = db()
@@ -161,8 +161,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
     if (source.notebookId !== nid) throw new NotFoundError(`Source ${sid} not found`);
     // c44: "not ready" → 400 (v1 api_qa.py:67)
     if (source.status !== 'ready') {
-      set.status = 400;
-      return { error: 'Source is not ready' };
+      return sendError(set, ErrorCode.INVALID_REQUEST, 'Source is not ready');
     }
 
     const { question } = body as { question: string };

@@ -9,6 +9,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { db } from '../../db/index.ts';
 import { tasks as tasksTable } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { ErrorCode, sendError } from '../../shared/errors.ts';
 import type { TaskQueue } from '../../shared/queue.ts';
 
 const apiDocs: OpenApiRoute[] = [
@@ -77,8 +78,11 @@ export function tasksRouter(taskQueue: TaskQueue) {
 
       // c39 gap fix: return 409 for non-cancellable state (v1 api.py:71-76)
       if (task.status !== 'pending' && task.status !== 'running') {
-        set.status = 409;
-        return { error: `Task ${id} cannot be cancelled from status '${task.status}'` };
+        return sendError(
+          set,
+          ErrorCode.CONFLICT,
+          `Task ${id} cannot be cancelled from status '${task.status}'`,
+        );
       }
 
       // Use TaskQueue.cancel for proper AbortSignal interruption

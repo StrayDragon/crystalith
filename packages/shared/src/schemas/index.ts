@@ -13,6 +13,7 @@ export * from './research.js';
 export * from './analysis.js';
 export * from './studio.js';
 export * from './refine.js';
+export * from './qa.js';
 export * from './model.js';
 export * from './template.js';
 export * from './task.js';

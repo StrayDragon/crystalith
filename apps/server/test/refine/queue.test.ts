@@ -106,7 +106,8 @@ describe('refine single-format via task queue (c29 v1-aligned)', () => {
       format: 'expand',
     });
     expect(status).toBe(400);
-    expect((body as { detail: string }).detail).toContain('Unsupported refine format');
+    // c54: errors now use the unified ErrorEnvelope (message field, not detail).
+    expect((body as { message: string }).message).toContain('Unsupported refine format');
   });
 
   it('returns 404 when notebook does not exist', async () => {

@@ -1,5 +1,5 @@
 import type { LanguageModelV4 } from '@ai-sdk/provider';
-import type { Citation, ChatTurn } from '@crystalith/shared';
+import type { ChatTurn, Citation, ContextStats } from '@crystalith/shared';
 // Streaming — relay Vercel AI SDK `streamText` fullStream parts into SSE
 // events compatible with the v1 frontend chat consumer (`useChat.ts`).
 //
@@ -33,17 +33,10 @@ export interface StreamQaOptions {
   noEvidenceResolver?: (citations: Citation[]) => Promise<string | undefined> | string | undefined;
   /**
    * Context stats (v1 ContextStats) attached to the done event when pre-computed
-   * by the deterministic retrieval stage (c36).
+   * by the deterministic retrieval stage (c36). c54: type now sourced from
+   * @crystalith/shared instead of a duplicated inline struct.
    */
-  contextStats?: {
-    total_tokens: number;
-    system_tokens: number;
-    history_tokens: number;
-    retrieval_tokens: number;
-    query_tokens: number;
-    max_tokens: number;
-    compressed: boolean;
-  };
+  contextStats?: ContextStats;
   /**
    * Optional sink for tool-result events emitted during the fullStream loop.
    * Each tool call's result is forwarded here so the caller can accumulate

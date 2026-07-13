@@ -1,5 +1,5 @@
 import type { LanguageModelV4 } from '@ai-sdk/provider';
-import type { ChatTurn, Citation } from '@crystalith/shared';
+import type { ChatTurn, Citation, ContextStats } from '@crystalith/shared';
 import { generateText } from 'ai';
 
 import { streamQaResponse } from '../../ai/stream.ts';
@@ -22,10 +22,10 @@ import {
   resolveCitations,
   type NoEvidenceReason,
   type JudgeResult,
-  type ContextStats,
 } from './retrieve-and-judge.ts';
 
-// Re-export for consumers (router, presets)
+// Re-export for consumers (router, presets). ContextStats now comes from
+// @crystalith/shared (c54: moved out of server-local to honor Zod-SSOT).
 export { retrieveAndJudge, noEvidenceAnswerForReason, resolveCitations };
 export type { NoEvidenceReason, JudgeResult, ContextStats };
 
@@ -274,7 +274,7 @@ export interface QaDirectResult {
   confidence: number;
   evidence: boolean;
   noEvidenceReason: string | undefined;
-  contextStats: import('./retrieve-and-judge.ts').ContextStats;
+  contextStats: ContextStats;
 }
 
 /**
