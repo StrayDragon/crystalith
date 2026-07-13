@@ -107,7 +107,9 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
     console.error(`[pipeline] contentStorage.save failed for source ${sourceRow.id}:`, error);
   });
 
-  let stage: 'parse' | 'embed' = 'parse';
+  // c57: 4-stage error tracking (v1 api_ingest.py:893-924):
+  // PARSE_ERROR → EMBEDDING_FAILED → VECTOR_STORE_FAILED → INGESTION_FAILED
+  let stage: 'parse' | 'embed' | 'vector_store' | 'ingestion' = 'parse';
   try {
     // 2. Parse
     const result = await parser!.parse(input.buffer, input.filename);
@@ -143,6 +145,9 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
 
     // 5. Embed synchronously — vectors MUST exist before marking ready (c30).
     //    v1 awaits the full parse→embed→vector_store sequence before returning.
+    //    c57: embed stage covers both embedBatch + insertChunkVector inside
+    //    triggerEmbedding (they're not separable without refactoring the
+    //    EmbedStrategy). VECTOR_STORE_FAILED is reserved for future split.
     stage = 'embed';
     await triggerEmbedding(sourceRow.id, sourceRow.notebookId);
 
@@ -165,13 +170,29 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    const errorCode = stage === 'embed' ? 'EMBEDDING_FAILED' : 'PARSE_ERROR';
+    // c57: 4-stage error classification (v1 api_ingest.py:893-924)
+    const errorCode =
+      stage === 'parse'
+        ? 'PARSE_ERROR'
+        : stage === 'embed'
+          ? 'EMBEDDING_FAILED'
+          : stage === 'vector_store'
+            ? 'VECTOR_STORE_FAILED'
+            : 'INGESTION_FAILED';
+    // c57: recovery hints (v1-style, per-stage guidance)
+    const recoveryHints: Record<string, string> = {
+      PARSE_ERROR: '请检查文件格式是否受支持，或尝试转换为 PDF/HTML/TXT/CSV 格式',
+      EMBEDDING_FAILED: '请检查 embedding 模型配置是否正确，或尝试 re-embed',
+      VECTOR_STORE_FAILED: '向量存储写入失败，请检查 sqlite-vec 扩展是否正常加载',
+      INGESTION_FAILED: '摄取流程发生未知错误，请重试或检查日志',
+    };
     db()
       .update(sources)
       .set({
         status: 'failed',
         errorCode,
         errorMessage: message,
+        recoveryHint: recoveryHints[errorCode] ?? null,
         lastErrorAt: new Date(),
       })
       .where(eq(sources.id, sourceRow.id))

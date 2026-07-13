@@ -291,10 +291,13 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Get a source by ID
-  .get('/sources/:id', ({ params }) => {
+  // c57: notebook ownership check — requires ?notebook_id= query, returns 404
+  // if the source doesn't belong to that notebook (prevents cross-notebook access)
+  .get('/sources/:id', ({ params, query }) => {
     const id = Number(params.id);
+    const nid = Number((query as Record<string, string> | undefined)?.notebook_id);
     const row = db().select().from(sources).where(eq(sources.id, id)).get();
-    if (!row) sourceNotFound(id);
+    if (!row || (nid && row.notebookId !== nid)) sourceNotFound(id);
 
     const c = db()
       .select({ c: sql<number>`COUNT(*)` })
@@ -315,10 +318,12 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Delete a source
-  .delete('/sources/:id', ({ params, set }) => {
+  // c57: notebook ownership check via ?notebook_id= query
+  .delete('/sources/:id', ({ params, query, set }) => {
     const id = Number(params.id);
+    const nid = Number((query as Record<string, string> | undefined)?.notebook_id);
     const row = db().select().from(sources).where(eq(sources.id, id)).get();
-    if (!row) sourceNotFound(id);
+    if (!row || (nid && row.notebookId !== nid)) sourceNotFound(id);
 
     // Delete vectors first
     deleteSourceVectors(db(), id);
@@ -384,6 +389,8 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       .values({ notebookId: nid, name: rawName })
       .returning()
       .get();
+    // c57: invalidate sources cache (list-sources cache key includes tag filter)
+    bumpSourcesEpoch(nid);
     return {
       id: row.id,
       notebook_id: row.notebookId,
@@ -421,6 +428,8 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       });
     }
     db().update(sourceTags).set({ name: rawName }).where(eq(sourceTags.id, tid)).run();
+    // c57: invalidate sources cache
+    bumpSourcesEpoch(nid);
     const updated = db().select().from(sourceTags).where(eq(sourceTags.id, tid)).get();
     return {
       id: updated!.id,
@@ -442,6 +451,8 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       .get();
     if (!existing) throw new NotFoundError(`Tag ${tid} not found in notebook ${nid}`);
     db().delete(sourceTags).where(eq(sourceTags.id, tid)).run();
+    // c57: invalidate sources cache
+    bumpSourcesEpoch(nid);
     set.status = 204;
     return '';
   })
@@ -484,12 +495,13 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       applied++;
       results.push({ source_id: sid, ok: true });
     }
+    // c57: invalidate sources cache (tag binding changed)
+    if (applied > 0) bumpSourcesEpoch(nid);
     return { tag_id: tid, source_ids, applied, skipped, results };
   })
 
   .delete('/notebooks/:nid/sources/tags/:tid/sources', ({ params, body }) => {
-    const _nid = Number(params.nid);
-    void _nid;
+    const nid = Number(params.nid);
     const tid = Number(params.tid);
     const { source_ids } = body as { source_ids: number[] };
     // c53: per-item diagnostics (v1 api_tags.py:142-185)
@@ -519,12 +531,18 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       removed++;
       results.push({ source_id: sid, ok: true });
     }
+    // c57: invalidate sources cache (tag unbinding changed)
+    if (removed > 0) bumpSourcesEpoch(nid);
     return { tag_id: tid, source_ids, removed, skipped, results };
   })
 
   // Get source chunks
-  .get('/sources/:id/chunks', ({ params }) => {
+  // c57: notebook ownership check via ?notebook_id= query
+  .get('/sources/:id/chunks', ({ params, query }) => {
     const id = Number(params.id);
+    const nid = Number((query as Record<string, string> | undefined)?.notebook_id);
+    const row = db().select().from(sources).where(eq(sources.id, id)).get();
+    if (!row || (nid && row.notebookId !== nid)) sourceNotFound(id);
     const rows = db()
       .select()
       .from(chunks)
@@ -542,18 +560,27 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Re-embed a source (v1: requires FAILED status; processing → ready/failed)
-  .post('/sources/:id/re-embed', async ({ params }) => {
+  // c57: notebook ownership check via ?notebook_id= query
+  .post('/sources/:id/re-embed', async ({ params, query }) => {
     const id = Number(params.id);
+    const nid = Number((query as Record<string, string> | undefined)?.notebook_id);
     const row = db().select().from(sources).where(eq(sources.id, id)).get();
-    if (!row) sourceNotFound(id);
+    if (!row || (nid && row.notebookId !== nid)) sourceNotFound(id);
     // c44: v1 _reembed_existing_source rejects non-failed with 400
     if (row.status !== 'failed') {
       throw new Error(`Source ${id} is not in failed status (current: ${row.status})`);
     }
 
+    // c57: clear ALL error fields (v1 api_common.py:261-263), not just errorMessage
     db()
       .update(sources)
-      .set({ status: 'processing', errorMessage: null })
+      .set({
+        status: 'processing',
+        errorCode: null,
+        errorMessage: null,
+        recoveryHint: null,
+        lastErrorAt: null,
+      })
       .where(eq(sources.id, id))
       .run();
 
@@ -615,21 +642,34 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Batch delete sources
-  .post('/notebooks/:nid/sources/batch/delete', ({ body }) => {
+  // c57: per-item results array (v1 api_schemas.py:111-114 SourceBatchDeleteResponse)
+  .post('/notebooks/:nid/sources/batch/delete', ({ params, body }) => {
+    const nid = Number(params.nid);
     const { source_ids } = body as { source_ids: number[] };
     const deletedIds: number[] = [];
+    const results: Array<{ source_id: number; ok: boolean; error_code?: string; message?: string }> = [];
     for (const sid of source_ids) {
       const row = db().select().from(sources).where(eq(sources.id, sid)).get();
-      if (row) {
+      if (row && row.notebookId === nid) {
         deleteSourceVectors(db(), sid);
         db().delete(sources).where(eq(sources.id, sid)).run();
         deletedIds.push(sid);
+        results.push({ source_id: sid, ok: true });
+      } else {
+        results.push({
+          source_id: sid,
+          ok: false,
+          error_code: 'SOURCE_NOT_FOUND',
+          message: row ? 'Source not in this notebook' : 'Source not found',
+        });
       }
     }
-    return { deleted_ids: deletedIds, deleted_count: deletedIds.length };
+    if (deletedIds.length) bumpSourcesEpoch(nid);
+    return { results, deleted_ids: deletedIds, deleted_count: deletedIds.length };
   })
 
   // Batch re-embed sources
+  // c57: per-item results array + clear all error fields
   .post('/notebooks/:nid/sources/batch/re-embed', async ({ params, body }) => {
     const nid = Number(params.nid);
     const { source_ids } = body as { source_ids: number[] };
@@ -637,15 +677,24 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     const strategy = new EmbedStrategy();
     const reembedded: number[] = [];
     const failed: number[] = [];
+    const results: Array<{ source_id: number; ok: boolean; error_code?: string; message?: string }> = [];
     for (const sid of source_ids) {
       const row = db().select().from(sources).where(eq(sources.id, sid)).get();
       if (!row || row.notebookId !== nid) {
         failed.push(sid);
+        results.push({ source_id: sid, ok: false, error_code: 'SOURCE_NOT_FOUND', message: 'Source not found in this notebook' });
         continue;
       }
+      // c57: clear ALL error fields (v1 api_common.py:261-263)
       db()
         .update(sources)
-        .set({ status: 'processing', errorMessage: null })
+        .set({
+          status: 'processing',
+          errorCode: null,
+          errorMessage: null,
+          recoveryHint: null,
+          lastErrorAt: null,
+        })
         .where(eq(sources.id, sid))
         .run();
       try {
@@ -653,20 +702,25 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         await strategy.indexSource(sid, nid);
         db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sid)).run();
         reembedded.push(sid);
+        results.push({ source_id: sid, ok: true });
       } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
         db()
           .update(sources)
           .set({
             status: 'failed',
-            errorMessage: error instanceof Error ? error.message : String(error),
+            errorCode: 'EMBEDDING_FAILED',
+            errorMessage: msg,
           })
           .where(eq(sources.id, sid))
           .run();
         failed.push(sid);
+        results.push({ source_id: sid, ok: false, error_code: 'EMBEDDING_FAILED', message: msg });
       }
     }
     if (reembedded.length || failed.length) bumpSourcesEpoch(nid);
     return {
+      results,
       reembedded_ids: reembedded,
       failed_ids: failed,
       reembedded_count: reembedded.length,
