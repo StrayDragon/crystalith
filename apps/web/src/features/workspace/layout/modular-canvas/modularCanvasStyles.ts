@@ -18,9 +18,12 @@ export const GRIDSTACK_STYLES = `
   background: transparent !important;
 }
 
-/* Item content — positioning only, no visual decoration */
+/* Item content — positioning only, no visual decoration.
+   overflow: auto (not hidden) so nested WidgetShell with overflow-y-auto
+   can scroll when output content (GUIDE sections, MINDMAP tree) exceeds
+   the widget height. See WidgetShell.tsx. */
 .grid-stack-item-content {
-  overflow: hidden !important;
+  overflow: auto !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;

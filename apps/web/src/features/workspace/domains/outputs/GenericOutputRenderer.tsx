@@ -68,14 +68,65 @@ function resolveOptionBool(
   return typeof value === 'boolean' ? value : fallback;
 }
 
+/**
+ * Extract the text content from a value, handling the v1 CitedText pattern
+ * `{ text: string, citations: [...] }` — when the value is an object with a
+ * `text` string field, return that field instead of JSON-stringifying the
+ * whole object. This is the primary fix for "notes show JSON instead of text"
+ * after the Rivu AG-UI runtime was removed in favor of embedded JSON content
+ * + GenericOutputRenderer (see PROGRESS.v2.e2e.md K12).
+ */
 function coerceText(value: unknown): string {
   if (typeof value === 'string') return value;
   if (typeof value === 'number') return String(value);
   if (typeof value === 'boolean') return value ? 'true' : 'false';
   if (value == null) return '';
   if (Array.isArray(value)) return value.map(coerceText).filter(Boolean).join(', ');
-  if (isRecord(value)) return stringify(value);
+  if (isRecord(value)) {
+    // Handle v1 CitedText: { text: string, citations: [...] }
+    if (typeof value.text === 'string') return value.text;
+    return stringify(value);
+  }
   return String(value);
+}
+
+/**
+ * Check if a value is a v1 CitedText object: `{ text: string, citations?: [...] }`.
+ * Used to decide whether to render citations alongside the text.
+ */
+function isCitedText(value: unknown): boolean {
+  return isRecord(value) && typeof value.text === 'string';
+}
+
+/**
+ * Render a field value that may be a simple string or a CitedText object.
+ * For CitedText, renders the text plus any citations as inline tags.
+ */
+function renderTextWithCitations(value: unknown): ReactNode {
+  if (typeof value === 'string') return <>{value}</>;
+  if (isCitedText(value)) {
+    const text = (value as Record<string, unknown>).text as string;
+    const citations = (value as Record<string, unknown>).citations;
+    return (
+      <>
+        <span>{text}</span>
+        {renderCitations(citations)}
+      </>
+    );
+  }
+  if (Array.isArray(value)) {
+    return (
+      <>
+        {value.map((item, i) => (
+          <span key={i}>
+            {i > 0 ? ', ' : ''}
+            {renderTextWithCitations(item)}
+          </span>
+        ))}
+      </>
+    );
+  }
+  return <>{coerceText(value)}</>;
 }
 
 function renderCitations(value: unknown): ReactNode {
@@ -199,12 +250,14 @@ function renderFields(
                     const keyForListItem = createKeyFactory(`${field.key}:list`);
                     return fieldValue
                       .slice(0, 50)
-                      .map((item) => <li key={keyForListItem(item)}>{coerceText(item)}</li>);
+                      .map((item) => (
+                        <li key={keyForListItem(item)}>{renderTextWithCitations(item)}</li>
+                      ));
                   })()}
                 </ul>
               ) : (
                 <div className="text-sm text-gray-800 dark:text-slate-200">
-                  {coerceText(fieldValue)}
+                  {renderTextWithCitations(fieldValue)}
                 </div>
               );
               break;
@@ -216,7 +269,7 @@ function renderFields(
             default:
               body = (
                 <div className="text-sm text-gray-800 dark:text-slate-200 whitespace-pre-wrap">
-                  {coerceText(fieldValue)}
+                  {renderTextWithCitations(fieldValue)}
                 </div>
               );
               break;
