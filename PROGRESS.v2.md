@@ -4,62 +4,64 @@
 
 ## 状态看板
 
-| #   | Change                     | 状态                                                                                             |
-| :-- | :------------------------- | :----------------------------------------------------------------------------------------------- |
-| c00 | server-foundation          | ✅ DONE                                                                                          |
-| c01 | data-layer                 | ✅ DONE                                                                                          |
-| c02 | ai-runtime                 | ✅ DONE                                                                                          |
-| c03 | frontend-eden              | ✅ DONE                                                                                          |
-| c04 | core-crud                  | ✅ DONE                                                                                          |
-| c05 | rag-embed                  | ✅ DONE                                                                                          |
-| c06 | rag-registry               | ✅ DONE                                                                                          |
-| c07 | qa-pipeline                | ✅ DONE                                                                                          |
-| c08 | research-agent             | ✅ DONE                                                                                          |
-| c09 | outputs-generation         | ✅ DONE                                                                                          |
-| c10 | models-management          | ✅ DONE                                                                                          |
-| c11 | eval-harness               | ✅ DONE                                                                                          |
-| c12 | analysis-studio-refine     | ✅ DONE                                                                                          |
-| c15 | bdd-tests                  | ✅ DONE                                                                                          |
-| c16 | rag-foundations            | ✅ DONE                                                                                          |
-| c17 | qa-citations               | ✅ DONE                                                                                          |
-| c18 | source-dedup-safety        | ✅ DONE                                                                                          |
-| c19 | task-queue                 | ✅ DONE (Semaphore + TaskQueue + crash-recovery)                                                 |
-| c20 | outputs-refine             | ✅ DONE                                                                                          |
-| c21 | web-extractors             | ✅ DONE                                                                                          |
-| c22 | research-agent             | ✅ DONE (parity via c24-B + c37; ToolLoopAgent/toolApproval 仍为延迟改进，见 c24 未勾 tasks)     |
-| c23 | studio-analysis            | ✅ DONE                                                                                          |
-| c24 | pipeline-integration       | ✅ DONE (WS-A✅ / WS-B✅ / WS-C✅)                                                               |
-| c25 | ssrf-config                | ✅ DONE (本会话)                                                                                 |
-| c26 | citation-context           | ✅ DONE (本会话)                                                                                 |
-| c27 | outputs-rag                | ✅ DONE (本会话)                                                                                 |
-| c28 | analysis-vector            | ✅ DONE (前agent)                                                                                |
-| c29 | refine-revert              | ✅ DONE (前agent)                                                                                |
-| c30 | sync-embedding             | ✅ DONE (前agent)                                                                                |
-| c31 | qa-noevidence              | ✅ DONE (本会话)                                                                                 |
-| c32 | studio-persist             | ✅ DONE (本会话)                                                                                 |
-| c33 | source-extras              | ✅ DONE (本会话)                                                                                 |
-| c34 | sessions-convert           | ✅ DONE (本会话)                                                                                 |
-| c35 | frontend-migration         | ✅ DONE                                                                                          |
-| c36 | align-qa-pipeline          | ✅ DONE (确定性检索/no-evidence 5reason/export/confidence/source_ids)                            |
-| c37 | align-research-agent       | ✅ DONE (resume推断/skip推进/finish生成report/delete/SSE命名事件)                                |
-| c38 | align-outputs-pipeline     | ✅ DONE (source_ids RAG接通/citation mapping/postprocess/export markdown)                        |
-| c39 | align-sources-sessions     | ✅ DONE (竞态修复/dedup默认prompt/tags校验/link模式/QA向量/sessions补全)                         |
-| c40 | align-shared-infra         | ✅ DONE (config typed/retry Retry-After/searchVectors source_ids)                                |
-| c41 | ts-upgrade                 | ✅ DONE (TS ^5→^7, Go-native tsc, tsconfig unified)                                              |
-| c42 | outputs-contract           | ✅ DONE (OutputRead契约/citation树映射持久化/RAG失败传播/字段级postprocess/错误码)               |
-| c43 | studio-sse-rag             | ✅ DONE (SSE流式端点/ragRegistry接入/drafts-latest/stale清理/preview/frontmatter确定性)          |
-| c44 | sources-search-extract     | ✅ DONE (web search真实现/extractors完整响应/dedup配置门控/re-embed强制FAILED/400+归属)          |
-| c45 | qa-context-citations       | ✅ DONE (ContextStats字段对齐/inline citation兜底/low_similarity空citations/prompt指令)          |
-| c46 | parsers-research           | ✅ DONE (CSV markdown-table parser/report富prompt/AI失败fallback/lock续期/dedup增强)             |
-| c47 | analysis-relations-knn     | ✅ DONE (本会话: relations 回归 KNN/score=1-distance/topics去ghost/RelationType→shared)          |
-| c48 | qa-determinism-export      | ✅ DONE (本会话: multiQuery确定性/stats preset/ContextStats真token/export page·para+sources)     |
-| c49 | research-dedup-report-sse  | ✅ DONE (本会话: 跨迭代dedup/双report 6段prompt/SSE status·thinking/resume plan/note STRUCTURED) |
-| c50 | outputs-slides-guard       | ✅ DONE (本会话: SLIDES 400守卫/source_id校验/citation sanitize/LLM repair loop)                 |
-| c51 | studio-response-shape      | ✅ DONE (本会话: serializeSlide字段/SSE done·trace_id·toolcall/outputId FK/stale清理)            |
-| c52 | models-sessions-parity     | ✅ DONE (本会话: providers envelope/provider过滤/default顶层/message_ids/convert文本格式)        |
-| c53 | sources-citations-contract | ✅ DONE (本会话: qa-to-source多轮/tag per-item/CSV转义/citations路径BREAKING/connector校验)      |
-| c13 | distribution               | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                          |
-| c14 | cleanup-delivery           | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                          |
+| #   | Change                             | 状态                                                                                                             |
+| :-- | :--------------------------------- | :--------------------------------------------------------------------------------------------------------------- |
+| c00 | server-foundation                  | ✅ DONE                                                                                                          |
+| c01 | data-layer                         | ✅ DONE                                                                                                          |
+| c02 | ai-runtime                         | ✅ DONE                                                                                                          |
+| c03 | frontend-eden                      | ✅ DONE                                                                                                          |
+| c04 | core-crud                          | ✅ DONE                                                                                                          |
+| c05 | rag-embed                          | ✅ DONE                                                                                                          |
+| c06 | rag-registry                       | ✅ DONE                                                                                                          |
+| c07 | qa-pipeline                        | ✅ DONE                                                                                                          |
+| c08 | research-agent                     | ✅ DONE                                                                                                          |
+| c09 | outputs-generation                 | ✅ DONE                                                                                                          |
+| c10 | models-management                  | ✅ DONE                                                                                                          |
+| c11 | eval-harness                       | ✅ DONE                                                                                                          |
+| c12 | analysis-studio-refine             | ✅ DONE                                                                                                          |
+| c15 | bdd-tests                          | ✅ DONE                                                                                                          |
+| c16 | rag-foundations                    | ✅ DONE                                                                                                          |
+| c17 | qa-citations                       | ✅ DONE                                                                                                          |
+| c18 | source-dedup-safety                | ✅ DONE                                                                                                          |
+| c19 | task-queue                         | ✅ DONE (Semaphore + TaskQueue + crash-recovery)                                                                 |
+| c20 | outputs-refine                     | ✅ DONE                                                                                                          |
+| c21 | web-extractors                     | ✅ DONE                                                                                                          |
+| c22 | research-agent                     | ✅ DONE (parity via c24-B + c37; ToolLoopAgent/toolApproval 仍为延迟改进，见 c24 未勾 tasks)                     |
+| c23 | studio-analysis                    | ✅ DONE                                                                                                          |
+| c24 | pipeline-integration               | ✅ DONE (WS-A✅ / WS-B✅ / WS-C✅)                                                                               |
+| c25 | ssrf-config                        | ✅ DONE (本会话)                                                                                                 |
+| c26 | citation-context                   | ✅ DONE (本会话)                                                                                                 |
+| c27 | outputs-rag                        | ✅ DONE (本会话)                                                                                                 |
+| c28 | analysis-vector                    | ✅ DONE (前agent)                                                                                                |
+| c29 | refine-revert                      | ✅ DONE (前agent)                                                                                                |
+| c30 | sync-embedding                     | ✅ DONE (前agent)                                                                                                |
+| c31 | qa-noevidence                      | ✅ DONE (本会话)                                                                                                 |
+| c32 | studio-persist                     | ✅ DONE (本会话)                                                                                                 |
+| c33 | source-extras                      | ✅ DONE (本会话)                                                                                                 |
+| c34 | sessions-convert                   | ✅ DONE (本会话)                                                                                                 |
+| c35 | frontend-migration                 | ✅ DONE                                                                                                          |
+| c36 | align-qa-pipeline                  | ✅ DONE (确定性检索/no-evidence 5reason/export/confidence/source_ids)                                            |
+| c37 | align-research-agent               | ✅ DONE (resume推断/skip推进/finish生成report/delete/SSE命名事件)                                                |
+| c38 | align-outputs-pipeline             | ✅ DONE (source_ids RAG接通/citation mapping/postprocess/export markdown)                                        |
+| c39 | align-sources-sessions             | ✅ DONE (竞态修复/dedup默认prompt/tags校验/link模式/QA向量/sessions补全)                                         |
+| c40 | align-shared-infra                 | ✅ DONE (config typed/retry Retry-After/searchVectors source_ids)                                                |
+| c41 | ts-upgrade                         | ✅ DONE (TS ^5→^7, Go-native tsc, tsconfig unified)                                                              |
+| c42 | outputs-contract                   | ✅ DONE (OutputRead契约/citation树映射持久化/RAG失败传播/字段级postprocess/错误码)                               |
+| c43 | studio-sse-rag                     | ✅ DONE (SSE流式端点/ragRegistry接入/drafts-latest/stale清理/preview/frontmatter确定性)                          |
+| c44 | sources-search-extract             | ✅ DONE (web search真实现/extractors完整响应/dedup配置门控/re-embed强制FAILED/400+归属)                          |
+| c45 | qa-context-citations               | ✅ DONE (ContextStats字段对齐/inline citation兜底/low_similarity空citations/prompt指令)                          |
+| c46 | parsers-research                   | ✅ DONE (CSV markdown-table parser/report富prompt/AI失败fallback/lock续期/dedup增强)                             |
+| c47 | analysis-relations-knn             | ✅ DONE (本会话: relations 回归 KNN/score=1-distance/topics去ghost/RelationType→shared)                          |
+| c48 | qa-determinism-export              | ✅ DONE (本会话: multiQuery确定性/stats preset/ContextStats真token/export page·para+sources)                     |
+| c49 | research-dedup-report-sse          | ✅ DONE (本会话: 跨迭代dedup/双report 6段prompt/SSE status·thinking/resume plan/note STRUCTURED)                 |
+| c50 | outputs-slides-guard               | ✅ DONE (本会话: SLIDES 400守卫/source_id校验/citation sanitize/LLM repair loop)                                 |
+| c51 | studio-response-shape              | ✅ DONE (本会话: serializeSlide字段/SSE done·trace_id·toolcall/outputId FK/stale清理)                            |
+| c52 | models-sessions-parity             | ✅ DONE (本会话: providers envelope/provider过滤/default顶层/message_ids/convert文本格式)                        |
+| c53 | sources-citations-contract         | ✅ DONE (本会话: qa-to-source多轮/tag per-item/CSV转义/citations路径BREAKING/connector校验)                      |
+| c54 | error-envelope-contextstats-shared | ✅ DONE (2026-07-13: sendError helper+ErrorCode映射/6 router改造/ContextStats→shared Zod SSOT; +3 reqs archived) |
+| c55 | context-window-real-compression    | ✅ DONE (2026-07-13: truncateToTokenBudget移植v1 _truncate_blocks/QA Step12真实截断; +1 req archived)            |
+| c13 | distribution                       | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                                          |
+| c14 | cleanup-delivery                   | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                                          |
 
 <!-- LEGEND: ✅ DONE | 🔄 WIP | ⬜ TODO | ⏸️ BLOCKED -->
 
@@ -148,6 +150,32 @@
 ## 当前批次
 
 <!-- CURRENT -->
+
+**2026-07-13 第五轮：v1↔v2 差距深度审计 + quick-path 修复 + c54/c55 提案并实现+归档。**
+
+### 复核方法
+
+对照 `backend/py` SSOT 逐域审计端点（v1 82 / v2 118）、行为语义偏差与架构债，发现端点对齐已基本完成；真正残留集中在 3 类：① c13/c14 收尾（阻塞中）；② 几处行为偏差；③ 架构债。用 `llman-sdd-quick` skill 判定每项修复路径（quick vs full SDD），按 spec-defined MUST 违规分流。
+
+### 本会话产出
+
+| 类型     | 内容                                                                                                                                                   | 提交                  | 状态               |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------- | ------------------ |
+| quick    | `/finish` 同步→异步（v1 BackgroundTasks parity；report 后台 fire-and-forget）                                                                          | `0cc8c0b1`            | ✅                 |
+| quick    | citation hydration 去重 → 共享 `hydrateCitations`（qa/refine/outputs；`HydrateOptions` 保行为一致）                                                    | `0cc8c0b1`            | ✅                 |
+| quick    | PROGRESS 同步（移除 2 项已完成 stale 条目）+ 8 个预存 oxlint error 清零                                                                                | `0cc8c0b1`            | ✅                 |
+| full SDD | **c54** 错误信封统一执行 + ContextStats→shared（+3 reqs；`shared/errors.ts` sendError+ErrorCode 映射；6 router 改造；`packages/shared/schemas/qa.ts`） | `3ac9f3a4`/`fdcc8808` | ✅ DONE + archived |
+| full SDD | **c55** context-window 真实截断（+1 req；`truncateToTokenBudget` 移植 v1 `_truncate_blocks`；QA Step12 实际截断非仅标志）                              | `1b28adeb`/`8c6299ba` | ✅ DONE + archived |
+
+### 质量门禁
+
+- Server test: **218 pass / 1 fail**（research 网络 timeout，非回归，隔离通过；较上轮 209→218 +9 新测试）
+- Server typecheck: **✅ pass**
+- oxlint: **0 error**（修了 8 个预存 correctness error）
+- SDD: c54 + c55 **archived**（+4 reqs 合并到 3 个 capability spec）；39/39 specs ✅
+- 仅剩 c13/c14 active（BLOCKED 等人工授权）
+
+---
 
 **2026-07-12 第四轮深度复核 + c47–c53 提案 + c47/c48/c49/c50/c51/c52/c53 全部实现+归档。1 P0 (analysis relations) + 30×P1 (全部 7 域) 清零。第四轮完成。**
 
@@ -262,28 +290,28 @@ c42–c46 已全部 archive（`llman sdd archive run`），spec deltas 合并到
 
 ### 仍开放（后置项）
 
-> 2026-07-13 核对代码后更新：移除 2 项已完成条目，新增 1 项实测偏差。
+> 2026-07-13 第五轮更新：c54/c55 + quick-path 修复全部落地，已知问题清单大幅缩减。
 
-- P1 残留：~~stats preset（chart+table）~~ ✅ c48 已做（`qa/presets.ts:23`）；~~export note STRUCTURED 类型~~ ✅ c49 已做（`research/router.ts:600`）；~~waiting SSE 心跳~~ ✅ c37 已做（`research/router.ts:711`，30s heartbeat）
-- **P1 残留（实测）**：context window 压缩（仅算 `compressed` 标志，无真实截断动作 → 提案 **c55**）；`/finish` 同步阻塞（v1 异步 BackgroundTasks，v2 `router.ts:487` `await generateFinalReport` 在请求内 → quick-path 修复中）；错误 envelope 不统一（违反 `workspace-api-contract r3` → 提案 **c54**）
-- MEDIUM 架构债：citation hydration 共享 helper（4 处重复，仅 qa 用 `resolveCitations` → quick-path 修复中）；~~ContextStats 定义到 shared~~ → 并入 **c54**；SLIDES postprocess
-- P2 架构债：audio/video parsers；plugin host；ToolLoopAgent 迁移；batch DELETE 方法（BREAKING，留 c14）
-- c13/c14 等人授权；web typecheck；`api/generated/` → c14
+- ✅ **已完成（本会话）**：~~context window 压缩~~ → **c55** DONE（QA Step12 真实截断）；~~错误 envelope 不统一~~ → **c54** DONE（sendError helper + 6 router）；~~`/finish` 同步阻塞~~ → quick DONE（异步 fire-and-forget）；~~citation hydration 去重~~ → quick DONE（`hydrateCitations` 共享）；~~ContextStats→shared~~ → **c54** DONE（`packages/shared/schemas/qa.ts`）
+- ✅ **历史已完成（核对确认）**：~~stats preset~~ c48；~~export note STRUCTURED~~ c49；~~waiting SSE 心跳~~ c37
+- **仍开放 P1/P2**：SLIDES postprocess case；audio/video parsers；plugin host；ToolLoopAgent 迁移；batch DELETE 方法（BREAKING，留 c14）
+- **阻塞中**：c13/c14 等人授权；web typecheck；`api/generated/` → c14
 
 **当前状态**:
 
-- Server test: **209 pass / 2 fail**（research 网络 + URL 超时，非回归）
+- Server test: **218 pass / 1 fail**（research 网络 timeout，非回归；隔离通过）
 - Server typecheck: **✅ pass**
-- SDD: c42–c46 **archived**，39/39 specs ✅
-- 验证审计: **28/28 通过**（含修复后）
-- QA 架构审查: **7/7 HIGH 修复完成**；MEDIUM/LOW 后置
-- 下一阶段建议: 前端适配 SSE + OutputRead 契约；c13 授权；MEDIUM 架构债清理
+- oxlint: **0 error**（correctness rules；214 warnings 后置）
+- SDD: c54 + c55 **archived**（+4 reqs 合并），39/39 specs ✅
+- 仅剩 c13/c14 active（BLOCKED 等人工授权）
+- 下一阶段建议: c13 授权（单二进制 + Tauri）；前端适配 SSE + OutputRead/ErrorEnvelope 契约；SLIDES postprocess；P2 架构债
 
 ### GAP-BOARD 更新
 
 - 全部 8 个 P0 已清零（c42–c46）
-- P1 大部分已清零；残留 stats preset / context compression / export note / waiting 心跳为后置项
+- P1 已全部清零：~~stats preset~~ c48 / ~~export note~~ c49 / ~~waiting 心跳~~ c37 / ~~context compression~~ c55 / ~~error envelope~~ c54 / ~~/finish 异步~~ quick / ~~citation hydration 去重~~ quick
 - G14 source-connectors：最小可用管线 + c44 补充 409/schema 校验
+- 残留仅 P2（SLIDES postprocess / audio-video parsers / plugin host / ToolLoopAgent）+ c13/c14 阻塞
 
 ## GAP-BOARD — v1 行为对齐提案规划
 
@@ -317,11 +345,11 @@ c42–c46 已全部 archive（`llman sdd archive run`），spec deltas 合并到
 > ⚠️ **对拍说明**: 早期 ✅ 曾表示「端点存在」而非「行为对齐」。c36–c40 + 2026-07-11 复核修了多处伪对齐。
 > c42–c46 已 archived，验证审计 28/28 通过（含修复）。
 
-| 上次 Agent | 第三轮深度复核 + c42–c46 实现 + 验证审计 + QA 架构审查 |
-| 上次操作 | **commits**: `996e2a88`（P1 行为债）→ `7ee5972a`（c42–c46 提案）→ `4707d0f5`–`33abbf83`（c42–c46 实现）→ `f1b53fa2`（tasks 全勾）→ `73be56b1`（archive +31 reqs 合并）→ `d3ffdd7c`（验证审计 5 项偏差修复）→ `2fa63263`（QA 架构审查 7 个 HIGH 修复: /search host bug/extractor factory/connector Error/lock.ts 循环依赖/studio service.ts 提取/qa generateQaDirect）。 |
-| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13）。(2) **React**: 暂锁18.2.0。(3) **c13/c14 等人工授权**。(4) 前端适配 SSE + OutputRead 契约。(5) SDD archive 卫生（c24–c27 旧未勾 tasks 仍 active）。 |
-| 已知问题 | **🟡 后置 P1**: stats preset；context window 压缩；export note STRUCTURED；finish 后台生成；waiting SSE 心跳。**🟡 MEDIUM 架构债**: citation hydration 共享；ContextStats→shared；错误 envelope 统一；SLIDES postprocess。**🟡 P2**: audio/video parsers；plugin host；ToolLoopAgent；web typecheck；`api/generated/` → c14。 |
-| 质量门禁 | `bun test` (server) → 209 pass / 2 fail（网络超时，非回归）。`bun typecheck` (server) → ✅ pass。`llman sdd validate --specs` → 39/39 ✅。验证审计 → 28/28 ✅。QA 架构审查 → 7/7 HIGH ✅。 |
+| 上次 Agent | 第五轮 v1↔v2 差距审计 + quick-path 修复 + c54/c55 提案并实现+归档 |
+| 上次操作 | **commits**: `0cc8c0b1`（quick: /finish 异步 + citation 去重 + PROGRESS 同步 + 8 lint）→ `08ae7070`（c54/c55 提案）→ `3ac9f3a4`（c54 实现: sendError helper + ErrorCode 映射 + 6 router + ContextStats→shared）→ `fdcc8808`（c54 archive +3 reqs）→ `1b28adeb`（c55 实现: truncateToTokenBudget + QA 真实截断）→ `8c6299ba`（c55 archive +1 req）。 |
+| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13）。(2) **React**: 暂锁18.2.0。(3) **c13/c14 等人工授权**。(4) 前端适配 SSE + OutputRead + ErrorEnvelope 契约。 |
+| 已知问题 | **🟡 P2 架构债**: SLIDES postprocess case；audio/video parsers；plugin host；ToolLoopAgent 迁移；batch DELETE（BREAKING，留 c14）。**🟡 阻塞**: c13/c14 等人授权；web typecheck；`api/generated/` → c14。 |
+| 质量门禁 | `bun test` (server) → 218 pass / 1 fail（research 网络 timeout，非回归；隔离通过）。`bun typecheck` (server) → ✅ pass。`bun oxlint` → 0 error（214 warnings 后置）。`llman sdd validate --specs` → 39/39 ✅。c54+c55 archived（+4 reqs 合并）。 |
 
 ---
 
