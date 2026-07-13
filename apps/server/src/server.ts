@@ -84,12 +84,34 @@ apiDocs.push({
 export function createApp() {
   return new Elysia()
     .get('/health', () => ({ status: 'ok', version: '2.0.0-dev' }))
-    .get('/health/dependencies', () => {
+    .get('/health/dependencies', async () => {
       const opt = getOptionalServices();
+      const now = new Date().toISOString();
+
+      // Probe SearXNG if enabled — short timeout, fail fast.
+      let searxngStatus: string;
+      let searxngHealthy: boolean | null;
+      if (opt.searxng.enabled && opt.searxng.endpoint) {
+        try {
+          const res = await fetch(opt.searxng.endpoint, {
+            method: 'GET',
+            signal: AbortSignal.timeout((opt.searxng.timeout_s ?? 3) * 1000),
+          });
+          searxngStatus = res.ok ? 'healthy' : 'degraded';
+          searxngHealthy = res.ok;
+        } catch {
+          searxngStatus = 'degraded';
+          searxngHealthy = false;
+        }
+      } else {
+        searxngStatus = 'disabled';
+        searxngHealthy = null;
+      }
+
       return {
         status: 'ok',
-        generated_at: new Date().toISOString(),
-        last_probe: null,
+        generated_at: now,
+        last_probe: now,
         core: {
           backend: { service: 'api', healthy: true },
           frontend: {
@@ -117,8 +139,8 @@ export function createApp() {
             service: 'SearXNG (Search)',
             enabled: opt.searxng.enabled,
             endpoint: opt.searxng.enabled ? opt.searxng.endpoint : null,
-            status: opt.searxng.enabled ? 'unknown' : 'disabled',
-            healthy: null,
+            status: searxngStatus,
+            healthy: searxngHealthy,
           },
         },
       };

@@ -145,6 +145,10 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
       min_score,
       model_id,
     } = body as Record<string, unknown>;
+
+    // Normalize output type to uppercase (API accepts both 'faq' and 'FAQ')
+    const normalizedType = String(type ?? '').toUpperCase();
+
     const notebookId = Number(notebook_id);
 
     // Verify notebook
@@ -154,7 +158,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     // c50: reject SLIDES — v1 api.py:205-206 returns 400 "Use slides endpoints
     // for SLIDES output". SLIDES has its own studio pipeline; the generic
     // outputs pipeline has no SLIDES postprocess/isContentEmpty case.
-    if (String(type).toUpperCase() === 'SLIDES') {
+    if (normalizedType === 'SLIDES') {
       return sendError(set, ErrorCode.INVALID_REQUEST, 'Use slides endpoints for SLIDES output');
     }
 
@@ -192,7 +196,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
       result = await runOutputPipeline({
         model,
         notebookId,
-        type: String(type) as ToolOutputType,
+        type: normalizedType as ToolOutputType,
         chunkIds: resolvedChunkIds,
         sourceIds: resolvedSourceIds,
         prompt: prompt ? String(prompt) : undefined,

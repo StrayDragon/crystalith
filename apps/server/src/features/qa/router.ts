@@ -11,6 +11,7 @@ import { db } from '../../db/index.ts';
 import { messages, notebooks, sessions, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
+import { ErrorCode, sendError } from '../../shared/errors.ts';
 import { streamQa, generateQaDirect } from './handler.ts';
 import { resolvePreset, listPresets } from './presets.ts';
 
@@ -153,9 +154,10 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
   .get('/qa/presets', () => listPresets())
 
   // Non-streaming QA
-  .post('/qa', async ({ body }) => {
+  .post('/qa', async ({ body, set }) => {
     const {
       question: rawQuestion,
+      content: rawContent,
       notebook_id,
       session_id,
       preset: bodyPreset,
@@ -164,10 +166,16 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       top_k,
       min_score,
       source_ids,
-    } = body as unknown as QaRequest;
+    } = body as unknown as QaRequest & { content?: string };
 
     // c45: parse /prompt:<preset> directive from question text (v1 presets.py:9-30)
-    const { preset, question } = parsePromptDirective(rawQuestion, bodyPreset);
+    // Accept both 'question' (API canonical) and 'content' (some clients' convention)
+    const resolvedQuestion = rawQuestion ?? rawContent;
+    if (!resolvedQuestion) {
+      set.status = 400;
+      return sendError(set, ErrorCode.INVALID_REQUEST, 'question is required');
+    }
+    const { preset, question } = parsePromptDirective(resolvedQuestion, bodyPreset);
 
     assertQaOwnership({
       notebookId: notebook_id,

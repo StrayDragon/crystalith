@@ -61,6 +61,15 @@ export function createDb(path: string = DB_PATH): Orm {
   // Provision the sqlite-vec virtual table (not managed by Drizzle).
   initVecChunks(orm);
 
+  // Ensure strategy_configs exists (table def in rag/registry.ts, not in migrations).
+  orm.run(sql`
+    CREATE TABLE IF NOT EXISTS strategy_configs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      notebook_id INTEGER NOT NULL,
+      strategy_id TEXT NOT NULL
+    );
+  `);
+
   return orm;
 }
 
