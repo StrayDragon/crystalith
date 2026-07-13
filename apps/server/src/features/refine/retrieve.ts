@@ -7,10 +7,10 @@ import type { Citation } from '@crystalith/shared';
 import { inArray } from 'drizzle-orm';
 
 import { db } from '../../db/index.ts';
-import { chunks, sources } from '../../db/schema.ts';
+import { sources } from '../../db/schema.ts';
 import { ragRegistry } from '../../rag/registry.ts';
+import { hydrateCitations } from '../../shared/citations.ts';
 import type { StageLimiters } from '../tasks/worker.ts';
-import { extractPageNumber, extractParagraphIndex } from './format.ts';
 
 export interface RetrieveResult {
   citations: Citation[];
@@ -56,8 +56,18 @@ export async function retrieveForRefine(
 
   if (filtered.length === 0) return { citations: [], context: '', evidence: false };
 
-  // ③ ChunkResult already carries text/source_id/chunk_index (sqlite-vec JOIN).
-  //    Hydrate source filename + chunk metadata for citation enrichment.
+  // ③ Hydrate citations via the shared helper. Refine's behavior: snippet is
+  //    trimmed before slicing (`.trim().slice(0,200)`, v1 api.py:289 /
+  //    worker.py:234) and page/paragraph use the coercive extractPageNumber
+  //    predicate (Number() + isFinite), so pass both options.
+  const citations: Citation[] = hydrateCitations(filtered, {
+    trimSnippet: true,
+    coercePageNumber: true,
+  });
+
+  // ④ context: full unstripped text, [N] Source: <filename> (chunk <idx>)\n<text>
+  //    (v1 utils/context.py:13-24). Source names are needed here independently
+  //    of the citation hydration above.
   const uniqueSourceIds = [...new Set(filtered.map((r) => r.source_id))];
   const sourceRows = db()
     .select({ id: sources.id, filename: sources.filename })
@@ -66,28 +76,6 @@ export async function retrieveForRefine(
     .all();
   const sourceNameMap = new Map(sourceRows.map((s) => [s.id, s.filename]));
 
-  const chunkIds = filtered.map((r) => r.chunk_id);
-  const chunkRows = db()
-    .select({ id: chunks.id, metadata: chunks.metadata })
-    .from(chunks)
-    .where(inArray(chunks.id, chunkIds))
-    .all();
-  const chunkMetaMap = new Map(chunkRows.map((c) => [c.id, c.metadata]));
-
-  // ④ citations: strip THEN slice(0,200) (v1 api.py:289 / worker.py:234).
-  const citations: Citation[] = filtered.map((r) => ({
-    source_id: r.source_id,
-    source_name: sourceNameMap.get(r.source_id) ?? 'unknown',
-    chunk_id: r.chunk_id,
-    chunk_index: r.chunk_index + 1, // 1-based (v1 refine/api.py:295)
-    snippet: r.text.trim().slice(0, 200),
-    page_number: extractPageNumber(chunkMetaMap.get(r.chunk_id)),
-    paragraph_index: extractParagraphIndex(chunkMetaMap.get(r.chunk_id)),
-    score: r.score,
-  }));
-
-  // ⑤ context: full unstripped text, [N] Source: <filename> (chunk <idx>)\n<text>
-  //    (v1 utils/context.py:13-24)
   const context = filtered
     .map((r, i) => {
       const name = sourceNameMap.get(r.source_id) ?? 'unknown';

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "spec_hash": "88029308456803bdb1c2223eadb673042f4ff41120819966039f2b16518ce063",
-  "build_timestamp": "2026-07-12T03:01:27.628477809+00:00",
+  "spec_hash": "69b2349642d66fcae55d1d879f0500fa00204ccebe29e2802e520b4dec00291e",
+  "build_timestamp": "2026-07-13T02:08:35.954213670+00:00",
   "chat_model": "",
   "docs": [
     {
@@ -140,6 +140,11 @@
           "req_id": "r3",
           "title": "端到端回归门禁",
           "statement": "MUST 将 BDD 测试加入 pre-commit 门禁，MUST 覆盖全部 16 个功能域的 API 端点行为。"
+        },
+        {
+          "req_id": "r_integration_tests",
+          "title": "Cross-module integration test suite",
+          "statement": "系统 MUST 提供 AI SDK mock 驱动的集成测试套件 覆盖 QA 与 sources 与 refine 与 outputs 与 research 与 studio 全流程 作为 v2 发布质量门禁"
         }
       ]
     },
@@ -238,6 +243,16 @@
           "req_id": "r5",
           "title": "转换请求与结果元数据必须显式表达目标类型与映射摘要",
           "statement": "系统 MUST 在转换请求与结果元数据中显式表达目标类型，并提供可理解的映射摘要（保留/重建边界）用于 UI 展示。"
+        },
+        {
+          "req_id": "session-get-single",
+          "title": "API MUST provide GET single session",
+          "statement": "系统 MUST 提供 GET 单个 session 端点返回完整 session 信息"
+        },
+        {
+          "req_id": "session-convert-citation-chunks",
+          "title": "Session convert-to-output MUST collect chunk_ids from citations",
+          "statement": "session convert-to-output MUST 从消息 citations 中收集 chunk_ids 并附加到创建的 output"
         }
       ]
     },
@@ -284,6 +299,16 @@
           "req_id": "r_clustering_vector",
           "title": "Clustering embedding vectors",
           "statement": "analysis 聚类 MUST 基于 embedding 向量 而非关键词 TF 向量 做质心聚类以保证语义级聚类质量"
+        },
+        {
+          "req_id": "r_storage_layer",
+          "title": "Content storage abstraction",
+          "statement": "系统 MUST 提供内容存储抽象 LocalStorage 实现 saveContent 与 fetchContent 以持久化原始上传字节 使 document_parse 任务可重新解析 单二进制架构下 MUST 使用本地文件系统路径"
+        },
+        {
+          "req_id": "r_document_parse",
+          "title": "document_parse task wired",
+          "statement": "任务队列 worker MUST 实现 document_parse 任务类型 从存储读取原始字节 经 parse 与 chunk 与 embed 完整流程 不再抛 stub 错误"
         }
       ]
     },
@@ -325,6 +350,31 @@
           "req_id": "evidence-low-similarity-strip",
           "title": "Low similarity evidence review MUST strip citations",
           "statement": "evidence 审查在 low_similarity 判定下 MUST 返回空 citations 列表，因为低相似度证据不应作为引用呈现给用户"
+        },
+        {
+          "req_id": "citations-context-must-use-notebook-path",
+          "title": "Citations context endpoint MUST nest under /notebooks/:nid path (not flat query param)",
+          "statement": "citations /context 端点 MUST 沿用 v1 路径层级 GET /v2/notebooks/:nid/citations/context（对齐 v1 api.py:13 的 prefix /v1/notebooks/{notebook_id}/citations），MUST NOT 用扁平 /v2/citations/context?notebook_id=；当前 v2 router.ts:35 与 50 用扁平路径 + query param，违反 c26 proposal.md:20 与 design.md:6 的承诺，且与所有其他 v2 特性的层级路径不一致。BREAKING: 路径修正（query param → path param）"
+        },
+        {
+          "req_id": "citations-context-defaults-must-match-v1",
+          "title": "Citations context defaults MUST be before=1/after=1 (not 2)",
+          "statement": "citations /context 的 before/after 默认值 MUST 为 1（对齐 v1 api.py:61-62 Query(1, ge=0, le=5)），MUST NOT 为 2；当前 v2 router.ts:89-90 默认 2，客户端省略参数会拿到 v1 2 倍的 chunk 窗口"
+        },
+        {
+          "req_id": "connector-config-must-be-schema-validated",
+          "title": "Source connector connection_config MUST be JSON-schema validated",
+          "statement": "source connector 创建时 MUST 用 jsonschema Draft7 校验 connection_config（对齐 v1 api.py:77-98 与 199-200 的 Draft7Validator），非法路径/键 → 400；当前 v2 router.ts:232-241 原样存储无校验，畸形配置静默接受"
+        },
+        {
+          "req_id": "r_context_endpoint",
+          "title": "Citation context neighborhood",
+          "statement": "系统 MUST 提供 citations context 端点 按 chunk_id 或 source_id 与 chunk_index 解析目标 chunk 并返回相邻 chunk 邻域窗口 返回 MUST 包含 before 数组 与目标 chunk 与 after 数组"
+        },
+        {
+          "req_id": "r_context_enrichment",
+          "title": "Citation context enrichment",
+          "statement": "系统 MUST 在 citations context 返回的每个 chunk 中包含 page_number 与 paragraph_index 字段以支持证据定位"
         }
       ]
     },
@@ -422,6 +472,41 @@
           "req_id": "qa-low-similarity-empty",
           "title": "Low similarity no-evidence MUST return empty citations",
           "statement": "当 no_evidence_reason 为 low_similarity 时 MUST 返回 citations=[] 空数组，MUST NOT 返回检索到的 citations"
+        },
+        {
+          "req_id": "qa-retrieve-before-generate",
+          "title": "QA MUST determine evidence deterministically before generation",
+          "statement": "QA 管线 MUST 在进入 LLM 生成之前先通过确定性检索阶段判断是否有足够证据，而非让 LLM 自主决定是否检索"
+        },
+        {
+          "req_id": "qa-no-evidence-reasons",
+          "title": "QA MUST produce 5 distinct no-evidence reasons",
+          "statement": "当 evidence 为 false 时系统 MUST 从 5 种 reason 中确定一个并返回对应本地化回答：no_sources / embedding_empty / no_vector_hits / no_valid_chunks / low_similarity"
+        },
+        {
+          "req_id": "qa-confidence-score",
+          "title": "QA MUST compute and return confidence score",
+          "statement": "当 evidence 为 true 时系统 MUST 计算并返回 confidence 置信度分数"
+        },
+        {
+          "req_id": "outputs-citation-mapping",
+          "title": "Outputs MUST map LLM citation indices to full citation objects",
+          "statement": "outputs 生成管线 MUST 将 LLM 输出的数字 citation 索引映射回完整的 Citation 对象，而非附加全部检索 chunk"
+        },
+        {
+          "req_id": "outputs-postprocess",
+          "title": "Outputs MUST run postprocess and fallback",
+          "statement": "outputs 生成管线 MUST 在生成后运行 postprocess（空内容 fallback + citation 索引清理），并在生成失败时产出类型化 fallback 内容"
+        },
+        {
+          "req_id": "r_outputs_rag",
+          "title": "Outputs RAG retrieval",
+          "statement": "结构化输出生成 MUST 通过 RAG 检索获取相关上下文 而非 dump 全部 chunk 以避免上下文窗口溢出 检索 MUST 支持 topK 参数并由生成偏好调节"
+        },
+        {
+          "req_id": "r_outputs_citations",
+          "title": "Outputs citations attached",
+          "statement": "结构化输出生成 MUST 把检索到的 chunk 作为 citations 附到生成结果以支持证据追溯"
         }
       ]
     },
@@ -463,6 +548,16 @@
           "req_id": "r7",
           "title": "Background workers shutdown gracefully",
           "statement": "后台任务队列 worker MUST 支持优雅停机与终态等待行为。"
+        },
+        {
+          "req_id": "retry-honors-retry-after",
+          "title": "Retry MUST honor Retry-After header and include full retryable codes",
+          "statement": "AI 调用重试 MUST 解析并遵守响应的 Retry-After 头，且可重试状态码集合 MUST 包含 408/409/425/429/500/502/503/504"
+        },
+        {
+          "req_id": "retry-timeout-budget",
+          "title": "Retry MUST enforce timeout budget and max delay",
+          "statement": "AI 调用重试 MUST 实施 total timeout 预算和 max delay 上限，避免无限退避"
         }
       ]
     },
@@ -494,6 +589,21 @@
           "req_id": "r5",
           "title": "结果必须回传本次生效的控制配置（effective controls）",
           "statement": "系统 MUST 在生成结果中回传本次生效的预设与控制项配置，以支持复用与“保存为预设”。"
+        },
+        {
+          "req_id": "qa-stats-preset-must-exist",
+          "title": "QA MUST support the stats preset with chart/table structured output",
+          "statement": "QA MUST 支持 stats preset（与 v1 presets.py:93-99 一致）：包含 STATS_SYSTEM_PROMPT、StatsChart/StatsTable schema、专用生成 + JSON 解析路径（v1 api.py:289-304 与 457-504），当前 v2 presets.ts 仅 default/analysis/creative/explainer 而缺 stats"
+        },
+        {
+          "req_id": "qa-contextstats-must-use-real-tokens",
+          "title": "QA ContextStats MUST use real token counts and compression flag",
+          "statement": "QA 的 ContextStats 字段（total_tokens/system_tokens/history_tokens/retrieval_tokens/query_tokens/max_tokens/compressed）MUST 使用真实 token 计数（v1 用 TokenCounter，service.py:254-271），MUST NOT 用字符数估算（当前 retrieve-and-judge.ts:118 与 244-252 用 Math.ceil(length/4)）；compressed 标志 SHALL 在历史被截断/摘要时为 true（当前硬编码 false）"
+        },
+        {
+          "req_id": "qa-export-must-match-v1-citation-and-sources-shape",
+          "title": "QA export MUST match v1 citation line format and sources meta shape",
+          "statement": "QA export（markdown/json）MUST 与 v1 对齐：(1) markdown citation 行 SHALL 包含 page_number/paragraph_index（v1 api.py:599-610 _format_citation_line）；当前 router.ts:391-398 仅含 chunk_index。(2) JSON sources meta SHALL 为 source_id/source_name/mime_type/parser_type 且 notebook-scoped 且含 cited-but-deleted fallback（v1 api.py:89-94 与 584-595）；当前 router.ts:370-374 返回 id/filename/status。(3) JSON SHALL 含顶层 notebook_id（v1 api.py:679）；当前缺失。markdown SHALL 含 - Notebook ID 行"
         }
       ]
     },
@@ -571,6 +681,51 @@
           "req_id": "r6",
           "title": "工作区必须提供可聚合查看的治理入口",
           "statement": "系统 MUST 在工作区/来源管理界面提供治理入口，聚合展示 stale sources、duplicate candidates 与维护建议，避免治理能力藏在单个来源详情里。"
+        },
+        {
+          "req_id": "research-dedup-must-be-cross-iteration",
+          "title": "Research dedup MUST seed seen-set from all accumulated results across iterations",
+          "statement": "research 搜索结果去重 MUST 跨迭代累积：去重 seen-set（seen_titles/seen_normalized_urls）SHALL 用 state.all_results（所有先前迭代累积结果）初始化，而非仅当前批次；当前 agent.ts:161 与 178 只对单批 allResults 去重，与 v1 graph.py:518 与 551 的跨迭代去重不一致，导致同一 URL/title 在迭代 2 后重复出现"
+        },
+        {
+          "req_id": "research-report-prompt-must-be-consistent",
+          "title": "Research report generation MUST use the v1 6-section prompt on BOTH paths",
+          "statement": "research report 生成 MUST 在所有路径使用 v1 的 6 段结构化 REPORT_SYSTEM_PROMPT（graph.py:94-128：Executive Summary/Background/Key Findings/Analysis/Recommendations/References）。当前 v2 仅 finish 路径（generateFinalReport, agent.ts:549-583）用该 prompt；正常完成路径（generateReport, agent.ts:296-304）用 1 行极简 prompt 'You are a research report writer. Produce a comprehensive markdown report.'，与 c46 承诺的 report 富 prompt 仅半数兑现"
+        },
+        {
+          "req_id": "research-sse-must-emit-status-and-thinking",
+          "title": "Research SSE MUST emit status events and rich thinking payloads like v1",
+          "statement": "research SSE 事件流 MUST 对齐 v1 覆盖度：(1) SHALL 在每次状态转换时发 status 事件（v1 api.py:1037-1058）；当前 v2 完全不发 status。(2) SHALL 发富 thinking 事件（状态消息 api.py:1044-1050、迭代变更 1060-1071、每步 reasoning/insight/decision 1102-1186）；当前 v2 把非 plan/search/analyze/summary 步骤塌缩成无消息的 thinking（router.ts:783-785）。前端依赖 status/thinking 维护 UI 状态时会回归"
+        },
+        {
+          "req_id": "research-resume-must-restore-plan",
+          "title": "Research resume MUST restore the in-flight search plan and start node",
+          "statement": "research resume（runResearchFromState）MUST 还原暂停时的 search_plan 与起始节点：(1) SHALL 从持久化 steps 还原 search_plan（v1 _extract_plan_from_steps, graph.py:945-972 与 1009）；当前 agent.ts:502-526 只还原 iteration+results，总是重新 planSearches。(2) SHALL 支持 start-node 选择（v1 _start_node_for_status, graph.py:1013-1028）使 waiting_user/searching 状态跳过重规划直接进入 WaitForApproval/ExecuteSearches。否则 resume 一个 waiting_user 会话会重新生成 plan 而非展示用户即将审批的那个"
+        },
+        {
+          "req_id": "research-export-note-must-use-structured-type",
+          "title": "Research export note MUST use STRUCTURED output type with v1 content schema",
+          "statement": "research export 的 note 类型 MUST 用 OutputType=STRUCTURED + content={title, text, metadata}（v1 api.py:1434-1448），MUST NOT 用 BRIEFING + {title, sections:[{heading, points}]}（当前 router.ts:606-611）。两者 type 与 content schema 均不兼容，跨版本不可比"
+        },
+        {
+          "req_id": "r_tool_approval",
+          "title": "Research HITL via toolApproval",
+          "statement": "研究智能体 MUST 使用 AI SDK v7 toolApproval user-approval 实现事件驱动审批 替代 DB 轮询"
+        },
+        {
+          "req_id": "r_resume_with_state",
+          "title": "Research resume preserves state",
+          "statement": "研究 resume MUST 从 aggregatedResults 与 currentIteration 重建 ResearchState 而非从空结果重跑"
+        },
+        {
+          "req_id": "r_export_to_source",
+          "title": "Research export creates source",
+          "statement": "研究 export MUST 将 report 经 chunk 与 embed 与 vector 写入并创建 source 而非仅返回原始 JSON"
+        },
+        {
+          "req_id": "r_modify_action",
+          "title": "Research HITL modify action",
+          "statement": "研究 MUST 支持 modify 动作 接受修改后的 SearchPlan 记录 step 并 resume"
         }
       ]
     },
@@ -669,6 +824,26 @@
           "req_id": "outputs-error-mapping",
           "title": "Output generation errors MUST map to granular HTTP codes",
           "statement": "输出生成错误 MUST 映射到细分 HTTP 状态码：model 不可用→503、schema 校验失败→422、值错误→400，MUST NOT 统一返回 500"
+        },
+        {
+          "req_id": "outputs-slides-must-be-rejected-at-outputs-endpoint",
+          "title": "Outputs endpoint MUST reject SLIDES type with 400 (use studio endpoints)",
+          "statement": "outputs 生成端点 MUST 对 type=SLIDES 返回 400 并提示使用 studio slides 端点（对齐 v1 api.py:205-206 'Use slides endpoints for SLIDES output'），MUST NOT 把 SLIDES 路由进通用 outputs pipeline；当前 v2 router.ts:97-180 接受 SLIDES 并走 runOutputPipeline，导致 SLIDES content 既无 postprocess backfill（pipeline.ts:220-252 缺 SLIDES case）也无 isContentEmpty 判定（pipeline.ts:258-276 缺 SLIDES case）。这是 PROGRESS.v2.md 标注 'SLIDES 缺 postprocess case' 的根因——v1 根本不让 SLIDES 进此路径"
+        },
+        {
+          "req_id": "outputs-source-id-must-be-validated",
+          "title": "Outputs pipeline MUST validate source_id existence and notebook ownership",
+          "statement": "outputs 生成端点 MUST 校验 source_ids 中的每个 id 都属于该 notebook（对齐 v1 _validate_source_ids, output_graph.py:151-176，未知 id 抛 ValueError→400 'Unknown source_id in source_ids'），MUST NOT 直接把 sourceIds 透传给 ragRegistry.retrieveWith 而不校验；当前 v2 pipeline.ts 不校验，source_id 不存在或不属于 notebook 时静默检索空结果而非 400"
+        },
+        {
+          "req_id": "outputs-export-format",
+          "title": "Export MUST support markdown and json formats",
+          "statement": "outputs 导出端点 MUST 支持 format=markdown 和 format=json 两种格式，markdown 路径 MUST 按输出类型渲染为可读 markdown"
+        },
+        {
+          "req_id": "outputs-convert-type-aware",
+          "title": "Convert-to-source MUST use type-aware rendering",
+          "statement": "outputs convert-to-source MUST 使用逐类型 markdown 渲染而非原始 JSON 序列化，并按段落分块嵌入"
         }
       ]
     },
@@ -919,6 +1094,21 @@
           "req_id": "studio-rag-through-registry",
           "title": "Studio retrieval MUST go through the unified RAG registry",
           "statement": "studio 生成检索 MUST 通过统一 ragRegistry.retrieveWith 走 embed/fusion/diversity 路径，MUST NOT 用原始文本 slice 截断（对齐 qa/outputs/refine 的检索路径一致性）"
+        },
+        {
+          "req_id": "qa-retrieval-must-be-deterministic",
+          "title": "QA retrieval MUST be deterministic single-embed (no multi-query expansion)",
+          "statement": "QA 检索 MUST 使用确定性单次 embed 检索路径（与 v1 service.py:319-327 单次 embed_batch + 单次 cached_vector_search 对齐），MUST NOT 在 QA 检索路径硬编码 multiQuery:true（当前 retrieve-and-judge.ts:139 违反此约束，会经 multi-query seed 扩张 + RRF fusion 改变边集与 score 语义）"
+        },
+        {
+          "req_id": "qa-source-scoping",
+          "title": "QA retrieval MUST support source_ids filtering",
+          "statement": "QA 检索路径 MUST 支持通过 source_ids 参数将检索范围限定到指定 source 子集，并支持可配置的 min_score 阈值作为证据门控"
+        },
+        {
+          "req_id": "vector-search-source-filter",
+          "title": "Vector search MUST support source_ids filtering",
+          "statement": "向量检索 MUST 支持通过 source_ids 参数将 KNN 搜索范围限定到指定 source 子集"
         }
       ]
     },
@@ -976,6 +1166,11 @@
           "req_id": "r6",
           "title": "用户可见的来源模式标签不得直接暴露内部策略术语",
           "statement": "系统 MUST 使用可理解的产品概念向用户表达来源模式，而不是把内部策略术语直接当作产品标签。"
+        },
+        {
+          "req_id": "outputs-source-scoping",
+          "title": "Outputs retrieval MUST filter by source_ids",
+          "statement": "outputs 生成检索 MUST 支持通过 source_ids 参数将检索范围限定到指定 source 子集"
         }
       ]
     },
@@ -1139,6 +1334,16 @@
           "req_id": "tag-binding-response-and-ownership",
           "title": "Tag binding MUST return v1 response shape and verify ownership",
           "statement": "tag binding MUST 返回 {count, results:[SourceBatchItemResult]} 结构，且 DELETE binding MUST 校验 source 属于该 notebook"
+        },
+        {
+          "req_id": "tags-uniqueness-and-ownership",
+          "title": "Tag operations MUST enforce uniqueness and notebook ownership",
+          "statement": "source tag 的创建和更新 MUST 强制名称唯一性（case-insensitive，返回 409），所有 tag 操作 MUST 校验 tag 属于指定 notebook"
+        },
+        {
+          "req_id": "tags-assign-idempotent",
+          "title": "Tag assign and remove MUST be idempotent",
+          "statement": "tag 的 assign 和 remove 操作 MUST 验证 source 存在且具备幂等性"
         }
       ]
     },
@@ -1180,6 +1385,36 @@
           "req_id": "qa-to-source-contract",
           "title": "qa-to-source MUST accept messages list contract",
           "statement": "qa-to-source 端点 MUST 接受 messages:[QAMessage] 列表并格式化为 markdown（对齐 v1 convert_source_qa_to_source），MUST NOT 只接受单轮 {question, answer}"
+        },
+        {
+          "req_id": "qa-to-source-must-accept-multi-turn-messages",
+          "title": "qa-to-source conversion MUST accept multi-turn messages list (not single-turn pair)",
+          "statement": "qa-to-source 转换 MUST 接受 messages: list[QAMessage] 多轮历史并格式化为完整 transcript（对齐 v1 api.py:186-209 与 204-209），MUST NOT 只接受单轮 {question, answer}；当前 v2 source-extras.router.ts:228-231 只接受单轮，多轮 QA 历史无法转换。c44 tasks 明确 deferral"
+        },
+        {
+          "req_id": "tag-binding-must-return-per-item-diagnostics",
+          "title": "Tag assign/remove MUST return per-item results with error_code",
+          "statement": "tag 批量 assign/remove MUST 返回 per-item 结果 {source_id, ok, message, error_code}（对齐 v1 api_tags.py:142-185 与 180-184 的 SourceBatchItemResult 列表），缺失 source SHALL 报 SOURCE_NOT_FOUND 而非静默 continue；当前 v2 router.ts:461 与 488 只返回 {applied, skipped} 计数，router.ts:447 缺失 source 静默 continue。消费方拿不到 per-item 诊断"
+        },
+        {
+          "req_id": "csv-parser-must-escape-cells",
+          "title": "CSV parser MUST escape pipes and newlines in markdown-table cells",
+          "statement": "CSV parser MUST 转义 markdown-table 单元格中的 |（转义为 \\|）、换行（转义）、截断用 … 省略号（对齐 v1 csv.py:61-67）；当前 v2 parsers/csv.ts:64-67 与 70-76 不转义 pipe/换行且用 ...（三个点）。含 | 或换行的单元格会破坏 v2 产出的 markdown table"
+        },
+        {
+          "req_id": "convert-embedding-no-ready-on-fail",
+          "title": "Source conversion MUST NOT mark ready when embedding fails",
+          "statement": "QA-to-source 和 session convert-to-source MUST 在 embedding 失败时标记 source 为 failed 而非 ready"
+        },
+        {
+          "req_id": "per-source-qa-vector-search",
+          "title": "Per-source QA MUST use vector retrieval",
+          "statement": "per-source QA MUST 通过 embed question + scoped vector search 检索相关 chunk，而非简单取前 N 个 chunk"
+        },
+        {
+          "req_id": "from-url-link-mode",
+          "title": "From-url MUST support link mode",
+          "statement": "from-url 端点 MUST 支持 mode=link 创建轻量 source（不 fetch URL 内容）"
         }
       ]
     },
@@ -1256,6 +1491,16 @@
           "req_id": "sources-dedup-config-gated",
           "title": "Dedup MUST be gated by config",
           "statement": "sources 去重 MUST 受 config source_ingestion.dedup.enabled 门控，为 false 时 MUST 跳过 dedup 直接创建新 source"
+        },
+        {
+          "req_id": "r_ssrf_config",
+          "title": "SSRF policy driven by config",
+          "statement": "系统 MUST 从配置解析 hostAllowlist 与 domainAllowlist 与 cidrAllowlist 与 allowlist_only 为 SsrfPolicy 并应用于 URL fetch 校验。无配置时 MUST 回退默认姿态 (拒绝私网与元数据 IP)。"
+        },
+        {
+          "req_id": "r_upload_size_config",
+          "title": "Upload size limit configurable",
+          "statement": "系统 MUST 从配置读取上传大小上限。无配置时 MUST 默认 50MB。"
         }
       ]
     },
@@ -1388,6 +1633,16 @@
           "req_id": "r8",
           "title": "Missing capabilities are explained to the user",
           "statement": "当某输出类型不可用（插件缺失/禁用/加载失败）时，客户端 MUST 能呈现可执行的恢复提示（例如安装/启用对应官方插件），以避免“功能消失但原因不明”。"
+        },
+        {
+          "req_id": "studio-output-sync-must-write-output-id-fk",
+          "title": "Studio output sync MUST write studioSlides.outputId FK and full content schema",
+          "statement": "studio 的 syncSlideOutput MUST (1) 写 studioSlides.outputId 外键（当前 v2 从不写该列，schema.ts:361 的列恒为 null），(2) content schema 对齐 v1 _sync_output（api.py:194-229）：content={title, engine, outline, markdown, slide_id}；当前 v2 service.ts:133-157 只写 {title, markdown, stage:'markdown'}（缺 engine/outline/slide_id）且用 prompt='studio:<id>' 匹配而非用 FK。任何依赖 slide→output join 的 UI/查询在 v2 失效"
+        },
+        {
+          "req_id": "studio-stale-cleanup-must-not-set-error-message",
+          "title": "Studio stale-RUNNING cleanup MUST clear error and return bool like v1",
+          "statement": "studio 的 clearStaleRunning MUST 对齐 v1 _clear_stale_running_status（api.py:107-118）：设 status=IDLE、清空 error_message（设 None）、返回 bool；当前 v2 service.ts:105-118 把 errorMessage 设为 'stale running status cleared'（非空字符串），导致 stale 清理后的 slide 在 v2 显示错误信息而 v1 不显示"
         }
       ]
     },
@@ -1449,6 +1704,21 @@
           "req_id": "studio-stale-running-guard",
           "title": "Studio MUST clear stale RUNNING status and guard concurrent generation",
           "statement": "studio MUST 清理超过阈值（10min）的 RUNNING 状态 draft，并发生成时 MUST 返回 busy 事件而非覆盖"
+        },
+        {
+          "req_id": "studio-serialize-must-include-output-id-and-config",
+          "title": "Studio slide serialization MUST include output_id and generation_config",
+          "statement": "studio slide 序列化（serializeSlide）MUST 返回 output_id 与 generation_config 字段（对齐 v1 SlideDraftRead, api.py:76-94），当前 v2 router.ts:51-67 两者都缺；前端读 output_id 做 slide→output 跳转、读 generation_config 复用配置时会拿到 undefined"
+        },
+        {
+          "req_id": "studio-sse-done-payload-must-carry-trace-id",
+          "title": "Studio SSE done event MUST carry trace_id and slide_id (not full slide)",
+          "statement": "studio SSE 的 done 事件 payload MUST 为 {trace_id, slide_id}（对齐 v1 api.py:428 与 538），MUST NOT 直接序列化整个 slide（当前 router.ts:218 与 240 emit('done', serializeSlide(...))）；且所有 SSE 事件 SHALL 携带 trace_id 以支持关联/可观测性（当前 v2 完全无 trace_id）"
+        },
+        {
+          "req_id": "studio-sse-must-emit-toolcall-event",
+          "title": "Studio SSE MUST emit toolcall event before each generation stage",
+          "statement": "studio SSE SHALL 在 outline/markdown 各生成阶段前发 toolcall 事件（对齐 v1 api.py:401 slides_generate_outline, api.py:506 slides_generate_markdown），当前 v2 完全不发 toolcall；前端依赖此事件做工具调用展示/埋点时会缺失"
         }
       ]
     },
@@ -1490,6 +1760,16 @@
           "req_id": "r7",
           "title": "下游扩展只能使用扩展位，禁止反向改写公共词汇",
           "statement": "系统 MUST 为下游能力提供明确扩展位，同时禁止下游能力反向改写公共词汇定义。"
+        },
+        {
+          "req_id": "outputs-citations-must-be-sanitized",
+          "title": "Outputs pipeline MUST sanitize citation indices (range/dup/int) with warnings",
+          "statement": "outputs pipeline MUST 实现 sanitize_citations_indices（对齐 v1 output_postprocess.py:293-346）：递归剥离越界、重复、非整数 citation 索引，设置 _warnings/citations_sanitized 标记与 _postprocessed:true。当前 v2 mapCitationsIntoContent（pipeline.ts:421-449）只做 .filter undefined 静默丢弃，不 dedupe、不发警告、不设 _postprocessed 标记；c38 proposal 第 3 项承诺的 sanitizeCitationsIndices 未兑现"
+        },
+        {
+          "req_id": "outputs-quality-preference-must-trigger-llm-repair",
+          "title": "Outputs pipeline with preference=quality MUST run LLM repair loop for salvageable output",
+          "statement": "outputs pipeline 在 preference=quality 且 needs_repair 检测到空/缺字段时 MUST 运行 LLM repair loop（对齐 v1 output_graph.py:595-719 的 PostprocessOutput 节点 + output_postprocess.py:192-290 的 needs_repair），用第二次 LLM pass 修补可挽救的不完整输出，而非直接降级到 fallback 内容。当前 v2 pipeline.ts:185-199 无 repair loop、无 needs_repair，生成失败直接走 fallback，对 quality 请求降级更激进"
         }
       ]
     },
@@ -1637,6 +1917,71 @@
           "req_id": "r21",
           "title": "Tool config endpoint stays consistent (if present)",
           "statement": "若 `/v1/workspace/tools/{tool_id}/config` 端点存在，其返回值 MUST 与 tools 列表中的 `config_schema` 语义一致。"
+        },
+        {
+          "req_id": "models-list-must-return-providers-envelope",
+          "title": "Models list MUST return providers field on the list envelope (not only separate endpoint)",
+          "statement": "models 列表端点 MUST 在响应 envelope 返回 providers 字段（对齐 v1 ModelsListResponse, api.py:42-43 与 95-97：sorted({openai} ∪ plugins.list_ai_providers())），MUST NOT 只在单独的 /models/providers 端点暴露；当前 v2 router.ts:43-56 envelope 缺 providers 字段，前端读 resp.providers 会 break"
+        },
+        {
+          "req_id": "models-must-filter-by-provider-availability",
+          "title": "Models endpoints MUST filter by provider availability like v1",
+          "statement": "models GET list 与 GET single MUST 按 provider 可用性过滤（对齐 v1 api.py:83 与 109-110 用 plugins.is_provider_available）：未配置 provider 的 model 在 list 中不出现，GET single 时返回 404；当前 v2 router.ts:38-42 只按 role 过滤、shared/config.ts:213-215 的 getModelById 做裸 find 无 provider 检查，未配置 provider 的 model 仍会出现"
+        },
+        {
+          "req_id": "sessions-convert-must-honor-message-ids",
+          "title": "Sessions convert-to-source and convert-to-output MUST honor message_ids filter",
+          "statement": "sessions 的 convert-to-source 与 convert-to-output MUST 接受 message_ids 过滤（对齐 v1 api.py:34-41 与 51-57 与 257-268 与 417-428）：仅转换指定消息，缺失 id 时 404；当前 v2 router.ts:185（convert-to-source）无 request body schema、总是转换所有消息，router.ts:298（convert-to-output）只读 output_type 不读 message_ids。多轮历史无法选择性转换"
+        },
+        {
+          "req_id": "sessions-convert-text-format-must-align-v1",
+          "title": "Sessions convert text format MUST match v1 role labels and separators",
+          "statement": "sessions convert 的文本格式 MUST 对齐 v1：(1) convert-to-source 用中文角色标签 **用户**:/**助手**: + \\n\\n 分隔（v1 api.py:110-123），当前 v2 router.ts:203-208 用英文 **Assistant**:/**User**: + \\n\\n---\\n\\n。(2) convert-to-output 用 raw 文本（无角色前缀，v1 text_format=raw, api.py:438），当前 v2 router.ts:314-319 加 [Assistant]/[User] 前缀。跨版本导出内容 diff 噪音"
+        },
+        {
+          "req_id": "models-response-default-shape-must-align-v1",
+          "title": "Models response MUST put defaults on envelope (not inline per-model) for list endpoint",
+          "statement": "models 列表端点 MUST 把 default_chat/default_embedding 放在 envelope 顶层（对齐 v1 api.py:42-43 与 96-97），GET single 不返回 default 信息（对齐 v1 get_model 返回裸 ModelRead）；当前 v2 router.ts:53-54 给每个 model 挂 is_default_chat/is_default_embedding，GET single 也内联默认标记，与 v1 契约不一致"
+        },
+        {
+          "req_id": "qa-export-endpoint",
+          "title": "API MUST provide QA export endpoint",
+          "statement": "系统 MUST 提供 QA 导出端点支持 markdown 和 json 两种格式"
+        },
+        {
+          "req_id": "qa-sse-done-shape",
+          "title": "QA done SSE event MUST include evidence and context fields",
+          "statement": "QA 流式 done 事件 MUST 包含 evidence 和 context 和 created_at 字段"
+        },
+        {
+          "req_id": "qa-response-confidence-field",
+          "title": "QA non-streaming response MUST include confidence and evidence",
+          "statement": "QA 非流式响应 MUST 在 body 中包含 confidence 和 evidence 字段"
+        },
+        {
+          "req_id": "research-resume-infer-state",
+          "title": "Resume MUST infer state from persisted steps",
+          "statement": "research resume 端点 MUST 通过检查已持久化的 steps 推断恢复状态和迭代号，而非强制从头重跑"
+        },
+        {
+          "req_id": "research-control-actions-record-steps",
+          "title": "Control endpoints MUST record steps and resume",
+          "statement": "research 的 approve/modify/skip/finish/cancel 端点 MUST 记录对应的 user_input step 并确保后台 resume"
+        },
+        {
+          "req_id": "research-finish-generates-report",
+          "title": "Finish MUST trigger report generation",
+          "statement": "research finish 端点 MUST 在标记 COMPLETED 后触发最终报告生成并持久化"
+        },
+        {
+          "req_id": "research-delete-endpoint",
+          "title": "API MUST provide research delete endpoint",
+          "statement": "系统 MUST 提供 research 删除端点，在删除前取消运行中的研究"
+        },
+        {
+          "req_id": "research-sse-named-events",
+          "title": "Research SSE MUST emit named events",
+          "statement": "research 流式端点 MUST 发送带 event: 字段的命名 SSE 事件"
         }
       ]
     },

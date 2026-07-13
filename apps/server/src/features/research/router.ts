@@ -36,8 +36,8 @@ import {
   type ResearchResult,
 } from './agent.ts';
 // H4: lock primitives moved to lock.ts to break circular dependency
-export { isLockHeld, acquireLock, releaseLock, renewLock, cleanupExpiredLocks } from './lock.ts';
-import { isLockHeld, acquireLock, releaseLock, cleanupExpiredLocks } from './lock.ts';
+import { acquireLock, isLockHeld, releaseLock } from './lock.ts';
+export { cleanupExpiredLocks, isLockHeld, renewLock, acquireLock, releaseLock } from './lock.ts';
 
 // ---------------------------------------------------------------------------
 // OpenAPI docs
@@ -453,8 +453,14 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     return { id, status: 'planning', skipped: true, next_iteration: nextIteration };
   })
 
-  // Finish early (c37: record step + trigger report generation)
-  .post('/research/:id/finish', async ({ params }) => {
+  // Finish early (c37: record step; 2026-07-13: non-blocking report generation)
+  // v1 api.py:650-687 uses FastAPI BackgroundTasks — /finish marks COMPLETED and
+  // returns immediately; the report is generated off the request path. The v2
+  // spec `research-finish-generates-report` still requires the report to be
+  // generated and persisted, so we spawn a fire-and-forget promise rather than
+  // awaiting inside the handler (which previously blocked until the LLM finished
+  // and risked client timeouts on large reports).
+  .post('/research/:id/finish', ({ params }) => {
     const id = Number(params.id);
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
@@ -466,14 +472,18 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     // Record finish step (v1 api.py:650-687)
     recordUserStep(id, row.currentIteration, 'finish');
 
-    // Set completed status first
+    // Mark COMPLETED immediately so the client + DB reflect the terminal state
+    // without waiting for report generation (v1 parity: return right away).
     db()
       .update(researchSessions)
-      .set({ status: 'analyzing' })
+      .set({ status: 'completed' })
       .where(eq(researchSessions.id, id))
       .run();
 
-    // Generate the report from accumulated results (v1 GenerateReport node)
+    // Generate the report in the background (v1 GenerateReport node). On success
+    // it persists finalReport; on failure it records a sentinel so callers can
+    // tell a pending/failed report apart from a deliberately-empty one. Errors
+    // are logged but never reject — the session is already COMPLETED.
     const state: ResearchState = {
       sessionId: id,
       notebookId: row.notebookId,
@@ -482,29 +492,25 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       maxIterations: row.maxIterations,
       results: (row.aggregatedResults ?? []) as ResearchResult[],
     };
+    void Promise.resolve()
+      .then(() => generateFinalReport(state))
+      .then((report) => {
+        db()
+          .update(researchSessions)
+          .set({ finalReport: report })
+          .where(eq(researchSessions.id, id))
+          .run();
+      })
+      .catch((error) => {
+        console.error(`[research] finish report failed for session ${id}:`, error);
+        db()
+          .update(researchSessions)
+          .set({ finalReport: '(report generation failed)' })
+          .where(eq(researchSessions.id, id))
+          .run();
+      });
 
-    try {
-      const report = await generateFinalReport(state);
-      db()
-        .update(researchSessions)
-        .set({ status: 'completed', finalReport: report })
-        .where(eq(researchSessions.id, id))
-        .run();
-      return { id, status: 'completed', report_generated: true };
-    } catch (error) {
-      // Fallback: mark completed even if report fails
-      db()
-        .update(researchSessions)
-        .set({ status: 'completed', finalReport: '(report generation failed)' })
-        .where(eq(researchSessions.id, id))
-        .run();
-      return {
-        id,
-        status: 'completed',
-        report_generated: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
+    return { id, status: 'completed', report_generated: 'pending' as const };
   })
 
   // Cancel (c37: record step + release lock)

@@ -16,6 +16,7 @@ import { countTokens } from '../../ai/tokenizer.ts';
 import { db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { ragRegistry } from '../../rag/registry.ts';
+import { hydrateCitations } from '../../shared/citations.ts';
 import { computeConfidence } from './confidence.ts';
 
 export const EVIDENCE_THRESHOLD_DEFAULT = 0.2;
@@ -283,8 +284,11 @@ function noEvidence(
 
 /**
  * Resolve retrieved chunks into Citation format (exported for testing/reuse).
- * Hydrates source_name from DB, extracts page_number/paragraph_index from
- * chunk metadata, uses 1-based chunk_index (v1 chunk.chunk_index + 1).
+ * Delegates to the shared `hydrateCitations` helper
+ * (`shared/citations.ts`); behavior is unchanged from the previously-inlined
+ * version: snippet NOT trimmed, page/paragraph extracted via the strict
+ * `typeof === 'number'` predicate (no string coercion). Kept `async` for
+ * call-site / test-signature compatibility.
  */
 export async function resolveCitations(
   retrievedChunks: Array<{
@@ -295,45 +299,7 @@ export async function resolveCitations(
     score: number;
   }>,
 ): Promise<Citation[]> {
-  if (retrievedChunks.length === 0) return [];
-
-  const chunkIds = retrievedChunks.map((c) => c.chunk_id);
-  const chunkRows = db()
-    .select({
-      id: chunks.id,
-      sourceId: chunks.sourceId,
-      metadata: chunks.metadata,
-    })
-    .from(chunks)
-    .where(inArray(chunks.id, chunkIds))
-    .all();
-  const chunkMetaMap = new Map(chunkRows.map((c) => [c.id, c]));
-
-  const sourceIds = [...new Set(retrievedChunks.map((c) => c.source_id))];
-  const sourceRows = db()
-    .select({ id: sources.id, filename: sources.filename })
-    .from(sources)
-    .where(inArray(sources.id, sourceIds))
-    .all();
-  const sourceMap = new Map(sourceRows.map((s) => [s.id, s.filename]));
-
-  return retrievedChunks.map((c) => {
-    const chunkMeta = chunkMetaMap.get(c.chunk_id);
-    const metadata = (chunkMeta?.metadata ?? {}) as Record<string, unknown>;
-    const pageNumber = typeof metadata.page === 'number' ? metadata.page : null;
-    const paragraphIndex =
-      typeof metadata.paragraph_index === 'number' ? metadata.paragraph_index : null;
-    return {
-      source_id: c.source_id,
-      source_name: sourceMap.get(c.source_id) ?? 'unknown',
-      chunk_id: c.chunk_id,
-      chunk_index: c.chunk_index + 1, // v1 1-based
-      page_number: pageNumber,
-      paragraph_index: paragraphIndex,
-      snippet: c.text.slice(0, 200),
-      score: c.score,
-    };
-  });
+  return hydrateCitations(retrievedChunks);
 }
 
 function avg(xs: number[]): number {

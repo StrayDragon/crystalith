@@ -262,8 +262,11 @@ c42–c46 已全部 archive（`llman sdd archive run`），spec deltas 合并到
 
 ### 仍开放（后置项）
 
-- P1 残留：stats preset（chart+table）；context window 压缩；export note STRUCTURED 类型；finish 后台生成；waiting SSE 心跳
-- MEDIUM 架构债：citation hydration 共享 helper；ContextStats 定义到 shared；错误 envelope 统一；SLIDES postprocess
+> 2026-07-13 核对代码后更新：移除 2 项已完成条目，新增 1 项实测偏差。
+
+- P1 残留：~~stats preset（chart+table）~~ ✅ c48 已做（`qa/presets.ts:23`）；~~export note STRUCTURED 类型~~ ✅ c49 已做（`research/router.ts:600`）；~~waiting SSE 心跳~~ ✅ c37 已做（`research/router.ts:711`，30s heartbeat）
+- **P1 残留（实测）**：context window 压缩（仅算 `compressed` 标志，无真实截断动作 → 提案 **c55**）；`/finish` 同步阻塞（v1 异步 BackgroundTasks，v2 `router.ts:487` `await generateFinalReport` 在请求内 → quick-path 修复中）；错误 envelope 不统一（违反 `workspace-api-contract r3` → 提案 **c54**）
+- MEDIUM 架构债：citation hydration 共享 helper（4 处重复，仅 qa 用 `resolveCitations` → quick-path 修复中）；~~ContextStats 定义到 shared~~ → 并入 **c54**；SLIDES postprocess
 - P2 架构债：audio/video parsers；plugin host；ToolLoopAgent 迁移；batch DELETE 方法（BREAKING，留 c14）
 - c13/c14 等人授权；web typecheck；`api/generated/` → c14
 
