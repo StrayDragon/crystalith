@@ -15,6 +15,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { countTokens } from '../../ai/tokenizer.ts';
 import { db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
+import { truncateToTokenBudget } from '../../rag/context-window.ts';
 import { ragRegistry } from '../../rag/registry.ts';
 import { hydrateCitations } from '../../shared/citations.ts';
 import { computeConfidence } from './confidence.ts';
@@ -213,13 +214,12 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
   });
 
   // Step 9b: Format context (v1 format_context — [i] Source: filename (chunk N)\n<text>)
-  const context = validResults
-    .map((r, i) => {
-      const chunk = chunkMap.get(r.chunk_id)!;
-      const name = sourceMap.get(r.source_id) ?? 'unknown';
-      return `[${i + 1}] Source: ${name} (chunk ${r.chunk_index + 1})\n${chunk.text}`;
-    })
-    .join('\n\n');
+  // Keep the blocks so Step 12 can truncate block-by-block when over budget.
+  const contextBlocks = validResults.map((r, i) => {
+    const chunk = chunkMap.get(r.chunk_id)!;
+    const name = sourceMap.get(r.source_id) ?? 'unknown';
+    return `[${i + 1}] Source: ${name} (chunk ${r.chunk_index + 1})\n${chunk.text}`;
+  });
 
   // Step 10: Low similarity check (v1: similarity_avg < max(min_score, threshold))
   const similarityAvg = avg(validResults.map((r) => r.score));
@@ -237,12 +237,24 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
     .all().length;
   const confidence = computeConfidence(citations, notebookSourceCount, topK);
 
-  // Step 12: Evidence found
-  // c48: real token counts (v1 TokenCounter, service.py:254-271) + compression
-  // flag when history + retrieval would exceed max_tokens (v1 ContextWindow).
-  const retrievalTokens = countTokens(context);
+  // Step 12: Evidence found.
+  // c48 computed real token counts + a `compressed` flag; c55 actually enforces
+  // the budget: when history + retrieval + query would exceed max_tokens, the
+  // retrieval blocks are truncated (v1 _truncate_blocks) so the text passed to
+  // the LLM fits. query + history are always preserved (budget reserved for
+  // them); retrieval fills the remainder.
+  const fullContext = contextBlocks.join('\n\n');
+  const retrievalBudget = Math.max(0, maxTokens - historyTokens - queryTokens);
+  let context = fullContext;
+  let retrievalTokens = countTokens(fullContext);
+  let compressed = false;
+  if (countTokens(fullContext) > retrievalBudget) {
+    const { text, truncated, usedTokens } = truncateToTokenBudget(contextBlocks, retrievalBudget);
+    context = text;
+    compressed = truncated;
+    retrievalTokens = usedTokens;
+  }
   const totalTokens = historyTokens + retrievalTokens + queryTokens;
-  const compressed = totalTokens > maxTokens;
   return {
     evidence: true,
     citations,
