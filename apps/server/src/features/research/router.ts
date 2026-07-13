@@ -32,6 +32,7 @@ import {
   runResearch,
   runResearchFromState,
   generateFinalReport,
+  synthesizeFallbackReport,
   type ResearchState,
   type ResearchResult,
 } from './agent.ts';
@@ -514,9 +515,12 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       })
       .catch((error) => {
         console.error(`[research] finish report failed for session ${id}:`, error);
+        // c58: synthesize meaningful fallback (v1 graph.py:811-823), NOT a
+        // sentinel string — sentinel passes the export guard and yields garbage.
+        const results = (row.aggregatedResults ?? []) as ResearchResult[];
         db()
           .update(researchSessions)
-          .set({ finalReport: '(report generation failed)' })
+          .set({ finalReport: synthesizeFallbackReport(row.topic, results) })
           .where(eq(researchSessions.id, id))
           .run();
       });
@@ -707,6 +711,19 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     const id = Number(params.id);
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
+
+    // c58: auto-resume stalled sessions (v1 api.py:972-983 _should_resume_research).
+    // If status is active but no in-process AbortController exists (process
+    // crashed/restarted) OR the lock expired, trigger a resume so reconnecting
+    // clients don't have to manually call /resume.
+    const isActiveStatus =
+      row.status === 'planning' ||
+      row.status === 'searching' ||
+      row.status === 'analyzing' ||
+      row.status === 'waiting_user';
+    if (isActiveStatus && !activeResearch.has(id)) {
+      spawnResearch(id, runResearchFromState);
+    }
 
     set.headers['Content-Type'] = 'text/event-stream';
     set.headers['Cache-Control'] = 'no-cache';
