@@ -1,0 +1,5 @@
+kind: llman.sdd.delta
+ops[1]{op,req_id,title,statement,from,to,name}:
+  add_requirement,"frontend-extractor-types-must-not-duplicate","Frontend MUST NOT keep stale duplicate type definitions that diverge from the SSOT","前端 MUST NOT 在 api/shared-types.ts 中保留与 api/generated（SSOT）重复且字段不全的类型定义（如 ExtractorInfoResponse 缺 priority/display_name/requires_api_key/requires_service/recovery_hint 等字段）。重复类型 MUST 删除以消除混淆，统一从 api/generated 导入。",null,null,null
+op_scenarios[1]{req_id,id,given,when,then}:
+  "frontend-extractor-types-must-not-duplicate","stale-extractor-type-removed","the api/shared-types.ts has a stale ExtractorInfoResponse missing fields","the change is applied","the stale type MUST be deleted and all imports MUST reference the complete api/generated version"
