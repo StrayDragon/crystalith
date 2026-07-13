@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "workspace-api-contract"
 purpose: 定义前后端协作所依赖的稳定 API 契约：版本前缀、错误信封、核心端点稳定字段与 SSE 事件最小形状。
 valid_scope[2]: src/,tests/
-requirements[36]{req_id,title,statement}:
+requirements[37]{req_id,title,statement}:
   r1,API major version prefix is stable,对外 API MUST 使用 `/v1` 前缀；同一 major 内保持兼容。
   r2,"Optional API key authentication is supported for self-host","自托管部署 MUST 支持可选的 API key 鉴权基线：当配置了鉴权密钥时，所有 `/v1/**` 端点 MUST 要求 `Authorization: Bearer <token>`（或等价 API key 头）；未配置密钥时系统 MAY 允许匿名访问以保持本地开发低摩擦。"
   r3,"Non-SSE errors use unified envelope","非 SSE 错误响应 MUST 使用统一结构：`error_code`, `message`, `details?`, `retry_after?`。"
@@ -39,7 +39,8 @@ requirements[36]{req_id,title,statement}:
   "research-sse-named-events",Research SSE MUST emit named events,"research 流式端点 MUST 发送带 event: 字段的命名 SSE 事件"
   "error-envelope-actually-emitted-by-routes","Server routes MUST emit the ErrorEnvelope shape not ad-hoc error objects","All non-SSE error responses MUST return the ErrorEnvelope shape defined in packages/shared (error_code plus message plus optional details plus optional retry_after). MUST NOT return ad-hoc shapes such as {error: string} or {error plus error_code} or {error plus max_bytes plus uploaded_bytes}. Current feature routers return at least 5 ad-hoc shapes using field name error instead of canonical message, violating existing r3."
   "shared-error-envelope-helper","Server MUST provide a shared error-response helper consuming ErrorEnvelopeSchema","The system MUST provide a shared helper (sendError or setError) that consumes the ErrorEnvelopeSchema from packages/shared and centralizes the HTTP status to error_code mapping (400 maps to INVALID_REQUEST plus 404 maps to NOT_FOUND plus 409 maps to CONFLICT plus 422 maps to SCHEMA_VALIDATION_FAILED plus 429 maps to RATE_LIMITED plus 503 maps to MODEL_ERROR). Feature routers MUST return errors via this helper rather than constructing ad-hoc error bodies inline."
-scenarios[45]{req_id,id,given,when,then}:
+  "slides-config-schema-options-must-be-complete","SLIDES tool config_schema MUST expose all config axes with options and defaults","当 SLIDES 工具在 `/v1/workspace/tools` 响应中可用时，其 `config_schema` MUST 返回完整的 options 列表（每个 option 含 id/label/is_default）与 defaults 对象，MUST NOT 省略任一配置轴（quantity/audience/structure/tone/language/density/theme_preset）。这强化 r20 的既有 MUST：当前 v2 workspace router 的 SLIDES tool 不返回 config_schema，前端无法驱动配置 UI。"
+scenarios[46]{req_id,id,given,when,then}:
   r1,"client-targets-stable-major-prefix","",客户端调用对外 API,端点 SHALL 使用 `/v1` 前缀且在同一 major 内保持兼容
   r2,"auth-enabled-requires-bearer-token-for-v1","",运维启用鉴权并配置了 API key,客户端请求任意 `/v1/**` 端点若未携带有效 token SHALL 返回 401
   r2,"health-endpoints-remain-accessible-without-auth","",运维启用鉴权并配置了 API key,`/health` 与 `/health/dependencies` SHALL 保持匿名可访问以支持探活与运维诊断
@@ -85,3 +86,4 @@ scenarios[45]{req_id,id,given,when,then}:
   "error-envelope-actually-emitted-by-routes","non-sse-error-shape",a feature router such as POST /v2/outputs hits a predictable error (source_id out of scope or SLIDES guard or schema validation failure),the system returns an error response,"the body MUST match ErrorEnvelopeSchema (with error_code and message) and MUST NOT be {error: string} or any other ad-hoc shape"
   "error-envelope-actually-emitted-by-routes","field-name-is-message",the client triggers a 400 error such as a missing field,the system returns an error response,the message field MUST be named message (aligned with ErrorEnvelopeSchema) and MUST NOT be named error
   "shared-error-envelope-helper","single-helper-source",a developer adds a new error branch in a feature router,returning the error via the shared helper,the helper output MUST be consistent with other routers and error_code MUST come from the centralized mapping table not a custom string
+  "slides-config-schema-options-must-be-complete","slides-config-options-all-present","the SLIDES tool is available (returned in /v1/workspace/tools)","a client reads the SLIDES tool's config_schema","the config_schema MUST contain non-empty quantity_options, audience_options, structure_options, tone_options, language_options, density_options, and theme_preset_options arrays, plus a defaults object; each option MUST have id, label, and is_default fields"
