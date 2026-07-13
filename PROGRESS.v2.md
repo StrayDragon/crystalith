@@ -152,6 +152,67 @@
 
 <!-- CURRENT -->
 
+**2026-07-13 第七轮：v1↔v2 全域深度行为审计 + plugins host 设计决策（纯审计，无代码改动）。**
+
+### 复核方法
+
+派出 6 个并行 Explore agent 对照 `backend/py` SSOT 逐域做**行为级**（非行数）对比：research / sources+connectors / studio+outputs / qa+refine / shared 基础设施 / 其余 9 域（analysis/sessions/models/workspace/citations/messages/notebooks/commands/tasks/templates/prompt-presets）。抽样验证 c42–c56 自陈"已修复"项，并发现 2 个新 P0 + ~20 个新 P1 跨 7 个域。
+
+### 关键设计决策：plugins host 移出 v2 范围
+
+v1 用 `shared/plugins/`（1091 行 PluginRegistry + 6 类插件接口：AIProvider/Parser/OutputType/SlidesWorkflow/WebExtractor/SourceConnector）实现插件扩展；v2 是**单体架构**（所有 parsers/extractors/output-types/slides/connectors 硬编码在 core）。经评估，v2 单体设计**有意为之**（单二进制桌面分发、sqlite-vec 内嵌、无第三方扩展需求），plugins host **不作为 v1 parity 缺口追踪**。
+
+影响：以下原 P1 项**降级为"桌面版出范围"**，不再追踪：
+
+- trafilatura / browserless extractors（v2 用 readability + jina + firecrawl 替代）
+- audio / video / transcription parsers（v1 core 也没有，靠 plugin）
+- 外部 source connector 加载（v2 内建 obsidian + local-directory 2 项，够用）
+- AI provider 插件（v2 用 provider registry 动态 import）
+
+### 审计结论
+
+**端点对齐：基本完成**。v1 82 个注册端点中 81 个有 v2 对应（仅 `/research/:id/start` 缺失，且为 v2 设计选择——create 即自动 spawn）。v2 另有 ~15 个独占端点（eval 域、templates/prompt-presets CRUD、各种 list/types/providers 端点）。
+
+**行为对齐：核心流水线强，细节偏差多**。c42–c56 修复基本属实，但发现：
+
+| 类别         | 数量  | 说明                                                                                                                                                         |
+| ------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 新 P0        | 2     | connector dedup 不按配置门控；单 source 路由不做 notebook 归属校验（隔离问题）                                                                               |
+| 新 P1        | ~20   | research 状态机细节(5)、sources 诊断/缓存/批量(6)、outputs fallback/postprocess(3)、qa ContextStats(2)、templates/prompt-presets 保护(2)、shared 基础设施(2) |
+| c42–c56 验证 | 28 项 | 全部通过（含 c47 KNN、c48 multiQuery、c50 SLIDES 守卫、c51 SSE、c56 config_schema）                                                                          |
+
+**架构差距（已关闭/重分类）**：~~plugins host~~ → 设计决策，移出范围；config 段落未解析 → 多数 c13 延后或桌面版出范围；cache provider（Redis）/ per-stage 并发限流 → 桌面版出范围。
+
+### 强对齐领域（无需进一步工作）
+
+AI retry 中间件（最忠实移植）、SSRF/net 安全（v2 甚至超出 v1，额外阻塞 CGNAT/广播）、output_graph 5 节点流水线、analysis 聚类/相关/矛盾、QA 核心流水线、refine（c29）、studio c56、epoch 检索缓存、db schema（v2 超集 +4 eval 表）、eval harness（v2 独占且领先）。
+
+### 新发现 P0（建议立即修，非 c13 范围）
+
+1. **connector dedup 配置门控**：`source-connectors/sync.ts:203-215` 总是无条件 dedup；v1 `source_connectors/api.py:898,1070` 用 `if settings.source_ingestion.dedup.enabled:` 门控。配置关闭 dedup 时 v2 错误复用已有 source。
+2. **单 source 路由不做 notebook 归属校验**：`GET/DELETE/POST /sources/:id`（router.ts:289,313,540）、`GET /sources/:id/chunks`（521）不验证 source 属于调用者 notebook。v1 嵌在 `/notebooks/{nid}/sources/...` 下并校验。**跨 notebook 访问风险**。
+
+### 新发现 P1（按域分组，可独立修）
+
+- **research**：`suggested_queries` 反馈环断裂（agent.ts:107 不传 analyze 的 suggestedQueries，v1 graph.py:170-171 传入）；锁续期按迭代非周期（agent.ts:428 vs v1 api.py:885-899 每 300s 后台续期）；`/finish` 可能持久化哨兵 `'(report generation failed)'`（router.ts:519，v1 总生成真实 fallback report graph.py:811-823）；SSE `/stream` 不自动 resume 卡住会话（v1 api.py:972-983 检测锁过期触发 resume）；skip 跳过 Analyze 步骤（agent.ts:484-489 vs graph.py:364）
+- **sources**：batch 缺 per-item `results` 数组（router.ts:624,664-669 vs api_schemas.py:111-126）；re-embed 不清 `errorCode`/`recoveryHint`（router.ts:549-553）；ingestion 失败诊断降级（pipeline.ts:168，2 stage vs v1 4 stage + recovery_hint + last_error_at）；tags 不失效 sources 缓存（从不调 bumpSourcesEpoch，v1 每次都调）；extractors 响应形状偏离（`name` vs `type`，extractor 集合 readability/jina/firecrawl vs trafilatura/jina/firecrawl/browserless）；from-url 丢 `extractor` 参数和 `mode` 枚举校验
+- **outputs**：fallback 用 `error.message` 作可见标题（pipeline.ts:385 vs v1 用 prompt）；postprocess 回填过浅（pipeline.ts:261-310 vs output_postprocess.py:102-189 嵌套回填）；`_postprocessed` 标记条件设 vs v1 无条件设（pipeline.ts:615-616 vs output_postprocess.py:377）
+- **qa**：ContextStats `system_tokens` 恒 0（retrieve-and-judge.ts:118,265）；`max_tokens` 硬编码 8000 而非读配置（retrieve-and-judge.ts:108）
+- **templates/prompt-presets**：builtin 保护缺失（templates/router.ts:89-118 不守 is_builtin）；trigger 唯一性/builtin 冲突检查缺失（prompt-presets/router.ts:62-101）
+
+### 质量门禁（无代码改动，沿用第六轮基线）
+
+- Server test: 257 pass / 0 fail
+- Server typecheck: ✅ pass
+- oxlint: 0 error（210 warnings 后置）
+- SDD: 仅剩 c13/c14 active（BLOCKED 等人工授权）
+
+### 建议下一步
+
+**启动前后端本地开发模式联调实验**（`bun dev`），以运行时行为验证剩余 P1 的真实影响，并推进前端对 SSE + OutputRead + ErrorEnvelope + config_schema 契约的适配。代码层修复可在实验后按域批量处理（research/sources/outputs 各成一组）；2 个新 P0 建议优先修（隔离/dedup 正确性）。
+
+---
+
 **2026-07-13 第六轮：v1↔v2 差距审计后续 — 5 个 quick 修复 + c56 full SDD 提案/实现/归档。**
 
 ### 复核方法
@@ -382,11 +443,11 @@ c42–c46 已全部 archive（`llman sdd archive run`），spec deltas 合并到
 > ⚠️ **对拍说明**: 早期 ✅ 曾表示「端点存在」而非「行为对齐」。c36–c40 + 2026-07-11 复核修了多处伪对齐。
 > c42–c46 已 archived，验证审计 28/28 通过（含修复）。
 
-| 上次 Agent | 第六轮 v1↔v2 差距审计后续 — 5 quick 修复 + c56 full SDD |
-| 上次操作 | **commits**: `26117fbf`（5 quick: /finish 竞态 + search_result 事件 + SSRF per-hop + loopback bind + outputs export 引用子集 + 2 预存 lint error）→ `7e96d2f6`（c56 实现: config.ts 移植 + theme 6-key + preference→retrieval + workspace config_schema）→ `50e894f8`（pageindex rebuild）→ `abdfb64c`（c56 archive +3 reqs 手动合并）。 |
-| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13；本会话已加 127.0.0.1 默认绑定）。(2) **React**: 暂锁18.2.0。(3) **c13/c14 等人工授权**。(4) 前端适配 SSE + OutputRead + ErrorEnvelope + config_schema 契约。 |
-| 已知问题 | **🟡 P2 架构债**: SLIDES postprocess case；audio/video parsers；plugin host；ToolLoopAgent 迁移；batch DELETE（BREAKING，留 c14）；research thinking 事件 taxonomy；research export include_results/metadata。**🟡 阻塞**: c13/c14 等人授权；web typecheck；`api/generated/` → c14。 |
-| 质量门禁 | `bun test` (server) → **257 pass / 0 fail**（+39 新测试）。`bun typecheck` (server) → ✅ pass。`bun oxlint` → 0 error（210 warnings 后置）。`llman sdd validate --specs` → 39/39 ✅。c56 archived（+3 reqs 合并）。 |
+| 上次 Agent | 第七轮 v1↔v2 全域深度行为审计（纯审计，无代码改动）+ plugins host 设计决策 |
+| 上次操作 | **审计**: 6 并行 Explore agent 逐域行为级对比，验证 c42–c56（28 项全过）+ 发现 2 新 P0 + ~20 新 P1。**PROGRESS 更新**: 第七轮章节（plugins host 移出范围 + 新 P0/P1 清单 + 强对齐领域）。无代码提交。 |
+| 开放决策 | (1) **plugins host 移出 v2 范围**（单体架构是设计选择，非 parity 缺口）。(2) **启动 bun dev 前后端联调**（验证 P1 真实影响 + 推进前端契约适配）。(3) 2 新 P0 建议优先修。(4) **Auth**: 本地免鉴权 + 回环绑定（c13）。(5) **React**: 暂锁18.2.0。(6) **c13/c14 等人工授权**。 |
+| 已知问题 | **🔴 新 P0**: connector dedup 配置门控缺失（sync.ts:203-215）；单 source 路由无 notebook 归属校验（4 处 router.ts）。**🟡 新 P1 (~20)**: research(5)/sources(6)/outputs(3)/qa(2)/templates+presets(2)/shared(2) —— 见第七轮"新发现 P1"详表。**🟡 P2 架构债（重分类后缩减）**: ToolLoopAgent 迁移；batch DELETE（BREAKING，留 c14）；research thinking 事件 taxonomy；research export include_results/metadata。**🟡 阻塞**: c13/c14 等人授权；web typecheck；`api/generated/` → c14。 |
+| 质量门禁 | `bun test` (server) → **257 pass / 0 fail**（第六轮基线，本轮无代码改动）。`bun typecheck` (server) → ✅ pass。`bun oxlint` → 0 error（210 warnings 后置）。`llman sdd validate --specs` → 39/39 ✅。仅剩 c13/c14 active。 |
 
 ---
 
