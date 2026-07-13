@@ -24,7 +24,8 @@ import {
 } from '../../shared/config.ts';
 import { ErrorCode, sendError } from '../../shared/errors.ts';
 import { extractUrl, listExtractorMetadata } from '../../shared/extraction/factory.ts';
-import { validateUrlForFetch } from '../../shared/net/url-safety.ts';
+import { fetchWithRedirectGuard } from '../../shared/net/fetch-with-redirect-guard.ts';
+import { validateUrlForFetch, SsrfBlockedError } from '../../shared/net/url-safety.ts';
 import { uploadDedupKey, urlDedupKey } from './dedup.ts';
 import { listParsers } from './parser-registry.ts';
 import { ingestSource } from './pipeline.ts';
@@ -766,15 +767,22 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       return { ...result, extracted_by: extracted.extractorUsed, title: extracted.title };
     } catch {
       // Fallback to raw fetch if extractors all fail.
-      // c39: SSRF guard re-applied on fallback path (was bypassed before)
+      // P0-3: use fetchWithRedirectGuard so the initial URL AND every redirect
+      // hop are validated against the SSRF policy (replaces the c39 single
+      // pre-check + bare fetch that followed redirects unsafely).
+      let response: Response;
       try {
-        await validateUrlForFetch(url, getSecurityPolicy());
+        response = await fetchWithRedirectGuard(url, getSecurityPolicy());
       } catch (error) {
-        return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, 'SSRF blocked on fallback', {
-          reason: (error as Error).message,
-        });
+        return sendError(
+          set,
+          ErrorCode.SCHEMA_VALIDATION_FAILED,
+          error instanceof SsrfBlockedError
+            ? 'SSRF blocked on fallback'
+            : 'fetch failed on fallback',
+          { reason: (error as Error).message },
+        );
       }
-      const response = await fetch(url);
       const html = await response.text();
       const buffer = new TextEncoder().encode(html);
       const result = await ingestSource({

@@ -8,6 +8,8 @@ import { Readability } from '@mozilla/readability';
 import * as cheerio from 'cheerio';
 import { JSDOM } from 'jsdom';
 
+import { getSecurityPolicy } from '../config.ts';
+import { fetchWithRedirectGuard } from '../net/fetch-with-redirect-guard.ts';
 import type { ExtractedContent, Extractor } from './types.ts';
 
 export const readabilityExtractor: Extractor = {
@@ -18,7 +20,10 @@ export const readabilityExtractor: Extractor = {
   },
 
   async extract(url: string, _config: unknown): Promise<ExtractedContent> {
-    const res = await fetch(url);
+    // P0-3: fetch directly on this process, so walk redirects with SSRF guard
+    // (validates the initial URL and every redirect hop). Jina/Firecrawl fetch
+    // on their own infra and do not need this.
+    const res = await fetchWithRedirectGuard(url, getSecurityPolicy());
     if (!res.ok) {
       throw new Error(`Fetch failed: ${res.status} ${res.statusText}`);
     }

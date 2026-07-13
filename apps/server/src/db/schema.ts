@@ -431,7 +431,7 @@ export const researchSteps = sqliteTable(
       .references(() => researchSessions.id, { onDelete: 'cascade' }),
     iteration: integer('iteration').notNull(),
     type: text('type', {
-      enum: ['plan', 'search', 'analyze', 'user_input', 'summary'],
+      enum: ['plan', 'search', 'search_result', 'analyze', 'user_input', 'summary'],
     }).notNull(),
     inputData: json('input_data'),
     outputData: json('output_data'),
