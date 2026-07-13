@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "generation-core"
 purpose: 定义统一生成主链路：上下文解析、结构化生成、后处理、引用映射、持久化，以及 QA/refine 与 preference 的一致语义。
 valid_scope[2]: src/,tests/
-requirements[21]{req_id,title,statement}:
+requirements[22]{req_id,title,statement}:
   r1,Output generation follows deterministic node pipeline,"结构化输出 MUST 遵循 `ResolveContext -> Generate -> Postprocess -> MapCitations -> Persist` 逻辑顺序。"
   r2,Source scope is explicit and validated,生成/问答请求中的 `source_ids` 语义 MUST 明确且可校验；非法范围 MUST 返回错误。
   r3,"Preference tuning is table-driven",`preference` MUST 通过集中 tuning 表映射到检索与重试默认值。
@@ -24,7 +24,8 @@ requirements[21]{req_id,title,statement}:
   "outputs-postprocess",Outputs MUST run postprocess and fallback,outputs 生成管线 MUST 在生成后运行 postprocess（空内容 fallback + citation 索引清理），并在生成失败时产出类型化 fallback 内容
   r_outputs_rag,Outputs RAG retrieval,结构化输出生成 MUST 通过 RAG 检索获取相关上下文 而非 dump 全部 chunk 以避免上下文窗口溢出 检索 MUST 支持 topK 参数并由生成偏好调节
   r_outputs_citations,Outputs citations attached,结构化输出生成 MUST 把检索到的 chunk 作为 citations 附到生成结果以支持证据追溯
-scenarios[21]{req_id,id,given,when,then}:
+  "context-stats-defined-in-shared","ContextStats type MUST be defined in packages/shared not server-local","The ContextStats type MUST be defined in packages/shared/src/schemas (consistent with the project Zod SSOT rule) and MUST NOT be defined only in apps/server/src/features/qa/retrieve-and-judge.ts as a server-local interface. The current server-local definition violates the AGENTS.md rule that forbids redefining types outside packages/shared. This type also provides the contract for the frontend to display token budget information."
+scenarios[23]{req_id,id,given,when,then}:
   r1,"generation-pipeline-order-is-stable","",系统处理一次结构化输出生成请求,"各阶段 SHALL 按 `ResolveContext -> Generate -> Postprocess -> MapCitations -> Persist` 的顺序执行"
   r2,"invalid-source-scope-is-rejected","",请求携带非法或越权的 `source_ids`,系统 SHALL 返回明确错误并拒绝继续生成
   r3,"preference-maps-to-defaults","",请求选择某个 `preference`,系统 SHALL 从集中 tuning 表加载对应的检索与重试默认值
@@ -46,3 +47,5 @@ scenarios[21]{req_id,id,given,when,then}:
   "outputs-postprocess","generation-fails",LLM 生成抛出异常,postprocess 阶段处理,系统 SHALL 产出类型化 fallback 内容而非空结果
   r_outputs_rag,large_notebook,notebook 含大量 chunk,用户生成输出,系统 SHALL 仅检索 topK 相关 chunk 进入 prompt
   r_outputs_citations,citations_attached,检索到相关 chunk,生成完成,系统 SHALL 在输出结果附 citations
+  "context-stats-defined-in-shared","shared-import",the frontend or server needs to display or pass ContextStats,importing ContextStats from packages/shared,the import MUST succeed and fields MUST align with v1 (total_tokens plus system_tokens plus history_tokens plus retrieval_tokens plus query_tokens plus max_tokens plus compressed)
+  "context-stats-defined-in-shared","no-server-local-duplication",the retrieval stage computes the token budget,the server constructs a ContextStats object,it MUST use the shared type and MUST NOT redeclare interface ContextStats locally in the server
