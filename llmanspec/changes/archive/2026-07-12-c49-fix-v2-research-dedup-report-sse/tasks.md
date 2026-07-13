@@ -44,6 +44,7 @@ cd apps/server && bun test test/research/  # ✅ 28 pass / 0 fail
 ```
 
 人工：
+
 - 跨迭代去重生效（seed from state.results）
 - 正常完成路径 report 为 6 段结构化（与 finish 路径一致）
 - SSE status 事件覆盖状态转换；thinking 事件含 message

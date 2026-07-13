@@ -40,6 +40,7 @@ cd apps/server && bun test test/qa/ # ✅ 13 pass / 0 fail
 ```
 
 人工：
+
 - 同一输入两次 QA 检索结果一致（multiQuery:false）
 - preset=stats 产出 StatsChart/StatsTable JSON（fallback_markdown 作答）
 - 历史超限时 ContextStats.compressed=true

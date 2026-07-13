@@ -1,43 +1,56 @@
 ---
 name: 'llman-sdd-graph'
-description: 'Generate a dependency graph from change proposal frontmatter (depends_on/blocks).'
+description: 'Visualize llman SDD change dependency relationships as a mermaid graph. Use to understand blocking and depends_on relationships for planning or inspection. Auxiliary tool — not part of the main implementation pipeline.'
 metadata:
-  version: '0.0.56'
+  version: '0.0.57'
 ---
 
-# LLMAN SDD Graph
+# LLMAN SDD Dependency Graph
 
-Use this skill to visualize change dependencies as a graph.
+Use this skill to visualize dependencies between changes.
+
+## Pipeline Position
+
+```mermaid
+flowchart LR
+    pipeline["Main pipeline:<br/>propose → apply → verify → archive"]
+    graph["📎 llman-sdd-graph<br/>Dependency visualization (utility)"]
+    graph -.->|available at any stage| pipeline
+
+    style graph fill:#e8f4e8,stroke:#28a745,stroke-width:2px
+```
+
+> 📎 Utility tool, available at any pipeline stage. For execution: `llman-sdd-apply` (implement) or `llman-sdd-propose` (propose).
 
 ## Usage
 
-**Focused view (seed mode):** Show a specific change and its relationship neighborhood.
+**Focus view (seed mode):** Show a specific change and its relationship neighborhood.
 
 ```bash
-llman sdd graph <change-id>              # change + direct relationships (depth 1)
+llman sdd graph <change-id>              # the change + direct relationships (depth 1)
 llman sdd graph <change-id> --depth 3    # recurse 3 levels
 llman sdd graph <change-id> --depth 0    # just the change itself
 ```
 
-The seed mode traverses upstream (depends_on), downstream (who depends on it), and blocks edges in all directions. It discovers both active and archived changes automatically.
+Seed mode traverses three directions: upstream (depends_on), downstream (depended by), and blocks, automatically discovering active and archived changes.
 
-**Full view (scope mode):** Show all changes by scope.
+**Global view (scope mode):** Show all changes by scope.
 
 ```bash
 llman sdd graph                          # all active changes (default)
-llman sdd graph --scope archived         # all archived (done) changes
+llman sdd graph --scope archived         # all archived (completed) changes
 llman sdd graph --scope all              # everything
 ```
 
 ## Output
 
-- Output goes to stdout as mermaid flowchart. Pipe to a file or renderer:
+- Output is a mermaid flowchart to stdout, pipeable to a file or renderer:
   ```
   llman sdd graph c50 > deps.mmd
   llman sdd graph c50 --depth 2 | mmdc -i - -o deps.png
   ```
-- Archived (done) changes are shown with a "✓ done" suffix and green highlight.
-- When the graph has disconnected groups, each group renders as a separate subgraph labeled "Active", "Done", or "Mixed".
+- Archived (completed) changes are shown with "✓ done" suffix and green highlight.
+- When the graph contains disconnected groups, each group renders as an independent subgraph labeled "Active", "Done", or "Mixed".
 
 ## Proposal frontmatter format
 
@@ -51,6 +64,8 @@ blocks:
 ## Why
 ...
 ```
+
+> 💡 This is just a utility — for execution, return to the main pipeline: `llman-sdd-propose` → `llman-sdd-apply` → `llman-sdd-verify` → `llman-sdd-archive`.
 
 Before acting, read `llmanspec/config.yaml` and follow its `context` and `rules` if present.
 

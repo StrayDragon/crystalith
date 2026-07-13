@@ -34,6 +34,7 @@ cd apps/server && bun test test/studio/  # ✅ 5 pass / 0 fail
 ```
 
 人工：
+
 - serializeSlide 含 output_id/generation_config
 - SSE done 为 {trace_id, slide_id}，全事件带 trace_id
 - toolcall 事件在 outline/markdown 阶段前发出

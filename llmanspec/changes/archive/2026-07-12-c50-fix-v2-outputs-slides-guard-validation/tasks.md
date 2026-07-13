@@ -34,6 +34,7 @@ cd apps/server && bun test        # ✅ 209 pass / 2 fail（research 网络 + UR
 ```
 
 人工：
+
 - SLIDES → 400；studio SLIDES 正常
 - 错误 source_id → 400
 - 越界 citation 索引被剥离 + _postprocessed 标记

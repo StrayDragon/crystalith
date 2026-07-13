@@ -1,8 +1,8 @@
 ---
 name: 'llman-sdd-explore'
-description: 'Enter explore mode for llman SDD (thinking only; no implementation).'
+description: 'Enter llman SDD explore mode when the user wants to investigate, understand requirements, or think through a problem before implementing. Prohibits code writing. Use this when intent is unclear or the user wants analysis before action.'
 metadata:
-  version: '0.0.56'
+  version: '0.0.57'
 ---
 
 # LLMAN SDD Explore
@@ -14,6 +14,23 @@ Use this skill when the user wants to think through ideas, investigate problems,
 - You MAY read files, search code, and investigate the codebase.
 - You MAY create or update llman SDD artifacts (proposal/specs/design/tasks) if the user asks.
 - You MUST NOT write application code or implement features in explore mode.
+
+## Pipeline Position
+
+```mermaid
+flowchart LR
+    explore["★ llman-sdd-explore ★<br/>Explore (you are here)"]
+    explore --> propose["llman-sdd-propose<br/>Propose"]
+    propose --> apply["llman-sdd-apply<br/>Implement"]
+    apply --> verify["llman-sdd-verify<br/>Verify"]
+    verify --> archive["llman-sdd-archive<br/>Archive"]
+    archive --> commit["git commit<br/>Done"]
+
+    style explore fill:#fff3cd,stroke:#ffc107,stroke-width:3px
+```
+
+> 📍 You are in the explore phase (thinking only) → standard path next: `llman-sdd-propose` (propose)
+> 📎 For small changes (no behavioral contract changes), go directly to `llman-sdd-quick` (quick path)
 
 ## Stance
 
@@ -39,14 +56,14 @@ Use this skill when the user wants to think through ideas, investigate problems,
 
 ## Exiting explore mode
 
-When the user is ready to implement, suggest:
+When the user is ready to implement, choose based on change scale:
 
-- `llman-sdd-propose` (propose + generate artifacts)
-- `llman-sdd-new-change` (start a change)
-- `llman-sdd-ff` (create all artifacts quickly)
-- `llman-sdd-apply` (implement tasks)
-- `llman-sdd-quick` (quick path: direct implementation for small changes)
+- Behavioral contract change → `llman-sdd-propose` (create proposal artifacts)
+- Small change / no contract change → `llman-sdd-quick` (quick path)
+- Already have complete change artifacts → `llman-sdd-apply` (implement tasks)
   If the user asks you to implement while in explore mode, STOP and remind them to exit explore mode first.
+
+> 💡 Explore done → next: `llman-sdd-propose` (propose) or `llman-sdd-quick` (quick path)
 
 Before acting, read `llmanspec/config.yaml` and follow its `context` and `rules` if present.
 

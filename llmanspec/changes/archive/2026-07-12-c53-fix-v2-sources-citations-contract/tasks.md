@@ -40,6 +40,7 @@ cd apps/server && bun test test/citations/  # ✅ 12 pass / 0 fail
 ```
 
 人工：
+
 - qa-to-source 多轮可转换；单轮仍兼容
 - tag 批量绑定 results 含 per-item 诊断；缺失 source 报 SOURCE_NOT_FOUND
 - CSV 含 `|`/换行正确转义；截断用 `…`

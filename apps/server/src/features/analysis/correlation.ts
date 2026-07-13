@@ -55,9 +55,7 @@ export async function detectRelations(
   const { minScore = 0.7, maxRelations = 200, topK = 20 } = options;
   if (maxRelations <= 0 || topK <= 0 || entries.length < 2) return [];
 
-  const entriesByChunk = new Map<number, VectorChunkMeta>(
-    entries.map((e) => [e.chunkId, e]),
-  );
+  const entriesByChunk = new Map<number, VectorChunkMeta>(entries.map((e) => [e.chunkId, e]));
   const relationMap = new Map<string, Relation>();
 
   for (const entry of entries) {
