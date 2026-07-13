@@ -16,6 +16,7 @@ import { db } from '../../db/index.ts';
 import { notebooks, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
+import { ErrorCode, sendError } from '../../shared/errors.ts';
 import type { TaskQueue } from '../../shared/queue.ts';
 import { Semaphore } from '../../shared/semaphore.ts';
 import { createStageLimiters } from '../tasks/worker.ts';
@@ -139,8 +140,7 @@ export function refineRouter(taskQueue: TaskQueue) {
           sourceIds = b.source_ids ? normalizeSourceIds(b.source_ids) : [];
           validateSourceIds(notebookId, sourceIds);
         } catch (error) {
-          set.status = 400;
-          return { detail: (error as Error).message };
+          return sendError(set, ErrorCode.INVALID_REQUEST, (error as Error).message);
         }
 
         const topK = Number(b.top_k ?? 5);
@@ -167,11 +167,13 @@ export function refineRouter(taskQueue: TaskQueue) {
           return await taskQueue.waitForCompletion(taskId);
         } catch (error) {
           if (error instanceof Error && error.message === 'Task cancelled') {
-            set.status = 409;
-            return { detail: 'Task cancelled' };
+            return sendError(set, ErrorCode.CONFLICT, 'Task cancelled');
           }
-          set.status = 500;
-          return { detail: error instanceof Error ? error.message : 'Task failed' };
+          return sendError(
+            set,
+            ErrorCode.INTERNAL_ERROR,
+            error instanceof Error ? error.message : 'Task failed',
+          );
         }
       })
 
@@ -194,16 +196,14 @@ export function refineRouter(taskQueue: TaskQueue) {
           sourceIds = b.source_ids ? normalizeSourceIds(b.source_ids) : [];
           validateSourceIds(notebookId, sourceIds);
         } catch (error) {
-          set.status = 400;
-          return { detail: (error as Error).message };
+          return sendError(set, ErrorCode.INVALID_REQUEST, (error as Error).message);
         }
 
         const topK = Number(b.top_k ?? 5);
         const minScore = Number(b.min_score ?? 0.2);
         const prompt = String(b.prompt).trim();
         if (!prompt) {
-          set.status = 400;
-          return { detail: 'Refine task requires a prompt' };
+          return sendError(set, ErrorCode.INVALID_REQUEST, 'Refine task requires a prompt');
         }
 
         // ① retrieve once — shared across all formats

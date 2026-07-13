@@ -1,4 +1,4 @@
-import type { Citation } from '@crystalith/shared';
+import type { Citation, ContextStats } from '@crystalith/shared';
 // Deterministic retrieval + evidence judge — ports v1 `run_qa_pipeline`
 // (service.py:274-487).
 //
@@ -64,15 +64,8 @@ export interface JudgeResult {
   contextStats: ContextStats;
 }
 
-export interface ContextStats {
-  total_tokens: number;
-  system_tokens: number;
-  history_tokens: number;
-  retrieval_tokens: number;
-  query_tokens: number;
-  max_tokens: number;
-  compressed: boolean;
-}
+// ContextStats is imported from @crystalith/shared (c54: moved out of
+// server-local to honor the Zod-SSOT rule).
 
 export interface RetrieveAndJudgeOptions {
   notebookId: number;

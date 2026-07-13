@@ -15,6 +15,7 @@ import { outputs, notebooks, sources, chunks } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
+import { ErrorCode, sendError } from '../../shared/errors.ts';
 import { listOutputTypes, type ToolOutputType } from './generator.ts';
 import { runOutputPipeline } from './pipeline.ts';
 import { renderOutputToMarkdown, splitTextToChunks } from './render.ts';
@@ -116,27 +117,25 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     // for SLIDES output". SLIDES has its own studio pipeline; the generic
     // outputs pipeline has no SLIDES postprocess/isContentEmpty case.
     if (String(type).toUpperCase() === 'SLIDES') {
-      set.status = 400;
-      return {
-        error: 'Use slides endpoints for SLIDES output',
-        error_code: 'OUTPUT_TYPE_USE_STUDIO',
-      };
+      return sendError(set, ErrorCode.INVALID_REQUEST, 'Use slides endpoints for SLIDES output');
     }
 
     // c38 gap fix: source_ids is required when chunk_ids is not provided (v1 api.py:292-293)
     const resolvedSourceIds = source_ids ? (source_ids as number[]).map(Number) : undefined;
     const resolvedChunkIds = chunk_ids ? (chunk_ids as number[]).map(Number) : undefined;
     if (!resolvedChunkIds?.length && !resolvedSourceIds?.length) {
-      set.status = 400;
-      return { error: 'source_ids must not be empty (or provide chunk_ids)' };
+      return sendError(
+        set,
+        ErrorCode.INVALID_REQUEST,
+        'source_ids must not be empty (or provide chunk_ids)',
+      );
     }
 
     // Resolve model (config default or explicit model_id override)
     const modelConfig = model_id ? getModelById(String(model_id)) : getDefaultChatModel();
     // c42: granular error mapping (v1 api.py:309-361) — typed exceptions, not string matching
     if (!modelConfig) {
-      set.status = 503;
-      return { error: 'No chat model configured', error_code: 'MODEL_UNAVAILABLE' };
+      return sendError(set, ErrorCode.MODEL_UNAVAILABLE, 'No chat model configured');
     }
 
     let model;
@@ -145,8 +144,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     } catch (error) {
       // Model resolution failure → 503 (v1 ModelConfigurationError)
       if (error instanceof NoSuchModelError) {
-        set.status = 503;
-        return { error: 'Model not available', error_code: 'MODEL_UNAVAILABLE' };
+        return sendError(set, ErrorCode.MODEL_UNAVAILABLE, 'Model not available');
       }
       throw error;
     }
@@ -169,19 +167,15 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
       const msg = error instanceof Error ? error.message : String(error);
       // Typed error mapping (v1 api.py:309-361)
       if (error instanceof TypeValidationError || error instanceof NoObjectGeneratedError) {
-        set.status = 422; // schema validation failure
-        return { error: msg, error_code: 'SCHEMA_VALIDATION_FAILED' };
+        return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, msg);
       }
       if (error instanceof NoSuchModelError || error instanceof APICallError) {
-        set.status = 503; // model unavailable / API error
-        return { error: msg, error_code: 'MODEL_ERROR' };
+        return sendError(set, ErrorCode.MODEL_ERROR, msg);
       }
       if (msg.includes('retrieval')) {
-        set.status = 400; // value/retrieval error
-        return { error: msg };
+        return sendError(set, ErrorCode.INVALID_REQUEST, msg);
       }
-      set.status = 500;
-      return { error: msg };
+      return sendError(set, ErrorCode.INTERNAL_ERROR, msg);
     }
 
     // c42: return v1 OutputRead contract (snake_case) instead of PipelineResult

@@ -119,7 +119,10 @@ describe('source dedup', () => {
 
     const { status, body } = await uploadFile(nb, 'b.txt', content, 'prompt');
     expect(status).toBe(409);
-    expect((body as { error_code: string }).error_code).toBe('SOURCE_DEDUP_HIT');
+    // c54: errors now use the unified ErrorEnvelope (error_code + message).
+    // Dedup is surfaced as CONFLICT with existing_source_id in details.
+    expect((body as { error_code: string }).error_code).toBe('CONFLICT');
+    expect((body as { details: { existing_source_id?: number } }).details).toBeDefined();
   });
 
   it('reuses the existing source with dedup_action=reuse', async () => {
@@ -176,8 +179,9 @@ describe('SSRF guard on URL ingest', () => {
       }),
     );
     expect(res.status).toBe(422);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toBe('SSRF blocked');
+    // c54: message field is now `message` (ErrorEnvelope), not `error`.
+    const body = (await res.json()) as { message: string };
+    expect(body.message).toBe('SSRF blocked');
   });
 
   it('blocks the metadata-IP literal 169.254.169.254 with 422', async () => {
@@ -190,7 +194,7 @@ describe('SSRF guard on URL ingest', () => {
       }),
     );
     expect(res.status).toBe(422);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toBe('SSRF blocked');
+    const body = (await res.json()) as { message: string };
+    expect(body.message).toBe('SSRF blocked');
   });
 });
