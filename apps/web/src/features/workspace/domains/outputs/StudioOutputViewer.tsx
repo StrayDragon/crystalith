@@ -117,8 +117,12 @@ export default function StudioOutputViewer({
         aria-label="关闭"
         tabIndex={-1}
       />
+      {/* position:relative so this modal content stacks ABOVE the
+           absolute inset-0 backdrop sibling; without it the backdrop
+           captures all pointer events including scroll/click on content.
+           See PROGRESS.v2.e2e.md K14. */}
       <div
-        className={`flex flex-col overflow-hidden bg-white shadow-2xl transition-all dark:bg-slate-900 ${
+        className={`relative flex flex-col overflow-hidden bg-white shadow-2xl transition-all dark:bg-slate-900 ${
           isFullscreen
             ? 'h-full w-full rounded-none'
             : 'h-[85vh] w-[90vw] max-w-6xl rounded-2xl border border-gray-300 dark:border-slate-700'
