@@ -1,0 +1,5 @@
+kind: llman.sdd.delta
+ops[1]{op,req_id,title,statement,from,to,name}:
+  add_requirement,"slides-config-schema-options-must-be-complete","SLIDES tool config_schema MUST expose all config axes with options and defaults","当 SLIDES 工具在 `/v1/workspace/tools` 响应中可用时，其 `config_schema` MUST 返回完整的 options 列表（每个 option 含 id/label/is_default）与 defaults 对象，MUST NOT 省略任一配置轴（quantity/audience/structure/tone/language/density/theme_preset）。这强化 r20 的既有 MUST：当前 v2 workspace router 的 SLIDES tool 不返回 config_schema，前端无法驱动配置 UI。",null,null,null
+op_scenarios[1]{req_id,id,given,when,then}:
+  "slides-config-schema-options-must-be-complete","slides-config-options-all-present","the SLIDES tool is available (returned in /v1/workspace/tools)","a client reads the SLIDES tool's config_schema","the config_schema MUST contain non-empty quantity_options, audience_options, structure_options, tone_options, language_options, density_options, and theme_preset_options arrays, plus a defaults object; each option MUST have id, label, and is_default fields"

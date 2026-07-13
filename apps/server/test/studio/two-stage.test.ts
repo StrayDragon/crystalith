@@ -145,7 +145,9 @@ describe('studio two-stage generation', () => {
     const slide = body as { stage: string; markdown: string };
     expect(slide.stage).toBe('markdown');
     expect(slide.markdown).toContain('---');
-    expect(slide.markdown).toContain('theme: seriph');
+    // c56: default preset (minimal-clean) now emits theme: default (v1 parity),
+    // not the prior v2-divergent 'seriph'.
+    expect(slide.markdown).toContain('theme: default');
     expect(slide.markdown).toContain('# Intro');
   });
 
