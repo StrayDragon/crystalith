@@ -35,6 +35,7 @@ cd apps/server && bun test        # ✅ 209 pass / 2 fail（research 网络 + UR
 ```
 
 人工：
+
 - GET /models envelope 含 providers + default_chat/default_embedding；无 per-model default 标记
 - 未配置 provider 的 model 不出现 / single 404
 - convert 传 message_ids 仅转换指定消息；缺失 id → 404

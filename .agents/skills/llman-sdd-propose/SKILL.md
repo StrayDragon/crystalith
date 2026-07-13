@@ -1,21 +1,52 @@
 ---
 name: 'llman-sdd-propose'
-description: 'Propose a new change and generate planning artifacts in one pass.'
+description: 'Create a new llman SDD change proposal with planning artifacts (proposal, delta specs, tasks) in one pass. Use when the user asks to define a formal change — especially for behavioral contract changes that modify MUST/SHALL requirements.'
 metadata:
-  version: '0.0.56'
+  version: '0.0.57'
 ---
 
 # LLMAN SDD Propose
 
 Create a new change and generate all planning artifacts in one pass (proposal + delta specs + tasks; design optional), then validate and suggest next actions.
 
+## Pipeline Position
+
+```mermaid
+flowchart LR
+    explore["llman-sdd-explore<br/>Explore"] --> propose
+    propose["★ llman-sdd-propose ★<br/>Propose (you are here)"]
+    propose --> apply["llman-sdd-apply<br/>Implement"]
+    apply --> verify["llman-sdd-verify<br/>Verify"]
+    verify --> archive["llman-sdd-archive<br/>Archive"]
+
+    style propose fill:#fff3cd,stroke:#ffc107,stroke-width:3px
+```
+
+> 📍 You are in the propose phase → next: `llman-sdd-apply` (implement)
+> 📎 For small changes (no behavioral contract changes), use `llman-sdd-quick` (quick path)
+
+## Hard Constraints
+
+- **Must confirm change id with user before writing files**: change boundaries must stay clear.
+- **Delta specs must have at least one op + one scenario**: otherwise validation fails.
+- **Don't ask "should I continue?"**: execute the full propose phase in one pass, generate artifacts and validate.
+- **If change already exists**: STOP and suggest `llman-sdd-continue` or `llman-sdd-apply`.
+
 ## Steps
 
-1. Assess change scale (triage):
-   - **Behavioural contract change** (modify MUST/SHALL, change external behaviour) → full SDD workflow
-   - **Implementation change** (refactor, typo, perf) → quick path via `llman-sdd-quick`
-   - **Meta-spec change** (SDD templates/process) → full SDD workflow
-   - When uncertain, choose full SDD (conservative).
+### 0) Preflight
+
+- Read `llmanspec/config.yaml` for project context, rules, locale.
+- `llman sdd validate --all --strict --no-interactive`: ensure current artifacts are clean.
+  - If pre-existing errors, stop and report (stacking new changes on dirty artifacts causes cascading errors).
+
+### 1) Assess change scale (triage)
+
+- **Behavioral contract change** (modify MUST/SHALL, change external behavior) → full SDD workflow
+- **Implementation change** (refactor, typo, perf) → quick path via `llman-sdd-quick`
+- **Meta-spec change** (SDD templates/process) → full SDD workflow
+- When uncertain, choose full SDD (conservative).
+
 2. Use `llman sdd context --task "<goal>" --paths "<scope>"` to find relevant specs.
    - If context unavailable, rebuild with `llman sdd index rebuild` (default `pageindex`, no model needed) and continue.
 3. Gather input:
@@ -23,27 +54,40 @@ Create a new change and generate all planning artifacts in one pass (proposal + 
    - A change id (or derive one; kebab-case, verb prefix: `add-`, `update-`, `remove-`, `refactor-`)
    - The impacted capability/capabilities (to name `specs/<capability>/`)
    - Confirm the final id before writing files
-4. Ensure the project is initialized:
-   - `llmanspec/` must exist; if missing, tell the user to run `llman sdd init`, then STOP.
-5. Create `llmanspec/changes/<change-id>/` and `llmanspec/changes/<change-id>/specs/`.
-   - If the change already exists, STOP and suggest `llman-sdd-continue`.
-6. Create artifacts under `llmanspec/changes/<change-id>/`:
-   - `proposal.md` (Why / What Changes / Capabilities / Impact)
-   - `specs/<capability>/spec.toon` for each capability (a standalone TOON document, one per file):
-     - Prefer generating via authoring helpers so the TOON payload is well-formed:
-       - `llman sdd delta skeleton <change-id> <capability>`
-       - `llman sdd delta add-op ...`
-       - `llman sdd delta add-scenario ...`
-     - Include at least one `add_requirement`/`modify_requirement` op (statement MUST contain MUST/SHALL) and at least one matching op scenario row
-   - `design.md` only when tradeoffs/migrations matter
-   - `tasks.md` as an ordered checklist (include validation commands)
-7. Validate:
-   ```bash
-   llman sdd validate <change-id> --strict --no-interactive
-   ```
-   This MUST pass before proceeding. If TOON parse errors appear, fix quoting:
-   values containing commas/colons/brackets must be double-quoted in tabular rows.
-8. Summarize what was created and suggest `llman-sdd-apply` for implementation.
+
+### 2) Ensure project is initialized:
+
+- `llmanspec/` must exist; if missing, tell the user to run `llman sdd init`, then STOP.
+
+### 3) Create change directory and artifacts
+
+- Create `llmanspec/changes/<change-id>/` and `llmanspec/changes/<change-id>/specs/`.
+- If the change already exists, STOP and suggest `llman-sdd-continue`.
+- `proposal.md` (Why / What Changes / Capabilities / Impact)
+- `specs/<capability>/spec.toon` for each capability (a standalone TOON document, one per file):
+  - Prefer generating via authoring helpers so the TOON payload is well-formed:
+    - `llman sdd delta skeleton <change-id> <capability>`
+    - `llman sdd delta add-op ...`
+    - `llman sdd delta add-scenario ...`
+  - Include at least one `add_requirement`/`modify_requirement` op (statement MUST contain MUST/SHALL) and at least one matching op scenario row
+- `design.md` only when tradeoffs/migrations matter
+- `tasks.md` as an ordered checklist (include validation commands)
+
+### 4) Validate:
+
+```bash
+llman sdd validate <change-id> --strict --no-interactive
+```
+
+This MUST pass before proceeding. If TOON parse errors appear, fix quoting:
+values containing commas/colons/brackets must be double-quoted in tabular rows.
+
+### 5) Summarize and suggest next step:
+
+- Enter implementation phase: `llman-sdd-apply`.
+- If you need to think more: `llman-sdd-explore`.
+
+> 💡 Proposal done → next: `llman-sdd-apply` (implement)
 
 Before acting, read `llmanspec/config.yaml` and follow its `context` and `rules` if present.
 
