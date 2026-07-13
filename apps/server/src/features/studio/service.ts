@@ -14,6 +14,16 @@ import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';
 import { chunks, outputs, sources, studioSlides } from '../../db/schema.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
+import {
+  resolveAudienceHint,
+  resolveBulletRange,
+  resolveLanguageHint,
+  resolveQuantityRange,
+  resolveRetrievalTuning,
+  resolveStructureHint,
+  resolveThemePreset,
+  resolveToneHint,
+} from './config.ts';
 import { buildFrontmatter } from './theme-presets.ts';
 
 // ---------------------------------------------------------------------------
@@ -47,19 +57,48 @@ export function applyFrontmatter(md: string, frontmatter: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Config hints (v1 generator.py:202-290)
+// Config hints (c56: v1 generator.py:202-290 requirement_lines, expanded)
 // ---------------------------------------------------------------------------
 
+/**
+ * Build the Chinese requirement block for the generation prompt (v1
+ * _build_outline_prompt/_build_markdown_prompt requirement_lines). Expands
+ * quantity/density to concrete ranges and appends audience/tone/structure/
+ * language/theme hints when those config fields are set.
+ *
+ * Returns a `\n\nGuidance:\n- ...` block appended to the system prompt, or ''.
+ */
 export function buildConfigHints(config: Record<string, unknown> | null): string {
   if (!config) return '';
-  const hints: string[] = [];
-  if (typeof config.quantity === 'number') hints.push(`Generate ~${config.quantity} slides.`);
-  if (typeof config.density === 'string') hints.push(`Content density: ${config.density}.`);
-  if (typeof config.audience === 'string') hints.push(`Target audience: ${config.audience}.`);
-  if (typeof config.tone === 'string') hints.push(`Tone: ${config.tone}.`);
-  if (typeof config.structure === 'string') hints.push(`Structure: ${config.structure}.`);
-  if (typeof config.language === 'string') hints.push(`Language: ${config.language}.`);
-  return hints.length ? `\n\nGuidance:\n- ${hints.join('\n- ')}` : '';
+  const [slideMin, slideMax] = resolveQuantityRange(
+    typeof config.quantity === 'string' ? config.quantity : null,
+  );
+  const [bulletMin, bulletMax] = resolveBulletRange(
+    typeof config.density === 'string' ? config.density : null,
+  );
+  const languageHint = resolveLanguageHint(
+    typeof config.language === 'string' ? config.language : null,
+  );
+  const audienceHint = resolveAudienceHint(
+    typeof config.audience === 'string' ? config.audience : null,
+  );
+  const toneHint = resolveToneHint(typeof config.tone === 'string' ? config.tone : null);
+  const structureHint = resolveStructureHint(
+    typeof config.structure === 'string' ? config.structure : null,
+  );
+  const themePreset = resolveThemePreset(
+    typeof config.theme_preset === 'string' ? config.theme_preset : null,
+  );
+
+  const lines: string[] = [];
+  lines.push(`请生成 ${slideMin}-${slideMax} 张幻灯片。`);
+  lines.push(`每页 ${bulletMin}-${bulletMax} 个要点。`);
+  if (languageHint) lines.push(`输出语言：${languageHint}`);
+  if (audienceHint) lines.push(`受众定位：${audienceHint}`);
+  if (toneHint) lines.push(`语气风格：${toneHint}`);
+  if (structureHint) lines.push(`结构模板：${structureHint}`);
+  lines.push(`主题预设：${themePreset}`);
+  return `\n\nGuidance:\n- ${lines.join('\n- ')}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -72,12 +111,17 @@ export async function getContext(slide: typeof studioSlides.$inferSelect): Promi
     throw new Error('source_ids required — select at least one source');
   }
 
+  // c56: preference (quality/speed) tunes topK/minScore (v1 generation_preference.py).
+  const config = (slide.generationConfig ?? {}) as Record<string, unknown>;
+  const preference = typeof config.preference === 'string' ? config.preference : null;
+  const { topK, minScore } = resolveRetrievalTuning(preference);
+
   const query = slide.prompt || slide.title || 'presentation slides';
   try {
     const { ragRegistry } = await import('../../rag/registry.ts');
     const results = await ragRegistry.retrieveWith('embed', slide.notebookId, query, {
-      topK: 20,
-      minScore: 0.2,
+      topK,
+      minScore,
       sourceIds,
     });
     if (results.length > 0) {
@@ -200,11 +244,16 @@ export async function generateOutline(
   if (!modelConfig) throw new Error('No chat model configured');
   const model = withRetry(await resolveModel(modelConfig));
 
+  // c56: interpret generation_config into concrete ranges (v1 _build_outline_prompt).
+  const config = (slide.generationConfig ?? null) as Record<string, unknown> | null;
+  const hintLines = buildConfigHints(config);
+
   const { object: outline } = await generateObject({
     model,
     schema: SlideOutlineSchema,
     system:
-      'You are a presentation designer. Create a slide outline with title and bullet points for each slide.',
+      'You are a presentation designer. Create a slide outline with title and bullet points for each slide.' +
+      hintLines,
     prompt: `Create a slide outline based on:\n\nTitle: ${slide.title || 'Presentation'}\n\nContent:\n${context}\n\n${slide.prompt ? `Additional instructions: ${slide.prompt}` : ''}`,
   });
 
@@ -227,7 +276,12 @@ export async function generateMarkdown(
 
   const config = slide.generationConfig as Record<string, unknown> | null;
   const themePreset = (config?.theme_preset as string) ?? 'minimal-clean';
-  const frontmatter = buildFrontmatter(themePreset);
+  const frontmatterOverride =
+    typeof config?.frontmatter === 'string' && config.frontmatter.trim()
+      ? config.frontmatter
+      : null;
+  // c56: pass title + override so buildFrontmatter honors the v1 override path.
+  const frontmatter = buildFrontmatter(themePreset, slide.title, frontmatterOverride);
   const hintLines = buildConfigHints(config);
 
   const result = streamText({

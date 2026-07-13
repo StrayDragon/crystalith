@@ -6,6 +6,7 @@ import { Elysia, NotFoundError } from 'elysia';
 
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { OUTPUT_META } from '../outputs/generator.ts';
+import { buildSlidesConfigSchema } from '../studio/config.ts';
 
 const apiDocs: OpenApiRoute[] = [
   {
@@ -38,6 +39,9 @@ export const workspaceRouter = new Elysia({ prefix: '/v2' })
       prompt: meta.prompt,
       is_tool: meta.is_tool,
       enabled: true,
+      // c56: SLIDES tool MUST carry config_schema to drive the frontend config UI
+      // (workspace-api-contract r20). Other output types have no config UI yet.
+      config_schema: type === 'SLIDES' ? buildSlidesConfigSchema() : null,
     }));
 
     return {
@@ -54,6 +58,15 @@ export const workspaceRouter = new Elysia({ prefix: '/v2' })
     const type = params.id.toUpperCase();
     const meta = OUTPUT_META[type];
     if (!meta) throw new NotFoundError(`Tool ${params.id} not found`);
+    // c56: /tools/:id/config MUST be consistent with the tools list config_schema
+    // (workspace-api-contract r21). SLIDES returns the full SlidesConfigSchema.
+    if (type === 'SLIDES') {
+      return {
+        tool_id: params.id,
+        tool_label: meta.display_text,
+        ...buildSlidesConfigSchema(),
+      };
+    }
     return {
       tool_id: params.id,
       tool_label: meta.display_text,

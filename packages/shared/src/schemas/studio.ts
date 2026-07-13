@@ -61,6 +61,60 @@ export const StudioSlideListSchema = z.object({
   slides: z.array(StudioSlideSchema),
 });
 
+// ---------------------------------------------------------------------------
+// c56: Slide generation config + config_schema (v1 PluginConfigSchema parity).
+// Drives the workspace /tools config_schema contract (workspace-api-contract r20)
+// and studio generation prompt/retrieval interpretation.
+// ---------------------------------------------------------------------------
+
+/** v1 schemas.py:28-39 SlideGenerationConfig (typed subset). */
+export const SlideGenerationConfigSchema = z.object({
+  preference: z.enum(['quality', 'speed']).nullable().optional(),
+  quantity: z.string().nullable().optional(),
+  audience: z.string().nullable().optional(),
+  structure: z.string().nullable().optional(),
+  tone: z.string().nullable().optional(),
+  language: z.string().nullable().optional(),
+  density: z.string().nullable().optional(),
+  theme_preset: z.string().nullable().optional(),
+  frontmatter: z.string().nullable().optional(),
+});
+export type SlideGenerationConfig = z.infer<typeof SlideGenerationConfigSchema>;
+
+/** v1 render_types.py ConfigOption — one selectable value for a config axis. */
+export const ConfigOptionSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  is_default: z.boolean().default(false),
+});
+export type ConfigOption = z.infer<typeof ConfigOptionSchema>;
+
+/** v1 render_types.py ThemePresetOption — option carrying a frontmatter template. */
+export const ThemePresetOptionSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  template: JsonMetadataSchema.default({}),
+});
+export type ThemePresetOption = z.infer<typeof ThemePresetOptionSchema>;
+
+/**
+ * v1 render_types.py PluginConfigSchema — the shape returned by
+ * /workspace/tools[].config_schema and /workspace/tools/:id/config for SLIDES.
+ * Drives the frontend config UI directly (workspace-api-contract r20).
+ */
+export const SlidesConfigSchemaSchema = z.object({
+  defaults: JsonMetadataSchema.default({}),
+  quantity_options: z.array(ConfigOptionSchema).default([]),
+  audience_options: z.array(ConfigOptionSchema).default([]),
+  structure_options: z.array(ConfigOptionSchema).default([]),
+  tone_options: z.array(ConfigOptionSchema).default([]),
+  language_options: z.array(ConfigOptionSchema).default([]),
+  density_options: z.array(ConfigOptionSchema).default([]),
+  theme_preset_options: z.array(ThemePresetOptionSchema).default([]),
+  engine: z.string().nullable().optional(),
+});
+export type SlidesConfigSchema = z.infer<typeof SlidesConfigSchemaSchema>;
+
 /** Re-export so consumers can import slide outline shape from one place. */
 export { SlidesOutlineSchema };
 

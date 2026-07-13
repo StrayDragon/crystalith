@@ -35,6 +35,7 @@ config/secret.env
 # Local runtime data (databases/uploads)
 backend/py/data/
 apps/server/data/
+apps/server/slides/
 
 ### Python ###
 # Python compiled files, virtual environments, and cache
