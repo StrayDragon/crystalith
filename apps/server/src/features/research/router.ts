@@ -472,11 +472,22 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     // Record finish step (v1 api.py:650-687)
     recordUserStep(id, row.currentIteration, 'finish');
 
+    // Abort the in-flight agent loop BEFORE spawning the report generator.
+    // Without this, both the fire-and-forget `generateFinalReport` below and
+    // `runResearchCore`'s afterLoop path can concurrently read/write
+    // `finalReport` (v1 has no race because only the graph node writes the
+    // report). Mirrors the `/cancel` abort pattern (router.ts:533-537).
+    const ac = activeResearch.get(id);
+    if (ac) {
+      ac.abort();
+      activeResearch.delete(id);
+    }
+
     // Mark COMPLETED immediately so the client + DB reflect the terminal state
     // without waiting for report generation (v1 parity: return right away).
     db()
       .update(researchSessions)
-      .set({ status: 'completed' })
+      .set({ status: 'completed', lockedAt: null, lockExpiresAt: null })
       .where(eq(researchSessions.id, id))
       .run();
 
@@ -674,7 +685,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       } catch (error) {
         console.error('[research] export embedding failed:', error);
         db().update(sources).set({ status: 'failed' }).where(eq(sources.id, source.id)).run();
-        throw new Error('Failed to embed exported report');
+        throw new Error('Failed to embed exported report', { cause: error });
       }
     }
 
@@ -804,6 +815,14 @@ function deriveNamedEvent(step: typeof researchSteps.$inferSelect): {
       return { event: 'waiting', data: { ...base, type: 'approval_request' } };
     case 'search':
       return { event: 'search_progress', data: { ...base, type: 'search_progress' } };
+    case 'search_result':
+      // P0-2: per-result event (v1 on_search_result, graph.py:497-498).
+      // outputData carries {title,url,snippet,source,iteration,relevance_score}
+      // matching shared ResearchSearchResultSchema.
+      return {
+        event: 'search_result',
+        data: { ...base, type: 'search_result', result: step.outputData },
+      };
     case 'analyze':
       return { event: 'analysis', data: { ...base, type: 'analysis' } };
     case 'summary':
@@ -861,5 +880,7 @@ function statusMessage(status: string): string {
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
+  return new Promise((r) => {
+    setTimeout(r, ms);
+  });
 }

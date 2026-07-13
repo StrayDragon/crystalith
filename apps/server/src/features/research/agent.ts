@@ -202,6 +202,35 @@ async function executeSearches(
     })
     .run();
 
+  // P0-2: emit one `search_result` step per result so the SSE poller can relay
+  // them as individual `search_result` events (v1 graph.py:497-498 fires
+  // on_search_result per result; shared schema ResearchProgressEventSchema
+  // already defines the `search_result` variant). Mirrors v1's per-result
+  // streaming UX (live "found N results") that the aggregate `search` step
+  // cannot provide.
+  if (deduped.length > 0) {
+    db()
+      .insert(researchSteps)
+      .values(
+        deduped.map((r) => ({
+          sessionId: state.sessionId,
+          iteration: state.iteration,
+          type: 'search_result' as const,
+          outputData: {
+            title: r.title,
+            url: r.url,
+            snippet: r.snippet,
+            source: r.engine,
+            iteration: state.iteration,
+            relevance_score: 0,
+            query: r.query,
+          } as Record<string, unknown>,
+          status: 'completed' as const,
+        })),
+      )
+      .run();
+  }
+
   return deduped;
 }
 
@@ -496,13 +525,11 @@ export async function runResearchCore(
     if (!analysis.needMore || iter >= state.maxIterations) break;
   }
 
-  // If cancelled, don't write report
+  // If the signal was aborted, the terminating handler (/finish or /cancel)
+  // has already set the terminal status (completed/cancelled) and owns the
+  // finalReport write. Do not overwrite status here — the handler knows which
+  // terminal state applies, the loop does not.
   if (signal.aborted) {
-    db()
-      .update(researchSessions)
-      .set({ status: 'cancelled' })
-      .where(eq(researchSessions.id, sessionId))
-      .run();
     return null;
   }
 

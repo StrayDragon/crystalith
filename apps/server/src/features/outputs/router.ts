@@ -1,3 +1,4 @@
+import type { Citation } from '@crystalith/shared';
 import { NoSuchModelError, TypeValidationError, APICallError, NoObjectGeneratedError } from 'ai';
 // Outputs router — /v2/outputs CRUD + generation.
 //
@@ -84,6 +85,43 @@ function serializeOutput(row: typeof outputs.$inferSelect) {
     created_at: row.createdAt.toISOString(),
     updated_at: row.updatedAt.toISOString(),
   };
+}
+
+/**
+ * Walk an output's content tree and collect only the citations actually
+ * referenced by leaf nodes (v1 _collect_output_citations, api.py:124-156).
+ * pipeline.mapCitationsIntoContent already resolved numeric `citations` arrays
+ * into full Citation dicts embedded on leaf nodes, so we recurse and dedup by
+ * chunk_id in first-seen order. Returns the cited subset — NOT the full
+ * retrieved-chunk superset stored in `outputs.chunk_ids`.
+ */
+export function collectCitedCitations(content: Record<string, unknown> | null): Citation[] {
+  if (!content) return [];
+  const seen = new Set<number>();
+  const out: Citation[] = [];
+  const visit = (node: unknown): void => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item);
+      return;
+    }
+    const obj = node as Record<string, unknown>;
+    const cited = obj.citations;
+    if (Array.isArray(cited)) {
+      for (const c of cited) {
+        if (!c || typeof c !== 'object') continue;
+        const cit = c as Record<string, unknown>;
+        const chunkId = cit.chunk_id;
+        if (typeof chunkId !== 'number' || seen.has(chunkId)) continue;
+        seen.add(chunkId);
+        out.push(cit as unknown as Citation);
+      }
+    }
+    // Recurse into all object-valued properties.
+    for (const v of Object.values(obj)) visit(v);
+  };
+  visit(content);
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -223,41 +261,20 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
 
     const exportedAt = new Date().toISOString();
 
+    // P1-6: collect only the citations actually referenced in the content tree
+    // (v1 _collect_output_citations, api.py:124-156). pipeline.mapCitationsIntoContent
+    // already resolved numeric indices into full Citation dicts embedded on
+    // leaf nodes, so we walk the tree and dedup by chunk_id (first-seen order).
+    // This replaces the prior `row.chunkIds` join which listed ALL retrieved
+    // chunks (the superset), not just the cited ones.
+    const citations = collectCitedCitations(row.content as Record<string, unknown> | null);
+    const sourceIds = [...new Set(citations.map((c) => c.source_id))];
+    const sourceRows = sourceIds.length
+      ? db().select().from(sources).where(inArray(sources.id, sourceIds)).all()
+      : [];
+
     if (format === 'json') {
       // c42: full citation fields + correct source metadata (v1 OutputExportJson)
-      const chunkIds = (row.chunkIds as number[] | null) ?? [];
-      const citationRows = chunkIds.length
-        ? db()
-            .select({
-              chunkId: chunks.id,
-              text: chunks.text,
-              chunkIndex: chunks.chunkIndex,
-              sourceId: chunks.sourceId,
-              sourceName: sources.filename,
-              chunkMeta: chunks.metadata,
-            })
-            .from(chunks)
-            .innerJoin(sources, eq(chunks.sourceId, sources.id))
-            .where(inArray(chunks.id, chunkIds))
-            .all()
-        : [];
-      const citations = citationRows.map((c, i) => {
-        const meta = (c.chunkMeta as Record<string, unknown> | null) ?? {};
-        return {
-          source_id: c.sourceId,
-          source_name: c.sourceName,
-          chunk_id: c.chunkId,
-          chunk_index: c.chunkIndex + 1, // 1-based
-          page_number: typeof meta.page === 'number' ? meta.page : null,
-          paragraph_index: typeof meta.paragraph_index === 'number' ? meta.paragraph_index : null,
-          snippet: c.text.slice(0, 200),
-          score: 1 - i * 0.01, // approximate (ranking preserved)
-        };
-      });
-      const sourceIds = [...new Set(citations.map((c) => c.source_id))];
-      const sourceRows = sourceIds.length
-        ? db().select().from(sources).where(inArray(sources.id, sourceIds)).all()
-        : [];
       return {
         notebook_id: row.notebookId,
         output_id: row.id,
@@ -276,35 +293,25 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     }
 
     // Markdown format — type-aware rendering (v1 _extract_text_from_output)
-    // + Citations and Sources sections (v1 api.py:441-476)
+    // + Citations and Sources sections (v1 api.py:441-476). Citation line
+    // format aligns with v1 api.py:452-461:
+    //   [N] source_name · chunk N[ · page N][ · para N]
+    //   > snippet
     const bodyMarkdown = renderOutputToMarkdown(
       row.type,
       row.content as Record<string, unknown> | null,
       row.prompt,
     );
-    // Build citations + sources sections
-    const chunkIds = (row.chunkIds as number[] | null) ?? [];
-    const citationRows = chunkIds.length
-      ? db()
-          .select({
-            chunkId: chunks.id,
-            text: chunks.text,
-            sourceId: chunks.sourceId,
-            sourceName: sources.filename,
-          })
-          .from(chunks)
-          .innerJoin(sources, eq(chunks.sourceId, sources.id))
-          .where(inArray(chunks.id, chunkIds))
-          .all()
-      : [];
-    const citationLines = citationRows.map((c, i) => {
-      const snippet = c.text.slice(0, 200).trim();
-      return snippet ? `[${i + 1}] ${c.sourceName}\n> ${snippet}` : `[${i + 1}] ${c.sourceName}`;
+    const citationLines = citations.map((c, i) => {
+      const parts = [`[${i + 1}] ${c.source_name}`, `chunk ${c.chunk_index}`];
+      if (c.page_number !== null && c.page_number !== undefined)
+        parts.push(`page ${c.page_number}`);
+      if (c.paragraph_index !== null && c.paragraph_index !== undefined)
+        parts.push(`para ${c.paragraph_index}`);
+      const line = parts.join(' · ');
+      const snippet = (c.snippet ?? '').trim();
+      return snippet ? `${line}\n> ${snippet}` : line;
     });
-    const sourceIds = [...new Set(citationRows.map((c) => c.sourceId))];
-    const sourceRows = sourceIds.length
-      ? db().select().from(sources).where(inArray(sources.id, sourceIds)).all()
-      : [];
     const markdown = [
       bodyMarkdown,
       '',

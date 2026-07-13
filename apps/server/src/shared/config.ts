@@ -256,6 +256,7 @@ export function getSecurityPolicy(): SsrfPolicy {
     cidrAllowlist: Array.isArray(security.allowlist_cidrs)
       ? (security.allowlist_cidrs as string[])
       : undefined,
+    maxRedirects: typeof security.max_redirects === 'number' ? security.max_redirects : undefined,
   };
 }
 

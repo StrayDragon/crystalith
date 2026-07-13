@@ -117,9 +117,14 @@ export function createApp() {
 
 // Only listen when run as the entry point (not when imported by tests).
 if (import.meta.main) {
+  // Bind loopback by default (parity with v1 `_DEFAULT_LISTEN_HOST = "127.0.0.1"`).
+  // v2 has no auth yet (c13 scope), so loopback binding is the primary network
+  // exposure guard. Override with CL_SERVER_HOST=0.0.0.0 for docker/LAN once
+  // auth is in place.
   const app = createApp()
     .decorate('taskQueue', taskQueue)
     .listen({
+      hostname: process.env.CL_SERVER_HOST ?? '127.0.0.1',
       port: process.env.CL_SERVER_PORT ? parseInt(process.env.CL_SERVER_PORT) : 8032,
     });
   console.log(

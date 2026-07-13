@@ -24,6 +24,8 @@ export interface SsrfPolicy {
   domainAllowlist?: string[];
   /** Allowed CIDR ranges. */
   cidrAllowlist?: string[];
+  /** Max HTTP redirects to follow when using fetchWithRedirectGuard (default 5). */
+  maxRedirects?: number;
 }
 
 export class SsrfBlockedError extends Error {
