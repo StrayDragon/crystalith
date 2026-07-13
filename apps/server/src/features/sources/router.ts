@@ -911,10 +911,16 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     // Use factory's listExtractorMetadata — reads real config, not env vars (H2 fix)
     const allExtractors = listExtractorMetadata(config().raw);
 
+    // K8 fix: nest mode/enabled_extractors under 'policy' key to match
+    // the frontend ExtractorsListResponse type (generated from OpenAPI spec).
+    // Without this nesting, frontend reads extractorsData?.policy?.mode
+    // which is always undefined, so the mode display never updates.
     return {
       notebook_id: nid,
-      mode,
-      enabled_extractors: enabledExtractors,
+      policy: {
+        mode,
+        enabled_extractors: enabledExtractors,
+      },
       extractors: allExtractors,
       // c62: derive default by availability (v1), not hardcoded
       default_extractor: getDefaultExtractor(config().raw),
@@ -971,7 +977,17 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       .from(notebookExtractorPolicies)
       .where(eq(notebookExtractorPolicies.notebookId, nid))
       .get();
-    return updated;
+    // K8 fix: match GET response shape — nest under 'policy' key
+    return {
+      notebook_id: nid,
+      policy: {
+        mode: updated!.mode,
+        enabled_extractors: updated!.enabledExtractors,
+      },
+      extractors: listExtractorMetadata(config().raw),
+      default_extractor: getDefaultExtractor(config().raw),
+      fallback_enabled: updated!.mode === 'inherit_global',
+    };
   });
 
 registerApiDoc(apiDocs);
