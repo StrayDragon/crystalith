@@ -60,3 +60,57 @@ export function buildContext(parts: ContextPart[], maxTokens: number): string {
   }
   return blocks.join('\n\n');
 }
+
+/**
+ * Truncate a list of context blocks to fit a token budget (v1 `_truncate_blocks`,
+ * context.py:438-485). Blocks are kept in order; when a block would overflow the
+ * remaining budget it is partially trimmed (head kept) and iteration stops.
+ *
+ * Returns the joined text (`\n\n` separator, matching v1), whether truncation
+ * occurred, and the resulting token count. A budget ≤ 0 yields empty output
+ * with `truncated: true`.
+ *
+ * c55: the QA path uses this to actually enforce the token budget that
+ * `ContextStats.compressed` reports (previously the flag was set but the
+ * context was passed through untruncated).
+ */
+export function truncateToTokenBudget(
+  blocks: string[],
+  budgetTokens: number,
+): { text: string; truncated: boolean; usedTokens: number } {
+  if (budgetTokens <= 0) return { text: '', truncated: true, usedTokens: 0 };
+
+  const joiner = '\n\n';
+  const joinerTokens = countTokens(joiner);
+  const kept: string[] = [];
+  let usedTokens = 0;
+  let truncated = false;
+
+  for (const block of blocks) {
+    const blockTokens = countTokens(block);
+    const extraTokens = kept.length > 0 ? joinerTokens : 0;
+    if (usedTokens + extraTokens + blockTokens <= budgetTokens) {
+      if (extraTokens) usedTokens += extraTokens;
+      kept.push(block);
+      usedTokens += blockTokens;
+      continue;
+    }
+
+    const remaining = budgetTokens - usedTokens - extraTokens;
+    if (remaining <= 0) {
+      truncated = true;
+      break;
+    }
+
+    const trimmed = truncateToTokens(block, remaining);
+    if (trimmed) {
+      if (extraTokens) usedTokens += extraTokens;
+      kept.push(trimmed);
+      usedTokens += countTokens(trimmed);
+    }
+    truncated = true;
+    break;
+  }
+
+  return { text: kept.join(joiner), truncated, usedTokens };
+}
