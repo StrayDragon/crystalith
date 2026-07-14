@@ -1782,7 +1782,7 @@ export default function SlidesStudioDialog({
                           key={previewKey}
                           title={`${previewProviderLabel} 预览`}
                           src={previewUrl}
-                          sandbox="allow-scripts"
+                          sandbox="allow-scripts allow-same-origin"
                           className="h-full w-full border-0 bg-white dark:bg-slate-800 relative z-10"
                           loading="lazy"
                         />

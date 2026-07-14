@@ -225,7 +225,7 @@ snap <target>
 | K5  | Citation 格式 `[Source: N]` 不匹配前端 `[N]`                                                                     | ✅ prompt 改为 `[N]`                                                           |
 | K6  | `supportsStructuredOutputs` 默认 false 导致降级到 `json_object`                                                  | ✅ config 设为 true                                                            |
 | K7  | Research `topic` 字段收到 `goal` 或空值时报 `undefined`                                                          | ✅ 兼容 goal 别名 + 默认 fallback "深度研究"                                   |
-| K8  | 提取器设置弹窗中模式显示为"遵循全局"但实际已切换为"custom"，前端的 header 标签未随 API mode 更新                 | ⬜ 前端展示问题，不影响后端功能；可后续用 llman-sdd 提交修复                   |
+| K8  | 提取器设置弹窗中模式显示为"遵循全局"但实际已切换为"custom"，前后端字段路径不匹配（policy 嵌套 vs 顶层返回）      | ✅ 后端 GET/PATCH 将 mode/enabled_extractors 嵌套在 policy 键下                |
 | K9  | Slidev markdown 生成超时（标准 8-12 张幻灯片 + 长内容），Outline 阶段正常完成                                    | 🔄 需增大超时或检查 AI provider 响应性能                                       |
 | K10 | Notes 面板输出渲染为原始 JSON，因 workspace/tools 响应缺少 render_descriptor                                     | ✅ 已修复 - 为 FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING 添加 render_descriptor |
 | K11 | Slides Studio 显示"当前 slides 插件未声明预览入口"，因 config_schema 缺少 preview 字段                           | ✅ 已修复 - buildSlidesConfigSchema() 返回 preview 对象                        |
