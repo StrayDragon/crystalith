@@ -31,7 +31,7 @@ function attachPortalMount(contentEl: Element): HTMLElement {
 
   const mountEl = document.createElement('div');
   mountEl.className = 'mc-portal-mount';
-  mountEl.style.cssText = 'display:flex;flex-direction:column;height:100%;overflow:hidden;';
+  mountEl.style.cssText = 'display:flex;flex-direction:column;height:100%;overflow:auto;';
   contentEl.append(mountEl);
   return mountEl;
 }

@@ -21,9 +21,13 @@ export const GRIDSTACK_STYLES = `
 /* Item content — positioning only, no visual decoration.
    overflow: auto (not hidden) so nested WidgetShell with overflow-y-auto
    can scroll when output content (GUIDE sections, MINDMAP tree) exceeds
-   the widget height. See WidgetShell.tsx. */
+   the widget height. See WidgetShell.tsx.
+   cursor: auto overrides GridStack's cursor:grab on draggable items so
+   the notes/output content shows a normal cursor and mouse-wheel/trackpad
+   scrolling works (hand cursor = grab mode blocks scroll). */
 .grid-stack-item-content {
   overflow: auto !important;
+  cursor: auto !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
