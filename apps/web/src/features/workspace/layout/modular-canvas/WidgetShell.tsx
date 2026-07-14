@@ -59,8 +59,10 @@ export default function WidgetShell({
         )}
       </div>
 
-      {/* Widget content */}
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+      {/* Widget content — overflow-y-auto allows vertical scroll when output
+           content (GUIDE sections, MINDMAP tree, etc.) exceeds widget height.
+           overflow-x-hidden prevents horizontal scrollbar. */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden">
         <ErrorBoundary title={`${label}模块异常`} description={`${label}模块渲染失败，请重试。`}>
           {children}
         </ErrorBoundary>
