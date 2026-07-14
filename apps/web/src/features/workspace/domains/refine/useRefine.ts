@@ -37,11 +37,12 @@ import {
 import { REFINE_FORMATS, REFINE_TEMPLATES } from './data/refineTemplates';
 
 function normalizeFieldDescriptor(field: ApiFieldDescriptor): FieldDescriptor {
+  const f = field as unknown as Record<string, unknown>;
   return {
-    key: field.key,
-    type: field.type,
-    label: field.label ?? null,
-    children: (field.children ?? []).map(normalizeFieldDescriptor),
+    key: f.key as string,
+    type: f.type as FieldDescriptor['type'],
+    label: (f.label as string | null) ?? null,
+    children: ((f.children ?? []) as unknown as ApiFieldDescriptor[]).map(normalizeFieldDescriptor),
   };
 }
 
@@ -49,14 +50,18 @@ function normalizeRenderDescriptor(
   descriptor?: ApiRenderDescriptor | null,
 ): RenderDescriptor | null {
   if (!descriptor) return null;
+  const d = descriptor as unknown as Record<string, unknown>;
   return {
-    layout: descriptor.layout,
-    item_schema: descriptor.item_schema
+    layout: d.layout as RenderDescriptor['layout'],
+    item_schema: d.item_schema
       ? {
-          fields: (descriptor.item_schema.fields ?? []).map(normalizeFieldDescriptor),
+          fields: (
+            ((d.item_schema as Record<string, unknown>)
+              .fields as unknown as ApiFieldDescriptor[]) ?? []
+          ).map(normalizeFieldDescriptor),
         }
       : null,
-    options: descriptor.options ?? {},
+    options: (d.options as Record<string, unknown>) ?? {},
   };
 }
 
@@ -84,35 +89,41 @@ function normalizePreviewDescriptor(
   descriptor?: ApiPreviewDescriptor | null,
 ): PreviewDescriptor | null {
   if (!descriptor) return null;
+  const d = descriptor as unknown as Record<string, unknown>;
   return {
-    kind: descriptor.kind ?? 'external_url',
-    service: descriptor.service ?? null,
-    url: descriptor.url ?? null,
-    open_in_new_tab: descriptor.open_in_new_tab ?? false,
-    meta: descriptor.meta ?? {},
+    kind: (d.kind as PreviewDescriptor['kind']) ?? 'external_url',
+    service: (d.service as string | null) ?? null,
+    url: (d.url as string | null) ?? null,
+    open_in_new_tab: (d.open_in_new_tab as boolean) ?? false,
+    meta: (d.meta as Record<string, unknown>) ?? {},
   };
 }
 
 function normalizeConfigSchema(schema?: ApiPluginConfigSchema | null): PluginConfigSchema | null {
   if (!schema) return null;
+  const s = schema as Record<string, unknown>;
   return {
-    defaults: normalizeSlideGenerationDefaults(schema.defaults ?? null),
-    quantity_options: schema.quantity_options ?? [],
-    difficulty_options: schema.difficulty_options ?? [],
-    audience_options: schema.audience_options ?? [],
-    structure_options: schema.structure_options ?? [],
-    tone_options: schema.tone_options ?? [],
-    language_options: schema.language_options ?? [],
-    density_options: schema.density_options ?? [],
-    theme_preset_options: (schema.theme_preset_options ?? []).map((option) => ({
-      id: option.id,
-      label: option.label,
-      template: option.template ?? {},
-    })),
-    topic_placeholder: schema.topic_placeholder ?? '',
-    supports_topic: schema.supports_topic ?? false,
-    engine: schema.engine ?? null,
-    preview: normalizePreviewDescriptor(schema.preview ?? null),
+    defaults: normalizeSlideGenerationDefaults(
+      (s.defaults ?? null) as Record<string, unknown> | null,
+    ),
+    quantity_options: (s.quantity_options ?? []) as PluginConfigSchema['quantity_options'],
+    difficulty_options: (s.difficulty_options ?? []) as PluginConfigSchema['difficulty_options'],
+    audience_options: (s.audience_options ?? []) as PluginConfigSchema['audience_options'],
+    structure_options: (s.structure_options ?? []) as PluginConfigSchema['structure_options'],
+    tone_options: (s.tone_options ?? []) as PluginConfigSchema['tone_options'],
+    language_options: (s.language_options ?? []) as PluginConfigSchema['language_options'],
+    density_options: (s.density_options ?? []) as PluginConfigSchema['density_options'],
+    theme_preset_options: ((s.theme_preset_options ?? []) as Array<Record<string, unknown>>).map(
+      (option) => ({
+        id: option.id as string,
+        label: option.label as string,
+        template: (option.template ?? {}) as Record<string, unknown>,
+      }),
+    ),
+    topic_placeholder: (s.topic_placeholder as string) ?? '',
+    supports_topic: (s.supports_topic as boolean) ?? false,
+    engine: (s.engine as string | null) ?? null,
+    preview: normalizePreviewDescriptor((s.preview as ApiPreviewDescriptor | null) ?? null),
   };
 }
 
@@ -120,28 +131,32 @@ function normalizeFrontendBundle(
   bundle?: ApiFrontendBundleDescriptor | null,
 ): FrontendBundleDescriptor | null {
   if (!bundle) return null;
+  const b = bundle as unknown as Record<string, unknown>;
   return {
-    api_version: bundle.api_version ?? 'v1',
-    kind: bundle.kind ?? 'builtin',
-    id: bundle.id,
-    export: bundle.export ?? 'render',
-    meta: bundle.meta ?? {},
+    api_version: (b.api_version as FrontendBundleDescriptor['api_version']) ?? 'v1',
+    kind: (b.kind as FrontendBundleDescriptor['kind']) ?? 'builtin',
+    id: b.id as string,
+    export: (b.export as string) ?? 'render',
+    meta: (b.meta as Record<string, unknown>) ?? {},
   };
 }
 
 function normalizeTool(tool: ApiWorkspaceTool): WorkspaceTool {
+  const t = tool as unknown as Record<string, unknown>;
   return {
-    id: tool.id,
-    label: tool.label,
-    description: tool.description,
-    tone: tool.tone,
-    outputType: tool.output_type,
-    prompt: tool.prompt,
-    renderDescriptor: normalizeRenderDescriptor(tool.render_descriptor),
-    configSchema: normalizeConfigSchema(tool.config_schema),
-    frontendBundle: normalizeFrontendBundle(tool.frontend_bundle),
-    badge: tool.badge ?? undefined,
-    enabled: tool.enabled !== false,
+    id: t.id as string,
+    label: t.label as string,
+    description: t.description as string,
+    tone: t.tone as WorkspaceTool['tone'],
+    outputType: t.output_type as WorkspaceTool['outputType'],
+    prompt: t.prompt as string,
+    renderDescriptor: normalizeRenderDescriptor(t.render_descriptor as ApiRenderDescriptor | null),
+    configSchema: normalizeConfigSchema(t.config_schema as ApiPluginConfigSchema | null),
+    frontendBundle: normalizeFrontendBundle(
+      (t.frontend_bundle ?? null) as ApiFrontendBundleDescriptor | null,
+    ),
+    badge: (t.badge as string | undefined) ?? undefined,
+    enabled: (t.enabled as boolean) !== false,
   };
 }
 

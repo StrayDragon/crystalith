@@ -118,7 +118,7 @@ export const SlidesConfigSchemaSchema = z.object({
       service: z.string().nullable().optional(),
       url: z.string().nullable().optional(),
       open_in_new_tab: z.boolean().nullable().optional(),
-      meta: z.record(z.unknown()).default({}),
+      meta: z.record(z.string(), z.unknown()).default({}),
     })
     .nullable()
     .optional(),

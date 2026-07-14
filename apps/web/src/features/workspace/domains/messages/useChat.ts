@@ -403,21 +403,21 @@ export function useChat({
         session_id: sessionId,
       });
       if (qaErr) throw qaErr;
-      const result = qaResult!;
+      const result = qaResult! as Record<string, unknown>;
 
-      const normalizedCitations = (
-        ((result as Record<string, unknown>).citations as unknown[]) ?? []
-      ).map((c: unknown) => normalizeCitation(c as Parameters<typeof normalizeCitation>[0]));
+      const normalizedCitations = ((result.citations as unknown[]) ?? []).map((c: unknown) =>
+        normalizeCitation(c as Parameters<typeof normalizeCitation>[0]),
+      );
       const messageId =
         typeof result.message_id === 'number' &&
         Number.isFinite(result.message_id) &&
-        result.message_id > 0
+        (result.message_id as number) > 0
           ? String(result.message_id)
           : createId();
       const assistantMessage: WorkspaceChatMessage = {
         id: messageId,
         role: 'assistant',
-        content: result.answer,
+        content: result.answer as string,
         citationChunkIds: collectChunkIds(normalizedCitations),
         citations: normalizedCitations,
         citationScope: selectedScope ?? undefined,

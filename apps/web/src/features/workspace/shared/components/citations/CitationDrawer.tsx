@@ -6,8 +6,8 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api } from '../../../../../api/eden';
+import type { CitationContextResponse } from '../../../../../api/shared-types';
 import { useLayer } from '../../../../../shared/layer';
-import type { CitationContextResponse } from '../../../../api/shared-types';
 import { useWorkspaceStore } from '../../state/workspaceStore';
 import type { Citation } from '../../types';
 
@@ -230,11 +230,11 @@ export default function CitationDrawer({
 
           {!loading && !error && context ? (
             <div className="flex flex-col gap-3">
-              {context.before.map((chunk) => (
+              {context.before.map((chunk: Record<string, unknown>) => (
                 <ContextChunkBlock
-                  key={chunk.chunk_id}
-                  title={`上文 · ${formatChunkMeta(chunk.chunk_index, chunk.page_number, chunk.paragraph_index)}`}
-                  text={chunk.text}
+                  key={chunk.chunk_id as string}
+                  title={`上文 · ${formatChunkMeta(chunk.chunk_index as number, chunk.page_number as number | null, chunk.paragraph_index as number | null)}`}
+                  text={chunk.text as string}
                   muted
                 />
               ))}
@@ -244,11 +244,11 @@ export default function CitationDrawer({
                 text={context.chunk.text}
               />
 
-              {context.after.map((chunk) => (
+              {context.after.map((chunk: Record<string, unknown>) => (
                 <ContextChunkBlock
-                  key={chunk.chunk_id}
-                  title={`下文 · ${formatChunkMeta(chunk.chunk_index, chunk.page_number, chunk.paragraph_index)}`}
-                  text={chunk.text}
+                  key={chunk.chunk_id as string}
+                  title={`下文 · ${formatChunkMeta(chunk.chunk_index as number, chunk.page_number as number | null, chunk.paragraph_index as number | null)}`}
+                  text={chunk.text as string}
                   muted
                 />
               ))}

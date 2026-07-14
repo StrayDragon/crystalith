@@ -32,7 +32,6 @@ bun preview              # Preview production build
 - **Primary**: Elysia eden RPC via `src/api/eden.ts` (type-safe, no codegen)
 - **Legacy removal (c14)**: `src/api/generated/` deleted; types migrated to `shared-types.ts`
 
-
 ## Coding Style & Naming Conventions
 
 - TypeScript/React: 2-space indentation

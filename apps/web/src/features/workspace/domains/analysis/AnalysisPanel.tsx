@@ -121,7 +121,7 @@ function TopicCard({ topic, index }: { topic: Topic; index: number }) {
           <div className="flex flex-wrap gap-1">
             {(() => {
               const keywordCounts = new Map<string, number>();
-              return topic.keywords.map((keyword) => {
+              return (topic.keywords as string[]).map((keyword: string) => {
                 const ordinal = keywordCounts.get(keyword) ?? 0;
                 keywordCounts.set(keyword, ordinal + 1);
                 const keywordKey = `${keyword}:${ordinal}`;
@@ -344,7 +344,9 @@ function AnalysisPanel({
 
   // Analysis results
   const { topics, relations, contradictions } = analysis;
-  const similarRelations = relations.filter((r) => r.relation_type === 'similar');
+  const similarRelations = (relations as Array<Record<string, unknown>>).filter(
+    (r: Record<string, unknown>) => (r as Record<string, unknown>).relation_type === 'similar',
+  );
 
   return (
     <div className="flex flex-col h-full">
@@ -386,9 +388,11 @@ function AnalysisPanel({
           color="blue"
         >
           <div className="space-y-2">
-            {topics.map((topic, index) => (
-              <TopicCard key={topic.id} topic={topic} index={index} />
-            ))}
+            {(topics as Array<Record<string, unknown>>).map(
+              (topic: Record<string, unknown>, index: number) => (
+                <TopicCard key={topic.id as string} topic={topic} index={index} />
+              ),
+            )}
           </div>
         </Section>
 
@@ -400,13 +404,15 @@ function AnalysisPanel({
           emptyMessage="未发现显著的来源关联"
         >
           <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
-            {similarRelations.slice(0, 20).map((relation) => (
-              <RelationItem
-                key={`${relation.source_chunk_id}:${relation.target_chunk_id}`}
-                relation={relation}
-                type="similar"
-              />
-            ))}
+            {(similarRelations as Array<Record<string, unknown>>)
+              .slice(0, 20)
+              .map((relation: Record<string, unknown>) => (
+                <RelationItem
+                  key={`${relation.source_chunk_id as string}:${relation.target_chunk_id as string}`}
+                  relation={relation}
+                  type="similar"
+                />
+              ))}
             {similarRelations.length > 20 && (
               <Typography
                 variant="small"
@@ -427,13 +433,15 @@ function AnalysisPanel({
           color="red"
         >
           <div className="space-y-1.5">
-            {contradictions.map((relation) => (
-              <RelationItem
-                key={`${relation.source_chunk_id}:${relation.target_chunk_id}`}
-                relation={relation}
-                type="contradicts"
-              />
-            ))}
+            {(contradictions as Array<Record<string, unknown>>).map(
+              (relation: Record<string, unknown>) => (
+                <RelationItem
+                  key={`${relation.source_chunk_id as string}:${relation.target_chunk_id as string}`}
+                  relation={relation}
+                  type="contradicts"
+                />
+              ),
+            )}
           </div>
         </Section>
 

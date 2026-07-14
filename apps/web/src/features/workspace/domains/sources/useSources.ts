@@ -778,7 +778,12 @@ export function useSources() {
   }, [extractorsData]);
 
   const extractorsPolicy = useMemo<NotebookExtractorsPolicy | null>(() => {
-    return extractorsData?.policy ?? null;
+    const policy = extractorsData?.policy;
+    if (!policy) return null;
+    return {
+      mode: policy.mode as NotebookExtractorsPolicy['mode'],
+      enabled_extractors: policy.enabled_extractors ?? undefined,
+    };
   }, [extractorsData]);
 
   const extractorFallbackEnabled = useMemo<boolean | null>(() => {
