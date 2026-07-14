@@ -132,12 +132,12 @@
 
 ### 前端迁移状态 (apps/web)
 
-> **2026-07-14 更新**: c35 + c63 完成后运行时以 eden 为主；`api/generated/` 仍有类型-only 引用，**删除推迟到 c14**。web typecheck ✅。
+> **2026-07-15 更新**: c14 删除完成，`api/generated/` 已移除，类型迁移到 shared-types。
 
 | 层面                            | 状态                                        |
 | :------------------------------ | :------------------------------------------ |
 | eden 脚手架 (`api/eden.ts`)     | ✅                                          |
-| 旧生成客户端 (`api/generated/`) | 🟡 残留类型 import；c14 迁类型后删除        |
+| 旧生成客户端 (`api/generated/`) | ✅ 已删除；类型迁移到 shared-types      |
 | 功能域 API                      | ✅ c35 + c63（notebook_id / ErrorEnvelope） |
 | typecheck (web)                 | ✅ 本会话清零                               |
 | 可用性                          | workspace + AI 域走 v2；联调验证中          |
