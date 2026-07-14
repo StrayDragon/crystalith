@@ -61,12 +61,12 @@
 | c54 | error-envelope-contextstats-shared   | ✅ DONE (2026-07-13: sendError helper+ErrorCode映射/6 router改造/ContextStats→shared Zod SSOT; +3 reqs archived)                    |
 | c55 | context-window-real-compression      | ✅ DONE (2026-07-13: truncateToTokenBudget移植v1 _truncate_blocks/QA Step12真实截断; +1 req archived)                               |
 | c56 | studio-config-and-workspace-schema   | ✅ DONE (2026-07-13: generation_config区间展开/frontmatter v1 6-key/preference→retrieval/workspace config_schema; +3 reqs archived) |
-| c57 | sources-safety-and-diagnostics       | 🔄 PROPOSED (2 P0 + 4 P1: notebook归属校验/connector dedup门控/batch results/reembed清字段/ingestion 4-stage诊断/tag缓存失效)       |
-| c58 | research-feedback-loop-and-state     | 🔄 PROPOSED (5 P1: suggested_queries反馈环/锁周期续期/finish真fallback/stream auto-resume/skip→analyze)                             |
-| c59 | outputs-fallback-and-postprocess     | 🔄 PROPOSED (3 P1: fallback标题用prompt/postprocess嵌套回填/_postprocessed无条件设)                                                 |
-| c60 | qa-contextstats-accounting           | 🔄 PROPOSED (2 P1: system_tokens真实计数/max_tokens读配置)                                                                          |
-| c61 | templates-presets-builtin-protection | 🔄 PROPOSED (2 P1: templates is_builtin保护/presets trigger唯一性+builtin冲突)                                                      |
-| c62 | sources-extractors-shape-from-url    | 🔄 PROPOSED (2 P1: extractors响应字段对齐/default按可用性/from-url extractor+mode枚举)                                              |
+| c57 | sources-safety-and-diagnostics       | ✅ DONE (2P0+4P1: notebook归属校验/connector dedup门控/batch results/reembed清字段/ingestion 4-stage诊断/tag缓存失效)              |
+| c58 | research-feedback-loop-and-state     | ✅ DONE (5P1: suggested_queries反馈环/锁周期续期/finish真fallback/stream auto-resume/skip→analyze)                                  |
+| c59 | outputs-fallback-and-postprocess     | ✅ DONE (3P1: fallback标题用prompt/postprocess嵌套回填/_postprocessed无条件设)                                                      |
+| c60 | qa-contextstats-accounting           | ✅ DONE (2P1: system_tokens真实计数/max_tokens读配置)                                                                               |
+| c61 | templates-presets-builtin-protection | ✅ DONE (2P1: templates is_builtin保护/presets trigger唯一性+builtin冲突)                                                          |
+| c62 | sources-extractors-shape-from-url    | ✅ DONE (2P1: extractors响应字段对齐/default按可用性/from-url extractor+mode枚举)                                                   |
 | c13 | distribution                         | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                                                             |
 | c14 | cleanup-delivery                     | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                                                             |
 
@@ -158,36 +158,49 @@
 
 <!-- CURRENT -->
 
-**2026-07-14 第八轮：c57–c62 正式 change 化（第七轮审计的 2 P0 + ~18 P1 全部转为 SDD proposal）。**
+**2026-07-14 第八轮：c57–c62 正式 change 化 + 全部实现（第七轮审计的 2 P0 + ~18 P1 清零）。**
 
 ### 复核方法
 
-承接第七轮深度审计的 2 P0 + ~20 P1 清单，按域分组为 6 个独立 SDD change（c57–c62），每个含 proposal/design/tasks/spec delta。全部 `llman sdd validate` 通过。plugins host 及其连带项（trafilatura/browserless extractors、audio/video parsers、外部 connector）确认为桌面版出范围，不 change 化。
+承接第七轮深度审计的 2 P0 + ~20 P1 清单，按域分组为 6 个独立 SDD change（c57–c62），逐个 apply 实现 + 测试 + commit。plugins host 及其连带项（trafilatura/browserless extractors、audio/video parsers、外部 connector）确认为桌面版出范围，不 change 化。
 
 ### 本会话产出
 
-| Change  | 域                 | P0  | P1  | 内容                                                                                                               | 状态        |
-| ------- | ------------------ | --- | --- | ------------------------------------------------------------------------------------------------------------------ | ----------- |
-| **c57** | sources+connectors | 2   | 4   | notebook归属校验(4路由)/connector dedup门控/batch per-item results/reembed清字段/ingestion 4-stage诊断/tag缓存失效 | 🔄 PROPOSED |
-| **c58** | research           | 0   | 5   | suggested_queries反馈环/锁周期续期/finish真fallback(非哨兵)/stream auto-resume/skip→analyze                        | 🔄 PROPOSED |
-| **c59** | outputs            | 0   | 3   | fallback标题用prompt(非error.message)/postprocess嵌套回填(per-type)/_postprocessed无条件设                         | 🔄 PROPOSED |
-| **c60** | qa                 | 0   | 2   | ContextStats system_tokens真实计数(非0)/max_tokens读配置(非硬编码8000)                                             | 🔄 PROPOSED |
-| **c61** | templates+presets  | 0   | 2   | templates is_builtin保护(不可改删)/presets trigger唯一性+builtin冲突检查                                           | 🔄 PROPOSED |
-| **c62** | sources            | 0   | 2   | extractors响应字段对齐v1/default按可用性计算/from-url extractor参数+mode枚举校验                                   | 🔄 PROPOSED |
+| Change  | 域                | P0 | P1 | 内容                                                                                                  | 状态             |
+| ------- | ----------------- | -- | -- | ----------------------------------------------------------------------------------------------------- | ---------------- |
+| **c57** | sources+connectors| 2  | 4  | notebook归属校验(4路由)/connector dedup门控/batch per-item results/reembed清字段/ingestion 4-stage诊断/tag缓存失效 | ✅ DONE `b3e911bd` |
+| **c58** | research          | 0  | 5  | suggested_queries反馈环/锁周期续期/finish真fallback(非哨兵)/stream auto-resume/skip→analyze            | ✅ DONE `dd2677f7` |
+| **c59** | outputs           | 0  | 3  | fallback标题用prompt(非error.message)/postprocess嵌套回填(per-type)/_postprocessed无条件设            | ✅ DONE `06aa6724` |
+| **c60** | qa                | 0  | 2  | ContextStats system_tokens真实计数(非0)/max_tokens读配置(非硬编码8000)                                | ✅ DONE `c59487af` |
+| **c61** | templates+presets | 0  | 2  | templates is_builtin保护(不可改删)/presets trigger唯一性+builtin冲突检查                              | ✅ DONE `5660e928` |
+| **c62** | sources           | 0  | 2  | extractors响应字段对齐v1/default按可用性计算/from-url extractor参数+mode枚举校验                      | ✅ DONE `4c291e68` |
 
-### Change 分组依据
+### 实现要点
 
-- c57 含 2 个 P0（安全/正确性），优先级最高，独立于其他
-- c58–c62 各自域内 P1 聚集，无 inter-dependencies，可独立 apply
-- 所有 change `depends_on: []`，不互相阻塞
-- c57 的 BREAKING（路由路径改嵌套）需前端适配，建议先 apply c58–c62 再 c57
+- **c57**: 单 source 路由用 `?notebook_id=` query 校验（非路径嵌套，降低前端 BREAKING）；4-stage 诊断用 PARSE_ERROR/EMBEDDING_FAILED/VECTOR_STORE_FAILED/INGESTION_FAILED + recoveryHint
+- **c58**: `synthesizeFallbackReport()` 从结果合成有意义中文报告替代哨兵字符串；锁续期用 `setInterval(300s)` + try/finally；skip 分支先 analyze 再 continue
+- **c59**: `generateFallbackContent` 加 `prompt` 参数（截断 200）；`ensureMinimumContentFields` 做 per-type 嵌套 `{text, citations:[1]}` 回填；`markPostprocessed` 无条件设
+- **c60**: `system_tokens = countTokens(systemPrompt)`；`maxTokens` 从 `getContextWindowSettings().max_tokens` 读
+- **c61**: builtin template PATCH/DELETE 返回 409；presets `checkTriggerConflict()` 查 builtin + custom 重复
+- **c62**: `ExtractorMetadata` 加 type/enabled/description/requires_service；`getDefaultExtractor()` 按可用性；from-url 加 extractor/mode 枚举/snippet
 
 ### 质量门禁
 
-- 6/6 change `llman sdd validate` 通过（spec delta + tasks 全合法）
-- 无代码改动（纯 proposal 阶段）
-- specs 39/39 ✅（未改动 main specs，仅 delta）
-- 下一步：逐个 `llman-sdd-apply` 实现 → `verify` → `archive`，全部完成后启动 bun dev 联调
+- Server test: **281 pass / 0 fail**（较第七轮 257→281，+24 新测试：c57×3 + c58×4 + c59×10 + c60×4 + c62×3）
+- Server typecheck: **✅ pass**
+- oxlint: server 0 error（web 预存 lint error 后置）
+- SDD: c57–c62 全部 validate ✅；tasks 全勾（除 oxlint task 标注 web 后置）
+- Active changes: c57–c62 待 archive（实现完成，spec delta 待合并）
+
+### 下一步
+
+**启动 bun dev 前后端联调实验**——所有 P0/P1 已清零，核心流水线（retrieval/QA/research/outputs/studio/sources）足够稳定。联调可验证：
+1. 前端 SSE + OutputRead + ErrorEnvelope + config_schema 契约适配
+2. sources `?notebook_id=` query 传递（前端调用需加此参数）
+3. extractors 响应新字段消费
+4. 实际 AI 调用质量（fallback / postprocess / research 反馈环）
+
+联调后可逐个 `llman-sdd-archive` 归档 c57–c62。
 
 ---
 
@@ -476,11 +489,11 @@ c42–c46 已全部 archive（`llman sdd archive run`），spec deltas 合并到
 > ⚠️ **对拍说明**: 早期 ✅ 曾表示「端点存在」而非「行为对齐」。c36–c40 + 2026-07-11 复核修了多处伪对齐。
 > c42–c46 已 archived，验证审计 28/28 通过（含修复）。
 
-| 上次 Agent | 第八轮 c57–c62 正式 change 化（第七轮审计的剩余 P0/P1 全部转为 SDD proposal） |
-| 上次操作 | **SDD propose**: 创建 c57–c62 共 6 个 change（proposal+design+tasks+spec delta），覆盖 2 P0 + ~18 P1。6/6 `llman sdd validate` 通过。**PROGRESS 更新**: status board + 第八轮章节。无代码改动。 |
-| 开放决策 | (1) **apply 顺序**: 建议 c58→c59→c60→c61→c62→c57（c57 含路由 BREAKING 放最后，或先修 c57 的 2 P0 部分）。(2) 全部 apply+archive 后启动 bun dev 联调。(3) **plugins host 移出 v2 范围**（第七轮决策）。(4) **Auth**: 本地免鉴权 + 回环绑定（c13）。(5) **React**: 暂锁18.2.0。(6) **c13/c14 等人工授权**。 |
-| 已知问题 | **🔄 c57–c62 PROPOSED**: 6 个 change 待 apply（见上方详表）。**🟡 P2 后置**: ToolLoopAgent 迁移；batch DELETE（BREAKING，留 c14）；research thinking 事件 taxonomy；research export include_results/metadata；SLIDES postprocess case；studio/outputs SSE 字段名差异。**🟡 阻塞**: c13/c14 等人授权；web typecheck；`api/generated/` → c14。 |
-| 质量门禁 | `bun test` (server) → **257 pass / 0 fail**（第六轮基线，本轮无代码改动）。`bun typecheck` (server) → ✅ pass。`bun oxlint` → 0 error（210 warnings 后置）。6/6 新 change validate ✅。39/39 specs ✅。Active: c57–c62 + c13/c14。 |
+| 上次 Agent | 第八轮 c57–c62 change 化 + 全部实现（2 P0 + ~18 P1 清零，准备联调） |
+| 上次操作 | **SDD propose + apply**: c57–c62 共 6 个 change 全部实现并 commit（b3e911bd/dd2677f7/06aa6724/c59487af/5660e928/4c291e68）。**+24 新测试**（c57×3/c58×4/c59×10/c60×4/c62×3）。Server 281 pass / 0 fail。 |
+| 开放决策 | (1) **启动 bun dev 联调**（所有 P0/P1 清零，核心流水线稳定）。(2) **前端适配**: sources `?notebook_id=` query；extractors 新字段；SSE/OutputRead/ErrorEnvelope/config_schema 契约。(3) 联调后逐个 archive c57–c62。(4) **plugins host 移出 v2 范围**（第七轮决策）。(5) **Auth**: 本地免鉴权 + 回环绑定（c13）。(6) **c13/c14 等人工授权**。 |
+| 已知问题 | **🟡 P2 后置**: ToolLoopAgent 迁移；batch DELETE（BREAKING，留 c14）；research thinking 事件 taxonomy；research export include_results/metadata；studio/outputs SSE 字段名/toolcall 差异；outputs RAG multi-query 调优；research per-result iteration 溯源。(2 P0 + ~18 P1 已清零)。**🟡 阻塞**: c13/c14 等人授权；web typecheck；`api/generated/` → c14。 |
+| 质量门禁 | `bun test` (server) → **281 pass / 0 fail**（+24 新测试）。`bun typecheck` (server) → ✅ pass。`bun oxlint` (server) → 0 error（web 预存 lint error 后置）。c57–c62 全部 validate ✅，待 archive。Active: c57–c62（待 archive）+ c13/c14。 |
 
 ---
 
