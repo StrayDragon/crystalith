@@ -13,6 +13,7 @@ import type { Citation, ContextStats } from '@crystalith/shared';
 import { and, eq, inArray } from 'drizzle-orm';
 
 import { countTokens } from '../../ai/tokenizer.ts';
+import { getContextWindowSettings } from '../../shared/config.ts';
 import { db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { truncateToTokenBudget } from '../../rag/context-window.ts';
@@ -83,6 +84,8 @@ export interface RetrieveAndJudgeOptions {
   maxTokens?: number;
   /** History token estimate for stats. */
   historyTokens?: number;
+  /** c60: system prompt for real system_tokens counting (v1 ContextWindow.build). */
+  systemPrompt?: string;
 }
 
 /**
@@ -105,13 +108,16 @@ export interface RetrieveAndJudgeOptions {
 export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<JudgeResult> {
   const topK = opts.topK ?? 5;
   const minScore = opts.minScore ?? EVIDENCE_THRESHOLD_DEFAULT;
-  const maxTokens = opts.maxTokens ?? 8000;
+  // c60: read max_tokens from config (v1 service.py:265 reads settings.context_window)
+  const maxTokens = opts.maxTokens ?? getContextWindowSettings().max_tokens;
+  // c60: real system_tokens via gpt-tokenizer (v1 ContextWindow.build + TokenCounter)
+  const systemTokens = opts.systemPrompt ? countTokens(opts.systemPrompt) : 0;
   // c48: real token counts via gpt-tokenizer (v1 TokenCounter, service.py:254-271).
   const queryTokens = countTokens(opts.question);
   const historyTokens = opts.historyTokens ?? 0;
   const emptyStats: ContextStats = {
-    total_tokens: historyTokens + queryTokens,
-    system_tokens: 0,
+    total_tokens: systemTokens + historyTokens + queryTokens,
+    system_tokens: systemTokens,
     history_tokens: historyTokens,
     retrieval_tokens: 0,
     query_tokens: queryTokens,
@@ -244,7 +250,7 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
   // the LLM fits. query + history are always preserved (budget reserved for
   // them); retrieval fills the remainder.
   const fullContext = contextBlocks.join('\n\n');
-  const retrievalBudget = Math.max(0, maxTokens - historyTokens - queryTokens);
+  const retrievalBudget = Math.max(0, maxTokens - systemTokens - historyTokens - queryTokens);
   let context = fullContext;
   let retrievalTokens = countTokens(fullContext);
   let compressed = false;
@@ -254,7 +260,7 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
     compressed = truncated;
     retrievalTokens = usedTokens;
   }
-  const totalTokens = historyTokens + retrievalTokens + queryTokens;
+  const totalTokens = systemTokens + historyTokens + retrievalTokens + queryTokens;
   return {
     evidence: true,
     citations,
@@ -262,7 +268,7 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
     confidence,
     contextStats: {
       total_tokens: totalTokens,
-      system_tokens: 0,
+      system_tokens: systemTokens,
       history_tokens: historyTokens,
       retrieval_tokens: retrievalTokens,
       query_tokens: queryTokens,
