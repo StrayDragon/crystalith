@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '../../db/index.ts';
 import { sourceConnectorBindings, sources } from '../../db/schema.ts';
 import { checkDedup } from '../sources/dedup.ts';
+import { getDedupEnabled } from '../../shared/config.ts';
 import { ingestSource } from '../sources/pipeline.ts';
 import { normalizeDirectoryPath, normalizeFilePath, pathInScope } from './paths.ts';
 import { readConnectorFileBytes } from './scanner.ts';
@@ -200,8 +201,11 @@ async function ingestConnectorEntry(
     };
   }
 
+  // c57/P0-B: gate dedup by config (v1 source_connectors/api.py:898,1070)
   const dedupKey = connectorDedupKey(binding.connectorId, raw);
-  const dedup = checkDedup(notebookId, dedupKey);
+  const dedup = getDedupEnabled()
+    ? checkDedup(notebookId, dedupKey)
+    : { hit: false, existingSourceId: null as number | null };
   if (dedup.hit) {
     return {
       vectorsChanged: false,
