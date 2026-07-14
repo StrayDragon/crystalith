@@ -81,7 +81,8 @@ export function usePromptPresets(_options?: { enabled?: boolean }) {
         enabled: payload.enabled ?? true,
       });
       if (error) throw error;
-      const created = normalizePreset(data!);
+      if (!data || !('id' in data)) throw new Error('prompt-preset create failed');
+      const created = normalizePreset(data);
       await mutate(async (current) => [...(current ?? []), created], {
         revalidate: false,
       });
@@ -108,7 +109,8 @@ export function usePromptPresets(_options?: { enabled?: boolean }) {
 
       const { data, error } = await api.v2['prompt-presets']({ id: presetId }).patch(body);
       if (error) throw error;
-      const updated = normalizePreset(data!);
+      if (!data || !('id' in data)) throw new Error('prompt-preset update failed');
+      const updated = normalizePreset(data);
       await mutate(
         async (current) => current?.map((p) => (p.preset_id === presetId ? updated : p)) ?? [],
         { revalidate: false },

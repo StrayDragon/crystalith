@@ -19,12 +19,17 @@ import {
 } from '@mui/icons-material';
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
-import type { ResearchSessionResponse, ResearchStepResponse } from '../../../../api/generated';
 import { copyToClipboard } from '../../../../shared/clipboard';
 import { useLayer } from '../../../../shared/layer';
 import { toast } from '../../../../shared/toast';
 import ResearchExportDialog from './ResearchExportDialog';
-import type { SSEEvent } from './useResearch';
+import type { ResearchSessionDetail, SSEEvent } from './useResearch';
+
+type ResearchStepResponse = {
+  type: string;
+  output_data?: Record<string, unknown> | null;
+  iteration: number;
+};
 
 // Typewriter component for streaming text effect
 interface TypewriterTextProps {
@@ -191,7 +196,7 @@ function ThinkingBlock({
 }
 
 interface ResearchDetailPanelProps {
-  session: ResearchSessionResponse;
+  session: ResearchSessionDetail;
   sseEvents: SSEEvent[];
   onClose: () => void;
   onApprove: (feedback?: string) => Promise<void>;
@@ -266,8 +271,8 @@ function ResearchDetailPanel({
     const progressEvents = sseEvents.filter((e) => e.type === 'search_progress');
     if (progressEvents.length === 0) return null;
     const latest = progressEvents.at(-1);
-    if (latest.type === 'search_progress') {
-      return latest.data;
+    if (latest?.type === 'search_progress') {
+      return latest.data.data;
     }
     return null;
   }, [sseEvents]);
@@ -277,8 +282,12 @@ function ResearchDetailPanel({
     const analysisEvents = sseEvents.filter((e) => e.type === 'analysis');
     if (analysisEvents.length === 0) return null;
     const latest = analysisEvents.at(-1);
-    if (latest.type === 'analysis') {
-      return latest.data;
+    if (latest?.type === 'analysis') {
+      const payload = latest.data.data;
+      return {
+        ...payload,
+        coverage: payload.coverage ?? payload.coverageEstimate ?? 0,
+      };
     }
     return null;
   }, [sseEvents]);
@@ -315,7 +324,7 @@ function ResearchDetailPanel({
     };
   }, [session.steps]);
   const latestPlan =
-    latestPlanEvent?.type === 'plan_ready' ? latestPlanEvent.data.plan : latestPlanFromSteps;
+    latestPlanEvent?.type === 'plan_ready' ? latestPlanEvent.data.data : latestPlanFromSteps;
 
   // Get queries from plan
   const queries = useMemo(() => latestPlan?.queries ?? [], [latestPlan]);
@@ -663,7 +672,7 @@ function ResearchDetailPanel({
   // Initialize selected queries
   useEffect(() => {
     if (queries.length > 0 && selectedQueries.size === 0) {
-      setSelectedQueries(new Set(queries.map((_, i) => i)));
+      setSelectedQueries(new Set(queries.map((_: { query: string }, i: number) => i)));
     }
   }, [queries, selectedQueries.size]);
 
@@ -752,7 +761,10 @@ function ResearchDetailPanel({
   // 如果有 steps，说明研究已经开始过，即使状态是 planning 也不应该显示
   const hasSteps = session.steps && session.steps.length > 0;
   const isPlanning = session.status === 'planning' && !hasSteps;
-  const statusColors = STATUS_COLORS[session.status] || STATUS_COLORS.planning;
+  const statusKey = (
+    session.status in STATUS_COLORS ? session.status : 'planning'
+  ) as keyof typeof STATUS_COLORS;
+  const statusColors = STATUS_COLORS[statusKey];
 
   // Get completed steps for this session
   const completedSteps = session.steps || [];
@@ -793,7 +805,7 @@ function ResearchDetailPanel({
               <span
                 className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${statusColors.bg} ${statusColors.text}`}
               >
-                {STATUS_LABELS[session.status]}
+                {STATUS_LABELS[statusKey]}
               </span>
               <span className="text-xs text-gray-400 flex-shrink-0">
                 第 {session.current_iteration}/{session.max_iterations} 轮
@@ -1172,7 +1184,9 @@ function ResearchDetailPanel({
                         if (selectedQueries.size === queries.length) {
                           setSelectedQueries(new Set());
                         } else {
-                          setSelectedQueries(new Set(queries.map((_, i) => i)));
+                          setSelectedQueries(
+                            new Set(queries.map((_: { query: string }, i: number) => i)),
+                          );
                         }
                       }}
                       className="text-xs text-blue-600 hover:text-blue-700 font-medium"
@@ -1183,41 +1197,51 @@ function ResearchDetailPanel({
                   <div className="divide-y divide-gray-100">
                     {(() => {
                       const keyCounts = new Map<string, number>();
-                      return queries.map((query, index) => {
-                        const checkboxId = `research-query-${index}`;
-                        const baseKey = `${query.engine}:${query.priority}:${query.query}`;
-                        const ordinal = keyCounts.get(baseKey) ?? 0;
-                        keyCounts.set(baseKey, ordinal + 1);
-                        const queryKey = `${baseKey}:${ordinal}`;
-                        return (
-                          <label
-                            key={queryKey}
-                            htmlFor={checkboxId}
-                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${
-                              selectedQueries.has(index) ? 'bg-blue-50/50' : ''
-                            }`}
-                          >
-                            <Checkbox
-                              id={checkboxId}
-                              checked={selectedQueries.has(index)}
-                              onChange={() => toggleQuery(index)}
-                              crossOrigin={undefined}
-                              className="w-4 h-4"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-gray-900 truncate">{query.query}</p>
-                              <p className="text-xs text-gray-400 mt-0.5">
-                                {query.engine} ·{' '}
-                                {query.priority === 1
-                                  ? '高优先级'
-                                  : query.priority === 2
-                                    ? '中优先级'
-                                    : '低优先级'}
-                              </p>
-                            </div>
-                          </label>
-                        );
-                      });
+                      return queries.map(
+                        (
+                          query: {
+                            query: string;
+                            engine: string;
+                            priority: number;
+                            reason: string;
+                          },
+                          index: number,
+                        ) => {
+                          const checkboxId = `research-query-${index}`;
+                          const baseKey = `${query.engine}:${query.priority}:${query.query}`;
+                          const ordinal = keyCounts.get(baseKey) ?? 0;
+                          keyCounts.set(baseKey, ordinal + 1);
+                          const queryKey = `${baseKey}:${ordinal}`;
+                          return (
+                            <label
+                              key={queryKey}
+                              htmlFor={checkboxId}
+                              className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${
+                                selectedQueries.has(index) ? 'bg-blue-50/50' : ''
+                              }`}
+                            >
+                              <Checkbox
+                                id={checkboxId}
+                                checked={selectedQueries.has(index)}
+                                onChange={() => toggleQuery(index)}
+                                crossOrigin={undefined}
+                                className="w-4 h-4"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-gray-900 truncate">{query.query}</p>
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  {query.engine} ·{' '}
+                                  {query.priority === 1
+                                    ? '高优先级'
+                                    : query.priority === 2
+                                      ? '中优先级'
+                                      : '低优先级'}
+                                </p>
+                              </div>
+                            </label>
+                          );
+                        },
+                      );
                     })()}
                   </div>
                 </div>
@@ -1401,7 +1425,7 @@ function ResearchDetailPanel({
 
 // Extracted Results Dialog component to use hooks
 interface ResultsDialogContentProps {
-  session: ResearchSessionResponse;
+  session: ResearchSessionDetail;
   selectedResults: Set<number>;
   setSelectedResults: React.Dispatch<React.SetStateAction<Set<number>>>;
   onClose: () => void;

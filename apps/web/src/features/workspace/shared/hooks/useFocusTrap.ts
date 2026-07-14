@@ -67,14 +67,14 @@ export function useFocusTrap({ active, containerRef, onEscape }: UseFocusTrapOpt
       if (event.shiftKey) {
         if (target === first || !target || !container.contains(target)) {
           event.preventDefault();
-          last.focus();
+          last?.focus();
         }
         return;
       }
 
       if (target === last || !target || !container.contains(target)) {
         event.preventDefault();
-        first.focus();
+        first?.focus();
       }
     };
 

@@ -21,17 +21,21 @@ interface SSEPlanEvent {
 interface SSESearchProgressEvent {
   iteration: number;
   data: {
-    result_count: number;
-    new_results: number;
+    result_count?: number;
+    new_results?: number;
+    queries_executed?: number;
   };
 }
 
 interface SSEAnalysisEvent {
   iteration: number;
   data: {
-    summary: string;
-    coverage: number;
-    need_more_search: boolean;
+    summary?: string;
+    /** v2 agent stores camelCase coverageEstimate */
+    coverageEstimate?: number;
+    coverage?: number;
+    needMore?: boolean;
+    need_more_search?: boolean;
   };
 }
 
@@ -78,27 +82,41 @@ export type SSEEvent =
   | { type: 'connection'; data: SSEConnectionEvent }
   | { type: 'error'; data: { message: string } };
 
-// Eden response types
-interface ResearchSessionItem {
+// Eden response types (aligned with ResearchSessionListItem / Response)
+export type ResearchStatus =
+  | 'planning'
+  | 'searching'
+  | 'analyzing'
+  | 'waiting_user'
+  | 'completed'
+  | 'cancelled';
+
+export interface ResearchSessionItem {
   id: number;
   notebook_id: number;
   topic: string;
-  status: string;
+  status: ResearchStatus | string;
   current_iteration: number;
   max_iterations: number;
+  result_count?: number;
   created_at: string;
   updated_at: string;
 }
 
-interface ResearchSessionDetail {
+export interface ResearchSessionDetail {
   id: number;
   notebook_id: number;
   topic: string;
-  status: string;
+  status: ResearchStatus | string;
   current_iteration: number;
   max_iterations: number;
   aggregated_results: Array<Record<string, unknown>> | null;
   final_report: string | null;
+  steps?: Array<{
+    type: string;
+    output_data?: Record<string, unknown> | null;
+    iteration: number;
+  }>;
   created_at: string;
   updated_at: string;
 }

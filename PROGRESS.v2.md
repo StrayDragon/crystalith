@@ -67,7 +67,7 @@
 | c60 | qa-contextstats-accounting           | ✅ DONE (2P1: system_tokens真实计数/max_tokens读配置)                                                                               |
 | c61 | templates-presets-builtin-protection | ✅ DONE (2P1: templates is_builtin保护/presets trigger唯一性+builtin冲突)                                                           |
 | c62 | sources-extractors-shape-from-url    | ✅ DONE (2P1: extractors响应字段对齐/default按可用性/from-url extractor+mode枚举)                                                   |
-| c63 | adapt-frontend-v2-contracts          | 🔄 PROPOSED (前端适配: sources notebook_id query/ErrorEnvelope统一解析/陈旧类型清理; extractors/SSE/OutputRead审计确认已对齐)       |
+| c63 | adapt-frontend-v2-contracts          | ✅ DONE (notebook_id query + parseServerError + archive；2026-07-14)                                                                |
 | c13 | distribution                         | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                                                             |
 | c14 | cleanup-delivery                     | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                                                             |
 
@@ -132,15 +132,15 @@
 
 ### 前端迁移状态 (apps/web)
 
-> **2026-07-11 更新**: c35 完成后运行时以 eden 为主；`api/generated/` 仍有类型-only 引用，**删除推迟到 c14**。
+> **2026-07-14 更新**: c35 + c63 完成后运行时以 eden 为主；`api/generated/` 仍有类型-only 引用，**删除推迟到 c14**。web typecheck ✅。
 
-| 层面                            | 状态                                           |
-| :------------------------------ | :--------------------------------------------- |
-| eden 脚手架 (`api/eden.ts`)     | ✅                                             |
-| 旧生成客户端 (`api/generated/`) | 🟡 残留类型 import（~18 处）；c14 迁类型后删除 |
-| 功能域 API                      | ✅ c35：多数域已迁 eden；细节见第三轮 P1       |
-| typecheck (web)                 | 🟡 ~22–23 pre-existing errors                  |
-| 可用性                          | workspace + AI 域走 v2；残留兼容差异见 CURRENT |
+| 层面                            | 状态                                        |
+| :------------------------------ | :------------------------------------------ |
+| eden 脚手架 (`api/eden.ts`)     | ✅                                          |
+| 旧生成客户端 (`api/generated/`) | 🟡 残留类型 import；c14 迁类型后删除        |
+| 功能域 API                      | ✅ c35 + c63（notebook_id / ErrorEnvelope） |
+| typecheck (web)                 | ✅ 本会话清零                               |
+| 可用性                          | workspace + AI 域走 v2；联调验证中          |
 
 ### 关键结论（快照 2026-07-10 → 后续消化）
 
@@ -158,6 +158,72 @@
 ## 当前批次
 
 <!-- CURRENT -->
+
+**2026-07-14 第九轮：web typecheck 清零 + 进入前后端联调。**
+
+### 本会话产出
+
+| 项                | 内容                                                                                                                                                                 | 状态                              |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| **web typecheck** | 修复 33 个 TS 错误：ErrorEnvelope 收窄、research SSE 嵌套 data、citations `/notebooks/:nid/context`、slidev path+`buildSlidevPreviewUrl`、analysis/Research 类型对齐 | ✅ `bun run typecheck` (web) pass |
+| **c63**           | 已实现并 archive（PROGRESS 此前误标 PROPOSED）                                                                                                                       | ✅ DONE `0115ec4c`                |
+| **联调清单**      | 见下方 checklist — 核心流水线手测入口                                                                                                                                | 🔄 进行中                         |
+
+### 联调检查清单（`bun dev` = server :8032 + web :3000）
+
+前置：`config/secret.env` 模型 key；可选 SearXNG（网页搜索 / research）。
+
+#### A. 冒烟（5 min）
+
+- [ ] `GET /v2/health` 200；web 打开 workspace 无白屏
+- [ ] 创建/切换 notebook；connection 显示 live
+- [ ] 上传文本/PDF source → status READY（embedding 完成）
+
+#### B. Sources（c57/c62 契约）
+
+- [ ] 单 source 详情 / chunks / delete / re-embed 带 `?notebook_id=`（跨 notebook → 404）
+- [ ] extractors 列表字段可读；from-url 可选 extractor/mode
+- [ ] connector sync（obsidian / local-directory）无异常；dedup 配置门控
+
+#### C. QA + Citations
+
+- [ ] notebook QA 流式回答 + inline citations
+- [ ] no-evidence 路径（空库 / 低相似）提示正确
+- [ ] CitationDrawer 邻域上下文（`/v2/notebooks/:nid/citations/context`）
+- [ ] export（page/para + sources meta）
+
+#### D. Research（SSE + HITL）
+
+- [ ] 创建会话 → plan_ready → waiting 选 query → approve
+- [ ] search_progress / analysis / thinking 事件可见（覆盖度读 coverageEstimate）
+- [ ] skip / finish / cancel / resume；finish 非哨兵报告
+- [ ] export → source / note
+
+#### E. Outputs / Refine / Studio
+
+- [ ] FAQ/GUIDE/MINDMAP/… 生成；失败时 fallback 标题用 prompt
+- [ ] refine batch 三格式 + evidence
+- [ ] Studio outline → markdown → preview（Slidev 需 :3030 或显式 preview.url）
+- [ ] workspace `/tools` 含 slides `config_schema`
+
+#### F. Analysis / Sessions / Models
+
+- [ ] analysis relations/topics 有结果（有向量源时）
+- [ ] session 列表 / GET 单个 / convert-to-output
+- [ ] models providers envelope + 默认模型切换
+
+#### G. 错误与契约
+
+- [ ] 故意错误请求：UI 显示 ErrorEnvelope `message` / `error_code`（sources 已用 parseServerError）
+- [ ] SSE 断线重连提示（research）
+
+### 联调后跟进
+
+1. 按发现的 runtime bug 修（优先 P0 契约断裂）
+2. `llman-sdd-archive` 逐个归档 c57–c62
+3. c13/c14 等人授权后再做分发与清理
+
+---
 
 **2026-07-14 第八轮：c57–c62 正式 change 化 + 全部实现（第七轮审计的 2 P0 + ~18 P1 清零）。**
 
@@ -491,11 +557,11 @@ c42–c46 已全部 archive（`llman sdd archive run`），spec deltas 合并到
 > ⚠️ **对拍说明**: 早期 ✅ 曾表示「端点存在」而非「行为对齐」。c36–c40 + 2026-07-11 复核修了多处伪对齐。
 > c42–c46 已 archived，验证审计 28/28 通过（含修复）。
 
-| 上次 Agent | 第八轮 c57–c62 change 化 + 全部实现（2 P0 + ~18 P1 清零，准备联调） |
-| 上次操作 | **SDD propose + apply**: c57–c62 共 6 个 change 全部实现并 commit（b3e911bd/dd2677f7/06aa6724/c59487af/5660e928/4c291e68）。**+24 新测试**（c57×3/c58×4/c59×10/c60×4/c62×3）。Server 281 pass / 0 fail。 |
-| 开放决策 | (1) **启动 bun dev 联调**（所有 P0/P1 清零，核心流水线稳定）。(2) **前端适配**: sources `?notebook_id=` query；extractors 新字段；SSE/OutputRead/ErrorEnvelope/config_schema 契约。(3) 联调后逐个 archive c57–c62。(4) **plugins host 移出 v2 范围**（第七轮决策）。(5) **Auth**: 本地免鉴权 + 回环绑定（c13）。(6) **c13/c14 等人工授权**。 |
-| 已知问题 | **🟡 P2 后置**: ToolLoopAgent 迁移；batch DELETE（BREAKING，留 c14）；research thinking 事件 taxonomy；research export include_results/metadata；studio/outputs SSE 字段名/toolcall 差异；outputs RAG multi-query 调优；research per-result iteration 溯源。(2 P0 + ~18 P1 已清零)。**🟡 阻塞**: c13/c14 等人授权；web typecheck；`api/generated/` → c14。 |
-| 质量门禁 | `bun test` (server) → **281 pass / 0 fail**（+24 新测试）。`bun typecheck` (server) → ✅ pass。`bun oxlint` (server) → 0 error（web 预存 lint error 后置）。c57–c62 全部 validate ✅，待 archive。Active: c57–c62（待 archive）+ c13/c14。 |
+| 上次 Agent | 第九轮：web typecheck 清零 + PROGRESS 同步；进入联调 |
+| 上次操作 | 修 web 33 TS errors（research SSE 嵌套、ErrorEnvelope 收窄、citations notebook 路径、slidev preview helper、analysis/Research 类型）。c63 状态更正为 ✅ archived。写入联调 checklist（A–G）。 |
+| 开放决策 | (1) **执行联调清单**（`bun dev`）。(2) 联调后 archive c57–c62。(3) **plugins host 移出 v2 范围**。(4) **Auth**: 本地免鉴权 + 回环绑定（c13）。(5) **c13/c14 等人工授权**。 |
+| 已知问题 | **🟡 P2 后置**: ToolLoopAgent；batch DELETE（c14）；research thinking taxonomy；export include_results；studio preview 依赖 Slidev :3030；outputs RAG multi-query 调优。(2 P0 + ~18 P1 已清零)。**🟡 阻塞**: c13/c14 等人授权；`api/generated/` → c14。 |
+| 质量门禁 | `bun test` (server) → **281 pass / 0 fail**。`bun typecheck` (server) → ✅。`bun run typecheck` (web) → ✅（本会话清零）。c57–c62 待 archive。Active: c57–c62 + c13/c14。 |
 
 ---
 

@@ -15,11 +15,11 @@ import {
 } from '@mui/icons-material';
 import { memo, useCallback, useState } from 'react';
 
-import type { ResearchSessionListItem, ResearchStatus } from '../../../../api/generated';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
+import type { ResearchSessionItem, ResearchStatus } from './useResearch';
 
 interface ResearchCapsuleProps {
-  session: ResearchSessionListItem;
+  session: ResearchSessionItem;
   onClick: () => void;
   onStart?: () => void;
   onDelete?: () => void;
@@ -46,7 +46,10 @@ function ResearchCapsule({
   isExpanded,
 }: ResearchCapsuleProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const config = STATUS_CONFIG[session.status] || { label: session.status, color: 'gray' };
+  const config = STATUS_CONFIG[session.status as ResearchStatus] || {
+    label: session.status,
+    color: 'gray' as const,
+  };
   const progress = Math.round((session.current_iteration / session.max_iterations) * 100);
   const isActive = ['planning', 'searching', 'analyzing', 'waiting_user'].includes(session.status);
   const shouldAnimate = config.animate;

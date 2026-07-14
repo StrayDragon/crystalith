@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { api } from '../../../../api/eden';
+import type { AnalysisResult } from '../../../../api/generated';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 
 interface AnalysisState {
-  analysis: Record<string, unknown> | null;
+  analysis: AnalysisResult | null;
   isLoading: boolean;
   error: string;
 }
@@ -47,12 +48,13 @@ export function useAnalysis() {
         notebook_id: activeNotebookId,
       });
       if (error) throw error;
+      const analysis = (data ?? null) as AnalysisResult | null;
       setAnalysisState({
-        analysis: data as Record<string, unknown> | null,
+        analysis,
         isLoading: false,
         error: '',
       });
-      return data as Record<string, unknown> | null;
+      return analysis;
     } catch {
       setAnalysisState((prev) => ({
         ...prev,

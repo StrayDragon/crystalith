@@ -221,7 +221,13 @@ function layoutY(node: LayoutNode, startY: number): void {
     layoutY(c, y);
     y += c.height + V_SPACING;
   }
-  node.y = (node.children[0].y + node.children.at(-1).y) / 2;
+  const first = node.children[0];
+  const last = node.children.at(-1);
+  if (!first || !last) {
+    node.y = startY;
+    return;
+  }
+  node.y = (first.y + last.y) / 2;
 }
 
 function flatten(node: LayoutNode, collapsed: Set<string>, nodes: Node[], edges: Edge[]): void {

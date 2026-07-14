@@ -127,9 +127,11 @@ export default function CitationDrawer({
 
     const fetchContext = async () => {
       try {
-        const { data, error: fetchErr } = await api.v2.citations.context.get({
-          query: { chunk_id: String(citation.chunkId), before: '1', after: '1' },
-        });
+        const { data, error: fetchErr } = await api.v2
+          .notebooks({ nid: notebookId })
+          .citations.context.get({
+            query: { chunk_id: String(citation.chunkId), before: '1', after: '1' },
+          });
         if (fetchErr) throw fetchErr;
         setContext(data as unknown as CitationContextResponse);
       } catch (error) {

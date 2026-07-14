@@ -12,12 +12,12 @@ import {
 import { memo, useState, useMemo, useCallback } from 'react';
 
 import { api } from '../../../../api/eden';
-import type { ResearchSessionResponse } from '../../../../api/generated';
 import { useLayer } from '../../../../shared/layer';
 import { toast } from '../../../../shared/toast';
+import type { ResearchSessionDetail } from './useResearch';
 
 interface ResearchExportDialogProps {
-  session: ResearchSessionResponse;
+  session: ResearchSessionDetail;
   onClose: () => void;
   onExportComplete?: () => void;
 }

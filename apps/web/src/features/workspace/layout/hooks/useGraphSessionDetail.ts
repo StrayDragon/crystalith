@@ -30,8 +30,8 @@ export function useGraphSessionDetail() {
         .sessions({ sid: sessionId })
         .messages.get({ query: { offset: 0, limit: 200 } });
       if (error) throw error;
-      const msgs = (data ?? []).map((item: Record<string, unknown>) =>
-        normalizeMessage(item as Parameters<typeof normalizeMessage>[0]),
+      const msgs = (data ?? []).map((item) =>
+        normalizeMessage(item as unknown as Parameters<typeof normalizeMessage>[0]),
       );
       setMessages(msgs);
     } catch {
