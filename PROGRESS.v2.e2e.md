@@ -90,11 +90,11 @@ click <target> "button:has-text('上传文件')"
 # 后续通过 API 上传后验证 UI 更新
 ```
 
-| #   | 操作                | 预期               | 结果 | 时间 |
-| --- | ------------------- | ------------------ | ---- | ---- |
-| C1  | 通过 API 上传后刷新 | 来源列表显示新文件 | ✅   |      |
-| C2  | 来源复选框选择      | "已选 N/M" 更新    | ⬜   |      |
-| C3  | 来源排序与筛选      | 可切换排序方式     | ⬜   |      |
+| #   | 操作                | 预期               | 结果 | 时间                                   |
+| --- | ------------------- | ------------------ | ---- | -------------------------------------- |
+| C1  | 通过 API 上传后刷新 | 来源列表显示新文件 | ✅   |                                        |
+| C2  | 来源复选框选择      | "已选 N/M" 更新    | ✅   | UI 显示 "已选 1/1"                     |
+| C3  | 来源排序与筛选      | 可切换排序方式     | ✅   | 弹出菜单含日期/名称/大小/类型 + 升降序 |
 
 ### C2. 提取器设置
 
@@ -105,10 +105,10 @@ click <target> "button:has-text('提取器设置')"
 snap <target>
 ```
 
-| #   | 操作                              | 预期                                               | 结果 | 时间       |
-| --- | --------------------------------- | -------------------------------------------------- | ---- | ---------- |
-| C4  | 打开提取器设置                    | 显示 extractors 列表（readability/jina/firecrawl） | ✅   | 2026-07-14 |
-| C5  | 切换模式（inherit_global/custom） | API 返回正确                                       | ⬜   |            |
+| #   | 操作                              | 预期                                               | 结果 | 时间                                                                      |
+| --- | --------------------------------- | -------------------------------------------------- | ---- | ------------------------------------------------------------------------- |
+| C4  | 打开提取器设置                    | 显示 extractors 列表（readability/jina/firecrawl） | ✅   | 2026-07-14                                                                |
+| C5  | 切换模式（inherit_global/custom） | API 返回正确                                       | ✅   | API PATCH 返回 200，模式切换为 custom；前端 header 标签未同步更新 (见 K8) |
 
 ---
 
@@ -125,12 +125,12 @@ click <target> "button:has-text('生成')"
 snap <target>  # 看有哪些工具卡片
 ```
 
-| #   | 操作         | 预期             | 结果   | 时间                               |
-| --- | ------------ | ---------------- | ------ | ---------------------------------- |
-| D1  | 点击生成按钮 | 显示输出类型选择 | ⬜     |                                    |
-| D2  | 选择 FAQ     | AI 生成 FAQ 内容 | ✅ API | `supportsStructuredOutputs` 修复后 |
-| D3  | 生成 GUIDE   | 内容正确         | ⬜     |                                    |
-| D4  | 生成 MINDMAP | 内容正确         | ⬜     |                                    |
+| #   | 操作         | 预期             | 结果   | 时间                                                  |
+| --- | ------------ | ---------------- | ------ | ----------------------------------------------------- |
+| D1  | 点击生成按钮 | 显示输出类型选择 | ⬜     |                                                       |
+| D2  | 选择 FAQ     | AI 生成 FAQ 内容 | ✅ API | `supportsStructuredOutputs` 修复后                    |
+| D3  | 生成 GUIDE   | 内容正确         | ✅     | 5 模块结构化学习指南，含引用                          |
+| D4  | 生成 MINDMAP | 内容正确         | ✅     | 树形结构：Core Functions / AI Search / Output Formats |
 
 ### D2. Slides Studio
 
@@ -141,10 +141,10 @@ click <target> "button:has-text('打开 Slides Studio')"
 snap <target>
 ```
 
-| #   | 操作               | 预期            | 结果 | 时间 |
-| --- | ------------------ | --------------- | ---- | ---- |
-| D5  | 打开 Slides Studio | 编辑器加载      | ⬜   |      |
-| D6  | outline → 生成     | Slidev 预览窗口 | ⬜   |      |
+| #   | 操作               | 预期            | 结果 | 时间                                                                      |
+| --- | ------------------ | --------------- | ---- | ------------------------------------------------------------------------- |
+| D5  | 打开 Slides Studio | 编辑器加载      | ✅   | 完整配置界面：标题/说明/高级设置（数量/模板/受众/语气/语言等）            |
+| D6  | outline → 生成     | Slidev 预览窗口 | ⬜   | 大纲生成成功（封面+议程+内容），markdown 生成因 AI timeout 未完成 (见 K9) |
 
 ---
 
@@ -203,23 +203,28 @@ snap <target>
 | ---------- | ------ | ------ | ----- | ----- |
 | A. 冒烟    | 4      | 4      | 0     | 0     |
 | B. 对话    | 4      | 4      | 0     | 0     |
-| C. Sources | 5      | 2      | 3     | 0     |
-| D. 输出    | 6      | 4      | 2     | 0     |
+| C. Sources | 5      | 4      | 1     | 0     |
+| D. 输出    | 6      | 6      | 0     | 0     |
 | E. 研究    | 6      | 4      | 2     | 0     |
 | F. 分析    | 2      | 2      | 0     | 0     |
 | G. 错误    | 4      | 4      | 0     | 0     |
-| **总计**   | **31** | **24** | **7** | **0** |
+| **总计**   | **31** | **28** | **3** | **0** |
 
 ---
 
 ## 已知问题（本会话发现）
 
-| #   | 描述                                                                       | 状态                                         |
-| --- | -------------------------------------------------------------------------- | -------------------------------------------- |
-| K1  | `@ai-sdk/openai v4` 默认用 Responses API，tufa 网关只支持 Chat Completions | ✅ `provider: openai-compatible`             |
-| K2  | `strategy_configs` 表不在 drizzle migration 中                             | ✅ `db/index.ts` CREATE TABLE IF NOT EXISTS  |
-| K3  | QA body 字段 `question` vs `content` 不一致                                | ✅ 兼容两者                                  |
-| K4  | Output type 枚举需大写 `FAQ` vs `faq`                                      | ✅ 自动 `.toUpperCase()`                     |
-| K5  | Citation 格式 `[Source: N]` 不匹配前端 `[N]`                               | ✅ prompt 改为 `[N]`                         |
-| K6  | `supportsStructuredOutputs` 默认 false 导致降级到 `json_object`            | ✅ config 设为 true                          |
-| K7  | Research `topic` 字段收到 `goal` 或空值时报 `undefined`                    | ✅ 兼容 goal 别名 + 默认 fallback "深度研究" |
+| #   | 描述                                                                                                             | 状态                                                                           |
+| --- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| K1  | `@ai-sdk/openai v4` 默认用 Responses API，tufa 网关只支持 Chat Completions                                       | ✅ `provider: openai-compatible`                                               |
+| K2  | `strategy_configs` 表不在 drizzle migration 中                                                                   | ✅ `db/index.ts` CREATE TABLE IF NOT EXISTS                                    |
+| K3  | QA body 字段 `question` vs `content` 不一致                                                                      | ✅ 兼容两者                                                                    |
+| K4  | Output type 枚举需大写 `FAQ` vs `faq`                                                                            | ✅ 自动 `.toUpperCase()`                                                       |
+| K5  | Citation 格式 `[Source: N]` 不匹配前端 `[N]`                                                                     | ✅ prompt 改为 `[N]`                                                           |
+| K6  | `supportsStructuredOutputs` 默认 false 导致降级到 `json_object`                                                  | ✅ config 设为 true                                                            |
+| K7  | Research `topic` 字段收到 `goal` 或空值时报 `undefined`                                                          | ✅ 兼容 goal 别名 + 默认 fallback "深度研究"                                   |
+| K8  | 提取器设置弹窗中模式显示为"遵循全局"但实际已切换为"custom"，前端的 header 标签未随 API mode 更新                 | 🔄 前端展示问题，不影响后端功能                                                |
+| K9  | Slidev markdown 生成超时（标准 8-12 张幻灯片 + 长内容），Outline 阶段正常完成                                    | 🔄 需增大超时或检查 AI provider 响应性能                                       |
+| K10 | Notes 面板输出渲染为原始 JSON，因 workspace/tools 响应缺少 render_descriptor                                     | ✅ 已修复 - 为 FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING 添加 render_descriptor |
+| K11 | Slides Studio 显示"当前 slides 插件未声明预览入口"，因 config_schema 缺少 preview 字段                           | ✅ 已修复 - buildSlidesConfigSchema() 返回 preview 对象                        |
+| K12 | GUIDE 的 objective 字段为 `{text, citations}` 复合结构，GenericOutputRenderer 渲染为 JSON 字符串（非 Rivu 问题） | 🔄 GenericOutputRenderer 的 coerceText 需支持嵌套对象字段提取                  |

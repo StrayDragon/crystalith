@@ -8,6 +8,26 @@ import { generateObject } from 'ai';
 import type { z } from 'zod';
 
 /**
+ * Render field descriptor (v1 FieldDescriptor) — tells frontend how to render
+ * a field within an output item. mirrors apps/web/src/.../types.ts FieldDescriptor.
+ */
+export interface FieldDescriptor {
+  key: string;
+  type: 'heading' | 'text' | 'list' | 'badge' | 'date' | 'tree' | 'citation' | 'code';
+  label: string | null;
+}
+
+/**
+ * Render descriptor (v1 RenderDescriptor) — tells frontend GenericOutputRenderer
+ * how to display a structured output type as visual cards/tree/sections/etc.
+ */
+export interface RenderDescriptor {
+  layout: 'cards' | 'list' | 'sections' | 'timeline' | 'table' | 'tree';
+  item_schema: { fields: FieldDescriptor[] } | null;
+  options: Record<string, unknown>;
+}
+
+/**
  * Metadata for each output type — maps to v1 OutputTypeMeta.
  */
 export interface OutputMeta {
@@ -17,7 +37,89 @@ export interface OutputMeta {
   tone: StudioTone;
   prompt: string;
   is_tool: boolean;
+  /**
+   * Render descriptor for frontend GenericOutputRenderer.
+   * When provided, the frontend renders output content as structured visual
+   * elements instead of raw JSON. Mirrors v1 plugin.render_descriptor.
+   */
+  render_descriptor: RenderDescriptor | null;
 }
+
+// ---------------------------------------------------------------------------
+// Render descriptors (v1 plugins' render_descriptor) — tell frontend how to
+// render each output type as structured visual elements instead of raw JSON.
+// SSOT: backend/py/plugins/crystalith-output-{faq,guide,mindmap,timeline,quiz,briefing}/.../plugin.py
+// ---------------------------------------------------------------------------
+
+const RENDER_DESCRIPTORS: Record<string, RenderDescriptor> = {
+  FAQ: {
+    layout: 'cards',
+    item_schema: {
+      fields: [
+        { key: 'question', type: 'heading', label: '问题' },
+        { key: 'answer', type: 'text', label: '回答' },
+        { key: 'citations', type: 'citation', label: null },
+      ],
+    },
+    options: { items_key: 'items' },
+  },
+  GUIDE: {
+    layout: 'sections',
+    item_schema: {
+      fields: [
+        { key: 'title', type: 'heading', label: '模块' },
+        { key: 'objective', type: 'text', label: '目标' },
+        { key: 'key_points', type: 'list', label: '要点' },
+      ],
+    },
+    options: { items_key: 'modules' },
+  },
+  TIMELINE: {
+    layout: 'timeline',
+    item_schema: {
+      fields: [
+        { key: 'date', type: 'date', label: '日期' },
+        { key: 'event', type: 'heading', label: '事件' },
+        { key: 'description', type: 'text', label: '描述' },
+        { key: 'citations', type: 'citation', label: null },
+      ],
+    },
+    options: { items_key: 'events' },
+  },
+  MINDMAP: {
+    layout: 'tree',
+    item_schema: {
+      fields: [
+        { key: 'label', type: 'heading', label: null },
+        { key: 'citations', type: 'citation', label: null },
+      ],
+    },
+    options: { root_key: 'root', children_key: 'children', label_key: 'label' },
+  },
+  QUIZ: {
+    layout: 'cards',
+    item_schema: {
+      fields: [
+        { key: 'question', type: 'heading', label: '问题' },
+        { key: 'options', type: 'list', label: '选项' },
+        { key: 'answer', type: 'badge', label: '答案' },
+        { key: 'explanation', type: 'text', label: '解析' },
+        { key: 'citations', type: 'citation', label: null },
+      ],
+    },
+    options: { items_key: 'questions' },
+  },
+  BRIEFING: {
+    layout: 'sections',
+    item_schema: {
+      fields: [
+        { key: 'heading', type: 'heading', label: '章节' },
+        { key: 'points', type: 'list', label: '要点' },
+      ],
+    },
+    options: { items_key: 'sections' },
+  },
+};
 
 export const OUTPUT_META: Record<string, OutputMeta> = {
   FAQ: {
@@ -28,6 +130,7 @@ export const OUTPUT_META: Record<string, OutputMeta> = {
     prompt:
       'Generate a structured FAQ (Frequently Asked Questions) list based on the provided context. Each item should have a question and a detailed answer.',
     is_tool: true,
+    render_descriptor: RENDER_DESCRIPTORS.FAQ,
   },
   GUIDE: {
     type: 'GUIDE',
@@ -37,6 +140,7 @@ export const OUTPUT_META: Record<string, OutputMeta> = {
     prompt:
       'Generate a structured learning guide based on the provided context. Organize into modules with objectives and key points.',
     is_tool: true,
+    render_descriptor: RENDER_DESCRIPTORS.GUIDE,
   },
   TIMELINE: {
     type: 'TIMELINE',
@@ -46,6 +150,7 @@ export const OUTPUT_META: Record<string, OutputMeta> = {
     prompt:
       'Generate a chronological timeline based on the provided context. Each event should have a date, title, and description.',
     is_tool: true,
+    render_descriptor: RENDER_DESCRIPTORS.TIMELINE,
   },
   MINDMAP: {
     type: 'MINDMAP',
@@ -55,6 +160,7 @@ export const OUTPUT_META: Record<string, OutputMeta> = {
     prompt:
       'Generate a mind map structure based on the provided context. Output a hierarchical tree with a root node and nested children.',
     is_tool: true,
+    render_descriptor: RENDER_DESCRIPTORS.MINDMAP,
   },
   QUIZ: {
     type: 'QUIZ',
@@ -64,6 +170,7 @@ export const OUTPUT_META: Record<string, OutputMeta> = {
     prompt:
       'Generate a quiz based on the provided context. Include questions with options, correct answers, and explanations.',
     is_tool: true,
+    render_descriptor: RENDER_DESCRIPTORS.QUIZ,
   },
   BRIEFING: {
     type: 'BRIEFING',
@@ -73,6 +180,7 @@ export const OUTPUT_META: Record<string, OutputMeta> = {
     prompt:
       'Generate a briefing document based on the provided context. Organize into sections with headings and bullet points.',
     is_tool: false,
+    render_descriptor: RENDER_DESCRIPTORS.BRIEFING,
   },
   SLIDES: {
     type: 'SLIDES',
@@ -82,6 +190,7 @@ export const OUTPUT_META: Record<string, OutputMeta> = {
     prompt:
       'Generate a slide deck outline based on the provided context. Include a title and slides with bullet points.',
     is_tool: false,
+    render_descriptor: null,
   },
   PARAGRAPH: {
     type: 'PARAGRAPH',
@@ -91,6 +200,7 @@ export const OUTPUT_META: Record<string, OutputMeta> = {
     prompt:
       'Generate a coherent paragraph summarizing the provided context. Write in clear, flowing prose.',
     is_tool: false,
+    render_descriptor: null,
   },
   BULLETS: {
     type: 'BULLETS',
@@ -100,6 +210,7 @@ export const OUTPUT_META: Record<string, OutputMeta> = {
     prompt:
       'Generate a bullet-point summary of the provided context. Each bullet should be a concise key point.',
     is_tool: false,
+    render_descriptor: null,
   },
   STRUCTURED: {
     type: 'STRUCTURED',
@@ -109,6 +220,7 @@ export const OUTPUT_META: Record<string, OutputMeta> = {
     prompt:
       'Generate structured JSON output based on the provided context. Include a title, bullet points, and term definitions.',
     is_tool: false,
+    render_descriptor: null,
   },
 };
 
