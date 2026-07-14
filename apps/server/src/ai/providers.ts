@@ -57,6 +57,7 @@ export async function resolveModel(config: ModelConfig): Promise<LanguageModelV4
     organization: providerConfig.organization || undefined,
     project: providerConfig.project || undefined,
     headers: config.request_options?.headers ?? undefined,
+    supportsStructuredOutputs: providerConfig.supportsStructuredOutputs ?? false,
   };
 
   // Create the provider instance, then select the model by id.
@@ -103,6 +104,7 @@ export async function resolveEmbeddingModel(config: ModelConfig): Promise<Embedd
     baseURL: providerConfig.base_url || undefined,
     organization: providerConfig.organization || undefined,
     project: providerConfig.project || undefined,
+    supportsStructuredOutputs: providerConfig.supportsStructuredOutputs ?? false,
   };
 
   const provider = (factoryFn as (o: Record<string, unknown>) => unknown)(opts);

@@ -84,6 +84,7 @@ providers:
   chat_gateway: &chat_gateway
     api_key: "{{ secret.CL_CHAT_API_KEY | default(env.CL_CHAT_API_KEY | default('sk-local')) }}"
     base_url: "{{ env.CL_CHAT_API_BASE | default('http://127.0.0.1:50256/v1') }}"
+    supportsStructuredOutputs: true
 
 # ----------------------------------------------------------------------------
 # Models (required)
