@@ -240,6 +240,13 @@ export function buildSlidesConfigSchema(): SlidesConfigSchema {
     density_options: DENSITY_OPTIONS,
     theme_preset_options: THEME_PRESET_OPTIONS,
     engine: 'slidev',
+    // c56: preview descriptor tells frontend where to open slide preview
+    // (v1 SlidevSlidesWorkflowPlugin.preview_descriptor)
+    preview: {
+      kind: 'external_url',
+      service: 'slidev',
+      meta: { package: '@crystalith-slidev' },
+    },
   };
 }
 

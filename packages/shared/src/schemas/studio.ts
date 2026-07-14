@@ -112,6 +112,16 @@ export const SlidesConfigSchemaSchema = z.object({
   density_options: z.array(ConfigOptionSchema).default([]),
   theme_preset_options: z.array(ThemePresetOptionSchema).default([]),
   engine: z.string().nullable().optional(),
+  preview: z
+    .object({
+      kind: z.string(),
+      service: z.string().nullable().optional(),
+      url: z.string().nullable().optional(),
+      open_in_new_tab: z.boolean().nullable().optional(),
+      meta: z.record(z.unknown()).default({}),
+    })
+    .nullable()
+    .optional(),
 });
 export type SlidesConfigSchema = z.infer<typeof SlidesConfigSchemaSchema>;
 

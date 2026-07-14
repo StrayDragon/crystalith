@@ -42,6 +42,10 @@ export const workspaceRouter = new Elysia({ prefix: '/v2' })
       // c56: SLIDES tool MUST carry config_schema to drive the frontend config UI
       // (workspace-api-contract r20). Other output types have no config UI yet.
       config_schema: type === 'SLIDES' ? buildSlidesConfigSchema() : null,
+      // render_descriptor tells frontend GenericOutputRenderer how to display
+      // structured output content (FAQ→cards, GUIDE→sections, MINDMAP→tree, etc.)
+      // Without this, frontend falls back to raw JSON. Mirrors v1 plugin.render_descriptor.
+      render_descriptor: meta.render_descriptor,
     }));
 
     return {
