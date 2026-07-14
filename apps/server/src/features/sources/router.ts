@@ -647,7 +647,12 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     const nid = Number(params.nid);
     const { source_ids } = body as { source_ids: number[] };
     const deletedIds: number[] = [];
-    const results: Array<{ source_id: number; ok: boolean; error_code?: string; message?: string }> = [];
+    const results: Array<{
+      source_id: number;
+      ok: boolean;
+      error_code?: string;
+      message?: string;
+    }> = [];
     for (const sid of source_ids) {
       const row = db().select().from(sources).where(eq(sources.id, sid)).get();
       if (row && row.notebookId === nid) {
@@ -677,12 +682,22 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     const strategy = new EmbedStrategy();
     const reembedded: number[] = [];
     const failed: number[] = [];
-    const results: Array<{ source_id: number; ok: boolean; error_code?: string; message?: string }> = [];
+    const results: Array<{
+      source_id: number;
+      ok: boolean;
+      error_code?: string;
+      message?: string;
+    }> = [];
     for (const sid of source_ids) {
       const row = db().select().from(sources).where(eq(sources.id, sid)).get();
       if (!row || row.notebookId !== nid) {
         failed.push(sid);
-        results.push({ source_id: sid, ok: false, error_code: 'SOURCE_NOT_FOUND', message: 'Source not found in this notebook' });
+        results.push({
+          source_id: sid,
+          ok: false,
+          error_code: 'SOURCE_NOT_FOUND',
+          message: 'Source not found in this notebook',
+        });
         continue;
       }
       // c57: clear ALL error fields (v1 api_common.py:261-263)

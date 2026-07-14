@@ -5,8 +5,8 @@ import { and, eq } from 'drizzle-orm';
 
 import { db } from '../../db/index.ts';
 import { sourceConnectorBindings, sources } from '../../db/schema.ts';
-import { checkDedup } from '../sources/dedup.ts';
 import { getDedupEnabled } from '../../shared/config.ts';
+import { checkDedup } from '../sources/dedup.ts';
 import { ingestSource } from '../sources/pipeline.ts';
 import { normalizeDirectoryPath, normalizeFilePath, pathInScope } from './paths.ts';
 import { readConnectorFileBytes } from './scanner.ts';

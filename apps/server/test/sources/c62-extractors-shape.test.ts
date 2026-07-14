@@ -1,10 +1,7 @@
 // c62 tests — extractors response field shape + default by availability.
 import { describe, expect, it } from 'bun:test';
 
-import {
-  getDefaultExtractor,
-  listExtractorMetadata,
-} from '../../src/shared/extraction/factory.ts';
+import { getDefaultExtractor, listExtractorMetadata } from '../../src/shared/extraction/factory.ts';
 
 describe('c62: listExtractorMetadata field shape', () => {
   it('each extractor has type, enabled, description, requires_service', () => {

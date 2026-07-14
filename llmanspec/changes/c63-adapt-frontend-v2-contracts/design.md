@@ -7,14 +7,18 @@
 ### D1: notebook_id query 传递——eden treaty query API
 
 eden treaty 的 query 传递语法:
+
 ```ts
 // 删除 source
-api.v2.sources({ id: sourceId }).delete({ query: { notebook_id: activeNotebookId } })
+api.v2.sources({ id: sourceId }).delete({ query: { notebook_id: activeNotebookId } });
 // re-embed
-api.v2.sources({ id: sourceId })['re-embed'].post(null, { query: { notebook_id: activeNotebookId } })
+api.v2
+  .sources({ id: sourceId })
+  ['re-embed'].post(null, { query: { notebook_id: activeNotebookId } });
 // chunks
-api.v2.sources({ id: sourceId }).chunks.get({ query: { notebook_id: notebookId } })
+api.v2.sources({ id: sourceId }).chunks.get({ query: { notebook_id: notebookId } });
 ```
+
 `activeNotebookId` / `notebookId` 已在每个调用点的闭包中（`useWorkspaceStore((s) => s.activeNotebookId)`），无需额外 props 传递。
 
 注意: POST 的 query 传递语法可能需要 `post(null, { query: {...} })` 或 `post({}, { query: {...} })`——eden treaty 对 POST+query 的处理需验证。若 treaty 不支持 POST query,改用 fetch（参考 `stream.ts` 模式）或服务端改为 path param。
@@ -34,15 +38,29 @@ export function parseServerError(error: unknown): ParsedServerError {
   if (!error || typeof error !== 'object') return { message: String(error) };
   const e = error as Record<string, unknown>;
   return {
-    errorCode: typeof e.code === 'string' ? e.code : (typeof e.errorCode === 'string' ? e.errorCode : undefined),
-    message: typeof e.message === 'string' ? e.message : (typeof e.detail === 'string' ? e.detail : 'Unknown error'),
-    details: typeof e.details === 'object' && e.details ? e.details as Record<string, unknown> : undefined,
+    errorCode:
+      typeof e.code === 'string'
+        ? e.code
+        : typeof e.errorCode === 'string'
+          ? e.errorCode
+          : undefined,
+    message:
+      typeof e.message === 'string'
+        ? e.message
+        : typeof e.detail === 'string'
+          ? e.detail
+          : 'Unknown error',
+    details:
+      typeof e.details === 'object' && e.details
+        ? (e.details as Record<string, unknown>)
+        : undefined,
     status: typeof e.status === 'number' ? e.status : undefined,
   };
 }
 ```
 
 替换 `useSources.ts:268-274` 和 `:729-737` 的 inline cast:
+
 ```ts
 const { errorCode, details, message } = parseServerError(err);
 if (errorCode === 'SOURCE_DEDUP_HIT') { ... }

@@ -2,7 +2,7 @@
 name: 'llman-sdd-explore'
 description: 'Enter llman SDD explore mode when the user wants to investigate, understand requirements, or think through a problem before implementing. Prohibits code writing. Use this when intent is unclear or the user wants analysis before action.'
 metadata:
-  version: '0.0.57'
+  version: '0.0.58'
 ---
 
 # LLMAN SDD Explore
@@ -122,17 +122,3 @@ Common commands:
 - `ethics.required_evidence`: list required evidence before high-impact output.
 - `ethics.refusal_contract`: define when to refuse and safe alternative response.
 - `ethics.escalation_policy`: define when to escalate to user confirmation/review.
-
-## Future-to-Execution Planning
-
-- Treat `llmanspec/changes/<id>/future.md` as a candidate backlog, not passive notes.
-- Review `Deferred Items`, `Branch Options`, and `Triggers to Reopen`; classify each item as:
-  - `now` (must be converted into executable work now)
-  - `later` (keep in future.md with explicit trigger/signal)
-  - `drop` (remove or mark rejected with rationale)
-- For each `now` item, propose a concrete landing path:
-  - follow-up change id (`add-...`, `update-...`, `refactor-...`)
-  - affected capability/spec path
-  - first executable action (`llman-sdd-propose`, `llman-sdd-new-change`, `llman-sdd-continue`, `llman-sdd-ff`, or `llman-sdd-apply`)
-- Keep traceability: reference source future item in the new proposal/design/tasks notes.
-- When uncertainty is high, pause and ask before creating new change artifacts.

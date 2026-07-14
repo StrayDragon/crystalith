@@ -2,7 +2,7 @@
 name: 'llman-sdd-propose'
 description: 'Create a new llman SDD change proposal with planning artifacts (proposal, delta specs, tasks) in one pass. Use when the user asks to define a formal change — especially for behavioral contract changes that modify MUST/SHALL requirements.'
 metadata:
-  version: '0.0.57'
+  version: '0.0.58'
 ---
 
 # LLMAN SDD Propose
@@ -39,6 +39,7 @@ flowchart LR
 - Read `llmanspec/config.yaml` for project context, rules, locale.
 - `llman sdd validate --all --strict --no-interactive`: ensure current artifacts are clean.
   - If pre-existing errors, stop and report (stacking new changes on dirty artifacts causes cascading errors).
+- **Check spec valid_scope integrity**: use `llman sdd list --specs --json` to list all specs, then for each spec verify every path in its `valid_scope` exists on disk. If any scope file/directory is missing, stop and suggest updating the spec (remove the deleted path from `valid_scope`).
 
 ### 1) Assess change scale (triage)
 
@@ -194,17 +195,3 @@ Notes:
 - `ethics.required_evidence`: list required evidence before high-impact output.
 - `ethics.refusal_contract`: define when to refuse and safe alternative response.
 - `ethics.escalation_policy`: define when to escalate to user confirmation/review.
-
-## Future-to-Execution Planning
-
-- Treat `llmanspec/changes/<id>/future.md` as a candidate backlog, not passive notes.
-- Review `Deferred Items`, `Branch Options`, and `Triggers to Reopen`; classify each item as:
-  - `now` (must be converted into executable work now)
-  - `later` (keep in future.md with explicit trigger/signal)
-  - `drop` (remove or mark rejected with rationale)
-- For each `now` item, propose a concrete landing path:
-  - follow-up change id (`add-...`, `update-...`, `refactor-...`)
-  - affected capability/spec path
-  - first executable action (`llman-sdd-propose`, `llman-sdd-new-change`, `llman-sdd-continue`, `llman-sdd-ff`, or `llman-sdd-apply`)
-- Keep traceability: reference source future item in the new proposal/design/tasks notes.
-- When uncertainty is high, pause and ask before creating new change artifacts.

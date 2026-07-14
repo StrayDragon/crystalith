@@ -2,7 +2,7 @@
 name: 'llman-sdd-apply'
 description: 'Implement tasks from an llman SDD change in a closed loop — write code, run tests, self-heal on failures until all gates pass. Use when a change is proposed and ready to implement. Updates tasks.md checkboxes and runs validation.'
 metadata:
-  version: '0.0.57'
+  version: '0.0.58'
 ---
 
 # LLMAN SDD Apply
@@ -44,6 +44,7 @@ flowchart LR
   - If working tree is dirty and changes don't belong to the current change: `git stash push -u -m "llman-sdd-apply autopilot backup"`.
 - Run `llman sdd validate --all --strict --no-interactive`:
   - If it fails for reasons unrelated to the current change, stop and report (inconsistent artifacts prevent SSOT-driven implementation).
+- **Check spec valid_scope integrity**: use `llman sdd list --specs --json` to list all specs, then for each spec verify every path in its `valid_scope` exists on disk. If any scope file/directory is missing, stop and suggest updating the spec (remove the deleted path from `valid_scope`).
 
 ### 1) Select change id and check prerequisites
 

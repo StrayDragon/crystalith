@@ -13,12 +13,12 @@ import type { Citation, ContextStats } from '@crystalith/shared';
 import { and, eq, inArray } from 'drizzle-orm';
 
 import { countTokens } from '../../ai/tokenizer.ts';
-import { getContextWindowSettings } from '../../shared/config.ts';
 import { db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { truncateToTokenBudget } from '../../rag/context-window.ts';
 import { ragRegistry } from '../../rag/registry.ts';
 import { hydrateCitations } from '../../shared/citations.ts';
+import { getContextWindowSettings } from '../../shared/config.ts';
 import { computeConfidence } from './confidence.ts';
 
 export const EVIDENCE_THRESHOLD_DEFAULT = 0.2;
