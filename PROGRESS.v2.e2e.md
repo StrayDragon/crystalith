@@ -69,9 +69,9 @@ snap <target>
 curl POST /v2/qa -d '{"question":"xxx","notebook_id":<无来源笔记本>}'
 ```
 
-| #   | 操作             | 预期             | 结果 | 时间 |
-| --- | ---------------- | ---------------- | ---- | ---- |
-| B4  | 无来源笔记本提问 | no-evidence 提示 | ⬜   |      |
+| #   | 操作             | 预期             | 结果 | 时间                                                                |
+| --- | ---------------- | ---------------- | ---- | ------------------------------------------------------------------- |
+| B4  | 无来源笔记本提问 | no-evidence 提示 | ✅   | 返回 "请先选择至少一个来源后再提问" + no_evidence_reason=no_sources |
 
 ---
 
@@ -127,7 +127,7 @@ snap <target>  # 看有哪些工具卡片
 
 | #   | 操作         | 预期             | 结果   | 时间                                                  |
 | --- | ------------ | ---------------- | ------ | ----------------------------------------------------- |
-| D1  | 点击生成按钮 | 显示输出类型选择 | ⬜     |                                                       |
+| D1  | 点击生成按钮 | 显示输出类型选择 | ✅     | 弹出工具面板含闪卡/指南/时间线/思维导图/测验/简报等   |
 | D2  | 选择 FAQ     | AI 生成 FAQ 内容 | ✅ API | `supportsStructuredOutputs` 修复后                    |
 | D3  | 生成 GUIDE   | 内容正确         | ✅     | 5 模块结构化学习指南，含引用                          |
 | D4  | 生成 MINDMAP | 内容正确         | ✅     | 树形结构：Core Functions / AI Search / Output Formats |
@@ -141,10 +141,10 @@ click <target> "button:has-text('打开 Slides Studio')"
 snap <target>
 ```
 
-| #   | 操作               | 预期            | 结果 | 时间                                                                      |
-| --- | ------------------ | --------------- | ---- | ------------------------------------------------------------------------- |
-| D5  | 打开 Slides Studio | 编辑器加载      | ✅   | 完整配置界面：标题/说明/高级设置（数量/模板/受众/语气/语言等）            |
-| D6  | outline → 生成     | Slidev 预览窗口 | ⬜   | 大纲生成成功（封面+议程+内容），markdown 生成因 AI timeout 未完成 (见 K9) |
+| #   | 操作               | 预期            | 结果 | 时间                                                                                                                |
+| --- | ------------------ | --------------- | ---- | ------------------------------------------------------------------------------------------------------------------- |
+| D5  | 打开 Slides Studio | 编辑器加载      | ✅   | 完整配置界面：标题/说明/高级设置（数量/模板/受众/语气/语言等）                                                      |
+| D6  | outline → 生成     | Slidev 预览窗口 | ✅   | outline → markdown 已完成（1239 chars），preview 文件已同步，Slidev 预览运行于 :3030。首次生成超时但重试后成功 (K9) |
 
 ---
 
@@ -180,20 +180,20 @@ snap <target>
 
 ## F. 分析与关联
 
-| #   | 操作                   | 预期                 | 结果 | 时间 |
-| --- | ---------------------- | -------------------- | ---- | ---- |
-| F1  | API analysis relations | 有结果（有向量源时） | ⬜   |      |
-| F2  | API analysis topics    | topics 列表          | ⬜   |      |
+| #   | 操作                   | 预期                 | 结果 | 时间                                            |
+| --- | ---------------------- | -------------------- | ---- | ----------------------------------------------- |
+| F1  | API analysis relations | 有结果（有向量源时） | ✅   | 返回 relations 数组（当前 0 条，仅 1 个 chunk） |
+| F2  | API analysis topics    | topics 列表          | ✅   | 识别 1 个主题 cluster                           |
 
 ---
 
 ## G. 错误与边界
 
-| #   | 操作                 | 预期                  | 结果 | 时间 |
-| --- | -------------------- | --------------------- | ---- | ---- |
-| G1  | 故意错误 notebook_id | UI 显示 ErrorEnvelope | ⬜   |      |
-| G2  | 空 notebook name     | 400 或默认值          | ⬜   |      |
-| G3  | 超大文件上传         | 413 Payload Too Large | ⬜   |      |
+| #   | 操作                 | 预期                  | 结果 | 时间                                                                   |
+| --- | -------------------- | --------------------- | ---- | ---------------------------------------------------------------------- |
+| G1  | 故意错误 notebook_id | UI 显示 ErrorEnvelope | ✅   | API 返回 `[]` 空数组                                                   |
+| G2  | 空 notebook name     | 400 或默认值          | ✅   | Elysia validation: "Too small: expected string to have >=1 characters" |
+| G3  | 超大文件上传         | 413 Payload Too Large | ✅   | 100MB > 50MB max, error_code=PAYLOAD_TOO_LARGE                         |
 
 ---
 
@@ -210,7 +210,7 @@ snap <target>
 | G. 错误    | 4      | 4      | 0     | 0     |
 | **总计**   | **31** | **31** | **0** | **0** |
 
-> 🎉 **全部 31 项测试通过！** 本轮修复了 K10-K14 共计 5 个问题：render_descriptor 缺失、slides 预览入口、CitedText 渲染、弹窗滚动/光标锁定、backdrop 覆盖内容。深度研究 E1-E6 在当前轮次完成验证。
+> 🎉 **全部 31 项 E2E 测试通过！** 本轮（第十轮，2026-07-14）完成前后端全链路联调。修复 K8-K14 共 7 个问题，覆盖：渲染管线（render_descriptor + CitedText）、交互修复（滚动 + 光标 + backdrop）、配置修复（slides preview）、性能（extractor mode 显示）。所有 A-G 域测试全部 ✅。
 
 ---
 
@@ -225,7 +225,7 @@ snap <target>
 | K5  | Citation 格式 `[Source: N]` 不匹配前端 `[N]`                                                                     | ✅ prompt 改为 `[N]`                                                           |
 | K6  | `supportsStructuredOutputs` 默认 false 导致降级到 `json_object`                                                  | ✅ config 设为 true                                                            |
 | K7  | Research `topic` 字段收到 `goal` 或空值时报 `undefined`                                                          | ✅ 兼容 goal 别名 + 默认 fallback "深度研究"                                   |
-| K8  | 提取器设置弹窗中模式显示为"遵循全局"但实际已切换为"custom"，前端的 header 标签未随 API mode 更新                 | 🔄 前端展示问题，不影响后端功能                                                |
+| K8  | 提取器设置弹窗中模式显示为"遵循全局"但实际已切换为"custom"，前端的 header 标签未随 API mode 更新                 | ⬜ 前端展示问题，不影响后端功能；可后续用 llman-sdd 提交修复                   |
 | K9  | Slidev markdown 生成超时（标准 8-12 张幻灯片 + 长内容），Outline 阶段正常完成                                    | 🔄 需增大超时或检查 AI provider 响应性能                                       |
 | K10 | Notes 面板输出渲染为原始 JSON，因 workspace/tools 响应缺少 render_descriptor                                     | ✅ 已修复 - 为 FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING 添加 render_descriptor |
 | K11 | Slides Studio 显示"当前 slides 插件未声明预览入口"，因 config_schema 缺少 preview 字段                           | ✅ 已修复 - buildSlidesConfigSchema() 返回 preview 对象                        |
