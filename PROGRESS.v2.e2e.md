@@ -210,25 +210,26 @@ snap <target>
 | G. 错误    | 4      | 4      | 0     | 0     |
 | **总计**   | **31** | **31** | **0** | **0** |
 
-> 🎉 **全部 31 项 E2E 测试通过！** 本轮（第十轮，2026-07-14）完成前后端全链路联调。修复 K8-K14 共 7 个问题，覆盖：渲染管线（render_descriptor + CitedText）、交互修复（滚动 + 光标 + backdrop）、配置修复（slides preview）、性能（extractor mode 显示）。所有 A-G 域测试全部 ✅。
+> 🎉 **全部 31 项 E2E 测试通过！** 本轮（第十轮，2026-07-14）完成前后端全链路联调。修复 K8-K15 共 8 个问题，覆盖：渲染管线（render_descriptor + CitedText + SlidesMarkdownRenderer）、交互修复（滚动 + 光标 + backdrop + iframe sandbox）、配置修复（slides preview + extractor policy nesting）。所有 A-G 域测试全部 ✅。
 
 ---
 
 ## 已知问题（本会话发现）
 
-| #   | 描述                                                                                                             | 状态                                                                           |
-| --- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| K1  | `@ai-sdk/openai v4` 默认用 Responses API，tufa 网关只支持 Chat Completions                                       | ✅ `provider: openai-compatible`                                               |
-| K2  | `strategy_configs` 表不在 drizzle migration 中                                                                   | ✅ `db/index.ts` CREATE TABLE IF NOT EXISTS                                    |
-| K3  | QA body 字段 `question` vs `content` 不一致                                                                      | ✅ 兼容两者                                                                    |
-| K4  | Output type 枚举需大写 `FAQ` vs `faq`                                                                            | ✅ 自动 `.toUpperCase()`                                                       |
-| K5  | Citation 格式 `[Source: N]` 不匹配前端 `[N]`                                                                     | ✅ prompt 改为 `[N]`                                                           |
-| K6  | `supportsStructuredOutputs` 默认 false 导致降级到 `json_object`                                                  | ✅ config 设为 true                                                            |
-| K7  | Research `topic` 字段收到 `goal` 或空值时报 `undefined`                                                          | ✅ 兼容 goal 别名 + 默认 fallback "深度研究"                                   |
-| K8  | 提取器设置弹窗中模式显示为"遵循全局"但实际已切换为"custom"，前后端字段路径不匹配（policy 嵌套 vs 顶层返回）      | ✅ 后端 GET/PATCH 将 mode/enabled_extractors 嵌套在 policy 键下                |
-| K9  | Slidev markdown 生成超时（标准 8-12 张幻灯片 + 长内容），Outline 阶段正常完成                                    | 🔄 需增大超时或检查 AI provider 响应性能                                       |
-| K10 | Notes 面板输出渲染为原始 JSON，因 workspace/tools 响应缺少 render_descriptor                                     | ✅ 已修复 - 为 FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING 添加 render_descriptor |
-| K11 | Slides Studio 显示"当前 slides 插件未声明预览入口"，因 config_schema 缺少 preview 字段                           | ✅ 已修复 - buildSlidesConfigSchema() 返回 preview 对象                        |
-| K12 | GUIDE 的 objective 字段为 `{text, citations}` 复合结构，GenericOutputRenderer 渲染为 JSON 字符串（非 Rivu 问题） | ✅ 已修复 - coerceText 提取 text 字段 + renderTextWithCitations 支持 CitedText |
-| K13 | Notes 面板内输出内容过长时无法纵向滚动                                                                           | ✅ 已修复 - WidgetShell + grid-stack-item-content overflow:hidden → auto       |
-| K14 | StudioOutputViewer 弹窗内 backdrop (absolute inset-0) 覆盖内容 div，点击/滚轮事件全被拦截，弹窗无法交互          | ✅ 已修复 - 内容 div 添加 position:relative，stack 在 backdrop 之上            |
+| #   | 描述                                                                                                                           | 状态                                                                                         |
+| --- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| K1  | `@ai-sdk/openai v4` 默认用 Responses API，tufa 网关只支持 Chat Completions                                                     | ✅ `provider: openai-compatible`                                                             |
+| K2  | `strategy_configs` 表不在 drizzle migration 中                                                                                 | ✅ `db/index.ts` CREATE TABLE IF NOT EXISTS                                                  |
+| K3  | QA body 字段 `question` vs `content` 不一致                                                                                    | ✅ 兼容两者                                                                                  |
+| K4  | Output type 枚举需大写 `FAQ` vs `faq`                                                                                          | ✅ 自动 `.toUpperCase()`                                                                     |
+| K5  | Citation 格式 `[Source: N]` 不匹配前端 `[N]`                                                                                   | ✅ prompt 改为 `[N]`                                                                         |
+| K6  | `supportsStructuredOutputs` 默认 false 导致降级到 `json_object`                                                                | ✅ config 设为 true                                                                          |
+| K7  | Research `topic` 字段收到 `goal` 或空值时报 `undefined`                                                                        | ✅ 兼容 goal 别名 + 默认 fallback "深度研究"                                                 |
+| K8  | 提取器设置弹窗中模式显示为"遵循全局"但实际已切换为"custom"，前后端字段路径不匹配（policy 嵌套 vs 顶层返回）                    | ✅ 后端 GET/PATCH 将 mode/enabled_extractors 嵌套在 policy 键下                              |
+| K9  | Slidev markdown 生成超时（标准 8-12 张幻灯片 + 长内容），Outline 阶段正常完成                                                  | 🔄 需增大超时或检查 AI provider 响应性能                                                     |
+| K10 | Notes 面板输出渲染为原始 JSON，因 workspace/tools 响应缺少 render_descriptor                                                   | ✅ 已修复 - 为 FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING 添加 render_descriptor               |
+| K11 | Slides Studio 显示"当前 slides 插件未声明预览入口"，因 config_schema 缺少 preview 字段                                         | ✅ 已修复 - buildSlidesConfigSchema() 返回 preview 对象                                      |
+| K12 | GUIDE 的 objective 字段为 `{text, citations}` 复合结构，GenericOutputRenderer 渲染为 JSON 字符串（非 Rivu 问题）               | ✅ 已修复 - coerceText 提取 text 字段 + renderTextWithCitations 支持 CitedText               |
+| K13 | Notes 面板内输出内容过长时无法纵向滚动                                                                                         | ✅ 已修复 - WidgetShell + grid-stack-item-content overflow:hidden → auto                     |
+| K14 | StudioOutputViewer 弹窗内 backdrop (absolute inset-0) 覆盖内容 div，点击/滚轮事件全被拦截，弹窗无法交互                        | ✅ 已修复 - 内容 div 添加 position:relative，stack 在 backdrop 之上                          |
+| K15 | Slides Studio iframe 预览因 sandbox="allow-scripts"（无 allow-same-origin）导致 CORS 错误；笔记列表中 SLIDES 输出显示原始 JSON | ✅ sandbox 加 allow-same-origin；OutputContent 添加 SlidesMarkdownRenderer 逐页渲染 markdown |
