@@ -41,9 +41,14 @@ import type {
 import { ModelSelector } from './ModelSelector';
 import { buildFrontmatterPreview, normalizeGenerationConfig } from './utils/slides';
 
-/** Minimal tools diagnostics shape (was from generated client). */
+/** Minimal tools diagnostics shape (aligned with workspace /tools diagnostics). */
 type WorkspaceToolsDiagnostics = {
-  slides?: { available?: boolean; message?: string | null } | null;
+  slides?: {
+    available?: boolean;
+    message?: string | null;
+    hint?: string | null;
+  } | null;
+  official?: Record<string, { hint?: string | null; status?: string }>;
 } | null;
 
 const STAGES: { id: SlideStage; label: string }[] = [

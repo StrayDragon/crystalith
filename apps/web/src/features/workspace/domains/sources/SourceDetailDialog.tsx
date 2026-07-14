@@ -307,11 +307,14 @@ export default function SourceDetailDialog({
         .sources({ sid: source.id })
         .qa.post({ question: userMessage.content } as any);
       if (qaErr) throw qaErr;
+      if (!response || !('answer' in response)) {
+        throw new Error('source QA returned an unexpected payload');
+      }
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
         content: response.answer,
-        timestamp: new Date((response as any).created_at || Date.now()),
+        timestamp: new Date((response as { created_at?: string }).created_at || Date.now()),
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {

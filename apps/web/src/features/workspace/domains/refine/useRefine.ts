@@ -353,15 +353,30 @@ export function useRefine() {
             source_ids: sourceIds,
           } as any);
           if (refineErr) throw refineErr;
-          resolvedCitations = (response as any).citations?.map(normalizeCitation) ?? [];
-          for (const [format, output] of Object.entries(response.outputs ?? {})) {
+          if (!response || !('outputs' in response)) {
+            throw new Error('refine batch returned an unexpected payload');
+          }
+          const batch = response as {
+            outputs: Record<
+              string,
+              {
+                paragraph?: string | null;
+                bullets?: string[] | null;
+                structured?: RefineOutput['structured'] | null;
+              }
+            >;
+            citations?: unknown[];
+            evidence: boolean;
+          };
+          resolvedCitations = (batch.citations as any)?.map(normalizeCitation) ?? [];
+          for (const [format, output] of Object.entries(batch.outputs ?? {})) {
             if (!output) continue;
             const key = format as RefineMode;
             normalizedOutputs[key] = {
               paragraph: output.paragraph ?? '',
               bullets: output.bullets ?? [],
               structured: output.structured ?? null,
-              evidence: response.evidence,
+              evidence: batch.evidence,
             };
           }
         } else {

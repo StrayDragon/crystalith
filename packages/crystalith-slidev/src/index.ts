@@ -1,6 +1,6 @@
 // crystalith-slidev — Slidev integration package.
-// Currently exports types and a placeholder render function. The full
-// Slidev integration (preview, export) is deferred to post-Phase-4.
+// Preview URL helpers for the studio dialog; full Slidev render is deferred.
+
 export interface SlidevConfig {
   theme: string;
   font?: string;
@@ -16,4 +16,24 @@ export interface SlidevConfig {
 export function renderSlides(_config: SlidevConfig): { html: string } {
   // Post-Phase-4: wire @slidev/cli headless rendering.
   return { html: '' };
+}
+
+const DEFAULT_PREVIEW_URL =
+  (typeof import.meta !== 'undefined' &&
+    (import.meta as { env?: Record<string, string> }).env?.VITE_SLIDEV_PREVIEW_URL) ||
+  (typeof import.meta !== 'undefined' && (import.meta as { env?: { PROD?: boolean } }).env?.PROD
+    ? '/slidev'
+    : 'http://localhost:3030');
+
+export function getSlidevPreviewBaseUrl(): string {
+  return String(DEFAULT_PREVIEW_URL).replace(/\/+$/, '');
+}
+
+/** Build a Slidev preview iframe URL, optionally cache-busted with `cacheKey`. */
+export function buildSlidevPreviewUrl(cacheKey?: string | number): string {
+  const base = getSlidevPreviewBaseUrl();
+  if (cacheKey === undefined || cacheKey === null) {
+    return `${base}/`;
+  }
+  return `${base}/?t=${encodeURIComponent(String(cacheKey))}`;
 }
