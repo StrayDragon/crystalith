@@ -84,7 +84,10 @@ Key entry points:
 From repo root:
 
 - `bun install` — install all dependencies
-- `bun dev` / `just dev` — server --watch + Vite HMR
+- `bun dev` / `just dev` — Overmind (`Procfile`: server + web + slidev; needs `overmind` + `tmux`)
+- `bun run dev:server` / `just dev-server` — server only (:8032)
+- `bun run dev:web` / `just dev-web` — Vite only (:3000)
+- `bun run dev:slidev` / `just dev-slidev` — Slidev preview only (:3030)
 - `bun test` — run tests
 - `bun typecheck` — typecheck everything
 
@@ -94,6 +97,8 @@ Fast path:
 - `cd apps/web && bun dev` — Vite (port 3000)
 - `cd apps/web && bun test` — Vitest
 - `cd apps/web && bun run typecheck` — frontend typecheck
+- `just dev-connect server` — attach to Overmind process (`overmind connect`; also `web` / `slidev`)
+- `just dev-quit` — stop Overmind session
 
 ## Coding Style
 

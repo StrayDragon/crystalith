@@ -12,9 +12,11 @@ _default:
 install:
     bun install --frozen-lockfile
 
-# Start development environment (server + frontend hot reload in parallel)
+# Start development environment via Overmind (Procfile: server + web + slidev)
+# Requires: overmind + tmux. `-N` keeps app-owned ports (8032 / 3000 / 3030).
+# `-c slidev` allows preview to exit without tearing down core processes.
 dev:
-    bun dev
+    overmind start -N -c slidev -f Procfile
 
 # Start only the Elysia server
 dev-server:
@@ -24,8 +26,17 @@ dev-server:
 dev-web:
     cd apps/web && bun dev
 
-# Start both (two terminals: `just dev-server` + `just dev-web`)
-# Or use: bun run dev:server & bun run dev:web
+# Start only Slidev preview (apps/server/slides/preview/slides.md → :3030)
+dev-slidev:
+    cd packages/crystalith-slidev && bun run dev
+
+# Attach to a running Overmind process (server|web|slidev)
+dev-connect process='server':
+    overmind connect {{process}}
+
+# Gracefully stop Overmind (same as Ctrl-C on the start session)
+dev-quit:
+    overmind quit
 
 # --------------------------------------------------------------------------
 # Build
