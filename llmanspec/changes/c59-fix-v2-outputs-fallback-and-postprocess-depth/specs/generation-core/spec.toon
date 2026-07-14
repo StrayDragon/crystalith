@@ -1,0 +1,9 @@
+kind: llman.sdd.delta
+ops[3]{op,req_id,title,statement,from,to,name}:
+  add_requirement,"outputs-fallback-title-from-prompt","Outputs fallback MUST use user prompt as title not error message","outputs 生成管线的 fallback 内容 MUST 用用户 prompt（截断）作为可见标题/问题文本，MUST NOT 用 error.message 或原始异常内部信息作为用户可见内容（对齐 v1 output_postprocess.py:16 _fallback_output(prompt, ...)）。",null,null,null
+  add_requirement,"outputs-postprocess-nested-backfill","Outputs postprocess MUST do per-type nested structure backfill","outputs 后处理的 ensure_minimum_content MUST 对每个输出类型做嵌套结构回填（对齐 v1 output_postprocess.py:102-189）：GUIDE 回填 objective {text, citations:[1]} 与 key_points [{text, citations:[1]}]；MINDMAP 回填 root.citations=[1] 并合成 child {label, citations:[1], children:[]}；BRIEFING 回填 points [{text, citations:[1]}]；PARAGRAPH 回填 citations=[1]。MUST NOT 只做浅层 ensureArray（设 []）而不回填嵌套 {text, citations} 结构。",null,null,null
+  add_requirement,"outputs-postprocessed-flag-always-set","Outputs _postprocessed flag MUST be set unconditionally","outputs 后处理 MUST 在 postprocess 完成后无条件设置 content._postprocessed = true，不论 warnings 数组是否为空（对齐 v1 output_postprocess.py:377）。MUST NOT 仅在有 warnings 时设置——下游消费者依赖此 flag 判断内容是否已处理后。",null,null,null
+op_scenarios[3]{req_id,id,given,when,then}:
+  "outputs-fallback-title-from-prompt","fallback-shows-prompt","a user submits a generation request with prompt '量子计算原理'","the LLM generation fails and fallback content is produced","the fallback title/question MUST contain '量子计算原理' (the prompt) not the exception message"
+  "outputs-postprocess-nested-backfill","guide-objective-backfilled","a GUIDE output is generated but objective field is missing","the system runs postprocess","the objective MUST be backfilled as {text, citations:[1]} not left as an empty array"
+  "outputs-postprocessed-flag-always-set","flag-set-without-warnings","an output is generated successfully with no postprocess warnings","the system runs postprocess","content._postprocessed MUST be true"
