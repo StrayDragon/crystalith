@@ -36,8 +36,7 @@ From repo root: `just dev-server`, `bun test apps/server/…`.
 - OpenAPI via `@asteasolutions/zod-to-openapi` — **no** `@elysiajs/swagger` / `t.*`
 - AI: AI SDK v7 only (`generateObject`, `streamText`, ToolLoopAgent/WorkflowAgent when needed)
 - Config: `config/app.yaml` + `config/secret.env` (see `config/AGENTS.md`)
-- v1 behavior reference: `backend/py/` — removed in c14, all parity-confirmed in TS
 
 ## Progress
 
-See root `PROGRESS.v2.md`. Package rules defer to root `AGENTS.md` for repo-wide decisions.
+Package rules defer to root `AGENTS.md` for repo-wide decisions.

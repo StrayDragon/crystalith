@@ -26,5 +26,5 @@ Results:
 ## Checklist / 自检清单
 
 - [ ] No secrets or tokens committed
-- [ ] Docs updated (if needed) — see `AGENTS.md` / `PROGRESS.v2.md`
+- [ ] Docs updated (if needed) — see `AGENTS.md`
 - [ ] Critical-path UI copy is centralized via `t()` (avoid new hardcoded strings) / 关键路径文案集中管理（避免新增硬编码）
