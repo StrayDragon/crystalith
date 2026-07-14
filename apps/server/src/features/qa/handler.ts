@@ -104,6 +104,8 @@ export async function streamQa(opts: QaHandlerOptions): Promise<Response> {
     minScore,
     strategyId: opts.strategyId,
     historyTokens,
+    // c60: pass systemPrompt so ContextStats counts real system_tokens
+    systemPrompt: opts.systemPrompt,
   });
 
   // Step 2: No evidence → short-circuit with localized answer
@@ -295,6 +297,8 @@ export async function generateQaDirect(opts: QaHandlerOptions): Promise<QaDirect
     minScore,
     strategyId: opts.strategyId,
     historyTokens,
+    // c60: pass systemPrompt so ContextStats counts real system_tokens
+    systemPrompt: opts.systemPrompt,
   });
 
   // No evidence → short-circuit
