@@ -291,7 +291,7 @@ export default function StudioOutputViewer({
               </div>
             )}
           </aside>
-          <section className="flex-1 overflow-y-auto p-6 bg-white dark:bg-slate-900">
+          <section className="flex-1 min-h-0 overflow-y-auto p-6 bg-white dark:bg-slate-900">
             {selectedOutput ? <OutputContent output={selectedOutput} /> : null}
             {outputCitations.length > 0 ? (
               <div className="mt-6 border-t border-gray-100 pt-4 dark:border-slate-700">

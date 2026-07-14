@@ -210,6 +210,8 @@ snap <target>
 | G. 错误    | 4      | 4      | 0     | 0     |
 | **总计**   | **31** | **28** | **3** | **0** |
 
+> 本轮修复了 K10（render_descriptor 缺失导致 JSON 显示）、K11（slides 预览入口）、K12（CitedText 渲染为 JSON）、K13（笔记面板无法滚动）。剩余 ⬜ 项：深度研究（E1-E6），待后续轮次。
+
 ---
 
 ## 已知问题（本会话发现）
@@ -227,4 +229,5 @@ snap <target>
 | K9  | Slidev markdown 生成超时（标准 8-12 张幻灯片 + 长内容），Outline 阶段正常完成                                    | 🔄 需增大超时或检查 AI provider 响应性能                                       |
 | K10 | Notes 面板输出渲染为原始 JSON，因 workspace/tools 响应缺少 render_descriptor                                     | ✅ 已修复 - 为 FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING 添加 render_descriptor |
 | K11 | Slides Studio 显示"当前 slides 插件未声明预览入口"，因 config_schema 缺少 preview 字段                           | ✅ 已修复 - buildSlidesConfigSchema() 返回 preview 对象                        |
-| K12 | GUIDE 的 objective 字段为 `{text, citations}` 复合结构，GenericOutputRenderer 渲染为 JSON 字符串（非 Rivu 问题） | 🔄 GenericOutputRenderer 的 coerceText 需支持嵌套对象字段提取                  |
+| K12 | GUIDE 的 objective 字段为 `{text, citations}` 复合结构，GenericOutputRenderer 渲染为 JSON 字符串（非 Rivu 问题） | ✅ 已修复 - coerceText 提取 text 字段 + renderTextWithCitations 支持 CitedText |
+| K13 | Notes 面板内输出内容过长时无法纵向滚动                                                                           | ✅ 已修复 - WidgetShell + grid-stack-item-content overflow:hidden → auto       |
