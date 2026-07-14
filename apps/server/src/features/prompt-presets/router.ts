@@ -9,7 +9,37 @@ import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
 import { promptPresets } from '../../db/schema.ts';
+import { listPresets } from '../qa/presets.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+
+/** c61: builtin preset trigger set for conflict detection. */
+const BUILTIN_TRIGGERS = new Set(listPresets().map((p) => p.name.toLowerCase()));
+
+/**
+ * c61: check trigger uniqueness (no duplicate custom) + no builtin conflict.
+ * Returns an error message string if conflict, or null if OK.
+ * `excludeId` allows PATCH to keep its own trigger (exclude self from dup check).
+ */
+function checkTriggerConflict(trigger: string, excludeId?: number): string | null {
+  const normalized = trigger.trim().toLowerCase();
+  if (BUILTIN_TRIGGERS.has(normalized)) {
+    return `Trigger '${trigger}' conflicts with a built-in preset`;
+  }
+  const dupQuery = db().select().from(promptPresets);
+  const dup = excludeId
+    ? dupQuery.where(eq(promptPresets.id, excludeId)).all() // no-op filter; we check below
+    : dupQuery.all();
+  // Check all customs (excluding self if PATCH)
+  const customs = db().select().from(promptPresets).all();
+  const conflict = customs.find(
+    (c) => c.trigger.trim().toLowerCase() === normalized && c.id !== excludeId,
+  );
+  if (conflict) {
+    return `Trigger '${trigger}' already exists`;
+  }
+  void dup; // suppress unused
+  return null;
+}
 
 const apiDocs: OpenApiRoute[] = [
   {
@@ -61,7 +91,13 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
   })
   .post(
     '/prompt-presets',
-    ({ body }) => {
+    ({ body, set }) => {
+      // c61: trigger uniqueness + builtin conflict (v1 service.py:74-85)
+      const conflict = checkTriggerConflict(body.trigger);
+      if (conflict) {
+        set.status = 409;
+        return { error: conflict };
+      }
       const row = db()
         .insert(promptPresets)
         .values({
@@ -78,10 +114,19 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
   )
   .patch(
     '/prompt-presets/:id',
-    ({ params, body }) => {
+    ({ params, body, set }) => {
       const id = Number(params.id);
       const existing = db().select().from(promptPresets).where(eq(promptPresets.id, id)).get();
       if (!existing) throw new NotFoundError(`Preset ${id} not found`);
+
+      // c61: if changing trigger, check uniqueness + builtin conflict (exclude self)
+      if (body.trigger !== undefined) {
+        const conflict = checkTriggerConflict(body.trigger, id);
+        if (conflict) {
+          set.status = 409;
+          return { error: conflict };
+        }
+      }
 
       const updateData: Record<string, unknown> = {};
       if (body.trigger !== undefined) updateData.trigger = body.trigger;

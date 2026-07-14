@@ -88,10 +88,15 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
   })
   .patch(
     '/templates/:id',
-    ({ params, body }) => {
+    ({ params, body, set }) => {
       const id = Number(params.id);
       const existing = db().select().from(templates).where(eq(templates.id, id)).get();
       if (!existing) throw new NotFoundError(`Template ${id} not found`);
+      // c61: builtin templates cannot be modified (v1 service.py:110-111)
+      if (existing.isBuiltin) {
+        set.status = 409;
+        return { error: 'Built-in templates cannot be modified' };
+      }
 
       const updateData: Record<string, unknown> = {};
       if (body.name !== undefined) updateData.name = body.name;
@@ -112,6 +117,11 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
     const id = Number(params.id);
     const existing = db().select().from(templates).where(eq(templates.id, id)).get();
     if (!existing) throw new NotFoundError(`Template ${id} not found`);
+    // c61: builtin templates cannot be deleted (v1 service.py:126-127)
+    if (existing.isBuiltin) {
+      set.status = 409;
+      return { error: 'Built-in templates cannot be deleted' };
+    }
     db().delete(templates).where(eq(templates.id, id)).run();
     set.status = 204;
     return '';
