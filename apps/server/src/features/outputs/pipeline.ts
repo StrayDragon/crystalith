@@ -163,7 +163,7 @@ async function finishPipeline(
     object = await generateOutputByType(input.model, input.type, context, input.prompt);
   } catch (error) {
     // Fallback content on generation failure (v1 output_postprocess.py:15-99)
-    object = generateFallbackContent(input.type, error);
+    object = generateFallbackContent(input.type, input.prompt, error);
   }
 
   // c50: LLM repair loop (v1 output_graph.py:595-719 PostprocessOutput node).
@@ -255,51 +255,114 @@ function postprocessOutput(object: unknown, type: string): PostprocessResult {
 }
 
 /**
- * c42: per-type field-level backfill (v1 output_graph.py:290-375).
- * Ensures required arrays/objects exist for each type instead of whole-object replacement.
+ * c59: per-type nested structure backfill (v1 ensure_minimum_content,
+ * output_postprocess.py:102-189). Unlike the old shallow ensureArray, this
+ * backfills nested {text, citations:[1]} structures so incomplete content
+ * carries a citation anchor instead of leaving bare [].
  */
-function ensureMinimumContentFields(
+export function ensureMinimumContentFields(
   content: Record<string, unknown>,
   type: string,
 ): Record<string, unknown> {
-  const ensureArray = (key: string): void => {
+  const ensureArray = (key: string): unknown[] => {
     if (!Array.isArray(content[key]) || (content[key] as unknown[]).length === 0) {
       content[key] = [];
     }
+    return content[key] as unknown[];
   };
   const ensureString = (key: string, fallback = ''): void => {
     if (typeof content[key] !== 'string' || !content[key]) {
       content[key] = fallback;
     }
   };
+  // A leaf entry that should carry a citation anchor
+  const leaf = (text: string): Record<string, unknown> => ({ text, citations: [1] });
 
   switch (type) {
-    case 'FAQ':
-    case 'BULLETS':
-      ensureArray('items');
-      break;
-    case 'TIMELINE':
-      ensureArray('events');
-      break;
-    case 'QUIZ':
-      ensureArray('questions');
-      break;
-    case 'GUIDE':
-      ensureArray('modules');
-      ensureArray('examples');
-      ensureArray('exercises');
-      break;
-    case 'BRIEFING':
-      ensureArray('sections');
-      ensureArray('points');
-      break;
-    case 'MINDMAP':
-      if (!content.root || typeof content.root !== 'object') {
-        content.root = { title: '', children: [] };
+    case 'FAQ': {
+      const items = ensureArray('items');
+      for (const item of items) {
+        if (item && typeof item === 'object' && !('citations' in item)) {
+          (item as Record<string, unknown>).citations = [1];
+        }
       }
       break;
+    }
+    case 'BULLETS': {
+      const items = ensureArray('items');
+      for (const item of items) {
+        if (item && typeof item === 'object' && !('citations' in item)) {
+          (item as Record<string, unknown>).citations = [1];
+        }
+      }
+      break;
+    }
+    case 'TIMELINE': {
+      const events = ensureArray('events');
+      for (const ev of events) {
+        if (ev && typeof ev === 'object' && !('citations' in ev)) {
+          (ev as Record<string, unknown>).citations = [1];
+        }
+      }
+      break;
+    }
+    case 'QUIZ': {
+      const questions = ensureArray('questions');
+      for (const q of questions) {
+        if (q && typeof q === 'object' && !('citations' in q)) {
+          (q as Record<string, unknown>).citations = [1];
+        }
+      }
+      break;
+    }
+    case 'GUIDE': {
+      const modules = ensureArray('modules');
+      for (const mod of modules) {
+        if (mod && typeof mod === 'object') {
+          const m = mod as Record<string, unknown>;
+          // backfill objective {text, citations:[1]}
+          if (!m.objective || typeof m.objective !== 'object') {
+            m.objective = leaf(String(m.title ?? ''));
+          } else {
+            const obj = m.objective as Record<string, unknown>;
+            if (!Array.isArray(obj.citations)) obj.citations = [1];
+          }
+          // backfill key_points with at least one entry
+          if (!Array.isArray(m.key_points) || (m.key_points as unknown[]).length === 0) {
+            m.key_points = [leaf(String(m.title ?? ''))];
+          }
+          if (!Array.isArray(m.examples)) m.examples = [];
+          if (!Array.isArray(m.exercises)) m.exercises = [];
+        }
+      }
+      break;
+    }
+    case 'BRIEFING': {
+      const sections = ensureArray('sections');
+      for (const sec of sections) {
+        if (sec && typeof sec === 'object') {
+          const s = sec as Record<string, unknown>;
+          if (!Array.isArray(s.points) || (s.points as unknown[]).length === 0) {
+            s.points = [leaf(String(s.heading ?? ''))];
+          }
+        }
+      }
+      break;
+    }
+    case 'MINDMAP': {
+      if (!content.root || typeof content.root !== 'object') {
+        content.root = { label: '', citations: [], children: [] };
+      }
+      const root = content.root as Record<string, unknown>;
+      if (!Array.isArray(root.citations)) root.citations = [1];
+      if (!Array.isArray(root.children) || (root.children as unknown[]).length === 0) {
+        root.children = [{ label: String(root.label ?? ''), citations: [1], children: [] }];
+      }
+      break;
+    }
     case 'PARAGRAPH':
       ensureString('text');
+      if (!Array.isArray(content.citations)) content.citations = [1];
       break;
     case 'STRUCTURED':
       ensureArray('bullets');
@@ -377,12 +440,19 @@ function isContentEmpty(content: Record<string, unknown>, type: string): boolean
 
 /** Generate fallback content matching v1 output_graph.py:198-287 exactly.
  * Uses friendly error note (not raw exception), `label` for MINDMAP,
- * `citations: []` on every leaf so mapCitationsIntoContent can attach fallback. */
-function generateFallbackContent(type: string, error?: unknown): Record<string, unknown> {
+ * `citations: []` on every leaf so mapCitationsIntoContent can attach fallback.
+ *
+ * c59: title/question text comes from the user's `prompt` (truncated), NOT
+ * error.message — v1 uses the user's prompt (output_postprocess.py:16). */
+export function generateFallbackContent(
+  type: string,
+  prompt?: string,
+  _error?: unknown,
+): Record<string, unknown> {
   const errorNote = '⚠️ AI 模型生成失败，请稍后重试或使用更强大的模型。';
   const _fallback = true;
-  // Use prompt as title when available (v1 uses the user's prompt)
-  const title = error instanceof Error ? error.message.slice(0, 80) : '';
+  // c59: use user prompt as visible title (v1 _fallback_output(prompt, ...))
+  const title = (prompt || '').trim().slice(0, 200);
 
   switch (type) {
     case 'FAQ':
@@ -608,16 +678,15 @@ function sanitizeCitationList(
 }
 
 /**
- * c50: mark the content tree with `_postprocessed: true` when sanitization or
- * fallback occurred (v1 output_postprocess.py:377 sets it on all content).
- * `_warnings` carries the human-readable list of what was postprocessed.
+ * c59: mark the content tree with `_postprocessed: true` unconditionally
+ * (v1 output_postprocess.py:377 sets it on ALL content regardless of warnings).
+ * `_warnings` carries the human-readable list (may be empty).
  */
-function markPostprocessed(content: unknown, postprocessed: boolean, warnings: string[]): unknown {
-  if (!postprocessed || warnings.length === 0) return content;
+function markPostprocessed(content: unknown, _postprocessed: boolean, warnings: string[]): unknown {
   if (content && typeof content === 'object' && !Array.isArray(content)) {
     const result = { ...(content as Record<string, unknown>) };
     result._postprocessed = true;
-    result._warnings = warnings;
+    if (warnings.length > 0) result._warnings = warnings;
     return result;
   }
   return content;
