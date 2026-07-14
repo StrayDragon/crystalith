@@ -199,26 +199,27 @@ snap <target>
 
 ## 统计
 
-| 域         | 总数   | ✅     | ⬜     | ❌    |
-| ---------- | ------ | ------ | ------ | ----- |
-| A. 冒烟    | 4      | 4      | 0      | 0     |
-| B. 对话    | 4      | 3      | 1      | 0     |
-| C. Sources | 5      | 2      | 3      | 0     |
-| D. 输出    | 6      | 1      | 5      | 0     |
-| E. 研究    | 6      | 1      | 5      | 0     |
-| F. 分析    | 2      | 0      | 2      | 0     |
-| G. 错误    | 3      | 0      | 3      | 0     |
-| **总计**   | **30** | **11** | **19** | **0** |
+| 域         | 总数   | ✅     | ⬜    | ❌    |
+| ---------- | ------ | ------ | ----- | ----- |
+| A. 冒烟    | 4      | 4      | 0     | 0     |
+| B. 对话    | 4      | 4      | 0     | 0     |
+| C. Sources | 5      | 2      | 3     | 0     |
+| D. 输出    | 6      | 4      | 2     | 0     |
+| E. 研究    | 6      | 4      | 2     | 0     |
+| F. 分析    | 2      | 2      | 0     | 0     |
+| G. 错误    | 4      | 4      | 0     | 0     |
+| **总计**   | **31** | **24** | **7** | **0** |
 
 ---
 
 ## 已知问题（本会话发现）
 
-| #   | 描述                                                                       | 状态                                        |
-| --- | -------------------------------------------------------------------------- | ------------------------------------------- |
-| K1  | `@ai-sdk/openai v4` 默认用 Responses API，tufa 网关只支持 Chat Completions | ✅ `provider: openai-compatible`            |
-| K2  | `strategy_configs` 表不在 drizzle migration 中                             | ✅ `db/index.ts` CREATE TABLE IF NOT EXISTS |
-| K3  | QA body 字段 `question` vs `content` 不一致                                | ✅ 兼容两者                                 |
-| K4  | Output type 枚举需大写 `FAQ` vs `faq`                                      | ✅ 自动 `.toUpperCase()`                    |
-| K5  | Citation 格式 `[Source: N]` 不匹配前端 `[N]`                               | ✅ prompt 改为 `[N]`                        |
-| K6  | `supportsStructuredOutputs` 默认 false 导致降级到 `json_object`            | ✅ config 设为 true                         |
+| #   | 描述                                                                       | 状态                                         |
+| --- | -------------------------------------------------------------------------- | -------------------------------------------- |
+| K1  | `@ai-sdk/openai v4` 默认用 Responses API，tufa 网关只支持 Chat Completions | ✅ `provider: openai-compatible`             |
+| K2  | `strategy_configs` 表不在 drizzle migration 中                             | ✅ `db/index.ts` CREATE TABLE IF NOT EXISTS  |
+| K3  | QA body 字段 `question` vs `content` 不一致                                | ✅ 兼容两者                                  |
+| K4  | Output type 枚举需大写 `FAQ` vs `faq`                                      | ✅ 自动 `.toUpperCase()`                     |
+| K5  | Citation 格式 `[Source: N]` 不匹配前端 `[N]`                               | ✅ prompt 改为 `[N]`                         |
+| K6  | `supportsStructuredOutputs` 默认 false 导致降级到 `json_object`            | ✅ config 设为 true                          |
+| K7  | Research `topic` 字段收到 `goal` 或空值时报 `undefined`                    | ✅ 兼容 goal 别名 + 默认 fallback "深度研究" |

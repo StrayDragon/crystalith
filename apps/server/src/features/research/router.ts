@@ -305,7 +305,11 @@ function inferResumeState(sessionId: number): {
 export const researchRouter = new Elysia({ prefix: '/v2' })
   // Start a new research session
   .post('/research', async ({ body, set }) => {
-    const { topic, notebook_id, max_iterations } = body as Record<string, unknown>;
+    const raw = body as Record<string, unknown>;
+    // Accept both 'topic' (canonical) and 'goal' (some clients' convention)
+    const topic = String(raw.topic ?? raw.goal ?? '').trim() || '深度研究';
+    const notebook_id = raw.notebook_id;
+    const max_iterations = raw.max_iterations;
     const notebookId = Number(notebook_id);
 
     const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
@@ -315,7 +319,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       .insert(researchSessions)
       .values({
         notebookId,
-        topic: String(topic),
+        topic,
         status: 'planning',
         maxIterations: Number(max_iterations ?? 4),
       })
