@@ -6,14 +6,14 @@ import {
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { copyToClipboard } from '../../../../../shared/clipboard';
+import { useLayer } from '../../../../../shared/layer';
+import { toast } from '../../../../../shared/toast';
 import type {
   ExtractorInfoResponse as ExtractorInfo,
   NotebookExtractorsPolicy,
   PatchNotebookExtractorsPolicyRequest,
-} from '../../../../../api/generated';
-import { copyToClipboard } from '../../../../../shared/clipboard';
-import { useLayer } from '../../../../../shared/layer';
-import { toast } from '../../../../../shared/toast';
+} from '../../../../api/shared-types';
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
 
 interface ExtractorPolicyDialogProps {

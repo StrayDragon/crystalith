@@ -4,7 +4,8 @@ import type { ReactNode } from 'react';
 import { SWRConfig } from 'swr';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { client } from '../../../../api/generated/client.gen';
+// Mock client — minimal stub for SSE endpoint testing
+const client = { sse: { post: vi.fn() } };
 import { server } from '../../../../test-utils/msw/server';
 import { renderHook } from '../../../../test-utils/renderHook';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';

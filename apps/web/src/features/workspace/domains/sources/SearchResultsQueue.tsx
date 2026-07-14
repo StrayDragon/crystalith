@@ -29,7 +29,7 @@ import {
 import { useState, useCallback, useMemo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 
-import type { ExtractorInfoResponse as ExtractorInfo } from '../../../../api/generated';
+import type { ExtractorInfoResponse as ExtractorInfo } from '../../../../api/shared-types';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import SearchResultCard, { type SearchResultItem } from './SearchResultCard';
 import type { SearchQueueItem } from './useSources';

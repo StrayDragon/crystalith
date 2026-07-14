@@ -6,8 +6,8 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api } from '../../../../../api/eden';
-import type { CitationContextResponse } from '../../../../../api/generated';
 import { useLayer } from '../../../../../shared/layer';
+import type { CitationContextResponse } from '../../../../api/shared-types';
 import { useWorkspaceStore } from '../../state/workspaceStore';
 import type { Citation } from '../../types';
 

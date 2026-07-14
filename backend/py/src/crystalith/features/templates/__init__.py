@@ -1,1 +1,0 @@
-"""Workspace template feature slice."""

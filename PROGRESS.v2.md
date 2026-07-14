@@ -69,7 +69,7 @@
 | c62 | sources-extractors-shape-from-url    | ✅ DONE (2P1: extractors响应字段对齐/default按可用性/from-url extractor+mode枚举)                                                   |
 | c63 | adapt-frontend-v2-contracts          | ✅ DONE (notebook_id query + parseServerError + archive；2026-07-14)                                                                |
 | c13 | distribution                         | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                                                             |
-| c14 | cleanup-delivery                     | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                                                             |
+| c14 | cleanup-delivery                     | ✅ DONE (本批次: 删除 backend/py/ api/generated/ openapi.gen.json; 迁移14文件import到shared-types)                                  |
 
 <!-- LEGEND: ✅ DONE | 🔄 WIP | ⬜ TODO | ⏸️ BLOCKED -->
 

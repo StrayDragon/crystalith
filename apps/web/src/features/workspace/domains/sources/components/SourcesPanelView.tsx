@@ -38,7 +38,7 @@ import type {
   QaMessage,
   SourceFromUrlMode,
   SourceTagRead,
-} from '../../../../../api/generated';
+} from '../../../../../api/shared-types';
 import { copyToClipboard } from '../../../../../shared/clipboard';
 import ConfirmPopover from '../../../../../shared/ConfirmPopover';
 import { t } from '../../../../../shared/i18n';

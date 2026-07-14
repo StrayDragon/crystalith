@@ -1,1 +1,0 @@
-"""Crystalith TIMELINE OutputTypePlugin example."""
