@@ -7,7 +7,7 @@
 - `src/features/workspace/` — main workspace feature
   - `domains/` — business domains (notebooks, sessions, messages, analysis, sources, outputs, refine, studio, research)
   - `layout/`, `shared/`, `app/` — workspace scaffolding
-- `src/api/` — API client layer (eden RPC primary; `generated/` types until c14)
+- `src/api/` — API client layer (eden RPC primary; types in `shared-types.ts`)
 - `src/shared/` — shared utilities, Layer system, types
 
 ## Build, Test, and Development Commands
@@ -30,8 +30,8 @@ bun preview              # Preview production build
 ## API Client
 
 - **Primary**: Elysia eden RPC via `src/api/eden.ts` (type-safe, no codegen)
-- **Legacy**: `src/api/generated/` — still used for some **type-only** imports; runtime calls should go through eden
-- **c14**: migrate remaining generated types → `@crystalith/shared` / eden-inferred types, then delete `generated/` + OpenAPI codegen chain
+- **Legacy removal (c14)**: `src/api/generated/` deleted; types migrated to `shared-types.ts`
+
 
 ## Coding Style & Naming Conventions
 
