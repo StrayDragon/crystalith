@@ -110,6 +110,20 @@ models:
         temperature: 0.7
         max_tokens: 4096
 
+    # -------------------- OpenAI-compatible gateway (chat) --------------------
+    # NOTE: @ai-sdk/openai v4 uses Responses API by default. Gateway models
+    # (tufa, coral) only support Chat Completions API, so they use
+    # 'openai-compatible' provider (createOpenAICompatible).
+    - id: "deepseek-chat-via-gateway"
+      provider: "openai-compatible"
+      model: "deepseek-chat"
+      display_name: "DeepSeek Chat (gateway)"
+      description: "DeepSeek chat via OpenAI-compatible gateway (Chat Completions API)"
+      roles: [chat, edit]
+      capabilities: [tool_use]
+      provider_config:
+        <<: *chat_gateway
+
     # -------------------- OpenAI (embedding) --------------------
     - id: "text-embedding-3-small"
       provider: "openai"
@@ -151,7 +165,7 @@ models:
         <<: *embed_gateway
 
     - id: "gateway-chat-light"
-      provider: "openai"
+      provider: "openai-compatible"
       model: "{{ env.CL_CHAT_LIGHT_MODEL | default('Qwen3.5-0.8B-MLX-bf16') }}"
       display_name: "Gateway Chat (light)"
       description: "Lightweight chat via OpenAI-compatible gateway"
@@ -164,7 +178,7 @@ models:
         max_tokens: 4096
 
     - id: "gateway-chat-primary"
-      provider: "openai"
+      provider: "openai-compatible"
       model: "{{ env.CL_CHAT_MODEL | default('Qwen3.6-35B-A3B/UD-Q5_K_XL-think-coding') }}"
       display_name: "Gateway Chat (primary)"
       description: "Primary chat via OpenAI-compatible gateway"
