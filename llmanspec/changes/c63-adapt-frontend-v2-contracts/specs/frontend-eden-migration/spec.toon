@@ -1,0 +1,7 @@
+kind: llman.sdd.delta
+ops[2]{op,req_id,title,statement,from,to,name}:
+  add_requirement,"frontend-sources-must-pass-notebook-id-query","Frontend sources single-item calls MUST pass notebook_id query for ownership check","前端调用 sources 单 source 路由（GET /sources/:id、DELETE /sources/:id、POST /sources/:id/re-embed、GET /sources/:id/chunks）MUST 传递 `notebook_id` query 参数以激活服务端归属校验。MUST NOT 省略此参数导致归属校验被跳过（服务端在 notebook_id 缺失时跳过检查，形成跨 notebook 访问漏洞）。notebook_id 从 workspace store 的 activeNotebookId 获取。",null,null,null
+  add_requirement,"frontend-error-envelope-must-use-shared-parser","Frontend eden error handling MUST use shared parseServerError helper","前端 eden treaty 调用点的错误处理 MUST 使用共享 `parseServerError(error)` helper 解析 ErrorEnvelope（errorCode/message/details/status），MUST NOT 在各调用点 inline cast `{ errorCode?, details?, message? }` 导致逻辑重复与漂移。",null,null,null
+op_scenarios[2]{req_id,id,given,when,then}:
+  "frontend-sources-must-pass-notebook-id-query","delete-passes-notebook-id","a user deletes a source in notebook A","the frontend calls DELETE /sources/:id","the request MUST include ?notebook_id=A so the server verifies ownership"
+  "frontend-error-envelope-must-use-shared-parser","dedup-error-parsed-via-helper","an eden call returns an error with errorCode SOURCE_DEDUP_HIT","the frontend parses the error","it MUST use parseServerError to extract errorCode rather than inline casting"

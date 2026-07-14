@@ -67,6 +67,7 @@
 | c60 | qa-contextstats-accounting           | ✅ DONE (2P1: system_tokens真实计数/max_tokens读配置)                                                                               |
 | c61 | templates-presets-builtin-protection | ✅ DONE (2P1: templates is_builtin保护/presets trigger唯一性+builtin冲突)                                                          |
 | c62 | sources-extractors-shape-from-url    | ✅ DONE (2P1: extractors响应字段对齐/default按可用性/from-url extractor+mode枚举)                                                   |
+| c63 | adapt-frontend-v2-contracts          | 🔄 PROPOSED (前端适配: sources notebook_id query/ErrorEnvelope统一解析/陈旧类型清理; extractors/SSE/OutputRead审计确认已对齐)       |
 | c13 | distribution                         | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                                                             |
 | c14 | cleanup-delivery                     | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                                                             |
 
