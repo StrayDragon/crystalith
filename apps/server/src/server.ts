@@ -26,6 +26,7 @@ import { templatesRouter } from './features/templates/router.ts';
 import { workspaceRouter } from './features/workspace/router.ts';
 import { generateOpenApiDocument, registerApiDoc, type OpenApiRoute } from './openapi.ts';
 import { strategiesRouter } from './rag/router.ts';
+import { getOptionalServices } from './shared/config.ts';
 import { TaskQueue } from './shared/queue.ts';
 
 // ---------------------------------------------------------------------------
@@ -83,6 +84,45 @@ apiDocs.push({
 export function createApp() {
   return new Elysia()
     .get('/health', () => ({ status: 'ok', version: '2.0.0-dev' }))
+    .get('/health/dependencies', () => {
+      const opt = getOptionalServices();
+      return {
+        status: 'ok',
+        generated_at: new Date().toISOString(),
+        last_probe: null,
+        core: {
+          backend: { service: 'api', healthy: true },
+          frontend: {
+            service: 'web',
+            healthy: null,
+            note: 'frontend health is validated through reverse-proxy route /health',
+          },
+        },
+        optional: {
+          storage_chroma: {
+            service: 'Chroma (Vector Store)',
+            enabled: opt.chroma.enabled,
+            endpoint: opt.chroma.enabled ? opt.chroma.endpoint : null,
+            status: opt.chroma.enabled ? 'unknown' : 'disabled',
+            healthy: null,
+          },
+          cache_redis: {
+            service: 'Redis (Cache)',
+            enabled: false,
+            endpoint: null,
+            status: 'disabled',
+            healthy: null,
+          },
+          search_searxng: {
+            service: 'SearXNG (Search)',
+            enabled: opt.searxng.enabled,
+            endpoint: opt.searxng.enabled ? opt.searxng.endpoint : null,
+            status: opt.searxng.enabled ? 'unknown' : 'disabled',
+            healthy: null,
+          },
+        },
+      };
+    })
     .get('/openapi.json', () => generateOpenApiDocument())
     .get('/asyncapi.json', () => generateAsyncApiDocument())
 

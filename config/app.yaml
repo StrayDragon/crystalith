@@ -70,34 +70,30 @@ plugins:
 # Providers (use YAML anchors for reuse)
 # ----------------------------------------------------------------------------
 providers:
-  # OpenAI-compatible API
+  # OpenAI-compatible API (general-purpose: chat, embeddings via external API)
   openai_default: &openai_default
-    api_key: "{{ secret.OPENAI_API_KEY | default(env.OPENAI_API_KEY | default('')) }}"
-    # Optional override: set OPENAI_BASE_URL to use an OpenAI-compatible endpoint/proxy.
-    # When empty/unset, the OpenAI SDK default (https://api.openai.com/v1) is used.
-    base_url: "{{ env.OPENAI_BASE_URL | default('') }}"
+    api_key: "{{ secret.CL_CHAT_API_KEY | default(env.CL_CHAT_API_KEY | default('')) }}"
+    base_url: "{{ env.CL_CHAT_API_BASE | default('http://127.0.0.1:50256/v1') }}"
 
-  # OpenAI-compatible embedding gateway (OMLX / local bridge default :50256)
-  # Keys: secret/env OMLX_OPENAI_API_KEY; base: env OMLX_OPENAI_API_BASE
+  # OpenAI-compatible embedding gateway (dedicated embedding server, e.g. OMLX)
   embed_gateway: &embed_gateway
-    api_key: "{{ secret.OMLX_OPENAI_API_KEY | default(env.OMLX_OPENAI_API_KEY | default('sk-local')) }}"
-    base_url: "{{ env.OMLX_OPENAI_API_BASE | default('http://127.0.0.1:50256/v1') }}"
+    api_key: "{{ secret.CL_EMBEDDING_API_KEY | default(env.CL_EMBEDDING_API_KEY | default('sk-local')) }}"
+    base_url: "{{ env.CL_EMBEDDING_API_BASE | default('http://127.0.0.1:50256/v1') }}"
 
-  # OpenAI-compatible primary chat gateway (TUFA / local bridge default :50256)
-  # Keys: secret/env TUFA_OPENAI_API_KEY; base: env TUFA_OPENAI_API_HOST
+  # OpenAI-compatible primary chat gateway (routed via CL_CHAT_API_BASE by default)
   chat_gateway: &chat_gateway
-    api_key: "{{ secret.TUFA_OPENAI_API_KEY | default(env.TUFA_OPENAI_API_KEY | default('sk-local')) }}"
-    base_url: "{{ env.TUFA_OPENAI_API_HOST | default('http://127.0.0.1:50256/v1') }}"
+    api_key: "{{ secret.CL_CHAT_API_KEY | default(env.CL_CHAT_API_KEY | default('sk-local')) }}"
+    base_url: "{{ env.CL_CHAT_API_BASE | default('http://127.0.0.1:50256/v1') }}"
 
 # ----------------------------------------------------------------------------
 # Models (required)
 # ----------------------------------------------------------------------------
 models:
   defaults:
-    # Default chat: primary gateway (override: CRYSTALITH_DEFAULT_CHAT_MODEL=gateway-chat-light)
-    chat: "{{ env.CRYSTALITH_DEFAULT_CHAT_MODEL | default('gateway-chat-primary') }}"
-    # Default embedding: local gateway
-    embedding: "{{ env.CRYSTALITH_DEFAULT_EMBEDDING_MODEL | default('gateway-embedding') }}"
+    # Default chat model ID (override: CL_DEFAULT_CHAT_MODEL=gateway-chat-light)
+    chat: "{{ env.CL_DEFAULT_CHAT_MODEL | default('gateway-chat-primary') }}"
+    # Default embedding model ID
+    embedding: "{{ env.CL_DEFAULT_EMBEDDING_MODEL | default('gateway-embedding') }}"
 
   available:
     # -------------------- OpenAI (chat) --------------------
@@ -147,7 +143,7 @@ models:
     # -------------------- OpenAI-compatible gateways (env-driven) --------------------
     - id: "gateway-embedding"
       provider: "openai"
-      model: "{{ env.OMLX_OPENAI_DEFAULT_EMBEDDING_MODEL | default('bge-m3-mlx-8bit') }}"
+      model: "{{ env.CL_EMBEDDING_MODEL | default('bge-m3-mlx-8bit') }}"
       display_name: "Gateway Embedding"
       description: "Embedding via OpenAI-compatible gateway"
       roles: [embed]
@@ -156,7 +152,7 @@ models:
 
     - id: "gateway-chat-light"
       provider: "openai"
-      model: "{{ env.OMLX_OPENAI_DEFAULT_CHAT_MODEL | default('Qwen3.5-0.8B-MLX-bf16') }}"
+      model: "{{ env.CL_CHAT_LIGHT_MODEL | default('Qwen3.5-0.8B-MLX-bf16') }}"
       display_name: "Gateway Chat (light)"
       description: "Lightweight chat via OpenAI-compatible gateway"
       roles: [chat, edit]
@@ -169,7 +165,7 @@ models:
 
     - id: "gateway-chat-primary"
       provider: "openai"
-      model: "{{ env.TUFA_OPENAI_DEFAULT_CHATMODEL | default('Qwen3.6-35B-A3B/UD-Q5_K_XL-think-coding') }}"
+      model: "{{ env.CL_CHAT_MODEL | default('Qwen3.6-35B-A3B/UD-Q5_K_XL-think-coding') }}"
       display_name: "Gateway Chat (primary)"
       description: "Primary chat via OpenAI-compatible gateway"
       roles: [chat, edit]
@@ -246,9 +242,9 @@ context_window:
 # ----------------------------------------------------------------------------
 search:
   searxng:
-    # Empty host disables web search by default.
-    # Set host to enable SearXNG (endpoint_candidates removed — set host directly).
-    host: ""
+    # SearXNG instance URL. Override via CL_SEARXNG_HOST.
+    # Empty host disables web search.
+    host: "{{ env.CL_SEARXNG_HOST | default('') }}"
     timeout: 10
     max_results: 10
 
@@ -263,8 +259,8 @@ optional_services:
     timeout_s: 3
 
   searxng:
-    enabled: false
-    endpoint: "http://127.0.0.1:50201"
+    enabled: true
+    endpoint: "http://gateway.lan:50201"
     timeout_s: 10
 
 # ----------------------------------------------------------------------------

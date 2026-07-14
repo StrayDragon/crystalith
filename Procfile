@@ -14,6 +14,6 @@
 #
 # Requires: overmind + tmux on PATH.
 
-server: cd apps/server && bun run dev
+server: bun --watch apps/server/src/server.ts
 web: cd apps/web && bun run dev
 slidev: cd packages/crystalith-slidev && bun run dev

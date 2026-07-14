@@ -109,6 +109,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@crystalith/shared': path.resolve(__dirname, '../../packages/shared/src'),
+      '@crystalith-slidev': path.resolve(__dirname, '../../packages/crystalith-slidev/src'),
     },
     dedupe: ['react', 'react-dom'],
   },

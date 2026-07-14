@@ -19,8 +19,9 @@ dev:
     overmind start -N -c slidev -f Procfile
 
 # Start only the Elysia server
+# Starts from repo root so config/* paths resolve correctly.
 dev-server:
-    cd apps/server && bun dev
+    bun --watch apps/server/src/server.ts
 
 # Start only the frontend
 dev-web:

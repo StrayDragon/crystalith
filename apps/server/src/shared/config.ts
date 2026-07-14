@@ -11,6 +11,7 @@
 //
 // YAML anchors (&name / <<: *name) are handled natively by the `yaml` parser.
 import { readFileSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
 
 import {
   ModelsSettingsSchema,
@@ -23,8 +24,24 @@ import { z } from 'zod';
 
 import type { SsrfPolicy } from './net/url-safety.ts';
 
-export const CONFIG_PATH = process.env.CL_CONFIG_PATH ?? 'config/app.yaml';
-export const SECRET_PATH = process.env.CL_SECRET_PATH ?? 'config/secret.env';
+export function getConfigPath(): string {
+  return envValue('CL_CONFIG_PATH') ?? 'config/app.yaml';
+}
+export function getSecretPath(): string {
+  return envValue('CL_SECRET_PATH') ?? 'config/secret.env';
+}
+
+// Lazy init — resolve paths after env overlay is ready.
+let _configPath: string | null = null;
+let _secretPath: string | null = null;
+export function configPath(): string {
+  if (_configPath === null) _configPath = getConfigPath();
+  return _configPath;
+}
+export function secretPath(): string {
+  if (_secretPath === null) _secretPath = getSecretPath();
+  return _secretPath;
+}
 
 // ---------------------------------------------------------------------------
 // Secret + env loading
@@ -53,13 +70,36 @@ function parseDotenv(path: string): Record<string, string> {
 
 let _secrets: Record<string, string> | null = null;
 function secrets(): Record<string, string> {
-  if (_secrets === null) _secrets = parseDotenv(SECRET_PATH);
+  if (_secrets === null) _secrets = parseDotenv(secretPath());
   return _secrets;
 }
 
 let _envOverlay: Record<string, string> | null = null;
+/** Look up .env — try CWD first, then walk up to repo root. */
+function findDotenv(): string {
+  const cwd = process.cwd();
+  // Fast path: .env at CWD
+  if (existsSync('.env')) return '.env';
+  // Walk up from CWD to find repo root (has .git or package.json at top)
+  let dir = cwd;
+  for (let i = 0; i < 5; i++) {
+    const candidate = join(dir, '.env');
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return '.env'; // fallback
+}
+
+let _envPath: string | null = null;
+function envPath(): string {
+  if (_envPath === null) _envPath = findDotenv();
+  return _envPath;
+}
+
 function envOverlay(): Record<string, string> {
-  if (_envOverlay === null) _envOverlay = parseDotenv('.env');
+  if (_envOverlay === null) _envOverlay = parseDotenv(envPath());
   return _envOverlay;
 }
 
@@ -172,11 +212,12 @@ export interface AppConfig {
 let _config: AppConfig | null = null;
 
 /** Load + render + validate the config. Throws on invalid models section. */
-export function loadConfig(path: string = CONFIG_PATH): AppConfig {
-  if (!existsSync(path)) {
+export function loadConfig(path?: string): AppConfig {
+  const resolvedPath = path ?? configPath();
+  if (!existsSync(resolvedPath)) {
     return { models: { defaults: {}, available: [] }, raw: {} };
   }
-  const raw = readFileSync(path, 'utf-8');
+  const raw = readFileSync(resolvedPath, 'utf-8');
   const rendered = renderTemplates(raw);
   const parsed = parseYaml(rendered) as Record<string, unknown>;
 
@@ -381,4 +422,39 @@ export function getSearxngHost(): string {
 /** Completion options from `completion_options` config section (optional fields). */
 export function getCompletionOptions(): CompletionOptions {
   return parseSection(CompletionOptionsSchema, config().raw.completion_options);
+}
+
+// ---------------------------------------------------------------------------
+// Optional services config (used by /health/dependencies)
+// ---------------------------------------------------------------------------
+
+export interface OptionalServiceEntry {
+  enabled: boolean;
+  endpoint?: string;
+  timeout_s?: number;
+}
+
+export interface OptionalServicesConfig {
+  chroma: OptionalServiceEntry;
+  cache_redis?: OptionalServiceEntry;
+  searxng: OptionalServiceEntry;
+}
+
+/** Read optional_services config section. Returns defaults when absent. */
+export function getOptionalServices(): OptionalServicesConfig {
+  const raw = (config().raw.optional_services ?? {}) as Record<string, unknown>;
+  return {
+    chroma: {
+      enabled: (raw.chroma as Record<string, unknown>)?.enabled === true,
+      endpoint:
+        ((raw.chroma as Record<string, unknown>)?.endpoint as string) ?? 'http://localhost:8000',
+      timeout_s: ((raw.chroma as Record<string, unknown>)?.timeout_s as number) ?? 3,
+    },
+    searxng: {
+      enabled: (raw.searxng as Record<string, unknown>)?.enabled === true,
+      endpoint:
+        ((raw.searxng as Record<string, unknown>)?.endpoint as string) ?? 'http://127.0.0.1:50201',
+      timeout_s: ((raw.searxng as Record<string, unknown>)?.timeout_s as number) ?? 10,
+    },
+  };
 }
