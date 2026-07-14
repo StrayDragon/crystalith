@@ -2,7 +2,7 @@
 name: 'llman-sdd-propose'
 description: 'Create a new llman SDD change proposal with planning artifacts (proposal, delta specs, tasks) in one pass. Use when the user asks to define a formal change — especially for behavioral contract changes that modify MUST/SHALL requirements.'
 metadata:
-  version: '0.0.58'
+  version: '0.0.59'
 ---
 
 # LLMAN SDD Propose

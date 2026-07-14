@@ -2,7 +2,7 @@
 name: 'llman-sdd-graph'
 description: 'Visualize llman SDD change dependency relationships as a mermaid graph. Use to understand blocking and depends_on relationships for planning or inspection. Auxiliary tool — not part of the main implementation pipeline.'
 metadata:
-  version: '0.0.58'
+  version: '0.0.59'
 ---
 
 # LLMAN SDD Dependency Graph
