@@ -86,6 +86,11 @@ export default function OutputContent({ output }: OutputContentProps) {
     bundleRenderer(content, isFallback)
   ) : renderDescriptor ? (
     <GenericOutputRenderer content={content} renderDescriptor={renderDescriptor} />
+  ) : typeId === 'SLIDES' &&
+    content &&
+    typeof content === 'object' &&
+    'markdown' in (content as Record<string, unknown>) ? (
+    <SlidesMarkdownRenderer content={content as Record<string, unknown>} />
   ) : (
     <pre className="StructuredOutputRaw rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700 whitespace-pre-wrap dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200">
       {JSON.stringify(output.content ?? {}, null, 2)}
@@ -158,6 +163,93 @@ export default function OutputContent({ output }: OutputContentProps) {
         </Menu>
       </div>
       {body}
+    </div>
+  );
+}
+
+/**
+ * Render a SLIDES output as markdown with slide separators.
+ * Displays the Slidev markdown content with clear visual breaks between
+ * slides, instead of falling back to raw JSON (which was the default for
+ * SLIDES outputs that have no render_descriptor).
+ */
+function SlidesMarkdownRenderer({ content }: { content: Record<string, unknown> }) {
+  const markdown = typeof content.markdown === 'string' ? content.markdown : '';
+  const title = typeof content.title === 'string' ? content.title : '幻灯片';
+  const engine = typeof content.engine === 'string' ? content.engine : 'slidev';
+
+  if (!markdown) {
+    return (
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300">
+        该幻灯片输出没有 Markdown 内容。
+      </div>
+    );
+  }
+
+  // Split on slide separators (---) and strip frontmatter
+  const slides = markdown
+    .split(/\n---\n/)
+    .filter(Boolean)
+    .map((s) => s.trim());
+
+  // First block is usually frontmatter (YAML between --- delimiters)
+  const hasFrontmatter = slides.length > 0 && slides[0]?.startsWith('---\n');
+  const contentSlides = hasFrontmatter ? slides.slice(1) : slides;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
+        <span className="font-semibold">{title}</span>
+        <span>·</span>
+        <span>{engine}</span>
+        <span>·</span>
+        <span>{contentSlides.length} 页幻灯片</span>
+      </div>
+
+      <div className="space-y-4">
+        {contentSlides.map((slide, i) => {
+          // Extract title from first heading line
+          const lines = slide.split('\n');
+          const headingLine = lines.find((l) => l.startsWith('#'));
+          const slideTitle = headingLine ? headingLine.replace(/^#+\s*/, '') : `第 ${i + 1} 页`;
+
+          return (
+            <div
+              key={i}
+              className="rounded-xl border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
+            >
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-900 text-[10px] font-semibold text-white dark:bg-slate-600">
+                  {i + 1}
+                </span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                  {slideTitle}
+                </span>
+              </div>
+              <div className="space-y-1 text-sm text-gray-700 dark:text-slate-300">
+                {lines
+                  .filter((l) => !l.startsWith('#') && l.trim())
+                  .slice(0, 10)
+                  .map((line, j) => (
+                    <div key={j} className="flex gap-2">
+                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gray-300 dark:bg-slate-600" />
+                      <span>{line.replace(/^[-*]\s+/, '').trim()}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <details className="group rounded-xl border border-gray-200 bg-gray-50 dark:border-slate-700 dark:bg-slate-900/80">
+        <summary className="cursor-pointer px-4 py-2 text-xs font-semibold text-gray-600 dark:text-slate-400">
+          查看原始 Markdown
+        </summary>
+        <pre className="overflow-x-auto p-4 text-xs text-gray-700 dark:text-slate-300">
+          {markdown}
+        </pre>
+      </details>
     </div>
   );
 }
