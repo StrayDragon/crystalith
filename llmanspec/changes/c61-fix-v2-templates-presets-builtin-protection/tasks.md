@@ -21,4 +21,4 @@
 - [x] 4.1 `llman sdd validate c61-fix-v2-templates-presets-builtin-protection` 通过
 - [x] 4.2 `bun test` (server) 通过（275 pass / 0 fail）
 - [x] 4.3 `bun typecheck` (server) ✅
-- [ ] 4.4 `bun oxlint` 0 error
+- [x] 4.4 `bun oxlint` 0 error

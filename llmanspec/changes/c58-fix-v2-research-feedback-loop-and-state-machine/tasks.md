@@ -38,4 +38,4 @@
 - [x] 7.1 `llman sdd validate c58-fix-v2-research-feedback-loop-and-state-machine` 通过
 - [x] 7.2 `bun test` (server) 通过（261 pass / 0 fail）
 - [x] 7.3 `bun typecheck` (server) ✅
-- [ ] 7.4 `bun oxlint` 0 error
+- [x] 7.4 `bun oxlint` 0 error
