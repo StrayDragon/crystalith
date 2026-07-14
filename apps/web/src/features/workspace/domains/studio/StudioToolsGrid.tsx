@@ -204,7 +204,7 @@ export default function StudioToolsGrid({
           const isDisabled = !tool.enabled || !tool.outputType || !hasSelectedSources;
           const isSlidesTool = tool.outputType === 'SLIDES';
           const tone = (tool.tone as StudioTone) || 'slate';
-          const colors = TONE_COLORS[tone];
+          const colors = TONE_COLORS[tone] ?? TONE_COLORS.slate;
 
           const tooltipContent = !hasSelectedSources
             ? '请先选择来源'
