@@ -43,4 +43,4 @@
 - [x] 8.1 `llman sdd validate c57-fix-v2-sources-safety-and-diagnostics` 通过
 - [x] 8.2 `bun test` (server) 通过（281 pass / 0 fail）
 - [x] 8.3 `bun typecheck` (server) ✅
-- [ ] 8.4 `bun oxlint` 0 error
+- [x] 8.4 `bun oxlint` 0 error

@@ -28,4 +28,4 @@
 - [x] 5.1 `llman sdd validate c62-fix-v2-sources-extractors-shape-and-from-url-params` 通过
 - [x] 5.2 `bun test` (server) 通过（278 pass / 0 fail）
 - [x] 5.3 `bun typecheck` (server) ✅
-- [ ] 5.4 `bun oxlint` 0 error
+- [x] 5.4 `bun oxlint` 0 error
