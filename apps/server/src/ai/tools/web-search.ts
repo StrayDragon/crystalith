@@ -31,7 +31,7 @@ export interface WebSearchConfig {
 
 const DEFAULT_CONFIG: WebSearchConfig = {
   host: '',
-  timeoutMs: 10_000,
+  timeoutMs: 20_000,
   maxResults: 10,
 };
 
@@ -52,7 +52,10 @@ export async function searchWeb(
   const url = new URL('/search', host);
   url.searchParams.set('q', query);
   url.searchParams.set('format', 'json');
-  url.searchParams.set('safesearch', '1');
+  // c53: use reliable engines explicitly — SearXNG's default engine set may
+  // include rate-limited engines (Google, DuckDuckGo) that timeout.
+  // Bing and Wikipedia are consistently available.
+  url.searchParams.set('engines', 'bing,wikipedia,brave,google');
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
