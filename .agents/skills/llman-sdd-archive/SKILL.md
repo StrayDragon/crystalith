@@ -2,7 +2,7 @@
 name: 'llman-sdd-archive'
 description: 'Archive completed llman SDD changes — merge delta specs into main specs, validate, and guide the final commit. Use after verify reports all-clear. Supports single or batch archiving with full project validation.'
 metadata:
-  version: '0.0.58'
+  version: '0.0.59'
 ---
 
 # LLMAN SDD Archive
