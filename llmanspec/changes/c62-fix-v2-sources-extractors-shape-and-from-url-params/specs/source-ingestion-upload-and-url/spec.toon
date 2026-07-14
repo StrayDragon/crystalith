@@ -1,0 +1,9 @@
+kind: llman.sdd.delta
+ops[2]{op,req_id,title,statement,from,to,name}:
+  add_requirement,"extractors-response-must-align-v1-field-shape","Extractors response MUST align v1 field shape with diagnostics and availability-derived default","GET /extractors 响应的每个 extractor 项 MUST 包含诊断字段（type/enabled/available/display_name/description/priority/requires_api_key/requires_service 及不可用时的 error_code/message/recovery_hint），对齐 v1 ExtractorInfoResponse。default_extractor MUST 按可用性计算（首个 available 的 extractor），MUST NOT 硬编码。PATCH /extractors MUST 校验 mode ∈ {inherit_global, custom} 且 enabled_extractors 条目合法，非法值 MUST 返回 400。",null,null,null
+  add_requirement,"from-url-must-validate-extractor-and-mode-enum","from-url MUST accept extractor param and validate mode enum","from-url 端点 MUST 接受可选 extractor 参数（校验值 ∈ 已注册 extractor 集合，非法返回 400）并 MUST 对 mode 做枚举校验 {fetch, link}（默认 link，非法值返回 400 而非静默走 fetch）。link 模式 MUST 接受 snippet 字段用于构建内容。MUST NOT 把 mode 当自由字符串或忽略 extractor 指定。",null,null,null
+op_scenarios[4]{req_id,id,given,when,then}:
+  "extractors-response-must-align-v1-field-shape","extractor-has-diagnostics-fields","the client requests GET /extractors","the system returns the extractor list","each extractor item MUST contain type, enabled, available, description, and requires_service fields"
+  "extractors-response-must-align-v1-field-shape","default-derived-from-availability","jina is the first available extractor (readability is unavailable)","the system computes default_extractor","default_extractor MUST be 'jina' (first available) not hardcoded 'readability'"
+  "from-url-must-validate-extractor-and-mode-enum","invalid-mode-rejected","a from-url request has mode='invalid'","the system validates the request","the system MUST return 400 (not silently treat as fetch)"
+  "from-url-must-validate-extractor-and-mode-enum","extractor-param-validated","a from-url request specifies extractor='nonexistent'","the system validates the request","the system MUST return 400"

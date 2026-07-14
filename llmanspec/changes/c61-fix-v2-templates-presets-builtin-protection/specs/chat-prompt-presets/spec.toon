@@ -1,0 +1,6 @@
+kind: llman.sdd.delta
+ops[1]{op,req_id,title,statement,from,to,name}:
+  add_requirement,"preset-trigger-must-be-unique-and-not-shadow-builtin","Custom preset trigger MUST be unique and must not shadow built-in presets","custom prompt preset 的 trigger MUST 唯一（不得与已有 custom preset 的 trigger 重复）且 MUST NOT 与 built-in preset 的 trigger 冲突（对齐 v1 prompt_presets/service.py:74-85,101-106）。POST 创建与 PATCH 更新时 MUST 执行冲突检查，冲突时 MUST 返回 409。MUST NOT 允许创建重复或 shadow builtin 的 trigger 导致 /prompt:<trigger> 解析歧义。",null,null,null
+op_scenarios[2]{req_id,id,given,when,then}:
+  "preset-trigger-must-be-unique-and-not-shadow-builtin","duplicate-custom-trigger-rejected","a custom preset with trigger 'summary' already exists","a POST creates another preset with trigger 'summary'","the system MUST return 409 Conflict"
+  "preset-trigger-must-be-unique-and-not-shadow-builtin","builtin-shadow-rejected","a built-in preset has trigger 'stats'","a POST creates a custom preset with trigger 'stats'","the system MUST return 409 Conflict"

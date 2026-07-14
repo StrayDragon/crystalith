@@ -1,0 +1,6 @@
+kind: llman.sdd.delta
+ops[1]{op,req_id,title,statement,from,to,name}:
+  add_requirement,"connector-import-must-respect-dedup-config","Connector import MUST respect global dedup config gate","Source connector 导入（snapshot apply / import-scope）MUST 遵循全局 dedup 配置门控：当 `source_ingestion.dedup.enabled` 为 false 时，MUST NOT 复用已有 source（总是创建新 source）；为 true 时 MAY 复用。MUST NOT 无条件执行 dedup 检查而忽略配置。",null,null,null
+op_scenarios[2]{req_id,id,given,when,then}:
+  "connector-import-must-respect-dedup-config","dedup-disabled-creates-new","the dedup config is set to enabled=false","a connector imports an entry that matches an existing source","the system MUST create a new source instead of reusing the existing one"
+  "connector-import-must-respect-dedup-config","dedup-enabled-may-reuse","the dedup config is set to enabled=true","a connector imports an entry that matches an existing source","the system MAY reuse the existing source (dedup check runs)"
