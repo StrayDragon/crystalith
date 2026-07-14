@@ -64,15 +64,6 @@ export interface ResearchSessionResponse {
 // biome-ignore lint/suspicious/noExplicitAny: dynamic v2 response shapes
 export type WorkspaceToolsDiagnostics = Record<string, any>;
 
-export interface ExtractorInfoResponse {
-  id: string;
-  name: string;
-  type: string;
-  enabled: boolean;
-  available: boolean;
-  description?: string;
-}
-
 export interface CitationContextResponse {
   chunk_id: number;
   source_id: number;

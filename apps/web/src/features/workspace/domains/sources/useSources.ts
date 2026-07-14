@@ -10,6 +10,7 @@ import type {
   PatchNotebookExtractorsPolicyRequest,
   SourceFromUrlMode,
 } from '../../../../api/generated';
+import { parseServerError } from '../../../../api/parseServerError';
 import { toast } from '../../../../shared/toast';
 import type { AsyncStatus } from '../../../../shared/types';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
@@ -265,18 +266,14 @@ export function useSources() {
               prev.map((item) => (item.id === queueId ? { ...item, status: 'success' } : item)),
             );
           } catch (error) {
-            const err = error as {
-              errorCode?: string;
-              details?: unknown;
-              message?: string;
-            };
-            if (err?.errorCode === 'SOURCE_DEDUP_HIT') {
-              const details = err.details as { existing_filename?: unknown } | null;
+            const { errorCode, details } = parseServerError(error);
+            if (errorCode === 'SOURCE_DEDUP_HIT') {
+              const dedupDetails = details as { existing_filename?: unknown } | null;
               const existingFilename =
-                details &&
-                typeof details.existing_filename === 'string' &&
-                details.existing_filename
-                  ? details.existing_filename
+                dedupDetails &&
+                typeof dedupDetails.existing_filename === 'string' &&
+                dedupDetails.existing_filename
+                  ? dedupDetails.existing_filename
                   : file.name;
               const reuse = window.confirm(
                 `检测到重复来源：${existingFilename}\n\n点击“确定”复用已有来源；点击“取消”仍创建新来源。`,
@@ -489,10 +486,12 @@ export function useSources() {
       }
       setRemoveState('loading');
       try {
-        await (api.v2.sources({ id: sourceId }).delete() as any).then((r: any) => {
-          if (r.error) throw r.error;
-          return r.data as any;
-        });
+        await (api.v2.sources({ id: sourceId }) as any)
+          .delete(null, { query: { notebook_id: activeNotebookId } })
+          .then((r: any) => {
+            if (r.error) throw r.error;
+            return r.data as any;
+          });
         await mutate();
         toast.success('来源删除成功');
         return true;
@@ -726,18 +725,16 @@ export function useSources() {
         await mutate();
         return result;
       } catch (error) {
-        const err = error as {
-          errorCode?: string;
-          details?: unknown;
-          message?: string;
-        };
-        if (err?.errorCode !== 'SOURCE_DEDUP_HIT') {
+        const { errorCode, details } = parseServerError(error);
+        if (errorCode !== 'SOURCE_DEDUP_HIT') {
           throw error;
         }
-        const details = err.details as { existing_filename?: unknown } | null;
+        const dedupDetails = details as { existing_filename?: unknown } | null;
         const existingFilename =
-          details && typeof details.existing_filename === 'string' && details.existing_filename
-            ? details.existing_filename
+          dedupDetails &&
+          typeof dedupDetails.existing_filename === 'string' &&
+          dedupDetails.existing_filename
+            ? dedupDetails.existing_filename
             : url;
         const reuse = window.confirm(
           `检测到重复来源：${existingFilename}\n\n点击“确定”复用已有来源；点击“取消”仍创建新来源。`,
@@ -843,7 +840,10 @@ export function useSources() {
         return;
       }
       try {
-        const { error: reErr } = (await api.v2.sources({ id: sourceId })['re-embed'].post()) as any;
+        const { error: reErr } = (await (api.v2.sources({ id: sourceId }) as any)['re-embed'].post(
+          null,
+          { query: { notebook_id: activeNotebookId } },
+        )) as any;
         if (reErr) throw reErr;
         toast.success('已重新嵌入来源');
         await mutate();

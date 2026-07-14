@@ -139,8 +139,10 @@ async function fetchSourceSummary(notebookId: number, sourceId: number) {
   return data as any;
 }
 
-async function fetchSourceChunks(sourceId: number) {
-  const { data, error } = await api.v2.sources({ id: sourceId }).chunks.get();
+async function fetchSourceChunks(notebookId: number, sourceId: number) {
+  const { data, error } = await api.v2
+    .sources({ id: sourceId })
+    .chunks.get({ query: { notebook_id: notebookId } } as any);
   if (error) throw error;
   return data as any;
 }
@@ -246,7 +248,7 @@ export default function SourceDetailDialog({
     // Call real API
     setIsChunksLoading(true);
     setChunksError('');
-    fetchSourceChunks(source.id)
+    fetchSourceChunks(notebookId, source.id)
       .then((response) => {
         chunksCache.set(source.id, response);
         setChunks(response);
