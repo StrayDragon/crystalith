@@ -23,6 +23,22 @@ export const OutputTypeSchema = z.enum([
 ]);
 export type OutputType = z.infer<typeof OutputTypeSchema>;
 
+// ---------------------------------------------------------------------------
+// Studio tone — color theme for output type cards (shared frontend/server)
+// ---------------------------------------------------------------------------
+
+/** Valid tone values that both server and frontend recognize. */
+export const StudioToneSchema = z.enum([
+  'slate',
+  'blue',
+  'green',
+  'rose',
+  'amber',
+  'teal',
+  'indigo',
+]);
+export type StudioTone = z.infer<typeof StudioToneSchema>;
+
 /** The 7 "tool" output types that have dedicated generators + renderers. */
 export const ToolOutputTypeSchema = z.enum([
   'FAQ',
