@@ -40,7 +40,12 @@ describe('c57: ingestion 4-stage error codes + recovery hints', () => {
       VECTOR_STORE_FAILED: '向量存储写入失败，请检查 sqlite-vec 扩展是否正常加载',
       INGESTION_FAILED: '摄取流程发生未知错误，请重试或检查日志',
     };
-    for (const code of ['PARSE_ERROR', 'EMBEDDING_FAILED', 'VECTOR_STORE_FAILED', 'INGESTION_FAILED']) {
+    for (const code of [
+      'PARSE_ERROR',
+      'EMBEDDING_FAILED',
+      'VECTOR_STORE_FAILED',
+      'INGESTION_FAILED',
+    ]) {
       expect(hints[code]).toBeDefined();
       expect(hints[code]!.length).toBeGreaterThan(0);
     }

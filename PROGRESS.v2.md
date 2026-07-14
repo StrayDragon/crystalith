@@ -61,11 +61,11 @@
 | c54 | error-envelope-contextstats-shared   | ✅ DONE (2026-07-13: sendError helper+ErrorCode映射/6 router改造/ContextStats→shared Zod SSOT; +3 reqs archived)                    |
 | c55 | context-window-real-compression      | ✅ DONE (2026-07-13: truncateToTokenBudget移植v1 _truncate_blocks/QA Step12真实截断; +1 req archived)                               |
 | c56 | studio-config-and-workspace-schema   | ✅ DONE (2026-07-13: generation_config区间展开/frontmatter v1 6-key/preference→retrieval/workspace config_schema; +3 reqs archived) |
-| c57 | sources-safety-and-diagnostics       | ✅ DONE (2P0+4P1: notebook归属校验/connector dedup门控/batch results/reembed清字段/ingestion 4-stage诊断/tag缓存失效)              |
+| c57 | sources-safety-and-diagnostics       | ✅ DONE (2P0+4P1: notebook归属校验/connector dedup门控/batch results/reembed清字段/ingestion 4-stage诊断/tag缓存失效)               |
 | c58 | research-feedback-loop-and-state     | ✅ DONE (5P1: suggested_queries反馈环/锁周期续期/finish真fallback/stream auto-resume/skip→analyze)                                  |
 | c59 | outputs-fallback-and-postprocess     | ✅ DONE (3P1: fallback标题用prompt/postprocess嵌套回填/_postprocessed无条件设)                                                      |
 | c60 | qa-contextstats-accounting           | ✅ DONE (2P1: system_tokens真实计数/max_tokens读配置)                                                                               |
-| c61 | templates-presets-builtin-protection | ✅ DONE (2P1: templates is_builtin保护/presets trigger唯一性+builtin冲突)                                                          |
+| c61 | templates-presets-builtin-protection | ✅ DONE (2P1: templates is_builtin保护/presets trigger唯一性+builtin冲突)                                                           |
 | c62 | sources-extractors-shape-from-url    | ✅ DONE (2P1: extractors响应字段对齐/default按可用性/from-url extractor+mode枚举)                                                   |
 | c63 | adapt-frontend-v2-contracts          | 🔄 PROPOSED (前端适配: sources notebook_id query/ErrorEnvelope统一解析/陈旧类型清理; extractors/SSE/OutputRead审计确认已对齐)       |
 | c13 | distribution                         | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                                                             |
@@ -167,14 +167,14 @@
 
 ### 本会话产出
 
-| Change  | 域                | P0 | P1 | 内容                                                                                                  | 状态             |
-| ------- | ----------------- | -- | -- | ----------------------------------------------------------------------------------------------------- | ---------------- |
-| **c57** | sources+connectors| 2  | 4  | notebook归属校验(4路由)/connector dedup门控/batch per-item results/reembed清字段/ingestion 4-stage诊断/tag缓存失效 | ✅ DONE `b3e911bd` |
-| **c58** | research          | 0  | 5  | suggested_queries反馈环/锁周期续期/finish真fallback(非哨兵)/stream auto-resume/skip→analyze            | ✅ DONE `dd2677f7` |
-| **c59** | outputs           | 0  | 3  | fallback标题用prompt(非error.message)/postprocess嵌套回填(per-type)/_postprocessed无条件设            | ✅ DONE `06aa6724` |
-| **c60** | qa                | 0  | 2  | ContextStats system_tokens真实计数(非0)/max_tokens读配置(非硬编码8000)                                | ✅ DONE `c59487af` |
-| **c61** | templates+presets | 0  | 2  | templates is_builtin保护(不可改删)/presets trigger唯一性+builtin冲突检查                              | ✅ DONE `5660e928` |
-| **c62** | sources           | 0  | 2  | extractors响应字段对齐v1/default按可用性计算/from-url extractor参数+mode枚举校验                      | ✅ DONE `4c291e68` |
+| Change  | 域                 | P0  | P1  | 内容                                                                                                               | 状态               |
+| ------- | ------------------ | --- | --- | ------------------------------------------------------------------------------------------------------------------ | ------------------ |
+| **c57** | sources+connectors | 2   | 4   | notebook归属校验(4路由)/connector dedup门控/batch per-item results/reembed清字段/ingestion 4-stage诊断/tag缓存失效 | ✅ DONE `b3e911bd` |
+| **c58** | research           | 0   | 5   | suggested_queries反馈环/锁周期续期/finish真fallback(非哨兵)/stream auto-resume/skip→analyze                        | ✅ DONE `dd2677f7` |
+| **c59** | outputs            | 0   | 3   | fallback标题用prompt(非error.message)/postprocess嵌套回填(per-type)/_postprocessed无条件设                         | ✅ DONE `06aa6724` |
+| **c60** | qa                 | 0   | 2   | ContextStats system_tokens真实计数(非0)/max_tokens读配置(非硬编码8000)                                             | ✅ DONE `c59487af` |
+| **c61** | templates+presets  | 0   | 2   | templates is_builtin保护(不可改删)/presets trigger唯一性+builtin冲突检查                                           | ✅ DONE `5660e928` |
+| **c62** | sources            | 0   | 2   | extractors响应字段对齐v1/default按可用性计算/from-url extractor参数+mode枚举校验                                   | ✅ DONE `4c291e68` |
 
 ### 实现要点
 
@@ -196,6 +196,7 @@
 ### 下一步
 
 **启动 bun dev 前后端联调实验**——所有 P0/P1 已清零，核心流水线（retrieval/QA/research/outputs/studio/sources）足够稳定。联调可验证：
+
 1. 前端 SSE + OutputRead + ErrorEnvelope + config_schema 契约适配
 2. sources `?notebook_id=` query 传递（前端调用需加此参数）
 3. extractors 响应新字段消费

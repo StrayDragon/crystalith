@@ -9,8 +9,8 @@ import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
 import { promptPresets } from '../../db/schema.ts';
-import { listPresets } from '../qa/presets.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { listPresets } from '../qa/presets.ts';
 
 /** c61: builtin preset trigger set for conflict detection. */
 const BUILTIN_TRIGGERS = new Set(listPresets().map((p) => p.name.toLowerCase()));

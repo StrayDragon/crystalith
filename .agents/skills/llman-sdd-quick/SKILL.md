@@ -2,7 +2,7 @@
 name: 'llman-sdd-quick'
 description: 'Handle small code changes that do NOT modify behavioral contracts — no MUST/SHALL changes, no spec modifications. Use for refactors, typo fixes, or perf tweaks. Switch to propose for anything affecting externally observable behavior.'
 metadata:
-  version: '0.0.57'
+  version: '0.0.58'
 ---
 
 # LLMAN SDD Quick Path

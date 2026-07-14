@@ -30,15 +30,18 @@ c57–c62 服务端变更后,前端需适配 3 类契约差异。经深度审计
 ## What Changes
 
 ### P0（安全/正确性,必须）
+
 1. **`useSources.ts`** — `removeSource`（:492）和 `handleReembedSource`（:846）的 eden 调用加 `{ query: { notebook_id: activeNotebookId } }`。
 2. **`SourceDetailDialog.tsx`** — `fetchSourceChunks` 签名加 `notebookId` 参数,eden 调用加 `{ query: { notebook_id: notebookId } }`（:143-146）。`notebookId` 已在 :156 可用。
 
 ### P1（一致性,建议）
+
 3. **`api/shared-types.ts`** — 删除陈旧重复的 `ExtractorInfoResponse`（:67-74）,消除与 `api/generated` 完整版的混淆。
 4. **新增 `api/parseServerError.ts`** — 抽取 eden 调用点的 inline `{ errorCode?, details?, message? }` cast 为共享 helper: `parseServerError(error): { errorCode?, message?, details?, status? }`。
 5. **`useSources.ts`** — `:268-274` 和 `:729-737` 的 inline cast 改用 `parseServerError`。
 
 ### P2（可选增强,后置）
+
 6. **（后置）studio config_schema 消费** — 若要服务端驱动 slides 配置,需新建组件渲染 `workspace/tools` SLIDES `config_schema` 的 options/defaults,替换 `useOutputQueue.ts:53-67` 的硬编码。标注为 future item,不在本 change 实现。
 
 ## Capabilities

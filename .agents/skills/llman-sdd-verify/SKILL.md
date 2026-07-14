@@ -2,7 +2,7 @@
 name: 'llman-sdd-verify'
 description: 'Verify that an implemented llman SDD change matches its specs, design, and tasks. Produces a report (CRITICAL / WARNING / SUGGESTION) comparing code to artifacts. Run after apply completes. If clean, the change is ready to archive.'
 metadata:
-  version: '0.0.57'
+  version: '0.0.58'
 ---
 
 # LLMAN SDD Verify
