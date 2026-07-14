@@ -23,7 +23,12 @@ import {
   getUploadMaxBytes,
 } from '../../shared/config.ts';
 import { ErrorCode, sendError } from '../../shared/errors.ts';
-import { extractUrl, listExtractorMetadata } from '../../shared/extraction/factory.ts';
+import {
+  extractUrl,
+  extractors,
+  getDefaultExtractor,
+  listExtractorMetadata,
+} from '../../shared/extraction/factory.ts';
 import { fetchWithRedirectGuard } from '../../shared/net/fetch-with-redirect-guard.ts';
 import { validateUrlForFetch, SsrfBlockedError } from '../../shared/net/url-safety.ts';
 import { uploadDedupKey, urlDedupKey } from './dedup.ts';
@@ -672,7 +677,29 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   // Ingest from URL (c39: dedup default prompt + link mode + SSRF fallback fix)
   .post('/notebooks/:nid/sources/from-url', async ({ params, body, query, set }) => {
     const nid = Number(params.nid);
-    const { url, mode, title } = body as { url: string; mode?: string; title?: string };
+    const { url, mode, title, extractor, snippet } = body as {
+      url: string;
+      mode?: string;
+      title?: string;
+      extractor?: string;
+      snippet?: string;
+    };
+    // c62: validate mode enum (v1 api_schemas.py:166-173: fetch|link, default link)
+    const normalizedMode = mode ?? 'link';
+    if (!['fetch', 'link'].includes(normalizedMode)) {
+      return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, 'Invalid mode', {
+        reason: `mode must be 'fetch' or 'link', got '${mode}'`,
+      });
+    }
+    // c62: validate extractor param if provided (v1 api_schemas.py:233-256)
+    if (extractor !== undefined) {
+      const validExtractors = Object.keys(extractors);
+      if (!validExtractors.includes(extractor)) {
+        return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, 'Invalid extractor', {
+          reason: `extractor must be one of: ${validExtractors.join(', ')}`,
+        });
+      }
+    }
     const dedupAction = ((query as Record<string, string> | undefined)?.dedup_action ??
       'prompt') as 'prompt' | 'reuse' | 'create_new';
 
@@ -707,9 +734,12 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     }
 
     // Link mode: create a lightweight source, then embed so it is searchable (v1 still embeds)
-    if (mode === 'link') {
+    if (normalizedMode === 'link') {
       const linkTitle = title ?? url;
-      const snippet = `# ${linkTitle}\n\n${url}\n\n来源链接（未抓取正文）`;
+      // c62: use snippet from body if provided (v1 api_ingest.py:381-390)
+      const content = snippet
+        ? `# ${linkTitle}\n\n${snippet}\n\n来源: ${url}`
+        : `# ${linkTitle}\n\n${url}\n\n来源链接（未抓取正文）`;
       const sourceRow = db()
         .insert(sources)
         .values({
@@ -728,7 +758,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         .values({
           sourceId: sourceRow.id,
           chunkIndex: 0,
-          text: snippet,
+          text: content,
           metadata: { url, type: 'link' },
         })
         .run();
@@ -755,7 +785,9 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
 
     // Default mode: fetch and extract URL content
     try {
-      const extracted = await extractUrl(url, {});
+      // c62: pass extractor order if specified (v1 preferred-extractor)
+      const order = extractor ? [extractor] : undefined;
+      const extracted = await extractUrl(url, {}, order);
       const buffer = new TextEncoder().encode(extracted.content);
       const result = await ingestSource({
         buffer,
@@ -815,16 +847,32 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       mode,
       enabled_extractors: enabledExtractors,
       extractors: allExtractors,
-      default_extractor: 'readability',
+      // c62: derive default by availability (v1), not hardcoded
+      default_extractor: getDefaultExtractor(config().raw),
       fallback_enabled: mode === 'inherit_global',
     };
   })
-  .patch('/notebooks/:nid/extractors', ({ params, body }) => {
+  .patch('/notebooks/:nid/extractors', ({ params, body, set }) => {
     const nid = Number(params.nid);
     const { mode, enabled_extractors } = body as {
       mode?: string;
       enabled_extractors?: string[];
     };
+    // c62: validate mode enum (v1 api_ingest.py:179-211)
+    if (mode !== undefined && !['inherit_global', 'custom'].includes(mode)) {
+      set.status = 400;
+      return { error: `Invalid mode '${mode}'; must be 'inherit_global' or 'custom'` };
+    }
+    // c62: validate enabled_extractors entries against registered set
+    const validExtractors = Object.keys(extractors);
+    if (
+      enabled_extractors !== undefined &&
+      !enabled_extractors.every((e) => validExtractors.includes(e))
+    ) {
+      const invalid = enabled_extractors.filter((e) => !validExtractors.includes(e));
+      set.status = 400;
+      return { error: `Unknown extractor(s): ${invalid.join(', ')}` };
+    }
     const existing = db()
       .select()
       .from(notebookExtractorPolicies)

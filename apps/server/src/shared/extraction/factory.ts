@@ -42,10 +42,14 @@ export class ExtractionError extends Error {
 
 export interface ExtractorMetadata {
   name: string;
+  type: string;
   available: boolean;
+  enabled: boolean;
   display_name: string;
+  description: string;
   priority: number;
   requires_api_key: boolean;
+  requires_service: boolean;
   recovery_hint: string | null;
 }
 
@@ -53,6 +57,12 @@ const DISPLAY_NAMES: Record<string, string> = {
   readability: 'Readability (built-in)',
   jina: 'Jina Reader',
   firecrawl: 'Firecrawl',
+};
+
+const DESCRIPTIONS: Record<string, string> = {
+  readability: '基于 @mozilla/readability 的本地正文提取，无需外部服务',
+  jina: 'Jina Reader API，适合 JS 重渲染页面',
+  firecrawl: 'Firecrawl API，浏览器渲染级提取',
 };
 
 const RECOVERY_HINTS: Record<string, string> = {
@@ -64,18 +74,33 @@ const RECOVERY_HINTS: Record<string, string> = {
  * List all extractors with availability + metadata (v1 ExtractorsListResponse).
  * Uses each extractor's isAvailable() against the real config object, not env vars.
  */
+/**
+ * List all extractors with availability + metadata (v1 ExtractorsListResponse).
+ * Uses each extractor's isAvailable() against the real config object, not env vars.
+ * c62: adds type/enabled/description/requires_service fields + derives default.
+ */
 export function listExtractorMetadata(config: unknown): ExtractorMetadata[] {
   return DEFAULT_ORDER.map((name, index) => {
     const ext = extractors[name];
     return {
       name,
+      type: name, // c62: v1 uses `type`; `name` is the v2 alias
       available: ext ? ext.isAvailable(config) : false,
+      enabled: true, // v2 has no per-extractor disable config (monolithic)
       display_name: DISPLAY_NAMES[name] ?? name,
+      description: DESCRIPTIONS[name] ?? '',
       priority: (index + 1) * 10,
       requires_api_key: name !== 'readability',
+      requires_service: name !== 'readability', // jina/firecrawl call external services
       recovery_hint: RECOVERY_HINTS[name] ?? null,
     };
   });
+}
+
+/** c62: derive default_extractor by availability (first available), v1 parity. */
+export function getDefaultExtractor(config: unknown): string {
+  const meta = listExtractorMetadata(config);
+  return meta.find((e) => e.available)?.name ?? 'readability';
 }
 
 /**
