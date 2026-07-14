@@ -44,6 +44,11 @@ export interface ResearchState {
    */
   searchPlan?: SearchPlan | null;
   resumeStatus?: 'planning' | 'searching' | 'analyzing' | 'waiting_user' | null;
+  /**
+   * c58: last analysis result (suggestedQueries feeds next plan prompt).
+   * v1 graph.py:170-171 passes prior analysis.suggested_queries into plan.
+   */
+  lastAnalysis?: AnalysisResult | null;
 }
 
 export interface ResearchResult {
@@ -96,6 +101,26 @@ const AnalysisSchema = z.object({
 // Sub-function: Plan
 // ---------------------------------------------------------------------------
 
+/**
+ * c58: build the plan prompt, including prior analysis suggested_queries as
+ * "Suggested focus areas" (v1 graph.py:170-171). On iteration 1 there is no
+ * prior analysis, so the focus-areas section is omitted.
+ */
+function buildPlanPrompt(state: ResearchState): string {
+  const parts = [
+    `Research topic: ${state.topic}.`,
+    `Iteration ${state.iteration}/${state.maxIterations}.`,
+    `Current results count: ${state.results.length}.`,
+  ];
+  const suggested = state.lastAnalysis?.suggestedQueries?.filter((q) => q.trim());
+  if (suggested && suggested.length > 0) {
+    parts.push(
+      `Suggested focus areas (from previous analysis): ${suggested.map((q) => q.trim()).join(', ')}.`,
+    );
+  }
+  return parts.join(' ');
+}
+
 async function planSearches(state: ResearchState, signal: AbortSignal): Promise<SearchPlan> {
   const modelConfig = getDefaultChatModel();
   const model = withRetry(await resolveModel(modelConfig!));
@@ -104,7 +129,7 @@ async function planSearches(state: ResearchState, signal: AbortSignal): Promise<
     model,
     schema: PlanSearchSchema,
     system: `You are a research assistant planning search queries. Generate 2-4 search queries covering different aspects of the topic.`,
-    prompt: `Research topic: ${state.topic}. Iteration ${state.iteration}/${state.maxIterations}. Current results count: ${state.results.length}.`,
+    prompt: buildPlanPrompt(state),
     abortSignal: signal,
   });
 
@@ -416,167 +441,192 @@ export async function runResearchCore(
   signal: AbortSignal,
 ): Promise<{ reportStream: AsyncIterable<string> } | null> {
   const sessionId = state.sessionId;
-  // c49: resume start-node selection (v1 _start_node_for_status, graph.py:1013-1028).
-  // On the first loop iteration, if resuming at waiting_user/searching with a
-  // restored plan, skip re-planning and jump straight to HITL/search.
-  let resumeSkipPlan = state.resumeStatus === 'waiting_user' && !!state.searchPlan;
-  let resumeSkipHitl = state.resumeStatus === 'searching' && !!state.searchPlan;
+  // c58: periodic lock renewal heartbeat (v1 _extend_lock_periodically,
+  // api.py:885-899 runs every 300s). Per-iteration renewal (c46) is insufficient
+  // when a single iteration (plan+search+analyze) exceeds the 10min TTL.
+  const lockHeartbeat = setInterval(() => renewLock(sessionId), 300_000);
 
-  for (let iter = state.iteration; iter <= state.maxIterations && !signal.aborted; iter++) {
-    state.iteration = iter;
-    // c46: renew lock each iteration to prevent expiry on long runs (v1 _extend_lock_periodically)
-    renewLock(sessionId);
+  try {
+    // c49: resume start-node selection (v1 _start_node_for_status, graph.py:1013-1028).
+    // On the first loop iteration, if resuming at waiting_user/searching with a
+    // restored plan, skip re-planning and jump straight to HITL/search.
+    let resumeSkipPlan = state.resumeStatus === 'waiting_user' && !!state.searchPlan;
+    let resumeSkipHitl = state.resumeStatus === 'searching' && !!state.searchPlan;
 
-    // c49: decide the start node for this iteration (resume-aware).
-    // - resumeSkipPlan (first iter only): jump to HITL with restored plan
-    // - resumeSkipHitl (first iter only): jump straight to search with restored plan
-    // - default: re-plan from scratch
-    let plan: SearchPlan;
-    if (resumeSkipPlan || resumeSkipHitl) {
-      plan = state.searchPlan!;
-    } else {
+    for (let iter = state.iteration; iter <= state.maxIterations && !signal.aborted; iter++) {
+      state.iteration = iter;
+      // c46: renew lock each iteration to prevent expiry on long runs (v1 _extend_lock_periodically)
+      renewLock(sessionId);
+
+      // c49: decide the start node for this iteration (resume-aware).
+      // - resumeSkipPlan (first iter only): jump to HITL with restored plan
+      // - resumeSkipHitl (first iter only): jump straight to search with restored plan
+      // - default: re-plan from scratch
+      let plan: SearchPlan;
+      if (resumeSkipPlan || resumeSkipHitl) {
+        plan = state.searchPlan!;
+      } else {
+        db()
+          .update(researchSessions)
+          .set({ status: 'planning', currentIteration: iter })
+          .where(eq(researchSessions.id, sessionId))
+          .run();
+
+        // 1. Plan
+        try {
+          plan = await planSearches(state, signal);
+        } catch {
+          // c46: fallback 2-query plan (v1 graph.py:225-236) — don't abort the run
+          plan = {
+            queries: [
+              { query: state.topic, engine: 'Web', priority: 1, reason: 'fallback' },
+              { query: `${state.topic} overview`, engine: 'Web', priority: 2, reason: 'fallback' },
+            ],
+            reasoning: 'Fallback plan (AI planning failed)',
+          };
+        }
+      }
+      // Resume flags only apply to the first iteration — capture the skip-hitl
+      // decision before resetting the flag.
+      const skipHitlThisIter = resumeSkipHitl;
+      resumeSkipPlan = false;
+      resumeSkipHitl = false;
+
+      // 2. HITL (skip on resume from searching — user already approved)
+      let decision: HitlDecision;
+      if (skipHitlThisIter) {
+        // Already approved before resume — jump straight to search execution
+        decision = { action: 'approve', plan };
+      } else {
+        db()
+          .update(researchSessions)
+          .set({ status: 'waiting_user' })
+          .where(eq(researchSessions.id, sessionId))
+          .run();
+
+        decision = await waitForApproval(state, plan, signal);
+      }
+
+      if (signal.aborted || decision.action === 'cancel') break;
+      if (decision.action === 'finish') {
+        // finish endpoint already generated+persisted the report — do not overwrite
+        return null;
+      }
+      if (decision.action === 'skip') {
+        // c58: v1 graph.py:364 skip → AnalyzeResults (not straight to next plan).
+        // Run analyze on accumulated results so the report has analysis signal
+        // and the next plan can read suggestedQueries (D5 + D1 feedback loop).
+        try {
+          state.lastAnalysis = await analyzeResults(state, signal);
+        } catch {
+          state.lastAnalysis = {
+            summary: 'Analysis failed — using fallback',
+            coverageEstimate: 0.5,
+            needMore: false,
+            suggestedQueries: [],
+          };
+        }
+        // Jump to next iteration (re-plan); for-loop will ++ so set iter = next-1
+        iter = decision.nextIteration - 1;
+        state.iteration = decision.nextIteration;
+        continue;
+      }
+
+      // approve / modify / timeout — use decision.plan (modify replaces local plan)
+      plan = decision.plan;
+
+      // 3. Execute searches
       db()
         .update(researchSessions)
-        .set({ status: 'planning', currentIteration: iter })
+        .set({ status: 'searching' })
         .where(eq(researchSessions.id, sessionId))
         .run();
 
-      // 1. Plan
+      const newResults = await executeSearches(state, plan, signal);
+      state.results.push(...newResults);
+
+      db()
+        .update(researchSessions)
+        .set({ aggregatedResults: state.results as unknown as Record<string, unknown>[] })
+        .where(eq(researchSessions.id, sessionId))
+        .run();
+
+      // 4. Analyze
+      let analysis: AnalysisResult;
       try {
-        plan = await planSearches(state, signal);
+        analysis = await analyzeResults(state, signal);
       } catch {
-        // c46: fallback 2-query plan (v1 graph.py:225-236) — don't abort the run
-        plan = {
-          queries: [
-            { query: state.topic, engine: 'Web', priority: 1, reason: 'fallback' },
-            { query: `${state.topic} overview`, engine: 'Web', priority: 2, reason: 'fallback' },
-          ],
-          reasoning: 'Fallback plan (AI planning failed)',
+        // c46: fallback coverage analysis (v1 graph.py:675-686) — don't abort the run
+        analysis = {
+          summary: 'Analysis failed — using fallback',
+          coverageEstimate: 0.5,
+          needMore: false,
+          suggestedQueries: [],
         };
       }
-    }
-    // Resume flags only apply to the first iteration — capture the skip-hitl
-    // decision before resetting the flag.
-    const skipHitlThisIter = resumeSkipHitl;
-    resumeSkipPlan = false;
-    resumeSkipHitl = false;
+      // c58: store analysis so the next plan can read suggestedQueries (D1)
+      state.lastAnalysis = analysis;
 
-    // 2. HITL (skip on resume from searching — user already approved)
-    let decision: HitlDecision;
-    if (skipHitlThisIter) {
-      // Already approved before resume — jump straight to search execution
-      decision = { action: 'approve', plan };
-    } else {
-      db()
-        .update(researchSessions)
-        .set({ status: 'waiting_user' })
-        .where(eq(researchSessions.id, sessionId))
-        .run();
-
-      decision = await waitForApproval(state, plan, signal);
+      // 5. Loop condition
+      if (!analysis.needMore || iter >= state.maxIterations) break;
     }
 
-    if (signal.aborted || decision.action === 'cancel') break;
-    if (decision.action === 'finish') {
-      // finish endpoint already generated+persisted the report — do not overwrite
+    // If the signal was aborted, the terminating handler (/finish or /cancel)
+    // has already set the terminal status (completed/cancelled) and owns the
+    // finalReport write. Do not overwrite status here — the handler knows which
+    // terminal state applies, the loop does not.
+    if (signal.aborted) {
       return null;
     }
-    if (decision.action === 'skip') {
-      // Jump to next iteration (re-plan); for-loop will ++ so set iter = next-1
-      iter = decision.nextIteration - 1;
-      state.iteration = decision.nextIteration;
-      continue;
-    }
 
-    // approve / modify / timeout — use decision.plan (modify replaces local plan)
-    plan = decision.plan;
-
-    // 3. Execute searches
-    db()
-      .update(researchSessions)
-      .set({ status: 'searching' })
+    // finish/skip-at-max may have already completed the session
+    const afterLoop = db()
+      .select()
+      .from(researchSessions)
       .where(eq(researchSessions.id, sessionId))
-      .run();
-
-    const newResults = await executeSearches(state, plan, signal);
-    state.results.push(...newResults);
-
-    db()
-      .update(researchSessions)
-      .set({ aggregatedResults: state.results as unknown as Record<string, unknown>[] })
-      .where(eq(researchSessions.id, sessionId))
-      .run();
-
-    // 4. Analyze
-    let analysis: AnalysisResult;
-    try {
-      analysis = await analyzeResults(state, signal);
-    } catch {
-      // c46: fallback coverage analysis (v1 graph.py:675-686) — don't abort the run
-      analysis = {
-        summary: 'Analysis failed — using fallback',
-        coverageEstimate: 0.5,
-        needMore: false,
-        suggestedQueries: [],
+      .get();
+    if (afterLoop?.status === 'completed') {
+      const report = afterLoop.finalReport ?? '';
+      return {
+        reportStream: (async function* () {
+          if (report) yield report;
+        })(),
       };
     }
+    if (afterLoop?.status === 'cancelled') return null;
 
-    // 5. Loop condition
-    if (!analysis.needMore || iter >= state.maxIterations) break;
-  }
+    // Generate report — eagerly drain so status persists regardless of SSE consumer
+    db()
+      .update(researchSessions)
+      .set({ status: 'analyzing' })
+      .where(eq(researchSessions.id, sessionId))
+      .run();
 
-  // If the signal was aborted, the terminating handler (/finish or /cancel)
-  // has already set the terminal status (completed/cancelled) and owns the
-  // finalReport write. Do not overwrite status here — the handler knows which
-  // terminal state applies, the loop does not.
-  if (signal.aborted) {
-    return null;
-  }
+    const rawStream = await generateReport(state, signal);
+    const chunks: string[] = [];
+    for await (const chunk of rawStream) {
+      chunks.push(chunk);
+    }
 
-  // finish/skip-at-max may have already completed the session
-  const afterLoop = db()
-    .select()
-    .from(researchSessions)
-    .where(eq(researchSessions.id, sessionId))
-    .get();
-  if (afterLoop?.status === 'completed') {
-    const report = afterLoop.finalReport ?? '';
+    const fullReport = chunks.join('');
+    db()
+      .update(researchSessions)
+      .set({
+        status: 'completed',
+        finalReport: fullReport || '(no report generated)',
+      })
+      .where(eq(researchSessions.id, sessionId))
+      .run();
+
     return {
       reportStream: (async function* () {
-        if (report) yield report;
+        for (const c of chunks) yield c;
       })(),
     };
+  } finally {
+    // c58: clear the periodic lock-renewal heartbeat on all exit paths
+    clearInterval(lockHeartbeat);
   }
-  if (afterLoop?.status === 'cancelled') return null;
-
-  // Generate report — eagerly drain so status persists regardless of SSE consumer
-  db()
-    .update(researchSessions)
-    .set({ status: 'analyzing' })
-    .where(eq(researchSessions.id, sessionId))
-    .run();
-
-  const rawStream = await generateReport(state, signal);
-  const chunks: string[] = [];
-  for await (const chunk of rawStream) {
-    chunks.push(chunk);
-  }
-
-  const fullReport = chunks.join('');
-  db()
-    .update(researchSessions)
-    .set({
-      status: 'completed',
-      finalReport: fullReport || '(no report generated)',
-    })
-    .where(eq(researchSessions.id, sessionId))
-    .run();
-
-  return {
-    reportStream: (async function* () {
-      for (const c of chunks) yield c;
-    })(),
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -702,6 +752,33 @@ export async function generateFinalReport(state: ResearchState): Promise<string>
     .run();
 
   return fullReport || '(no report generated)';
+}
+
+/**
+ * c58: synthesize a meaningful fallback report when LLM generation fails
+ * (v1 graph.py:811-823 GenerateReport fallback). MUST NOT persist a technical
+ * sentinel string like '(report generation failed)' — that passes the export
+ * guard (`if (!finalReport)`) and produces a garbage source. Instead, build a
+ * minimal Chinese report from accumulated results (or a clear empty-state msg).
+ */
+export function synthesizeFallbackReport(topic: string, results: ResearchResult[]): string {
+  if (results.length === 0) {
+    return `# ${topic}\n\n（研究未收集到结果，请尝试调整搜索关键词或检查网络连接后重试。）`;
+  }
+  const lines = [`# ${topic}`, '', '## 研究结果摘要', ''];
+  const top = results.slice(0, 20);
+  for (let i = 0; i < top.length; i++) {
+    const r = top[i]!;
+    const snippet = r.snippet ? r.snippet.slice(0, 200) : '';
+    lines.push(`${i + 1}. **${r.title || '(无标题)'}**`);
+    lines.push(`   - URL: ${r.url}`);
+    if (snippet) lines.push(`   - 摘要: ${snippet}`);
+    lines.push('');
+  }
+  lines.push(
+    `> ⚠️ 此报告为系统自动生成的结果摘要（LLM 报告生成失败时的兜底）。共 ${results.length} 条结果，展示前 ${top.length} 条。`,
+  );
+  return lines.join('\n');
 }
 
 // ---------------------------------------------------------------------------
