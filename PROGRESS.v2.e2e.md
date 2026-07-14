@@ -210,7 +210,7 @@ snap <target>
 | G. 错误    | 4      | 4      | 0     | 0     |
 | **总计**   | **31** | **28** | **3** | **0** |
 
-> 本轮修复了 K10（render_descriptor 缺失导致 JSON 显示）、K11（slides 预览入口）、K12（CitedText 渲染为 JSON）、K13（笔记面板无法滚动）。剩余 ⬜ 项：深度研究（E1-E6），待后续轮次。
+> 本轮修复了 K10（render_descriptor 缺失导致 JSON 显示）、K11（slides 预览入口）、K12（CitedText 渲染为 JSON）、K13+K14（笔记面板 + 弹窗无法滚动、手掌光标）。剩余 ⬜ 项：深度研究（E1-E6），待后续轮次。
 
 ---
 
@@ -231,3 +231,4 @@ snap <target>
 | K11 | Slides Studio 显示"当前 slides 插件未声明预览入口"，因 config_schema 缺少 preview 字段                           | ✅ 已修复 - buildSlidesConfigSchema() 返回 preview 对象                        |
 | K12 | GUIDE 的 objective 字段为 `{text, citations}` 复合结构，GenericOutputRenderer 渲染为 JSON 字符串（非 Rivu 问题） | ✅ 已修复 - coerceText 提取 text 字段 + renderTextWithCitations 支持 CitedText |
 | K13 | Notes 面板内输出内容过长时无法纵向滚动                                                                           | ✅ 已修复 - WidgetShell + grid-stack-item-content overflow:hidden → auto       |
+| K14 | StudioOutputViewer 弹窗内 backdrop (absolute inset-0) 覆盖内容 div，点击/滚轮事件全被拦截，弹窗无法交互          | ✅ 已修复 - 内容 div 添加 position:relative，stack 在 backdrop 之上            |
