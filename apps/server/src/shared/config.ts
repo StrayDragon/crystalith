@@ -274,54 +274,74 @@ export function getDefaultEmbeddingModel(): ModelConfig | undefined {
 // ---------------------------------------------------------------------------
 
 /**
- * Parse SSRF security policy from config YAML.
- *
- * Path: `source_ingestion.url_fetch.security`
- * Returns an empty object when the section is absent (the default
- * deny-private-IP posture baked into validateUrlForFetch).
+ * SSRF security policy schema — maps from `source_ingestion.url_fetch.security.*`.
  */
+export const SsrfPolicyConfigSchema = z.object({
+  allowlist_only: z.boolean().default(false),
+  allowlist_hosts: z.array(z.string()).default([]),
+  allowlist_domains: z.array(z.string()).default([]),
+  allowlist_cidrs: z.array(z.string()).default([]),
+  max_redirects: z.number().int().min(0).max(20).default(5),
+});
+export type SsrfPolicyConfig = z.infer<typeof SsrfPolicyConfigSchema>;
+
+/**
+ * App-level settings schema — maps from `app.*`.
+ */
+export const AppSettingsSchema = z.object({
+  http_guardrails: z
+    .object({
+      upload_max_bytes: z
+        .number()
+        .int()
+        .positive()
+        .default(50 * 1024 * 1024),
+    })
+    .optional(),
+});
+export type AppSettings = z.infer<typeof AppSettingsSchema>;
+
+/**
+ * Source ingestion settings schema — maps from `source_ingestion.*`.
+ */
+export const SourceIngestionSettingsSchema = z.object({
+  dedup: z
+    .object({
+      enabled: z.boolean().default(true),
+    })
+    .optional(),
+});
+export type SourceIngestionSettings = z.infer<typeof SourceIngestionSettingsSchema>;
+
+/** Parse SSRF security policy from config YAML. */
 export function getSecurityPolicy(): SsrfPolicy {
   const sec = (config().raw.source_ingestion as Record<string, unknown> | undefined)?.url_fetch as
     | Record<string, unknown>
     | undefined;
-  const security = sec?.security as Record<string, unknown> | undefined;
-  if (!security) return {};
+  const security = parseSection(SsrfPolicyConfigSchema, sec?.security);
   return {
-    allowlistOnly: security.allowlist_only === true,
-    hostAllowlist: Array.isArray(security.allowlist_hosts)
-      ? (security.allowlist_hosts as string[])
-      : undefined,
-    domainAllowlist: Array.isArray(security.allowlist_domains)
-      ? (security.allowlist_domains as string[])
-      : undefined,
-    cidrAllowlist: Array.isArray(security.allowlist_cidrs)
-      ? (security.allowlist_cidrs as string[])
-      : undefined,
-    maxRedirects: typeof security.max_redirects === 'number' ? security.max_redirects : undefined,
+    allowlistOnly: security.allowlist_only,
+    hostAllowlist: security.allowlist_hosts.length > 0 ? security.allowlist_hosts : undefined,
+    domainAllowlist: security.allowlist_domains.length > 0 ? security.allowlist_domains : undefined,
+    cidrAllowlist: security.allowlist_cidrs.length > 0 ? security.allowlist_cidrs : undefined,
+    maxRedirects: security.max_redirects,
   };
 }
 
-/**
- * Read `app.http_guardrails.upload_max_bytes` from config.
- * Falls back to 50 MB when absent or invalid.
- */
+/** Read `app.http_guardrails.upload_max_bytes` from config. */
 export function getUploadMaxBytes(): number {
-  const guardrails = (config().raw.app as Record<string, unknown> | undefined)?.http_guardrails as
-    | Record<string, unknown>
-    | undefined;
-  const n = guardrails?.upload_max_bytes;
-  return typeof n === 'number' && n > 0 ? n : 50 * 1024 * 1024;
+  return (
+    parseSection(AppSettingsSchema, config().raw.app).http_guardrails?.upload_max_bytes ??
+    50 * 1024 * 1024
+  );
 }
 
-/**
- * c44: Dedup config gate (v1 settings.source_ingestion.dedup.enabled).
- * Defaults to true when absent (v1 default).
- */
+/** c44: Dedup config gate — true by default. */
 export function getDedupEnabled(): boolean {
-  const ingestion = config().raw.source_ingestion as Record<string, unknown> | undefined;
-  const dedup = ingestion?.dedup as Record<string, unknown> | undefined;
-  const enabled = dedup?.enabled;
-  return enabled !== false; // default true
+  return (
+    parseSection(SourceIngestionSettingsSchema, config().raw.source_ingestion).dedup?.enabled ??
+    true
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -363,6 +383,7 @@ export const SearXNGSettingsSchema = z.object({
   host: z.string().default(''),
   api_key: z.string().nullable().default(null),
   max_results: z.number().int().min(1).max(50).default(10),
+  timeout: z.number().int().positive().max(120_000).default(20_000),
 });
 export type SearXNGSettings = z.infer<typeof SearXNGSettingsSchema>;
 
@@ -410,7 +431,11 @@ export function getDataRoot(): string {
 /** Parse a config section safely — returns defaults on absence/invalid. */
 function parseSection<T>(schema: z.ZodType<T>, section: unknown): T {
   const result = schema.safeParse(section);
-  return result.success ? result.data : schema.parse({});
+  if (result.success) return result.data;
+  // When section is absent/undefined, parse an empty object so all nested
+  // `.default()` values take effect.  Cast via unknown to satisfy TS since
+  // `{}` may not structurally match the schema input type.
+  return schema.parse({} as unknown);
 }
 
 export function getAiSettings(): AiSettings {
@@ -467,21 +492,43 @@ export interface OptionalServicesConfig {
   searxng: OptionalServiceEntry;
 }
 
+/** Optional service entry schema. */
+const OptionalServiceEntrySchema = z.object({
+  enabled: z.boolean().default(false),
+  endpoint: z.string().optional(),
+  timeout_s: z.number().int().positive().optional(),
+});
+
+/** Optional services schema — maps from `optional_services.*`. */
+/** Optional services schema — maps from `optional_services.*`. */
+export const OptionalServicesSchema = z.object({
+  chroma: OptionalServiceEntrySchema.default({
+    enabled: false,
+    endpoint: 'http://localhost:8000',
+    timeout_s: 3,
+  } as z.infer<typeof OptionalServiceEntrySchema>),
+  searxng: OptionalServiceEntrySchema.default({
+    enabled: false,
+    endpoint: 'http://127.0.0.1:50201',
+    timeout_s: 10,
+  } as z.infer<typeof OptionalServiceEntrySchema>),
+  cache_redis: OptionalServiceEntrySchema.optional(),
+});
+export type OptionalServicesSettings = z.infer<typeof OptionalServicesSchema>;
+
 /** Read optional_services config section. Returns defaults when absent. */
 export function getOptionalServices(): OptionalServicesConfig {
-  const raw = (config().raw.optional_services ?? {}) as Record<string, unknown>;
+  const parsed = parseSection(OptionalServicesSchema, config().raw.optional_services);
   return {
     chroma: {
-      enabled: (raw.chroma as Record<string, unknown>)?.enabled === true,
-      endpoint:
-        ((raw.chroma as Record<string, unknown>)?.endpoint as string) ?? 'http://localhost:8000',
-      timeout_s: ((raw.chroma as Record<string, unknown>)?.timeout_s as number) ?? 3,
+      enabled: parsed.chroma.enabled,
+      endpoint: parsed.chroma.endpoint ?? 'http://localhost:8000',
+      timeout_s: parsed.chroma.timeout_s ?? 3,
     },
     searxng: {
-      enabled: (raw.searxng as Record<string, unknown>)?.enabled === true,
-      endpoint:
-        ((raw.searxng as Record<string, unknown>)?.endpoint as string) ?? 'http://127.0.0.1:50201',
-      timeout_s: ((raw.searxng as Record<string, unknown>)?.timeout_s as number) ?? 10,
+      enabled: parsed.searxng.enabled,
+      endpoint: parsed.searxng.endpoint ?? 'http://127.0.0.1:50201',
+      timeout_s: parsed.searxng.timeout_s ?? 10,
     },
   };
 }

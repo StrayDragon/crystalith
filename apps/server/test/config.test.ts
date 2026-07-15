@@ -125,7 +125,14 @@ describe('config: security policy parsing', () => {
 `,
     );
     resetConfig(loadConfig(TMP));
-    expect(getSecurityPolicy()).toEqual({});
+    // Now returns typed defaults instead of empty object (c63+ typed accessor).
+    expect(getSecurityPolicy()).toEqual({
+      allowlistOnly: false,
+      hostAllowlist: undefined,
+      domainAllowlist: undefined,
+      cidrAllowlist: undefined,
+      maxRedirects: 5,
+    });
   });
 
   it('parses allowlist_hosts as string array', () => {

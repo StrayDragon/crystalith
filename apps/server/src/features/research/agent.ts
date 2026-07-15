@@ -266,8 +266,7 @@ async function searxngFetch(
   const { getSearxngHost, getSearchSettings } = await import('../../shared/config.ts');
   const host = getSearxngHost();
   if (!host) return [];
-  const { max_results } = getSearchSettings().searxng;
-  const timeout = 10_000;
+  const { max_results, timeout } = getSearchSettings().searxng;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);

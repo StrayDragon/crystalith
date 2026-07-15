@@ -7,7 +7,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 
-import { getSearxngHost } from '../../shared/config.ts';
+import { getSearxngHost, getSearchSettings } from '../../shared/config.ts';
 
 export const WebSearchArgs = z.object({
   query: z.string().min(1).describe('The web search query.'),
@@ -31,7 +31,7 @@ export interface WebSearchConfig {
 
 const DEFAULT_CONFIG: WebSearchConfig = {
   host: '',
-  timeoutMs: 20_000,
+  timeoutMs: getSearchSettings().searxng.timeout,
   maxResults: 10,
 };
 
