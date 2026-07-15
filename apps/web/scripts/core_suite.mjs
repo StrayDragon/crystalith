@@ -20,6 +20,7 @@ function readJson(filePath) {
 }
 
 function asStringArray(value, context) {
+  // eslint-disable-next-line eqeqeq
   if (value == null) return [];
   if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
     throw new Error(`Invalid ${context}: expected string[]`);

@@ -93,10 +93,11 @@ export default function AddSearchResultDialog({
         }
 
         const result = results[i];
+        const resultUrl = result.url;
 
         // Update status to loading
         setStatuses((prev) =>
-          prev.map((s) => (s.url === result.url ? { ...s, status: 'loading' } : s)),
+          prev.map((s) => (s.url === resultUrl ? { ...s, status: 'loading' } : s)),
         );
 
         try {
@@ -106,18 +107,19 @@ export default function AddSearchResultDialog({
           if (cancelledRef.current) {
             setStatuses((prev) =>
               prev.map((s) =>
-                s.url === result.url && s.status === 'loading' ? { ...s, status: 'cancelled' } : s,
+                s.url === resultUrl && s.status === 'loading' ? { ...s, status: 'cancelled' } : s,
               ),
             );
             break;
           }
           setStatuses((prev) =>
-            prev.map((s) => (s.url === result.url ? { ...s, status: 'success' } : s)),
+            prev.map((s) => (s.url === resultUrl ? { ...s, status: 'success' } : s)),
           );
         } catch (error) {
+          // eslint-disable-next-line eslint/no-loop-func
           setStatuses((prev) =>
             prev.map((s) =>
-              s.url === result.url
+              s.url === resultUrl
                 ? {
                     ...s,
                     status: 'error',

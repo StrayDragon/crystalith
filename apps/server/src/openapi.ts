@@ -109,17 +109,20 @@ export function registerApiDoc(routes: OpenApiRoute[]): void {
 }
 
 /** Generate the full OpenAPI 3.1 document. */
-export function generateOpenApiDocument(
-  info: { title: string; version: string; description?: string } = {
-    title: 'Crystalith v2 API',
-    version: '2.0.0-dev',
-    description: 'RAG-powered knowledge notebook — v2 API',
-  },
-): Record<string, unknown> {
+export function generateOpenApiDocument(info?: {
+  title: string;
+  version: string;
+  description?: string;
+}): Record<string, unknown> {
+  const {
+    title = 'Crystalith v2 API',
+    version = '2.0.0-dev',
+    description = 'RAG-powered knowledge notebook — v2 API',
+  } = info ?? {};
   const generator = new OpenApiGeneratorV31(registry.definitions);
   return generator.generateDocument({
     openapi: '3.1.0',
-    info,
+    info: { title, version, description },
     servers: [{ url: '/v2', description: 'Crystalith v2 API' }],
   }) as unknown as Record<string, unknown>;
 }

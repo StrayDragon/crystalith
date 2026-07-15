@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const __dirname = path.dirname(import.meta.filename);
+const __dirname = import.meta.dirname;
 const packageRoot = path.resolve(__dirname, '..');
 
 const ensure = spawn('bun', [path.join(__dirname, 'ensure-preview.mjs')], {

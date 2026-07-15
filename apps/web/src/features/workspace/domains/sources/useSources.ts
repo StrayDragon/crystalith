@@ -3,13 +3,14 @@ import useSWR from 'swr';
 
 import { api } from '../../../../api/eden';
 import { parseServerError } from '../../../../api/parseServerError';
-import type { QaMessage, SourceTagRead } from '../../../../api/shared-types';
 import type {
   ExtractorInfoResponse as ExtractorInfo,
   ExtractorsListResponse,
   NotebookExtractorsPolicy,
   PatchNotebookExtractorsPolicyRequest,
+  QaMessage,
   SourceFromUrlMode,
+  SourceTagRead,
 } from '../../../../api/shared-types';
 import { toast } from '../../../../shared/toast';
 import type { AsyncStatus } from '../../../../shared/types';
@@ -179,6 +180,7 @@ export function useSources() {
   }, [activeNotebookId]);
 
   useEffect(() => {
+    // eslint-disable-next-line eqeqeq
     if (jumpToCitationChunkId == null) return undefined;
     const timer = window.setTimeout(() => {
       store.getState().setJumpToCitation(null);
@@ -210,9 +212,11 @@ export function useSources() {
 
   const highlightedChunkIds = useMemo(() => {
     const highlighted = new Set<number>();
+    // eslint-disable-next-line eqeqeq
     if (hoveredCitationChunkId != null) {
       highlighted.add(hoveredCitationChunkId);
     }
+    // eslint-disable-next-line eqeqeq
     if (jumpToCitationChunkId != null) {
       highlighted.add(jumpToCitationChunkId);
     }
@@ -287,7 +291,7 @@ export function useSources() {
                 await api.v2.sources.upload
                   .post({ file } as any, { query: { dedup_action } } as any)
                   .then((r) => {
-                    // eslint-disable-next-line typescript/no-base-to-string
+                    // eslint-disable-next-line typescript/no-base-to-string, eslint/preserve-caught-error
                     if (r.error) throw new Error(String(r.error));
                     return r.data as any;
                   });
@@ -674,6 +678,7 @@ export function useSources() {
       try {
         const { data: result, error: coErr } = (await api.v2
           .outputs({ id: outputId })
+          // eslint-disable-next-line no-unexpected-multiline
           ['convert-to-source'].post()) as any;
         if (coErr) throw coErr;
         await mutate();
@@ -831,6 +836,7 @@ export function useSources() {
       const { data: result, error: csErr } = (await api.v2
         .notebooks({ nid: activeNotebookId })
         .sources({ sid: sourceId })
+        // eslint-disable-next-line no-unexpected-multiline
         ['qa-to-source'].post({ messages } as any)) as any;
       if (csErr) throw csErr;
       await mutate();

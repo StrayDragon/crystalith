@@ -118,13 +118,16 @@ const RESEARCH_PROGRESS_CHANNEL: AsyncApiChannel = {
 };
 
 /** Generate the AsyncAPI 3.0 document. */
-export function generateAsyncApiDocument(
-  info: { title: string; version: string; description?: string } = {
-    title: 'Crystalith v2 Streaming API',
-    version: '2.0.0-dev',
-    description: 'SSE streaming channels for QA and research agents.',
-  },
-): Record<string, unknown> {
+export function generateAsyncApiDocument(info?: {
+  title: string;
+  version: string;
+  description?: string;
+}): Record<string, unknown> {
+  const {
+    title = 'Crystalith v2 Streaming API',
+    version = '2.0.0-dev',
+    description = 'SSE streaming channels for QA and research agents.',
+  } = info ?? {};
   const channels: Record<string, unknown> = {};
   for (const ch of [QA_STREAM_CHANNEL, RESEARCH_PROGRESS_CHANNEL]) {
     const messages: Record<string, unknown> = {};
@@ -143,7 +146,7 @@ export function generateAsyncApiDocument(
 
   return {
     asyncapi: '3.0.0',
-    info,
+    info: { title, version, description },
     channels,
   };
 }

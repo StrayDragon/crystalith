@@ -488,6 +488,7 @@ export function useChat({
       const { data: result, error: convErr } = await api.v2
         .notebooks({ nid: s.activeNotebookId })
         .sessions({ sid: s.activeSessionId })
+        // eslint-disable-next-line no-unexpected-multiline
         ['convert-to-source'].post();
       if (convErr)
         throw new Error(
@@ -524,6 +525,7 @@ export function useChat({
         const { data: result, error: convErr } = await api.v2
           .notebooks({ nid: s.activeNotebookId })
           .sessions({ sid: s.activeSessionId })
+          // eslint-disable-next-line no-unexpected-multiline
           ['convert-to-output'].post({ output_type: outputType });
         if (convErr)
           throw new Error(

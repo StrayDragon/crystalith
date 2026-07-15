@@ -116,7 +116,7 @@ export default function StudioOutputsList({
   const handleDeleteNote = useCallback(
     (id: string) => {
       if (!id) return;
-      const outputId = parseInt(id, 10);
+      const outputId = Number(id);
       if (!isNaN(outputId)) {
         onDeleteOutput(outputId);
       }
@@ -127,7 +127,7 @@ export default function StudioOutputsList({
   const handleConvertToSource = useCallback(
     (id: string) => {
       if (!id) return;
-      const outputId = parseInt(id, 10);
+      const outputId = Number(id);
       if (!isNaN(outputId) && onConvertToSource) {
         onConvertToSource(outputId);
       }

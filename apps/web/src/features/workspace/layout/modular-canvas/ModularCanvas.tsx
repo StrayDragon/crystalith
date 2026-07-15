@@ -124,7 +124,7 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(functi
     if (!gs || !container) return;
 
     const style = getComputedStyle(container);
-    const paddingY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+    const paddingY = (Number(style.paddingTop) || 0) + (Number(style.paddingBottom) || 0);
     const available = container.getBoundingClientRect().height - paddingY;
     if (available <= 0) return;
 

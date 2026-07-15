@@ -389,7 +389,7 @@ function ResearchDetailPanel({
 
       // Process each iteration
       Object.entries(stepsByIteration).forEach(([iterStr, iterationSteps]) => {
-        const iteration = parseInt(iterStr, 10);
+        const iteration = Number(iterStr);
 
         iterationSteps.forEach((step) => {
           if (step.type === 'plan' && step.output_data) {
