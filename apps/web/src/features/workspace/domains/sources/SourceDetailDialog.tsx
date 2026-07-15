@@ -174,6 +174,7 @@ export default function SourceDetailDialog({
   const [exportMenuOpen, setExportMenuOpen] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const fetchedSourceRef = useRef<number | null>(null);
 
   // Scroll to bottom when new messages arrive
   const scrollToBottom = useCallback(() => {
@@ -202,6 +203,10 @@ export default function SourceDetailDialog({
       setIsBriefLoading(false);
       return;
     }
+
+    // Dedup: skip if a fetch is already in-flight for this source
+    if (fetchedSourceRef.current === source.id) return;
+    fetchedSourceRef.current = source.id;
 
     // Call real API
     setIsBriefLoading(true);
