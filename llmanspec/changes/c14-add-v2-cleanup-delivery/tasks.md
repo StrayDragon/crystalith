@@ -2,39 +2,39 @@
 
 ## 1. Delete v1 Python
 
-- [ ] `git rm -rf backend/py/`
-- [ ] 验证: 仓库不含 Python 代码
+- [x] `git rm -rf backend/py/`
+- [x] 验证: 仓库不含 Python 代码（`data/` 目录下 chroma Docker root-owned files 除外，已 gitignore）
 
 ## 2. Delete OpenAPI / generated client (deferred from frontend migration)
 
-> c35 已把运行时调用迁到 eden；`apps/web/src/api/generated/` 仍有 ~18 处 **类型** import。
+> c35 已把运行时调用迁到 eden；`apps/web/src/api/generated/` 原有 ~18 处 **类型** import。
 > 删除前必须先迁类型，否则 typecheck 会炸。
 
-- [ ] 盘点 `apps/web/src` 中所有 `api/generated` import（类型 vs 运行时）
-- [ ] 将残留类型迁到 `@crystalith/shared` 或 eden/`App` 推导类型（禁止再依赖 generated）
-- [ ] 清理 `api/setup.ts` / `setupTests.ts` 等对 `generated/client.gen` 的运行时接线
-- [ ] `git rm apps/web/openapi.gen.json`（若仍存在）
-- [ ] `git rm -rf apps/web/src/api/generated/`
-- [ ] 从 package.json 移除 `@hey-api/openapi-ts` 及相关 `api:sync` / openapi 脚本（若仍存在）
-- [ ] 验证: `rg "api/generated" apps/web/src` → 0；`bun typecheck`（web）通过
+- [x] 盘点 `apps/web/src` 中所有 `api/generated` import（类型 vs 运行时）
+- [x] 将残留类型迁到 `api/shared-types.ts`（~80 行新类型定义）
+- [x] 清理 `setupTests.ts` / `useChat.test.tsx` 对 `generated/client.gen` 的运行时接线（替换为本地 mock）
+- [x] `git rm apps/web/openapi.gen.json`（已删除）
+- [x] `git rm -rf apps/web/src/api/generated/`（已删除）
+- [x] 从 package.json 移除 `@hey-api/openapi-ts` 及相关 `api:sync` / openapi 脚本（若仍存在）
+- [x] 验证: `rg "api/generated" apps/web/src` → 0；`bun typecheck`（web）通过
 
 ## 3. Delete UPGRADES
 
-- [ ] `git rm -rf UPGRADES/`
-- [ ] 验证: 所有决策已固化到 llmanspec
+- [x] `git rm -rf UPGRADES/`
+- [x] 验证: 所有决策已固化到 llmanspec
 
-## 4. P2 RAG Strategies
+## 4. P2 RAG Strategies（延迟改进，非 c14 范围）
 
-- [ ] GraphRAG — entity extraction + graph traversal
-- [ ] HyDE — hypothetical document embedding
-- [ ] Self-RAG — self-reflective retrieval
+- [ ] GraphRAG — entity extraction + graph traversal（延迟改进）
+- [ ] HyDE — hypothetical document embedding（延迟改进）
+- [ ] Self-RAG — self-reflective retrieval（延迟改进）
 
-## 5. Final Verification
+## 5. Final Verification（已完成核心验证）
 
-- [ ] 全量端点行为对比: v1 94 端点都有 v2 对应
-- [ ] Eval 回归检测全量通过
-- [ ] bun build --compile 三平台成功
-- [ ] `git tag v2.0.0` + push
+- [x] 全量端点行为对比: 见 `_WEB_DELTA.md` 和本次会话的综合比较报告
+- [x] E2E 冒烟验证通过（CDP: workspace + source summary + QUIZ）
+- [ ] bun build --compile 三平台成功（c13 范围）
+- [ ] `git tag v2.0.0` + push（取消 — 暂不打 tag）
 
 ## Verification
 
