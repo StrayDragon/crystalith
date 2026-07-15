@@ -12,7 +12,7 @@ export default function SourcesPanel(props: SourcesPanelProps) {
 
   useEffect(() => {
     if (notebookId) {
-      fetchSessions();
+      void fetchSessions();
     }
   }, [notebookId, fetchSessions]);
 

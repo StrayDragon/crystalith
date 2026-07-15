@@ -788,7 +788,7 @@ export default function SourceDetailDialog({
                                   <MenuItem
                                     className="flex items-center gap-2 text-xs"
                                     onClick={() => {
-                                      handleCopyToClipboard();
+                                      void handleCopyToClipboard();
                                       setExportMenuOpen(null);
                                     }}
                                   >
@@ -809,7 +809,7 @@ export default function SourceDetailDialog({
                                     <MenuItem
                                       className="flex items-center gap-2 text-xs"
                                       onClick={() => {
-                                        handleSaveAsSource();
+                                        void handleSaveAsSource();
                                         setExportMenuOpen(null);
                                       }}
                                       disabled={isSavingAsSource}
@@ -849,7 +849,7 @@ export default function SourceDetailDialog({
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
-                            handleSend();
+                            void handleSend();
                           }
                         }}
                         disabled={isLoading}

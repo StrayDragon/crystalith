@@ -885,7 +885,7 @@ export default function WorkspaceLayout() {
         multiple
         accept={SOURCE_UPLOAD_ACCEPT}
         onChange={(event) => {
-          sources.handleUpload(event.target.files);
+          void sources.handleUpload(event.target.files);
           if (event.target) {
             event.target.value = '';
           }

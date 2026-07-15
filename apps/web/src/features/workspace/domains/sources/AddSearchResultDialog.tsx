@@ -132,7 +132,7 @@ export default function AddSearchResultDialog({
       setProcessingState('done');
     };
 
-    processResults();
+    void processResults();
   }, [open, processingState, results, resultsKey, mode, onAddSource, statuses.length]);
 
   const isProcessing = processingState === 'running';
