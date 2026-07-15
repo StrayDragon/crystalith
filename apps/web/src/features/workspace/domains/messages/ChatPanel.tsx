@@ -288,7 +288,9 @@ function ChatPanel({
             <button
               type="button"
               className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
-              onClick={() => handleCopy(message.id, message.content)}
+              onClick={() => {
+                void handleCopy(message.id, message.content);
+              }}
             >
               <IconCopy className="w-3.5 h-3.5" />
               {copiedId === message.id ? '已复制' : '复制'}
@@ -355,7 +357,9 @@ function ChatPanel({
                 <MenuList className="p-1 min-w-[160px]" style={{ zIndex: LAYER_LEVELS.dropdown }}>
                   {onConvertToSource && (
                     <MenuItem
-                      onClick={() => onConvertToSource()}
+                      onClick={() => {
+                        void onConvertToSource();
+                      }}
                       className="flex items-center gap-2 py-2 px-3 text-xs"
                       disabled={isConverting}
                     >
@@ -369,7 +373,9 @@ function ChatPanel({
                         转为笔记
                       </div>
                       <MenuItem
-                        onClick={() => onConvertToOutput('PARAGRAPH')}
+                        onClick={() => {
+                          void onConvertToOutput('PARAGRAPH');
+                        }}
                         className="flex items-center gap-2 py-2 px-3 text-xs"
                         disabled={isConverting}
                       >
@@ -377,7 +383,9 @@ function ChatPanel({
                         <span>段落</span>
                       </MenuItem>
                       <MenuItem
-                        onClick={() => onConvertToOutput('BULLETS')}
+                        onClick={() => {
+                          void onConvertToOutput('BULLETS');
+                        }}
                         className="flex items-center gap-2 py-2 px-3 text-xs"
                         disabled={isConverting}
                       >
@@ -385,7 +393,9 @@ function ChatPanel({
                         <span>要点</span>
                       </MenuItem>
                       <MenuItem
-                        onClick={() => onConvertToOutput('STRUCTURED')}
+                        onClick={() => {
+                          void onConvertToOutput('STRUCTURED');
+                        }}
                         className="flex items-center gap-2 py-2 px-3 text-xs"
                         disabled={isConverting}
                       >

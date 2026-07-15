@@ -142,7 +142,9 @@ export function useTasks() {
           return;
         }
 
-        const timer = setTimeout(poll, intervalMs);
+        const timer = setTimeout(() => {
+          void poll();
+        }, intervalMs);
         pollingRef.current.set(taskId, timer);
       };
 

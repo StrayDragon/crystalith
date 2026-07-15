@@ -206,7 +206,7 @@ export function useWorkspaceOverlays({
 
   const openGraphSessionDetail = useCallback(
     async (session: GraphSessionTarget) => {
-      await graphSessionDetail.openSessionDetail(session);
+      graphSessionDetail.openSessionDetail(session);
       if (activeNotebookId) {
         await graphSessionDetail.fetchMessages(activeNotebookId, session.id);
       }

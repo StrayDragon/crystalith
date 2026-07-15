@@ -1006,7 +1006,9 @@ function ResearchDetailPanel({
                     <Button
                       size="sm"
                       color="blue"
-                      onClick={handleStart}
+                      onClick={(..._args) => {
+                        void handleStart();
+                      }}
                       disabled={isProcessing}
                       className="flex items-center gap-2"
                     >
@@ -1038,7 +1040,9 @@ function ResearchDetailPanel({
                       <Button
                         size="sm"
                         color="blue"
-                        onClick={handleFinish}
+                        onClick={() => {
+                          void handleFinish();
+                        }}
                         disabled={isProcessing}
                         className="flex items-center gap-2"
                       >
@@ -1053,7 +1057,9 @@ function ResearchDetailPanel({
                         size="sm"
                         variant="outlined"
                         color="gray"
-                        onClick={handleCancel}
+                        onClick={() => {
+                          void handleCancel();
+                        }}
                         disabled={isProcessing}
                         className="flex items-center gap-2"
                       >
@@ -1086,7 +1092,9 @@ function ResearchDetailPanel({
                       <Button
                         size="sm"
                         color="blue"
-                        onClick={handleResume}
+                        onClick={() => {
+                          void handleResume();
+                        }}
                         disabled={isProcessing}
                         className="flex items-center gap-2"
                       >
@@ -1101,7 +1109,9 @@ function ResearchDetailPanel({
                         size="sm"
                         variant="outlined"
                         color="gray"
-                        onClick={handleRetry}
+                        onClick={() => {
+                          void handleRetry();
+                        }}
                         disabled={isProcessing}
                         className="flex items-center gap-2"
                       >
@@ -1251,7 +1261,9 @@ function ResearchDetailPanel({
                   <Button
                     fullWidth
                     color="blue"
-                    onClick={handleApprove}
+                    onClick={() => {
+                      void handleApprove();
+                    }}
                     disabled={isProcessing || selectedQueries.size === 0}
                     className="flex items-center justify-center gap-2 py-2.5"
                   >
@@ -1267,7 +1279,9 @@ function ResearchDetailPanel({
                       fullWidth
                       variant="outlined"
                       color="gray"
-                      onClick={handleSkip}
+                      onClick={() => {
+                        void handleSkip();
+                      }}
                       disabled={isProcessing}
                       className="flex items-center justify-center gap-2 py-2"
                     >
@@ -1278,7 +1292,9 @@ function ResearchDetailPanel({
                       fullWidth
                       variant="outlined"
                       color="amber"
-                      onClick={handleFinish}
+                      onClick={() => {
+                        void handleFinish();
+                      }}
                       disabled={isProcessing}
                       className="flex items-center justify-center gap-2 py-2"
                     >
@@ -1619,7 +1635,9 @@ function ResultsDialogContent({
                 size="sm"
                 color="blue"
                 disabled={selectedResults.size === 0 || isAddingSources}
-                onClick={handleAddSources}
+                onClick={() => {
+                  void handleAddSources();
+                }}
               >
                 {isAddingSources ? (
                   <>

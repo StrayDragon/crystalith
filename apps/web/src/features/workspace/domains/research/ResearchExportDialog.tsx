@@ -367,7 +367,9 @@ function ResearchExportDialog({ session, onClose, onExportComplete }: ResearchEx
             </Button>
             <Button
               color="blue"
-              onClick={handleExport}
+              onClick={() => {
+                void handleExport();
+              }}
               disabled={isExporting || selectedItems.size === 0}
               className="flex items-center gap-2"
             >

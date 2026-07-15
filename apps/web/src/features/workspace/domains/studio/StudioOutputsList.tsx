@@ -477,7 +477,9 @@ export default function StudioOutputsList({
                         <span>转换为来源</span>
                       </MenuItem>
                       <MenuItem
-                        onClick={() => handleCopyNote(note)}
+                        onClick={() => {
+                          void handleCopyNote(note);
+                        }}
                         className="flex items-center gap-2 py-2 px-3 text-xs"
                       >
                         <CopyIcon className="h-3.5 w-3.5" />

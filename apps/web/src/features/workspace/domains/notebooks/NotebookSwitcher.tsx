@@ -365,7 +365,9 @@ export default function NotebookSwitcher({
                         size="sm"
                         variant="text"
                         className="w-6 h-6 min-w-[24px] rounded text-blue-500 hover:bg-blue-50"
-                        onClick={handleSaveEdit}
+                        onClick={(..._args) => {
+                          void handleSaveEdit();
+                        }}
                         disabled={isUpdating}
                       >
                         {isUpdating ? (
@@ -449,7 +451,9 @@ export default function NotebookSwitcher({
                           {onDelete && (
                             <ConfirmPopover
                               message={`确定删除「${item.title}」？此操作不可撤销。`}
-                              onConfirm={() => handleDelete(item.id)}
+                              onConfirm={() => {
+                                void handleDelete(item.id);
+                              }}
                               placement="left"
                               disabled={isDeleting}
                             >
@@ -532,7 +536,9 @@ export default function NotebookSwitcher({
               variant="filled"
               className="rounded-full px-3 py-1.5 normal-case font-normal bg-gray-900 text-[11px]"
               disabled={createDisabled}
-              onClick={handleCreate}
+              onClick={(..._args) => {
+                void handleCreate();
+              }}
             >
               创建
             </Button>

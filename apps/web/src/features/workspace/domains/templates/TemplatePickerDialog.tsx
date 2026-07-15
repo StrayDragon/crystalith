@@ -256,7 +256,9 @@ export default function TemplatePickerDialog({
                 variant="filled"
                 className="rounded-full px-3 py-1.5 normal-case font-normal bg-gray-900 dark:bg-slate-100 dark:text-slate-900 text-[11px]"
                 disabled={!canCreate}
-                onClick={handleCreate}
+                onClick={() => {
+                  void handleCreate();
+                }}
               >
                 {isCreating ? <Spinner className="h-3 w-3" /> : '创建'}
               </Button>

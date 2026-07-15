@@ -5,7 +5,6 @@
 // markdown. Used by:
 //  - export endpoint (format=markdown)
 //  - convert-to-source (type-aware chunking instead of raw JSON)
-import type { OutputType } from '@crystalith/shared';
 
 /** Coerce a JSON value to text (v1 _json_to_text). */
 function jsonToText(value: unknown): string {
@@ -24,7 +23,7 @@ function jsonToText(value: unknown): string {
  * Mirrors v1 `_extract_text_from_output` (api.py:515-693).
  */
 export function renderOutputToMarkdown(
-  type: OutputType | string,
+  type: string,
   content: Record<string, unknown> | null,
   prompt?: string | null,
 ): string {
