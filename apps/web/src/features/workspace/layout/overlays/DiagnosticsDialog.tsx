@@ -128,7 +128,10 @@ export default function DiagnosticsDialog({
     return Object.entries(official).toSorted(([a], [b]) => a.localeCompare(b));
   }, [toolsDiagnostics]);
   const missingOfficial = useMemo(
-    () => officialEntries.filter(([, item]) => item.status !== 'loaded'),
+    () =>
+      officialEntries.filter(
+        ([, item]) => (item as { status: string; hint?: string }).status !== 'loaded',
+      ),
     [officialEntries],
   );
   const slidesDiagnostic = useMemo(() => toolsDiagnostics?.slides ?? null, [toolsDiagnostics]);
@@ -472,39 +475,46 @@ export default function DiagnosticsDialog({
                       跳过的插件
                     </div>
                     <div className="space-y-2">
-                      {Object.entries(skippedPlugins).map(([pluginId, detail]) => (
-                        <div
-                          key={pluginId}
-                          className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 px-3 py-2"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="text-[11px] font-semibold text-gray-800 dark:text-slate-200">
-                                <span className="font-mono">{pluginId}</span>
+                      {Object.entries(skippedPlugins).map(([pluginId, _detail]) => {
+                        const detail = _detail as {
+                          error_code?: string;
+                          message?: string;
+                          hint?: string;
+                        };
+                        return (
+                          <div
+                            key={pluginId}
+                            className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 px-3 py-2"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="text-[11px] font-semibold text-gray-800 dark:text-slate-200">
+                                  <span className="font-mono">{pluginId}</span>
+                                </div>
+                                <div className="mt-0.5 text-[11px] text-gray-700 dark:text-slate-300">
+                                  <span className="font-mono">{detail.error_code}</span> ·{' '}
+                                  {detail.message}
+                                </div>
                               </div>
-                              <div className="mt-0.5 text-[11px] text-gray-700 dark:text-slate-300">
-                                <span className="font-mono">{detail.error_code}</span> ·{' '}
-                                {detail.message}
-                              </div>
+                              {detail.hint ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleCopy(detail.hint ?? '')}
+                                  className="px-2 py-1 rounded-md text-[11px] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-1"
+                                >
+                                  <ContentCopyIcon sx={{ fontSize: 14 }} />
+                                  {t('common.copy')}
+                                </button>
+                              ) : null}
                             </div>
                             {detail.hint ? (
-                              <button
-                                type="button"
-                                onClick={() => void handleCopy(detail.hint ?? '')}
-                                className="px-2 py-1 rounded-md text-[11px] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-1"
-                              >
-                                <ContentCopyIcon sx={{ fontSize: 14 }} />
-                                {t('common.copy')}
-                              </button>
+                              <pre className="mt-1 whitespace-pre-wrap text-[11px] text-gray-700 dark:text-slate-300">
+                                {detail.hint}
+                              </pre>
                             ) : null}
                           </div>
-                          {detail.hint ? (
-                            <pre className="mt-1 whitespace-pre-wrap text-[11px] text-gray-700 dark:text-slate-300">
-                              {detail.hint}
-                            </pre>
-                          ) : null}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ) : null}
@@ -520,7 +530,8 @@ export default function DiagnosticsDialog({
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {missingOfficial.map(([pluginId, item]) => {
+                      {missingOfficial.map(([pluginId, _item]) => {
+                        const item = _item as { status: string; hint?: string };
                         const tone = toneForPluginStatus(item.status);
                         return (
                           <div

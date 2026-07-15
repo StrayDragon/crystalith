@@ -6,14 +6,14 @@ import {
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { copyToClipboard } from '../../../../../shared/clipboard';
-import { useLayer } from '../../../../../shared/layer';
-import { toast } from '../../../../../shared/toast';
 import type {
   ExtractorInfoResponse as ExtractorInfo,
   NotebookExtractorsPolicy,
   PatchNotebookExtractorsPolicyRequest,
-} from '../../../../api/shared-types';
+} from '../../../../../api/shared-types';
+import { copyToClipboard } from '../../../../../shared/clipboard';
+import { useLayer } from '../../../../../shared/layer';
+import { toast } from '../../../../../shared/toast';
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
 
 interface ExtractorPolicyDialogProps {
@@ -67,8 +67,8 @@ export default function ExtractorPolicyDialog({
 
   const sortedExtractors = useMemo(() => {
     return [...extractors].toSorted((a, b) => {
-      const ap = Number.isFinite(a.priority) ? a.priority : 10_000;
-      const bp = Number.isFinite(b.priority) ? b.priority : 10_000;
+      const ap = a.priority ?? 10_000;
+      const bp = b.priority ?? 10_000;
       if (ap !== bp) return ap - bp;
       return String(a.type).localeCompare(String(b.type));
     });
@@ -113,7 +113,7 @@ export default function ExtractorPolicyDialog({
       } else {
         next.add(extractorType);
       }
-      const nextList = Array.from(next).toSorted((a, b) => a.localeCompare(b));
+      const nextList = Array.from(next).toSorted((a: string, b: string) => a.localeCompare(b));
       setIsSaving(true);
       try {
         await onPatchPolicy?.({ enabled_extractors: nextList });

@@ -128,10 +128,28 @@ export interface ExtractorInfoResponse {
   available: boolean;
   description: string;
   details?: Record<string, unknown> | null;
+  display_name?: string;
   type: string;
   enabled: boolean;
+  priority?: number;
+  requires_api_key?: boolean;
   requires_service: boolean;
+  plugin_id?: string;
+  error_code?: string;
+  message?: string;
+  recovery_hint?: string;
   metadata?: Record<string, unknown>;
+}
+
+export interface ExtractorsListResponse {
+  notebook_id: number;
+  policy: {
+    mode: string;
+    enabled_extractors: string[] | null;
+  };
+  extractors: ExtractorInfoResponse[];
+  default_extractor: string;
+  fallback_enabled: boolean;
 }
 
 export interface ChunkRead {

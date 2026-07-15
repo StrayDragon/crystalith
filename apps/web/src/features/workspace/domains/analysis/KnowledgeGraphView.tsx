@@ -261,14 +261,16 @@ function buildGraphData(
   // Calculate topic assignment for each source
   const sourceToTopic = new Map<number, number>();
   if (analysis?.topics) {
-    analysis.topics.forEach((topic, index) => {
-      for (const chunkId of topic.chunk_ids) {
-        const sourceId = findSourceForChunk(chunkId);
-        if (sourceId !== undefined && !sourceToTopic.has(sourceId)) {
-          sourceToTopic.set(sourceId, index);
+    (analysis.topics as Array<Record<string, unknown>>).forEach(
+      (topic: Record<string, unknown>, index: number) => {
+        for (const chunkId of topic.chunk_ids as number[]) {
+          const sourceId = findSourceForChunk(chunkId);
+          if (sourceId !== undefined && !sourceToTopic.has(sourceId)) {
+            sourceToTopic.set(sourceId, index);
+          }
         }
-      }
-    });
+      },
+    );
   }
 
   // Calculate relations between sources
