@@ -3,6 +3,17 @@
 # (pre-commit itself is still Python; hooks are Bun/TS)
 
 repos:
+  # Root-level generated config drift detection
+  - repo: local
+    hooks:
+      - id: check-env-examples
+        name: Env examples match Zod SSOT
+        entry: bun scripts/gen-env-examples.ts --check
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
   # Root-level oxlint + oxfmt (covers apps/server/ + packages/shared/ + apps/web/)
   - repo: local
     hooks:
