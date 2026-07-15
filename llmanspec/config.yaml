@@ -1,34 +1,3 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/StrayDragon/llman/main/artifacts/schema/configs/en/llmanspec-config.schema.json
 schema: spec-driven
 locale: en
-context: |-
-  Project-wide tech stack, commands, conventions, testing, git rules, and doc governance: see ../AGENTS.md.
-
-  **v2 Implementation Progress**: run `llman sdd list` for active change status.
-  See `_E2E.md` for E2E test patterns and known-issues reference.
-
-  Spec workflow paths:
-  - Canonical specs: llmanspec/specs
-  - Active change workspaces: llmanspec/changes (archive: llmanspec/changes/archive)
-  - Deferred proposals / parked changes: llmanspec/notplan-changes
-  - v2 changes use c<NN>- prefix: c00 (foundation) → c41+ (align/cleanup). Lower number ≈ earlier foundation; run `llman sdd list` for truth.
-  - All c<NN> changes are batch:all — must read all design.md before implementing any.
-  - Do not archive a change solely because tasks.md marks ✅ — tasks.md may be incomplete (e.g. c25–c27).
-
-  Spec-workflow-specific notes:
-  - For v2, do NOT run `pnpm run api:sync` (v1 OpenAPI chain removed in v2).
-  - OpenAPI: use `@asteasolutions/zod-to-openapi` from shared Zod schemas. NOT `@elysiajs/swagger`.
-  - Stable entrypoints: `bun test`, `bun typecheck`.
-rules:
-  design:
-    - For generated artifacts or injected blocks, include naming/marker rules and deterministic output expectations.
-    - For repo-wide refactors, include an explicit migration + rollback boundary.
-  proposal:
-    - If the change renames paths/contracts, mark them as **BREAKING** and list old -> new explicitly.
-    - If the change introduces/updates generated artifacts, specify the SSOT, generator entrypoint, and drift gate command.
-  specs:
-    - Use ADDED/MODIFIED/REMOVED/RENAMED sections as appropriate.
-    - For MODIFIED requirements, copy the full updated requirement block (do not do partial diffs).
-  tasks:
-    - Group tasks by dependency order and include explicit verification commands.
-    - Include drift-check commands whenever generated artifacts are involved.
