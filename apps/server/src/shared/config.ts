@@ -564,6 +564,116 @@ export function getOptionalServices(): OptionalServicesConfig {
 }
 
 // ===========================================================================
+// Section schemas for YAML sections not yet migrated to typed accessors.
+// These exist in config/app.yaml but are read ad-hoc (v1 legacy or pending
+// typed accessor migration). Defined here so RootConfigSchema covers all
+// YAML sections → app.schema.gen.json validates the entire file.
+// ===========================================================================
+
+/** Cache settings — read by v1 Python backend; v2 defaults to memory. */
+export const CacheSettingsSchema = z.object({
+  provider: z
+    .enum(['memory', 'auto'])
+    .default('memory')
+    .describe(desc('cache.provider', '缓存提供者：memory 内存 / auto 自动选择')),
+  ttl: z.number().int().positive().default(60).describe(desc('cache.ttl', '缓存 TTL（秒）')),
+  max_size: z
+    .number()
+    .int()
+    .positive()
+    .default(2048)
+    .describe(desc('cache.max_size', '缓存最大条目数')),
+});
+export type CacheSettings = z.infer<typeof CacheSettingsSchema>;
+
+/** Database settings — v1 SQLAlchemy URL; v2 uses bun:sqlite. */
+export const DatabaseSettingsSchema = z.object({
+  url: z
+    .string()
+    .default('sqlite+aiosqlite:///./data/app.db')
+    .describe(desc('database.url', '数据库连接 URL（v1 兼容）')),
+  url_candidates: z
+    .array(z.string())
+    .default([])
+    .describe(desc('database.url_candidates', '备用数据库 URL 列表')),
+});
+export type DatabaseSettings = z.infer<typeof DatabaseSettingsSchema>;
+
+/** Plugin discovery configuration. */
+export const PluginsSettingsSchema = z.object({
+  enabled: z
+    .array(z.string())
+    .nullable()
+    .optional()
+    .describe(desc('plugins.enabled', '启用的插件 ID 列表（白名单）')),
+  disabled: z
+    .array(z.string())
+    .default([])
+    .describe(desc('plugins.disabled', '禁用的插件 ID 列表（黑名单，优先）')),
+  load_order: z
+    .array(z.string())
+    .default([])
+    .describe(desc('plugins.load_order', '插件加载顺序（后加载优先）')),
+});
+export type PluginsSettings = z.infer<typeof PluginsSettingsSchema>;
+
+/** Outbound proxy settings — used by URL fetchers. */
+export const ProxySettingsSchema = z.object({
+  enabled: z.boolean().default(false).describe(desc('proxy_settings.enabled', '是否启用代理')),
+  http_url: z
+    .string()
+    .nullable()
+    .default(null)
+    .describe(desc('proxy_settings.http_url', 'HTTP 代理 URL')),
+  https_url: z
+    .string()
+    .nullable()
+    .default(null)
+    .describe(desc('proxy_settings.https_url', 'HTTPS 代理 URL')),
+  socks5_url: z
+    .string()
+    .nullable()
+    .default(null)
+    .describe(desc('proxy_settings.socks5_url', 'SOCKS5 代理 URL')),
+  no_proxy: z
+    .array(z.string())
+    .default(['localhost', '127.0.0.1'])
+    .describe(desc('proxy_settings.no_proxy', '不走代理的地址列表')),
+});
+export type ProxySettings = z.infer<typeof ProxySettingsSchema>;
+
+/** Vector storage settings — v1 Chroma config; v2 uses sqlite-vec. */
+export const VectorStorageSettingsSchema = z.object({
+  provider: z
+    .string()
+    .default('chroma')
+    .describe(desc('vector_storage.provider', '向量存储提供者（v1 兼容）')),
+  chroma: z
+    .object({
+      path: z
+        .string()
+        .default('./data/chroma')
+        .optional()
+        .describe(desc('vector_storage.chroma.path', 'Chroma 数据目录路径')),
+      telemetry: z.boolean().default(false).optional(),
+      host: z
+        .string()
+        .default('')
+        .optional()
+        .describe(desc('vector_storage.chroma.host', 'Chroma 服务主机，空=嵌入式')),
+      port: z
+        .number()
+        .int()
+        .default(8000)
+        .optional()
+        .describe(desc('vector_storage.chroma.port', 'Chroma 服务端口')),
+    })
+    .default({})
+    .describe(desc('vector_storage.chroma', 'Chroma 配置')),
+});
+export type VectorStorageSettings = z.infer<typeof VectorStorageSettingsSchema>;
+
+// ===========================================================================
 // Root config schema — single combined schema for app.yaml generation
 // (gen-app-schema.ts consumes this instead of a manual section mapping).
 // Each section carries an inline .describe() for JSON Schema doc.
@@ -601,6 +711,13 @@ export const RootConfigSchema = z.object({
   ),
   providers: ProviderConfigSchema.describe(
     desc('root.providers', 'AI 提供商配置：API key、base URL 等'),
+  ),
+  cache: CacheSettingsSchema.describe(desc('root.cache', '缓存设置：provider、TTL、最大条目数')),
+  database: DatabaseSettingsSchema.describe(desc('root.database', '数据库设置（v1 兼容）')),
+  plugins: PluginsSettingsSchema.describe(desc('root.plugins', '插件发现与加载配置')),
+  proxy_settings: ProxySettingsSchema.describe(desc('root.proxy_settings', '出站代理设置')),
+  vector_storage: VectorStorageSettingsSchema.describe(
+    desc('root.vector_storage', '向量存储设置（v1 兼容）'),
   ),
 });
 export type RootConfig = z.infer<typeof RootConfigSchema>;
