@@ -248,6 +248,15 @@ function postprocessOutput(object: unknown, type: string): PostprocessResult {
     content = generateFallbackContent(type) as Record<string, unknown>;
   }
 
+  // Detect "no content found" template responses from AI and convert to fallback.
+  // When the AI has no relevant context, it often generates a polite "not found"
+  // message as the first item instead of failing. These should be treated as
+  // generation failures so the frontend shows the error+retry UI.
+  if (isNoContentTemplate(content, type)) {
+    warnings.push('AI generated placeholder content instead of real output — using fallback');
+    content = generateFallbackContent(type) as Record<string, unknown>;
+  }
+
   // c42: per-type field-level backfill (v1 _ensure_minimum_content output_graph.py:290-375)
   content = ensureMinimumContentFields(content, type);
 
@@ -433,6 +442,75 @@ function isContentEmpty(content: Record<string, unknown>, type: string): boolean
       return !content.root;
     case 'PARAGRAPH':
       return !content.text;
+    default:
+      return false;
+  }
+}
+
+/** Known prefixes that indicate AI generated a "no content found" template
+ * instead of real content. Checked against the first item's text field. */
+const NO_CONTENT_PREFIXES = [
+  '由于您提供的上下文显示',
+  '未找到相关内容',
+  '未找到与',
+  '无法生成',
+  '以下提供标准',
+];
+
+/**
+ * Detect whether AI-generated content is a "no content found" template response
+ * rather than real content. The AI sometimes politely declines to generate when
+ * context is insufficient, producing valid JSON with templated messages.
+ * These should be treated as generation failures.
+ */
+function isNoContentTemplate(content: Record<string, unknown>, type: string): boolean {
+  // Helper: check if a text value matches any known "not found" prefix
+  const hasNoContentPrefix = (text: unknown): boolean => {
+    if (typeof text !== 'string') return false;
+    const trimmed = text.trim();
+    return NO_CONTENT_PREFIXES.some((prefix) => trimmed.startsWith(prefix));
+  };
+
+  switch (type) {
+    case 'FAQ':
+    case 'BULLETS': {
+      const items = content.items;
+      if (!Array.isArray(items) || items.length === 0) return false;
+      const first = items[0];
+      if (!first || typeof first !== 'object') return false;
+      const f = first as Record<string, unknown>;
+      return (
+        hasNoContentPrefix(f.question) || hasNoContentPrefix(f.answer) || hasNoContentPrefix(f.text)
+      );
+    }
+    case 'TIMELINE': {
+      const events = content.events;
+      if (!Array.isArray(events) || events.length === 0) return false;
+      const first = events[0];
+      if (!first || typeof first !== 'object') return false;
+      const f = first as Record<string, unknown>;
+      return hasNoContentPrefix(f.event) || hasNoContentPrefix(f.description);
+    }
+    case 'GUIDE': {
+      const modules = content.modules;
+      if (!Array.isArray(modules) || modules.length === 0) return false;
+      const first = modules[0];
+      if (!first || typeof first !== 'object') return false;
+      const f = first as Record<string, unknown>;
+      // Objective could be {text: string} or raw string
+      const obj = f.objective;
+      const objText =
+        typeof obj === 'object' && obj !== null ? (obj as Record<string, unknown>).text : obj;
+      return hasNoContentPrefix(f.title) || hasNoContentPrefix(objText);
+    }
+    case 'BRIEFING': {
+      const sections = content.sections;
+      if (!Array.isArray(sections) || sections.length === 0) return false;
+      const first = sections[0];
+      if (!first || typeof first !== 'object') return false;
+      const f = first as Record<string, unknown>;
+      return hasNoContentPrefix(f.heading);
+    }
     default:
       return false;
   }

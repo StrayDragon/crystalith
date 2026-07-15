@@ -1,5 +1,10 @@
 import { Menu, MenuHandler, MenuList, MenuItem, Spinner } from '@material-tailwind/react';
-import { Download as DownloadIcon } from '@mui/icons-material';
+import {
+  Delete as DeleteIcon,
+  Download as DownloadIcon,
+  Refresh as RefreshIcon,
+  Warning as WarningIcon,
+} from '@mui/icons-material';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
@@ -7,21 +12,43 @@ import { getBuiltinBundleLoader } from '../../../../plugins/official/registry';
 import { t } from '../../../../shared/i18n';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { getOutputPayloadWarnings, isFallbackOutputPayload } from '../../shared/outputPayload';
+import { decodeOutputContent } from '../../shared/outputPayload';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { OutputItem, OutputTypeId } from '../../shared/types';
 import { EXPORT_FORMAT_LABELS } from './exporters';
+import FlashcardViewer from './FlashcardViewer';
 import GenericOutputRenderer from './GenericOutputRenderer';
+import GuideChecklist from './GuideChecklist';
+import { MindmapViewer, type MindmapNode } from './MindmapViewer';
+import QuizRunner from './QuizRunner';
+import ReportViewer from './ReportViewer';
+import TimelineViewer from './TimelineViewer';
 import { useExport } from './useExport';
+
+/** Normalize raw content to MindmapViewer-compatible nodes. */
+function normalizeMindmapNode(node: unknown): MindmapNode {
+  if (!node || typeof node !== 'object') return { label: String(node ?? '') };
+  const record = node as Record<string, unknown>;
+  const label = typeof record.label === 'string' ? record.label : String(record.label ?? '');
+  const children = Array.isArray(record.children)
+    ? record.children.map((child) => normalizeMindmapNode(child))
+    : undefined;
+  return { label, children };
+}
 
 interface OutputContentProps {
   output: OutputItem;
+  /** Called when user clicks retry on a failed (fallback) output. */
+  onRetry?: (output: OutputItem) => void;
+  /** Called when user clicks delete on a failed (fallback) output. */
+  onDelete?: (outputId: number) => void;
 }
 
 type BundleRenderer = (content: unknown, isFallback?: boolean) => ReactNode;
 
 const EMPTY_OUTPUT_CONTENT: Record<string, never> = {};
 
-export default function OutputContent({ output }: OutputContentProps) {
+export default function OutputContent({ output, onRetry, onDelete }: OutputContentProps) {
   const content = output.content ?? EMPTY_OUTPUT_CONTENT;
   const isFallback = isFallbackOutputPayload(content);
   const warnings = useMemo(() => getOutputPayloadWarnings(content), [content]);
@@ -82,8 +109,83 @@ export default function OutputContent({ output }: OutputContentProps) {
     };
   }, [frontendBundleApiVersion, frontendBundleExport, frontendBundleId, frontendBundleKind]);
 
+  // Fallback content: generation failed — show error with actions instead of content.
+  if (isFallback) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="rounded-full bg-red-100 p-4 dark:bg-red-900/20">
+          <WarningIcon className="h-8 w-8 text-red-500 dark:text-red-400" />
+        </div>
+        <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-slate-100">
+          内容生成失败
+        </h3>
+        <p className="mt-2 max-w-sm text-sm text-gray-500 dark:text-slate-400">
+          AI 未能成功生成此{output.type}类型的内容，可能是模型配置问题或上下文不足。
+        </p>
+        <div className="mt-6 flex items-center gap-3">
+          {onRetry ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-gray-800 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400"
+              onClick={() => onRetry(output)}
+            >
+              <RefreshIcon style={{ fontSize: 16 }} />
+              重新生成
+            </button>
+          ) : null}
+          {onDelete ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-full border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+              onClick={() => onDelete(output.id)}
+            >
+              <DeleteIcon style={{ fontSize: 16 }} />
+              删除
+            </button>
+          ) : null}
+        </div>
+        <div className="mt-6 text-xs text-gray-400 dark:text-slate-500">
+          {typeof content === 'object' && content !== null
+            ? Object.keys(content as Record<string, unknown>).length > 0
+              ? '输出存在部分数据处理异常'
+              : '输出内容为空'
+            : '输出内容格式异常'}
+        </div>
+      </div>
+    );
+  }
+
   const body = bundleRenderer ? (
     bundleRenderer(content, isFallback)
+  ) : typeId === 'MINDMAP' &&
+    content &&
+    typeof content === 'object' &&
+    'root' in (content as Record<string, unknown>) ? (
+    <div className="StructuredMindmapInteractive h-[400px]">
+      <MindmapViewer
+        data={{ root: normalizeMindmapNode((content as Record<string, unknown>).root) }}
+      />
+    </div>
+  ) : typeId === 'FAQ' && content && decodeOutputContent('FAQ', content) ? (
+    <div className="StructuredOutputFaq">
+      <FlashcardViewer items={decodeOutputContent('FAQ', content)!.items} />
+    </div>
+  ) : typeId === 'QUIZ' && content && decodeOutputContent('QUIZ', content) ? (
+    <div className="StructuredOutputQuiz">
+      <QuizRunner questions={decodeOutputContent('QUIZ', content)!.questions} />
+    </div>
+  ) : typeId === 'GUIDE' && content && decodeOutputContent('GUIDE', content) ? (
+    <div className="StructuredOutputGuide">
+      <GuideChecklist modules={decodeOutputContent('GUIDE', content)!.modules} />
+    </div>
+  ) : typeId === 'TIMELINE' && content && decodeOutputContent('TIMELINE', content) ? (
+    <div className="StructuredOutputTimeline">
+      <TimelineViewer events={decodeOutputContent('TIMELINE', content)!.events} />
+    </div>
+  ) : typeId === 'BRIEFING' && content && decodeOutputContent('BRIEFING', content) ? (
+    <div className="StructuredOutputBriefing">
+      <ReportViewer sections={decodeOutputContent('BRIEFING', content)!.sections} />
+    </div>
   ) : renderDescriptor ? (
     <GenericOutputRenderer content={content} renderDescriptor={renderDescriptor} />
   ) : typeId === 'SLIDES' &&
