@@ -75,15 +75,17 @@ export function registerApiDoc(routes: OpenApiRoute[]): void {
 
     if (route.request?.params) {
       pathItem.parameters = Object.entries(route.request.params).map(([name, schema]) => {
-        const s = schema as any;
-        const paramDesc = s.description ?? '';
-        const paramType = s.type === 'number' ? 'integer' : 'string';
+        // Resolve Zod v4 schema to OpenAPI parameter object.
+        // zod-to-openapi v7 does not support Zod v4, so we extract
+        // metadata directly from the schema instance.
+        const s: Record<string, unknown> = schema as never;
+        const desc = typeof s.description === 'string' ? s.description : undefined;
         return {
           name,
           in: 'path',
           required: true,
-          description: paramDesc || undefined,
-          schema: { type: paramType },
+          description: desc,
+          schema: { type: s.type === 'number' ? 'integer' : 'string' },
         };
       });
     }

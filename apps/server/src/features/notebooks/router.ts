@@ -17,7 +17,9 @@ import { notebooks, sessions, sourceTags, templates } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 
 // ---------------------------------------------------------------------------
-// OpenAPI doc registration
+// OpenAPI doc registration (manual spec — @elysiajs/openapi auto-gen uses
+// Zod ^3 compatible library; we run Zod v4, so the manual route provides
+// richer descriptions via registerApiDoc → generateOpenApiDocument)
 // ---------------------------------------------------------------------------
 
 const apiDocs: OpenApiRoute[] = [
@@ -39,30 +41,30 @@ const apiDocs: OpenApiRoute[] = [
     },
   },
   {
-    path: '/v2/notebooks/:id',
+    path: '/v2/notebooks/:nid',
     method: 'get',
     summary: 'Get a notebook by ID',
     tags: ['notebooks'],
-    request: { params: { id: IdSchema.describe(i18nDesc('notebook.id')) } },
+    request: { params: { nid: IdSchema.describe(i18nDesc('notebook.id')) } },
     responses: { 200: { description: 'Notebook', body: NotebookSchema } },
   },
   {
-    path: '/v2/notebooks/:id',
+    path: '/v2/notebooks/:nid',
     method: 'patch',
     summary: 'Update a notebook name',
     tags: ['notebooks'],
     request: {
-      params: { id: IdSchema.describe(i18nDesc('notebook.id')) },
+      params: { nid: IdSchema.describe(i18nDesc('notebook.id')) },
       body: NotebookCreateSchema,
     },
     responses: { 200: { description: 'Updated notebook', body: NotebookSchema } },
   },
   {
-    path: '/v2/notebooks/:id',
+    path: '/v2/notebooks/:nid',
     method: 'delete',
     summary: 'Delete a notebook (cascades)',
     tags: ['notebooks'],
-    request: { params: { id: IdSchema.describe(i18nDesc('notebook.id')) } },
+    request: { params: { nid: IdSchema.describe(i18nDesc('notebook.id')) } },
     responses: { 204: { description: 'Deleted' } },
   },
 ];
