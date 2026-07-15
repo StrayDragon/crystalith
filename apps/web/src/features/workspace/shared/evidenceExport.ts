@@ -1,8 +1,17 @@
 import { toast } from '../../../shared/toast';
 
-const BASE_URL =
-  (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_BASE_URL ??
-  'http://localhost:8032';
+function getBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    // Browser: use same origin (Vite proxy handles forwarding in dev)
+    return window.location.origin;
+  }
+  return (
+    (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_BASE_URL ??
+    'http://localhost:8032'
+  );
+}
+
+const BASE_URL = getBaseUrl();
 
 function downloadTextAsFile(filename: string, text: string, mimeType: string) {
   const blob = new Blob([text], { type: mimeType });
