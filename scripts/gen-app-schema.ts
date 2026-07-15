@@ -121,6 +121,15 @@ function zodToJson(field: Record<string, unknown>): Record<string, unknown> {
       result.type = 'number';
       break;
     }
+    case 'record': {
+      result.type = 'object';
+      const def = innerDef(field);
+      const valueType = def.valueType as Record<string, unknown> | undefined;
+      if (valueType) {
+        result.additionalProperties = zodToJson(valueType);
+      }
+      break;
+    }
     case 'boolean': {
       result.type = 'boolean';
       break;

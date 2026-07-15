@@ -289,9 +289,9 @@ optional_services:
 # ----------------------------------------------------------------------------
 proxy_settings: &default_proxy
   enabled: false
-  http_url: null
-  https_url: null
-  socks5_url: null
+  http_url: ""
+  https_url: ""
+  socks5_url: ""
   no_proxy:
     - localhost
     - "127.0.0.1"

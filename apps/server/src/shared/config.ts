@@ -292,6 +292,36 @@ export type SsrfPolicyConfig = z.infer<typeof SsrfPolicyConfigSchema>;
  * App-level settings schema — maps from `app.*`.
  */
 export const AppSettingsSchema = z.object({
+  features: z
+    .object({
+      workspace_frontend_bundles_enabled: z
+        .boolean()
+        .default(true)
+        .describe(desc('app.features.workspace_frontend_bundles_enabled')),
+    })
+    .optional(),
+  auth: z
+    .object({
+      enabled: z.boolean().default(false).describe(desc('app.auth.enabled')),
+    })
+    .optional(),
+  cors: z
+    .object({
+      allow_origins: z
+        .array(z.string())
+        .default(['http://localhost:3000'])
+        .describe(desc('app.cors.allow_origins')),
+    })
+    .optional(),
+  startup: z
+    .object({
+      auto_db_init: z.boolean().default(true).describe(desc('app.startup.auto_db_init')),
+      cleanup_failed_sources: z
+        .boolean()
+        .default(false)
+        .describe(desc('app.startup.cleanup_failed_sources')),
+    })
+    .optional(),
   http_guardrails: z
     .object({
       upload_max_bytes: z
@@ -311,7 +341,7 @@ export type AppSettings = z.infer<typeof AppSettingsSchema>;
 export const SourceIngestionSettingsSchema = z.object({
   dedup: z
     .object({
-      enabled: z.boolean().default(true),
+      enabled: z.boolean().default(true).optional(),
     })
     .optional(),
 });
@@ -383,6 +413,10 @@ export const ContextWindowSettingsSchema = z.object({
     .default('truncate')
     .describe(desc('context_window.compression_strategy')),
   window_size: z.number().int().min(0).default(10).describe(desc('context_window.window_size')),
+  priority: z
+    .array(z.string())
+    .default(['history', 'retrieval', 'recent', 'system'])
+    .describe(desc('context_window.priority')),
 });
 export type ContextWindowSettings = z.infer<typeof ContextWindowSettingsSchema>;
 
@@ -619,7 +653,11 @@ export type PluginsSettings = z.infer<typeof PluginsSettingsSchema>;
 
 /** Outbound proxy settings — used by URL fetchers. */
 export const ProxySettingsSchema = z.object({
-  enabled: z.boolean().default(false).describe(desc('proxy_settings.enabled', '是否启用代理')),
+  enabled: z
+    .boolean()
+    .default(false)
+    .optional()
+    .describe(desc('proxy_settings.enabled', '是否启用代理')),
   http_url: z
     .string()
     .nullable()
@@ -703,15 +741,99 @@ export const RootConfigSchema = z.object({
     desc('root.optional_services', '可选服务配置：Chroma、SearXNG、Redis 的启用状态与接入点'),
   ),
   storage: StorageSettingsSchema.describe(desc('root.storage', '存储设置：数据根目录路径')),
-  source_ingestion: SsrfPolicyConfigSchema.describe(
-    desc('root.source_ingestion', '来源摄取安全策略：SSRF 白名单域名/IP、重定向限制'),
-  ),
+  source_ingestion: z
+    .object({
+      url_fetch: z
+        .object({
+          proxy: z.object({
+            enabled: z.boolean().default(false).optional(),
+            http_url: z.string().default('').nullable().optional(),
+            https_url: z.string().default('').nullable().optional(),
+            socks5_url: z.string().default('').nullable().optional(),
+            no_proxy: z.array(z.string()).default(['localhost', '127.0.0.1']).optional(),
+          }),
+          timeout: z
+            .number()
+            .int()
+            .positive()
+            .default(30)
+            .optional()
+            .describe(desc('source_ingestion.url_fetch.timeout')),
+          retry_count: z
+            .number()
+            .int()
+            .min(0)
+            .default(2)
+            .optional()
+            .describe(desc('source_ingestion.url_fetch.retry_count')),
+          retry_delay: z
+            .number()
+            .positive()
+            .default(1.0)
+            .optional()
+            .describe(desc('source_ingestion.url_fetch.retry_delay')),
+          security: SsrfPolicyConfigSchema.partial()
+            .default({})
+            .optional()
+            .describe(desc('source_ingestion.url_fetch.security')),
+        })
+        .optional()
+        .describe(desc('source_ingestion.url_fetch')),
+      web_extraction: z
+        .object({
+          fallback_order: z
+            .array(z.string())
+            .default(['trafilatura', 'jina', 'firecrawl', 'browserless'])
+            .optional(),
+          enable_fallback: z.boolean().default(true).optional(),
+          trafilatura: z.object({
+            enabled: z.boolean().default(true).optional(),
+            include_tables: z.boolean().default(true).optional(),
+            include_links: z.boolean().default(true).optional(),
+            output_format: z.string().default('markdown').optional(),
+            timeout: z.number().int().positive().default(30).optional(),
+            proxy: z.object({
+              enabled: z.boolean().default(false).optional(),
+              http_url: z.string().default('').nullable().optional(),
+              https_url: z.string().default('').nullable().optional(),
+              socks5_url: z.string().default('').nullable().optional(),
+              no_proxy: z.array(z.string()).default(['localhost', '127.0.0.1']).optional(),
+            }),
+          }),
+          jina: z.object({
+            enabled: z.boolean().default(true).optional(),
+            api_key: z.string().default('').optional(),
+            timeout: z.number().int().positive().default(30).optional(),
+            proxy: z.object({
+              enabled: z.boolean().default(false).optional(),
+              http_url: z.string().default('').nullable().optional(),
+              https_url: z.string().default('').nullable().optional(),
+              socks5_url: z.string().default('').nullable().optional(),
+              no_proxy: z.array(z.string()).default(['localhost', '127.0.0.1']).optional(),
+            }),
+          }),
+          firecrawl: z.object({
+            enabled: z.boolean().default(false).optional(),
+            api_key: z.string().default('').optional(),
+            timeout: z.number().int().positive().default(60).optional(),
+          }),
+          browserless: z.object({
+            enabled: z.boolean().default(false).optional(),
+            endpoint: z.string().default('ws://localhost:3000').optional(),
+            token: z.string().default('').optional(),
+          }),
+        })
+        .optional()
+        .describe(desc('source_ingestion.web_extraction')),
+    })
+    .describe(desc('root.source_ingestion')),
   models: ModelsSettingsSchema.describe(
     desc('root.models', '模型配置：默认模型、可用模型列表、提供商配置'),
   ),
-  providers: ProviderConfigSchema.describe(
-    desc('root.providers', 'AI 提供商配置：API key、base URL 等'),
-  ),
+  providers: z
+    .record(z.string(), ProviderConfigSchema.catchall(z.unknown()))
+    .default({})
+    .describe(desc('root.providers', 'AI 提供商配置：name → API key、base URL')),
   cache: CacheSettingsSchema.describe(desc('root.cache', '缓存设置：provider、TTL、最大条目数')),
   database: DatabaseSettingsSchema.describe(desc('root.database', '数据库设置（v1 兼容）')),
   plugins: PluginsSettingsSchema.describe(desc('root.plugins', '插件发现与加载配置')),
