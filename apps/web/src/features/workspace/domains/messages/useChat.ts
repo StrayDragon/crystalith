@@ -97,7 +97,7 @@ export function useChat({
         .notebooks({ nid: activeNotebookId! })
         .sessions({ sid: activeSessionId! })
         .messages.get({ query: { offset: 0, limit: 200 } });
-      if (fetchErr) throw fetchErr;
+      if (fetchErr) throw new Error(String(fetchErr));
       return result ?? [];
     },
     { revalidateOnFocus: false },
@@ -402,7 +402,7 @@ export function useChat({
         notebook_id: notebookId,
         session_id: sessionId,
       });
-      if (qaErr) throw qaErr;
+      if (qaErr) throw new Error(String(qaErr));
       const result = qaResult! as Record<string, unknown>;
 
       const normalizedCitations = ((result.citations as unknown[]) ?? []).map((c: unknown) =>
@@ -480,7 +480,7 @@ export function useChat({
         .notebooks({ nid: s.activeNotebookId })
         .sessions({ sid: s.activeSessionId })
         ['convert-to-source'].post();
-      if (convErr) throw convErr;
+      if (convErr) throw new Error(String(convErr));
       if (refreshSources) {
         await refreshSources();
       }
@@ -513,7 +513,7 @@ export function useChat({
           .notebooks({ nid: s.activeNotebookId })
           .sessions({ sid: s.activeSessionId })
           ['convert-to-output'].post({ output_type: outputType });
-        if (convErr) throw convErr;
+        if (convErr) throw new Error(String(convErr));
         if (refreshOutputs) {
           await refreshOutputs();
         }

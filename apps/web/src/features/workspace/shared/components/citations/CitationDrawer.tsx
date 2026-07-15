@@ -132,7 +132,7 @@ export default function CitationDrawer({
           .citations.context.get({
             query: { chunk_id: String(citation.chunkId), before: '1', after: '1' },
           });
-        if (fetchErr) throw fetchErr;
+        if (fetchErr) throw new Error(String(fetchErr));
         setContext(data as unknown as CitationContextResponse);
       } catch (error) {
         setError((error as Error)?.message || '加载引用上下文失败');

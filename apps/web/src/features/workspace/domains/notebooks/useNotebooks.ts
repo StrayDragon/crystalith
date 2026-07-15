@@ -31,7 +31,7 @@ export function useNotebooks() {
     'workspace/notebooks',
     async () => {
       const { data, error } = await api.v2.notebooks.get();
-      if (error) throw error;
+      if (error) throw new Error(String(error));
       return data ?? [];
     },
     {
@@ -85,7 +85,7 @@ export function useNotebooks() {
         const { data: created, error: createErr } = await api.v2.notebooks.post({
           name: DEFAULT_NOTEBOOK_NAME,
         });
-        if (createErr) throw createErr;
+        if (createErr) throw new Error(String(createErr));
         const newNotebook = created!;
         await mutate(async (current) => (current ? [...current, newNotebook] : [newNotebook]), {
           revalidate: false,
@@ -127,7 +127,7 @@ export function useNotebooks() {
     s.setError('create', '');
     try {
       const { data: created, error } = await api.v2.notebooks.post({ name });
-      if (error) throw error;
+      if (error) throw new Error(String(error));
       const newNotebook = created!;
       await mutate(async (current) => (current ? [...current, newNotebook] : [newNotebook]), {
         revalidate: false,
@@ -156,7 +156,7 @@ export function useNotebooks() {
 
       try {
         const { data: created, error } = await api.v2.notebooks.post({ name: finalName });
-        if (error) throw error;
+        if (error) throw new Error(String(error));
         const newNotebook = created!;
         await mutate(async (current) => (current ? [...current, newNotebook] : [newNotebook]), {
           revalidate: false,
@@ -186,7 +186,7 @@ export function useNotebooks() {
       try {
         // template_id is a query param; use the same POST but pass templateId info
         const { data: created, error } = await api.v2.notebooks.post({ name: finalName });
-        if (error) throw error;
+        if (error) throw new Error(String(error));
         const newNotebook = created!;
         await mutate(async (current) => (current ? [...current, newNotebook] : [newNotebook]), {
           revalidate: false,
@@ -220,7 +220,7 @@ export function useNotebooks() {
         const { data: updated, error } = await api.v2.notebooks({ nid: notebookId }).patch({
           name: trimmed,
         });
-        if (error) throw error;
+        if (error) throw new Error(String(error));
         const result = updated!;
         const normalized = normalizeNotebook(result);
         await mutate(
@@ -247,7 +247,7 @@ export function useNotebooks() {
       if (connectionState !== 'live') return false;
       try {
         const { error } = await api.v2.notebooks({ nid: notebookId }).delete();
-        if (error) throw error;
+        if (error) throw new Error(String(error));
         await mutate(async (current) => current?.filter((item) => item.id !== notebookId) ?? [], {
           revalidate: false,
         });

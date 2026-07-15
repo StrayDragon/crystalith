@@ -22,7 +22,7 @@ export function useSessions() {
       const { data, error: fetchErr } = await api.v2
         .notebooks({ nid: activeNotebookId! })
         .sessions.get();
-      if (fetchErr) throw fetchErr;
+      if (fetchErr) throw new Error(String(fetchErr));
       return data ?? [];
     },
     { revalidateOnFocus: false },
@@ -83,7 +83,7 @@ export function useSessions() {
           .sessions.post({
             title: title ?? null,
           });
-        if (createErr) throw createErr;
+        if (createErr) throw new Error(String(createErr));
         const newSession = created!;
         const normalized = normalizeSession(newSession);
         store.getState().setActiveSession(normalized.id);
@@ -131,7 +131,7 @@ export function useSessions() {
           .patch({
             title: title.trim() || undefined,
           });
-        if (updateErr) throw updateErr;
+        if (updateErr) throw new Error(String(updateErr));
         const result = updated!;
         const normalized = normalizeSession(result);
         store
@@ -165,7 +165,7 @@ export function useSessions() {
           .notebooks({ nid: activeNotebookId })
           .sessions({ sid: sessionId })
           .delete();
-        if (deleteErr) throw deleteErr;
+        if (deleteErr) throw new Error(String(deleteErr));
         const s = store.getState();
         const remaining = s.sessions.filter((item) => item.id !== sessionId);
         s.setSessions(remaining);

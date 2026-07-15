@@ -22,7 +22,7 @@ export function useTemplates() {
     SWR_KEY,
     async () => {
       const { data, error } = await api.v2.templates.get();
-      if (error) throw error;
+      if (error) throw new Error(String(error));
       return (data ?? []).map(normalizeTemplate);
     },
     { revalidateOnFocus: false },
@@ -49,7 +49,7 @@ export function useTemplates() {
           source_tags: payload.sourceTags ?? [],
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(String(error));
       const created = normalizeTemplate(data!);
       await mutate(async (current) => [...(current ?? []), created], {
         revalidate: false,
@@ -78,7 +78,7 @@ export function useTemplates() {
           source_tags: [],
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(String(error));
       const created = normalizeTemplate(data!);
       await mutate(async (current) => [...(current ?? []), created], {
         revalidate: false,
@@ -93,7 +93,7 @@ export function useTemplates() {
       const { data, error } = await api.v2.templates({ id: templateId }).patch({
         description,
       });
-      if (error) throw error;
+      if (error) throw new Error(String(error));
       const updated = normalizeTemplate(data!);
       await mutate(
         async (current) => current?.map((t) => (t.id === templateId ? updated : t)) ?? [updated],
@@ -107,7 +107,7 @@ export function useTemplates() {
   const removeTemplate = useCallback(
     async (templateId: number) => {
       const { error } = await api.v2.templates({ id: templateId }).delete();
-      if (error) throw error;
+      if (error) throw new Error(String(error));
       await mutate(async (current) => current?.filter((t) => t.id !== templateId) ?? [], {
         revalidate: false,
       });

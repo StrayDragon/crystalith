@@ -117,7 +117,7 @@ export function useSources() {
         .notebooks({ nid: activeNotebookId! })
         .sources.get({ query: sourceListQuery as any } as any)
         .then((r) => {
-          if (r.error) throw r.error;
+          if (r.error) throw new Error(String(r.error));
           return r.data ?? [];
         }),
     { revalidateOnFocus: false },
@@ -130,7 +130,7 @@ export function useSources() {
         .notebooks({ nid: activeNotebookId! })
         .sources.tags.get()
         .then((r) => {
-          if (r.error) throw r.error;
+          if (r.error) throw new Error(String(r.error));
           return (r.data ?? []) as any;
         }),
     { revalidateOnFocus: false },
@@ -258,7 +258,7 @@ export function useSources() {
           try {
             // eslint-disable-next-line no-await-in-loop -- Upload queue + dedup confirmation requires serial execution.
             await api.v2.sources.upload.post({ file } as any).then((r) => {
-              if (r.error) throw r.error;
+              if (r.error) throw new Error(String(r.error));
               return r.data as any;
             });
             successCount += 1;
@@ -284,7 +284,7 @@ export function useSources() {
                 await api.v2.sources.upload
                   .post({ file } as any, { query: { dedup_action } } as any)
                   .then((r) => {
-                    if (r.error) throw r.error;
+                    if (r.error) throw new Error(String(r.error));
                     return r.data as any;
                   });
                 successCount += 1;
@@ -759,7 +759,7 @@ export function useSources() {
         .notebooks({ nid: activeNotebookId! })
         .extractors.get()
         .then((r) => {
-          if (r.error) throw r.error;
+          if (r.error) throw new Error(String(r.error));
           return r.data as any;
         }),
     { revalidateOnFocus: false },

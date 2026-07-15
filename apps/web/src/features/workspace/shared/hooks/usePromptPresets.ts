@@ -54,7 +54,7 @@ export function usePromptPresets(_options?: { enabled?: boolean }) {
     SWR_KEY,
     async () => {
       const { data, error } = await api.v2['prompt-presets'].get();
-      if (error) throw error;
+      if (error) throw new Error(String(error));
       return (data ?? []).map(normalizePreset);
     },
     { revalidateOnFocus: false },
@@ -80,7 +80,7 @@ export function usePromptPresets(_options?: { enabled?: boolean }) {
         system_prompt: payload.systemPrompt,
         enabled: payload.enabled ?? true,
       });
-      if (error) throw error;
+      if (error) throw new Error(String(error));
       if (!data || !('id' in data)) throw new Error('prompt-preset create failed');
       const created = normalizePreset(data);
       await mutate(async (current) => [...(current ?? []), created], {
@@ -108,7 +108,7 @@ export function usePromptPresets(_options?: { enabled?: boolean }) {
       if (payload.enabled !== undefined) body.enabled = payload.enabled;
 
       const { data, error } = await api.v2['prompt-presets']({ id: presetId }).patch(body);
-      if (error) throw error;
+      if (error) throw new Error(String(error));
       if (!data || !('id' in data)) throw new Error('prompt-preset update failed');
       const updated = normalizePreset(data);
       await mutate(
@@ -123,7 +123,7 @@ export function usePromptPresets(_options?: { enabled?: boolean }) {
   const deleteCustomPreset = useCallback(
     async (presetId: number) => {
       const { error } = await api.v2['prompt-presets']({ id: presetId }).delete();
-      if (error) throw error;
+      if (error) throw new Error(String(error));
       await mutate(async (current) => current?.filter((p) => p.preset_id !== presetId) ?? [], {
         revalidate: false,
       });
