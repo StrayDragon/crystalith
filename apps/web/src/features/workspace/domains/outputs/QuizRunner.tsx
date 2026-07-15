@@ -24,6 +24,30 @@ function normalize(value: string | undefined | null): string {
   return (value ?? '').toString().trim().toLowerCase();
 }
 
+/**
+ * Strip letter-prefix from option text for comparison with answer field.
+ * Options like "B. 计算机科学" get normalized to "计算机科学" for matching
+ * against an answer field like "B". Falls back to full text if no prefix.
+ *
+ * Handles formats:
+ *   "A. text"  → "text"       (letter + period + space)
+ *   "A) text"  → "text"       (letter + parenthesis + space)
+ *   "A text"   → "text"       (letter + space)
+ *   "text"     → "text"       (no prefix)
+ */
+function stripOptionPrefix(text: string): string {
+  return text.replace(/^[A-Za-z][).\s]\s*/, '').trim();
+}
+
+/**
+ * Extract the letter prefix (A, B, C...) from an option text, if present.
+ * Returns the uppercase letter or null.
+ */
+function extractOptionLetter(text: string): string | null {
+  const match = text.trim().match(/^([A-Za-z])[).\s]/);
+  return match ? match[1].toUpperCase() : null;
+}
+
 function resolveCorrect(answer: QuizQuestion['answer']): string[] {
   if (Array.isArray(answer)) return answer.filter(Boolean).map((item) => item.toString());
   if (typeof answer === 'string') return [answer];
@@ -68,7 +92,22 @@ export default function QuizRunner({ questions, className }: QuizRunnerProps) {
   const handleSubmit = useCallback(() => {
     const selected = currentAnswer.selected;
     if (!selected) return;
-    const isCorrect = correctAnswers.some((value) => normalize(value) === normalize(selected));
+    // Try matching by:
+    // 1. exact normalized string
+    // 2. letter prefix from selected option vs answer
+    // 3. stripped option text vs answer
+    const isCorrect = correctAnswers.some((answer) => {
+      const normAnswer = normalize(answer);
+      // Exact match (e.g. answer="B" and selected="b")
+      if (normalize(selected) === normAnswer) return true;
+      // Extract letter from selected option (e.g. "B. 计算机科学" → "B") and compare to answer
+      const selectedLetter = extractOptionLetter(selected);
+      if (selectedLetter && normalize(selectedLetter) === normAnswer) return true;
+      // Strip prefix from selected option (e.g. "计算机科学") and compare to answer
+      const stripped = normalize(stripOptionPrefix(selected));
+      if (stripped === normAnswer) return true;
+      return false;
+    });
     setAnswers((prev) =>
       prev.map((answer, index) =>
         index === currentIndex ? { ...answer, submitted: true, isCorrect } : answer,

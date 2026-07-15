@@ -1,3 +1,4 @@
+import { openapi } from '@elysiajs/openapi';
 import { Elysia } from 'elysia';
 
 import { generateAsyncApiDocument } from './asyncapi.ts';
@@ -83,6 +84,19 @@ apiDocs.push({
 
 export function createApp() {
   return new Elysia()
+    .use(
+      openapi({
+        provider: 'scalar',
+        path: '/openapi',
+        documentation: {
+          info: {
+            title: 'Crystalith v2 API',
+            version: '2.0.0-dev',
+            description: 'RAG-powered knowledge notebook — v2 API',
+          },
+        },
+      }),
+    )
     .get('/health', () => ({ status: 'ok', version: '2.0.0-dev' }))
     .get('/health/dependencies', async () => {
       const opt = getOptionalServices();
