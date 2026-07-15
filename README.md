@@ -38,10 +38,10 @@ just check         # Quality gates (typecheck + lint + format)
 
 ## v1 Python (Reference)
 
-`backend/py/` is preserved as a reference SSOT until c14 cleanup. Do not modify during v2 work.
+`backend/py/` was removed in c14 (2026-07-15). All v1 behavior has been parity-confirmed in the TypeScript v2 implementation.
 
 ## Migration / Progress
 
 - Live status: `PROGRESS.v2.md`
 - Specs & changes: `llmanspec/`
-- Next gated work: c13 (distribution) + c14 (cleanup) → v2.0.0
+- Remaining: c13 (distribution) → v2.0.0
