@@ -44,6 +44,7 @@ const BASE = 'http://test.local';
 let app: Elysia;
 let notebookId: number;
 let _origFetch: typeof globalThis.fetch;
+let _origSearxngHost: string | undefined;
 
 const MOCK_SEARCH_RESULTS = [
   {
@@ -81,6 +82,11 @@ beforeAll(() => {
   const nb = orm.insert(notebooks).values({ name: 'search-nb' }).returning().get();
   notebookId = nb.id;
 
+  // Set a dummy searxng host so searxngFetch doesn't short-circuit to [].
+  // The actual fetch is mocked below — the host is never contacted.
+  _origSearxngHost = process.env.CL_SEARXNG_HOST;
+  process.env.CL_SEARXNG_HOST = 'http://test-searxng:8888';
+
   _origFetch = globalThis.fetch;
   globalThis.fetch = ((url: string | URL, _init?: RequestInit) => {
     if (String(url).includes('/search?q=')) {
@@ -97,6 +103,11 @@ beforeAll(() => {
 
 afterAll(() => {
   globalThis.fetch = _origFetch;
+  if (_origSearxngHost !== undefined) {
+    process.env.CL_SEARXNG_HOST = _origSearxngHost;
+  } else {
+    delete process.env.CL_SEARXNG_HOST;
+  }
   teardownIntegrationEnv();
 });
 
