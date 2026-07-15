@@ -139,7 +139,7 @@ export function generateOpenApiDocument(info?: {
   const doc = generator.generateDocument({
     openapi: '3.1.0',
     info: { title, version, description },
-    servers: [{ url: '/v2', description: 'Crystalith v2 API' }],
+    servers: [{ url: '/', description: 'Crystalith v2 API' }],
   }) as unknown as Record<string, unknown>;
 
   // Inject tags for Scalar UI grouping.
