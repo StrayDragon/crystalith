@@ -1,5 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,extractors-full-response,"GET extractors MUST return full ExtractorsListResponse","GET /extractors MUST 返回完整 ExtractorsListResponse（每提取器 available/display_name/priority/requires_api_key/recovery_hint + default_extractor + fallback_enabled），MUST NOT 只返回存储的策略行",null,null,null
-op_scenarios[1]{req_id,id,given,when,then}:
-  extractors-full-response,client-lists-extractors,"客户端请求 GET /extractors","构建响应","系统 SHALL 返回每提取器的 available/display_name/priority/requires_api_key/recovery_hint 字段"

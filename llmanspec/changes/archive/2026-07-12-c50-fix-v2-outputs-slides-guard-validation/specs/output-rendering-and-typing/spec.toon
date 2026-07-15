@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  add_requirement,outputs-slides-must-be-rejected-at-outputs-endpoint,"Outputs endpoint MUST reject SLIDES type with 400 (use studio endpoints)","outputs 生成端点 MUST 对 type=SLIDES 返回 400 并提示使用 studio slides 端点（对齐 v1 api.py:205-206 'Use slides endpoints for SLIDES output'），MUST NOT 把 SLIDES 路由进通用 outputs pipeline；当前 v2 router.ts:97-180 接受 SLIDES 并走 runOutputPipeline，导致 SLIDES content 既无 postprocess backfill（pipeline.ts:220-252 缺 SLIDES case）也无 isContentEmpty 判定（pipeline.ts:258-276 缺 SLIDES case）。这是 PROGRESS.v2.md 标注 'SLIDES 缺 postprocess case' 的根因——v1 根本不让 SLIDES 进此路径",null,null,null
-  add_requirement,outputs-source-id-must-be-validated,"Outputs pipeline MUST validate source_id existence and notebook ownership","outputs 生成端点 MUST 校验 source_ids 中的每个 id 都属于该 notebook（对齐 v1 _validate_source_ids, output_graph.py:151-176，未知 id 抛 ValueError→400 'Unknown source_id in source_ids'），MUST NOT 直接把 sourceIds 透传给 ragRegistry.retrieveWith 而不校验；当前 v2 pipeline.ts 不校验，source_id 不存在或不属于 notebook 时静默检索空结果而非 400",null,null,null
-op_scenarios[2]{req_id,id,given,when,then}:
-  outputs-slides-must-be-rejected-at-outputs-endpoint,slides-rejected,"客户端 POST /outputs type=SLIDES","系统处理请求","SHALL 返回 400 并提示用 studio slides 端点"
-  outputs-source-id-must-be-validated,unknown-source-id,"客户端传 source_ids 含不属于本 notebook 的 id","系统校验 source_ids","SHALL 返回 400（而非静默检索空结果）"

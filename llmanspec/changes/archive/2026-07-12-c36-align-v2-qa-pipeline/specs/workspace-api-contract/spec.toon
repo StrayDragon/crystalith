@@ -1,9 +1,0 @@
-kind: llman.sdd.delta
-ops[3]{op,req_id,title,statement,from,to,name}:
-  add_requirement,qa-export-endpoint,"API MUST provide QA export endpoint","系统 MUST 提供 QA 导出端点支持 markdown 和 json 两种格式",null,null,null
-  add_requirement,qa-sse-done-shape,"QA done SSE event MUST include evidence and context fields","QA 流式 done 事件 MUST 包含 evidence 和 context 和 created_at 字段",null,null,null
-  add_requirement,qa-response-confidence-field,"QA non-streaming response MUST include confidence and evidence","QA 非流式响应 MUST 在 body 中包含 confidence 和 evidence 字段",null,null,null
-op_scenarios[3]{req_id,id,given,when,then}:
-  qa-export-endpoint,markdown-export,"一个 session 有 assistant 回答","客户端请求 GET /v2/qa/export?session_id=X&format=markdown","系统 SHALL 返回 text/markdown 内容含 question/answer/citations 三段结构及 Content-Disposition header"
-  qa-sse-done-shape,done-event-fields,"QA 流式完成","done 事件发出","事件 payload SHALL 包含 evidence 和 context 和 created_at 和 confidence 和 citations 和 message_id"
-  qa-response-confidence-field,non-streaming-response,"客户端发送非流式 QA 请求","响应返回","响应 body SHALL 包含 confidence 和 evidence 字段"

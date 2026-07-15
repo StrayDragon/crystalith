@@ -1,9 +1,0 @@
-kind: llman.sdd.delta
-ops[3]{op,req_id,title,statement,from,to,name}:
-  add_requirement,convert-embedding-no-ready-on-fail,"Source conversion MUST NOT mark ready when embedding fails","QA-to-source 和 session convert-to-source MUST 在 embedding 失败时标记 source 为 failed 而非 ready",null,null,null
-  add_requirement,per-source-qa-vector-search,"Per-source QA MUST use vector retrieval","per-source QA MUST 通过 embed question + scoped vector search 检索相关 chunk，而非简单取前 N 个 chunk",null,null,null
-  add_requirement,from-url-link-mode,"From-url MUST support link mode","from-url 端点 MUST 支持 mode=link 创建轻量 source（不 fetch URL 内容）",null,null,null
-op_scenarios[3]{req_id,id,given,when,then}:
-  convert-embedding-no-ready-on-fail,qa-to-source-fail,"embedding API 在 QA-to-source 过程中失败","source 状态更新","系统 SHALL 标记 source 为 failed 而非 ready"
-  per-source-qa-vector-search,large-source-qa,"一个 source 有 50 个 chunk","用户对该 source 提问","系统 SHALL 通过向量检索返回最相关的 chunk 而非前 15 个"
-  from-url-link-mode,link-mode,"用户提供 URL 且 mode=link","from-url 调用","系统 SHALL 创建轻量 source 不执行 HTTP fetch"

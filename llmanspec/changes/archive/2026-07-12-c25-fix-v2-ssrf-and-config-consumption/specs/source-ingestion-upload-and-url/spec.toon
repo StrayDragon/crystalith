@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  add_requirement,r_ssrf_config,"SSRF policy driven by config","系统 MUST 从配置解析 hostAllowlist 与 domainAllowlist 与 cidrAllowlist 与 allowlist_only 为 SsrfPolicy 并应用于 URL fetch 校验。无配置时 MUST 回退默认姿态 (拒绝私网与元数据 IP)。",null,null,null
-  add_requirement,r_upload_size_config,"Upload size limit configurable","系统 MUST 从配置读取上传大小上限。无配置时 MUST 默认 50MB。",null,null,null
-op_scenarios[2]{req_id,id,given,when,then}:
-  r_ssrf_config,allowlist_only_blocks,"配置了 allowlist_only=true 且 hostAllowlist 含 trusted.com","用户从非白名单主机 fetch URL","系统 SHALL 拒绝该 fetch"
-  r_upload_size_config,over_limit_rejected,"配置上传上限 10MB","用户上传 20MB 文件","系统 SHALL 拒绝 (413)"

@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  add_requirement,studio-output-sync-must-write-output-id-fk,"Studio output sync MUST write studioSlides.outputId FK and full content schema","studio 的 syncSlideOutput MUST (1) 写 studioSlides.outputId 外键（当前 v2 从不写该列，schema.ts:361 的列恒为 null），(2) content schema 对齐 v1 _sync_output（api.py:194-229）：content={title, engine, outline, markdown, slide_id}；当前 v2 service.ts:133-157 只写 {title, markdown, stage:'markdown'}（缺 engine/outline/slide_id）且用 prompt='studio:<id>' 匹配而非用 FK。任何依赖 slide→output join 的 UI/查询在 v2 失效",null,null,null
-  add_requirement,studio-stale-cleanup-must-not-set-error-message,"Studio stale-RUNNING cleanup MUST clear error and return bool like v1","studio 的 clearStaleRunning MUST 对齐 v1 _clear_stale_running_status（api.py:107-118）：设 status=IDLE、清空 error_message（设 None）、返回 bool；当前 v2 service.ts:105-118 把 errorMessage 设为 'stale running status cleared'（非空字符串），导致 stale 清理后的 slide 在 v2 显示错误信息而 v1 不显示",null,null,null
-op_scenarios[2]{req_id,id,given,when,then}:
-  studio-output-sync-must-write-output-id-fk,output-fk-join,"前端或查询用 studioSlides.outputId join outputs","系统 syncSlideOutput","studioSlides.outputId SHALL 被写入；content SHALL 含 engine/outline/markdown/slide_id"
-  studio-stale-cleanup-must-not-set-error-message,stale-no-error,"slide 处 RUNNING 但已 stale（>10min）","系统清理 stale 状态","status=IDLE 且 error_message 为空（非 'stale running status cleared'）"

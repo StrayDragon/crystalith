@@ -1,9 +1,0 @@
-kind: llman.sdd.delta
-ops[3]{op,req_id,title,statement,from,to,name}:
-  add_requirement,r1,中文 BDD 测试解析器,"MUST 提供基于 @cucumber/gherkin 的 BDD 测试 runner，MUST 支持 # language: zh-CN 的 .feature 文件解析，MUST 与 bun test 集成。",null,null,null
-  add_requirement,r2,v1 Feature 文件移植,MUST 移植 17 个 .feature 文件从 backend/py/tests/bdd/features/，MUST 仅修改路径前缀 /v1 到 /v2，MUST 保持中文场景描述不变。,null,null,null
-  add_requirement,r3,端到端回归门禁,"MUST 将 BDD 测试加入 pre-commit 门禁，MUST 覆盖全部 16 个功能域的 API 端点行为。",null,null,null
-op_scenarios[3]{req_id,id,given,when,then}:
-  r1,s1,"Gherkin .feature 文件使用 # language: zh-CN 声明",运行 bun test tests/bdd/,系统解析中文 功能/场景/假如/当/那么 关键词，生成对应的 test() block
-  r2,s2,17 个 .feature 文件已从 v1 复制,运行 apps/server/tests/bdd/features/ 下的测试,所有场景的 API 路径为 /v2/ 前缀，与原 v1 行为一致
-  r3,s3,核心 CRUD 域 (notebooks/sessions/messages/tasks/workspace) 的 feature 已注册,运行 bun test tests/bdd/,核心域全绿 (21 pass / 0 fail)；LLM 依赖域在白名单中 skip 不产生 fail

@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  add_requirement,outputs-export-format,"Export MUST support markdown and json formats","outputs 导出端点 MUST 支持 format=markdown 和 format=json 两种格式，markdown 路径 MUST 按输出类型渲染为可读 markdown",null,null,null
-  add_requirement,outputs-convert-type-aware,"Convert-to-source MUST use type-aware rendering","outputs convert-to-source MUST 使用逐类型 markdown 渲染而非原始 JSON 序列化，并按段落分块嵌入",null,null,null
-op_scenarios[2]{req_id,id,given,when,then}:
-  outputs-export-format,markdown-export,"一个 FAQ 类型 output 存在","客户端请求 format=markdown","系统 SHALL 返回按 FAQ 格式渲染的 markdown 文本"
-  outputs-convert-type-aware,convert-timeline,"一个 TIMELINE 类型 output 转换为 source","convert-to-source 调用","系统 SHALL 先渲染为 timeline markdown 再分块嵌入"

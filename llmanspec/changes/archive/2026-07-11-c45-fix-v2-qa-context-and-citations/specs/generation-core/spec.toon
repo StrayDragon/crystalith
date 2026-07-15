@@ -1,9 +1,0 @@
-kind: llman.sdd.delta
-ops[3]{op,req_id,title,statement,from,to,name}:
-  add_requirement,qa-context-stats-fields,"ContextStats MUST use v1 field names","QA ContextStats MUST 使用 v1 字段名 total_tokens/system_tokens/history_tokens/retrieval_tokens/query_tokens/max_tokens/compressed，MUST NOT 使用无后缀的 total/system 等",null,null,null
-  add_requirement,qa-inline-citation-fallback,"QA MUST ensure inline citations when missing","QA answer 无 [N] 形式内联引用时 MUST 追加 [1] 兜底标记（对齐 v1 _ensure_inline_citations）",null,null,null
-  add_requirement,qa-low-similarity-empty,"Low similarity no-evidence MUST return empty citations","当 no_evidence_reason 为 low_similarity 时 MUST 返回 citations=[] 空数组，MUST NOT 返回检索到的 citations",null,null,null
-op_scenarios[3]{req_id,id,given,when,then}:
-  qa-context-stats-fields,client-reads-context,"客户端读取 done 事件的 context 字段","响应构建","系统 SHALL 使用 total_tokens/system_tokens 等带后缀字段名并含 compressed 布尔"
-  qa-inline-citation-fallback,answer-no-brackets,"LLM answer 不含 [N]","后处理","系统 SHALL 追加 [1] 兜底"
-  qa-low-similarity-empty,low-similarity,"检索 score 低于阈值","判定 no-evidence","系统 SHALL 返回 citations=[]"

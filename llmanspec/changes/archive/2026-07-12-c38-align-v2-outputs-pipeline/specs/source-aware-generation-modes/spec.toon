@@ -1,5 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,outputs-source-scoping,"Outputs retrieval MUST filter by source_ids","outputs 生成检索 MUST 支持通过 source_ids 参数将检索范围限定到指定 source 子集",null,null,null
-op_scenarios[1]{req_id,id,given,when,then}:
-  outputs-source-scoping,scoped-generation,"notebook 有 5 个 source","用户指定 source_ids=[2,4] 生成 output","系统 SHALL 仅在 source 2 和 4 的 chunk 范围内检索"

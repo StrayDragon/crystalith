@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  add_requirement,"qa-contextstats-system-tokens-must-be-real","QA ContextStats system_tokens MUST be really counted not hardcoded zero","QA ContextStats 的 system_tokens MUST 用真实 tokenizer（gpt-tokenizer cl100k_base）计算 system prompt 的 token 成本，MUST NOT 硬编码为 0（对齐 v1 service.py:261-271）。total_tokens MUST 包含 system_tokens 的真实贡献。",null,null,null
-  add_requirement,"qa-contextstats-max-tokens-must-read-config","QA ContextStats max_tokens MUST read from config not hardcode","QA ContextStats 的 max_tokens MUST 从 context_window.max_tokens 配置读取（对齐 v1 service.py:265 读 settings.context_window），MUST NOT 硬编码 8000。压缩预算和 compressed flag MUST 对不同模型 context window 大小正确响应。",null,null,null
-op_scenarios[2]{req_id,id,given,when,then}:
-  "qa-contextstats-system-tokens-must-be-real","system-tokens-nonzero","a QA request uses a non-trivial system prompt","the system computes ContextStats","system_tokens MUST be greater than 0 and reflect the system prompt token cost"
-  "qa-contextstats-max-tokens-must-read-config","max-tokens-from-config","the context_window.max_tokens config is set to 16000","a QA request computes ContextStats","max_tokens MUST be 16000 (from config) not the hardcoded 8000"

@@ -1,6 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,"builtin-templates-must-not-be-modifiable","Built-in templates MUST NOT be modifiable or deletable","标记为 is_builtin 的内置模板 MUST NOT 被修改（PATCH）或删除（DELETE）（对齐 v1 templates/service.py:110-111,126-127）。尝试修改/删除内置模板时 MUST 返回 409 Conflict。MUST NOT 允许破坏内置模板（论文研究/项目文档/知识收集）导致无法恢复。",null,null,null
-op_scenarios[2]{req_id,id,given,when,then}:
-  "builtin-templates-must-not-be-modifiable","builtin-patch-rejected","a template marked is_builtin exists","a PATCH request attempts to modify it","the system MUST return 409 Conflict"
-  "builtin-templates-must-not-be-modifiable","builtin-delete-rejected","a template marked is_builtin exists","a DELETE request attempts to delete it","the system MUST return 409 Conflict"

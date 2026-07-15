@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  add_requirement,tags-uniqueness-and-ownership,"Tag operations MUST enforce uniqueness and notebook ownership","source tag 的创建和更新 MUST 强制名称唯一性（case-insensitive，返回 409），所有 tag 操作 MUST 校验 tag 属于指定 notebook",null,null,null
-  add_requirement,tags-assign-idempotent,"Tag assign and remove MUST be idempotent","tag 的 assign 和 remove 操作 MUST 验证 source 存在且具备幂等性",null,null,null
-op_scenarios[2]{req_id,id,given,when,then}:
-  tags-uniqueness-and-ownership,duplicate-name,"notebook 已有名为 Research 的 tag","创建同名 tag（不同大小写）","系统 SHALL 返回 409 冲突错误"
-  tags-assign-idempotent,reassign,"source 已被 assigned 到 tag","再次 assign 同一 tag","系统 SHALL 返回幂等提示而非插入重复行"

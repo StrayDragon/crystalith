@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  add_requirement,r_context_endpoint,"Citation context neighborhood","系统 MUST 提供 citations context 端点 按 chunk_id 或 source_id 与 chunk_index 解析目标 chunk 并返回相邻 chunk 邻域窗口 返回 MUST 包含 before 数组 与目标 chunk 与 after 数组",null,null,null
-  add_requirement,r_context_enrichment,"Citation context enrichment","系统 MUST 在 citations context 返回的每个 chunk 中包含 page_number 与 paragraph_index 字段以支持证据定位",null,null,null
-op_scenarios[2]{req_id,id,given,when,then}:
-  r_context_endpoint,by_chunk_id,"存在指定 chunk","用户请求 context 带 chunk_id 与 neighbors","系统 SHALL 返回 before 与 chunk 与 after 邻域"
-  r_context_enrichment,page_present,"source 含 page 元数据","用户请求 context","系统 SHALL 在每个 chunk 返回 page_number"

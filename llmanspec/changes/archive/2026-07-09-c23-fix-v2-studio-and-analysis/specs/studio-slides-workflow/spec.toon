@@ -1,9 +1,0 @@
-kind: llman.sdd.delta
-ops[3]{op,req_id,title,statement,from,to,name}:
-  add_requirement,r9,"Studio uses two-stage outline→markdown generation","Studio 幻灯片生成 MUST 分两阶段：(1) outline（generateObject SlideOutlineSchema，独立可 review）→(2) markdown（基于 outline streamText）。MUST NOT 跳过 outline 直接出 markdown。outline 存 DB（stage=outline）支持 HITL。",null,null,null
-  add_requirement,r10,"Studio theme is configurable via presets","Studio 主题 MUST 可配置（6 预设：minimal-clean/business-brief/product-launch/research-paper/data-insight/creative-visual）。frontmatter MUST 由预设确定性重建（LLM frontmatter 被 strip）。MUST NOT 硬编码单一 theme。",null,null,null
-  add_requirement,r11,"Analysis uses embedding clustering not LLM guessing","笔记本分析 MUST 使用 embedding greedy centroid 聚类（cosine ≥0.7，max 10 簇）+ 相关性检测（vector search top_k=20）+ LLM 矛盾检测（pairwise）。MUST NOT 用 8000 字截断 + 单次 LLM 猜测。聚类结果 MUST 可复现（确定性）。",null,null,null
-op_scenarios[3]{req_id,id,given,when,then}:
-  r9,happy,"创建 slide draft","先 POST /outline 再 POST /markdown","outline 独立生成可 review，stage=outline；markdown 基于 outline，stage=markdown"
-  r10,happy,"选 business-brief 主题","生成","frontmatter 由 business-brief 预设确定性重建，非硬编码 seriph"
-  r11,happy,"notebook 有 50 个相似 chunk","analysis","greedy 聚类归簇（cosine ≥0.7），topic name = top-3 keywords，非 LLM 猜测"

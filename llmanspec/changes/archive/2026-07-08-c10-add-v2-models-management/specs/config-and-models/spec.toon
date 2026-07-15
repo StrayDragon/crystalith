@@ -1,9 +1,0 @@
-kind: llman.sdd.delta
-ops[3]{op,req_id,title,statement,from,to,name}:
-  add_requirement,r1,"Models listed via /v2/models endpoint","系统 MUST 暴露 /v2/models 端点列出所有已配置模型。每个模型 MUST 包含 provider、modelId、displayName。",null,null,null
-  add_requirement,r2,"Provider registry supports multiple backends","系统 MUST 支持至少 4 个 provider：openai、anthropic、google、deepseek。provider instance 由 @ai-sdk/* 创建，apiKey 从 config/secret.env 读取。",null,null,null
-  add_requirement,r3,"Frontend model selector via API","前端 MUST 通过 /v2/models 获取可用模型列表并渲染 selector UI。用户切换模型后后续 QA/Output 调用使用对应 provider。",null,null,null
-op_scenarios[3]{req_id,id,given,when,then}:
-  r1,happy,"","GET /v2/models","返回 [{provider: 'openai', modelId: 'gpt-4o', displayName: 'GPT-4o'}, ...]"
-  r2,happy,"","用户配置并 secret.env 填入 ANTHROPIC_API_KEY","createAnthropic(apiKey) 创建可用 provider instance"
-  r3,happy,"","前端模型下拉切换到 Claude","后续 QA 调用使用 @ai-sdk/anthropic provider"

@@ -1,5 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,vector-search-source-filter,"Vector search MUST support source_ids filtering","向量检索 MUST 支持通过 source_ids 参数将 KNN 搜索范围限定到指定 source 子集",null,null,null
-op_scenarios[1]{req_id,id,given,when,then}:
-  vector-search-source-filter,scoped-knn,"notebook 有多个 source 的向量","searchVectors 传入 sourceIds=[2,3]","系统 SHALL 仅返回 source 2 和 3 的 KNN 结果"

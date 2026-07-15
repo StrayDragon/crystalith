@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  add_requirement,connector-binding-schema-validation,"Connector binding creation MUST validate connection_config against JSON schema","创建 connector binding 时 MUST 对 connection_config 做 JSON schema 校验，校验失败 MUST 返回 400（CONNECTOR_CONFIG_INVALID）",null,null,null
-  add_requirement,connector-unavailable-409,"Unavailable connector MUST return 409 with install hint","connector 不可用时 MUST 返回 409（CONNECTOR_UNAVAILABLE）含 hint 和 plugin_diagnostic，MUST NOT 返回 404",null,null,null
-op_scenarios[2]{req_id,id,given,when,then}:
-  connector-binding-schema-validation,invalid-config,"connection_config 不符合 schema","创建 binding","系统 SHALL 返回 400 CONNECTOR_CONFIG_INVALID"
-  connector-unavailable-409,connector-not-installed,"请求的 connector 未安装","客户端操作","系统 SHALL 返回 409 含 hint 和 plugin_diagnostic"
