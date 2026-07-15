@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { api } from '../../../../api/eden';
-import type { AnalysisResult } from '../../../../api/generated';
+import type { AnalysisResult } from '../../../../api/shared-types';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 
 interface AnalysisState {

@@ -117,3 +117,90 @@ export interface TaskRead {
   updated_at: string;
   error?: string;
 }
+
+// -----------------------------------------------------------------------
+// Source/Extractor types (migrated from api/generated/types.gen.ts)
+// -----------------------------------------------------------------------
+
+export type SourceFromUrlMode = 'fetch' | 'link';
+
+export interface ExtractorInfoResponse {
+  available: boolean;
+  description: string;
+  details?: Record<string, unknown> | null;
+  type: string;
+  enabled: boolean;
+  requires_service: boolean;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ChunkRead {
+  chunk_index: number;
+  end_offset: number | null;
+  id: number;
+  metadata: Record<string, unknown> | null;
+  source_id: number;
+  start_offset: number | null;
+  text: string;
+  token_count: number;
+}
+
+export interface NotebookExtractorsPolicy {
+  enabled_extractors?: string[];
+  mode?: 'custom' | 'inherit_global';
+}
+
+export interface PatchNotebookExtractorsPolicyRequest {
+  enabled_extractors?: string[] | null;
+  mode?: 'custom' | 'inherit_global' | null;
+}
+
+export interface FieldDescriptor {
+  key: string;
+  type: string;
+  label: string | null;
+  options?: Record<string, unknown>;
+  children?: FieldDescriptor[];
+}
+
+export interface RenderDescriptor {
+  layout: string;
+  item_schema: { fields: FieldDescriptor[] } | null;
+  options: Record<string, unknown>;
+}
+
+export interface PreviewDescriptor {
+  type: string;
+  url?: string;
+  label?: string;
+  requires?: string[];
+}
+
+export interface FrontendBundleDescriptor {
+  api_version: string;
+  kind: string;
+  id: string;
+  export: string;
+}
+
+export interface PluginConfigSchema {
+  description?: string;
+  preview?: PreviewDescriptor | null;
+  frontend_bundle?: FrontendBundleDescriptor | null;
+  [key: string]: unknown;
+}
+
+export interface WorkspaceTool {
+  id: string;
+  kind: string;
+  label: string;
+  description: string;
+  tone?: string;
+  output_type: string;
+  prompt: string;
+  is_tool: boolean;
+  enabled: boolean;
+  config_schema?: PluginConfigSchema | null;
+  render_descriptor?: RenderDescriptor | null;
+  frontend_bundle?: FrontendBundleDescriptor | null;
+}

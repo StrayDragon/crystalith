@@ -1,1 +1,0 @@
-"""Crystalith Slidev SlidesWorkflowPlugin example."""

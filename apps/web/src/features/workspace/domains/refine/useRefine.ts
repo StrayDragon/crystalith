@@ -9,7 +9,7 @@ import type {
   PreviewDescriptor as ApiPreviewDescriptor,
   RenderDescriptor as ApiRenderDescriptor,
   WorkspaceTool as ApiWorkspaceTool,
-} from '../../../../api/generated';
+} from '../../../../api/shared-types';
 import { useOutputQueue } from '../../shared/hooks/useOutputQueue';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type {

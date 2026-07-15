@@ -2,15 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
 import { api } from '../../../../api/eden';
-import type { QaMessage, SourceTagRead } from '../../../../api/generated';
+import { parseServerError } from '../../../../api/parseServerError';
+import type { QaMessage, SourceTagRead } from '../../../../api/shared-types';
 import type {
   ExtractorInfoResponse as ExtractorInfo,
   ExtractorsListResponse,
   NotebookExtractorsPolicy,
   PatchNotebookExtractorsPolicyRequest,
   SourceFromUrlMode,
-} from '../../../../api/generated';
-import { parseServerError } from '../../../../api/parseServerError';
+} from '../../../../api/shared-types';
 import { toast } from '../../../../shared/toast';
 import type { AsyncStatus } from '../../../../shared/types';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';

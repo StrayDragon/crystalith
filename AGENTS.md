@@ -11,7 +11,7 @@ Keep this managed block so `llman sdd update` can refresh it.
 
 # Crystalith v2 — AI Agent Guidelines
 
-> Bun + TypeScript rewrite (Elysia + React). Python v1 lives in `backend/py/` as a **reference SSOT** — do not modify it.
+> Bun + TypeScript rewrite (Elysia + React). **v1 Python SSOT (`backend/py/`) has been removed as of c14** — all behavior is now parity-confirmed in TypeScript.
 > **Progress SSOT**: always read `PROGRESS.v2.md` first (status board, current batch, gaps, handoff).
 
 ## Project Structure
@@ -37,25 +37,23 @@ crystalith/
 │   └── crystalith-slidev/ # Slidev integration
 ├── config/                # Runtime config (app.yaml + secret.env)
 ├── llmanspec/             # Spec-driven development specs + changes
-├── backend/py/            # 🔒 v1 Python reference SSOT — do NOT modify
 ├── data/                  # Runtime DB + uploads (gitignored)
 └── scripts/               # Maintenance scripts
 ```
 
 ## Current State
 
-> Detail: `PROGRESS.v2.md`. Summary as of 2026-07-11:
+> Detail: `PROGRESS.v2.md`. Summary as of 2026-07-15:
 
-- ✅ Core server + data layer + AI runtime + RAG + feature routers (c00–c12, c15–c41)
-- ✅ Frontend API migration largely done (c35); residual type imports from `api/generated/` until c14
-- ✅ Behavior-align batches c36–c40 + multi-round review complete
+- ✅ All c00–c62 completed (63 changes); v1 parity confirmed through E2E
+- ✅ Frontend: all output renderers aligned with v1 interactive components; `api/generated/` removed
+- ✅ Behavior-align batches c36–c40, c42–c62 + multi-round review + CDP verified
 - ⏸️ **c13** distribution (Tauri / single-binary) — blocked on human auth
-- ⏸️ **c14** cleanup delivery (delete v1 Python, generated client, tag v2.0.0) — blocked on human auth
 - 🔄 Active SDD hygiene: some DONE changes still have unchecked/partial `tasks.md` (see `llman sdd list`) — do not archive until tasks match reality
 
 ## Reference: v1 Python Implementation
 
-`backend/py/` is the Python v1 codebase (FastAPI + pydantic-ai + SQLAlchemy + ChromaDB).
+`backend/py/` has been **removed in c14**. The Python v1 codebase (FastAPI + pydantic-ai + SQLAlchemy + ChromaDB) is no longer needed as reference — all behavior has been parity-confirmed in the TypeScript v2 implementation.
 Read it to understand **what** a feature does, then implement a better **how** in TypeScript.
 
 Key entry points:

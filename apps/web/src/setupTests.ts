@@ -6,8 +6,10 @@ import '@testing-library/jest-dom/vitest';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 
 import './api/setup';
-import { client } from './api/generated/client.gen';
 import { server } from './test-utils/msw/server';
+
+// Mock client — minimal config stub (generated client removed in c14)
+const client: { setConfig: (opts: Record<string, unknown>) => void } = { setConfig: () => {} };
 
 beforeAll(() => {
   client.setConfig({

@@ -36,7 +36,7 @@ import {
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 import { api } from '../../../../api/eden';
-import type { ChunkRead } from '../../../../api/generated';
+import type { ChunkRead } from '../../../../api/shared-types';
 import { copyToClipboard } from '../../../../shared/clipboard';
 import { t } from '../../../../shared/i18n';
 import { toast } from '../../../../shared/toast';
