@@ -190,15 +190,15 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         .where(and(eq(sourceTags.notebookId, nid), eq(sourceTags.name, tagFilter)))
         .get();
       if (tagRow) {
-        const taggedSourceIds = db()
-          .select({ sourceId: sourceTagMap.sourceId })
-          .from(sourceTagMap)
-          .where(eq(sourceTagMap.tagId, tagRow.id))
-          .all()
-          .map((r) => r.sourceId);
-        rows = rows.filter((r) => taggedSourceIds.includes(r.id));
-      } else {
-        rows = [];
+        const taggedSourceIds = new Set(
+          db()
+            .select({ sourceId: sourceTagMap.sourceId })
+            .from(sourceTagMap)
+            .where(eq(sourceTagMap.tagId, tagRow.id))
+            .all()
+            .map((r) => r.sourceId),
+        );
+        rows = rows.filter((r) => taggedSourceIds.has(r.id));
       }
     }
 
@@ -226,7 +226,6 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         case 'type':
           cmp = (a.parserType ?? '').localeCompare(b.parserType ?? '');
           break;
-        case 'date':
         default:
           cmp = a.updatedAt.getTime() - b.updatedAt.getTime();
       }

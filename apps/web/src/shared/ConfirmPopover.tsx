@@ -194,7 +194,6 @@ export default function ConfirmPopover({
         return { x: anchorRect.left, y: anchorRect.top + anchorRect.height / 2 };
       case 'right':
         return { x: anchorRect.right, y: anchorRect.top + anchorRect.height / 2 };
-      case 'top':
       default:
         return { x: anchorRect.left + anchorRect.width / 2, y: anchorRect.top };
     }
@@ -210,7 +209,6 @@ export default function ConfirmPopover({
           return 'translate(calc(-100% - 8px), -50%)';
         case 'right':
           return 'translate(8px, -50%)';
-        case 'top':
         default:
           return 'translate(-50%, calc(-100% - 8px))';
       }

@@ -242,7 +242,6 @@ function renderStudioIcon(id: StudioIconId) {
           <path d="m10 9 5 3-5 3Z" />
         </svg>
       );
-    case 'REFINE':
     default:
       return (
         <svg {...STUDIO_ICON_PROPS} aria-hidden="true" focusable="false">

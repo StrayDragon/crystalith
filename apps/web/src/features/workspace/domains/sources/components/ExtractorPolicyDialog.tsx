@@ -32,7 +32,6 @@ function labelForMode(mode: string): string {
   switch (mode) {
     case 'custom':
       return '自定义';
-    case 'inherit_global':
     default:
       return '遵循全局';
   }

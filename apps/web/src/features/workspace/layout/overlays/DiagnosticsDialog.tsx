@@ -43,7 +43,6 @@ function toneForStatus(status: string): { bg: string; text: string } {
       };
     case 'disabled':
       return { bg: 'bg-gray-100 dark:bg-slate-800', text: 'text-gray-700 dark:text-slate-200' };
-    case 'unknown':
     default:
       return { bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-700 dark:text-slate-200' };
   }
