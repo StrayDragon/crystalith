@@ -111,7 +111,7 @@ test:
 upsert-env-configs:
     bash ./scripts/init_config.sh
 
-# Regenerate .env.example and config/secret.env.example from Zod SSOT
+# Regenerate .env.example, config/secret.env.example, and app.schema.gen.json
 gen-env-examples:
     bun scripts/gen-env-examples.ts
 
@@ -126,6 +126,16 @@ gen-app-schema:
 # Check app.schema.gen.json matches Zod schemas (exit 1 on drift)
 check-app-schema:
     bun scripts/gen-app-schema.ts --check
+
+# Regenerate all generated artifacts from SSOT: env examples + JSON schema
+gen-all:
+    just gen-env-examples gen-app-schema
+    @echo "✅ All generated artifacts regenerated from SSOT"
+
+# Check all generated artifacts against SSOT (exit 1 on any drift)
+check-generated:
+    just check-env-examples check-app-schema
+    @echo "✅ All generated artifacts match SSOT"
 
 # --------------------------------------------------------------------------
 # Maintenance
