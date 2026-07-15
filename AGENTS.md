@@ -52,17 +52,17 @@ crystalith/
 
 ## v2 Stack
 
-| Role                 | Technology                                                                                                |
-| -------------------- | --------------------------------------------------------------------------------------------------------- |
-| Runtime              | **Bun** (single binary, bun:sqlite built-in)                                                              |
-| Web Framework        | **Elysia** (eden RPC — zero-codegen type-safe client)                                                     |
-| ORM                  | **Drizzle ORM** (bun-sqlite driver)                                                                       |
-| AI Runtime           | **Vercel AI SDK v7** (`ai` + `@ai-sdk/*`)                                                                |
-| Schema Validation    | **Zod** (shared frontend/backend via `packages/shared`)                                                   |
-| Vector Store         | **sqlite-vec** (in-process, same DB file)                                                                 |
-| PDF Parsing          | **unpdf**                                                                                                 |
-| Template Engine      | **Nunjucks** (frontend)                                                                                   |
-| Desktop Distribution | **Tauri v2** + Bun sidecar (c13)                                                                          |
+| Role                 | Technology                                              |
+| -------------------- | ------------------------------------------------------- |
+| Runtime              | **Bun** (single binary, bun:sqlite built-in)            |
+| Web Framework        | **Elysia** (eden RPC — zero-codegen type-safe client)   |
+| ORM                  | **Drizzle ORM** (bun-sqlite driver)                     |
+| AI Runtime           | **Vercel AI SDK v7** (`ai` + `@ai-sdk/*`)               |
+| Schema Validation    | **Zod** (shared frontend/backend via `packages/shared`) |
+| Vector Store         | **sqlite-vec** (in-process, same DB file)               |
+| PDF Parsing          | **unpdf**                                               |
+| Template Engine      | **Nunjucks** (frontend)                                 |
+| Desktop Distribution | **Tauri v2** + Bun sidecar (c13)                        |
 
 ## Build, Test, and Development Commands
 
@@ -76,6 +76,7 @@ From repo root:
 - `bun typecheck` — typecheck everything
 
 Fast path:
+
 - `cd apps/server && bun dev` — Elysia server (port 8032)
 - `cd apps/web && bun dev` — Vite (port 3000)
 - `just dev-connect server` — attach to Overmind process
