@@ -8,6 +8,7 @@ import {
   JsonMetadataSchema,
   OptionalTimestampSchema,
 } from './common.js';
+import { desc } from './i18n.js';
 
 // ---------------------------------------------------------------------------
 // Enums
@@ -37,22 +38,22 @@ export type Chunk = z.infer<typeof ChunkSchema>;
 // ---------------------------------------------------------------------------
 
 export const SourceSchema = z.object({
-  id: IdSchema,
+  id: IdSchema.describe(desc('source.id')),
   notebook_id: IdSchema,
-  filename: z.string().min(1).max(512),
+  filename: z.string().min(1).max(512).describe(desc('source.title')),
   mime_type: z.string().nullable().optional(),
   parser_type: z.string().min(1).max(64),
   metadata: JsonMetadataSchema.nullable().optional(),
   dedup_key: z.string().nullable().optional(),
-  status: SourceStatusSchema,
+  status: SourceStatusSchema.describe(desc('source.status')),
   error_code: z.string().nullable().optional(),
   error_message: z.string().nullable().optional(),
   recovery_hint: z.string().nullable().optional(),
   last_error_at: OptionalTimestampSchema,
   chunk_count: z.number().int().nonnegative().default(0),
   tags: z.array(z.string()).default([]),
-  created_at: IsoTimestampSchema,
-  updated_at: IsoTimestampSchema,
+  created_at: IsoTimestampSchema.describe(desc('source.created_at')),
+  updated_at: IsoTimestampSchema.describe(desc('source.updated_at')),
 });
 export type Source = z.infer<typeof SourceSchema>;
 

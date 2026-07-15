@@ -18,6 +18,7 @@ import {
   type ModelsSettings,
   type ModelConfig,
   type ModelDefaults,
+  desc,
 } from '@crystalith/shared';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
@@ -278,11 +279,11 @@ export function getDefaultEmbeddingModel(): ModelConfig | undefined {
  * SSRF security policy schema — maps from `source_ingestion.url_fetch.security.*`.
  */
 export const SsrfPolicyConfigSchema = z.object({
-  allowlist_only: z.boolean().default(false),
-  allowlist_hosts: z.array(z.string()).default([]),
-  allowlist_domains: z.array(z.string()).default([]),
-  allowlist_cidrs: z.array(z.string()).default([]),
-  max_redirects: z.number().int().min(0).max(20).default(5),
+  allowlist_only: z.boolean().default(false).describe(desc('ssrf.allowlist_only')),
+  allowlist_hosts: z.array(z.string()).default([]).describe(desc('ssrf.allowlist_hosts')),
+  allowlist_domains: z.array(z.string()).default([]).describe(desc('ssrf.allowlist_domains')),
+  allowlist_cidrs: z.array(z.string()).default([]).describe(desc('ssrf.allowlist_cidrs')),
+  max_redirects: z.number().int().min(0).max(20).default(5).describe(desc('ssrf.max_redirects')),
 });
 export type SsrfPolicyConfig = z.infer<typeof SsrfPolicyConfigSchema>;
 
@@ -296,7 +297,8 @@ export const AppSettingsSchema = z.object({
         .number()
         .int()
         .positive()
-        .default(50 * 1024 * 1024),
+        .default(50 * 1024 * 1024)
+        .describe(desc('app.http_guardrails.upload_max_bytes')),
     })
     .optional(),
 });
@@ -355,36 +357,51 @@ export function getDedupEnabled(): boolean {
 // ---------------------------------------------------------------------------
 
 export const AiSettingsSchema = z.object({
-  timeout: z.number().int().positive().max(600).default(60),
-  max_retries: z.number().int().min(0).max(10).default(3),
+  timeout: z.number().int().positive().max(600).default(60).describe(desc('ai.timeout')),
+  max_retries: z.number().int().min(0).max(10).default(3).describe(desc('ai.max_retries')),
 });
 export type AiSettings = z.infer<typeof AiSettingsSchema>;
 
 export const ConcurrencySettingsSchema = z.object({
-  embedding: z.number().int().min(0).default(8),
-  vector_search: z.number().int().min(0).default(8),
-  llm_generate: z.number().int().min(0).default(4),
+  embedding: z.number().int().min(0).default(8).describe(desc('concurrency.embedding')),
+  vector_search: z.number().int().min(0).default(8).describe(desc('concurrency.vector_search')),
+  llm_generate: z.number().int().min(0).default(4).describe(desc('concurrency.llm_generate')),
 });
 export type ConcurrencySettings = z.infer<typeof ConcurrencySettingsSchema>;
 
 export const EmbeddingSettingsSchema = z.object({
-  chunk_size: z.number().int().min(64).default(512),
-  batch_size: z.number().int().min(1).default(32),
+  chunk_size: z.number().int().min(64).default(512).describe(desc('embedding.chunk_size')),
+  batch_size: z.number().int().min(1).default(32).describe(desc('embedding.batch_size')),
 });
 export type EmbeddingSettings = z.infer<typeof EmbeddingSettingsSchema>;
 
 export const ContextWindowSettingsSchema = z.object({
-  max_tokens: z.number().int().positive().default(8000),
-  compression_strategy: z.enum(['truncate', 'summarize']).default('truncate'),
-  window_size: z.number().int().min(0).default(10),
+  max_tokens: z.number().int().positive().default(8000).describe(desc('context_window.max_tokens')),
+  compression_strategy: z
+    .enum(['truncate', 'summarize'])
+    .default('truncate')
+    .describe(desc('context_window.compression_strategy')),
+  window_size: z.number().int().min(0).default(10).describe(desc('context_window.window_size')),
 });
 export type ContextWindowSettings = z.infer<typeof ContextWindowSettingsSchema>;
 
 export const SearXNGSettingsSchema = z.object({
-  host: z.string().default(''),
-  api_key: z.string().nullable().default(null),
-  max_results: z.number().int().min(1).max(50).default(10),
-  timeout: z.number().int().positive().max(120_000).default(20_000),
+  host: z.string().default('').describe(desc('search.searxng.host')),
+  api_key: z.string().nullable().default(null).describe(desc('search.searxng.api_key')),
+  max_results: z
+    .number()
+    .int()
+    .min(1)
+    .max(50)
+    .default(10)
+    .describe(desc('search.searxng.max_results')),
+  timeout: z
+    .number()
+    .int()
+    .positive()
+    .max(120_000)
+    .default(20_000)
+    .describe(desc('search.searxng.timeout')),
 });
 export type SearXNGSettings = z.infer<typeof SearXNGSettingsSchema>;
 
@@ -394,11 +411,11 @@ export const SearchSettingsSchema = z.object({
 export type SearchSettings = z.infer<typeof SearchSettingsSchema>;
 
 export const CompletionOptionsSchema = z.object({
-  temperature: z.number().min(0).max(2).optional(),
-  top_p: z.number().min(0).max(1).optional(),
-  top_k: z.number().int().min(0).optional(),
-  stop: z.array(z.string()).optional(),
-  reasoning: z.number().int().min(0).optional(),
+  temperature: z.number().min(0).max(2).optional().describe(desc('completion.temperature')),
+  top_p: z.number().min(0).max(1).optional().describe(desc('completion.top_p')),
+  top_k: z.number().int().min(0).optional().describe(desc('completion.top_k')),
+  stop: z.array(z.string()).optional().describe(desc('completion.stop')),
+  reasoning: z.number().int().min(0).optional().describe(desc('completion.reasoning')),
 });
 export type CompletionOptions = z.infer<typeof CompletionOptionsSchema>;
 
@@ -407,7 +424,7 @@ export type CompletionOptions = z.infer<typeof CompletionOptionsSchema>;
 // ---------------------------------------------------------------------------
 
 export const StorageSettingsSchema = z.object({
-  data_root: z.string().default('./data'),
+  data_root: z.string().default('./data').describe(desc('storage.data_root')),
 });
 export type StorageSettings = z.infer<typeof StorageSettingsSchema>;
 
@@ -495,9 +512,20 @@ export interface OptionalServicesConfig {
 
 /** Optional service entry schema. */
 const OptionalServiceEntrySchema = z.object({
-  enabled: z.boolean().default(false),
-  endpoint: z.string().optional(),
-  timeout_s: z.number().int().positive().optional(),
+  enabled: z
+    .boolean()
+    .default(false)
+    .describe(desc('optional_services.generic.enabled', '是否启用该服务')),
+  endpoint: z
+    .string()
+    .optional()
+    .describe(desc('optional_services.generic.endpoint', '服务端点地址')),
+  timeout_s: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe(desc('optional_services.generic.timeout_s', '请求超时（秒）')),
 });
 
 /** Optional services schema — maps from `optional_services.*`. */

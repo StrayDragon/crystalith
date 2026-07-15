@@ -102,6 +102,20 @@ packages/shared/src/schemas/   ← SSOT
     └──→ /openapi.json → Scalar UI
 ```
 
+### Schema Descriptions & i18n
+
+- **All** Zod schema `.describe()` / `.openapi({ description })` calls MUST use the
+  `desc()` helper from `packages/shared/src/schemas/i18n.ts`.
+- **Language**: Chinese (zh-CN) is the authoritative description language.
+- **i18n readiness**: The `desc(zh, _key?)` signature reserves an optional
+  translation key for future migration. When i18n is enabled, changing the
+  backend (typesafe-i18n / i18next / Lingui) requires only modifying `i18n.ts`.
+- **Zod → JSON Schema**: `.describe(desc(...))` populates `config/app.schema.gen.json`.
+- **Zod → OpenAPI**: `.openapi({ description: desc(...) })` populates Scalar UI.
+  Config-level schemas (config.ts) MAY use `.describe()` alone;
+  API-level schemas (packages/shared/src/schemas/) SHOULD use
+  `.openapi({ description: desc(...), example: ... })` for richer docs.
+
 ### AI SDK v7 Only
 
 - `generateObject({ schema: Zod })` ✅ | `streamText` / `fullStream` ✅

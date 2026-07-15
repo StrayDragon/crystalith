@@ -2,20 +2,21 @@
 import { z } from 'zod';
 
 import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from './common.js';
+import { desc } from './i18n.js';
 
 export const SessionSchema = z.object({
-  id: IdSchema,
-  notebook_id: IdSchema,
-  title: z.string().min(1).max(255).nullable(),
+  id: IdSchema.describe(desc('session.id')),
+  notebook_id: IdSchema.describe(desc('session.notebook_id')),
+  title: z.string().min(1).max(255).nullable().describe(desc('session.title')),
   shared_state: JsonMetadataSchema,
   shared_state_revision: z.number().int().nonnegative(),
-  created_at: IsoTimestampSchema,
-  updated_at: IsoTimestampSchema,
+  created_at: IsoTimestampSchema.describe(desc('session.created_at')),
+  updated_at: IsoTimestampSchema.describe(desc('session.updated_at')),
 });
 export type Session = z.infer<typeof SessionSchema>;
 
 export const SessionCreateSchema = z.object({
-  title: z.string().min(1).max(255).nullable().optional(),
+  title: z.string().min(1).max(255).nullable().optional().describe(desc('session.title')),
 });
 export type SessionCreate = z.infer<typeof SessionCreateSchema>;
 
