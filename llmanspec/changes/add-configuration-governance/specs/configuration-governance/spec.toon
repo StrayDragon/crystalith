@@ -1,0 +1,21 @@
+kind: llman.sdd.delta
+ops[8]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r1,Configuration source priority chain,系统 MUST 支持三级配置源优先级链：1) 环境变量（CL_* 前缀）最高优先级；2) YAML 配置文件（config/app.yaml）中间优先级；3) 硬编码默认值最低优先级。高优先级源 MUST 覆盖低优先级源的对应键。MUST NOT 出现配置源绕过优先级链直接生效的行为。,null,null,null
+  add_requirement,r2,CL_* environment variable naming convention,"环境变量 MUST 使用 CL_ 前缀命名空间。MUST 采用 SCREAMING_SNAKE_CASE。MUST 在 config/app.yaml 的 {{ env.CL_* }} 模板中声明对应的 YAML 缺省值。非 CL_ 前缀的环境变量（如 SEARXNG_HOST）仅作为向后兼容 fallback，新配置 MUST 使用 CL_ 前缀。",null,null,null
+  add_requirement,r3,YAML config loading pipeline,"config/app.yaml MUST 经过三段加载流水线：1) Nunjucks/Jinja2 模板渲染 {{ env.* }}/{{ secret.* }}；2) YAML parse（支持 anchors）；3) Zod schema 校验。三个阶段任一失败 MUST 抛出可读错误并在启动时阻止服务启动（非静默降级）。",null,null,null
+  add_requirement,r4,Typed config accessor requirement,"所有配置读取 MUST 通过 typed accessor 函数（如 getDataRoot()、getDefaultChatModel()）。Accessor 函数 MUST 调用 parseSection(schema, config().raw.<section>) 回退到 schema 默认值。MUST NOT 在业务代码中直接解构 config().raw。",null,null,null
+  add_requirement,r5,Unified storage data root,所有运行时文件存储路径（SQLite DB、slides、uploads、content storage）MUST 从 storage.data_root 派生。MUST NOT 独立硬编码路径或使用独立的默认路径（如 ~/.crystalith/storage）。CL_DATA_ROOT 环境变量 MUST 覆盖 YAML 配置。,null,null,null
+  add_requirement,r6,Timeout and limit config governance,业务超时与限值（timeout、max_retries、max_results、batch_size 等）MUST 通过 config schema 定义默认值并通过 accessor 读取。MUST NOT 在业务代码中直接硬编码数字常量作为运行时逻辑分支依据。UI/前端常量不受此约束。,null,null,null
+  add_requirement,r7,YAML section naming convention,config/app.yaml 段落 MUST 使用 snake_case。段落名 MUST 与 Zod schema 名对齐（如 concurrency、embedding、storage、search），避免含混缩写。optional_services 等跨层段落需在段落注释中标注用途与消费者。,null,null,null
+  add_requirement,r8,Configuration must be deterministic,同一组环境变量 + 同一份 config/app.yaml MUST 产生完全相同的 AppConfig 对象。配置加载 MUST 是纯函数（无随机、无网络 I/O、无时间依赖）。secret.env 的缺失 MUST 不改变行为（仅日志警告），应用继续以环境变量提供的值运行。,null,null,null
+op_scenarios[10]{req_id,id,given,when,then}:
+  r1,happy,"",设置 CL_DATA_ROOT=/custom，同时 config 中 storage.data_root=./data,getDataRoot() 返回 /custom
+  r1,precedence_env_overrides_yaml,storage.data_root 设为 ./data_local,设置 CL_DATA_ROOT=/prod,getDataRoot() 返回 /prod（env 优先）
+  r2,naming_new_config,新增某个功能的 CL_ 配置,检查命名,前缀为 CL_，SCREAMING_SNAKE_CASE
+  r3,loading_failure,config/app.yaml 语法错误,启动 server,服务拒绝启动，抛出可读错误
+  r4,typed_accessor_in_code,需要读取 embedding chunk_size,调用 getEmbeddingSettings(),返回 typed EmbeddingSettings 对象
+  r5,storage_alignment,storage.ts 的 DEFAULT_BASE,检查默认值,派生自 getDataRoot()，非 ~/.crystalith/storage
+  r5,data_root_env,CL_DATA_ROOT 设为 /mnt/data,getDataRoot() 调用,返回 /mnt/data
+  r6,timeout_in_config,新增一个 HTTP 调用超时,在 config 中定义并设置默认值,业务代码通过 accessor 读取，无硬编码数字
+  r7,section_naming,新增一个配置段落,检查段落名,snake_case 且与 Zod schema 名一致
+  r8,deterministic_load,同一份 YAML + 同一组 env,两次调用 loadConfig(),返回完全相同的 AppConfig 对象

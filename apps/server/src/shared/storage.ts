@@ -4,10 +4,14 @@
 // LocalStorage impl uses the filesystem (design.md Option 2): each source's
 // raw bytes live at `<basePath>/<sourceId>`. Bun's file I/O is fast (io_uring)
 // and keeps large blobs out of SQLite.
+//
+// The base directory is derived from storage.data_root (see getDataRoot()).
+// Override individually via CL_STORAGE_PATH env (legacy, will be removed).
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, rm, stat } from 'node:fs/promises';
-import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+
+import { getDataRoot } from './config.ts';
 
 // ---------------------------------------------------------------------------
 // Interface
@@ -68,7 +72,7 @@ export class LocalStorage implements Storage {
 // Global singleton
 // ---------------------------------------------------------------------------
 
-const DEFAULT_BASE = process.env.CL_STORAGE_PATH || join(homedir(), '.crystalith', 'storage');
+const DEFAULT_BASE = join(getDataRoot(), 'storage');
 
 export const contentStorage: Storage = new LocalStorage(DEFAULT_BASE);
 

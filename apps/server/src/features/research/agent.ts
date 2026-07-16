@@ -264,7 +264,8 @@ async function searxngFetch(
   signal: AbortSignal,
 ): Promise<Omit<ResearchResult, 'query'>[]> {
   const { getSearxngHost, getSearchSettings } = await import('../../shared/config.ts');
-  const host = getSearxngHost() || 'http://localhost:8080';
+  const host = getSearxngHost();
+  if (!host) return [];
   const { max_results } = getSearchSettings().searxng;
   const timeout = 10_000;
 
