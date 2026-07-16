@@ -115,7 +115,10 @@
           "description": "上下文超限时压缩策略：truncate 截断 / summarize 摘要",
           "default": "truncate",
           "type": "string",
-          "enum": []
+          "enum": [
+            "truncate",
+            "summarize"
+          ]
         },
         "window_size": {
           "description": "上下文窗口包含的历史消息轮次数",

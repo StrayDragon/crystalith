@@ -88,6 +88,7 @@ export function createApp() {
       openapi({
         provider: 'scalar',
         path: '/openapi',
+        specPath: '/openapi.json',
         documentation: {
           info: {
             title: 'Crystalith v2 API',

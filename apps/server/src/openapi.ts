@@ -14,6 +14,9 @@ import { z } from 'zod';
 // Extend Zod with .openapi() metadata once.
 extendZodWithOpenApi(z);
 
+// Collect unique tags for the document root.
+const _allTags = new Set<string>();
+
 export interface OpenApiRoute {
   path: string;
   method: 'get' | 'post' | 'patch' | 'put' | 'delete';
@@ -71,12 +74,18 @@ export function registerApiDoc(routes: OpenApiRoute[]): void {
     }
 
     if (route.request?.params) {
-      pathItem.parameters = Object.entries(route.request.params).map(([name, schema]) => ({
-        name,
-        in: 'path',
-        required: true,
-        schema,
-      }));
+      pathItem.parameters = Object.entries(route.request.params).map(([name, schema]) => {
+        const s = schema as any;
+        const paramDesc = s.description ?? '';
+        const paramType = s.type === 'number' ? 'integer' : 'string';
+        return {
+          name,
+          in: 'path',
+          required: true,
+          description: paramDesc || undefined,
+          schema: { type: paramType },
+        };
+      });
     }
 
     if (route.request?.query) {
@@ -100,6 +109,11 @@ export function registerApiDoc(routes: OpenApiRoute[]): void {
       (pathItem.responses as Record<string, unknown>)[status] = respObj;
     }
 
+    // Collect tags for document root.
+    for (const tag of route.tags ?? []) {
+      _allTags.add(tag);
+    }
+
     registry.registerPath({
       path: route.path,
       method: route.method,
@@ -120,11 +134,18 @@ export function generateOpenApiDocument(info?: {
     description = 'RAG-powered knowledge notebook — v2 API',
   } = info ?? {};
   const generator = new OpenApiGeneratorV31(registry.definitions);
-  return generator.generateDocument({
+  const doc = generator.generateDocument({
     openapi: '3.1.0',
     info: { title, version, description },
     servers: [{ url: '/v2', description: 'Crystalith v2 API' }],
   }) as unknown as Record<string, unknown>;
+
+  // Inject tags for Scalar UI grouping.
+  if (_allTags.size > 0) {
+    doc.tags = [..._allTags].toSorted().map((name) => ({ name, description: '' }));
+  }
+
+  return doc;
 }
 
 // Note: schemas are inlined into path definitions rather than registered as
