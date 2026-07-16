@@ -12,10 +12,25 @@ _default:
 install:
     bun install --frozen-lockfile
 
-# Start development environment via Overmind (Procfile: server + web + slidev)
-# Requires: overmind + tmux. `-N` keeps app-owned ports (8032 / 3000 / 3030).
-# `-c slidev` allows preview to exit without tearing down core processes.
+# Start development environment via Overmind (daemonized/background by default)
+# Requires: overmind + tmux.
+# - `-D` daemonizes to background (agent-friendly, non-blocking)
+# - `-N` keeps app-owned ports (8032 / 3000 / 3030) — prevents Overmind from injecting $PORT
+# - `-c slidev` allows preview to exit without tearing down core processes.
+#
+# Use `just dev-attach` for foreground (interactive tmux) mode.
 dev:
+    overmind start -D -N -c slidev -f Procfile
+    @echo "✅ Overmind daemonized — services running in background"
+    @echo ""
+    @echo "📋 Available processes: server  web  slidev"
+    @echo "   Attach to a process:  overmind connect server"
+    @echo "   View aggregated logs: overmind echo"
+    @echo "   Check status:         overmind status"
+    @echo "   Gracefully stop:      just dev-quit"
+
+# Start development environment in foreground (interactive tmux session)
+dev-attach:
     overmind start -N -c slidev -f Procfile
 
 # Start only the Elysia server
@@ -33,7 +48,7 @@ dev-slidev:
 
 # Attach to a running Overmind process (server|web|slidev)
 dev-connect process='server':
-    overmind connect {{process}}
+    overmind connect {{ process }}
 
 # Gracefully stop Overmind (same as Ctrl-C on the start session)
 dev-quit:
@@ -51,29 +66,41 @@ dev-quit:
 # Code Quality (delegated to root bun scripts)
 # --------------------------------------------------------------------------
 
-# Format check (oxfmt)
+# Format check (oxfmt) — suppress success noise, only check exit code
 format-check:
-    bun format:check
+    @bun format:check > /dev/null
 
 # Format fix (oxfmt --write)
 format:
-    bun format:write
+    @bun format:write
 
-# Lint (oxlint)
+# Lint (oxlint) — warnings to stdout, silent on success
 lint:
-    bun lint
+    @bun lint
 
-# Typecheck (all workspaces)
+# Typecheck (all workspaces) — suppress workspace orchestration stdout, preserve tsc errors on stderr
 typecheck:
-    bun typecheck
+    @bun typecheck > /dev/null
 
-# Run all quality checks
+# Run all quality checks (output minimized — only errors/warnings)
 check: typecheck lint format-check
-    @echo "All checks passed."
 
-# Run backend tests
+# Type-aware linting (oxlint with tsconfig) — warnings to stdout, silent on success
+type-aware-lint:
+    @bun run lint:type-aware
+
+# Run scripts/ harness checks (bun availability only, skip install)
+scripts-harness-check:
+    @CRYSTALITH_SKIP_READY_INSTALL=1 bash ./scripts/ensure_frontend_web_ready.sh
+
+# Run all QA checks (SSOT): typecheck, lint (standard + type-aware), format-check,
+# tests, and scripts/ harness checks. Output minimized — only errors and warnings shown.
+qa: check test type-aware-lint scripts-harness-check
+    @echo "✅ QA passed"
+
+# Run backend tests — only show failures
 test:
-    bun test apps/server/test/ packages/shared/test/
+    @bun test --only-failures apps/server/test/ packages/shared/test/
 
 # --------------------------------------------------------------------------
 # Config
