@@ -63,7 +63,6 @@ export function registerApiDoc(routes: OpenApiRoute[]): void {
     // We want the path visible, so swap: summary ← path, description ← summary.
     const pathItem: Record<string, unknown> = {
       tags: route.tags ?? [],
-      summary: route.path,
       description: route.summary ?? '',
     };
 
