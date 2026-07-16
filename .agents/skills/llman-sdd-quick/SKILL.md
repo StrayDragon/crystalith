@@ -1,8 +1,8 @@
 ---
-name: 'llman-sdd-quick'
-description: '快速路径：处理不改行为合约的小改动——重构、修错字、性能优化。不涉及 MUST/SHALL 变更。如发现需要改合约，立即切换到 propose 完整路径。'
+name: "llman-sdd-quick"
+description: "快速路径：处理不改行为合约的小改动——重构、修错字、性能优化。不涉及 MUST/SHALL 变更。如发现需要改合约，立即切换到 propose 完整路径。"
 metadata:
-  version: '0.0.63'
+  version: "0.0.64"
 ---
 
 # LLMAN SDD Quick Path
@@ -29,14 +29,12 @@ flowchart LR
 > 📍 快速路径：不改行为合约，直接改代码 commit。如果发现需要改合约 → STOP，改走完整路径 `llman-sdd-propose`
 
 ## 使用条件（所有条件必须满足）
-
 - 不改变任何 spec 中 MUST/SHALL 定义的外部可观测行为
 - 不涉及跨 capability 的修改
 - 不涉及迁移/兼容性
 - 不是 SDD 元规范变更
 
 ## 步骤
-
 1. 用 `llman sdd context --task "..." --paths "..."` 确认无相关 spec 变更需要。
    - 如果 context 返回 `quality: "unavailable"`，运行 `llman sdd index rebuild`（默认 `pageindex`，无需模型）。
    - 可以用 `llman sdd list --specs --json` 查看 specs 元数据。
@@ -46,7 +44,6 @@ flowchart LR
 5. 无需 change 目录，无需 archive。
 
 ## 边界处理
-
 - 如果在修改中发现需要改变行为合约 → STOP，改走 `llman-sdd-propose`（完整路径）。
 - 如果涉及到多个文件且不确定 scope → 先用 `llman sdd context` 确认。
 
@@ -55,7 +52,6 @@ flowchart LR
 行动前先阅读 `llmanspec/config.yaml`，并遵循其中的 `context` 与 `rules`（若有）。
 
 常用命令：
-
 - `llman sdd context --task "<描述>" --paths "<文件>"`（找相关 specs）。使用 pageindex agentic tree 后端（需 `LLMAN_SDD_INDEX_CHAT_MODEL`）。可用 `LLMAN_SDD_INDEX_BACKEND` 预设。
 - `llman sdd list`（列出变更）
 - `llman sdd list --specs`（列出 specs 及 purpose/scope 元数据）
@@ -75,41 +71,35 @@ flowchart LR
 - `llman sdd graph [CHANGE] [--format mermaid] [--scope active|archived|all] [--depth N]`（生成变更依赖图）
 - `llman sdd project migrate [--kind format|partitioned|legacy-bdd|auto]`（一次性迁移）
 
-## Context
 
+## Context
 - 执行前先确认当前 change/spec 状态。
 - 优先使用 `llman sdd context --task --paths` 获取相关 specs，而非全量读取或猜测。
 
 ## Goal
-
 - 明确本次命令/skill 要达成的可验证结果。
 
 ## Constraints
-
 - 变更保持最小化且范围明确。
 - 标识符或意图不明确时禁止猜测。
 - 在读取 spec 全文前，先使用 `llman sdd context --task --paths` 获取相关 specs。
 - 判断变更规模后选择路径：行为合约变更走完整 SDD 流程，实现变更走快速路径。
 
 ## Workflow
-
 - 以 `llman sdd` 命令结果为事实来源。
 - 涉及文件/规范变更时执行校验。
 - 首选 `llman sdd context` 获取相关 specs，而非全量读取或猜测。
 - 当 context 不可用时，按错误提示处理（重建 index 或降级到 `list --specs --json`）。
 
 ## Decision Policy
-
 - 高影响歧义必须先澄清。
 - 已知校验错误下禁止强行继续。
 
 ## Output Contract
-
 - 汇总已执行动作。
 - 给出结果路径与校验状态。
 
 ## Ethics Governance
-
 - `ethics.risk_level`：按 `low|medium|high|critical` 标注风险等级。
 - `ethics.prohibited_actions`：列出绝对禁止执行的动作。
 - `ethics.required_evidence`：列出高影响输出前必须具备的证据。
