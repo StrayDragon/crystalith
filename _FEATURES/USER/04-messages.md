@@ -180,7 +180,7 @@
 - **入口:** 点击引用编号
 - **操作:** 展示引用来源片段、跳转来源高亮
 - **Server:** `GET /v2/citations/:messageId`、`GET /v2/notebooks/:nid/citations/context`
-- **代码:** `apps/web/src/features/workspace/shared/components/citations/`（`CitationMark.tsx`、`CitationPopover.tsx`、`CitationDrawer.tsx`）
+- **代码:** `apps/web/src/features/workspace/shared/components/citations/`（`CitationMark.tsx`、`CitationPopover.tsx`）
 - **截图:** `screenshots/chat-citations.png`（待截图）
 
 > NOTE: 待盘点

@@ -1,4 +1,4 @@
-import { MyLocation as LocateIcon } from '@mui/icons-material';
+import { MyLocation as LocateIcon, OpenInNew as OpenInNewIcon } from '@mui/icons-material';
 import { useEffect, useRef, useCallback, useMemo, type MouseEvent as ReactMouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -14,12 +14,12 @@ interface CitationPopoverProps {
   onClose: () => void;
   /** 锚点位置（直接传入 DOMRect） */
   anchorRect: DOMRect | null;
-  /** 点击引用跳转回调（查看详情） */
-  onJumpToCitation?: (citation: Citation) => void;
   /** 悬停引用回调 */
   onCitationHover?: (chunkId: number | null) => void;
   /** 定位到来源回调（在来源列表中高亮） */
   onLocateSource?: (citation: Citation) => void;
+  /** 打开来源详情回调 */
+  onOpenSource?: (citation: Citation) => void;
   /** 是否提升 z-index（用于从 modal 中打开时） */
   elevated?: boolean;
 }
@@ -74,9 +74,9 @@ export default function CitationPopover({
   isOpen,
   onClose,
   anchorRect,
-  onJumpToCitation,
   onCitationHover,
   onLocateSource,
+  onOpenSource,
   elevated = false,
 }: CitationPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -123,14 +123,6 @@ export default function CitationPopover({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const handleItemClick = useCallback(
-    (citation: Citation) => {
-      onJumpToCitation?.(citation);
-      onClose();
-    },
-    [onJumpToCitation, onClose],
-  );
-
   const handleItemHover = useCallback(
     (chunkId: number | null) => {
       onCitationHover?.(chunkId);
@@ -145,6 +137,28 @@ export default function CitationPopover({
       onClose();
     },
     [onLocateSource, onClose],
+  );
+
+  const handleOpenSource = useCallback(
+    (e: ReactMouseEvent<HTMLButtonElement>, citation: Citation) => {
+      e.stopPropagation();
+      onOpenSource?.(citation);
+      onClose();
+    },
+    [onOpenSource, onClose],
+  );
+
+  const handleRowActivate = useCallback(
+    (citation: Citation) => {
+      // Prefer locating in the current workspace; fall back to opening source.
+      if (onLocateSource) {
+        onLocateSource(citation);
+      } else {
+        onOpenSource?.(citation);
+      }
+      onClose();
+    },
+    [onLocateSource, onOpenSource, onClose],
   );
 
   if (!isOpen || !position) return null;
@@ -166,6 +180,7 @@ export default function CitationPopover({
         }}
         role="dialog"
         aria-label="引用详情"
+        data-testid="citation-popover"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
@@ -206,7 +221,7 @@ export default function CitationPopover({
                 <button
                   type="button"
                   className="flex flex-1 min-w-0 items-start gap-3 text-left bg-transparent"
-                  onClick={() => handleItemClick(citation)}
+                  onClick={() => handleRowActivate(citation)}
                 >
                   {/* Index Badge */}
                   <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
@@ -231,7 +246,7 @@ export default function CitationPopover({
                   </div>
                 </button>
 
-                {/* Actions — keep inside card bounds */}
+                {/* Actions — stay in-card; no second-level drawer */}
                 <div className="flex-shrink-0 flex flex-col items-center gap-2 self-start">
                   {onLocateSource && (
                     <button
@@ -244,17 +259,17 @@ export default function CitationPopover({
                       <LocateIcon style={{ fontSize: 14 }} />
                     </button>
                   )}
-                  <span className="w-4 h-4 flex items-center justify-center text-gray-300 group-hover:text-gray-500 transition-colors">
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="w-3.5 h-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
+                  {onOpenSource && (
+                    <button
+                      type="button"
+                      className="w-6 h-6 rounded-full border border-gray-200 text-gray-400 flex items-center justify-center hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors opacity-70 group-hover:opacity-100"
+                      onClick={(e) => handleOpenSource(e, citation)}
+                      aria-label={`打开来源：${citation.sourceTitle}`}
+                      title="打开来源"
                     >
-                      <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </span>
+                      <OpenInNewIcon style={{ fontSize: 14 }} />
+                    </button>
+                  )}
                 </div>
               </li>
             );
