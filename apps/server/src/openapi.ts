@@ -34,6 +34,8 @@ export interface OpenApiRoute {
       description: string;
       body?: z.ZodTypeAny;
       contentType?: string;
+      /** Optional example value for the response body (shown in Scalar). */
+      example?: unknown;
     }
   >;
 }
@@ -105,8 +107,13 @@ export function registerApiDoc(routes: OpenApiRoute[]): void {
     for (const [status, resp] of Object.entries(route.responses)) {
       const respObj: Record<string, unknown> = { description: resp.description };
       if (resp.body) {
+        const mediaType: Record<string, unknown> = { schema: resp.body };
+        // Inject optional example at the media type level.
+        if (resp.example !== undefined) {
+          mediaType.example = resp.example;
+        }
         respObj.content = {
-          [resp.contentType ?? 'application/json']: { schema: resp.body },
+          [resp.contentType ?? 'application/json']: mediaType,
         };
       }
       (pathItem.responses as Record<string, unknown>)[status] = respObj;
