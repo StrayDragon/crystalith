@@ -13,7 +13,7 @@ import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';
 import { chunks, outputs, sources, studioSlides } from '../../db/schema.ts';
-import { getDefaultChatModel } from '../../shared/config.ts';
+import { getDataRoot, getDefaultChatModel } from '../../shared/config.ts';
 import {
   resolveAudienceHint,
   resolveBulletRange,
@@ -170,10 +170,10 @@ export function clearStaleRunning(id: number): boolean {
 // ---------------------------------------------------------------------------
 
 export function writeSlideFile(notebookId: number, slideId: number, markdown: string): void {
-  const dir = join(process.cwd(), 'data', 'slides', String(notebookId));
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, `${slideId}.md`), markdown, 'utf-8');
-  const previewDir = join(process.cwd(), 'data', 'slides', 'preview');
+  const slidesDir = join(getDataRoot(), 'slides', String(notebookId));
+  if (!existsSync(slidesDir)) mkdirSync(slidesDir, { recursive: true });
+  writeFileSync(join(slidesDir, `${slideId}.md`), markdown, 'utf-8');
+  const previewDir = join(getDataRoot(), 'slides', 'preview');
   if (!existsSync(previewDir)) mkdirSync(previewDir, { recursive: true });
   writeFileSync(join(previewDir, 'slides.md'), markdown, 'utf-8');
 }

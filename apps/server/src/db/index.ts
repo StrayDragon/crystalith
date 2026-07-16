@@ -6,7 +6,7 @@ import { Database } from 'bun:sqlite';
 // `vec_chunks` virtual table exists. The exported `orm` is the typed Drizzle
 // instance used across the server.
 import { existsSync, mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { sql } from 'drizzle-orm';
@@ -14,13 +14,17 @@ import { drizzle, type BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import * as sqliteVec from 'sqlite-vec';
 
+import { getDataRoot } from '../shared/config.ts';
 import * as schema from './schema';
 import { initVecChunks } from './vectors';
 
-// DB file lives in the repo root data/ directory (shared with v1 py backend).
-// Default path assumes CWD = repo root (justfile ensures this).
-// Override via CL_DB_PATH env for tests / custom deployments.
-export const DB_PATH = process.env.CL_DB_PATH ?? 'data/crystalith.db';
+// DB file lives under the data root directory.
+// Default (<data_root>/crystalith.db) assumes CWD = repo root (justfile
+// ensures this).  Override via CL_DB_PATH env for tests / custom deployments,
+// or set storage.data_root / CL_DATA_ROOT for a project-wide data root.
+export function getDbPath(): string {
+  return process.env.CL_DB_PATH ?? join(getDataRoot(), 'crystalith.db');
+}
 
 // Migrations folder is resolved relative to this source file so tests and
 // production both find it regardless of CWD.
@@ -33,11 +37,12 @@ export type Orm = BunSQLiteDatabase<typeof schema>;
 let _orm: Orm | null = null;
 
 /** Open the SQLite database + apply migrations + load extensions. */
-export function createDb(path: string = DB_PATH): Orm {
-  const dir = dirname(path);
+export function createDb(path?: string): Orm {
+  const dbPath = path ?? getDbPath();
+  const dir = dirname(dbPath);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 
-  const db = new Database(path, { create: true });
+  const db = new Database(dbPath, { create: true });
   db.exec('PRAGMA journal_mode = WAL;');
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec('PRAGMA synchronous = NORMAL;');
