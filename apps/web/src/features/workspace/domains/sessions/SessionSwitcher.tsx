@@ -175,7 +175,9 @@ export default function SessionSwitcher({
                   {error}
                 </Typography>
                 <button
-                  onClick={() => onRetry && onRetry()}
+                  onClick={() => {
+                    if (onRetry) void onRetry();
+                  }}
                   className="text-[11px] text-gray-800 underline"
                 >
                   重试
@@ -225,7 +227,9 @@ export default function SessionSwitcher({
                         size="sm"
                         variant="text"
                         className="w-6 h-6 min-w-[24px] rounded text-blue-500 hover:bg-blue-50"
-                        onClick={handleSaveEdit}
+                        onClick={() => {
+                          void handleSaveEdit();
+                        }}
                         disabled={isUpdating}
                       >
                         {isUpdating ? (
@@ -319,9 +323,11 @@ export default function SessionSwitcher({
         variant="text"
         size="sm"
         className="rounded-none h-full w-8 hover:bg-gray-100"
-        onClick={async () => {
-          await onCreate();
-          onClose(); // Close popover if open
+        onClick={() => {
+          void (async () => {
+            await onCreate();
+            onClose(); // Close popover if open
+          })();
         }}
         disabled={!isConnected}
       >
