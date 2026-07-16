@@ -1,21 +1,12 @@
 /**
  * Re-exported types from the generated client, now defined locally
  * as generic Record alias for the eden treaty migration.
- * These match the v2 server response shapes (analysis, research, etc.).
+ * These match the v2 server response shapes (research, etc.).
  *
  * Using Record<string, unknown> for complex types to avoid drift
  * with the actual server responses. Components should use type
  * assertions as needed.
  */
-
-// biome-ignore lint/suspicious/noExplicitAny: dynamic v2 response shapes
-export type AnalysisResult = Record<string, any>;
-
-// biome-ignore lint/suspicious/noExplicitAny: dynamic v2 response shapes
-export type Topic = Record<string, any>;
-
-// biome-ignore lint/suspicious/noExplicitAny: dynamic v2 response shapes
-export type Relation = Record<string, any>;
 
 export type ResearchStatus =
   | 'planning'

@@ -30,7 +30,6 @@
 | `session-switcher`              | 会话切换         | `GET /v2/notebooks/:nid/sessions`                                      | active   | 待盘点 |
 | `session-create`                | 新建会话         | `POST /v2/notebooks/:nid/sessions`                                     | active   | 待盘点 |
 | `session-rename-delete`         | 重命名/删除会话  | `PATCH/DELETE .../sessions/:sid`                                       | active   | 待盘点 |
-| `session-detail-dialog`         | 会话详情         | `GET .../sessions/:sid`                                                | active   | 待盘点 |
 | `chat-panel`                    | 对话面板         | `GET/POST .../messages`, `POST /v2/qa/stream`                          | active   | 待盘点 |
 | `chat-send-message`             | 发送消息         | `POST .../messages`, `POST /v2/qa/stream`                              | active   | 待盘点 |
 | `chat-stop-streaming`           | 停止流式         | （中断 stream）                                                        | active   | 待盘点 |
@@ -66,7 +65,6 @@
 | `research-capsule`              | 研究胶囊         | `GET /v2/research`, `POST .../cancel                                   | resume`  | active | 待盘点 |
 | `research-detail-panel`         | 研究详情         | `GET /v2/research/:id`, HITL `POST .../*`, `GET .../stream`            | active   | 待盘点 |
 | `research-history`              | 研究历史         | `GET/DELETE /v2/research`                                              | active   | 待盘点 |
-| `knowledge-graph-view`          | 知识图谱         | `POST /v2/analysis`                                                    | active   | 待盘点 |
 | `studio-panel`                  | Studio 面板      | `GET /v2/outputs`                                                      | active   | 待盘点 |
 | `studio-outputs-list`           | Output 列表      | `GET /v2/outputs`                                                      | active   | 待盘点 |
 | `studio-add-manual-note`        | 手动笔记         | `POST /v2/outputs`                                                     | active   | 待盘点 |
@@ -98,7 +96,6 @@
 | `diagnostics-dialog`            | 诊断             | `GET /health`, `GET /health/dependencies`                              | active   | 待盘点 |
 | `command-palette`               | 命令面板         | 多路由聚合                                                             | active   | 待盘点 |
 | `refine-panel-ui`               | Refine 面板      | `GET/POST /v2/refine*`                                                 | orphan   | 待盘点 |
-| `analysis-panel-ui`             | Analysis 面板    | `POST /v2/analysis`                                                    | orphan   | 待盘点 |
 | `output-type-selector`          | 类型选择器       | `GET /v2/outputs/types`                                                | orphan   | 待盘点 |
 | `audio-overview-stub`           | 音频概览存根     | —                                                                      | orphan   | 待盘点 |
 | `video-overview-stub`           | 视频概览存根     | —                                                                      | orphan   | 待盘点 |
@@ -134,7 +131,6 @@
 | sources + extras    | 22       |
 | source-connectors   | 8        |
 | research            | 12       |
-| analysis            | 1        |
 | outputs             | 7        |
 | studio              | 11       |
 | refine              | 3        |
@@ -147,4 +143,4 @@
 | workspace           | 2        |
 | eval                | 8        |
 | rag                 | 3        |
-| **合计**            | **~129** |
+| **合计**            | **~128** |

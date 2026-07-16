@@ -2,7 +2,6 @@ import { Menu, MenuHandler, MenuItem, MenuList, Tooltip } from '@material-tailwi
 import {
   DarkMode as DarkModeIcon,
   Close as CloseIcon,
-  Hub as HubIcon,
   LightMode as LightModeIcon,
   Lock as LockIcon,
   LockOpen as LockOpenIcon,
@@ -36,7 +35,6 @@ interface WorkspaceHeaderProps {
   onUpdateNotebook?: (notebookId: number, name: string) => Promise<boolean>;
   onDeleteNotebook?: (notebookId: number) => Promise<boolean>;
   onSelectNotebook: (notebookId: number | null) => void;
-  onOpenKnowledgeGraph?: () => void;
   onOpenDiagnostics?: () => void;
   onOpenSystemConfig?: () => void;
   onOpenShortcutHelp?: () => void;
@@ -94,7 +92,6 @@ export default function WorkspaceHeader({
   onUpdateNotebook,
   onDeleteNotebook,
   onSelectNotebook,
-  onOpenKnowledgeGraph,
   onOpenDiagnostics,
   onOpenSystemConfig,
   onOpenShortcutHelp,
@@ -297,19 +294,6 @@ export default function WorkspaceHeader({
                 <span>健康 / 诊断</span>
               </MenuItem>
             )}
-            {onOpenKnowledgeGraph && (
-              <MenuItem
-                onClick={onOpenKnowledgeGraph}
-                className="flex items-center gap-2.5 py-2 px-3 text-xs rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
-              >
-                <HubIcon
-                  style={{ fontSize: 16, marginLeft: 2 }}
-                  className="text-gray-500 dark:text-slate-400"
-                />
-                <span>知识图谱</span>
-              </MenuItem>
-            )}
-
             <hr className="my-1.5 border-gray-100 dark:border-slate-700" />
 
             {/* Theme section */}

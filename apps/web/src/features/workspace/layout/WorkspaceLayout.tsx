@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { toast } from '../../../shared/toast';
-import { useAnalysis } from '../domains/analysis/useAnalysis';
 import ChatPanel from '../domains/messages/ChatPanel';
 import { useChat } from '../domains/messages/useChat';
 import { useNotebooks } from '../domains/notebooks/useNotebooks';
@@ -77,7 +76,6 @@ export default function WorkspaceLayout() {
   const sessions = useSessions();
   const sources = useSources();
   const refine = useRefine();
-  const analysis = useAnalysis();
   const chat = useChat({
     ensureSession: sessions.ensureSession,
     refreshSessions: sessions.refreshSessions,
@@ -144,20 +142,8 @@ export default function WorkspaceLayout() {
     [refine.outputs],
   );
 
-  const analysisResult = analysis.analysis;
-  const isAnalysisLoading = analysis.isLoading;
-  const fetchAnalysis = analysis.fetchAnalysis;
-
-  const fetchAnalysisIfNeeded = useCallback(() => {
-    if (!analysisResult && !isAnalysisLoading) {
-      void fetchAnalysis();
-    }
-  }, [analysisResult, fetchAnalysis, isAnalysisLoading]);
-
   const overlays = useWorkspaceOverlays({
-    activeNotebookId,
     resolveSlideDraftId,
-    fetchAnalysisIfNeeded,
   });
 
   const dependencyHealth = useDependencyHealth({ enabled: overlays.isDiagnosticsOpen });
@@ -248,18 +234,6 @@ export default function WorkspaceLayout() {
       await convertSourceQAToSource(overlays.citationSelectedSource.id, qaMessages);
     },
     [convertSourceQAToSource, overlays.citationSelectedSource],
-  );
-
-  const handleSaveGraphSourceQAAsSource = useCallback(
-    async (_sourceTitle: string, messages: SourceDialogMessage[]) => {
-      if (!overlays.graphSelectedSource || !convertSourceQAToSource) return;
-      const qaMessages = messages.map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-      }));
-      await convertSourceQAToSource(overlays.graphSelectedSource.id, qaMessages);
-    },
-    [convertSourceQAToSource, overlays.graphSelectedSource],
   );
 
   const handleChatCitationJump = useCallback(
@@ -673,13 +647,6 @@ export default function WorkspaceLayout() {
       action: openSessionSearch,
     });
 
-    cmds.push({
-      id: 'open-graph',
-      label: '打开知识图谱',
-      icon: '🕸',
-      action: overlays.openGraphView,
-    });
-
     return cmds;
   }, [
     activeWidgetIds,
@@ -952,7 +919,6 @@ export default function WorkspaceLayout() {
           onUpdateNotebook={notebooks.updateNotebook}
           onDeleteNotebook={notebooks.deleteNotebook}
           onSelectNotebook={notebooks.setActiveNotebookId}
-          onOpenKnowledgeGraph={overlays.openGraphView}
           onOpenDiagnostics={overlays.openDiagnostics}
           onOpenSystemConfig={overlays.openSystemConfig}
           onOpenShortcutHelp={overlays.openShortcutHelp}
@@ -1049,42 +1015,12 @@ export default function WorkspaceLayout() {
         slidesTool={slidesTool}
         toolsDiagnostics={refine.toolsDiagnostics}
         onQueueSlides={refine.onQueueSlides}
-        graphViewOpen={overlays.isGraphViewOpen}
-        onCloseGraphView={overlays.closeGraphView}
-        onRefreshGraph={(...args) => {
-          void analysis.fetchAnalysis(...args);
-        }}
-        onGraphSourceClick={overlays.openGraphSourceDetail}
-        onGraphOutputClick={(output) => overlays.openOutputViewer(output.id, true)}
-        onGraphSessionClick={overlays.handleGraphSessionClick}
-        graphSources={sources.sources}
-        graphOutputs={refine.outputs}
-        graphSessions={sessions.sessions}
-        graphMessages={chat.messages}
-        graphAnalysis={analysis.analysis}
-        graphAnalysisLoading={analysis.isLoading}
-        graphAnalysisError={analysis.error}
-        activeSessionId={activeSessionId}
-        graphConnected={analysis.isConnected}
-        graphSourceDetailOpen={overlays.graphSourceDetailOpen}
-        graphSelectedSource={overlays.graphSelectedSource}
-        onCloseGraphSourceDetail={overlays.closeGraphSourceDetail}
-        graphSourceDetailFullscreen={overlays.graphSourceDetailFullscreen}
-        onToggleGraphSourceDetailFullscreen={overlays.toggleGraphSourceDetailFullscreen}
-        onSaveGraphSourceQAAsSource={handleSaveGraphSourceQAAsSource}
         citationSourceDetailOpen={overlays.citationSourceDetailOpen}
         citationSelectedSource={overlays.citationSelectedSource}
         onCloseCitationSourceDetail={overlays.closeCitationSourceDetail}
         citationSourceDetailFullscreen={overlays.citationSourceDetailFullscreen}
         onToggleCitationSourceDetailFullscreen={overlays.toggleCitationSourceDetailFullscreen}
         onSaveCitationSourceQAAsSource={handleCitationSaveQAAsSource}
-        graphSessionDetailOpen={overlays.graphSessionDetailOpen}
-        graphSelectedSession={overlays.graphSelectedSession}
-        graphSessionMessages={overlays.graphSessionMessages}
-        onCloseGraphSessionDetail={overlays.closeGraphSessionDetail}
-        graphSessionDetailFullscreen={overlays.graphSessionDetailFullscreen}
-        onToggleGraphSessionDetailFullscreen={overlays.toggleGraphSessionDetailFullscreen}
-        graphSessionMessagesLoading={overlays.graphSessionMessagesLoading}
       />
     </div>
   );

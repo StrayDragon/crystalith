@@ -35,6 +35,5 @@
 | `add-{widgetId}` / `remove-{widgetId}`           | 添加/移除模块（sources/chat/studio） |
 | `toggle-lock`                                    | 锁定/解锁布局                        |
 | `session-search`                                 | 切换会话                             |
-| `open-graph`                                     | 打开知识图谱                         |
 
 > NOTE: 待盘点

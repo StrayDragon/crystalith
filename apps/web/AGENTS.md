@@ -5,7 +5,7 @@
 - Source code: `src/`
 - Static assets: `public/`
 - `src/features/workspace/` — main workspace feature
-  - `domains/` — business domains (notebooks, sessions, messages, analysis, sources, outputs, refine, studio, research)
+  - `domains/` — business domains (notebooks, sessions, messages, sources, outputs, refine, studio, research)
   - `layout/`, `shared/`, `app/` — workspace scaffolding
 - `src/api/` — API client layer (eden RPC primary; types in `shared-types.ts`)
 - `src/shared/` — shared utilities, Layer system, types

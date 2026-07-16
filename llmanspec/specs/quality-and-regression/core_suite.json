@@ -17,11 +17,6 @@
       }
     },
     {
-      "id": "analysis",
-      "backend": { "pytestPaths": ["tests/web/test_api_smoke.py"] },
-      "frontend": { "vitestFiles": ["src/features/workspace/domains/analysis/useAnalysis.test.ts"] }
-    },
-    {
       "id": "sources",
       "backend": { "pytestPaths": ["tests/web/test_api_smoke.py"] },
       "frontend": { "vitestFiles": ["src/features/workspace/domains/sources/useSources.test.tsx"] }

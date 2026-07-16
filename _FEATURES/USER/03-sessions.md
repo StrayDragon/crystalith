@@ -43,17 +43,3 @@
 - **截图:** `screenshots/session-rename-delete.png`（待截图）
 
 > NOTE: 待盘点
-
----
-
-### `session-detail-dialog`
-
-- **名称:** 会话详情对话框
-- **位置:** 模态对话框
-- **入口:** 会话切换器「详情」
-- **操作:** 查看会话元数据、消息统计、创建/更新时间
-- **Server:** `GET /v2/notebooks/:nid/sessions/:sid`
-- **代码:** `apps/web/src/features/workspace/domains/sessions/SessionDetailDialog.tsx`
-- **截图:** `screenshots/session-detail-dialog.png`（待截图）
-
-> NOTE: 待盘点

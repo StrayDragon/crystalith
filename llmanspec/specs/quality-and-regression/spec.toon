@@ -45,6 +45,6 @@ scenarios[28]{req_id,id,given,when,then}:
   r15,"core-regression-suite-is-executable-and-deterministic","","开发者运行核心回归套件（例如 `cd backend/py && just test-core`）",系统 SHALL 仅运行标记为 `core` 的测试用例（允许通过 marker 或路径约定自动打标）
   r15,"tests-opt-into-experimental-explicitly","",新增/修改边缘或试验性的测试用例,该测试 SHOULD 显式标注 `@pytest.mark.experimental`
   r16,"default-frontend-test-gate-excludes-experimental-tests","","开发者运行前端默认质量门槛（例如 `cd frontend/web && pnpm run test:ci`）",系统 SHALL 运行稳定套件（默认排除 `*.experimental.test.*`）
-  r16,"frontend-core-regression-suite-aligns-with-backend-smoke-pat","","开发者运行前端核心回归套件（例如 `cd frontend/web && pnpm run test:core`）",系统 SHALL 仅运行覆盖后端核心 API 冒烟链路的最小 UI 用例集合（notebooks/analysis/sources/chat/outputs/health）
+  r16,"frontend-core-regression-suite-aligns-with-backend-smoke-pat","","开发者运行前端核心回归套件（例如 `cd frontend/web && pnpm run test:core`）",系统 SHALL 仅运行覆盖后端核心 API 冒烟链路的最小 UI 用例集合（notebooks/sources/chat/outputs/health）
   r16,"stable-frontend-tests-reject-unhandled-network-calls","",稳定套件中的测试触发未被 MSW handler 覆盖的网络请求,测试 SHALL 失败并提示补齐 handler 或将该用例标记为 `experimental`
   r16,"frontend-quality-gate-requires-mock-reason-for-vi-patch-ops","","开发者运行前端默认质量门槛（例如 `cd frontend/web && pnpm run test:ci`）",质量门槛 SHALL 失败并给出可定位的诊断信息

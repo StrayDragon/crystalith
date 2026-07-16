@@ -30,20 +30,6 @@
 
 ---
 
-### `analysis-panel-ui`
-
-- **名称:** Analysis 面板 UI
-- **位置:** （未挂载；`KnowledgeGraphView` 为活跃入口）
-- **入口:** 无
-- **操作:** 主题/矛盾/关系表格化展示（旧版分析 UI）
-- **Server:** `POST /v2/analysis`
-- **代码:** `apps/web/src/features/workspace/domains/analysis/AnalysisPanel.tsx`
-- **截图:** `screenshots/analysis-panel-ui.png`（待截图）
-
-> NOTE: 待盘点
-
----
-
 ### `output-type-selector`
 
 - **名称:** Output 类型选择器

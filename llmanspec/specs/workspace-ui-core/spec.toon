@@ -10,7 +10,7 @@ requirements[12]{req_id,title,statement}:
   r5,Overlay/layer policy is centralized,弹层、对话框、popover 的层级与关闭策略 MUST 统一管理。
   r6,Keyboard and accessibility baselines exist,快捷键帮助、基础可访问性与 modal 交互规范 MUST 提供。
   r7,"Workspace localization is centralized and locale-ready (zh-CN only)","Workspace MUST 将关键路径的用户可见文案集中管理（稳定 message key + `t()` 等价接口），并默认使用 `zh-CN` 文案。核心发行版不要求提供语言切换入口与多语言内置翻译，但结构 SHOULD 保持可扩展以支持社区后续新增 locale。"
-  r8,Core panel contracts are delegated,"Sources/Chat/Studio/Analysis 等面板交互细节 MUST 在 `workspace-ui-panels` 规范维护，避免总览规范膨胀。"
+  r8,Core panel contracts are delegated,"Sources/Chat/Studio/Research 等面板交互细节 MUST 在 `workspace-ui-panels` 规范维护，避免总览规范膨胀。"
   r9,Workspace provides guided empty states,Workspace MUST 在首次进入与关键空态下提供分层引导，明确下一步动作与成功路径。
   r10,Workspace health status is visible and actionable,Workspace MUST 提供可见的健康入口，能展示核心依赖与可选服务的降级信息，并包含可执行的恢复建议。
   r11,Command palette is discoverable and includes core actions,Workspace MUST 提供可发现的命令面板（例如 Ctrl+K）并包含覆盖核心流程的最小动作集；其中与可选能力相关的动作 MUST 随运行时 capability 动态变化。
