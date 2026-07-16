@@ -3,6 +3,12 @@
 // Error envelopes, pagination, citations, and shared primitives.
 // All API-facing timestamps are ISO 8601 UTC strings (the server serializes
 // Drizzle integer timestamps to ISO on the boundary).
+//
+// NOTE: .openapi() metadata is NOT available on shared schemas because
+// @asteasolutions/zod-to-openapi's extendZodWithOpenApi only patches Zod
+// instances created AFTER the call, and shared schemas are defined before
+// the server's openapi.ts is loaded. Examples are injected at the OpenAPI
+// registration level (openapi.ts → registerApiDoc).
 import { z } from 'zod';
 
 /** ISO 8601 UTC datetime string, e.g. `2026-07-08T12:00:00.000Z`. */

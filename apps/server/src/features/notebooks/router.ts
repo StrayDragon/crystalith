@@ -28,7 +28,20 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'List all notebooks',
     tags: ['notebooks'],
-    responses: { 200: { description: 'List of notebooks', body: NotebookSchema.array() } },
+    responses: {
+      200: {
+        description: 'List of notebooks',
+        body: NotebookSchema.array(),
+        example: [
+          {
+            id: 1,
+            name: '我的研究笔记',
+            created_at: '2026-07-14T07:15:57.000Z',
+            updated_at: '2026-07-14T07:15:57.000Z',
+          },
+        ],
+      },
+    },
   },
   {
     path: '/v2/notebooks',
@@ -37,7 +50,16 @@ const apiDocs: OpenApiRoute[] = [
     tags: ['notebooks'],
     request: { body: NotebookCreateSchema },
     responses: {
-      201: { description: 'Created notebook', body: NotebookSchema },
+      201: {
+        description: 'Created notebook',
+        body: NotebookSchema,
+        example: {
+          id: 1,
+          name: '我的研究笔记',
+          created_at: '2026-07-14T07:15:57.000Z',
+          updated_at: '2026-07-14T07:15:57.000Z',
+        },
+      },
     },
   },
   {
@@ -46,7 +68,18 @@ const apiDocs: OpenApiRoute[] = [
     summary: 'Get a notebook by ID',
     tags: ['notebooks'],
     request: { params: { nid: IdSchema.describe(i18nDesc('notebook.id')) } },
-    responses: { 200: { description: 'Notebook', body: NotebookSchema } },
+    responses: {
+      200: {
+        description: 'Notebook',
+        body: NotebookSchema,
+        example: {
+          id: 1,
+          name: '我的研究笔记',
+          created_at: '2026-07-14T07:15:57.000Z',
+          updated_at: '2026-07-14T07:15:57.000Z',
+        },
+      },
+    },
   },
   {
     path: '/v2/notebooks/:nid',
