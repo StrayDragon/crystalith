@@ -104,11 +104,22 @@
       }
     },
     {
-      "files": ["apps/web/scripts/**/*.mjs", "apps/web/scripts/**/*.js"],
+      "files": [
+        "apps/web/scripts/**/*.mjs",
+        "apps/web/scripts/**/*.js",
+        "packages/crystalith-slidev/scripts/**/*.mjs"
+      ],
       "rules": {
         "eslint/no-unused-vars": "warn",
         "eslint/eqeqeq": "warn",
-        "eslint/no-console": "off"
+        "eslint/no-console": "off",
+        "typescript/only-throw-error": "off",
+        "typescript/no-floating-promises": "off",
+        "typescript/no-base-to-string": "off",
+        "typescript/no-redundant-type-constituents": "off",
+        "typescript/strict-void-return": "off",
+        "typescript/no-confusing-void-expression": "off",
+        "typescript/no-unsafe-return": "off"
       }
     },
     {
@@ -137,6 +148,9 @@
         "eslint/require-unicode-regexp": "off",
         "eslint/no-unreachable": "off",
         "eslint/no-promise-executor-return": "off",
+        "eslint/eqeqeq": "off",
+        "eslint/max-classes-per-file": "off",
+        "eslint/no-unused-vars": "off",
         "import/first": "off",
         "import/no-duplicates": "off",
         "unicorn/catch-error-name": "off",
@@ -146,7 +160,16 @@
         "unicorn/prefer-number-coercion": "off",
         "unicorn/escape-case": "off",
         "unicorn/no-object-as-default-parameter": "off",
+        // Type-aware lint: test files use loose patterns intentionally
         "typescript/no-extraneous-class": "off",
+        "typescript/only-throw-error": "off",
+        "typescript/no-misused-promises": "off",
+        "typescript/no-floating-promises": "off",
+        "typescript/await-thenable": "off",
+        "typescript/restrict-template-expressions": "off",
+        "typescript/no-base-to-string": "off",
+        "typescript/no-redundant-type-constituents": "off",
+        "typescript/require-array-sort-compare": "off",
         "vitest/no-conditional-in-test": "off",
         "vitest/expect-expect": "error",
         "vitest/no-conditional-tests": "error",
