@@ -6,7 +6,6 @@ import CitationPopover from './CitationPopover';
 
 interface CitationsControlProps {
   citations: Citation[];
-  onCitationHover?: (chunkId: number | null) => void;
   onLocateSource?: (citation: Citation) => void;
   onOpenSource?: (citation: Citation) => void;
   elevated?: boolean;
@@ -16,7 +15,6 @@ interface CitationsControlProps {
 
 export default function CitationsControl({
   citations,
-  onCitationHover,
   onLocateSource,
   onOpenSource,
   elevated = false,
@@ -61,7 +59,6 @@ export default function CitationsControl({
         isOpen={popoverOpen}
         onClose={handleClosePopover}
         anchorRect={anchorRect}
-        onCitationHover={onCitationHover}
         onLocateSource={onLocateSource}
         onOpenSource={onOpenSource}
         elevated={elevated}

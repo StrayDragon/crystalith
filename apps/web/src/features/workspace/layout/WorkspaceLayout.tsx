@@ -187,17 +187,6 @@ export default function WorkspaceLayout() {
     [selectedSourceIds_raw],
   );
 
-  const handleChatCitationHover = useCallback(
-    (chunkId: number | null) => {
-      if (chunkId == null) {
-        sources.setHoveredMessageChunkIds(null);
-        return;
-      }
-      sources.setHoveredMessageChunkIds([chunkId]);
-    },
-    [sources],
-  );
-
   const handleOpenCitationSourceDetail = useCallback(
     (citation: Citation) => {
       const source = resolveCitationSource(citation);
@@ -777,7 +766,6 @@ export default function WorkspaceLayout() {
               isConnected={isConnected}
               inputRef={chatInputRef}
               citations={sources.citations}
-              onCitationHover={handleChatCitationHover}
               onCitationJump={handleChatCitationJump}
               onCitationLocate={handleLocateCitationSource}
               isLoadingMessages={chat.isLoadingMessages}
@@ -847,7 +835,6 @@ export default function WorkspaceLayout() {
       activeNotebookId,
       chat,
       errMessages,
-      handleChatCitationHover,
       handleChatCitationJump,
       handleLocateCitationSource,
       handleOutputCitationJump,
@@ -999,7 +986,6 @@ export default function WorkspaceLayout() {
         onSelectViewerOutput={overlays.selectOutput}
         onDeleteOutput={refine.onDeleteOutput}
         onOutputCitationJump={handleOutputCitationJump}
-        onCitationHover={handleChatCitationHover}
         onLocateCitationSource={handleLocateCitationSource}
         slidesDialogOpen={overlays.isSlidesDialogOpen}
         onCloseSlidesDialog={overlays.closeSlidesDialog}
