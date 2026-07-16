@@ -91,7 +91,9 @@ const allPaths = [];
 walkFiles(srcDir, allPaths);
 walkFiles(scriptsDir, allPaths);
 
-const testFiles = allPaths.filter((filePath) => isTestFile(filePath)).toSorted();
+const testFiles = allPaths
+  .filter((filePath) => isTestFile(filePath))
+  .toSorted((a, b) => a.localeCompare(b));
 const results = testFiles.map((filePath) => analyzeFile(filePath));
 
 const filesWithOps = results.filter((result) => result.totalOps > 0);

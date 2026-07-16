@@ -345,7 +345,9 @@ export default function AddSearchResultDialog({
                         <button
                           type="button"
                           className="mt-1 text-[10px] font-semibold text-red-700 hover:underline"
-                          onClick={() => handleRetryResult(result)}
+                          onClick={() => {
+                            void handleRetryResult(result);
+                          }}
                           disabled={status.status === 'loading'}
                         >
                           重试

@@ -1411,7 +1411,9 @@ export default function SlidesStudioDialog({
           </Button>
           <Button
             color="blue"
-            onClick={handleQueueSlides}
+            onClick={() => {
+              void handleQueueSlides();
+            }}
             disabled={!onQueueSlides || isQueueing || loading || configActionsDisabled}
           >
             生成
@@ -1428,7 +1430,9 @@ export default function SlidesStudioDialog({
           </Button>
           <Button
             variant="outlined"
-            onClick={handleSaveMarkdown}
+            onClick={() => {
+              void handleSaveMarkdown();
+            }}
             disabled={isGenerating || !draft || !isConnected}
           >
             保存 Markdown
@@ -1445,21 +1449,27 @@ export default function SlidesStudioDialog({
           </Button>
           <Button
             variant="outlined"
-            onClick={saveInputStage}
+            onClick={() => {
+              void saveInputStage();
+            }}
             disabled={isGenerating || configActionsDisabled}
           >
             保存
           </Button>
           <Button
             variant="outlined"
-            onClick={handleGenerateOutline}
+            onClick={() => {
+              void handleGenerateOutline();
+            }}
             disabled={isGenerating || configActionsDisabled}
           >
             生成大纲
           </Button>
           <Button
             color="blue"
-            onClick={handleGenerateAll}
+            onClick={() => {
+              void handleGenerateAll();
+            }}
             disabled={isGenerating || configActionsDisabled}
           >
             一键生成
@@ -1476,14 +1486,18 @@ export default function SlidesStudioDialog({
           </Button>
           <Button
             variant="outlined"
-            onClick={handleSaveOutline}
+            onClick={() => {
+              void handleSaveOutline();
+            }}
             disabled={isGenerating || !isConnected}
           >
             保存大纲
           </Button>
           <Button
             color="blue"
-            onClick={handleGenerateMarkdown}
+            onClick={() => {
+              void handleGenerateMarkdown();
+            }}
             disabled={isGenerating || !isConnected}
           >
             生成 Markdown
@@ -1499,7 +1513,9 @@ export default function SlidesStudioDialog({
         </Button>
         <Button
           variant="outlined"
-          onClick={handleSaveMarkdown}
+          onClick={() => {
+            void handleSaveMarkdown();
+          }}
           disabled={isGenerating || !isConnected}
         >
           保存 Markdown

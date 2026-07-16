@@ -72,7 +72,8 @@ export async function exportQaJsonDownload(params: {
   const url = `${BASE_URL}/v2/qa/export?${query.toString()}`;
   const response = await fetch(url);
   const data = await response.json();
-  const filename = `qa-session-${(data as Record<string, unknown>).session_id}-message-${(data as Record<string, unknown>).message_id}.json`;
+  const { session_id, message_id } = data as { session_id: number; message_id: number };
+  const filename = `qa-session-${session_id}-message-${message_id}.json`;
   downloadTextAsFile(filename, JSON.stringify(data, null, 2), 'application/json');
   toast.success('已导出 QA JSON');
 }
@@ -94,7 +95,8 @@ export async function exportOutputJsonDownload(params: { notebookId: number; out
   const url = `${BASE_URL}/v2/outputs/${params.outputId}/export?format=json`;
   const response = await fetch(url);
   const data = await response.json();
-  const filename = `output-${(data as Record<string, unknown>).output_id}-${(data as Record<string, unknown>).output_type}.json`;
+  const { output_id, output_type } = data as { output_id: number; output_type: string };
+  const filename = `output-${output_id}-${output_type}.json`;
   downloadTextAsFile(filename, JSON.stringify(data, null, 2), 'application/json');
   toast.success('已导出 Output JSON');
 }

@@ -95,7 +95,7 @@ export interface ResearchSessionItem {
   id: number;
   notebook_id: number;
   topic: string;
-  status: ResearchStatus | string;
+  status: string;
   current_iteration: number;
   max_iterations: number;
   result_count?: number;
@@ -107,7 +107,7 @@ export interface ResearchSessionDetail {
   id: number;
   notebook_id: number;
   topic: string;
-  status: ResearchStatus | string;
+  status: string;
   current_iteration: number;
   max_iterations: number;
   aggregated_results: Array<Record<string, unknown>> | null;

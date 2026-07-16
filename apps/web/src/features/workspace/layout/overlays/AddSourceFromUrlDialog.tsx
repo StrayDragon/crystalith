@@ -188,7 +188,9 @@ export default function AddSourceFromUrlDialog({
             </button>
             <button
               type="button"
-              onClick={handleSubmit}
+              onClick={() => {
+                void handleSubmit();
+              }}
               disabled={!canSubmit}
               className={`px-3 py-1.5 rounded-lg text-xs ${
                 canSubmit

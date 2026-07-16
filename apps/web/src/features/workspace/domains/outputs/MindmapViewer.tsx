@@ -307,7 +307,9 @@ function InnerFlow({ data, autoCollapseDepth, isDarkTheme }: InnerFlowProps) {
 
   // Fit view when nodes change
   useEffect(() => {
-    const timer = setTimeout(() => fitView({ padding: 0.2 }), 100);
+    const timer = setTimeout(() => {
+      void fitView({ padding: 0.2 });
+    }, 100);
     return () => clearTimeout(timer);
   }, [nodes, fitView]);
 

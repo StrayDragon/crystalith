@@ -205,7 +205,9 @@ export default function SaveTemplateDialog({
             size="sm"
             variant="filled"
             className="rounded-full px-3 py-1.5 normal-case font-normal bg-gray-900 dark:bg-slate-100 dark:text-slate-900 text-[11px]"
-            onClick={handleSave}
+            onClick={() => {
+              void handleSave();
+            }}
             disabled={!canSave}
           >
             {isSaving ? <Spinner className="h-3 w-3" /> : '保存'}
