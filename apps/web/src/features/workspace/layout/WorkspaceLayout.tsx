@@ -737,15 +737,21 @@ export default function WorkspaceLayout() {
             <SourcesPanel
               sources={sources.sources}
               jumpToSource={overlays.jumpToSource}
-              onUpload={sources.handleUpload}
+              onUpload={(...args) => {
+                void sources.handleUpload(...args);
+              }}
               onRefreshSources={sources.retrySources}
               uploadState={sources.uploadState}
               uploadError={sources.uploadError}
               uploadQueue={sources.uploadQueue}
-              onRetryUpload={sources.retryUpload}
+              onRetryUpload={(...args) => {
+                void sources.retryUpload(...args);
+              }}
               onClearUploadQueue={sources.clearUploadQueue}
               searchState={sources.searchState}
-              onSearch={sources.handleSearch}
+              onSearch={(...args) => {
+                void sources.handleSearch(...args);
+              }}
               onAddSourceFromUrl={sources.addSourceFromUrl}
               onRemoveSources={sources.removeSources}
               onRemoveSource={sources.removeSource}
@@ -789,13 +795,17 @@ export default function WorkspaceLayout() {
               messages={chat.messages}
               draft={chat.draft}
               onDraftChange={chat.setDraft}
-              onSend={chat.sendMessage}
+              onSend={(...args) => {
+                void chat.sendMessage(...args);
+              }}
               onStopStreaming={chat.stopStreaming}
               isSending={chat.isSending}
               isStreaming={chat.isStreaming}
               streamingMessageId={chat.streamingMessageId}
               notice={chat.sendError}
-              onRetrySend={chat.retrySend}
+              onRetrySend={(...args) => {
+                void chat.retrySend(...args);
+              }}
               isBlocked={!notebooks.activeNotebookId}
               isConnected={isConnected}
               inputRef={chatInputRef}
@@ -805,7 +815,9 @@ export default function WorkspaceLayout() {
               onCitationLocate={handleLocateCitationSource}
               isLoadingMessages={chat.isLoadingMessages}
               messagesError={errMessages}
-              onRetryMessages={chat.retryMessages}
+              onRetryMessages={(...args) => {
+                void chat.retryMessages(...args);
+              }}
               hasSources={sources.sources.length > 0}
               onSaveToNote={refine.saveContentAsNote}
               onConvertToSource={chat.convertSessionToSource}
@@ -824,10 +836,14 @@ export default function WorkspaceLayout() {
               outputQueueJobs={refine.outputQueueJobs}
               outputsLoading={refine.outputsLoading}
               outputsError={refine.outputsError}
-              onRetryOutputs={refine.retryOutputs}
+              onRetryOutputs={(...args) => {
+                void refine.retryOutputs(...args);
+              }}
               onRetryOutputJob={refine.retryOutputJob}
               onCancelOutputJob={refine.cancelOutputJob}
-              onGenerateOutput={refine.onGenerateOutput}
+              onGenerateOutput={(...args) => {
+                void refine.onGenerateOutput(...args);
+              }}
               onOpenSlides={(options) => {
                 const mode = options?.mode ?? 'config';
                 overlays.openSlidesDialog(
@@ -836,11 +852,15 @@ export default function WorkspaceLayout() {
                   options?.queueJobId ?? null,
                 );
               }}
-              onDeleteOutput={refine.onDeleteOutput}
+              onDeleteOutput={(...args) => {
+                void refine.onDeleteOutput(...args);
+              }}
               onSelectOutput={overlays.openOutputViewer}
               onSelectOutputFullscreen={overlays.openOutputViewerFullscreen}
               onSaveNote={refine.saveContentAsNote}
-              onConvertToSource={sources.convertOutputToSource}
+              onConvertToSource={(...args) => {
+                void sources.convertOutputToSource(...args);
+              }}
               onJumpToCitation={handleOutputCitationJump}
               isConnected={isConnected}
               isFullscreen={false}
@@ -945,14 +965,20 @@ export default function WorkspaceLayout() {
         <WorkspaceOnboardingBanner
           readiness={readiness}
           showReadyGuide={showReadyGuide}
-          onRetryConnection={notebooks.retryNotebooks}
+          onRetryConnection={(...args) => {
+            void notebooks.retryNotebooks(...args);
+          }}
           onOpenDiagnostics={handleOpenDiagnostics}
           onOpenDeploymentDocs={handleOpenDeploymentDocs}
-          onCreateNotebook={handleCreateNotebookFromOnboarding}
+          onCreateNotebook={(...args) => {
+            void handleCreateNotebookFromOnboarding(...args);
+          }}
           onUploadSources={handleOpenUpload}
           onAddSourceFromUrl={handleOpenAddSourceFromUrl}
           onFocusSourceSearch={handleFocusSourceSearch}
-          onStartSession={handleStartSession}
+          onStartSession={(...args) => {
+            void handleStartSession(...args);
+          }}
           onFocusChat={handleFocusChat}
           onOpenSlidesStudio={() => overlays.openSlidesDialog('config')}
           slidesAvailable={Boolean(slidesTool)}
@@ -1014,7 +1040,9 @@ export default function WorkspaceLayout() {
         notebookId={activeNotebookId}
         selectedSourceIds={selectedSourceIds}
         isConnected={isConnected}
-        onOutputsUpdated={refine.retryOutputs}
+        onOutputsUpdated={(...args) => {
+          void refine.retryOutputs(...args);
+        }}
         slidesOpenMode={overlays.slidesOpenMode}
         slidesDraftId={overlays.slidesDraftId}
         slidesQueueStatus={slidesQueueStatus}
@@ -1023,7 +1051,9 @@ export default function WorkspaceLayout() {
         onQueueSlides={refine.onQueueSlides}
         graphViewOpen={overlays.isGraphViewOpen}
         onCloseGraphView={overlays.closeGraphView}
-        onRefreshGraph={analysis.fetchAnalysis}
+        onRefreshGraph={(...args) => {
+          void analysis.fetchAnalysis(...args);
+        }}
         onGraphSourceClick={overlays.openGraphSourceDetail}
         onGraphOutputClick={(output) => overlays.openOutputViewer(output.id, true)}
         onGraphSessionClick={overlays.handleGraphSessionClick}

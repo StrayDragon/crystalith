@@ -225,7 +225,9 @@ export function WorkspaceOverlays({
           onClose={onCloseViewer}
           onToggleFullscreen={onToggleViewerFullscreen}
           onSelectOutput={onSelectViewerOutput}
-          onDeleteOutput={onDeleteOutput}
+          onDeleteOutput={(...args) => {
+            void onDeleteOutput(...args);
+          }}
           onJumpToCitation={onOutputCitationJump}
           onCitationHover={onCitationHover}
           onLocateSource={onLocateCitationSource}
@@ -283,7 +285,9 @@ export function WorkspaceOverlays({
             onRefresh={onRefreshGraph}
             onSourceClick={onGraphSourceClick}
             onOutputClick={onGraphOutputClick}
-            onSessionClick={onGraphSessionClick}
+            onSessionClick={(...args) => {
+              void onGraphSessionClick(...args);
+            }}
             isConnected={graphConnected}
           />
         </Suspense>

@@ -584,17 +584,19 @@ export default function SourceDetailDialog({
                       <IconButton
                         variant="text"
                         size="sm"
-                        onClick={async () => {
-                          const text = [
-                            source.errorCode ? `错误码: ${source.errorCode}` : null,
-                            source.errorMessage ? `原因: ${source.errorMessage}` : null,
-                            source.recoveryHint ? `修复建议: ${source.recoveryHint}` : null,
-                          ]
-                            .filter(Boolean)
-                            .join('\n');
-                          const ok = await copyToClipboard(text);
-                          if (ok) toast.success('已复制失败信息');
-                          else toast.error('复制失败');
+                        onClick={() => {
+                          void (async () => {
+                            const text = [
+                              source.errorCode ? `错误码: ${source.errorCode}` : null,
+                              source.errorMessage ? `原因: ${source.errorMessage}` : null,
+                              source.recoveryHint ? `修复建议: ${source.recoveryHint}` : null,
+                            ]
+                              .filter(Boolean)
+                              .join('\n');
+                            const ok = await copyToClipboard(text);
+                            if (ok) toast.success('已复制失败信息');
+                            else toast.error('复制失败');
+                          })();
                         }}
                         className="rounded-full text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50"
                         aria-label="复制失败信息"
@@ -864,7 +866,9 @@ export default function SourceDetailDialog({
                         <IconButton
                           size="sm"
                           className={`rounded-full w-7 h-7 ${!inputValue.trim() || isLoading ? 'bg-gray-200 text-gray-400 dark:text-slate-500' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
-                          onClick={handleSend}
+                          onClick={() => {
+                            void handleSend();
+                          }}
                           aria-label="发送问题"
                           disabled={!inputValue.trim() || isLoading}
                         >

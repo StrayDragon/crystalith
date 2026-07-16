@@ -139,16 +139,18 @@ export default function TemplateManagerDialog({
                           variant="text"
                           className="w-8 h-8 min-w-[32px] rounded hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-600 dark:text-slate-200 disabled:opacity-40"
                           disabled={!dirty || disabled || savingId === tpl.id}
-                          onClick={async () => {
-                            setSavingId(tpl.id);
-                            try {
-                              await onUpdateDescription(tpl.id, draft);
-                              toast.success('模板已更新');
-                            } catch {
-                              toast.error('更新失败');
-                            } finally {
-                              setSavingId(null);
-                            }
+                          onClick={() => {
+                            void (async () => {
+                              setSavingId(tpl.id);
+                              try {
+                                await onUpdateDescription(tpl.id, draft);
+                                toast.success('模板已更新');
+                              } catch {
+                                toast.error('更新失败');
+                              } finally {
+                                setSavingId(null);
+                              }
+                            })();
                           }}
                           aria-label="保存模板"
                         >
@@ -161,17 +163,19 @@ export default function TemplateManagerDialog({
 
                         <ConfirmPopover
                           message={`确定删除模板「${tpl.name}」？此操作不可撤销。`}
-                          onConfirm={async () => {
-                            setDeletingId(tpl.id);
-                            try {
-                              await onDelete(tpl.id);
-                              toast.success('模板已删除');
-                            } catch (error) {
-                              const msg = error instanceof Error ? error.message : '删除失败';
-                              toast.error(msg);
-                            } finally {
-                              setDeletingId(null);
-                            }
+                          onConfirm={() => {
+                            void (async () => {
+                              setDeletingId(tpl.id);
+                              try {
+                                await onDelete(tpl.id);
+                                toast.success('模板已删除');
+                              } catch (error) {
+                                const msg = error instanceof Error ? error.message : '删除失败';
+                                toast.error(msg);
+                              } finally {
+                                setDeletingId(null);
+                              }
+                            })();
                           }}
                           placement="left"
                           disabled={tpl.isBuiltin || deletingId === tpl.id}

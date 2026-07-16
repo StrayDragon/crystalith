@@ -367,9 +367,11 @@ export default function WorkspaceHeader({
               {onDeleteNotebook && autoCreatedNotebookId ? (
                 <ConfirmPopover
                   message={`确定删除「${autoNotebookTitle ?? '默认笔记本'}」？此操作不可撤销。`}
-                  onConfirm={async () => {
-                    await onDeleteNotebook(autoCreatedNotebookId);
-                    dismissAutoNotebookHint();
+                  onConfirm={() => {
+                    void (async () => {
+                      await onDeleteNotebook(autoCreatedNotebookId);
+                      dismissAutoNotebookHint();
+                    })();
                   }}
                   placement="bottom"
                 >

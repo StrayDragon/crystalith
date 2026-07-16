@@ -922,7 +922,9 @@ function SourcesPanelView({
                       : t('sources.search.action.fast')
                   }
                   className="rounded-full w-9 h-9 transition-all duration-200 active:scale-[0.98] bg-blue-500 hover:bg-blue-600"
-                  onClick={handleSearch}
+                  onClick={() => {
+                    void handleSearch();
+                  }}
                 >
                   <ArrowForwardIcon style={{ fontSize: 16 }} />
                 </IconButton>
@@ -988,9 +990,15 @@ function SourcesPanelView({
                   <ResearchCapsule
                     key={session.id}
                     session={session}
-                    onClick={() => handleResearchClick(session.id)}
-                    onStart={() => handleResearchStart(session.id)}
-                    onDelete={() => handleResearchDelete(session.id)}
+                    onClick={() => {
+                      void handleResearchClick(session.id);
+                    }}
+                    onStart={() => {
+                      void handleResearchStart(session.id);
+                    }}
+                    onDelete={() => {
+                      void handleResearchDelete(session.id);
+                    }}
                     isExpanded={research.activeSession?.id === session.id}
                   />
                 ))}
@@ -1152,7 +1160,9 @@ function SourcesPanelView({
                       ? '确定要移除已选的 1 个来源吗？'
                       : `确定要移除已选的 ${selectedIds.length} 个来源吗？`
                   }
-                  onConfirm={handleBatchDelete}
+                  onConfirm={() => {
+                    void handleBatchDelete();
+                  }}
                   placement="left"
                   disabled={removeDisabled}
                 >
@@ -1168,7 +1178,9 @@ function SourcesPanelView({
                 {onBatchReembedSources && (
                   <MenuItem
                     disabled={batchReembedDisabled}
-                    onClick={handleBatchReembed}
+                    onClick={() => {
+                      void handleBatchReembed();
+                    }}
                     className="flex items-center gap-2 py-1.5 px-3 text-xs"
                   >
                     <ReplayIcon style={{ fontSize: 14 }} />
@@ -1184,7 +1196,9 @@ function SourcesPanelView({
                       />,
                       <MenuItem
                         key="tag-actions-create"
-                        onClick={handleBatchCreateAndAssignTag}
+                        onClick={() => {
+                          void handleBatchCreateAndAssignTag();
+                        }}
                         disabled={
                           !onCreateSourceTag ||
                           !onAssignTagToSources ||
@@ -1197,7 +1211,9 @@ function SourcesPanelView({
                       ...sourceTags.map((tag) => (
                         <MenuItem
                           key={`assign-${tag.id}`}
-                          onClick={() => handleAssignExistingTag(tag.id)}
+                          onClick={() => {
+                            void handleAssignExistingTag(tag.id);
+                          }}
                           disabled={!onAssignTagToSources || tagMutationState === 'loading'}
                           className="py-1.5 px-3 text-xs"
                         >
@@ -1218,7 +1234,9 @@ function SourcesPanelView({
                         return [
                           <MenuItem
                             key={`remove-${tag.id}`}
-                            onClick={() => handleRemoveExistingTag(tag.id)}
+                            onClick={() => {
+                              void handleRemoveExistingTag(tag.id);
+                            }}
                             disabled={!onRemoveTagFromSources || tagMutationState === 'loading'}
                             className="py-1.5 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
                           >
@@ -1375,18 +1393,20 @@ function SourcesPanelView({
                         {source.statusTone === 'FAILED' &&
                         (source.recoveryHint || source.errorMessage || source.errorCode) ? (
                           <MenuItem
-                            onClick={async () => {
-                              const text =
-                                source.recoveryHint ||
-                                source.errorMessage ||
-                                source.errorCode ||
-                                '';
-                              const ok = await copyToClipboard(text);
-                              if (ok) {
-                                toast.success('已复制修复建议');
-                              } else {
-                                toast.error('复制失败');
-                              }
+                            onClick={() => {
+                              void (async () => {
+                                const text =
+                                  source.recoveryHint ||
+                                  source.errorMessage ||
+                                  source.errorCode ||
+                                  '';
+                                const ok = await copyToClipboard(text);
+                                if (ok) {
+                                  toast.success('已复制修复建议');
+                                } else {
+                                  toast.error('复制失败');
+                                }
+                              })();
                             }}
                             className="flex items-center gap-2 py-2 px-3 text-xs"
                           >
@@ -1396,9 +1416,11 @@ function SourcesPanelView({
                         ) : null}
                         <ConfirmPopover
                           message={`确定要删除「${source.title}」吗？此操作不可撤销。`}
-                          onConfirm={async () => {
-                            if (!isConnected || removeState === 'loading') return;
-                            await onRemoveSource(source.id);
+                          onConfirm={() => {
+                            void (async () => {
+                              if (!isConnected || removeState === 'loading') return;
+                              await onRemoveSource(source.id);
+                            })();
                           }}
                           placement="left"
                           disabled={!isConnected || removeState === 'loading'}
@@ -1413,9 +1435,11 @@ function SourcesPanelView({
                         </ConfirmPopover>
                         {source.statusTone === 'FAILED' && onReembedSource && (
                           <MenuItem
-                            onClick={async () => {
-                              if (!isConnected) return;
-                              await onReembedSource(source.id);
+                            onClick={() => {
+                              void (async () => {
+                                if (!isConnected) return;
+                                await onReembedSource(source.id);
+                              })();
                             }}
                             className="flex items-center gap-2 py-2 px-3 text-xs"
                           >
