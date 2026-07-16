@@ -25,6 +25,10 @@ import {
   StorageSettingsSchema,
   SsrfPolicyConfigSchema,
 } from '../apps/server/src/shared/config.ts';
+import {
+  ModelsSettingsSchema,
+  ProviderConfigSchema,
+} from '../packages/shared/src/schemas/model.ts';
 
 // ---------------------------------------------------------------------------
 // Custom Zod → JSON Schema converter (Zod v4 compatible)
@@ -240,6 +244,16 @@ const SECTION_MAPPINGS: SectionMapping[] = [
     yamlKey: 'source_ingestion',
     schema: SsrfPolicyConfigSchema,
     description: '来源摄取安全策略：SSRF 白名单域名/IP、重定向限制',
+  },
+  {
+    yamlKey: 'models',
+    schema: ModelsSettingsSchema,
+    description: '模型配置：默认模型、可用模型列表、提供商配置',
+  },
+  {
+    yamlKey: 'providers',
+    schema: ProviderConfigSchema,
+    description: 'AI 提供商配置：API key、base URL 等',
   },
 ];
 
