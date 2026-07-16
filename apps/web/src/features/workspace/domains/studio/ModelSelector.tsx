@@ -73,7 +73,7 @@ export function ModelSelector({
       }
     }
 
-    fetchModels();
+    void fetchModels();
     return () => {
       cancelled = true;
     };

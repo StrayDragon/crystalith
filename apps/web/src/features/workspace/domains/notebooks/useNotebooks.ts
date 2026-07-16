@@ -101,7 +101,7 @@ export function useNotebooks() {
       }
     };
 
-    autoCreateNotebook();
+    void autoCreateNotebook();
   }, [isLoading, mutate, notebookData, notebookError, store]);
 
   const setActiveNotebookId = useCallback(

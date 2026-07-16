@@ -532,8 +532,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
             }
 
             if (eventType === 'done' || eventType === 'report') {
-              fetchSession(researchId);
-              fetchSessions();
+              void fetchSession(researchId);
+              void fetchSessions();
               if (eventType === 'done') {
                 unsubscribeFromSSE();
               }

@@ -689,7 +689,7 @@ function SourcesPanelView({
     setResearchDetailOpen(false);
     // Refresh the session to get latest state
     if (research.activeSession?.id) {
-      research.fetchSession(research.activeSession.id);
+      void research.fetchSession(research.activeSession.id);
     }
   }, [research]);
 
@@ -902,7 +902,7 @@ function SourcesPanelView({
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      handleSearch();
+                      void handleSearch();
                     }
                   }}
                   id="source-search-input"
@@ -1600,7 +1600,7 @@ function SourcesPanelView({
                   <button
                     key={session.id}
                     onClick={() => {
-                      handleResearchClick(session.id);
+                      void handleResearchClick(session.id);
                       setShowResearchHistory(false);
                     }}
                     className="w-full text-left p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:border-blue-300 hover:bg-blue-50/50 transition-colors"
