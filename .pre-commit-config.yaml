@@ -14,6 +14,14 @@ repos:
         always_run: true
         stages: [pre-commit]
 
+      - id: check-app-schema
+        name: app.schema.gen.json matches Zod schemas
+        entry: bun scripts/gen-app-schema.ts --check
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
   # Root-level oxlint + oxfmt (covers apps/server/ + packages/shared/ + apps/web/)
   - repo: local
     hooks:
