@@ -205,7 +205,10 @@ export default function NotebookSwitcher({
   useEffect(() => {
     if (!isOpen && !createOpen) return;
     function onPointerDown(event: MouseEvent) {
-      const target = event.target as Node;
+      const target = event.target;
+      // ConfirmPopover portals to body above this panel — ignore it.
+      if (target instanceof Element && target.closest('[data-confirm-popover]')) return;
+      if (!(target instanceof Node)) return;
       if (isOpen) {
         if (panelRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
         onClose();
