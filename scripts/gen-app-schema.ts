@@ -1,34 +1,18 @@
 // @crystalith/gen-app-schema
-// Generate config/app.schema.gen.json from Zod schemas in config.ts.
-//
-// Uses a custom lightweight Zod → JSON Schema converter (Zod v4 compatible).
+// Generate config/app.schema.gen.json from the combined RootConfigSchema.
 //
 // Usage:
 //   bun scripts/gen-app-schema.ts           # generate config/app.schema.gen.json
 //   bun scripts/gen-app-schema.ts --check   # check for drift (exit 1 if different)
 //
-// The SSOT Zod schemas live in apps/server/src/shared/config.ts.
-// NEVER edit app.schema.gen.json manually — edit the Zod schemas and regenerate.
+// The SSOT is RootConfigSchema in apps/server/src/shared/config.ts — a single
+// Zod object combining all app.yaml sections with inline .describe() calls.
+// NEVER edit app.schema.gen.json or SECTION_MAPPINGS manually.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 
-import {
-  AiSettingsSchema,
-  AppSettingsSchema,
-  CompletionOptionsSchema,
-  ConcurrencySettingsSchema,
-  ContextWindowSettingsSchema,
-  EmbeddingSettingsSchema,
-  OptionalServicesSchema,
-  SearchSettingsSchema,
-  StorageSettingsSchema,
-  SsrfPolicyConfigSchema,
-} from '../apps/server/src/shared/config.ts';
-import {
-  ModelsSettingsSchema,
-  ProviderConfigSchema,
-} from '../packages/shared/src/schemas/model.ts';
+import { RootConfigSchema } from '../apps/server/src/shared/config.ts';
 
 // ---------------------------------------------------------------------------
 // Custom Zod → JSON Schema converter (Zod v4 compatible)
@@ -40,7 +24,7 @@ import {
 //   - object shape in schema._def.shape
 // ---------------------------------------------------------------------------
 
-/** Get the innermost type name by unwrapping "default" and "optional" layers. */
+/** Get the innermost type name by unwrapping wrapper layers. */
 function innerTypeName(field: Record<string, unknown>): string {
   let current = field;
   for (let i = 0; i < 10; i++) {
@@ -61,7 +45,6 @@ function innerDescription(field: Record<string, unknown>): string {
   if (field.description && typeof field.description === 'string' && field.description.length > 0) {
     return field.description as string;
   }
-  // Try to unwrap default/optional/nullable
   const inner = (field._def as Record<string, unknown>)?.innerType as
     | Record<string, unknown>
     | undefined;
@@ -184,81 +167,7 @@ function zodToJson(field: Record<string, unknown>): Record<string, unknown> {
 }
 
 // ---------------------------------------------------------------------------
-// Schema mapping
-// ---------------------------------------------------------------------------
-
-interface SectionMapping {
-  yamlKey: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  schema: any;
-  description: string;
-}
-
-const SECTION_MAPPINGS: SectionMapping[] = [
-  {
-    yamlKey: 'app',
-    schema: AppSettingsSchema,
-    description: '应用层设置：CORS、auth、startup behavior、feature flags',
-  },
-  {
-    yamlKey: 'ai',
-    schema: AiSettingsSchema,
-    description: 'AI 运行时设置：超时、重试次数',
-  },
-  {
-    yamlKey: 'completion_options',
-    schema: CompletionOptionsSchema,
-    description: 'Completion 参数默认值：temperature、top_p、stop 序列等',
-  },
-  {
-    yamlKey: 'concurrency',
-    schema: ConcurrencySettingsSchema,
-    description: '并发控制门禁：embedding、vector_search、llm_generate 的并发数限制',
-  },
-  {
-    yamlKey: 'embedding',
-    schema: EmbeddingSettingsSchema,
-    description: '文本嵌入设置：chunk_size、batch_size',
-  },
-  {
-    yamlKey: 'context_window',
-    schema: ContextWindowSettingsSchema,
-    description: '上下文窗口设置：max_tokens、compression_strategy、window_size',
-  },
-  {
-    yamlKey: 'search',
-    schema: SearchSettingsSchema,
-    description: '搜索引擎设置：SearXNG 实例地址、超时、最大结果数',
-  },
-  {
-    yamlKey: 'optional_services',
-    schema: OptionalServicesSchema,
-    description: '可选服务配置：Chroma、SearXNG、Redis 的启用状态与接入点',
-  },
-  {
-    yamlKey: 'storage',
-    schema: StorageSettingsSchema,
-    description: '存储设置：数据根目录路径',
-  },
-  {
-    yamlKey: 'source_ingestion',
-    schema: SsrfPolicyConfigSchema,
-    description: '来源摄取安全策略：SSRF 白名单域名/IP、重定向限制',
-  },
-  {
-    yamlKey: 'models',
-    schema: ModelsSettingsSchema,
-    description: '模型配置：默认模型、可用模型列表、提供商配置',
-  },
-  {
-    yamlKey: 'providers',
-    schema: ProviderConfigSchema,
-    description: 'AI 提供商配置：API key、base URL 等',
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Assembler
+// Assembler — walks RootConfigSchema.shape instead of a manual mapping
 // ---------------------------------------------------------------------------
 
 interface JsonSchemaRoot {
@@ -271,15 +180,17 @@ interface JsonSchemaRoot {
   additionalProperties?: boolean;
 }
 
-function assembleSchema(mappings: SectionMapping[]): JsonSchemaRoot {
-  const properties: Record<string, unknown> = {};
+function assembleSchema(): JsonSchemaRoot {
+  const shape = (RootConfigSchema as unknown as Record<string, unknown>)._def?.shape as
+    | Record<string, unknown>
+    | undefined;
+  if (!shape) {
+    throw new Error('Cannot read RootConfigSchema shape');
+  }
 
-  for (const { yamlKey, schema, description } of mappings) {
-    const jsonSchema = zodToJson(schema as Record<string, unknown>);
-    properties[yamlKey] = {
-      ...jsonSchema,
-      description,
-    };
+  const properties: Record<string, unknown> = {};
+  for (const [yamlKey, sectionSchema] of Object.entries(shape)) {
+    properties[yamlKey] = zodToJson(sectionSchema as Record<string, unknown>);
   }
 
   return {
@@ -302,7 +213,7 @@ const SCHEMA_FILE = join(process.cwd(), 'config', 'app.schema.gen.json');
 
 function main(): void {
   const isCheck = process.argv.includes('--check');
-  const root = assembleSchema(SECTION_MAPPINGS);
+  const root = assembleSchema();
   const content = JSON.stringify(root, null, 2) + '\n';
 
   if (isCheck) {

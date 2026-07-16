@@ -6,6 +6,7 @@
   "type": "object",
   "properties": {
     "app": {
+      "description": "应用层设置：CORS、auth、startup behavior、feature flags",
       "type": "object",
       "properties": {
         "http_guardrails": {
@@ -18,10 +19,10 @@
             }
           }
         }
-      },
-      "description": "应用层设置：CORS、auth、startup behavior、feature flags"
+      }
     },
     "ai": {
+      "description": "AI 运行时设置：超时、重试次数",
       "type": "object",
       "properties": {
         "timeout": {
@@ -34,10 +35,10 @@
           "default": 3,
           "type": "number"
         }
-      },
-      "description": "AI 运行时设置：超时、重试次数"
+      }
     },
     "completion_options": {
+      "description": "Completion 参数默认值：temperature、top_p、stop 序列等",
       "type": "object",
       "properties": {
         "temperature": {
@@ -63,10 +64,10 @@
           "description": "推理预算 token 数，0 表示不使用推理模式",
           "type": "number"
         }
-      },
-      "description": "Completion 参数默认值：temperature、top_p、stop 序列等"
+      }
     },
     "concurrency": {
+      "description": "并发控制门禁：embedding、vector_search、llm_generate 的并发数限制",
       "type": "object",
       "properties": {
         "embedding": {
@@ -84,10 +85,10 @@
           "default": 4,
           "type": "number"
         }
-      },
-      "description": "并发控制门禁：embedding、vector_search、llm_generate 的并发数限制"
+      }
     },
     "embedding": {
+      "description": "文本嵌入设置：chunk_size、batch_size",
       "type": "object",
       "properties": {
         "chunk_size": {
@@ -100,10 +101,10 @@
           "default": 32,
           "type": "number"
         }
-      },
-      "description": "文本嵌入设置：chunk_size、batch_size"
+      }
     },
     "context_window": {
+      "description": "上下文窗口设置：max_tokens、compression_strategy、window_size",
       "type": "object",
       "properties": {
         "max_tokens": {
@@ -125,10 +126,10 @@
           "default": 10,
           "type": "number"
         }
-      },
-      "description": "上下文窗口设置：max_tokens、compression_strategy、window_size"
+      }
     },
     "search": {
+      "description": "搜索引擎设置：SearXNG 实例地址、超时、最大结果数",
       "type": "object",
       "properties": {
         "searxng": {
@@ -162,10 +163,10 @@
             }
           }
         }
-      },
-      "description": "搜索引擎设置：SearXNG 实例地址、超时、最大结果数"
+      }
     },
     "optional_services": {
+      "description": "可选服务配置：Chroma、SearXNG、Redis 的启用状态与接入点",
       "type": "object",
       "properties": {
         "chroma": {
@@ -232,10 +233,10 @@
             }
           }
         }
-      },
-      "description": "可选服务配置：Chroma、SearXNG、Redis 的启用状态与接入点"
+      }
     },
     "storage": {
+      "description": "存储设置：数据根目录路径",
       "type": "object",
       "properties": {
         "data_root": {
@@ -243,10 +244,10 @@
           "default": "./data",
           "type": "string"
         }
-      },
-      "description": "存储设置：数据根目录路径"
+      }
     },
     "source_ingestion": {
+      "description": "来源摄取安全策略：SSRF 白名单域名/IP、重定向限制",
       "type": "object",
       "properties": {
         "allowlist_only": {
@@ -283,10 +284,10 @@
           "default": 5,
           "type": "number"
         }
-      },
-      "description": "来源摄取安全策略：SSRF 白名单域名/IP、重定向限制"
+      }
     },
     "models": {
+      "description": "模型配置：默认模型、可用模型列表、提供商配置",
       "type": "object",
       "properties": {
         "defaults": {
@@ -431,10 +432,10 @@
             }
           }
         }
-      },
-      "description": "模型配置：默认模型、可用模型列表、提供商配置"
+      }
     },
     "providers": {
+      "description": "AI 提供商配置：API key、base URL 等",
       "type": "object",
       "properties": {
         "api_key": {
@@ -449,8 +450,7 @@
         "project": {
           "type": "string"
         }
-      },
-      "description": "AI 提供商配置：API key、base URL 等"
+      }
     }
   },
   "additionalProperties": true

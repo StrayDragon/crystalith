@@ -15,6 +15,7 @@ import { join, dirname } from 'node:path';
 
 import {
   ModelsSettingsSchema,
+  ProviderConfigSchema,
   type ModelsSettings,
   type ModelConfig,
   type ModelDefaults,
@@ -561,3 +562,45 @@ export function getOptionalServices(): OptionalServicesConfig {
     },
   };
 }
+
+// ===========================================================================
+// Root config schema — single combined schema for app.yaml generation
+// (gen-app-schema.ts consumes this instead of a manual section mapping).
+// Each section carries an inline .describe() for JSON Schema doc.
+// ===========================================================================
+
+export const RootConfigSchema = z.object({
+  app: AppSettingsSchema.describe(
+    desc('root.app', '应用层设置：CORS、auth、startup behavior、feature flags'),
+  ),
+  ai: AiSettingsSchema.describe(desc('root.ai', 'AI 运行时设置：超时、重试次数')),
+  completion_options: CompletionOptionsSchema.describe(
+    desc('root.completion_options', 'Completion 参数默认值：temperature、top_p、stop 序列等'),
+  ),
+  concurrency: ConcurrencySettingsSchema.describe(
+    desc('root.concurrency', '并发控制门禁：embedding、vector_search、llm_generate 的并发数限制'),
+  ),
+  embedding: EmbeddingSettingsSchema.describe(
+    desc('root.embedding', '文本嵌入设置：chunk_size、batch_size'),
+  ),
+  context_window: ContextWindowSettingsSchema.describe(
+    desc('root.context_window', '上下文窗口设置：max_tokens、compression_strategy、window_size'),
+  ),
+  search: SearchSettingsSchema.describe(
+    desc('root.search', '搜索引擎设置：SearXNG 实例地址、超时、最大结果数'),
+  ),
+  optional_services: OptionalServicesSchema.describe(
+    desc('root.optional_services', '可选服务配置：Chroma、SearXNG、Redis 的启用状态与接入点'),
+  ),
+  storage: StorageSettingsSchema.describe(desc('root.storage', '存储设置：数据根目录路径')),
+  source_ingestion: SsrfPolicyConfigSchema.describe(
+    desc('root.source_ingestion', '来源摄取安全策略：SSRF 白名单域名/IP、重定向限制'),
+  ),
+  models: ModelsSettingsSchema.describe(
+    desc('root.models', '模型配置：默认模型、可用模型列表、提供商配置'),
+  ),
+  providers: ProviderConfigSchema.describe(
+    desc('root.providers', 'AI 提供商配置：API key、base URL 等'),
+  ),
+});
+export type RootConfig = z.infer<typeof RootConfigSchema>;
