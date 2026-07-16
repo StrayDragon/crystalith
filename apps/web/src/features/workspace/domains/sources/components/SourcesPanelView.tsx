@@ -46,6 +46,7 @@ import { LAYER_LEVELS } from '../../../../../shared/layer';
 import { toast } from '../../../../../shared/toast';
 import type { AsyncStatus } from '../../../../../shared/types';
 import { SkeletonCard, SkeletonList } from '../../../shared/components/Skeleton';
+import { useWorkspaceStore } from '../../../shared/state/workspaceStore';
 import type { SourceItem } from '../../../shared/types';
 import {
   SOURCE_UPLOAD_ACCEPT,
@@ -106,8 +107,6 @@ function splitUploadFiles(files: File[]) {
 
 export interface SourcesPanelProps {
   sources: SourceItem[];
-  /** 外部触发定位/高亮某个来源 */
-  jumpToSource?: { id: number; token: number } | null;
   onUpload: (input: File | File[] | FileList | null) => void;
   /** 刷新来源列表（例如连接器导入后） */
   onRefreshSources?: () => Promise<void> | void;
@@ -180,7 +179,6 @@ export type SourcesPanelViewProps = SourcesPanelProps & {
 
 function SourcesPanelView({
   sources,
-  jumpToSource = null,
   onUpload,
   onRefreshSources,
   uploadState,
@@ -226,6 +224,8 @@ function SourcesPanelView({
   notebookId,
   onSelectedSourceIdsChange,
 }: SourcesPanelViewProps) {
+  // Narrow store subscription — locating a source must not re-render ChatPanel.
+  const jumpToSource = useWorkspaceStore((s) => s.jumpToSourceTarget);
   const uploadDisabled = !isConnected || uploadState === 'loading';
   const connectorDisabled = !isConnected || !notebookId;
   const isSearching = searchState === 'loading';
@@ -404,7 +404,7 @@ function SourcesPanelView({
       // Prefer Virtuoso scroll — avoids scrollIntoView walking up and moving the chat panel.
       sourceListRef.current?.scrollToIndex({
         index: targetIndex,
-        align: 'nearest',
+        align: 'start',
         behavior: 'auto',
       });
     }

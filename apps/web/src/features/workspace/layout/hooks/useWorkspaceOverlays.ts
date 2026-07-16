@@ -22,7 +22,6 @@ export function useWorkspaceOverlays({ resolveSlideDraftId }: UseWorkspaceOverla
   const [citationSourceDetailOpen, setCitationSourceDetailOpen] = useState(false);
   const [citationSelectedSource, setCitationSelectedSource] = useState<SourceItem | null>(null);
   const [citationSourceDetailFullscreen, setCitationSourceDetailFullscreen] = useState(false);
-  const [jumpToSource, setJumpToSource] = useState<{ id: number; token: number } | null>(null);
   const [isSlidesDialogOpen, setIsSlidesDialogOpen] = useState(false);
   const [slidesOpenMode, setSlidesOpenMode] = useState<SlideOpenMode>('config');
   const [slidesDraftId, setSlidesDraftId] = useState<number | null>(null);
@@ -160,13 +159,6 @@ export function useWorkspaceOverlays({ resolveSlideDraftId }: UseWorkspaceOverla
     setCitationSourceDetailFullscreen((prev) => !prev);
   }, []);
 
-  const locateCitationSource = useCallback((sourceId: number) => {
-    setJumpToSource((prev) => ({
-      id: sourceId,
-      token: (prev?.token ?? 0) + 1,
-    }));
-  }, []);
-
   const closeActiveOverlay = useCallback(() => {
     if (showCommandPalette) {
       closeCommandPalette();
@@ -252,7 +244,6 @@ export function useWorkspaceOverlays({ resolveSlideDraftId }: UseWorkspaceOverla
     citationSourceDetailOpen,
     citationSelectedSource,
     citationSourceDetailFullscreen,
-    jumpToSource,
     isSlidesDialogOpen,
     slidesOpenMode,
     slidesDraftId,
@@ -280,7 +271,6 @@ export function useWorkspaceOverlays({ resolveSlideDraftId }: UseWorkspaceOverla
     openCitationSourceDetail,
     closeCitationSourceDetail,
     toggleCitationSourceDetailFullscreen,
-    locateCitationSource,
     openSlidesDialog,
     closeSlidesDialog,
     closeActiveOverlay,

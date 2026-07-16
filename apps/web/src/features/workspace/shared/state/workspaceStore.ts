@@ -44,6 +44,8 @@ export interface WorkspaceStoreState {
   hoveredCitationChunkId: number | null;
   hoveredMessageChunkIds: number[];
   jumpToCitationChunkId: number | null;
+  /** Locate a source row in the sources list (token bumps to re-fire). */
+  jumpToSourceTarget: { id: number; token: number } | null;
 
   // --- Outputs ---
   outputs: OutputItem[];
@@ -96,6 +98,7 @@ export interface WorkspaceStoreActions {
   setHoveredCitation: (chunkId: number | null) => void;
   setHoveredMessageChunks: (chunkIds: number[]) => void;
   setJumpToCitation: (chunkId: number | null) => void;
+  locateSourceInList: (sourceId: number) => void;
 
   // --- Outputs ---
   setOutputs: (outputs: OutputItem[]) => void;
@@ -144,6 +147,7 @@ const initialState: WorkspaceStoreState = {
   hoveredCitationChunkId: null,
   hoveredMessageChunkIds: [],
   jumpToCitationChunkId: null,
+  jumpToSourceTarget: null,
   outputs: [],
   outputType: 'FAQ',
   outputTypeRenderDescriptors: {},
@@ -203,6 +207,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
       hoveredCitationChunkId: null,
       hoveredMessageChunkIds: [],
       jumpToCitationChunkId: null,
+      jumpToSourceTarget: null,
       refineJobs: [],
       hasNewOutput: false,
       recentCompletedJobId: null,
@@ -228,6 +233,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
       hoveredCitationChunkId: null,
       hoveredMessageChunkIds: [],
       jumpToCitationChunkId: null,
+      jumpToSourceTarget: null,
       errors: {
         ...state.errors,
         messages: '',
@@ -269,6 +275,13 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
       return { hoveredMessageChunkIds: chunkIds };
     }),
   setJumpToCitation: (chunkId) => set({ jumpToCitationChunkId: chunkId }),
+  locateSourceInList: (sourceId) =>
+    set((state) => ({
+      jumpToSourceTarget: {
+        id: sourceId,
+        token: (state.jumpToSourceTarget?.token ?? 0) + 1,
+      },
+    })),
 
   // --- Outputs ---
   setOutputs: (outputs) => set({ outputs }),
