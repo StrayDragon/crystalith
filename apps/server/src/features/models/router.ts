@@ -47,7 +47,7 @@ export const modelsRouter = new Elysia({ prefix: '/v2' })
       // on the envelope. providers = sorted({openai} ∪ knownProviders()).
       default_chat: defaults.chat,
       default_embedding: defaults.embedding,
-      providers: [...new Set(['openai', ...knownProviders()])].sort(),
+      providers: [...new Set(['openai', ...knownProviders()])].toSorted(),
       models: available.map((m) => ({
         id: m.id,
         provider: m.provider,

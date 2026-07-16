@@ -166,7 +166,7 @@ export function buildSlidesExportItems(output: OutputItem): SlideExportItem[] {
   if (Array.isArray(outlineSlides) && outlineSlides.length > 0) {
     return outlineSlides.map((slide) => ({
       title: slide.title || '未命名幻灯片',
-      bullets: Array.isArray(slide.bullets) ? slide.bullets.map((item) => String(item)) : [],
+      bullets: Array.isArray(slide.bullets) ? slide.bullets.map(String) : [],
       paragraphs: [],
     }));
   }
