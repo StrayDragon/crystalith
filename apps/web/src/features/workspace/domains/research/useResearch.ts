@@ -182,7 +182,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       const { data, error: fetchErr } = await api.v2.research.get({
         query: { notebook_id: String(notebookId) },
       });
-      if (fetchErr) throw fetchErr;
+      if (fetchErr) throw new Error(String(fetchErr));
       setSessions(data as ResearchSessionItem[]);
     } catch (error) {
       setError(error instanceof Error ? error.message : '获取研究列表失败');
@@ -198,7 +198,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setError('');
       try {
         const { data, error: fetchErr } = await api.v2.research({ id: researchId }).get();
-        if (fetchErr) throw fetchErr;
+        if (fetchErr) throw new Error(String(fetchErr));
         setActiveSession(data as unknown as ResearchSessionDetail);
         return data as unknown as ResearchSessionDetail;
       } catch (error) {
@@ -222,7 +222,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           notebook_id: notebookId,
           max_iterations: maxIterations,
         });
-        if (postErr) throw postErr;
+        if (postErr) throw new Error(String(postErr));
         const sessionData = data as unknown as ResearchSessionDetail;
         setSessions((prev) => [
           {
@@ -276,7 +276,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       try {
         // startResearch in v2 is implicit with POST /research
         const { data, error: fetchErr } = await api.v2.research({ id: researchId }).get();
-        if (fetchErr) throw fetchErr;
+        if (fetchErr) throw new Error(String(fetchErr));
         setActiveSession(data as unknown as ResearchSessionDetail);
       } catch (error) {
         setError(error instanceof Error ? error.message : '启动研究失败');
@@ -291,7 +291,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setError('');
       try {
         const { data, error: postErr } = await api.v2.research({ id: researchId }).approve.post();
-        if (postErr) throw postErr;
+        if (postErr) throw new Error(String(postErr));
         setActiveSession((prev) =>
           prev ? { ...prev, status: (data as unknown as { status: string }).status } : prev,
         );
@@ -308,7 +308,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setError('');
       try {
         const { data, error: postErr } = await api.v2.research({ id: researchId }).skip.post();
-        if (postErr) throw postErr;
+        if (postErr) throw new Error(String(postErr));
         setActiveSession((prev) =>
           prev ? { ...prev, status: (data as unknown as { status: string }).status } : prev,
         );
@@ -325,7 +325,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setError('');
       try {
         const { error: postErr } = await api.v2.research({ id: researchId }).finish.post();
-        if (postErr) throw postErr;
+        if (postErr) throw new Error(String(postErr));
         setActiveSession((prev) => (prev ? { ...prev, status: 'completed' } : prev));
       } catch (error) {
         setError(error instanceof Error ? error.message : '结束研究失败');
@@ -340,7 +340,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setError('');
       try {
         const { data, error: postErr } = await api.v2.research({ id: researchId }).cancel.post();
-        if (postErr) throw postErr;
+        if (postErr) throw new Error(String(postErr));
         const newStatus = (data as unknown as { status: string }).status;
         setActiveSession((prev) => (prev ? { ...prev, status: newStatus } : prev));
         setSessions((prev) =>
@@ -366,7 +366,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setError('');
       try {
         const { data, error: postErr } = await api.v2.research({ id: researchId }).resume.post();
-        if (postErr) throw postErr;
+        if (postErr) throw new Error(String(postErr));
         const sessionData = data as unknown as ResearchSessionDetail;
         setActiveSession(sessionData);
         setSessions((prev) =>

@@ -106,7 +106,7 @@ async function runSlidesGenerate(
 
   // Confirm stage settled (server returns after completion, but re-check for safety)
   const { data: draft, error: draftErr } = await api.v2.studio.slides({ id: slideId }).get();
-  if (draftErr) throw draftErr;
+  if (draftErr) throw new Error(String(draftErr));
   const snapshot = draft as SlidesDraftSnapshot;
   if (snapshot.status === 'error') {
     throw new Error(snapshot.error_message?.trim() || '生成失败，请稍后重试。');
@@ -146,7 +146,7 @@ export function useOutputQueue({
       const { data, error: fetchErr } = await api.v2.outputs.get({
         query: { notebook_id: String(activeNotebookId ?? 0) },
       });
-      if (fetchErr) throw fetchErr;
+      if (fetchErr) throw new Error(String(fetchErr));
       return data ?? [];
     },
     { revalidateOnFocus: false },
@@ -279,7 +279,7 @@ export function useOutputQueue({
         generation_config: normalizeSlideGenerationConfig(generationConfig),
       };
       const { data: created, error: createErr } = await api.v2.studio.slides.post(payload);
-      if (createErr) throw createErr;
+      if (createErr) throw new Error(String(createErr));
       const draftId = created!.id;
 
       onQueueTotal();
@@ -363,7 +363,7 @@ export function useOutputQueue({
           };
           if (preference) Object.assign(body, { preference });
           const { data: response, error: createErr } = await api.v2.outputs.post(body);
-          if (createErr) throw createErr;
+          if (createErr) throw new Error(String(createErr));
           if (isCancelled()) {
             const abortError = new Error('aborted');
             abortError.name = 'AbortError';
@@ -524,7 +524,7 @@ export function useOutputQueue({
 
       try {
         const { error: deleteErr } = await api.v2.outputs({ id: outputId }).delete();
-        if (deleteErr) throw deleteErr;
+        if (deleteErr) throw new Error(String(deleteErr));
       } catch (error) {
         console.error('Failed to delete output:', error);
         await mutateOutputs();
@@ -543,7 +543,7 @@ export function useOutputQueue({
       if (!s.activeNotebookId || !isConnected) return null;
       try {
         const { data: output, error: getErr } = await api.v2.outputs({ id: outputId }).get();
-        if (getErr) throw getErr;
+        if (getErr) throw new Error(String(getErr));
         const normalized = normalizeOutput(output as any);
         const s2 = store.getState();
         s2.setOutputs(s2.outputs.map((item) => (item.id === outputId ? normalized : item)));

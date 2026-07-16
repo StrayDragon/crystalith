@@ -406,13 +406,13 @@ export default function SlidesStudioDialog({
     try {
       if (draftId) {
         const { data, error: fetchErr } = await api.v2.studio.slides({ id: draftId }).get();
-        if (fetchErr) throw fetchErr;
+        if (fetchErr) throw new Error(String(fetchErr));
         syncFromDraft(normalizeDraft(data));
       } else {
         const { data, error: fetchErr } = await api.v2.studio.slides.get({
           query: { notebook_id: String(notebookId) },
         });
-        if (fetchErr) throw fetchErr;
+        if (fetchErr) throw new Error(String(fetchErr));
         const list = Array.isArray(data) ? data : [];
         const latest = list.at(-1) ?? null;
         if (latest) syncFromDraft(normalizeDraft(latest));
@@ -436,7 +436,7 @@ export default function SlidesStudioDialog({
       const targetId = slideId ?? draft?.id;
       if (!targetId) return;
       const { data, error: fetchErr } = await api.v2.studio.slides({ id: targetId }).get();
-      if (fetchErr) throw fetchErr;
+      if (fetchErr) throw new Error(String(fetchErr));
       syncFromDraft(normalizeDraft(data));
     },
     [draft?.id, isConnected, notebookId, syncFromDraft],
@@ -603,7 +603,7 @@ export default function SlidesStudioDialog({
         notebook_id: notebookId,
         ...payload,
       });
-      if (createErr) throw createErr;
+      if (createErr) throw new Error(String(createErr));
       const normalized = normalizeDraft(created);
       syncFromDraft(normalized);
       return normalized;
@@ -611,7 +611,7 @@ export default function SlidesStudioDialog({
     const { data: updated, error: updateErr } = await api.v2.studio
       .slides({ id: draft.id })
       .patch(payload);
-    if (updateErr) throw updateErr;
+    if (updateErr) throw new Error(String(updateErr));
     const normalized = normalizeDraft(updated);
     syncFromDraft(normalized);
     return normalized;
@@ -694,7 +694,7 @@ export default function SlidesStudioDialog({
     const { data: updated, error: updateErr } = await api.v2.studio
       .slides({ id: draft.id })
       .outline.put({ outline });
-    if (updateErr) throw updateErr;
+    if (updateErr) throw new Error(String(updateErr));
     syncFromDraft(normalizeDraft(updated));
   }, [draft, isConnected, notebookId, outlineItems, outlineTitle, syncFromDraft, title]);
 
@@ -707,7 +707,7 @@ export default function SlidesStudioDialog({
     const { data: updated, error: updateErr } = await api.v2.studio
       .slides({ id: draft.id })
       .markdown.put({ markdown });
-    if (updateErr) throw updateErr;
+    if (updateErr) throw new Error(String(updateErr));
     syncFromDraft(normalizeDraft(updated));
     onOutputsUpdated();
   }, [draft, isConnected, markdown, notebookId, onOutputsUpdated, syncFromDraft]);
@@ -733,7 +733,7 @@ export default function SlidesStudioDialog({
           stage === 'outline'
             ? await slides.outline.post(undefined, { fetch: { signal: ac.signal } })
             : await slides.markdown.post(undefined, { fetch: { signal: ac.signal } });
-        if (genErr) throw genErr;
+        if (genErr) throw new Error(String(genErr));
         setIsGenerating(false);
         generateAbortRef.current = null;
         if (handlers.onDone) await handlers.onDone();
