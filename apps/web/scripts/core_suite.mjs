@@ -2,7 +2,6 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 const scriptDir = import.meta.dirname;
 const frontendDir = path.resolve(scriptDir, '..');

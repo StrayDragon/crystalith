@@ -26,10 +26,8 @@ function checkTriggerConflict(trigger: string, excludeId?: number): string | nul
     return `Trigger '${trigger}' conflicts with a built-in preset`;
   }
   const dupQuery = db().select().from(promptPresets);
-  const dup = excludeId
-    ? // no-op filter; we check below
-      dupQuery.where(eq(promptPresets.id, excludeId)).all()
-    : dupQuery.all();
+  // no-op filter; we check below
+  const dup = excludeId ? dupQuery.where(eq(promptPresets.id, excludeId)).all() : dupQuery.all();
   // Check all customs (excluding self if PATCH)
   const customs = db().select().from(promptPresets).all();
   const conflict = customs.find(

@@ -220,7 +220,7 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
       .join('\n\n');
 
     const title = sessionRow.title ?? `会话_${sid}`;
-    const timestamp = new Date().toISOString().replace(/[:.]/gu, '-');
+    const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, '-');
     const filename = `对话_${title}_${timestamp}.md`;
 
     // Create source
@@ -285,7 +285,7 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
           })
           .where(eq(sources.id, source.id))
           .run();
-        throw new Error('Failed to embed session source');
+        throw new Error('Failed to embed session source', { cause: error });
       }
     } else {
       db().update(sources).set({ status: 'ready' }).where(eq(sources.id, source.id)).run();

@@ -6,7 +6,7 @@ export function normalizeRelativePath(raw: string): string {
   const text = (raw || '').trim();
   if (!text) throw new Error('relative_path must not be empty');
 
-  const normalizedSeparators = text.replace(/\\/gu, '/');
+  const normalizedSeparators = text.replaceAll(/\\/gu, '/');
 
   if (WINDOWS_DRIVE_RE.test(normalizedSeparators)) {
     throw new Error('relative_path must not be an absolute Windows path');

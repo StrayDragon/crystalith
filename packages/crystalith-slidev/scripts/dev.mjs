@@ -6,9 +6,8 @@ import { spawn } from 'node:child_process';
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(import.meta.filename);
 const packageRoot = path.resolve(__dirname, '..');
 
 const ensure = spawn('bun', [path.join(__dirname, 'ensure-preview.mjs')], {
@@ -21,7 +20,9 @@ const chunks = [];
 for await (const chunk of ensure.stdout) {
   chunks.push(chunk);
 }
-const code = await new Promise((resolve) => ensure.on('close', resolve));
+const code = await new Promise((resolve) => {
+  ensure.on('close', resolve);
+});
 if (code !== 0) {
   process.exit(code ?? 1);
 }

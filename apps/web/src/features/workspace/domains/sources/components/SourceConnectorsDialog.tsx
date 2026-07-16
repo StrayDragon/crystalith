@@ -82,7 +82,7 @@ function schemaRequired(schema: unknown): Set<string> {
   if (!schema || typeof schema !== 'object') return new Set();
   const req = (schema as any).required;
   if (!Array.isArray(req)) return new Set();
-  return new Set(req.map((item) => String(item)));
+  return new Set(req.map(String));
 }
 
 function normalizeConfigValue(value: unknown, type: string | undefined): JsonValueInput {

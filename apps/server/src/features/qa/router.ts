@@ -97,7 +97,7 @@ function maybeSetSessionTitle(sessionId: number, question: string): void {
   const session = db().select().from(sessions).where(eq(sessions.id, sessionId)).get();
   if (!session) return;
   if (session.title && session.title.trim() && session.title !== 'New session') return;
-  const cleaned = question.trim().replace(/\s+/gu, ' ').slice(0, 80) || 'New session';
+  const cleaned = question.trim().replaceAll(/\s+/gu, ' ').slice(0, 80) || 'New session';
   db().update(sessions).set({ title: cleaned }).where(eq(sessions.id, sessionId)).run();
 }
 
@@ -346,8 +346,7 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
         .where(eq(messages.sessionId, sessionId))
         .orderBy(messages.createdAt)
         .all()
-        .filter((m) => m.role === 'assistant')
-        .pop();
+        .find((m) => m.role === 'assistant');
     }
 
     if (!assistantMessage) throw new NotFoundError('No assistant message found to export');
@@ -360,8 +359,7 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       .orderBy(messages.createdAt)
       .all()
       .filter((m) => m.role === 'user')
-      .filter((m) => m.createdAt <= assistantMessage.createdAt)
-      .pop();
+      .find((m) => m.createdAt <= assistantMessage.createdAt);
     const question = precedingUser?.content ?? null;
 
     const citations = (assistantMessage.citations as unknown[] | null) ?? [];
@@ -407,7 +405,7 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       // Fallback entries for cited-but-deleted sources (v1 api.py:584-595)
       ...citedSourceIds
         .filter((id) => !foundIds.has(id))
-        .sort((a, b) => a - b)
+        .toSorted((a, b) => a - b)
         .map((id) => ({
           source_id: id,
           source_name: fallbackNames.get(id) ?? '未知来源',

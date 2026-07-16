@@ -803,8 +803,7 @@ function loadLatestUserInput(sessionId: number): { action: string; plan?: Search
     .where(eq(researchSteps.sessionId, sessionId))
     .orderBy(researchSteps.id)
     .all()
-    .filter((s) => s.type === 'user_input')
-    .pop();
+    .find((s) => s.type === 'user_input');
   if (!step?.inputData || typeof step.inputData !== 'object') return null;
   const data = step.inputData as Record<string, unknown>;
   const action = typeof data.action === 'string' ? data.action : '';
@@ -934,5 +933,7 @@ async function waitForApproval(
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
+  return new Promise((r) => {
+    setTimeout(r, ms);
+  });
 }

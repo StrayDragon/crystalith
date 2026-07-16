@@ -128,7 +128,9 @@ export class TaskQueue {
       while (!this.aborted) {
         const entry = this._pop();
         if (!entry) {
-          await new Promise((r) => setTimeout(r, 200));
+          await new Promise((r) => {
+            setTimeout(r, 200);
+          });
           continue;
         }
 

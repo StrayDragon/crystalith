@@ -130,6 +130,7 @@ export async function runOutputPipeline(input: PipelineInput): Promise<PipelineR
       // c42: RAG failure MUST propagate — do NOT dump all chunks (v1 has no such fallback)
       throw new Error(
         `Output retrieval failed: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
       );
     }
 

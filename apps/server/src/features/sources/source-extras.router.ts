@@ -64,7 +64,7 @@ function parseSummaryResponse(response: string): {
       section = 'points';
     } else if (line.startsWith('主题：') || line.startsWith('主题:')) {
       const topicsStr = line.split(/[：:]/u, 2)[1]?.trim() ?? '';
-      for (const t of topicsStr.replace(/[、,]/gu, ',').split(',')) {
+      for (const t of topicsStr.replaceAll(/[、,]/gu, ',').split(',')) {
         const trimmed = t.trim();
         if (trimmed) topics.push(trimmed);
       }
@@ -235,7 +235,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
       messages?: Array<{ role: 'user' | 'assistant'; content: string }>;
     };
 
-    const timestamp = new Date().toISOString().replace(/[:.]/gu, '-');
+    const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, '-');
     const filename = `QA_${source.filename}_${timestamp}.md`;
 
     let text: string;
@@ -307,7 +307,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
           })
           .where(eq(sources.id, newSource.id))
           .run();
-        throw new Error('Failed to embed QA source');
+        throw new Error('Failed to embed QA source', { cause: error });
       }
     } else {
       // No chunks — safe to mark ready

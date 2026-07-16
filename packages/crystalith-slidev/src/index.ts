@@ -19,9 +19,9 @@ export function renderSlides(_config: SlidevConfig): { html: string } {
 }
 
 const DEFAULT_PREVIEW_URL =
-  (typeof import.meta !== 'undefined' &&
+  (import.meta !== undefined &&
     (import.meta as { env?: Record<string, string> }).env?.VITE_SLIDEV_PREVIEW_URL) ||
-  (typeof import.meta !== 'undefined' && (import.meta as { env?: { PROD?: boolean } }).env?.PROD
+  (import.meta !== undefined && (import.meta as { env?: { PROD?: boolean } }).env?.PROD
     ? '/slidev'
     : 'http://localhost:3030');
 
