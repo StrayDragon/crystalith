@@ -125,6 +125,33 @@ export type Translation = {
   'streaming.qa_done': string;
   'streaming.qa_error': string;
   'streaming.research_progress': string;
+  'env.CL_SERVER_PORT': string;
+  'env.CL_SERVER_HOST': string;
+  'env.CL_DATA_ROOT': string;
+  'env.CL_DB_PATH': string;
+  'env.CL_CONFIG_PATH': string;
+  'env.CL_SECRET_PATH': string;
+  'env.CL_CHAT_API_BASE': string;
+  'env.CL_EMBEDDING_API_BASE': string;
+  'env.OPENAI_BASE_URL': string;
+  'env.CL_DEFAULT_CHAT_MODEL': string;
+  'env.CL_DEFAULT_EMBEDDING_MODEL': string;
+  'env.CL_CHAT_MODEL': string;
+  'env.CL_CHAT_LIGHT_MODEL': string;
+  'env.CL_EMBEDDING_MODEL': string;
+  'env.CL_SEARXNG_HOST': string;
+  'env.VITE_API_PROXY_TARGET': string;
+  'env.SEARXNG_HOST': string;
+  'env.POSTGRES_PASSWORD': string;
+  'env.JINA_API_KEY': string;
+  'env.FIRECRAWL_API_KEY': string;
+  'env.BROWSERLESS_TOKEN': string;
+  'env.CL_CHAT_API_KEY': string;
+  'env.CL_EMBEDDING_API_KEY': string;
+  'env.CRYSTALITH_API_KEY': string;
+  'env.OPENAI_API_KEY': string;
+  'env.ANTHROPIC_API_KEY': string;
+  'env.GOOGLE_GENERATIVE_AI_API_KEY': string;
 };
 
 export type TranslationFunctions = {
