@@ -151,8 +151,13 @@ function zodToJson(field: Record<string, unknown>): Record<string, unknown> {
     }
     case 'enum': {
       result.type = 'string';
-      const def = (field._def as Record<string, unknown> | undefined) ?? {};
-      result.enum = (def.values as string[]) ?? [];
+      // Zod v4 stores enum entries in def.entries as {key: key} object
+      const def = innerDef(field);
+      const entriesObj = def.entries as Record<string, string> | undefined;
+      const entries = entriesObj ? Object.keys(entriesObj) : [];
+      if (entries.length > 0) {
+        result.enum = entries;
+      }
       break;
     }
     default: {

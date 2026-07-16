@@ -1,4 +1,9 @@
-import { NotebookCreateSchema, NotebookSchema } from '@crystalith/shared';
+import {
+  NotebookCreateSchema,
+  NotebookSchema,
+  IdSchema,
+  desc as i18nDesc,
+} from '@crystalith/shared';
 // Notebooks CRUD router — /v2/notebooks
 //
 // Mirrors v1 `features/notebooks/api.py` behavior but adapted to Elysia +
@@ -38,6 +43,7 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'Get a notebook by ID',
     tags: ['notebooks'],
+    request: { params: { id: IdSchema.describe(i18nDesc('notebook.id')) } },
     responses: { 200: { description: 'Notebook', body: NotebookSchema } },
   },
   {
@@ -45,7 +51,10 @@ const apiDocs: OpenApiRoute[] = [
     method: 'patch',
     summary: 'Update a notebook name',
     tags: ['notebooks'],
-    request: { body: NotebookCreateSchema },
+    request: {
+      params: { id: IdSchema.describe(i18nDesc('notebook.id')) },
+      body: NotebookCreateSchema,
+    },
     responses: { 200: { description: 'Updated notebook', body: NotebookSchema } },
   },
   {
@@ -53,6 +62,7 @@ const apiDocs: OpenApiRoute[] = [
     method: 'delete',
     summary: 'Delete a notebook (cascades)',
     tags: ['notebooks'],
+    request: { params: { id: IdSchema.describe(i18nDesc('notebook.id')) } },
     responses: { 204: { description: 'Deleted' } },
   },
 ];
