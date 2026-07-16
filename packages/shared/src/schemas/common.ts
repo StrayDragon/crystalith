@@ -50,8 +50,9 @@ export function PaginatedSchema<T extends z.ZodTypeAny>(item: T) {
 }
 
 /**
- * Citation — a grounded reference to a retrieved source chunk.
- * Matches v1 `crystalith.shared.schemas.citations.Citation`.
+ * Citation — wire/API grounded reference to a retrieved source chunk.
+ * Field names are snake_case to match the HTTP JSON contract (legacy v1 parity).
+ * Frontend UI MUST map through `normalizeCitation` into camelCase domain `Citation`.
  */
 export const CitationSchema = z.object({
   source_id: z.number().int(),
