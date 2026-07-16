@@ -170,10 +170,10 @@ export function clearStaleRunning(id: number): boolean {
 // ---------------------------------------------------------------------------
 
 export function writeSlideFile(notebookId: number, slideId: number, markdown: string): void {
-  const dir = join(process.cwd(), 'slides', String(notebookId));
+  const dir = join(process.cwd(), 'data', 'slides', String(notebookId));
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, `${slideId}.md`), markdown, 'utf-8');
-  const previewDir = join(process.cwd(), 'slides', 'preview');
+  const previewDir = join(process.cwd(), 'data', 'slides', 'preview');
   if (!existsSync(previewDir)) mkdirSync(previewDir, { recursive: true });
   writeFileSync(join(previewDir, 'slides.md'), markdown, 'utf-8');
 }
