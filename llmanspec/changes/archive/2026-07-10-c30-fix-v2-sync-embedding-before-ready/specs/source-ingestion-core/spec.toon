@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,r2_sync,"Ready MUST follow synchronous embedding","系统 MUST 在标记来源 ready 之前同步完成向量写入 不得使用 fire-and-forget embedding embedding 失败时 MUST 将来源标记为 failed 而非 ready",null,null,null
-op_scenarios[3]{req_id,id,given,when,then}:
-  r2_sync,upload-completes-embedding-before-ready,"用户上传一个文件","ingestSource 完成","系统 SHALL 在返回 ready 前完成向量写入"
-  r2_sync,embedding-failure-marks-failed,"embedding API 抛出异常","ingestSource 处理 embedding","系统 SHALL 将来源标记为 failed 而非 ready"
-  r2_sync,document-parse-embeds-before-ready,"document_parse 任务重新索引一个来源","worker 执行 handleDocumentParse","系统 SHALL 在标记 ready 前完成向量写入"

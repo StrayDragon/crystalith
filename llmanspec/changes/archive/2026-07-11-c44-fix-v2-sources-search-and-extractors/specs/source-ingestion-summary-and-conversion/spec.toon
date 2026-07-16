@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  add_requirement,summary-qa-error-and-ownership,"Summary and per-source QA MUST return 400 for not-ready and verify notebook ownership","summary 和 per-source QA 端点在 source 未 ready 时 MUST 返回 400（非 404），且 MUST 校验 source 属于 URL 中的 notebook",null,null,null
-  add_requirement,qa-to-source-contract,"qa-to-source MUST accept messages list contract","qa-to-source 端点 MUST 接受 messages:[QAMessage] 列表并格式化为 markdown（对齐 v1 convert_source_qa_to_source），MUST NOT 只接受单轮 {question, answer}",null,null,null
-op_scenarios[2]{req_id,id,given,when,then}:
-  summary-qa-error-and-ownership,source-not-ready,"source 状态非 ready","客户端请求 summary 或 QA","系统 SHALL 返回 400 而非 404"
-  qa-to-source-contract,client-sends-messages,"客户端发送 messages 列表","转换执行","系统 SHALL 接受并格式化为 markdown 后创建 source"

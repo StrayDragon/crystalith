@@ -1,9 +1,0 @@
-kind: llman.sdd.delta
-ops[3]{op,req_id,title,statement,from,to,name}:
-  add_requirement,citations-context-must-use-notebook-path,"Citations context endpoint MUST nest under /notebooks/:nid path (not flat query param)","citations /context 端点 MUST 沿用 v1 路径层级 GET /v2/notebooks/:nid/citations/context（对齐 v1 api.py:13 的 prefix /v1/notebooks/{notebook_id}/citations），MUST NOT 用扁平 /v2/citations/context?notebook_id=；当前 v2 router.ts:35 与 50 用扁平路径 + query param，违反 c26 proposal.md:20 与 design.md:6 的承诺，且与所有其他 v2 特性的层级路径不一致。BREAKING: 路径修正（query param → path param）",null,null,null
-  add_requirement,citations-context-defaults-must-match-v1,"Citations context defaults MUST be before=1/after=1 (not 2)","citations /context 的 before/after 默认值 MUST 为 1（对齐 v1 api.py:61-62 Query(1, ge=0, le=5)），MUST NOT 为 2；当前 v2 router.ts:89-90 默认 2，客户端省略参数会拿到 v1 2 倍的 chunk 窗口",null,null,null
-  add_requirement,connector-config-must-be-schema-validated,"Source connector connection_config MUST be JSON-schema validated","source connector 创建时 MUST 用 jsonschema Draft7 校验 connection_config（对齐 v1 api.py:77-98 与 199-200 的 Draft7Validator），非法路径/键 → 400；当前 v2 router.ts:232-241 原样存储无校验，畸形配置静默接受",null,null,null
-op_scenarios[3]{req_id,id,given,when,then}:
-  citations-context-must-use-notebook-path,notebook-path,"客户端按 v1/c26 契约请求 /v2/notebooks/:nid/citations/context","系统路由","SHALL 命中 citations /context（而非 404）"
-  citations-context-defaults-must-match-v1,defaults-omitted,"客户端省略 before/after 参数","系统返回窗口","默认 SHALL 为 1 before + 1 after（与 v1 一致）"
-  connector-config-must-be-schema-validated,malformed-connector-config,"客户端提交畸形 connection_config","系统校验","SHALL 返回 400（而非静默存储）"

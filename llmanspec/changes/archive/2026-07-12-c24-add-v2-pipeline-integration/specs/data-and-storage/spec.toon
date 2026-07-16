@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  add_requirement,r_storage_layer,"Content storage abstraction","系统 MUST 提供内容存储抽象 LocalStorage 实现 saveContent 与 fetchContent 以持久化原始上传字节 使 document_parse 任务可重新解析 单二进制架构下 MUST 使用本地文件系统路径",null,null,null
-  add_requirement,r_document_parse,"document_parse task wired","任务队列 worker MUST 实现 document_parse 任务类型 从存储读取原始字节 经 parse 与 chunk 与 embed 完整流程 不再抛 stub 错误",null,null,null
-op_scenarios[2]{req_id,id,given,when,then}:
-  r_storage_layer,save_then_fetch,"上传一个 PDF","ingestSource 解析后","系统 SHALL saveContent 持久化原始字节 且后续 fetchContent 能读回相同字节"
-  r_document_parse,parse_task_completes,"存在已持久化的 source","document_parse 任务入队执行","系统 SHALL 完成 parse 与 chunk 与 embed 全流程并写入向量库"

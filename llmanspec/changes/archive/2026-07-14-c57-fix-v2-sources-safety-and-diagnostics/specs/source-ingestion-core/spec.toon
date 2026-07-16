@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,"ingestion-failure-must-carry-stage-diagnostics","Ingestion failure MUST carry stage-specific error code with recovery hint and timestamp","Source 摄取失败 MUST 携带 stage-specific error_code 区分 4 个阶段（PARSE_ERROR / EMBEDDING_FAILED / VECTOR_STORE_FAILED / INGESTION_FAILED），并附 recovery_hint（中文恢复建议）与 last_error_at（ISO timestamp）。re-embed 重置 status=processing 时 MUST 清除全部错误字段（errorCode / errorMessage / recoveryHint / lastErrorAt），不得残留陈旧错误码。",null,null,null
-op_scenarios[3]{req_id,id,given,when,then}:
-  "ingestion-failure-must-carry-stage-diagnostics","vector-store-failure-classified","a source ingestion fails at the vector_store.add step","the system records the failure","the source row MUST carry error_code VECTOR_STORE_FAILED (not collapsed into EMBEDDING_FAILED) with a recovery_hint and last_error_at timestamp"
-  "ingestion-failure-must-carry-stage-diagnostics","reembed-clears-all-error-fields","a failed source is re-embedded"," the system sets status to processing","all four error fields (errorCode / errorMessage / recoveryHint / lastErrorAt) MUST be cleared to null"
-  "ingestion-failure-must-carry-stage-diagnostics","parse-failure-classified","a source ingestion fails at the parse step","the system records the failure","the source row MUST carry error_code PARSE_ERROR with a recovery_hint and last_error_at timestamp"

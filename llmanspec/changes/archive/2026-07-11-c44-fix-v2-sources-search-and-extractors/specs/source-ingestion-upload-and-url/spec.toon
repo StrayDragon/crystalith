@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  add_requirement,sources-search-web,"Sources search MUST perform real web search","POST /sources/search MUST 调用 web search 引擎（SearXNG）返回真实 web 结果，MUST NOT 返回 notebook 内向量匹配作为 placeholder",null,null,null
-  add_requirement,sources-dedup-config-gated,"Dedup MUST be gated by config","sources 去重 MUST 受 config source_ingestion.dedup.enabled 门控，为 false 时 MUST 跳过 dedup 直接创建新 source",null,null,null
-op_scenarios[2]{req_id,id,given,when,then}:
-  sources-search-web,client-searches,"客户端请求 /sources/search 带查询词","搜索执行","系统 SHALL 返回 web search 结果而非 notebook 内向量匹配"
-  sources-dedup-config-gated,dedup-disabled,"config dedup.enabled=false","上传重复内容 source","系统 SHALL 跳过 dedup 直接创建新 source"

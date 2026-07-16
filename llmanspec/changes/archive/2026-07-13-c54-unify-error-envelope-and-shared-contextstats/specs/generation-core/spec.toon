@@ -1,6 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,"context-stats-defined-in-shared","ContextStats type MUST be defined in packages/shared not server-local","The ContextStats type MUST be defined in packages/shared/src/schemas (consistent with the project Zod SSOT rule) and MUST NOT be defined only in apps/server/src/features/qa/retrieve-and-judge.ts as a server-local interface. The current server-local definition violates the AGENTS.md rule that forbids redefining types outside packages/shared. This type also provides the contract for the frontend to display token budget information.",null,null,null
-op_scenarios[2]{req_id,id,given,when,then}:
-  "context-stats-defined-in-shared","shared-import",the frontend or server needs to display or pass ContextStats,importing ContextStats from packages/shared,the import MUST succeed and fields MUST align with v1 (total_tokens plus system_tokens plus history_tokens plus retrieval_tokens plus query_tokens plus max_tokens plus compressed)
-  "context-stats-defined-in-shared","no-server-local-duplication",the retrieval stage computes the token budget,the server constructs a ContextStats object,it MUST use the shared type and MUST NOT redeclare interface ContextStats locally in the server

@@ -1,5 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,studio-rag-through-registry,"Studio retrieval MUST go through the unified RAG registry","studio 生成检索 MUST 通过统一 ragRegistry.retrieveWith 走 embed/fusion/diversity 路径，MUST NOT 用原始文本 slice 截断（对齐 qa/outputs/refine 的检索路径一致性）",null,null,null
-op_scenarios[1]{req_id,id,given,when,then}:
-  studio-rag-through-registry,generation-retrieves-context,"studio 生成需要上下文","检索阶段","系统 SHALL 调用 ragRegistry.retrieveWith 而非直接 join chunks+sources 后 slice"

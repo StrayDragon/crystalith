@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  add_requirement,retry-honors-retry-after,"Retry MUST honor Retry-After header and include full retryable codes","AI 调用重试 MUST 解析并遵守响应的 Retry-After 头，且可重试状态码集合 MUST 包含 408/409/425/429/500/502/503/504",null,null,null
-  add_requirement,retry-timeout-budget,"Retry MUST enforce timeout budget and max delay","AI 调用重试 MUST 实施 total timeout 预算和 max delay 上限，避免无限退避",null,null,null
-op_scenarios[2]{req_id,id,given,when,then}:
-  retry-honors-retry-after,rate-limit-with-retry-after,"provider 返回 429 且 Retry-After: 60","retry 逻辑处理","系统 SHALL 等待 60 秒后重试而非使用指数退避"
-  retry-timeout-budget,bounded-backoff,"连续多次 503 错误","retry 退避计算","退避延迟 SHALL 不超过 max_delay 上限且总时间不超过 total timeout 预算"

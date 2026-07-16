@@ -1,5 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,evidence-low-similarity-strip,"Low similarity evidence review MUST strip citations","evidence 审查在 low_similarity 判定下 MUST 返回空 citations 列表，因为低相似度证据不应作为引用呈现给用户",null,null,null
-op_scenarios[1]{req_id,id,given,when,then}:
-  evidence-low-similarity-strip,low-sim-evidence,"检索结果最高 score 低于阈值","evidence 判定","系统 SHALL 返回 citations=[] 并标记 no_evidence_reason=low_similarity"
