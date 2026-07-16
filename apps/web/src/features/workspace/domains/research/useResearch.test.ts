@@ -6,23 +6,31 @@ import { server } from '../../../../test-utils/msw/server';
 import { renderHook } from '../../../../test-utils/renderHook';
 import { useResearch } from './useResearch';
 
+const streamRequestMock = vi.fn();
+
+// Mock reason: control research SSE lifecycle without a real EventSource / fetch stream.
+vi.mock('../../../../api/stream', () => ({
+  streamRequest: (...args: unknown[]) => streamRequestMock(...args),
+}));
+
 beforeEach(() => {
   vi.clearAllMocks();
+  streamRequestMock.mockReset();
 });
 
 test('fetchSessions stores list data', async () => {
   server.use(
-    http.get('*/v1/notebooks/:notebookId/research', () =>
+    http.get('*/v2/research', () =>
       HttpResponse.json([
         {
           id: 1,
           notebookId: 1,
           topic: 'Topic',
           status: 'planning',
-          current_iteration: 0,
-          max_iterations: 3,
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01',
+          currentIteration: 1,
+          maxIterations: 3,
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z',
         },
       ]),
     ),
@@ -42,17 +50,22 @@ test('fetchSessions stores list data', async () => {
 
 test('createSession updates sessions and activeSession', async () => {
   server.use(
-    http.post('*/v1/notebooks/:notebookId/research', async ({ request, params }) => {
+    http.post('*/v2/research', async ({ request }) => {
       const body = (await request.json()) as Record<string, unknown>;
+      expect(body).toEqual({
+        topic: 'New Topic',
+        notebookId: 1,
+        maxIterations: 4,
+      });
       return HttpResponse.json({
         id: 2,
-        notebookId: Number(params.notebookId),
+        notebookId: 1,
         topic: String(body.topic ?? 'New Topic'),
         status: 'planning',
-        current_iteration: 0,
-        max_iterations: Number(body.max_iterations ?? 4),
-        createdAt: '2024-01-02',
-        updatedAt: '2024-01-02',
+        currentIteration: 1,
+        maxIterations: Number(body.maxIterations ?? 4),
+        createdAt: '2024-01-02T00:00:00Z',
+        updatedAt: '2024-01-02T00:00:00Z',
       });
     }),
   );
@@ -73,20 +86,20 @@ test('createSession updates sessions and activeSession', async () => {
 
 test('deleteSession removes session and clears active session', async () => {
   server.use(
-    http.post('*/v1/notebooks/:notebookId/research', async ({ request, params }) => {
+    http.post('*/v2/research', async ({ request }) => {
       const body = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         id: 22,
-        notebookId: Number(params.notebookId),
+        notebookId: 1,
         topic: String(body.topic ?? 'Topic'),
         status: 'planning',
-        current_iteration: 0,
-        max_iterations: Number(body.max_iterations ?? 4),
-        createdAt: '2024-01-01',
-        updatedAt: '2024-01-01',
+        currentIteration: 1,
+        maxIterations: Number(body.maxIterations ?? 4),
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
       });
     }),
-    http.delete('*/v1/notebooks/:notebookId/research/:research_id', () => HttpResponse.json({})),
+    http.delete('*/v2/research/:research_id', () => new HttpResponse(null, { status: 204 })),
   );
 
   const { result } = renderHook(() => useResearch(1));
@@ -106,48 +119,30 @@ test('deleteSession removes session and clears active session', async () => {
 test('SSE reconnect does not use stale session state after completion', async () => {
   vi.useFakeTimers();
 
-  class MockEventSource {
-    static instances: MockEventSource[] = [];
-    onerror: (() => void) | null = null;
-    onopen: (() => void) | null = null;
-    closed = false;
-    url: string;
-
-    constructor(url: string) {
-      this.url = url;
-      MockEventSource.instances.push(this);
-    }
-
-    addEventListener(_type: string, _listener: any) {
-      return;
-    }
-
-    close() {
-      this.closed = true;
-    }
-
-    triggerError() {
-      this.onerror?.();
-    }
-  }
-
-  // Mock reason: deterministic control of reconnect/error lifecycle is not reliable with real EventSource in jsdom.
-  vi.stubGlobal('EventSource', MockEventSource as any);
-
   const baseSession = {
     id: 1,
     notebookId: 1,
     topic: 'Topic',
     status: 'planning',
-    current_iteration: 0,
-    max_iterations: 3,
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01',
+    currentIteration: 1,
+    maxIterations: 3,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
   };
 
   let listCount = 0;
+  let rejectStream: ((error: Error) => void) | null = null;
+
+  streamRequestMock.mockImplementation(async function* () {
+    await new Promise<never>((_resolve, reject) => {
+      rejectStream = reject;
+    });
+    // Unreachable after reject; keep a yield so the generator is valid for oxlint.
+    yield undefined as never;
+  });
+
   server.use(
-    http.get('*/v1/notebooks/:notebookId/research', () => {
+    http.get('*/v2/research', () => {
       listCount += 1;
       if (listCount === 1) {
         return HttpResponse.json([baseSession]);
@@ -167,7 +162,7 @@ test('SSE reconnect does not use stale session state after completion', async ()
       result.current.subscribeToSSE(1);
     });
 
-    expect(MockEventSource.instances).toHaveLength(1);
+    expect(streamRequestMock).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       await result.current.fetchSessions();
@@ -175,15 +170,17 @@ test('SSE reconnect does not use stale session state after completion', async ()
 
     expect(result.current.sessions[0].status).toBe('completed');
 
-    act(() => {
-      MockEventSource.instances[0].triggerError();
+    await act(async () => {
+      rejectStream?.(new Error('connection lost'));
+      await Promise.resolve();
       vi.advanceTimersByTime(1000);
+      await Promise.resolve();
     });
 
-    expect(MockEventSource.instances).toHaveLength(1);
+    // Completed sessions must not schedule reconnects.
+    expect(streamRequestMock).toHaveBeenCalledTimes(1);
   } finally {
     vi.clearAllTimers();
     vi.useRealTimers();
-    vi.unstubAllGlobals();
   }
 });

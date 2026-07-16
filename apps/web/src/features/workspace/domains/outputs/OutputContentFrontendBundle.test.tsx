@@ -2,6 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
+import { TestProviders } from '../../../../test-utils/providers';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { OutputItem } from '../../shared/types';
 import OutputContent from './OutputContent';
@@ -80,7 +81,11 @@ test('renders with frontendBundle renderer when available', async () => {
   });
 
   await act(async () => {
-    render(<OutputContent output={output} />);
+    render(
+      <TestProviders>
+        <OutputContent output={output} />
+      </TestProviders>,
+    );
   });
 
   await act(async () => {

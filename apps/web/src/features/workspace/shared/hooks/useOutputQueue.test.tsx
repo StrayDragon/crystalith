@@ -71,7 +71,7 @@ beforeEach(() => {
     },
   });
 
-  server.use(http.get('*/v1/notebooks/:notebookId/outputs', () => HttpResponse.json([])));
+  server.use(http.get('*/v2/outputs', () => HttpResponse.json([])));
 
   onQueueReset.mockClear();
   onQueueTotal.mockClear();
@@ -108,10 +108,11 @@ function useOutputQueueHarness({ isConnected }: { isConnected: boolean }) {
 test('enqueueOutputJob processes and updates outputs', async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v1/notebooks/:notebookId/outputs/:outputType', async ({ request }) => {
+    http.post('*/v2/outputs', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         id: 10,
+        notebookId: 1,
         type: 'FAQ',
         prompt: 'hello',
         chunkIds: [1],
@@ -144,6 +145,8 @@ test('enqueueOutputJob processes and updates outputs', async () => {
   });
 
   expect(capturedBody).toEqual({
+    notebookId: 1,
+    type: 'FAQ',
     prompt: 'hello',
     sourceIds: [1],
   });
@@ -154,10 +157,11 @@ test('enqueueOutputJob propagates generation preference', async () => {
 
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v1/notebooks/:notebookId/outputs/:outputType', async ({ request }) => {
+    http.post('*/v2/outputs', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         id: 12,
+        notebookId: 1,
         type: 'FAQ',
         prompt: 'hello',
         chunkIds: [1],
@@ -186,6 +190,8 @@ test('enqueueOutputJob propagates generation preference', async () => {
   });
 
   expect(capturedBody).toEqual({
+    notebookId: 1,
+    type: 'FAQ',
     prompt: 'hello',
     sourceIds: [1],
     preference: 'speed',
@@ -301,30 +307,12 @@ test('enqueueSlidesJob returns null when disconnected', async () => {
   expect(useWorkspaceStore.getState().errors.outputs).toBe('未连接到后端服务。');
 });
 
-test('enqueueSlidesJob settles from draft polling when stream terminal event is missed', async () => {
-  const OriginalEventSource = globalThis.EventSource;
-
-  class SilentEventSource {
-    url: string;
-    onerror: ((event: Event) => void) | null = null;
-
-    constructor(url: string) {
-      this.url = url;
-    }
-
-    addEventListener(_type: string, _listener: EventListenerOrEventListenerObject) {}
-
-    close() {}
-  }
-
-  globalThis.EventSource = SilentEventSource as unknown as typeof EventSource;
-
-  let outputsReady = false;
-  let draftReads = 0;
+test('enqueueSlidesJob settles when outline+markdown generation completes', async () => {
   let capturedBody: Record<string, unknown> | null = null;
+  let draftStage: 'input' | 'outline' | 'markdown' = 'input';
 
   server.use(
-    http.post('*/v1/notebooks/:notebookId/slides/drafts', async ({ request }) => {
+    http.post('*/v2/studio/slides', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         id: 5,
@@ -345,9 +333,16 @@ test('enqueueSlidesJob settles from draft polling when stream terminal event is 
         updatedAt: '2024-01-01T00:00:00Z',
       });
     }),
-    http.get('*/v1/notebooks/:notebookId/slides/drafts/:slide_id', () => {
-      draftReads += 1;
-      if (draftReads === 1) {
+    http.post('*/v2/studio/slides/:id/outline', () => {
+      draftStage = 'outline';
+      return HttpResponse.json({ ok: true });
+    }),
+    http.post('*/v2/studio/slides/:id/markdown', () => {
+      draftStage = 'markdown';
+      return HttpResponse.json({ ok: true });
+    }),
+    http.get('*/v2/studio/slides/:id', () => {
+      if (draftStage === 'outline') {
         return HttpResponse.json({
           id: 5,
           notebookId: 1,
@@ -367,7 +362,6 @@ test('enqueueSlidesJob settles from draft polling when stream terminal event is 
           updatedAt: '2024-01-01T00:00:01Z',
         });
       }
-      outputsReady = true;
       return HttpResponse.json({
         id: 5,
         notebookId: 1,
@@ -387,12 +381,13 @@ test('enqueueSlidesJob settles from draft polling when stream terminal event is 
         updatedAt: '2024-01-01T00:00:02Z',
       });
     }),
-    http.get('*/v1/notebooks/:notebookId/outputs', () =>
+    http.get('*/v2/outputs', () =>
       HttpResponse.json(
-        outputsReady
+        draftStage === 'markdown'
           ? [
               {
                 id: 21,
+                notebookId: 1,
                 type: 'SLIDES',
                 prompt: 'Outline',
                 chunkIds: [1],
@@ -410,37 +405,34 @@ test('enqueueSlidesJob settles from draft polling when stream terminal event is 
     ),
   );
 
-  try {
-    setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });
-    const { result } = renderHook(() => useOutputQueueHarness({ isConnected: true }), {
-      wrapper: wrapSWR,
-    });
+  setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });
+  const { result } = renderHook(() => useOutputQueueHarness({ isConnected: true }), {
+    wrapper: wrapSWR,
+  });
 
-    await act(async () => {
-      await result.current.enqueueSlidesJob({
-        title: 'Deck',
-        prompt: 'Outline',
-        sourceIds: [1],
-        generationConfig: {},
-      } as any);
-    });
-
-    await waitFor(() => {
-      expect(result.current.outputQueueJobs[0].status).toBe('done');
-    });
-
-    await waitFor(() => {
-      expect(useWorkspaceStore.getState().outputs).toHaveLength(1);
-    });
-
-    expect(capturedBody).toEqual({
+  await act(async () => {
+    await result.current.enqueueSlidesJob({
       title: 'Deck',
       prompt: 'Outline',
       sourceIds: [1],
       generationConfig: {},
-    });
-    expect(markJobCompleted).toHaveBeenCalled();
-  } finally {
-    globalThis.EventSource = OriginalEventSource;
-  }
+    } as any);
+  });
+
+  await waitFor(() => {
+    expect(result.current.outputQueueJobs[0].status).toBe('done');
+  });
+
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().outputs).toHaveLength(1);
+  });
+
+  expect(capturedBody).toEqual({
+    notebookId: 1,
+    title: 'Deck',
+    prompt: 'Outline',
+    sourceIds: [1],
+    generationConfig: {},
+  });
+  expect(markJobCompleted).toHaveBeenCalled();
 });

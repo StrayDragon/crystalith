@@ -81,12 +81,12 @@ beforeEach(() => {
     },
   });
 
-  server.use(http.get('*/v1/workspace/tools', () => HttpResponse.json({ tools: [] })));
+  server.use(http.get('*/v2/workspace/tools', () => HttpResponse.json({ tools: [] })));
 });
 
 test('normalizes slides tool config schema from workspace tools', async () => {
   server.use(
-    http.get('*/v1/workspace/tools', () =>
+    http.get('*/v2/workspace/tools', () =>
       HttpResponse.json({
         tools: [
           {

@@ -5,13 +5,13 @@ import type { ComponentProps } from 'react';
 import { SWRConfig } from 'swr';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { LayerProvider } from '../../../../shared/layer';
 import { server } from '../../../../test-utils/msw/server';
+import { TestProviders } from '../../../../test-utils/providers';
 import type { ChatMessage, Citation, OutputTypeId } from '../../shared/types';
 import ChatPanel from './ChatPanel';
 
 beforeEach(() => {
-  server.use(http.get('*/v1/commands', () => HttpResponse.json([])));
+  server.use(http.get('*/v2/commands', () => HttpResponse.json([])));
 });
 
 type ChatPanelOverrides = Partial<ComponentProps<typeof ChatPanel>>;
@@ -22,7 +22,7 @@ function buildChatPanelElement(overrides?: ChatPanelOverrides) {
 
   return (
     <div style={{ height: 640, width: 720 }}>
-      <LayerProvider>
+      <TestProviders>
         <SWRConfig value={{ provider: () => new Map() }}>
           <ChatPanel
             messages={defaultMessages}
@@ -45,7 +45,7 @@ function buildChatPanelElement(overrides?: ChatPanelOverrides) {
             {...overrides}
           />
         </SWRConfig>
-      </LayerProvider>
+      </TestProviders>
     </div>
   );
 }

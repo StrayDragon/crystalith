@@ -2,15 +2,18 @@ import { render, screen } from '@testing-library/react';
 import { SWRConfig } from 'swr';
 import { afterAll, beforeEach, expect, test, vi } from 'vitest';
 
+import { TestProviders } from '../test-utils/providers';
 import App from './App';
 
 const originalFetch = globalThis.fetch;
 
 function renderWorkspace() {
   return render(
-    <SWRConfig value={{ provider: () => new Map() }}>
-      <App />
-    </SWRConfig>,
+    <TestProviders>
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <App />
+      </SWRConfig>
+    </TestProviders>,
   );
 }
 
