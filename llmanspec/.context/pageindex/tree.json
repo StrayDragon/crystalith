@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "spec_hash": "c296288cb0c03a4e16b7826f62aa3653a74e7726589acbea3b12c735430bbd46",
-  "build_timestamp": "2026-07-13T12:00:09.895243631+00:00",
-  "chat_model": "",
+  "spec_hash": "556fc3097a66978785f57d981ff2e94b0a2e1aed0bf688ebdb9dcb7f9aacc547",
+  "build_timestamp": "2026-07-16T02:16:54.760319858+00:00",
+  "chat_model": "Qwen3.6-35B-A3B/UD-Q5_K_XL-think-coding",
   "docs": [
     {
       "spec_id": "architecture-core",
@@ -396,6 +396,16 @@
           "req_id": "fm3",
           "title": "Code Cleanup",
           "statement": "The api/generated/ directory MUST be deleted after all references are migrated."
+        },
+        {
+          "req_id": "frontend-sources-must-pass-notebook-id-query",
+          "title": "Frontend sources single-item calls MUST pass notebook_id query for ownership check",
+          "statement": "前端调用 sources 单 source 路由（GET /sources/:id、DELETE /sources/:id、POST /sources/:id/re-embed、GET /sources/:id/chunks）MUST 传递 `notebook_id` query 参数以激活服务端归属校验。MUST NOT 省略此参数导致归属校验被跳过（服务端在 notebook_id 缺失时跳过检查，形成跨 notebook 访问漏洞）。notebook_id 从 workspace store 的 activeNotebookId 获取。"
+        },
+        {
+          "req_id": "frontend-error-envelope-must-use-shared-parser",
+          "title": "Frontend eden error handling MUST use shared parseServerError helper",
+          "statement": "前端 eden treaty 调用点的错误处理 MUST 使用共享 `parseServerError(error)` helper 解析 ErrorEnvelope（errorCode/message/details/status），MUST NOT 在各调用点 inline cast `{ errorCode?, details?, message? }` 导致逻辑重复与漂移。"
         }
       ]
     },
@@ -1729,6 +1739,16 @@
           "req_id": "studio-sse-must-emit-toolcall-event",
           "title": "Studio SSE MUST emit toolcall event before each generation stage",
           "statement": "studio SSE SHALL 在 outline/markdown 各生成阶段前发 toolcall 事件（对齐 v1 api.py:401 slides_generate_outline, api.py:506 slides_generate_markdown），当前 v2 完全不发 toolcall；前端依赖此事件做工具调用展示/埋点时会缺失"
+        },
+        {
+          "req_id": "studio-generation-config-must-expand-to-ranges",
+          "title": "Studio generation MUST interpret generation_config with concrete ranges not raw tokens",
+          "statement": "studio outline 与 markdown 生成 MUST 解读 slide.generation_config 的 quantity/density/audience/tone/structure/language/theme_preset 字段并展开为具体区间与本地化提示（对齐 v1 generator.py:202-290 的 _build_outline_prompt/_build_markdown_prompt）。quantity MUST 映射为 slide 数量区间（short=6-8/standard=8-12/detailed=12-18），density MUST 映射为要点区间（sparse=2-3/standard=3-5/dense=5-7）。generation_config.preference (quality/speed) MUST 影响检索参数（topK/minScore，对齐 v1 generation_preference.py 的 SLIDES tuning）。MUST NOT 把原始字段 id（如 'standard'）直接拼进 prompt 而不做展开。"
+        },
+        {
+          "req_id": "studio-frontmatter-must-align-v1-six-key-shape",
+          "title": "Studio frontmatter MUST use the v1 six-key template shape with override support",
+          "statement": "studio 生成的 markdown frontmatter MUST 对齐 v1 THEME_PRESET_TEMPLATES 的 6-key 结构（theme 恒为 default、colorSchema、fonts{sans,serif,mono}、transition、background、class）。当 generation_config.frontmatter 非空时，MUST 以该字符串作为 frontmatter body 绕过 preset（对齐 v1 _normalize_frontmatter_override），仅在缺 title: 且存在标题时补一行。MUST NOT 使用与 v1 不同的 slidev 主题名（如 seriph/bricks）或省略 colorSchema/class/serif/mono 字段。"
         }
       ]
     },
@@ -2002,6 +2022,11 @@
           "req_id": "shared-error-envelope-helper",
           "title": "Server MUST provide a shared error-response helper consuming ErrorEnvelopeSchema",
           "statement": "The system MUST provide a shared helper (sendError or setError) that consumes the ErrorEnvelopeSchema from packages/shared and centralizes the HTTP status to error_code mapping (400 maps to INVALID_REQUEST plus 404 maps to NOT_FOUND plus 409 maps to CONFLICT plus 422 maps to SCHEMA_VALIDATION_FAILED plus 429 maps to RATE_LIMITED plus 503 maps to MODEL_ERROR). Feature routers MUST return errors via this helper rather than constructing ad-hoc error bodies inline."
+        },
+        {
+          "req_id": "slides-config-schema-options-must-be-complete",
+          "title": "SLIDES tool config_schema MUST expose all config axes with options and defaults",
+          "statement": "当 SLIDES 工具在 `/v1/workspace/tools` 响应中可用时，其 `config_schema` MUST 返回完整的 options 列表（每个 option 含 id/label/is_default）与 defaults 对象，MUST NOT 省略任一配置轴（quantity/audience/structure/tone/language/density/theme_preset）。这强化 r20 的既有 MUST：当前 v2 workspace router 的 SLIDES tool 不返回 config_schema，前端无法驱动配置 UI。"
         }
       ]
     },
@@ -2165,6 +2190,11 @@
           "req_id": "r13",
           "title": "Studio queue, rendering fallback, and export gating are explicit",
           "statement": "Studio MUST 明确展示生成队列状态并支持取消；渲染 MUST 定义确定的回退顺序；导出选项 MUST 仅显示当前输出类型支持项。"
+        },
+        {
+          "req_id": "frontend-extractor-types-must-not-duplicate",
+          "title": "Frontend MUST NOT keep stale duplicate type definitions that diverge from the SSOT",
+          "statement": "前端 MUST NOT 在 api/shared-types.ts 中保留与 api/generated（SSOT）重复且字段不全的类型定义（如 ExtractorInfoResponse 缺 priority/display_name/requires_api_key/requires_service/recovery_hint 等字段）。重复类型 MUST 删除以消除混淆，统一从 api/generated 导入。"
         }
       ]
     }

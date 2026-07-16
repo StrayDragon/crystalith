@@ -215,6 +215,12 @@ concurrency:
 # ----------------------------------------------------------------------------
 # Storage
 # ----------------------------------------------------------------------------
+# v2: Unified data root for all runtime files (DB, slides, uploads, etc.).
+# Override via CL_DATA_ROOT env var.  Relative paths resolve from CWD.
+storage:
+  data_root: "./data"
+
+# v1 legacy (Python backend) — kept for reference, not consumed by v2 server.
 vector_storage:
   provider: "chroma"
   chroma:

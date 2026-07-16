@@ -380,6 +380,33 @@ export const CompletionOptionsSchema = z.object({
 });
 export type CompletionOptions = z.infer<typeof CompletionOptionsSchema>;
 
+// ---------------------------------------------------------------------------
+// Storage config — data root path for all runtime file storage
+// ---------------------------------------------------------------------------
+
+export const StorageSettingsSchema = z.object({
+  data_root: z.string().default('./data'),
+});
+export type StorageSettings = z.infer<typeof StorageSettingsSchema>;
+
+/**
+ * Resolve the data root directory path.
+ * Priority:
+ *   1. `CL_DATA_ROOT` env var (overrides everything)
+ *   2. `storage.data_root` from config YAML (default: `./data`)
+ *
+ * Relative paths are resolved against `process.cwd()`. Use this as the base
+ * for all runtime file storage: DB, slides, uploads, etc.
+ */
+export function getDataRoot(): string {
+  const envPath = envValue('CL_DATA_ROOT');
+  if (envPath) return envPath;
+
+  const raw = (config().raw.storage ?? {}) as Record<string, unknown>;
+  const result = StorageSettingsSchema.safeParse(raw);
+  return result.success ? result.data.data_root : './data';
+}
+
 /** Parse a config section safely — returns defaults on absence/invalid. */
 function parseSection<T>(schema: z.ZodType<T>, section: unknown): T {
   const result = schema.safeParse(section);
