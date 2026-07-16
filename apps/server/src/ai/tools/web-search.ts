@@ -66,10 +66,12 @@ export async function searchWeb(
     const data = (await resp.json()) as { results?: Array<Record<string, unknown>> };
     const results = data.results ?? [];
     return results.slice(0, maxResults).map((r) => ({
-      title: String(r.title ?? ''),
-      url: String(r.url ?? ''),
-      snippet: String(r.content ?? ''),
-      source: String(r.engine ?? ''),
+      title: typeof r.title === 'string' ? r.title : typeof r.title === 'string' ? r.title : '',
+      url: typeof r.url === 'string' ? r.url : typeof r.url === 'string' ? r.url : '',
+      snippet:
+        typeof r.content === 'string' ? r.content : typeof r.content === 'string' ? r.content : '',
+      source:
+        typeof r.engine === 'string' ? r.engine : typeof r.engine === 'string' ? r.engine : '',
     }));
   } catch {
     return [];

@@ -58,7 +58,10 @@ export function ModelSelector({
         const { data, error: fetchErr } = await api.v2.models.get({
           query: capability ? { capability } : undefined,
         });
-        if (fetchErr) throw new Error(String(fetchErr));
+        if (fetchErr)
+          throw new Error(
+            typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
+          );
         if (!cancelled) {
           setModelsData(data as unknown as ModelsListResponse);
         }

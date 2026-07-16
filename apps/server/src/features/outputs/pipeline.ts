@@ -331,14 +331,20 @@ export function ensureMinimumContentFields(
           const m = mod as Record<string, unknown>;
           // backfill objective {text, citations:[1]}
           if (!m.objective || typeof m.objective !== 'object') {
-            m.objective = leaf(String(m.title ?? ''));
+            m.objective = leaf(
+              typeof m.title === 'string' ? m.title : typeof m.title === 'string' ? m.title : '',
+            );
           } else {
             const obj = m.objective as Record<string, unknown>;
             if (!Array.isArray(obj.citations)) obj.citations = [1];
           }
           // backfill key_points with at least one entry
           if (!Array.isArray(m.key_points) || (m.key_points as unknown[]).length === 0) {
-            m.key_points = [leaf(String(m.title ?? ''))];
+            m.key_points = [
+              leaf(
+                typeof m.title === 'string' ? m.title : typeof m.title === 'string' ? m.title : '',
+              ),
+            ];
           }
           if (!Array.isArray(m.examples)) m.examples = [];
           if (!Array.isArray(m.exercises)) m.exercises = [];
@@ -352,7 +358,15 @@ export function ensureMinimumContentFields(
         if (sec && typeof sec === 'object') {
           const s = sec as Record<string, unknown>;
           if (!Array.isArray(s.points) || (s.points as unknown[]).length === 0) {
-            s.points = [leaf(String(s.heading ?? ''))];
+            s.points = [
+              leaf(
+                typeof s.heading === 'string'
+                  ? s.heading
+                  : typeof s.heading === 'string'
+                    ? s.heading
+                    : '',
+              ),
+            ];
           }
         }
       }
@@ -365,7 +379,18 @@ export function ensureMinimumContentFields(
       const root = content.root as Record<string, unknown>;
       if (!Array.isArray(root.citations)) root.citations = [1];
       if (!Array.isArray(root.children) || (root.children as unknown[]).length === 0) {
-        root.children = [{ label: String(root.label ?? ''), citations: [1], children: [] }];
+        root.children = [
+          {
+            label:
+              typeof root.label === 'string'
+                ? root.label
+                : typeof root.label === 'string'
+                  ? root.label
+                  : '',
+            citations: [1],
+            children: [],
+          },
+        ];
       }
       break;
     }

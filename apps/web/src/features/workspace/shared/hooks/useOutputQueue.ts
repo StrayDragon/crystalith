@@ -97,16 +97,20 @@ async function runSlidesGenerate(
       : await slides.markdown.post(undefined, { fetch: { signal: combined } });
 
   if (error) {
-    const message =
+    const rawValue =
       typeof error === 'object' && error !== null && 'value' in error
-        ? String((error as { value?: unknown }).value ?? '生成失败，请稍后重试。')
-        : '生成失败，请稍后重试。';
+        ? (error as { value?: unknown }).value
+        : undefined;
+    const message = typeof rawValue === 'string' ? rawValue : '生成失败，请稍后重试。';
     throw new Error(message);
   }
 
   // Confirm stage settled (server returns after completion, but re-check for safety)
   const { data: draft, error: draftErr } = await api.v2.studio.slides({ id: slideId }).get();
-  if (draftErr) throw new Error(String(draftErr));
+  if (draftErr)
+    throw new Error(
+      typeof draftErr === 'string' ? draftErr : typeof draftErr === 'string' ? draftErr : '',
+    );
   const snapshot = draft as SlidesDraftSnapshot;
   if (snapshot.status === 'error') {
     throw new Error(snapshot.error_message?.trim() || '生成失败，请稍后重试。');
@@ -146,7 +150,10 @@ export function useOutputQueue({
       const { data, error: fetchErr } = await api.v2.outputs.get({
         query: { notebook_id: String(activeNotebookId ?? 0) },
       });
-      if (fetchErr) throw new Error(String(fetchErr));
+      if (fetchErr)
+        throw new Error(
+          typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
+        );
       return data ?? [];
     },
     { revalidateOnFocus: false },
@@ -279,7 +286,14 @@ export function useOutputQueue({
         generation_config: normalizeSlideGenerationConfig(generationConfig),
       };
       const { data: created, error: createErr } = await api.v2.studio.slides.post(payload);
-      if (createErr) throw new Error(String(createErr));
+      if (createErr)
+        throw new Error(
+          typeof createErr === 'string'
+            ? createErr
+            : typeof createErr === 'string'
+              ? createErr
+              : '',
+        );
       const draftId = created!.id;
 
       onQueueTotal();
@@ -363,7 +377,14 @@ export function useOutputQueue({
           };
           if (preference) Object.assign(body, { preference });
           const { data: response, error: createErr } = await api.v2.outputs.post(body);
-          if (createErr) throw new Error(String(createErr));
+          if (createErr)
+            throw new Error(
+              typeof createErr === 'string'
+                ? createErr
+                : typeof createErr === 'string'
+                  ? createErr
+                  : '',
+            );
           if (isCancelled()) {
             const abortError = new Error('aborted');
             abortError.name = 'AbortError';
@@ -524,7 +545,14 @@ export function useOutputQueue({
 
       try {
         const { error: deleteErr } = await api.v2.outputs({ id: outputId }).delete();
-        if (deleteErr) throw new Error(String(deleteErr));
+        if (deleteErr)
+          throw new Error(
+            typeof deleteErr === 'string'
+              ? deleteErr
+              : typeof deleteErr === 'string'
+                ? deleteErr
+                : '',
+          );
       } catch (error) {
         console.error('Failed to delete output:', error);
         await mutateOutputs();
@@ -543,7 +571,10 @@ export function useOutputQueue({
       if (!s.activeNotebookId || !isConnected) return null;
       try {
         const { data: output, error: getErr } = await api.v2.outputs({ id: outputId }).get();
-        if (getErr) throw new Error(String(getErr));
+        if (getErr)
+          throw new Error(
+            typeof getErr === 'string' ? getErr : typeof getErr === 'string' ? getErr : '',
+          );
         const normalized = normalizeOutput(output as any);
         const s2 = store.getState();
         s2.setOutputs(s2.outputs.map((item) => (item.id === outputId ? normalized : item)));

@@ -29,7 +29,8 @@ export function useGraphSessionDetail() {
         .notebooks({ nid: notebookId })
         .sessions({ sid: sessionId })
         .messages.get({ query: { offset: 0, limit: 200 } });
-      if (error) throw new Error(String(error));
+      if (error)
+        throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
       const msgs = (data ?? []).map((item) =>
         normalizeMessage(item as unknown as Parameters<typeof normalizeMessage>[0]),
       );

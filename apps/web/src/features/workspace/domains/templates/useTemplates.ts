@@ -22,7 +22,8 @@ export function useTemplates() {
     SWR_KEY,
     async () => {
       const { data, error } = await api.v2.templates.get();
-      if (error) throw new Error(String(error));
+      if (error)
+        throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
       return (data ?? []).map(normalizeTemplate);
     },
     { revalidateOnFocus: false },
@@ -49,7 +50,8 @@ export function useTemplates() {
           source_tags: payload.sourceTags ?? [],
         },
       });
-      if (error) throw new Error(String(error));
+      if (error)
+        throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
       const created = normalizeTemplate(data!);
       await mutate(async (current) => [...(current ?? []), created], {
         revalidate: false,
@@ -78,7 +80,8 @@ export function useTemplates() {
           source_tags: [],
         },
       });
-      if (error) throw new Error(String(error));
+      if (error)
+        throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
       const created = normalizeTemplate(data!);
       await mutate(async (current) => [...(current ?? []), created], {
         revalidate: false,
@@ -93,7 +96,8 @@ export function useTemplates() {
       const { data, error } = await api.v2.templates({ id: templateId }).patch({
         description,
       });
-      if (error) throw new Error(String(error));
+      if (error)
+        throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
       const updated = normalizeTemplate(data!);
       await mutate(
         async (current) => current?.map((t) => (t.id === templateId ? updated : t)) ?? [updated],
@@ -107,7 +111,8 @@ export function useTemplates() {
   const removeTemplate = useCallback(
     async (templateId: number) => {
       const { error } = await api.v2.templates({ id: templateId }).delete();
-      if (error) throw new Error(String(error));
+      if (error)
+        throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
       await mutate(async (current) => current?.filter((t) => t.id !== templateId) ?? [], {
         revalidate: false,
       });

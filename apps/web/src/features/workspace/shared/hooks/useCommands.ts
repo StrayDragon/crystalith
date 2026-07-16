@@ -31,7 +31,10 @@ export function useCommands(options?: { enabled?: boolean }) {
     enabled ? COMMANDS_CACHE_KEY : null,
     async () => {
       const { data: result, error: fetchErr } = await api.v2.commands.get();
-      if (fetchErr) throw new Error(String(fetchErr));
+      if (fetchErr)
+        throw new Error(
+          typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
+        );
       return (result ?? []) as CommandItem[];
     },
     {

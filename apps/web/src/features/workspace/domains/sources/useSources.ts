@@ -117,6 +117,7 @@ export function useSources() {
         .notebooks({ nid: activeNotebookId! })
         .sources.get({ query: sourceListQuery as any } as any)
         .then((r) => {
+          // eslint-disable-next-line typescript/no-base-to-string
           if (r.error) throw new Error(String(r.error));
           return r.data ?? [];
         }),
@@ -130,6 +131,7 @@ export function useSources() {
         .notebooks({ nid: activeNotebookId! })
         .sources.tags.get()
         .then((r) => {
+          // eslint-disable-next-line typescript/no-base-to-string
           if (r.error) throw new Error(String(r.error));
           return (r.data ?? []) as any;
         }),
@@ -258,6 +260,7 @@ export function useSources() {
           try {
             // eslint-disable-next-line no-await-in-loop -- Upload queue + dedup confirmation requires serial execution.
             await api.v2.sources.upload.post({ file } as any).then((r) => {
+              // eslint-disable-next-line typescript/no-base-to-string
               if (r.error) throw new Error(String(r.error));
               return r.data as any;
             });
@@ -284,6 +287,7 @@ export function useSources() {
                 await api.v2.sources.upload
                   .post({ file } as any, { query: { dedup_action } } as any)
                   .then((r) => {
+                    // eslint-disable-next-line typescript/no-base-to-string
                     if (r.error) throw new Error(String(r.error));
                     return r.data as any;
                   });
@@ -759,6 +763,7 @@ export function useSources() {
         .notebooks({ nid: activeNotebookId! })
         .extractors.get()
         .then((r) => {
+          // eslint-disable-next-line typescript/no-base-to-string
           if (r.error) throw new Error(String(r.error));
           return r.data as any;
         }),

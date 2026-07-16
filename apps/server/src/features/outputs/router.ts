@@ -147,7 +147,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     } = body as Record<string, unknown>;
 
     // Normalize output type to uppercase (API accepts both 'faq' and 'FAQ')
-    const normalizedType = String(type ?? '').toUpperCase();
+    const normalizedType = (typeof type === 'string' ? type : '').toUpperCase();
 
     const notebookId = Number(notebook_id);
 
@@ -174,7 +174,11 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     }
 
     // Resolve model (config default or explicit model_id override)
-    const modelConfig = model_id ? getModelById(String(model_id)) : getDefaultChatModel();
+    const modelConfig = model_id
+      ? getModelById(
+          typeof model_id === 'string' ? model_id : typeof model_id === 'string' ? model_id : '',
+        )
+      : getDefaultChatModel();
     // c42: granular error mapping (v1 api.py:309-361) — typed exceptions, not string matching
     if (!modelConfig) {
       return sendError(set, ErrorCode.MODEL_UNAVAILABLE, 'No chat model configured');
@@ -199,11 +203,23 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
         type: normalizedType as ToolOutputType,
         chunkIds: resolvedChunkIds,
         sourceIds: resolvedSourceIds,
-        prompt: prompt ? String(prompt) : undefined,
+        prompt: prompt
+          ? typeof prompt === 'string'
+            ? prompt
+            : typeof prompt === 'string'
+              ? prompt
+              : ''
+          : undefined,
         preference: preference === 'speed' ? 'speed' : 'quality',
         topK: top_k ? Number(top_k) : undefined,
         minScore: min_score ? Number(min_score) : undefined,
-        modelId: model_id ? String(model_id) : undefined,
+        modelId: model_id
+          ? typeof model_id === 'string'
+            ? model_id
+            : typeof model_id === 'string'
+              ? model_id
+              : ''
+          : undefined,
       });
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);

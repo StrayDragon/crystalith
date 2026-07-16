@@ -137,7 +137,14 @@ function ResearchExportDialog({ session, onClose, onExportComplete }: ResearchEx
           include_report: includeReport,
           include_results: selectedRefs.length > 0,
         } as any);
-      if (exportErr) throw new Error(String(exportErr));
+      if (exportErr)
+        throw new Error(
+          typeof exportErr === 'string'
+            ? exportErr
+            : typeof exportErr === 'string'
+              ? exportErr
+              : '',
+        );
       const data = result as any;
 
       if (data?.success) {

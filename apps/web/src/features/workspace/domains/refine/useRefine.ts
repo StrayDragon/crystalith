@@ -193,7 +193,8 @@ export function useRefine() {
     isConnected ? 'workspace/tools' : null,
     async () => {
       const { data, error } = await api.v2.workspace.tools.get();
-      if (error) throw new Error(String(error));
+      if (error)
+        throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
       return data as any;
     },
     {
@@ -367,7 +368,14 @@ export function useRefine() {
             formats: [...refineFormats],
             source_ids: sourceIds,
           } as any);
-          if (refineErr) throw new Error(String(refineErr));
+          if (refineErr)
+            throw new Error(
+              typeof refineErr === 'string'
+                ? refineErr
+                : typeof refineErr === 'string'
+                  ? refineErr
+                  : '',
+            );
           if (!response || !('outputs' in response)) {
             throw new Error('refine batch returned an unexpected payload');
           }
