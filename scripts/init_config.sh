@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 # Initialize or update local config files from environment variables.
 #
+# NOTE: The authoritative list of env vars lives in
+# packages/shared/src/schemas/env.ts (Zod SSOT). The key lists below
+# are a practical subset for shell-based initial setup — always check
+# the SSOT when adding new vars.
+#
 # Writes well-known env vars from the user's shell into:
 #   .env              — build/run parameters
 #   config/secret.env — runtime secrets for config/app.yaml template rendering
 #
 # Existing values are preserved (env vars only fill in blanks).
 # Run via: just upsert-env-configs
+#
+# SSOT reference: packages/shared/src/schemas/env.ts
 #
 # Recognized env vars (all optional):
 #   .env targets:

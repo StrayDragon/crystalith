@@ -1,0 +1,12 @@
+kind: llman.sdd.delta
+ops[3]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r9,Env var schema SSOT,"系统 MUST 在 packages/shared/src/schemas/env.ts 中定义统一的 Zod schema 作为环境变量的单一权威来源（SSOT）。该 schema MUST：1) 覆盖所有 CL_* 及非 CL_* 环境变量；2) 通过 .describe() 携带中文描述；3) 按 target 分组（build-run → .env, secrets → config/secret.env）。.env.example 和 config/secret.env.example MUST 从此 schema 自动生成。MUST NOT 手工维护 .example 文件。",null,null,null
+  add_requirement,r10,"YAML config JSON Schema auto-generation",系统 MUST 提供脚本从 apps/server/src/shared/config.ts 中的 Zod schema 自动生成 config/app.schema.gen.json。该 JSON Schema MUST：1) 覆盖 config/app.yaml 中所有业务段落；2) 包含每个 Zod schema 的 .describe() 描述作为字段描述；3) 与 config.ts 中的 Zod schema 同步更新。config/app.yaml MUST 继续引用 '$schema=./app.schema.gen.json'。新增或修改配置段落时 MUST 先更新 Zod schema。MUST NOT 手工维护 app.schema.gen.json。,null,null,null
+  add_requirement,r11,Generated config drift prevention,"系统 MUST 提供无网络依赖的 drift 检测门禁：1) 'just check-env-examples' 命令比较当前 .example 文件与 SSOT 自动生成结果是否一致；2) 'just gen-env-examples' 和 'just gen-app-schema' 命令重新生成全部产物；3) .pre-commit-config.yaml MUST 包含 check-env-examples hook 在 pre-commit 阶段检测 .example 文件漂移；4) CI 流水线 MUST 包含 'gen-app-schema --check' 检测 YAML schema 漂移。生成的 .example 文件和 .schema.gen.json MUST 提交到仓库（非 gitignored）。",null,null,null
+op_scenarios[6]{req_id,id,given,when,then}:
+  r9,build_run_autogen,"在 env.ts 中新增 build-run 组 env var CL_FOO_PORT","运行 gen-env-examples",.env.example 包含 CL_FOO_PORT= 及对应的注释描述
+  r9,secret_autogen,在 env.ts 中新增 secrets 组 env var CL_NEW_API_KEY,"运行 gen-env-examples",config/secret.env.example 包含 CL_NEW_API_KEY= 及对应的注释描述
+  r9,drift_detected,在 env.ts 中新增一个 env var 但未重新生成 .example,"pre-commit 触发 check-env-examples",提交被拒绝，提示 .example 文件与 SSOT 不一致
+  r10,schema_autogen,在 config.ts 中新增一个配置段落 schema,"运行 gen-app-schema",config/app.schema.gen.json 包含新段落的 JSON Schema 定义及描述
+  r10,schema_drift,"config.ts 新增了配置字段但未运行 gen-app-schema","运行 gen-app-schema --check",退出码非零，提示 app.schema.gen.json 过期
+  r11,check_clean,SSOT 和 .example 一致,"运行 check-env-examples",退出码 0，无输出或提示一致

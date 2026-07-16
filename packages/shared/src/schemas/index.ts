@@ -17,6 +17,7 @@ export * from './qa.js';
 export * from './model.js';
 export * from './template.js';
 export * from './task.js';
+export * from './env.js';
 export * from './eval.js';
 export * from './streaming/qa-stream.js';
 export * from './streaming/research-progress.js';

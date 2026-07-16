@@ -93,10 +93,10 @@ type-aware-lint:
 scripts-harness-check:
     @CRYSTALITH_SKIP_READY_INSTALL=1 bash ./scripts/ensure_frontend_web_ready.sh
 
-# Run all QA checks (SSOT): typecheck, lint, format-check, tests, and scripts/ harness checks.
+# Run all QA checks (SSOT): typecheck, lint, format-check, generated-config drift, tests, and scripts/ harness checks.
 # Output minimized — only errors and warnings shown.
 # Note: `just type-aware-lint` is excluded — too many pre-existing errors in test files.
-qa: check test scripts-harness-check
+qa: check check-env-examples check-app-schema test scripts-harness-check
     @echo "✅ QA passed"
 
 # Run backend tests — only show failures
@@ -110,6 +110,22 @@ test:
 # Initialize .env and config/secret.env from shell environment variables
 upsert-env-configs:
     bash ./scripts/init_config.sh
+
+# Regenerate .env.example and config/secret.env.example from Zod SSOT
+gen-env-examples:
+    bun scripts/gen-env-examples.ts
+
+# Check .example files match Zod SSOT (exit 1 on drift)
+check-env-examples:
+    bun scripts/gen-env-examples.ts --check
+
+# Regenerate config/app.schema.gen.json from Zod schemas
+gen-app-schema:
+    bun scripts/gen-app-schema.ts
+
+# Check app.schema.gen.json matches Zod schemas (exit 1 on drift)
+check-app-schema:
+    bun scripts/gen-app-schema.ts --check
 
 # --------------------------------------------------------------------------
 # Maintenance

@@ -1,0 +1,253 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "./app.schema.gen.json",
+  "title": "Crystalith v2 Configuration Schema",
+  "description": "Auto-generated JSON Schema for config/app.yaml. DO NOT EDIT MANUALLY — update Zod schemas in apps/server/src/shared/config.ts and run `just gen-app-schema`.",
+  "type": "object",
+  "properties": {
+    "app": {
+      "type": "object",
+      "properties": {
+        "http_guardrails": {
+          "type": "object",
+          "properties": {
+            "upload_max_bytes": {
+              "default": 52428800,
+              "type": "number"
+            }
+          }
+        }
+      },
+      "description": "应用层设置：CORS、auth、startup behavior、feature flags"
+    },
+    "ai": {
+      "type": "object",
+      "properties": {
+        "timeout": {
+          "default": 60,
+          "type": "number"
+        },
+        "max_retries": {
+          "default": 3,
+          "type": "number"
+        }
+      },
+      "description": "AI 运行时设置：超时、重试次数"
+    },
+    "completion_options": {
+      "type": "object",
+      "properties": {
+        "temperature": {
+          "type": "number"
+        },
+        "top_p": {
+          "type": "number"
+        },
+        "top_k": {
+          "type": "number"
+        },
+        "stop": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reasoning": {
+          "type": "number"
+        }
+      },
+      "description": "Completion 参数默认值：temperature、top_p、stop 序列等"
+    },
+    "concurrency": {
+      "type": "object",
+      "properties": {
+        "embedding": {
+          "default": 8,
+          "type": "number"
+        },
+        "vector_search": {
+          "default": 8,
+          "type": "number"
+        },
+        "llm_generate": {
+          "default": 4,
+          "type": "number"
+        }
+      },
+      "description": "并发控制门禁：embedding、vector_search、llm_generate 的并发数限制"
+    },
+    "embedding": {
+      "type": "object",
+      "properties": {
+        "chunk_size": {
+          "default": 512,
+          "type": "number"
+        },
+        "batch_size": {
+          "default": 32,
+          "type": "number"
+        }
+      },
+      "description": "文本嵌入设置：chunk_size、batch_size"
+    },
+    "context_window": {
+      "type": "object",
+      "properties": {
+        "max_tokens": {
+          "default": 8000,
+          "type": "number"
+        },
+        "compression_strategy": {
+          "default": "truncate",
+          "type": "string",
+          "enum": []
+        },
+        "window_size": {
+          "default": 10,
+          "type": "number"
+        }
+      },
+      "description": "上下文窗口设置：max_tokens、compression_strategy、window_size"
+    },
+    "search": {
+      "type": "object",
+      "properties": {
+        "searxng": {
+          "default": {
+            "host": "",
+            "api_key": null,
+            "max_results": 10,
+            "timeout": 20000
+          },
+          "type": "object",
+          "properties": {
+            "host": {
+              "default": "",
+              "type": "string"
+            },
+            "api_key": {
+              "default": null,
+              "type": "string"
+            },
+            "max_results": {
+              "default": 10,
+              "type": "number"
+            },
+            "timeout": {
+              "default": 20000,
+              "type": "number"
+            }
+          }
+        }
+      },
+      "description": "搜索引擎设置：SearXNG 实例地址、超时、最大结果数"
+    },
+    "optional_services": {
+      "type": "object",
+      "properties": {
+        "chroma": {
+          "default": {
+            "enabled": false,
+            "endpoint": "http://localhost:8000",
+            "timeout_s": 3
+          },
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "default": false,
+              "type": "boolean"
+            },
+            "endpoint": {
+              "type": "string"
+            },
+            "timeout_s": {
+              "type": "number"
+            }
+          }
+        },
+        "searxng": {
+          "default": {
+            "enabled": false,
+            "endpoint": "http://127.0.0.1:50201",
+            "timeout_s": 10
+          },
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "default": false,
+              "type": "boolean"
+            },
+            "endpoint": {
+              "type": "string"
+            },
+            "timeout_s": {
+              "type": "number"
+            }
+          }
+        },
+        "cache_redis": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "default": false,
+              "type": "boolean"
+            },
+            "endpoint": {
+              "type": "string"
+            },
+            "timeout_s": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "description": "可选服务配置：Chroma、SearXNG、Redis 的启用状态与接入点"
+    },
+    "storage": {
+      "type": "object",
+      "properties": {
+        "data_root": {
+          "default": "./data",
+          "type": "string"
+        }
+      },
+      "description": "存储设置：数据根目录路径"
+    },
+    "source_ingestion": {
+      "type": "object",
+      "properties": {
+        "allowlist_only": {
+          "default": false,
+          "type": "boolean"
+        },
+        "allowlist_hosts": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "allowlist_domains": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "allowlist_cidrs": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "max_redirects": {
+          "default": 5,
+          "type": "number"
+        }
+      },
+      "description": "来源摄取安全策略：SSRF 白名单域名/IP、重定向限制"
+    }
+  },
+  "additionalProperties": true
+}
