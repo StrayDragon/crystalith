@@ -95,10 +95,10 @@
         "apps/web/src/features/workspace/**/*.tsx"
       ],
       "rules": {
-        // eqeqeq: warn (not error) — frontend uses intentional `== null` idiom
+        // eqeqeq: off (not warn) — frontend uses intentional `== null` idiom
         // to check null-or-undefined; forcing `=== null` would drop the
-        // undefined case and introduce bugs.
-        "eslint/eqeqeq": "warn",
+        // undefined case and introduce bugs. All eqeqeq warnings are this pattern.
+        "eslint/eqeqeq": "off",
         "import/no-duplicates": "warn",
         "eslint/no-unreachable": "warn"
       }

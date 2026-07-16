@@ -30,24 +30,22 @@ function parseCsvRows(text: string): string[][] {
       } else {
         currentField += char;
       }
-    } else {
-      if (char === '"') {
-        inQuotes = true;
-      } else if (char === ',') {
-        currentRow.push(currentField);
-        currentField = '';
-      } else if (char === '\n' || char === '\r') {
-        // Handle \r\n
-        if (char === '\r' && text[i + 1] === '\n') i++;
-        currentRow.push(currentField);
-        currentField = '';
-        if (currentRow.some((f) => f !== '')) {
-          rows.push(currentRow);
-        }
-        currentRow = [];
-      } else {
-        currentField += char;
+    } else if (char === '"') {
+      inQuotes = true;
+    } else if (char === ',') {
+      currentRow.push(currentField);
+      currentField = '';
+    } else if (char === '\n' || char === '\r') {
+      // Handle \r\n
+      if (char === '\r' && text[i + 1] === '\n') i++;
+      currentRow.push(currentField);
+      currentField = '';
+      if (currentRow.some((f) => f !== '')) {
+        rows.push(currentRow);
       }
+      currentRow = [];
+    } else {
+      currentField += char;
     }
   }
   // Last field

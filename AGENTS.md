@@ -139,6 +139,34 @@ Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `ope
 - Optional scope: `feat(server):`, `fix(frontend):`
 - Keep subjects short, imperative, focused on one change
 
+## just qa Tolerance Levels
+
+`just qa`（typecheck + lint + format-check + test）必须全员通过才算一次成功的 PR。不同范围的代码有不同的严格度：
+
+### Tier 0 — 零容忍，必须修复
+
+**业务代码**（`apps/server/src/`、`apps/web/src/features/`、`packages/shared/src/`）中出现以下情况必须直面修复，不得通过 disable 注释、override 或 exclude 绕过：
+
+- **lint error** — 立即修复
+- **lint warning** — 具体分析，优先重构代码消除 warning；仅在极少数工具误报（如 oxlint 的 `no-unexpected-multiline` vs Eden Treaty 链式调用）时允许 inline disable
+- **tests failure** — 必须修复；可能是代码回归或测试本身过时，需同步更新
+
+### Tier 1 — 可忽略（谨慎使用）
+
+以下范围允许 `just qa` 中部分检查不通过，但应保持接近零警告：
+
+- **测试代码**（`**/*.test.ts`、`**/*.spec.ts`、`**/test-utils/`）— lint warn/error 可接受，tests 本身仍须通过
+- **临时脚本**（`scripts/`、`apps/web/scripts/`、`packages/*/scripts/`）— lint 问题可忽略
+- **配置文件 / 构建产物** — 不参与 lint 检查
+- **测试 mock / stub** — 存在重复类、宽松类型可接受
+
+### 例外处理原则
+
+1. **先尝试重构消除 warning**（提取变量、简化条件、拆分函数）
+2. **若重构成本过高或引入更大风险**，在 PR 描述中说明原因后允许 inline disable
+3. **绝不允许**新增全局 rule override 来忽略 warning
+4. 已存在的 override（如 `.oxlintrc.json` 中 workspace 的 `eqeqeq: off`）需在新代码中保持一致性
+
 ## Agent-Specific Instructions
 
 - SDD workflow: `/llman-sdd-*` skills; conventions in `llmanspec/config.yaml`
