@@ -25,6 +25,9 @@ const TMP = join(tmpdir(), `crystalith-test-config-${process.pid}.yaml`);
 afterEach(() => {
   resetConfig();
   rmSync(TMP, { force: true });
+  delete process.env.CL_SEARXNG_HOST;
+  delete process.env.SEARXNG_HOST;
+  delete process.env.MY_CHAT_OVERRIDE;
 });
 
 describe('config: template rendering', () => {
@@ -301,9 +304,9 @@ search:
   it('getSearxngHost falls back to env when config host is empty', () => {
     writeFileSync(TMP, `models:\n  defaults: {}\n  available: []\n`);
     resetConfig(loadConfig(TMP));
+    delete process.env.CL_SEARXNG_HOST;
     process.env.SEARXNG_HOST = 'http://env-host:9090';
     expect(getSearxngHost()).toBe('http://env-host:9090');
-    delete process.env.SEARXNG_HOST;
   });
 
   it('parses completion_options section', () => {
