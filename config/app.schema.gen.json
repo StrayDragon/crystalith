@@ -285,6 +285,172 @@
         }
       },
       "description": "来源摄取安全策略：SSRF 白名单域名/IP、重定向限制"
+    },
+    "models": {
+      "type": "object",
+      "properties": {
+        "defaults": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "chat": {
+              "type": "string"
+            },
+            "embedding": {
+              "type": "string"
+            },
+            "edit": {
+              "type": "string"
+            },
+            "autocomplete": {
+              "type": "string"
+            }
+          }
+        },
+        "available": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "display_name": {
+                "type": "string"
+              },
+              "description": {
+                "default": "",
+                "type": "string"
+              },
+              "roles": {
+                "default": [
+                  "chat"
+                ],
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "chat",
+                    "embed",
+                    "edit",
+                    "apply",
+                    "autocomplete",
+                    "summarize"
+                  ]
+                }
+              },
+              "capabilities": {
+                "default": [],
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "tool_use",
+                    "image_input",
+                    "audio_input",
+                    "streaming"
+                  ]
+                }
+              },
+              "provider_config": {
+                "type": "object",
+                "properties": {
+                  "api_key": {
+                    "type": "string"
+                  },
+                  "base_url": {
+                    "type": "string"
+                  },
+                  "organization": {
+                    "type": "string"
+                  },
+                  "project": {
+                    "type": "string"
+                  }
+                }
+              },
+              "completion_options": {
+                "type": "object",
+                "properties": {
+                  "context_length": {
+                    "type": "number"
+                  },
+                  "max_tokens": {
+                    "type": "number"
+                  },
+                  "temperature": {
+                    "type": "number"
+                  },
+                  "top_p": {
+                    "type": "number"
+                  },
+                  "top_k": {
+                    "type": "number"
+                  },
+                  "stop": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "reasoning": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "request_options": {
+                "type": "object",
+                "properties": {
+                  "timeout": {
+                    "type": "number"
+                  },
+                  "verify_ssl": {
+                    "default": true,
+                    "type": "boolean"
+                  },
+                  "proxy": {
+                    "type": "string"
+                  },
+                  "headers": {}
+                }
+              },
+              "sdk": {
+                "type": "string"
+              },
+              "factory": {
+                "type": "string"
+              },
+              "provider_options": {}
+            }
+          }
+        }
+      },
+      "description": "模型配置：默认模型、可用模型列表、提供商配置"
+    },
+    "providers": {
+      "type": "object",
+      "properties": {
+        "api_key": {
+          "type": "string"
+        },
+        "base_url": {
+          "type": "string"
+        },
+        "organization": {
+          "type": "string"
+        },
+        "project": {
+          "type": "string"
+        }
+      },
+      "description": "AI 提供商配置：API key、base URL 等"
     }
   },
   "additionalProperties": true
