@@ -3,28 +3,28 @@ name: "evidence-review-workflow"
 purpose: 把 citation/evidence 的核查做成正式工作流：结果级审阅状态机、citation/evidence 级核查项与 review notes 的可追溯记录，以及稳定入口与摘要字段，支撑“待审/已审/需修订”的可信闭环。
 valid_scope[2]: src/,tests/
 requirements[12]{req_id,title,statement}:
-  r1,结果必须具备独立的 evidence review 状态,系统 MUST 为结果提供独立于生成成功状态的 evidence review 状态。
-  r2,审阅流程必须记录 review note 与证据关系,系统 MUST 在审阅流程中记录 review note 以及与 citation / evidence 的关系。
-  r3,审阅状态转移必须由显式动作触发,系统 MUST 以显式动作驱动审阅状态转移，而不是隐式自动批准。
-  r4,审阅记录必须关联到结果与 citation/evidence 对象,系统 MUST 让 evidence review 记录能够关联到被审阅的结果对象以及其 citation/evidence 上下文，以支持逐条核查与可追溯性。
-  r5,结果对象必须暴露 evidence review 摘要以支持列表与详情展示,系统 MUST 在结果对象中暴露 evidence review 的摘要字段（状态与计数），以支持工作区列表与结果页一致展示。
-  r6,工作区必须提供进入 evidence review 的稳定入口,系统 MUST 在工作区为结果提供稳定的 evidence review 入口，避免审阅能力变成零散不可发现的隐藏功能。
+  r30,结果必须具备独立的 evidence review 状态,系统 MUST 为结果提供独立于生成成功状态的 evidence review 状态。
+  r88,审阅流程必须记录 review note 与证据关系,系统 MUST 在审阅流程中记录 review note 以及与 citation / evidence 的关系。
+  r125,审阅状态转移必须由显式动作触发,系统 MUST 以显式动作驱动审阅状态转移，而不是隐式自动批准。
+  r161,审阅记录必须关联到结果与 citation/evidence 对象,系统 MUST 让 evidence review 记录能够关联到被审阅的结果对象以及其 citation/evidence 上下文，以支持逐条核查与可追溯性。
+  r196,结果对象必须暴露 evidence review 摘要以支持列表与详情展示,系统 MUST 在结果对象中暴露 evidence review 的摘要字段（状态与计数），以支持工作区列表与结果页一致展示。
+  r226,工作区必须提供进入 evidence review 的稳定入口,系统 MUST 在工作区为结果提供稳定的 evidence review 入口，避免审阅能力变成零散不可发现的隐藏功能。
   "evidence-low-similarity-strip",Low similarity evidence review MUST strip citations,evidence 审查在 low_similarity 判定下 MUST 返回空 citations 列表，因为低相似度证据不应作为引用呈现给用户
   "citations-context-must-use-notebook-path","Citations context endpoint MUST nest under /notebooks/:nid path (not flat query param)","citations /context 端点 MUST 沿用 v1 路径层级 GET /v2/notebooks/:nid/citations/context（对齐 v1 api.py:13 的 prefix /v1/notebooks/{notebook_id}/citations），MUST NOT 用扁平 /v2/citations/context?notebook_id=；当前 v2 router.ts:35 与 50 用扁平路径 + query param，违反 c26 proposal.md:20 与 design.md:6 的承诺，且与所有其他 v2 特性的层级路径不一致。BREAKING: 路径修正（query param → path param）"
   "citations-context-defaults-must-match-v1",Citations context defaults MUST be before=1/after=1 (not 2),"citations /context 的 before/after 默认值 MUST 为 1（对齐 v1 api.py:61-62 Query(1, ge=0, le=5)），MUST NOT 为 2；当前 v2 router.ts:89-90 默认 2，客户端省略参数会拿到 v1 2 倍的 chunk 窗口"
   "connector-config-must-be-schema-validated","Source connector connection_config MUST be JSON-schema validated","source connector 创建时 MUST 用 jsonschema Draft7 校验 connection_config（对齐 v1 api.py:77-98 与 199-200 的 Draft7Validator），非法路径/键 → 400；当前 v2 router.ts:232-241 原样存储无校验，畸形配置静默接受"
   r_context_endpoint,Citation context neighborhood,系统 MUST 提供 citations context 端点 按 chunk_id 或 source_id 与 chunk_index 解析目标 chunk 并返回相邻 chunk 邻域窗口 返回 MUST 包含 before 数组 与目标 chunk 与 after 数组
   r_context_enrichment,Citation context enrichment,系统 MUST 在 citations context 返回的每个 chunk 中包含 page_number 与 paragraph_index 字段以支持证据定位
-scenarios[12]{req_id,id,given,when,then}:
-  r1,结果已生成但尚未审阅,"",一个结果已经生成完成,系统 SHALL 允许该结果处于未审阅状态
-  r2,审阅者标记需要修订,"",审阅者对某个结果提出修订意见,系统 SHALL 保存结构化 review note
-  r3,审阅者确认结果通过,"",审阅者执行通过或需修订动作,系统 SHALL 更新 evidence review 状态
-  r4,"审阅者标记某条-citation-需修订","",审阅者对某条 citation 标记为需修订,系统 SHALL 记录该 citation 的审阅状态
-  r5,用户在结果列表查看审阅状态,"",用户在工作区查看结果列表或详情,系统 SHALL 返回该结果的 evidence review 状态摘要
-  r6,用户从结果页进入证据审阅,"",用户打开某个结果,用户 SHALL 能进入 evidence review 流程并查看 citation 级状态与 review notes
-  "evidence-low-similarity-strip","low-sim-evidence",检索结果最高 score 低于阈值,evidence 判定,"系统 SHALL 返回 citations=[] 并标记 no_evidence_reason=low_similarity"
-  "citations-context-must-use-notebook-path","notebook-path","客户端按 v1/c26 契约请求 /v2/notebooks/:nid/citations/context",系统路由,SHALL 命中 citations /context（而非 404）
-  "citations-context-defaults-must-match-v1","defaults-omitted",客户端省略 before/after 参数,系统返回窗口,默认 SHALL 为 1 before + 1 after（与 v1 一致）
-  "connector-config-must-be-schema-validated","malformed-connector-config",客户端提交畸形 connection_config,系统校验,SHALL 返回 400（而非静默存储）
-  r_context_endpoint,by_chunk_id,存在指定 chunk,用户请求 context 带 chunk_id 与 neighbors,系统 SHALL 返回 before 与 chunk 与 after 邻域
-  r_context_enrichment,page_present,source 含 page 元数据,用户请求 context,系统 SHALL 在每个 chunk 返回 page_number
+scenarios[12]{req_id,id,given,when,then,feature}:
+  r30,结果已生成但尚未审阅,"",一个结果已经生成完成,系统 SHALL 允许该结果处于未审阅状态,true
+  r88,审阅者标记需要修订,"",审阅者对某个结果提出修订意见,系统 SHALL 保存结构化 review note,true
+  r125,审阅者确认结果通过,"",审阅者执行通过或需修订动作,系统 SHALL 更新 evidence review 状态,true
+  r161,"审阅者标记某条-citation-需修订","",审阅者对某条 citation 标记为需修订,系统 SHALL 记录该 citation 的审阅状态,true
+  r196,用户在结果列表查看审阅状态,"",用户在工作区查看结果列表或详情,系统 SHALL 返回该结果的 evidence review 状态摘要,true
+  r226,用户从结果页进入证据审阅,"",用户打开某个结果,用户 SHALL 能进入 evidence review 流程并查看 citation 级状态与 review notes,true
+  "evidence-low-similarity-strip","low-sim-evidence",检索结果最高 score 低于阈值,evidence 判定,"系统 SHALL 返回 citations=[] 并标记 no_evidence_reason=low_similarity",true
+  "citations-context-must-use-notebook-path","notebook-path","客户端按 v1/c26 契约请求 /v2/notebooks/:nid/citations/context",系统路由,SHALL 命中 citations /context（而非 404）,true
+  "citations-context-defaults-must-match-v1","defaults-omitted",客户端省略 before/after 参数,系统返回窗口,默认 SHALL 为 1 before + 1 after（与 v1 一致）,true
+  "connector-config-must-be-schema-validated","malformed-connector-config",客户端提交畸形 connection_config,系统校验,SHALL 返回 400（而非静默存储）,true
+  r_context_endpoint,by_chunk_id,存在指定 chunk,用户请求 context 带 chunk_id 与 neighbors,系统 SHALL 返回 before 与 chunk 与 after 邻域,true
+  r_context_enrichment,page_present,source 含 page 元数据,用户请求 context,系统 SHALL 在每个 chunk 返回 page_number,true

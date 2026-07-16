@@ -3,18 +3,18 @@ name: "architecture-plugin-and-agent"
 purpose: "TBD - created by archiving change c02-add-v2-ai-runtime. Update purpose after archive."
 valid_scope[2]: src/,tests/
 requirements[7]{req_id,title,statement}:
-  r1,AI runtime is Vercel AI SDK,"系统 MUST 使用 Vercel AI SDK (`ai` + `@ai-sdk/*`) 作为唯一 AI 基础层，替换 pydantic-ai + pydantic-graph。AI SDK 覆盖 Provider 抽象、Agent Loop (streamText + maxSteps)、结构化输出 (generateObject/streamObject)、Tool Calling、流式生成、Middleware 全部能力。"
-  r2,"Provider layer uses @ai-sdk/* official packages","系统 MUST 通过 @ai-sdk/openai、@ai-sdk/anthropic、@ai-sdk/google、@ai-sdk/deepseek 等官方 provider 包承接 LLM 调用，砍掉 v1 shared/ai/factory.py ~2000 行胶水代码。API key/baseURL MUST 通过 config 或 env 注入。"
-  r3,Agent loop uses streamText + maxSteps,智能体多步 tool calling 循环 MUST 使用 AI SDK streamText + maxSteps。Retrieval、Web Search、mountUI 等能力 MUST 实现为 tool() 函数挂载到 agent。
-  r4,Structured output uses generateObject + Zod,"结构化 JSON 输出 MUST 使用 AI SDK generateObject(schema: Zod) 替换 pydantic-ai output_type。Output 生成管线 MUST 使用 generateObject + 普通 async 函数链 (非 agent loop)。"
-  r5,Streaming uses streamText ReadableStream + SSE relay,"流式生成 MUST 通过 AI SDK streamText 的 fullStream async iterable → Elysia SSE Response 中继到前端。Elysia SSE MUST 支持 text/event-stream。"
-  r6,"Token counting uses gpt-tokenizer","Token 计数 MUST 使用 gpt-tokenizer (纯 JS，零 wasm 依赖) 替换 tiktoken。"
-  r7,Middleware handles retry and logging,AI SDK middleware 系统 MUST 覆盖重试（替换 v1 shared/ai/retry.py ~233 行）和结构化日志。OpenTelemetry tracer MUST 备选接入。
-scenarios[7]{req_id,id,given,when,then}:
-  r1,happy,"",开发者配置 OpenAI API key,ai SDK 可完成 generateText/streamText/generateObject
-  r2,happy,"",用户在 config 中切换 Anthropic provider,"系统 SHALL 使用 @ai-sdk/anthropic 而非 @ai-sdk/openai 发起调用"
-  r3,happy,"",QA 对话触发检索 + 联网搜索,agent SHALL 自主多轮调用 retrieveSources 和 webSearch 工具，在 maxSteps 内完成
-  r4,happy,"",用户请求 FAQ 类型结构化输出,generateObject SHALL 返回符合 Zod schema 的 JSON，类型推断正确
-  r5,happy,"",前端请求流式 QA,"SSE 流 SHALL 实时推送 text-delta 和 tool-call/tool-result 事件"
-  r6,happy,"",系统计算 context window 使用量,"gpt-tokenizer encode().length 返回正确 token 数"
-  r7,happy,"",LLM 调用失败需要重试,middleware SHALL 自动重试最多 3 次，指数退避
+  r22,AI runtime is Vercel AI SDK,"系统 MUST 使用 Vercel AI SDK (`ai` + `@ai-sdk/*`) 作为唯一 AI 基础层，替换 pydantic-ai + pydantic-graph。AI SDK 覆盖 Provider 抽象、Agent Loop (streamText + maxSteps)、结构化输出 (generateObject/streamObject)、Tool Calling、流式生成、Middleware 全部能力。"
+  r80,"Provider layer uses @ai-sdk/* official packages","系统 MUST 通过 @ai-sdk/openai、@ai-sdk/anthropic、@ai-sdk/google、@ai-sdk/deepseek 等官方 provider 包承接 LLM 调用，砍掉 v1 shared/ai/factory.py ~2000 行胶水代码。API key/baseURL MUST 通过 config 或 env 注入。"
+  r118,Agent loop uses streamText + maxSteps,智能体多步 tool calling 循环 MUST 使用 AI SDK streamText + maxSteps。Retrieval、Web Search、mountUI 等能力 MUST 实现为 tool() 函数挂载到 agent。
+  r155,Structured output uses generateObject + Zod,"结构化 JSON 输出 MUST 使用 AI SDK generateObject(schema: Zod) 替换 pydantic-ai output_type。Output 生成管线 MUST 使用 generateObject + 普通 async 函数链 (非 agent loop)。"
+  r190,Streaming uses streamText ReadableStream + SSE relay,"流式生成 MUST 通过 AI SDK streamText 的 fullStream async iterable → Elysia SSE Response 中继到前端。Elysia SSE MUST 支持 text/event-stream。"
+  r221,"Token counting uses gpt-tokenizer","Token 计数 MUST 使用 gpt-tokenizer (纯 JS，零 wasm 依赖) 替换 tiktoken。"
+  r247,Middleware handles retry and logging,AI SDK middleware 系统 MUST 覆盖重试（替换 v1 shared/ai/retry.py ~233 行）和结构化日志。OpenTelemetry tracer MUST 备选接入。
+scenarios[7]{req_id,id,given,when,then,feature}:
+  r22,happy,"",开发者配置 OpenAI API key,ai SDK 可完成 generateText/streamText/generateObject,true
+  r80,happy,"",用户在 config 中切换 Anthropic provider,"系统 SHALL 使用 @ai-sdk/anthropic 而非 @ai-sdk/openai 发起调用",true
+  r118,happy,"",QA 对话触发检索 + 联网搜索,agent SHALL 自主多轮调用 retrieveSources 和 webSearch 工具，在 maxSteps 内完成,true
+  r155,happy,"",用户请求 FAQ 类型结构化输出,generateObject SHALL 返回符合 Zod schema 的 JSON，类型推断正确,true
+  r190,happy,"",前端请求流式 QA,"SSE 流 SHALL 实时推送 text-delta 和 tool-call/tool-result 事件",true
+  r221,happy,"",系统计算 context window 使用量,"gpt-tokenizer encode().length 返回正确 token 数",true
+  r247,happy,"",LLM 调用失败需要重试,middleware SHALL 自动重试最多 3 次，指数退避,true
