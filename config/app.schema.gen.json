@@ -451,6 +451,149 @@
           "type": "string"
         }
       }
+    },
+    "cache": {
+      "description": "缓存设置：provider、TTL、最大条目数",
+      "type": "object",
+      "properties": {
+        "provider": {
+          "description": "缓存提供者：memory 内存 / auto 自动选择",
+          "default": "memory",
+          "type": "string",
+          "enum": [
+            "memory",
+            "auto"
+          ]
+        },
+        "ttl": {
+          "description": "缓存 TTL（秒）",
+          "default": 60,
+          "type": "number"
+        },
+        "max_size": {
+          "description": "缓存最大条目数",
+          "default": 2048,
+          "type": "number"
+        }
+      }
+    },
+    "database": {
+      "description": "数据库设置（v1 兼容）",
+      "type": "object",
+      "properties": {
+        "url": {
+          "description": "数据库连接 URL（v1 兼容）",
+          "default": "sqlite+aiosqlite:///./data/app.db",
+          "type": "string"
+        },
+        "url_candidates": {
+          "description": "备用数据库 URL 列表",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "plugins": {
+      "description": "插件发现与加载配置",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "description": "启用的插件 ID 列表（白名单）",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "disabled": {
+          "description": "禁用的插件 ID 列表（黑名单，优先）",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "load_order": {
+          "description": "插件加载顺序（后加载优先）",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "proxy_settings": {
+      "description": "出站代理设置",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "description": "是否启用代理",
+          "default": false,
+          "type": "boolean"
+        },
+        "http_url": {
+          "description": "HTTP 代理 URL",
+          "default": null,
+          "type": "string"
+        },
+        "https_url": {
+          "description": "HTTPS 代理 URL",
+          "default": null,
+          "type": "string"
+        },
+        "socks5_url": {
+          "description": "SOCKS5 代理 URL",
+          "default": null,
+          "type": "string"
+        },
+        "no_proxy": {
+          "description": "不走代理的地址列表",
+          "default": [
+            "localhost",
+            "127.0.0.1"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "vector_storage": {
+      "description": "向量存储设置（v1 兼容）",
+      "type": "object",
+      "properties": {
+        "provider": {
+          "description": "向量存储提供者（v1 兼容）",
+          "default": "chroma",
+          "type": "string"
+        },
+        "chroma": {
+          "description": "Chroma 配置",
+          "default": {},
+          "type": "object",
+          "properties": {
+            "path": {
+              "description": "Chroma 数据目录路径",
+              "type": "string"
+            },
+            "telemetry": {
+              "type": "boolean"
+            },
+            "host": {
+              "description": "Chroma 服务主机，空=嵌入式",
+              "type": "string"
+            },
+            "port": {
+              "description": "Chroma 服务端口",
+              "type": "number"
+            }
+          }
+        }
+      }
     }
   },
   "additionalProperties": true
