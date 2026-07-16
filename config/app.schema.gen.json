@@ -9,6 +9,56 @@
       "description": "应用层设置：CORS、auth、startup behavior、feature flags",
       "type": "object",
       "properties": {
+        "features": {
+          "type": "object",
+          "properties": {
+            "workspace_frontend_bundles_enabled": {
+              "description": "app.features.workspace_frontend_bundles_enabled",
+              "default": true,
+              "type": "boolean"
+            }
+          }
+        },
+        "auth": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "description": "app.auth.enabled",
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        },
+        "cors": {
+          "type": "object",
+          "properties": {
+            "allow_origins": {
+              "description": "app.cors.allow_origins",
+              "default": [
+                "http://localhost:3000"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "startup": {
+          "type": "object",
+          "properties": {
+            "auto_db_init": {
+              "description": "app.startup.auto_db_init",
+              "default": true,
+              "type": "boolean"
+            },
+            "cleanup_failed_sources": {
+              "description": "app.startup.cleanup_failed_sources",
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        },
         "http_guardrails": {
           "type": "object",
           "properties": {
@@ -125,6 +175,19 @@
           "description": "上下文窗口包含的历史消息轮次数",
           "default": 10,
           "type": "number"
+        },
+        "priority": {
+          "description": "context_window.priority",
+          "default": [
+            "history",
+            "retrieval",
+            "recent",
+            "system"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -247,42 +310,207 @@
       }
     },
     "source_ingestion": {
-      "description": "来源摄取安全策略：SSRF 白名单域名/IP、重定向限制",
+      "description": "root.source_ingestion",
       "type": "object",
       "properties": {
-        "allowlist_only": {
-          "description": "仅允许白名单中的主机访问，禁止所有未列出的地址",
-          "default": false,
-          "type": "boolean"
-        },
-        "allowlist_hosts": {
-          "description": "白名单主机名列表（精确匹配）",
-          "default": [],
-          "type": "array",
-          "items": {
-            "type": "string"
+        "url_fetch": {
+          "description": "source_ingestion.url_fetch",
+          "type": "object",
+          "properties": {
+            "proxy": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "http_url": {
+                  "type": "string"
+                },
+                "https_url": {
+                  "type": "string"
+                },
+                "socks5_url": {
+                  "type": "string"
+                },
+                "no_proxy": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "timeout": {
+              "description": "source_ingestion.url_fetch.timeout",
+              "type": "number"
+            },
+            "retry_count": {
+              "description": "source_ingestion.url_fetch.retry_count",
+              "type": "number"
+            },
+            "retry_delay": {
+              "description": "source_ingestion.url_fetch.retry_delay",
+              "type": "number"
+            },
+            "security": {
+              "description": "source_ingestion.url_fetch.security",
+              "type": "object",
+              "properties": {
+                "allowlist_only": {
+                  "description": "仅允许白名单中的主机访问，禁止所有未列出的地址",
+                  "type": "boolean"
+                },
+                "allowlist_hosts": {
+                  "description": "白名单主机名列表（精确匹配）",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "allowlist_domains": {
+                  "description": "白名单域名列表（子域名通配）",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "allowlist_cidrs": {
+                  "description": "白名单 CIDR 网段列表",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "max_redirects": {
+                  "description": "URL 获取时最大重定向次数",
+                  "type": "number"
+                }
+              }
+            }
           }
         },
-        "allowlist_domains": {
-          "description": "白名单域名列表（子域名通配）",
-          "default": [],
-          "type": "array",
-          "items": {
-            "type": "string"
+        "web_extraction": {
+          "description": "source_ingestion.web_extraction",
+          "type": "object",
+          "properties": {
+            "fallback_order": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "enable_fallback": {
+              "type": "boolean"
+            },
+            "trafilatura": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "include_tables": {
+                  "type": "boolean"
+                },
+                "include_links": {
+                  "type": "boolean"
+                },
+                "output_format": {
+                  "type": "string"
+                },
+                "timeout": {
+                  "type": "number"
+                },
+                "proxy": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "http_url": {
+                      "type": "string"
+                    },
+                    "https_url": {
+                      "type": "string"
+                    },
+                    "socks5_url": {
+                      "type": "string"
+                    },
+                    "no_proxy": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "jina": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "api_key": {
+                  "type": "string"
+                },
+                "timeout": {
+                  "type": "number"
+                },
+                "proxy": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "http_url": {
+                      "type": "string"
+                    },
+                    "https_url": {
+                      "type": "string"
+                    },
+                    "socks5_url": {
+                      "type": "string"
+                    },
+                    "no_proxy": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "firecrawl": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "api_key": {
+                  "type": "string"
+                },
+                "timeout": {
+                  "type": "number"
+                }
+              }
+            },
+            "browserless": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "endpoint": {
+                  "type": "string"
+                },
+                "token": {
+                  "type": "string"
+                }
+              }
+            }
           }
-        },
-        "allowlist_cidrs": {
-          "description": "白名单 CIDR 网段列表",
-          "default": [],
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "max_redirects": {
-          "description": "URL 获取时最大重定向次数",
-          "default": 5,
-          "type": "number"
         }
       }
     },
@@ -419,7 +647,12 @@
                   "proxy": {
                     "type": "string"
                   },
-                  "headers": {}
+                  "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
                 }
               },
               "sdk": {
@@ -428,27 +661,34 @@
               "factory": {
                 "type": "string"
               },
-              "provider_options": {}
+              "provider_options": {
+                "type": "object",
+                "additionalProperties": {}
+              }
             }
           }
         }
       }
     },
     "providers": {
-      "description": "AI 提供商配置：API key、base URL 等",
+      "description": "AI 提供商配置：name → API key、base URL",
+      "default": {},
       "type": "object",
-      "properties": {
-        "api_key": {
-          "type": "string"
-        },
-        "base_url": {
-          "type": "string"
-        },
-        "organization": {
-          "type": "string"
-        },
-        "project": {
-          "type": "string"
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "api_key": {
+            "type": "string"
+          },
+          "base_url": {
+            "type": "string"
+          },
+          "organization": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string"
+          }
         }
       }
     },
@@ -531,7 +771,6 @@
       "properties": {
         "enabled": {
           "description": "是否启用代理",
-          "default": false,
           "type": "boolean"
         },
         "http_url": {
