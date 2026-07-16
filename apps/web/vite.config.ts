@@ -23,9 +23,9 @@ function getPackageName(id: string): string | null {
 
 function toSafeChunkName(name: string): string {
   return name
-    .replace(/^@/, '')
-    .replaceAll(/[\\/]/g, '-')
-    .replaceAll(/[^a-zA-Z0-9_-]/g, '-');
+    .replace(/^@/u, '')
+    .replaceAll(/[\\/]/gu, '-')
+    .replaceAll(/[^a-zA-Z0-9_-]/gu, '-');
 }
 
 function manualChunks(id: string): string | undefined {

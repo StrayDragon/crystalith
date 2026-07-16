@@ -85,7 +85,8 @@ export function hydrateCitations(
       source_id: c.source_id,
       source_name: sourceNameMap.get(c.source_id) ?? 'unknown',
       chunk_id: c.chunk_id,
-      chunk_index: c.chunk_index + 1, // v1 1-based
+      // v1 1-based
+      chunk_index: c.chunk_index + 1,
       page_number: extractNumber(meta.page, coercePageNumber),
       paragraph_index: extractNumber(meta.paragraph_index, coercePageNumber),
       snippet,

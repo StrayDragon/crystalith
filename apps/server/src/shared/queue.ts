@@ -14,7 +14,8 @@ import { Semaphore } from './semaphore.ts';
 export interface QueueEntry {
   taskId: number;
   priority: number;
-  counter: number; // FIFO tie-break within same priority
+  // FIFO tie-break within same priority
+  counter: number;
   signal: AbortSignal;
   resolve: (value: unknown) => void;
   reject: (reason: Error) => void;
@@ -34,7 +35,8 @@ export interface EnqueueOpts {
 export class TaskQueue {
   private heap: QueueEntry[] = [];
   private counter = 0;
-  private sem = new Semaphore(3); // max 3 concurrent
+  // max 3 concurrent
+  private sem = new Semaphore(3);
   private aborted = false;
   private pendingResolve = new Map<number, (value: unknown) => void>();
   private pendingReject = new Map<number, (reason: Error) => void>();

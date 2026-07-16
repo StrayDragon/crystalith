@@ -50,7 +50,7 @@ function extractFrontmatterSummary(filePath: string, raw: Uint8Array): Frontmatt
   );
   if (!text) return {};
 
-  const lines = text.split(/\r?\n/);
+  const lines = text.split(/\r?\n/u);
   if (!lines.length || lines[0]?.trim() !== '---') return {};
 
   let endIdx: number | null = null;

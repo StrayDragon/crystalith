@@ -39,9 +39,9 @@ function resolveOutputTitle(output: OutputItem): string {
 function sanitizeFileName(value: string): string {
   const sanitized = value
     .trim()
-    .replaceAll(/[<>:"/\\|?*]+/g, '-')
-    .replaceAll(/\s+/g, '_')
-    .replaceAll(/_+/g, '_');
+    .replaceAll(/[<>:"/\\|?*]+/gu, '-')
+    .replaceAll(/\s+/gu, '_')
+    .replaceAll(/_+/gu, '_');
 
   return sanitized || 'output';
 }
@@ -118,7 +118,7 @@ function parseSlidesFromMarkdown(markdown: string): SlideExportItem[] {
         slides.push(current);
       }
       current = {
-        title: line.replace(/^#\s+/, ''),
+        title: line.replace(/^#\s+/u, ''),
         bullets: [],
         paragraphs: [],
       };
@@ -130,7 +130,7 @@ function parseSlidesFromMarkdown(markdown: string): SlideExportItem[] {
         slides.push(current);
       }
       current = {
-        title: line.replace(/^##\s+/, ''),
+        title: line.replace(/^##\s+/u, ''),
         bullets: [],
         paragraphs: [],
       };
@@ -146,7 +146,7 @@ function parseSlidesFromMarkdown(markdown: string): SlideExportItem[] {
     }
 
     if (line.startsWith('- ') || line.startsWith('* ')) {
-      current.bullets.push(line.replace(/^[-*]\s+/, ''));
+      current.bullets.push(line.replace(/^[-*]\s+/u, ''));
     } else {
       current.paragraphs.push(line);
     }

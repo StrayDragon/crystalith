@@ -276,7 +276,8 @@ function SourcesPanelView({
 
   // Deep Research state
   const [researchDetailOpen, setResearchDetailOpen] = useState(false);
-  const [researchFullscreen, setResearchFullscreen] = useState(true); // Default fullscreen
+  // Default fullscreen
+  const [researchFullscreen, setResearchFullscreen] = useState(true);
   const [showResearchHistory, setShowResearchHistory] = useState(false);
 
   const handleOpenDetail = useCallback(

@@ -146,7 +146,7 @@ function ChatPanel({
       const tokenStart =
         Math.max(before.lastIndexOf(' '), before.lastIndexOf('\n'), before.lastIndexOf('\t')) + 1;
       const after = value.slice(cursor);
-      const endOffset = after.search(/\s/);
+      const endOffset = after.search(/\s/u);
       const tokenEnd = endOffset === -1 ? value.length : cursor + endOffset;
       const token = value.slice(tokenStart, tokenEnd);
 
@@ -169,7 +169,7 @@ function ChatPanel({
         return;
       }
       const afterChar = draft[commandContext.end] ?? '';
-      const needsSpace = afterChar === '' || !/\s/.test(afterChar);
+      const needsSpace = afterChar === '' || !/\s/u.test(afterChar);
       const replacement = suggestion.trigger + (needsSpace ? ' ' : '');
       const nextDraft =
         draft.slice(0, commandContext.start) + replacement + draft.slice(commandContext.end);

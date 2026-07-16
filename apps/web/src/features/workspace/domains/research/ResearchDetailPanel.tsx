@@ -241,7 +241,8 @@ function ResearchDetailPanel({
   onResume,
   onRetry,
   onStart,
-  isFullscreen = true, // Default to fullscreen
+  // Default to fullscreen
+  isFullscreen = true,
   onToggleFullscreen,
   onAddSourceFromUrl,
 }: ResearchDetailPanelProps) {

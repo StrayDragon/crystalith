@@ -55,7 +55,8 @@ interface NodeData {
   hasChildren: boolean;
   collapsed: boolean;
   childCount: number;
-  [key: string]: unknown; // Index signature for React Flow compatibility
+  // Index signature for React Flow compatibility
+  [key: string]: unknown;
 }
 
 // ============================================================================

@@ -251,6 +251,6 @@ function buildAnalysisContext(
 }
 
 function truncate(text: string, limit: number): string {
-  const cleaned = text.replaceAll(/\s+/g, ' ').trim();
+  const cleaned = text.replaceAll(/\s+/gu, ' ').trim();
   return cleaned.length <= limit ? cleaned : cleaned.slice(0, limit) + '...';
 }

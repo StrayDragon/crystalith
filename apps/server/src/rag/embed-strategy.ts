@@ -128,7 +128,8 @@ export class EmbedStrategy implements RAGStrategy {
       .map((h) => ({
         chunk_id: h.rowid,
         text: h.text,
-        score: Math.max(0, 1 - h.distance), // distance → similarity
+        // distance → similarity
+        score: Math.max(0, 1 - h.distance),
         source_id: h.source_id,
         chunk_index: h.chunk_index,
       }))
@@ -151,7 +152,8 @@ export class EmbedStrategy implements RAGStrategy {
     return rows.map((r) => ({
       chunk_id: r.id,
       text: r.text,
-      score: 1, // explicitly selected — max relevance
+      // explicitly selected — max relevance
+      score: 1,
       source_id: r.sourceId,
       chunk_index: r.chunkIndex,
     }));

@@ -26,7 +26,7 @@ const DEFAULT_PREVIEW_URL =
     : 'http://localhost:3030');
 
 export function getSlidevPreviewBaseUrl(): string {
-  return String(DEFAULT_PREVIEW_URL).replace(/\/+$/, '');
+  return String(DEFAULT_PREVIEW_URL).replace(/\/+$/u, '');
 }
 
 /** Build a Slidev preview iframe URL, optionally cache-busted with `cacheKey`. */

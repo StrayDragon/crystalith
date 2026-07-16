@@ -211,7 +211,8 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
       source_id: r.source_id,
       source_name: sourceMap.get(r.source_id) ?? 'unknown',
       chunk_id: r.chunk_id,
-      chunk_index: r.chunk_index + 1, // v1 stores 1-based (chunk.chunk_index + 1)
+      // v1 stores 1-based (chunk.chunk_index + 1)
+      chunk_index: r.chunk_index + 1,
       page_number: pageNumber,
       paragraph_index: paragraphIndex,
       snippet: chunk.text.slice(0, 200),

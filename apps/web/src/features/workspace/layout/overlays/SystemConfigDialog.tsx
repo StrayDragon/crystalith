@@ -15,7 +15,7 @@ import { toast } from '../../../../shared/toast';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { usePromptPresets } from '../../shared/hooks/usePromptPresets';
 
-const TRIGGER_RE = /^[a-z0-9_-]{1,32}$/;
+const TRIGGER_RE = /^[a-z0-9_-]{1,32}$/u;
 
 interface SystemConfigDialogProps {
   open: boolean;

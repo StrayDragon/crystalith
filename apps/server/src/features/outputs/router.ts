@@ -395,7 +395,8 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
           endOffset: offset + text.length,
         })
         .run();
-      offset += text.length + 2; // +2 for paragraph separator
+      // +2 for paragraph separator
+      offset += text.length + 2;
     }
 
     // Embed the chunks so they're discoverable via semantic search.

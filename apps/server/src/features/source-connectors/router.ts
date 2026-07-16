@@ -140,7 +140,8 @@ function validateConnectionConfig(
   config: Record<string, unknown>,
   schema: Record<string, unknown> | null,
 ): string | null {
-  if (!schema) return null; // no schema → accept anything
+  // no schema → accept anything
+  if (!schema) return null;
   if (schema.type === 'object' && typeof config !== 'object') {
     return 'connection_config must be an object';
   }

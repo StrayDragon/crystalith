@@ -78,7 +78,8 @@ async function handleRefine(
   if (!input) throw new Error('refine task missing refineInput payload');
   if (!payload.notebookId) throw new Error('refine task requires notebookId');
 
-  const trimmedPrompt = input.prompt.trim(); // v1 worker.py:165
+  // v1 worker.py:165
+  const trimmedPrompt = input.prompt.trim();
   if (!trimmedPrompt) throw new Error('Refine task requires a prompt');
 
   const format = input.format ?? 'paragraph';

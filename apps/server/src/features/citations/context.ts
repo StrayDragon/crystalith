@@ -18,8 +18,10 @@ import { chunks, sources } from '../../db/schema.ts';
 
 export interface CitationContextChunk {
   chunk_id: number;
-  chunk_index: number; // 1-based for v1 API compatibility
-  text: string; // full text (v1 returns untruncated)
+  // 1-based for v1 API compatibility
+  chunk_index: number;
+  // full text (v1 returns untruncated)
+  text: string;
   page_number: number | null;
   paragraph_index: number | null;
 }
@@ -81,7 +83,8 @@ async function resolveBySourceIndex(
   chunkIndex: number,
   notebookId: number,
 ): Promise<{ chunk: typeof chunks.$inferSelect; source: typeof sources.$inferSelect } | null> {
-  const zeroBased = chunkIndex - 1; // API is 1-based, DB is 0-based
+  // API is 1-based, DB is 0-based
+  const zeroBased = chunkIndex - 1;
   const rows = db()
     .select()
     .from(chunks)
@@ -186,8 +189,10 @@ function toContextChunk(chunk: typeof chunks.$inferSelect): CitationContextChunk
   const meta = chunk.metadata as ChunkMetadata;
   return {
     chunk_id: chunk.id,
-    chunk_index: chunk.chunkIndex + 1, // 1-based (v1 compat)
-    text: chunk.text ?? '', // full text (v1 returns untruncated — c39 gap fix)
+    // 1-based (v1 compat)
+    chunk_index: chunk.chunkIndex + 1,
+    // full text (v1 returns untruncated — c39 gap fix)
+    text: chunk.text ?? '',
     page_number: extractPageNumber(meta),
     paragraph_index: extractParagraphIndex(meta),
   };

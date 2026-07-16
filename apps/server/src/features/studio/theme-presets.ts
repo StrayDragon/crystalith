@@ -66,8 +66,8 @@ function buildPresetBody(template: ThemePresetTemplate, title?: string | null): 
  */
 function normalizeOverride(raw: string): string | null {
   const cleaned = raw
-    .replace(/^---\n?/, '')
-    .replace(/\n?---\n?$/, '')
+    .replace(/^---\n?/u, '')
+    .replace(/\n?---\n?$/u, '')
     .trim();
   return cleaned || null;
 }
@@ -90,7 +90,7 @@ export function buildFrontmatter(
   const override = frontmatterOverride ? normalizeOverride(frontmatterOverride) : null;
   if (override) {
     let body = override;
-    if (title && !/^title:/m.test(override)) {
+    if (title && !/^title:/mu.test(override)) {
       body = `title: ${yamlValue(title)}\n${override}`;
     }
     return `---\n${body}\n---\n`;

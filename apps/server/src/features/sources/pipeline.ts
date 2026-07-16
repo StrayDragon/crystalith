@@ -24,7 +24,8 @@ import { textParser } from './parsers/text.ts';
 
 registerParser(pdfParser);
 registerParser(htmlParser);
-registerParser(csvParser); // c46: CSV before text so it takes precedence
+// c46: CSV before text so it takes precedence
+registerParser(csvParser);
 registerParser(textParser);
 
 /** Async trigger: index source chunks via embed strategy (fire-and-forget). */
@@ -140,7 +141,8 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
           metadata: chunkMetadata as Record<string, unknown> | null,
         })
         .run();
-      offset += c.text.length + 1; // +1 for the separator
+      // +1 for the separator
+      offset += c.text.length + 1;
     }
 
     // 5. Embed synchronously — vectors MUST exist before marking ready (c30).

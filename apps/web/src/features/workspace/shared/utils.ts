@@ -30,7 +30,7 @@ export function buildRefineOutput(text: string): RefineOutput {
   }
 
   const bullets = normalized
-    .split(/[\n。；;]+/g)
+    .split(/[\n。；;]+/gu)
     .map((line) => line.trim())
     .filter(Boolean)
     .slice(0, 6);

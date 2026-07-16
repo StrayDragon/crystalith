@@ -27,7 +27,8 @@ function checkTriggerConflict(trigger: string, excludeId?: number): string | nul
   }
   const dupQuery = db().select().from(promptPresets);
   const dup = excludeId
-    ? dupQuery.where(eq(promptPresets.id, excludeId)).all() // no-op filter; we check below
+    ? // no-op filter; we check below
+      dupQuery.where(eq(promptPresets.id, excludeId)).all()
     : dupQuery.all();
   // Check all customs (excluding self if PATCH)
   const customs = db().select().from(promptPresets).all();
@@ -37,7 +38,8 @@ function checkTriggerConflict(trigger: string, excludeId?: number): string | nul
   if (conflict) {
     return `Trigger '${trigger}' already exists`;
   }
-  void dup; // suppress unused
+  // suppress unused
+  void dup;
   return null;
 }
 

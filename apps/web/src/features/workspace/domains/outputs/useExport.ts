@@ -55,7 +55,7 @@ async function exportPptx(output: OutputItem, fileName: string) {
   pptx.layout = 'LAYOUT_WIDE';
   pptx.author = 'Crystalith';
   pptx.subject = 'Exported Slides';
-  pptx.title = fileName.replace(/\.pptx$/i, '');
+  pptx.title = fileName.replace(/\.pptx$/iu, '');
 
   slides.forEach((slideData) => {
     const slide = pptx.addSlide();

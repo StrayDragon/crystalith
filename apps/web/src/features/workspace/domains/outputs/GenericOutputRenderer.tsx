@@ -137,7 +137,8 @@ function renderCitations(value: unknown): ReactNode {
     <div className="mt-1 flex flex-wrap gap-1">
       {value.slice(0, 6).map((item, index) => {
         const sourceName = isRecord(item)
-          ? (item.source_name ?? item.sourceTitle ?? item.source_title ?? item.source) // best-effort
+          ? // best-effort
+            (item.source_name ?? item.sourceTitle ?? item.source_title ?? item.source)
           : null;
         const label =
           typeof sourceName === 'string' && sourceName.trim()

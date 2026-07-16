@@ -66,7 +66,7 @@ function parseCsvRows(text: string): string[][] {
  * Pipes become \|, newlines become spaces. MUST run before truncation.
  */
 function escapeCell(cell: string): string {
-  return cell.replaceAll('|', '\\|').replaceAll(/\r?\n/g, ' ');
+  return cell.replaceAll('|', '\\|').replaceAll(/\r?\n/gu, ' ');
 }
 
 /** c53: truncate a cell to MAX_CELL_CHARS using the … ellipsis (v1 csv.py:66). */
@@ -118,7 +118,8 @@ export const csvParser: Parser = {
       pages.push({
         text: tableText,
         metadata: {
-          csv_row_start: start + 1, // 1-based (v1)
+          // 1-based (v1)
+          csv_row_start: start + 1,
           csv_row_end: end,
         },
       });

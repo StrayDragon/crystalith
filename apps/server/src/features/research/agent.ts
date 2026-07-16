@@ -310,16 +310,21 @@ function combineSignals(...signals: AbortSignal[]): AbortSignal {
 
 /** c46: Enhanced dedup — URL normalization + title similarity (v1 graph.py:517-562). */
 function normalizeUrl(url: string): string {
-  return url
-    .toLowerCase()
-    .replace(/[?#].*$/, '') // strip query/fragment
-    .replace(/\/+$/, '') // strip trailing slashes
-    .replace(/^https?:\/\/www\./, 'https://'); // strip www. prefix
+  return (
+    url
+      .toLowerCase()
+      // strip query/fragment
+      .replace(/[?#].*$/u, '')
+      // strip trailing slashes
+      .replace(/\/+$/u, '')
+      // strip www. prefix
+      .replace(/^https?:\/\/www\./u, 'https://')
+  );
 }
 
 function titleSimilarity(a: string, b: string): number {
-  const wordsA = new Set(a.toLowerCase().split(/\s+/).filter(Boolean));
-  const wordsB = new Set(b.toLowerCase().split(/\s+/).filter(Boolean));
+  const wordsA = new Set(a.toLowerCase().split(/\s+/u).filter(Boolean));
+  const wordsB = new Set(b.toLowerCase().split(/\s+/u).filter(Boolean));
   if (wordsA.size === 0 || wordsB.size === 0) return 0;
   let common = 0;
   for (const w of wordsA) if (wordsB.has(w)) common++;

@@ -55,16 +55,24 @@ module.exports = withMT({
         // 调整以下值可以统一修改整个应用的配色
         ui: {
           // 文字颜色
-          text: colors.gray[800], // 主要文字
-          'text-muted': colors.gray[600], // 次要文字
-          'text-subtle': colors.gray[500], // 辅助文字
+          // 主要文字
+          text: colors.gray[800],
+          // 次要文字
+          'text-muted': colors.gray[600],
+          // 辅助文字
+          'text-subtle': colors.gray[500],
           // 边框颜色
-          border: colors.gray[300], // 主要边框
-          'border-muted': colors.gray[200], // 次要边框
+          // 主要边框
+          border: colors.gray[300],
+          // 次要边框
+          'border-muted': colors.gray[200],
           // 背景颜色
-          bg: colors.gray[100], // 浅色背景
-          'bg-muted': colors.gray[50], // 更浅背景
-          'bg-hover': colors.gray[200], // 悬停背景
+          // 浅色背景
+          bg: colors.gray[100],
+          // 更浅背景
+          'bg-muted': colors.gray[50],
+          // 悬停背景
+          'bg-hover': colors.gray[200],
           // 交互状态
           hover: colors.gray[100],
           active: colors.gray[200],

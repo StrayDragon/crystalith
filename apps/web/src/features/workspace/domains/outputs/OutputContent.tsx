@@ -297,7 +297,7 @@ function SlidesMarkdownRenderer({ content }: { content: Record<string, unknown> 
 
   // Split on slide separators (---) and strip frontmatter
   const slides = markdown
-    .split(/\n---\n/)
+    .split(/\n---\n/u)
     .filter(Boolean)
     .map((s) => s.trim());
 
@@ -320,7 +320,7 @@ function SlidesMarkdownRenderer({ content }: { content: Record<string, unknown> 
           // Extract title from first heading line
           const lines = slide.split('\n');
           const headingLine = lines.find((l) => l.startsWith('#'));
-          const slideTitle = headingLine ? headingLine.replace(/^#+\s*/, '') : `第 ${i + 1} 页`;
+          const slideTitle = headingLine ? headingLine.replace(/^#+\s*/u, '') : `第 ${i + 1} 页`;
 
           return (
             <div
@@ -342,7 +342,7 @@ function SlidesMarkdownRenderer({ content }: { content: Record<string, unknown> 
                   .map((line, j) => (
                     <div key={j} className="flex gap-2">
                       <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gray-300 dark:bg-slate-600" />
-                      <span>{line.replace(/^[-*]\s+/, '').trim()}</span>
+                      <span>{line.replace(/^[-*]\s+/u, '').trim()}</span>
                     </div>
                   ))}
               </div>

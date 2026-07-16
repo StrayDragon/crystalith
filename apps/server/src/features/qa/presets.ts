@@ -98,7 +98,8 @@ export const DIRECTIVES: Record<Directive, string> = {
  */
 export function resolvePreset(presetName: string, directive: Directive = 'Mixed'): string {
   const preset = PRESETS[presetName] ?? PRESETS.default;
-  if (presetName === 'stats') return preset.systemPrompt; // no directive placeholder
+  // no directive placeholder
+  if (presetName === 'stats') return preset.systemPrompt;
   const directiveText = DIRECTIVES[directive];
   return preset.systemPrompt.replace('{{directive}}', directiveText ? `\n${directiveText}` : '');
 }

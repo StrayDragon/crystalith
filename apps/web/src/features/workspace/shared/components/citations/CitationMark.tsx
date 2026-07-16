@@ -23,7 +23,8 @@ export default function CitationMark({ index, citation, onHover, onJump }: Citat
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       const tooltipWidth = 280;
-      const tooltipHeight = 120; // estimated max height
+      // estimated max height
+      const tooltipHeight = 120;
       const gap = 6;
 
       let top = rect.bottom + gap;

@@ -38,7 +38,8 @@ export function buildContext(parts: ContextPart[], maxTokens: number): string {
   // Truncate from lowest priority until within budget.
   for (const part of ordered) {
     if (total <= maxTokens) break;
-    if (part.role === 'system' || part.role === 'query') continue; // never trim
+    // never trim
+    if (part.role === 'system' || part.role === 'query') continue;
     const partTokens = countTokens(part.text);
     const overflow = total - maxTokens;
     const keep = Math.max(0, partTokens - overflow);

@@ -74,7 +74,8 @@ export function resolveDedupAction(
     }
     // 'prompt' → caller throws 409; 'create_new' → ignore
     if (action === 'prompt') {
-      return { existingSourceId: dedupResult.existingSourceId }; // caller must check
+      // caller must check
+      return { existingSourceId: dedupResult.existingSourceId };
     }
   }
 

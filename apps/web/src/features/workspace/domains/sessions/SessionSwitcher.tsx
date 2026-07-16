@@ -326,7 +326,8 @@ export default function SessionSwitcher({
         onClick={() => {
           void (async () => {
             await onCreate();
-            onClose(); // Close popover if open
+            // Close popover if open
+            onClose();
           })();
         }}
         disabled={!isConnected}

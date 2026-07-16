@@ -67,8 +67,10 @@ export async function detectRelations(
 
     for (const hit of hits) {
       const target = entriesByChunk.get(hit.rowid);
-      if (target === undefined) continue; // hit not in our entry set
-      if (target.sourceId === entry.sourceId) continue; // exclude same-source
+      // hit not in our entry set
+      if (target === undefined) continue;
+      // exclude same-source
+      if (target.sourceId === entry.sourceId) continue;
 
       // v1 chroma cosine space: score = 1 - distance (chroma.py:136).
       const score = 1 - hit.distance;

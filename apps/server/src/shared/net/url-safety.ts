@@ -141,7 +141,8 @@ export async function validateUrlForFetch(url: string, policy?: SsrfPolicy): Pro
     if (policy?.allowlistOnly && !ipMatchesAllowlist(host, policy)) {
       throw new SsrfBlockedError(`IP ${host} not in allowlist`, 'not_allowlisted', host);
     }
-    return; // IP direct, no DNS needed.
+    // IP direct, no DNS needed.
+    return;
   }
 
   // 5. hostname: DNS resolve and check each IP.

@@ -6,7 +6,8 @@
 import type { ChunkResult } from './types.ts';
 
 const RRF_K = 60;
-const SEED_CAP = 3; // max seeds (incl. original) to bound cost
+// max seeds (incl. original) to bound cost
+const SEED_CAP = 3;
 
 // Output-type → seed suffix hints (v1 _build_query_seeds).
 const OUTPUT_HINTS: Record<string, string[]> = {
