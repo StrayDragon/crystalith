@@ -15,35 +15,41 @@ export interface SseEvent {
   data: unknown;
 }
 
-/** Parse a single SSE `data: {...}` line into an SseEvent. */
-function parseSseLine(line: string): SseEvent | null {
-  const trimmed = line.trim();
-  if (!trimmed || trimmed.startsWith(':')) return null;
-
+/**
+ * Parse a complete SSE event block (one or more lines ending at a blank line).
+ * Spec: `event:` sets the name; one or more `data:` lines are joined with `\n`.
+ */
+export function parseSseBlock(block: string): SseEvent | null {
+  const lines = block.split('\n');
   let eventName = 'message';
-  let eventData = '';
+  const dataLines: string[] = [];
 
-  if (trimmed.startsWith('event: ')) {
-    eventName = trimmed.slice(7).trim();
-    return { event: eventName, data: null };
-  }
+  for (const raw of lines) {
+    const line = raw.replace(/\r$/, '');
+    if (!line || line.startsWith(':')) continue;
 
-  if (trimmed.startsWith('data: ')) {
-    eventData = trimmed.slice(6);
-    try {
-      return { event: eventName, data: JSON.parse(eventData) };
-    } catch {
-      return { event: eventName, data: eventData };
+    if (line.startsWith('event:')) {
+      eventName = line.slice(6).trimStart();
+      continue;
     }
+
+    if (line.startsWith('data:')) {
+      // Spec allows optional single space after the colon
+      dataLines.push(line.startsWith('data: ') ? line.slice(6) : line.slice(5));
+      continue;
+    }
+
+    // id: / retry: — ignore
   }
 
-  // Handle id: and retry: lines — ignore for now
-  if (trimmed.startsWith('id: ') || trimmed.startsWith('retry: ')) {
-    return null;
-  }
+  if (dataLines.length === 0) return null;
 
-  // Unknown format — treat as data
-  return { event: eventName, data: trimmed };
+  const rawData = dataLines.join('\n');
+  try {
+    return { event: eventName, data: JSON.parse(rawData) };
+  } catch {
+    return { event: eventName, data: rawData };
+  }
 }
 
 function getBaseUrl(): string {
@@ -108,19 +114,19 @@ export async function* streamRequest(
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      // Keep last incomplete line in buffer
-      buffer = lines.pop() ?? '';
+      // SSE events are delimited by a blank line (\n\n)
+      const parts = buffer.split(/\n\n/);
+      buffer = parts.pop() ?? '';
 
-      for (const line of lines) {
-        const event = parseSseLine(line);
+      for (const part of parts) {
+        const event = parseSseBlock(part);
         if (event) yield event;
       }
     }
 
-    // Process remaining buffer
+    // Flush trailing block (some servers omit the final blank line)
     if (buffer.trim()) {
-      const event = parseSseLine(buffer);
+      const event = parseSseBlock(buffer);
       if (event) yield event;
     }
   } finally {

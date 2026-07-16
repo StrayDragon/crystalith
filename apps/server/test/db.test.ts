@@ -114,4 +114,54 @@ describe('db: sqlite-vec virtual table', () => {
     expect(row).toBeDefined();
     expect(row.text).toContain('Crystalith');
   });
+
+  it('sourceIds filter finds a small source even when others dominate KNN', () => {
+    // Populate many vectors for source A so notebook-wide top-K would miss source B
+    // under the old over-fetch+post-filter approach.
+    const [nb] = orm.insert(notebooks).values({ name: 'Filter NB' }).returning().all();
+    const notebookId = nb.id;
+    const [srcA] = orm
+      .insert(sources)
+      .values({ notebookId, filename: 'big.txt', status: 'ready' })
+      .returning()
+      .all();
+    const [srcB] = orm
+      .insert(sources)
+      .values({ notebookId, filename: 'small.txt', status: 'ready' })
+      .returning()
+      .all();
+
+    for (let i = 0; i < 20; i++) {
+      const [chk] = orm
+        .insert(chunks)
+        .values({ sourceId: srcA.id, chunkIndex: i, text: `big chunk ${i}` })
+        .returning()
+        .all();
+      const vec = new Float32Array(1024);
+      vec[0] = 1.0;
+      insertChunkVector(orm, chk.id, notebookId, srcA.id, vec);
+    }
+
+    const [smallChk] = orm
+      .insert(chunks)
+      .values({ sourceId: srcB.id, chunkIndex: 0, text: 'needle in small source' })
+      .returning()
+      .all();
+    const smallVec = new Float32Array(1024);
+    smallVec[1] = 1.0; // orthogonal to source A → ranks last notebook-wide
+    insertChunkVector(orm, smallChk.id, notebookId, srcB.id, smallVec);
+
+    const query = new Float32Array(1024);
+    query[0] = 1.0; // closer to source A
+
+    // Notebook-wide: source B should not appear in tiny top-K
+    const unscoped = searchVectors(orm, query, notebookId, 5);
+    expect(unscoped.every((h) => h.source_id === srcA.id)).toBe(true);
+
+    // Scoped to B: must still return the needle via partition equality
+    const scoped = searchVectors(orm, query, notebookId, 5, [srcB.id]);
+    expect(scoped).toHaveLength(1);
+    expect(scoped[0].rowid).toBe(smallChk.id);
+    expect(scoped[0].text).toContain('needle');
+  });
 });
