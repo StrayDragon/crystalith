@@ -9,7 +9,7 @@
 //   6. GET  /slides/:id/markdown/stream  → SSE (c43)
 //
 // CRUD: POST (create) / GET (list/id/latest) / PATCH (edit draft fields)
-// Slidev (c32): write .md to cwd/slides/ for preview
+// Slidev (c32): write .md to data/slides/ for preview
 //
 // H5+H6: generation logic + SSE helper extracted to service.ts
 import { desc, eq } from 'drizzle-orm';
