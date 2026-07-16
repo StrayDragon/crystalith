@@ -12,6 +12,7 @@
           "type": "object",
           "properties": {
             "upload_max_bytes": {
+              "description": "上传文件大小上限（字节）",
               "default": 52428800,
               "type": "number"
             }
@@ -24,10 +25,12 @@
       "type": "object",
       "properties": {
         "timeout": {
+          "description": "AI 调用超时（秒），范围 1-600",
           "default": 60,
           "type": "number"
         },
         "max_retries": {
+          "description": "AI 调用失败最大重试次数，范围 0-10",
           "default": 3,
           "type": "number"
         }
@@ -38,21 +41,26 @@
       "type": "object",
       "properties": {
         "temperature": {
+          "description": "生成温度，值越高输出越随机，范围 0-2",
           "type": "number"
         },
         "top_p": {
+          "description": "核采样概率阈值，范围 0-1",
           "type": "number"
         },
         "top_k": {
+          "description": "Top-K 采样参数，限制每次选择的前 K 个 token",
           "type": "number"
         },
         "stop": {
+          "description": "停止序列列表，遇到任一序列即停止生成",
           "type": "array",
           "items": {
             "type": "string"
           }
         },
         "reasoning": {
+          "description": "推理预算 token 数，0 表示不使用推理模式",
           "type": "number"
         }
       },
@@ -62,14 +70,17 @@
       "type": "object",
       "properties": {
         "embedding": {
+          "description": "嵌入生成最大并发数，0 表示不限制",
           "default": 8,
           "type": "number"
         },
         "vector_search": {
+          "description": "向量搜索最大并发数，0 表示不限制",
           "default": 8,
           "type": "number"
         },
         "llm_generate": {
+          "description": "LLM 生成最大并发数（含流式调用），0 表示不限制",
           "default": 4,
           "type": "number"
         }
@@ -80,10 +91,12 @@
       "type": "object",
       "properties": {
         "chunk_size": {
+          "description": "文本分块大小（token 数），最小 64",
           "default": 512,
           "type": "number"
         },
         "batch_size": {
+          "description": "嵌入 API 批处理大小，最小 1",
           "default": 32,
           "type": "number"
         }
@@ -94,15 +107,18 @@
       "type": "object",
       "properties": {
         "max_tokens": {
+          "description": "上下文窗口最大 token 数",
           "default": 8000,
           "type": "number"
         },
         "compression_strategy": {
+          "description": "上下文超限时压缩策略：truncate 截断 / summarize 摘要",
           "default": "truncate",
           "type": "string",
           "enum": []
         },
         "window_size": {
+          "description": "上下文窗口包含的历史消息轮次数",
           "default": 10,
           "type": "number"
         }
@@ -122,18 +138,22 @@
           "type": "object",
           "properties": {
             "host": {
+              "description": "SearXNG 实例 URL，留空禁用搜索引擎",
               "default": "",
               "type": "string"
             },
             "api_key": {
+              "description": "SearXNG API 密钥，可为空",
               "default": null,
               "type": "string"
             },
             "max_results": {
+              "description": "搜索结果最大条数，范围 1-50",
               "default": 10,
               "type": "number"
             },
             "timeout": {
+              "description": "SearXNG 请求超时（毫秒），最大 120000",
               "default": 20000,
               "type": "number"
             }
@@ -154,13 +174,16 @@
           "type": "object",
           "properties": {
             "enabled": {
+              "description": "是否启用该服务",
               "default": false,
               "type": "boolean"
             },
             "endpoint": {
+              "description": "服务端点地址",
               "type": "string"
             },
             "timeout_s": {
+              "description": "请求超时（秒）",
               "type": "number"
             }
           }
@@ -174,13 +197,16 @@
           "type": "object",
           "properties": {
             "enabled": {
+              "description": "是否启用该服务",
               "default": false,
               "type": "boolean"
             },
             "endpoint": {
+              "description": "服务端点地址",
               "type": "string"
             },
             "timeout_s": {
+              "description": "请求超时（秒）",
               "type": "number"
             }
           }
@@ -189,13 +215,16 @@
           "type": "object",
           "properties": {
             "enabled": {
+              "description": "是否启用该服务",
               "default": false,
               "type": "boolean"
             },
             "endpoint": {
+              "description": "服务端点地址",
               "type": "string"
             },
             "timeout_s": {
+              "description": "请求超时（秒）",
               "type": "number"
             }
           }
@@ -207,6 +236,7 @@
       "type": "object",
       "properties": {
         "data_root": {
+          "description": "运行时数据根目录路径，相对路径从 CWD 解析",
           "default": "./data",
           "type": "string"
         }
@@ -217,10 +247,12 @@
       "type": "object",
       "properties": {
         "allowlist_only": {
+          "description": "仅允许白名单中的主机访问，禁止所有未列出的地址",
           "default": false,
           "type": "boolean"
         },
         "allowlist_hosts": {
+          "description": "白名单主机名列表（精确匹配）",
           "default": [],
           "type": "array",
           "items": {
@@ -228,6 +260,7 @@
           }
         },
         "allowlist_domains": {
+          "description": "白名单域名列表（子域名通配）",
           "default": [],
           "type": "array",
           "items": {
@@ -235,6 +268,7 @@
           }
         },
         "allowlist_cidrs": {
+          "description": "白名单 CIDR 网段列表",
           "default": [],
           "type": "array",
           "items": {
@@ -242,6 +276,7 @@
           }
         },
         "max_redirects": {
+          "description": "URL 获取时最大重定向次数",
           "default": 5,
           "type": "number"
         }

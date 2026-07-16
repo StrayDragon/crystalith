@@ -15,10 +15,12 @@
     "format": "echo '@crystalith/shared format is managed by root; run bun format from repo root'",
     "format:check": "echo '@crystalith/shared format:check is managed by root; run bun format:check from repo root'",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "typesafe-i18n": "typesafe-i18n"
   },
   "devDependencies": {
-    "typescript": "^7",
+    "typesafe-i18n": "^5.27.1",
+    "typescript": "^7.0.2",
     "zod": "^4.4.3"
   },
   "peerDependencies": {

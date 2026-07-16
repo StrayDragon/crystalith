@@ -3,10 +3,11 @@
 import { z } from 'zod';
 
 import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from './common.js';
+import { desc } from './i18n.js';
 
 export const TemplateSchema = z.object({
-  id: IdSchema,
-  name: z.string().min(1).max(255),
+  id: IdSchema.describe(desc('template.id')),
+  name: z.string().min(1).max(255).describe(desc('template.name')),
   description: z.string().nullable().optional(),
   config_json: JsonMetadataSchema,
   is_builtin: z.boolean().default(false),
@@ -15,7 +16,7 @@ export const TemplateSchema = z.object({
 export type Template = z.infer<typeof TemplateSchema>;
 
 export const TemplateCreateSchema = z.object({
-  name: z.string().min(1).max(255),
+  name: z.string().min(1).max(255).describe(desc('template.name')),
   description: z.string().nullable().optional(),
   config_json: JsonMetadataSchema,
 });

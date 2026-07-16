@@ -2,17 +2,18 @@
 import { z } from 'zod';
 
 import { IdSchema, IsoTimestampSchema, TimestampsSchema } from './common.js';
+import { desc } from './i18n.js';
 
 export const NotebookSchema = z.object({
-  id: IdSchema,
-  name: z.string().min(1).max(255),
-  created_at: IsoTimestampSchema,
-  updated_at: IsoTimestampSchema,
+  id: IdSchema.describe(desc('notebook.id')),
+  name: z.string().min(1).max(255).describe(desc('notebook.name')),
+  created_at: IsoTimestampSchema.describe(desc('notebook.created_at')),
+  updated_at: IsoTimestampSchema.describe(desc('notebook.updated_at')),
 });
 export type Notebook = z.infer<typeof NotebookSchema>;
 
 export const NotebookCreateSchema = z.object({
-  name: z.string().min(1).max(255),
+  name: z.string().min(1).max(255).describe(desc('notebook.name')),
 });
 export type NotebookCreate = z.infer<typeof NotebookCreateSchema>;
 

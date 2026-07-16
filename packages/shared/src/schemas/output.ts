@@ -4,6 +4,7 @@
 import { z } from 'zod';
 
 import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from './common.js';
+import { desc } from './i18n.js';
 
 // ---------------------------------------------------------------------------
 // Output type enum (10 types — 7 tools + 3 summary styles)
@@ -221,13 +222,13 @@ export type OutputContent = z.infer<typeof OutputContentSchema>;
 // ---------------------------------------------------------------------------
 
 export const OutputSchema = z.object({
-  id: IdSchema,
+  id: IdSchema.describe(desc('output.id')),
   notebook_id: IdSchema,
-  type: OutputTypeSchema,
+  type: OutputTypeSchema.describe(desc('output.type')),
   prompt: z.string().nullable().optional(),
   chunk_ids: z.array(IdSchema).nullable().optional(),
-  content: OutputContentSchema,
-  created_at: IsoTimestampSchema,
+  content: OutputContentSchema.describe(desc('output.content')),
+  created_at: IsoTimestampSchema.describe(desc('output.created_at')),
   updated_at: IsoTimestampSchema,
 });
 export type Output = z.infer<typeof OutputSchema>;
