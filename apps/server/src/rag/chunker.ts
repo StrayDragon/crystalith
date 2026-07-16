@@ -34,7 +34,7 @@ export const DEFAULT_CHUNKER_CONFIG: ChunkerConfig = {
 export function chunkText(text: string, config?: ChunkerConfig): ChunkResult[] {
   const { maxLen, overlap } = config ?? resolveChunkerConfig();
   const paragraphs = text
-    .split(/\n\n+/)
+    .split(/\n\n+/u)
     .map((p) => p.trim())
     .filter(Boolean);
 
@@ -45,7 +45,7 @@ export function chunkText(text: string, config?: ChunkerConfig): ChunkResult[] {
       chunks.push({ text: para });
     } else {
       // Split long paragraphs by sentences with overlap
-      const sentences = para.match(/[^.!?]+[.!?]+/g) ?? [para];
+      const sentences = para.match(/[^.!?]+[.!?]+/gu) ?? [para];
       let current = '';
       for (const s of sentences) {
         if ((current + s).length > maxLen && current.length > 0) {

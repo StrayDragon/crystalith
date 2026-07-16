@@ -31,7 +31,8 @@ const TRACKING_PARAMS = new Set([
 export function canonicalizeUrlForDedup(url: string): string {
   const u = new URL(url);
   u.hostname = u.hostname.toLowerCase();
-  u.hash = ''; // strip fragment
+  // strip fragment
+  u.hash = '';
 
   // Strip default ports.
   if (
@@ -51,7 +52,7 @@ export function canonicalizeUrlForDedup(url: string): string {
 
   // Strip trailing slash on non-root path.
   if (u.pathname.length > 1) {
-    u.pathname = u.pathname.replace(/\/+$/, '');
+    u.pathname = u.pathname.replace(/\/+$/u, '');
   }
 
   return u.toString();

@@ -278,7 +278,7 @@ export function splitTextToChunks(text: string, chunkSize = 500, overlap = 50): 
     if (para.length <= chunkSize) {
       chunks.push(para);
     } else {
-      const sentences = para.match(/[^.!?]+[.!?]+/g) ?? [para];
+      const sentences = para.match(/[^.!?]+[.!?]+/gu) ?? [para];
       let current = '';
       for (const s of sentences) {
         if ((current + s).length > chunkSize && current.length > 0) {

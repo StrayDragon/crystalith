@@ -1,12 +1,12 @@
 // Path normalization for source connectors — mirrors v1 shared/source_connectors/paths.py
 
-const WINDOWS_DRIVE_RE = /^[a-zA-Z]:\//;
+const WINDOWS_DRIVE_RE = /^[a-zA-Z]:\//u;
 
 export function normalizeRelativePath(raw: string): string {
   const text = (raw || '').trim();
   if (!text) throw new Error('relative_path must not be empty');
 
-  const normalizedSeparators = text.replace(/\\/g, '/');
+  const normalizedSeparators = text.replace(/\\/gu, '/');
 
   if (WINDOWS_DRIVE_RE.test(normalizedSeparators)) {
     throw new Error('relative_path must not be an absolute Windows path');
@@ -43,13 +43,13 @@ export function normalizeRelativePath(raw: string): string {
 }
 
 export function normalizeDirectoryPath(raw: string): string {
-  const normalized = normalizeRelativePath(raw).replace(/\/+$/, '');
+  const normalized = normalizeRelativePath(raw).replace(/\/+$/u, '');
   if (!normalized) throw new Error('directory path must not be empty');
   return normalized;
 }
 
 export function normalizeFilePath(raw: string): string {
-  const normalized = normalizeRelativePath(raw).replace(/\/+$/, '');
+  const normalized = normalizeRelativePath(raw).replace(/\/+$/u, '');
   if (!normalized) throw new Error('file path must not be empty');
   return normalized;
 }

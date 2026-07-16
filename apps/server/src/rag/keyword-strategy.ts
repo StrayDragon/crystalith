@@ -111,7 +111,8 @@ export class KeywordStrategy implements RAGStrategy {
       .map((r) => ({
         chunk_id: r.chunk_id,
         text: r.text,
-        score: bm25Score(r, total), // normalized BM25 rank (0-1, higher = better)
+        // normalized BM25 rank (0-1, higher = better)
+        score: bm25Score(r, total),
         source_id: r.source_id,
         chunk_index: r.chunk_index,
       }))

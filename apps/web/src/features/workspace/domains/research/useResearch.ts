@@ -161,7 +161,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
   const lastEventAtRef = useRef<number>(Date.now());
   const reconnectAttemptRef = useRef(0);
   const maxReconnectAttempts = 5;
-  const baseReconnectDelay = 1000; // 1 second
+  // 1 second
+  const baseReconnectDelay = 1000;
   const maxSseEvents = 500;
   const staleConnectionMs = 45000;
   const staleCheckIntervalMs = 5000;

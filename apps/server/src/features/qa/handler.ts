@@ -143,7 +143,8 @@ export async function streamQa(opts: QaHandlerOptions): Promise<Response> {
     model: opts.model,
     systemPrompt: systemWithContext,
     messages: [...opts.history, { role: 'user' as const, content: opts.question }],
-    maxSteps: opts.maxSteps ?? 1, // no tool calls needed — context is pre-injected
+    // no tool calls needed — context is pre-injected
+    maxSteps: opts.maxSteps ?? 1,
     messageId: opts.messageId,
     citationsResolver: async () => judgment.citations,
     confidenceResolver: async () => judgment.confidence,

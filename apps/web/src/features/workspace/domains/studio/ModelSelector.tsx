@@ -40,7 +40,8 @@ export function ModelSelector({
   label = '选择模型',
   disabled = false,
   size = 'md',
-  fullWidth: _fullWidth = true, // Ignored in MT Select as it is block by default or controlled by container
+  // Ignored in MT Select as it is block by default or controlled by container
+  fullWidth: _fullWidth = true,
   className = '',
 }: ModelSelectorProps) {
   const [modelsData, setModelsData] = useState<ModelsListResponse | null>(null);

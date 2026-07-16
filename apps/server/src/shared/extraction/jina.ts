@@ -41,7 +41,7 @@ export const jinaExtractor: Extractor = {
     const text = await res.text();
     // Extract title from the first H1 / markdown heading.
     let title = url;
-    const h1Match = text.match(/^#\s+(.+)$/m);
+    const h1Match = text.match(/^#\s+(.+)$/mu);
     if (h1Match) title = h1Match[1].trim();
 
     return {

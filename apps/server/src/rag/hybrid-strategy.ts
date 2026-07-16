@@ -78,7 +78,8 @@ function rrfFuse(
   return entries.map((entry) => ({
     chunk_id: entry.hit.chunk_id,
     text: entry.hit.text,
-    score: maxRrf > 0 ? entry.rrf / maxRrf : 0, // normalized RRF as similarity
+    // normalized RRF as similarity
+    score: maxRrf > 0 ? entry.rrf / maxRrf : 0,
     source_id: entry.hit.source_id,
     chunk_index: entry.hit.chunk_index,
   }));

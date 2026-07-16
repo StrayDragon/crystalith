@@ -82,7 +82,7 @@ export async function detectContradictions(
 
 /** Truncate text to ~800 chars for LLM context window. */
 function truncate(text: string, limit = 800): string {
-  const cleaned = text.replaceAll(/\s+/g, ' ').trim();
+  const cleaned = text.replaceAll(/\s+/gu, ' ').trim();
   if (cleaned.length <= limit) return cleaned;
   return cleaned.slice(0, limit) + '...';
 }

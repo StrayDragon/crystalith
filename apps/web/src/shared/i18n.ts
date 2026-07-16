@@ -136,7 +136,7 @@ const MESSAGES_BY_LOCALE: Record<Locale, typeof ZH_CN_MESSAGES> = {
   'zh-CN': ZH_CN_MESSAGES,
 };
 
-const TEMPLATE_PARAM = /\{(\w+)\}/g;
+const TEMPLATE_PARAM = /\{(\w+)\}/gu;
 
 export function t(
   key: MessageKey,

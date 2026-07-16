@@ -616,7 +616,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     const export_type = (body as { export_type?: string })?.export_type ?? 'source';
 
     // Build markdown report content
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const timestamp = new Date().toISOString().replace(/[:.]/gu, '-');
     const reportContent = [
       `# 研究报告：${row.topic}`,
       '',

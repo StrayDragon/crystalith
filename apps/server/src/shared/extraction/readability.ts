@@ -16,7 +16,8 @@ export const readabilityExtractor: Extractor = {
   name: 'readability',
 
   isAvailable(): boolean {
-    return true; // always available — local, no API key needed
+    // always available — local, no API key needed
+    return true;
   },
 
   async extract(url: string, _config: unknown): Promise<ExtractedContent> {

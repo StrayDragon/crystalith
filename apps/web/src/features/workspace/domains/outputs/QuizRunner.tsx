@@ -36,7 +36,7 @@ function normalize(value: string | undefined | null): string {
  *   "text"     → "text"       (no prefix)
  */
 function stripOptionPrefix(text: string): string {
-  return text.replace(/^[A-Za-z][).\s]\s*/, '').trim();
+  return text.replace(/^[A-Za-z][).\s]\s*/u, '').trim();
 }
 
 /**
@@ -44,7 +44,7 @@ function stripOptionPrefix(text: string): string {
  * Returns the uppercase letter or null.
  */
 function extractOptionLetter(text: string): string | null {
-  const match = text.trim().match(/^([A-Za-z])[).\s]/);
+  const match = text.trim().match(/^([A-Za-z])[).\s]/u);
   return match ? match[1].toUpperCase() : null;
 }
 

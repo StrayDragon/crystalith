@@ -174,7 +174,8 @@ async function finishPipeline(
     try {
       const repaired = await generateOutputByType(input.model, input.type, context, input.prompt);
       if (!needsRepair(input.type, repaired)) {
-        object = repaired; // accept the repaired output
+        // accept the repaired output
+        object = repaired;
       }
     } catch {
       // repair pass failed — keep the original object (will fallback in postprocess)
@@ -417,7 +418,8 @@ export function ensureMinimumContentFields(
 function needsRepair(type: string, content: unknown): boolean {
   if (!content || typeof content !== 'object' || Array.isArray(content)) return true;
   const c = content as Record<string, unknown>;
-  if (c._fallback === true) return false; // already a fallback — don't repair
+  // already a fallback — don't repair
+  if (c._fallback === true) return false;
   const isBlank = (v: unknown): boolean => typeof v !== 'string' || v.trim() === '';
   const items = c.items;
   switch (type) {
@@ -650,7 +652,8 @@ function buildCitationMap(chunkRows: ChunkRow[]): {
   const citations = hydrateCitations(retrieved);
 
   const citationMap = new Map<number, Citation>();
-  citations.forEach((citation, i) => citationMap.set(i + 1, citation)); // 1-based index
+  // 1-based index
+  citations.forEach((citation, i) => citationMap.set(i + 1, citation));
 
   return { citations, citationMap };
 }
@@ -766,11 +769,13 @@ function sanitizeCitationList(
       continue;
     }
     if (item <= 0 || item > maxIndex) {
-      didChange = true; // out of range
+      // out of range
+      didChange = true;
       continue;
     }
     if (seen.has(item)) {
-      didChange = true; // duplicate
+      // duplicate
+      didChange = true;
       continue;
     }
     seen.add(item);

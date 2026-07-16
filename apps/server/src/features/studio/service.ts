@@ -48,7 +48,7 @@ export const SlideOutlineSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export function stripFrontmatter(md: string): string {
-  return md.replace(/^---\n[\s\S]*?\n---\n?/, '');
+  return md.replace(/^---\n[\s\S]*?\n---\n?/u, '');
 }
 
 export function applyFrontmatter(md: string, frontmatter: string): string {

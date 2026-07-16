@@ -220,7 +220,7 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
       .join('\n\n');
 
     const title = sessionRow.title ?? `会话_${sid}`;
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const timestamp = new Date().toISOString().replace(/[:.]/gu, '-');
     const filename = `对话_${title}_${timestamp}.md`;
 
     // Create source

@@ -23,11 +23,11 @@ const VI_OPS = {
 };
 
 function isTestFile(filePath) {
-  return /\.(test|spec)\.(ts|tsx|js|jsx|mjs|cjs)$/.test(filePath);
+  return /\.(test|spec)\.(ts|tsx|js|jsx|mjs|cjs)$/u.test(filePath);
 }
 
 function isExperimentalTestFile(filePath) {
-  return /\.experimental\.(test|spec)\./.test(filePath);
+  return /\.experimental\.(test|spec)\./u.test(filePath);
 }
 
 function readFileUtf8(filePath) {
@@ -100,7 +100,7 @@ const filesWithOps = results.filter((result) => result.totalOps > 0);
 const reasonHits = results.reduce((acc, result) => {
   if (!result.hasMockReason) return acc;
   const text = readFileUtf8(result.filePath);
-  return acc + (text.match(/Mock reason:/g)?.length ?? 0);
+  return acc + (text.match(/Mock reason:/gu)?.length ?? 0);
 }, 0);
 const totalOps = results.reduce((acc, result) => acc + result.totalOps, 0);
 

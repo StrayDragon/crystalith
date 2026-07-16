@@ -89,7 +89,8 @@ function findDotenv(): string {
     if (parent === dir) break;
     dir = parent;
   }
-  return '.env'; // fallback
+  // fallback
+  return '.env';
 }
 
 let _envPath: string | null = null;
@@ -113,7 +114,7 @@ function envValue(key: string): string | undefined {
 
 /** Render all `{{ ... }}` expressions in a string. */
 function renderTemplates(source: string): string {
-  return source.replaceAll(/\{\{([^}]+)\}\}/g, (_match, expr: string) => {
+  return source.replaceAll(/\{\{([^}]+)\}\}/gu, (_match, expr: string) => {
     return String(resolveExpression(expr.trim()));
   });
 }
@@ -168,10 +169,10 @@ function splitTopLevel(s: string, sep: string): string[] {
 
 /** Resolve `env.KEY` or `secret.KEY` or a bare string literal. */
 function resolveLookup(head: string): unknown {
-  const envMatch = head.match(/^env\.([A-Za-z_][A-Za-z0-9_]*)$/);
+  const envMatch = head.match(/^env\.([A-Za-z_][A-Za-z0-9_]*)$/u);
   if (envMatch) return envValue(envMatch[1]);
 
-  const secretMatch = head.match(/^secret\.([A-Za-z_][A-Za-z0-9_]*)$/);
+  const secretMatch = head.match(/^secret\.([A-Za-z_][A-Za-z0-9_]*)$/u);
   if (secretMatch) return secrets()[secretMatch[1]];
 
   // Bare quoted string literal.
@@ -186,7 +187,7 @@ function resolveLookup(head: string): unknown {
 
 /** Apply a single `filter(...)` expression. */
 function applyFilter(value: unknown, filter: string): unknown {
-  const m = filter.match(/^([A-Za-z_]+)\((.*)\)$/);
+  const m = filter.match(/^([A-Za-z_]+)\((.*)\)$/u);
   if (!m) return value;
   const [, name, argStr] = m;
   if (name === 'default') {

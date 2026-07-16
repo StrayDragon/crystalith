@@ -2,7 +2,8 @@
 // Mirrors v1 shared/extraction/extractor.py plugin protocol.
 export interface ExtractedContent {
   title: string;
-  content: string; // markdown or plain text
+  // markdown or plain text
+  content: string;
   description?: string;
   author?: string;
   publishedDate?: string;

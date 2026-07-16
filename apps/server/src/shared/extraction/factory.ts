@@ -84,14 +84,17 @@ export function listExtractorMetadata(config: unknown): ExtractorMetadata[] {
     const ext = extractors[name];
     return {
       name,
-      type: name, // c62: v1 uses `type`; `name` is the v2 alias
+      // c62: v1 uses `type`; `name` is the v2 alias
+      type: name,
       available: ext ? ext.isAvailable(config) : false,
-      enabled: true, // v2 has no per-extractor disable config (monolithic)
+      // v2 has no per-extractor disable config (monolithic)
+      enabled: true,
       display_name: DISPLAY_NAMES[name] ?? name,
       description: DESCRIPTIONS[name] ?? '',
       priority: (index + 1) * 10,
       requires_api_key: name !== 'readability',
-      requires_service: name !== 'readability', // jina/firecrawl call external services
+      // jina/firecrawl call external services
+      requires_service: name !== 'readability',
       recovery_hint: RECOVERY_HINTS[name] ?? null,
     };
   });

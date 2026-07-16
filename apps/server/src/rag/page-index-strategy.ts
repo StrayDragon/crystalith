@@ -87,7 +87,8 @@ export class PageIndexStrategy implements RAGStrategy {
         results.push({
           chunk_id: group.chunkIds[0],
           text: group.text.slice(0, 500),
-          score, // substring-match density (0-1, higher = better)
+          // substring-match density (0-1, higher = better)
+          score,
           source_id: group.source_id,
           chunk_index: group.page,
         });

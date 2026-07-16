@@ -89,7 +89,8 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
         .select()
         .from(messages)
         .where(eq(messages.sessionId, sid))
-        .orderBy(messages.createdAt) // ASC: chronological order
+        // ASC: chronological order
+        .orderBy(messages.createdAt)
         .limit(limit)
         .offset(offset)
         .all();

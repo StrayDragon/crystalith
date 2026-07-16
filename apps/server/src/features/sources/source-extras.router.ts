@@ -58,13 +58,13 @@ function parseSummaryResponse(response: string): {
     if (!line) continue;
 
     if (line.startsWith('摘要：') || line.startsWith('摘要:')) {
-      summary = line.split(/[：:]/, 2)[1]?.trim() ?? '';
+      summary = line.split(/[：:]/u, 2)[1]?.trim() ?? '';
       section = 'summary';
     } else if (line.startsWith('要点：') || line.startsWith('要点:')) {
       section = 'points';
     } else if (line.startsWith('主题：') || line.startsWith('主题:')) {
-      const topicsStr = line.split(/[：:]/, 2)[1]?.trim() ?? '';
-      for (const t of topicsStr.replace(/[、,]/g, ',').split(',')) {
+      const topicsStr = line.split(/[：:]/u, 2)[1]?.trim() ?? '';
+      for (const t of topicsStr.replace(/[、,]/gu, ',').split(',')) {
         const trimmed = t.trim();
         if (trimmed) topics.push(trimmed);
       }
@@ -114,7 +114,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
     if (chunkRows.length === 0) throw new NotFoundError('Source has no content');
 
     const totalText = chunkRows.map((c) => c.text).join(' ');
-    const wordCount = totalText.split(/\s+/).length;
+    const wordCount = totalText.split(/\s+/u).length;
 
     const contextBlocks = chunkRows.slice(0, 10);
     const context = contextBlocks.map((c, i) => `[片段 ${i + 1}]\n${c.text}`).join('\n\n');
@@ -235,7 +235,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
       messages?: Array<{ role: 'user' | 'assistant'; content: string }>;
     };
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const timestamp = new Date().toISOString().replace(/[:.]/gu, '-');
     const filename = `QA_${source.filename}_${timestamp}.md`;
 
     let text: string;

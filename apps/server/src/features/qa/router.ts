@@ -97,7 +97,7 @@ function maybeSetSessionTitle(sessionId: number, question: string): void {
   const session = db().select().from(sessions).where(eq(sessions.id, sessionId)).get();
   if (!session) return;
   if (session.title && session.title.trim() && session.title !== 'New session') return;
-  const cleaned = question.trim().replace(/\s+/g, ' ').slice(0, 80) || 'New session';
+  const cleaned = question.trim().replace(/\s+/gu, ' ').slice(0, 80) || 'New session';
   db().update(sessions).set({ title: cleaned }).where(eq(sessions.id, sessionId)).run();
 }
 
@@ -110,7 +110,7 @@ function parsePromptDirective(
   bodyPreset?: string,
 ): { preset: string; question: string } {
   // v1 presets.py:9-12: [a-z0-9_-]{1,32}, case-insensitive, lowercased
-  const match = question.match(/^\/prompt:([a-z0-9_-]{1,32})\s+/i);
+  const match = question.match(/^\/prompt:([a-z0-9_-]{1,32})\s+/iu);
   if (match) {
     return { preset: match[1]!.toLowerCase(), question: question.slice(match[0].length) };
   }

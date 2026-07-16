@@ -22,9 +22,11 @@ export function applyDiversity(
 
   for (const r of results) {
     const hash = createHash('sha256').update(r.text.trim()).digest('hex');
-    if (seen.has(hash)) continue; // dedup near-identical
+    // dedup near-identical
+    if (seen.has(hash)) continue;
     const count = perSource.get(r.source_id) ?? 0;
-    if (count >= maxPerSource) continue; // source diversity cap
+    // source diversity cap
+    if (count >= maxPerSource) continue;
     seen.add(hash);
     perSource.set(r.source_id, count + 1);
     out.push(r);
