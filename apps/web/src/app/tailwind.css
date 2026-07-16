@@ -130,6 +130,17 @@
     background-size: 200% 200%;
     animation: ux-gradient-shift 4.5s ease infinite;
   }
+
+  /* Source locate: flash the card body (not just a static ring). */
+  .ux-source-locate-flash {
+    animation: ux-source-locate-flash 1.35s ease-in-out 1;
+    border-color: rgb(147 197 253); /* blue-300 */
+  }
+
+  .dark .ux-source-locate-flash {
+    animation-name: ux-source-locate-flash-dark;
+    border-color: rgb(59 130 246); /* blue-500 */
+  }
 }
 
 @keyframes typing-cursor-blink {
@@ -186,6 +197,44 @@
   }
 }
 
+@keyframes ux-source-locate-flash {
+  0%,
+  100% {
+    background-color: rgb(255 255 255);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  }
+  18%,
+  52%,
+  86% {
+    background-color: rgb(191 219 254); /* blue-200 */
+    box-shadow: 0 0 0 2px rgb(147 197 253 / 0.65);
+  }
+  35%,
+  69% {
+    background-color: rgb(239 246 255); /* blue-50 */
+    box-shadow: 0 0 0 1px rgb(191 219 254 / 0.9);
+  }
+}
+
+@keyframes ux-source-locate-flash-dark {
+  0%,
+  100% {
+    background-color: rgb(15 23 42); /* slate-900 */
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+  }
+  18%,
+  52%,
+  86% {
+    background-color: rgb(30 58 138); /* blue-900 */
+    box-shadow: 0 0 0 2px rgb(59 130 246 / 0.55);
+  }
+  35%,
+  69% {
+    background-color: rgb(23 37 84); /* blue-950-ish */
+    box-shadow: 0 0 0 1px rgb(37 99 235 / 0.7);
+  }
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -202,9 +251,21 @@
   .ux-fade-in,
   .ux-slide-in,
   .ux-modal-in,
-  .ux-animated-gradient {
+  .ux-animated-gradient,
+  .ux-source-locate-flash {
     animation: none !important;
     transition-duration: 0ms !important;
+  }
+
+  .ux-source-locate-flash {
+    background-color: rgb(239 246 255) !important; /* blue-50 */
+    border-color: rgb(147 197 253) !important;
+    box-shadow: 0 0 0 2px rgb(147 197 253 / 0.45) !important;
+  }
+
+  .dark .ux-source-locate-flash {
+    background-color: rgb(30 58 138) !important;
+    border-color: rgb(59 130 246) !important;
   }
 
   .theme-transition *,
