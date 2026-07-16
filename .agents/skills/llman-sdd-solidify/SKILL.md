@@ -1,61 +1,61 @@
 ---
-name: "llman-sdd-specs-compact"
-description: "Human-triggered maintenance tool. Compacts and deduplicates llman SDD specs after many archived changes — merges redundant requirements and scenarios while preserving all normative behavior. NOT part of the regular pipeline: only run when the user explicitly asks to compact specs."
+name: "llman-sdd-solidify"
+description: "Serialize a change's delta scenarios into executable .feature files (BDD-on only). Applies after apply, before archive. Framework-agnostic: filters by the scenario feature field and a self-reference guard, then writes Gherkin."
 metadata:
   version: "0.0.61"
 ---
 
-# LLMAN SDD Specs Compact
+# LLMAN SDD Solidify
 
-Use this skill to compact specs without changing normative behavior.
+Use this skill to generate (regenerate) the executable `.feature` files for a change, from its delta `spec.toon` scenarios. BDD-on projects only.
 
 ## Pipeline Position
 
 ```mermaid
 flowchart LR
-    archive["llman-sdd-archive<br/>After archiving"] --> compact
-    compact["📎 llman-sdd-specs-compact<br/>Compact specs (maintenance)"]
+    apply["llman-sdd-apply<br/>Implement"] --> verify["llman-sdd-verify<br/>Verify"]
+    verify --> solidify
+    solidify["★ llman-sdd-solidify ★<br/>Solidify (you are here)"]
+    solidify --> archive["llman-sdd-archive<br/>Archive"]
+    archive --> commit["git commit<br/>Done"]
 
-    style compact fill:#e8f4e8,stroke:#28a745,stroke-width:2px
+    style solidify fill:#fff3cd,stroke:#ffc107,stroke-width:3px
 ```
 
-> 📎 Maintenance tool, typically run after accumulating many archives. For daily development → `llman-sdd-propose` / `llman-sdd-apply`.
+> 📍 You are in the solidify phase: after verify passes, before archive.
+> BDD-off projects: this is a no-op (nothing to generate).
 
-## Context
-- Specs grow bloated with duplicate requirements/scenarios as changes accumulate.
-- Compaction must remain verifiable and regressible.
-- When archive history is too large, it interferes with compaction review and navigation.
+## Hard Constraints
 
-## Goal
-- Identify and merge redundant requirements/scenarios.
-- Form a more compact and maintainable spec structure.
+- **BDD mode awareness** — check `llmanspec/config.yaml` for a `bdd:` block first, then branch:
+  - **BDD-on** (`bdd:` present): proceed with solidify normally (steps below).
+  - **BDD-off, no `.feature` files anywhere under `llmanspec/specs/`**: no-op. Report "nothing to solidify (BDD is off)".
+  - **BDD-off, but `.feature` files exist**: report a **residual warning** — list each file and state: "Found N `.feature` file(s) but BDD is off (no `bdd:` block in `config.yaml`). They are ignored by `validate`/`index`. To make them executable again, add a `bdd:` block (e.g. `bdd:\n  run_command: \"cargo test --features bdd\"`). Re-enable intentionally, or remove them if no longer needed." **Do NOT delete the files** — surface them and let the user decide.
+- **Framework-agnostic**: solidify does NOT scan `tests/bdd_steps.rs` or any BDD framework's step bindings. Whether a scenario is *executable* at runtime is decided by `bdd.run_command`.
+- **Don't edit `.feature` by hand**: they are generated artifacts. Edit `spec.toon` scenarios, then re-run solidify.
+- **Don't ask "should I continue?"**: run to completion unless you hit an unresolvable error.
 
-## Constraints
-- Don't delete normative behavior without explicit replacement.
-- Try to keep requirement titles stable.
-- Each retained requirement must have at least one valid scenario.
+## Steps
 
-## Workflow
-1. Inventory current specs (`llman sdd list --specs`).
-2. If archived history is large, run archive freeze first:
-   - Preview: `llman sdd archive freeze --dry-run`
-   - Execute: `llman sdd archive freeze --before <YYYY-MM-DD> --keep-recent <N>`
-3. Identify overlapping items across capabilities.
-4. Produce a compaction plan (canonical requirements + keep/merge/remove decisions + migration notes).
-5. Execute and validate (`llman sdd validate --specs --strict --no-interactive`).
+### 1) Confirm target change
+- Determine the change id (from user input or context).
+- Always announce: "Solidifying change: <id>".
+- `spec.toon` is the SSOT. `.feature` files are the **executable subset** of its scenarios, serialized as Gherkin.
+- Scenarios whose `when` invokes `llman sdd validate|archive|solidify` are **self-referencing** and are skipped (would recurse the BDD runner).
 
-## Decision Policy
-- Prefer merging when two requirements are semantically equivalent.
-- Only extract shared spec text when reference relationships are clear.
-- When archive directory is noisy, suggest freezing first before compacting.
-- If compaction would change external behavior, pause and ask the user first.
+### 2) (Optional) Dry-run preview
+- `llman sdd solidify <id> --dry-run` to preview which scenarios write vs skip.
+- Review the skip reasons: `feature=false` and self-referencing scenarios are expected.
 
-## Output Contract
-- Output compaction plan grouped by capability.
-- Include: keep/merge/remove decisions with rationale.
-- Include validation commands and expected results.
+### 3) Execute solidify
+- `llman sdd solidify <id>`
+- This writes one `.feature` per capability under `llmanspec/specs/<capability>/<capability>.feature`.
 
-> 💡 After maintenance, new work goes through the normal pipeline: `llman-sdd-propose` → `llman-sdd-apply` → `llman-sdd-verify` → `llman-sdd-archive`.
+### 4) Report
+- Summarize: per capability, how many scenarios written vs skipped, and the output path.
+- Skipped scenarios list their reason.
+
+> 💡 Previous phase `llman-sdd-verify` (passed) → this phase generates `.feature` → next phase `llman-sdd-archive` (archive).
 
 Before acting, read `llmanspec/config.yaml` and follow its `context` and `rules` if present.
 
