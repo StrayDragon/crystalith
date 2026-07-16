@@ -50,13 +50,13 @@ export async function resolveModel(config: ModelConfig): Promise<LanguageModelV4
     throw new TypeError(`Factory '${factory}' not found in '${sdk}'`);
   }
 
-  const providerConfig = config.provider_config ?? {};
+  const providerConfig = config.providerConfig ?? {};
   const opts: Record<string, unknown> = {
-    apiKey: resolveApiKey(providerConfig.api_key),
-    baseURL: providerConfig.base_url || undefined,
+    apiKey: resolveApiKey(providerConfig.apiKey),
+    baseURL: providerConfig.baseUrl || undefined,
     organization: providerConfig.organization || undefined,
     project: providerConfig.project || undefined,
-    headers: config.request_options?.headers ?? undefined,
+    headers: config.requestOptions?.headers ?? undefined,
     supportsStructuredOutputs: providerConfig.supportsStructuredOutputs ?? false,
   };
 
@@ -98,10 +98,10 @@ export async function resolveEmbeddingModel(config: ModelConfig): Promise<Embedd
     throw new TypeError(`Factory '${factory}' not found in '${sdk}'`);
   }
 
-  const providerConfig = config.provider_config ?? {};
+  const providerConfig = config.providerConfig ?? {};
   const opts: Record<string, unknown> = {
-    apiKey: resolveApiKey(providerConfig.api_key),
-    baseURL: providerConfig.base_url || undefined,
+    apiKey: resolveApiKey(providerConfig.apiKey),
+    baseURL: providerConfig.baseUrl || undefined,
     organization: providerConfig.organization || undefined,
     project: providerConfig.project || undefined,
     supportsStructuredOutputs: providerConfig.supportsStructuredOutputs ?? false,

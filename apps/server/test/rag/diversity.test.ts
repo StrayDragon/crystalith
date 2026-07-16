@@ -5,19 +5,19 @@ import { applyDiversity } from '../../src/rag/diversity.ts';
 import type { ChunkResult } from '../../src/rag/types.ts';
 
 function mkChunk(id: number, sourceId: number, text = 'unique'): ChunkResult {
-  return { chunk_id: id, text: `${text}-${id}`, score: 0.5, source_id: sourceId, chunk_index: 0 };
+  return { chunkId: id, text: `${text}-${id}`, score: 0.5, sourceId: sourceId, chunkIndex: 0 };
 }
 
 describe('applyDiversity', () => {
   it('removes near-duplicate chunks by content sha256', () => {
     const dupes = [
-      { chunk_id: 1, text: 'same text', score: 0.9, source_id: 1, chunk_index: 0 },
-      { chunk_id: 2, text: 'same text', score: 0.9, source_id: 1, chunk_index: 0 }, // dup
-      { chunk_id: 3, text: 'different', score: 0.8, source_id: 1, chunk_index: 0 },
+      { chunkId: 1, text: 'same text', score: 0.9, sourceId: 1, chunkIndex: 0 },
+      { chunkId: 2, text: 'same text', score: 0.9, sourceId: 1, chunkIndex: 0 }, // dup
+      { chunkId: 3, text: 'different', score: 0.8, sourceId: 1, chunkIndex: 0 },
     ];
     const result = applyDiversity(dupes);
     expect(result).toHaveLength(2);
-    expect(result.map((r) => r.chunk_id)).toEqual([1, 3]);
+    expect(result.map((r) => r.chunkId)).toEqual([1, 3]);
   });
 
   it('caps results per source (default 3)', () => {

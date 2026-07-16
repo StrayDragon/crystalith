@@ -47,11 +47,11 @@ export function rrfFuseSeeds(resultLists: ChunkResult[][], topK: number): ChunkR
     for (let rank = 0; rank < list.length; rank++) {
       const c = list[rank];
       const contribution = 1 / (RRF_K + rank + 1);
-      const existing = acc.get(c.chunk_id);
+      const existing = acc.get(c.chunkId);
       if (existing) {
         existing.rrf += contribution;
       } else {
-        acc.set(c.chunk_id, { chunk: c, rrf: contribution });
+        acc.set(c.chunkId, { chunk: c, rrf: contribution });
       }
     }
   }

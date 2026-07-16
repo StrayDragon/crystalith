@@ -126,7 +126,7 @@ export function refineRouter(taskQueue: TaskQueue) {
       // Single-format refine — via task queue (v1 POST "")
       .post('/refine', async ({ body, set }) => {
         const b = body as Record<string, unknown>;
-        const notebookId = Number(b.notebook_id);
+        const notebookId = Number(b.notebookId);
 
         // ① notebook existence → 404
         const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
@@ -137,14 +137,14 @@ export function refineRouter(taskQueue: TaskQueue) {
         let sourceIds: number[];
         try {
           format = validateFormat(b.format ?? 'paragraph');
-          sourceIds = b.source_ids ? normalizeSourceIds(b.source_ids) : [];
+          sourceIds = b.sourceIds ? normalizeSourceIds(b.sourceIds) : [];
           validateSourceIds(notebookId, sourceIds);
         } catch (error) {
           return sendError(set, ErrorCode.INVALID_REQUEST, (error as Error).message);
         }
 
-        const topK = Number(b.top_k ?? 5);
-        const minScore = Number(b.min_score ?? 0.2);
+        const topK = Number(b.topK ?? 5);
+        const minScore = Number(b.minScore ?? 0.2);
 
         // ③ enqueue + waitForCompletion
         const taskId = taskQueue.enqueue({
@@ -154,10 +154,10 @@ export function refineRouter(taskQueue: TaskQueue) {
             refineInput: {
               prompt: String(b.prompt),
               format,
-              source_ids: sourceIds.length ? sourceIds : undefined,
-              top_k: topK,
-              min_score: minScore,
-              notebook_id: notebookId,
+              sourceIds: sourceIds.length ? sourceIds : undefined,
+              topK: topK,
+              minScore: minScore,
+              notebookId: notebookId,
             },
           },
           priority: 1,
@@ -180,7 +180,7 @@ export function refineRouter(taskQueue: TaskQueue) {
       // Batch refine — direct concurrent (v1 POST /batch, NOT via queue)
       .post('/refine/batch', async ({ body, set }) => {
         const b = body as Record<string, unknown>;
-        const notebookId = Number(b.notebook_id);
+        const notebookId = Number(b.notebookId);
 
         const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
         if (!nb) throw new NotFoundError('Notebook not found');
@@ -193,14 +193,14 @@ export function refineRouter(taskQueue: TaskQueue) {
             Array.isArray(b.formats) && b.formats.length > 0
               ? b.formats.map((f) => validateFormat(f))
               : [...ALL_FORMATS];
-          sourceIds = b.source_ids ? normalizeSourceIds(b.source_ids) : [];
+          sourceIds = b.sourceIds ? normalizeSourceIds(b.sourceIds) : [];
           validateSourceIds(notebookId, sourceIds);
         } catch (error) {
           return sendError(set, ErrorCode.INVALID_REQUEST, (error as Error).message);
         }
 
-        const topK = Number(b.top_k ?? 5);
-        const minScore = Number(b.min_score ?? 0.2);
+        const topK = Number(b.topK ?? 5);
+        const minScore = Number(b.minScore ?? 0.2);
         const prompt = String(b.prompt).trim();
         if (!prompt) {
           return sendError(set, ErrorCode.INVALID_REQUEST, 'Refine task requires a prompt');
@@ -253,7 +253,7 @@ export function refineRouter(taskQueue: TaskQueue) {
           outputs,
           citations,
           evidence,
-          created_at: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
         };
       })
   );

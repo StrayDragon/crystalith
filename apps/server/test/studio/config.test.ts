@@ -145,20 +145,20 @@ describe('c56: buildSlidesConfigSchema completeness (workspace-api-contract r20)
   const schema = buildSlidesConfigSchema();
 
   it('returns all 7 options arrays non-empty', () => {
-    expect(schema.quantity_options.length).toBeGreaterThan(0);
-    expect(schema.audience_options.length).toBeGreaterThan(0);
-    expect(schema.structure_options.length).toBeGreaterThan(0);
-    expect(schema.tone_options.length).toBeGreaterThan(0);
-    expect(schema.language_options.length).toBeGreaterThan(0);
-    expect(schema.density_options.length).toBeGreaterThan(0);
-    expect(schema.theme_preset_options.length).toBeGreaterThan(0);
+    expect(schema.quantityOptions.length).toBeGreaterThan(0);
+    expect(schema.audienceOptions.length).toBeGreaterThan(0);
+    expect(schema.structureOptions.length).toBeGreaterThan(0);
+    expect(schema.toneOptions.length).toBeGreaterThan(0);
+    expect(schema.languageOptions.length).toBeGreaterThan(0);
+    expect(schema.densityOptions.length).toBeGreaterThan(0);
+    expect(schema.themePresetOptions.length).toBeGreaterThan(0);
   });
 
-  it('each option has id, label, is_default', () => {
-    for (const opt of schema.quantity_options) {
+  it('each option has id, label, isDefault', () => {
+    for (const opt of schema.quantityOptions) {
       expect(typeof opt.id).toBe('string');
       expect(typeof opt.label).toBe('string');
-      expect(typeof opt.is_default).toBe('boolean');
+      expect(typeof opt.isDefault).toBe('boolean');
     }
   });
 
@@ -173,15 +173,15 @@ describe('c56: buildSlidesConfigSchema completeness (workspace-api-contract r20)
 
   it('has exactly one default per options array', () => {
     const arrays = [
-      schema.quantity_options,
-      schema.audience_options,
-      schema.structure_options,
-      schema.tone_options,
-      schema.language_options,
-      schema.density_options,
+      schema.quantityOptions,
+      schema.audienceOptions,
+      schema.structureOptions,
+      schema.toneOptions,
+      schema.languageOptions,
+      schema.densityOptions,
     ];
     for (const arr of arrays) {
-      const defaults = arr.filter((o) => o.is_default);
+      const defaults = arr.filter((o) => o.isDefault);
       expect(defaults.length).toBe(1);
     }
   });

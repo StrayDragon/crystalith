@@ -68,16 +68,16 @@ export default function StudioToolsGrid({
   );
   const activeToolSchema = activeTool?.configSchema ?? null;
   const quantityOptions = useMemo(() => {
-    const options = activeToolSchema?.quantity_options ?? [];
+    const options = activeToolSchema?.quantityOptions ?? [];
     return options.length > 0 ? options : FALLBACK_QUANTITY_OPTIONS;
   }, [activeToolSchema]);
   const difficultyOptions = useMemo(
-    () => activeToolSchema?.difficulty_options ?? [],
+    () => activeToolSchema?.difficultyOptions ?? [],
     [activeToolSchema],
   );
-  const supportsTopic = activeToolSchema?.supports_topic !== false;
+  const supportsTopic = activeToolSchema?.supportsTopic !== false;
   const topicPlaceholder =
-    activeToolSchema?.topic_placeholder ||
+    activeToolSchema?.topicPlaceholder ||
     '示例提示\n• 限定特定来源或主题\n• 说明重点关注的方向\n• 提供具体的约束条件';
 
   const typeLabelMap = useMemo(() => {
@@ -100,10 +100,10 @@ export default function StudioToolsGrid({
       const tool = tools.find((item) => item.outputType === toolType) ?? null;
       const schema = tool?.configSchema ?? null;
       const localQuantityOptions =
-        schema?.quantity_options && schema.quantity_options.length > 0
-          ? schema.quantity_options
+        schema?.quantityOptions && schema.quantityOptions.length > 0
+          ? schema.quantityOptions
           : FALLBACK_QUANTITY_OPTIONS;
-      const localDifficultyOptions = schema?.difficulty_options ?? [];
+      const localDifficultyOptions = schema?.difficultyOptions ?? [];
       setConfigQuantity(localQuantityOptions.find((o) => o.is_default)?.id || 'standard');
       setConfigDifficulty(localDifficultyOptions.find((o) => o.is_default)?.id || 'medium');
       setConfigTopic('');

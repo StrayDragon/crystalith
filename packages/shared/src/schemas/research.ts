@@ -37,35 +37,35 @@ export type ResearchStepStatus = z.infer<typeof ResearchStepStatusSchema>;
 
 export const ResearchSessionSchema = z.object({
   id: IdSchema,
-  notebook_id: IdSchema,
+  notebookId: IdSchema,
   topic: z.string().min(1),
   status: ResearchStatusSchema,
-  current_iteration: z.number().int().positive(),
-  max_iterations: z.number().int().positive(),
-  aggregated_results: z.array(JsonMetadataSchema).nullable().optional(),
-  final_report: z.string().nullable().optional(),
-  locked_at: OptionalTimestampSchema,
-  lock_expires_at: OptionalTimestampSchema,
-  created_at: IsoTimestampSchema,
-  updated_at: IsoTimestampSchema,
+  currentIteration: z.number().int().positive(),
+  maxIterations: z.number().int().positive(),
+  aggregatedResults: z.array(JsonMetadataSchema).nullable().optional(),
+  finalReport: z.string().nullable().optional(),
+  lockedAt: OptionalTimestampSchema,
+  lockExpiresAt: OptionalTimestampSchema,
+  createdAt: IsoTimestampSchema,
+  updatedAt: IsoTimestampSchema,
 });
 export type ResearchSession = z.infer<typeof ResearchSessionSchema>;
 
 export const ResearchSessionCreateSchema = z.object({
   topic: z.string().min(1),
-  max_iterations: z.number().int().positive().max(10).optional(),
+  maxIterations: z.number().int().positive().max(10).optional(),
 });
 export type ResearchSessionCreate = z.infer<typeof ResearchSessionCreateSchema>;
 
 export const ResearchStepSchema = z.object({
   id: IdSchema,
-  session_id: IdSchema,
+  sessionId: IdSchema,
   iteration: z.number().int().positive(),
   type: ResearchStepTypeSchema,
-  input_data: JsonMetadataSchema.nullable().optional(),
-  output_data: JsonMetadataSchema.nullable().optional(),
+  inputData: JsonMetadataSchema.nullable().optional(),
+  outputData: JsonMetadataSchema.nullable().optional(),
   status: ResearchStepStatusSchema,
-  created_at: IsoTimestampSchema,
+  createdAt: IsoTimestampSchema,
 });
 export type ResearchStep = z.infer<typeof ResearchStepSchema>;
 
@@ -89,7 +89,7 @@ export const SearchPlanSchema = z.object({
   iteration: z.number().int().positive(),
   queries: z.array(SearchQuerySchema).default([]),
   reasoning: z.string().default(''),
-  estimated_results: z.number().int().default(10),
+  estimatedResults: z.number().int().default(10),
 });
 export type SearchPlan = z.infer<typeof SearchPlanSchema>;
 
@@ -99,17 +99,17 @@ export const ResearchSearchResultSchema = z.object({
   snippet: z.string().default(''),
   source: z.string().default(''),
   iteration: z.number().int().default(1),
-  relevance_score: z.number().default(0),
+  relevanceScore: z.number().default(0),
 });
 export type ResearchSearchResult = z.infer<typeof ResearchSearchResultSchema>;
 
 export const IterationAnalysisSchema = z.object({
   iteration: z.number().int().positive(),
-  result_count: z.number().int().nonnegative(),
+  resultCount: z.number().int().nonnegative(),
   coverage: z.number().min(0).max(1),
   summary: z.string(),
-  need_more_search: z.boolean(),
-  suggested_queries: z.array(z.string()).default([]),
+  needMoreSearch: z.boolean(),
+  suggestedQueries: z.array(z.string()).default([]),
 });
 export type IterationAnalysis = z.infer<typeof IterationAnalysisSchema>;
 
@@ -126,13 +126,13 @@ export const ResearchOutputSchema = z.object({
   title: z.string(),
   content: z.string(),
   url: z.string().nullable().optional(),
-  source_iteration: z.number().int().default(1),
-  relevance_score: z.number().default(0),
+  sourceIteration: z.number().int().default(1),
+  relevanceScore: z.number().default(0),
   snippet: z.string().default(''),
-  citation_index: z.number().int().nullable().optional(),
-  can_export_as_source: z.boolean().default(true),
-  can_export_as_note: z.boolean().default(true),
-  recommended_extractor: z.string().nullable().optional(),
+  citationIndex: z.number().int().nullable().optional(),
+  canExportAsSource: z.boolean().default(true),
+  canExportAsNote: z.boolean().default(true),
+  recommendedExtractor: z.string().nullable().optional(),
 });
 export type ResearchOutput = z.infer<typeof ResearchOutputSchema>;
 
@@ -145,6 +145,6 @@ export type ResearchUserAction = z.infer<typeof ResearchUserActionSchema>;
 
 export const ResearchUserInputSchema = z.object({
   action: ResearchUserActionSchema,
-  modified_plan: SearchPlanSchema.nullable().optional(),
+  modifiedPlan: SearchPlanSchema.nullable().optional(),
   message: z.string().optional(),
 });

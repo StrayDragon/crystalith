@@ -142,8 +142,8 @@ describe('research HITL — approve', () => {
   it('full approve cycle: plan → waiting_user → approve → completed', async () => {
     const { body, status } = await post('/v2/research', {
       topic: 'What is TypeScript?',
-      notebook_id: notebookId,
-      max_iterations: 1,
+      notebookId: notebookId,
+      maxIterations: 1,
     });
     expect(status).toBe(201);
     const sessionId = body.id;
@@ -177,8 +177,8 @@ describe('research HITL — approve', () => {
   it('plan step contains the search plan data at waiting_user', async () => {
     const { body } = await post('/v2/research', {
       topic: 'Test approval step',
-      notebook_id: notebookId,
-      max_iterations: 1,
+      notebookId: notebookId,
+      maxIterations: 1,
     });
     await waitForStatus(body.id, 'waiting_user');
 
@@ -201,8 +201,8 @@ describe('research HITL — approve', () => {
   it('rejects approve on a cancelled (terminal) session', async () => {
     const { body } = await post('/v2/research', {
       topic: 'Already cancelled',
-      notebook_id: notebookId,
-      max_iterations: 1,
+      notebookId: notebookId,
+      maxIterations: 1,
     });
     await post(`/v2/research/${body.id}/cancel`);
     const res = await post(`/v2/research/${body.id}/approve`);
@@ -214,8 +214,8 @@ describe('research HITL — skip', () => {
   it('skip unblocks the agent without changes', async () => {
     const { body } = await post('/v2/research', {
       topic: 'Test skip action',
-      notebook_id: notebookId,
-      max_iterations: 1,
+      notebookId: notebookId,
+      maxIterations: 1,
     });
     await waitForStatus(body.id, 'waiting_user');
 
@@ -232,8 +232,8 @@ describe('research HITL — finish', () => {
   it('finish completes early without further iterations', async () => {
     const { body } = await post('/v2/research', {
       topic: 'Early finish',
-      notebook_id: notebookId,
-      max_iterations: 3,
+      notebookId: notebookId,
+      maxIterations: 3,
     });
     await waitForStatus(body.id, 'waiting_user');
 
@@ -254,8 +254,8 @@ describe('research HITL — multi-iteration approve', () => {
   it('cycles through 2 iterations with approve between each', async () => {
     const { body } = await post('/v2/research', {
       topic: 'Multi-iteration test',
-      notebook_id: notebookId,
-      max_iterations: 2,
+      notebookId: notebookId,
+      maxIterations: 2,
     });
     const sessionId = body.id;
 

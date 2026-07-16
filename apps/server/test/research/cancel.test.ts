@@ -122,8 +122,8 @@ describe('research cancel', () => {
   it('cancel during waiting_user transitions to cancelled', async () => {
     const { body } = await post('/v2/research', {
       topic: 'Cancel during waiting',
-      notebook_id: notebookId,
-      max_iterations: 3,
+      notebookId: notebookId,
+      maxIterations: 3,
     });
     const sessionId = body.id;
 
@@ -144,8 +144,8 @@ describe('research cancel', () => {
   it('cancel before approval prevents completion', async () => {
     const { body } = await post('/v2/research', {
       topic: 'Cancel before approve',
-      notebook_id: notebookId,
-      max_iterations: 1,
+      notebookId: notebookId,
+      maxIterations: 1,
     });
     const sessionId = body.id;
 
@@ -169,8 +169,8 @@ describe('research cancel', () => {
   it('cancel on a multi-iteration session stops early', async () => {
     const { body } = await post('/v2/research', {
       topic: 'Multi-iteration early stop',
-      notebook_id: notebookId,
-      max_iterations: 5,
+      notebookId: notebookId,
+      maxIterations: 5,
     });
     const sessionId = body.id;
 
@@ -195,8 +195,8 @@ describe('research cancel', () => {
   it('idempotent cancel on already cancelled session', async () => {
     const { body } = await post('/v2/research', {
       topic: 'Double cancel',
-      notebook_id: notebookId,
-      max_iterations: 1,
+      notebookId: notebookId,
+      maxIterations: 1,
     });
     await waitForStatus(body.id, 'waiting_user');
 

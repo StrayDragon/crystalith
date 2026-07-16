@@ -60,8 +60,8 @@ export default function ExtractorPolicyDialog({
 
   const mode = policy?.mode ?? 'inherit_global';
   const enabledSet = useMemo(
-    () => new Set(policy?.enabled_extractors ?? []),
-    [policy?.enabled_extractors],
+    () => new Set(policy?.enabledExtractors ?? []),
+    [policy?.enabledExtractors],
   );
 
   const sortedExtractors = useMemo(() => {
@@ -115,7 +115,7 @@ export default function ExtractorPolicyDialog({
       const nextList = Array.from(next).toSorted((a: string, b: string) => a.localeCompare(b));
       setIsSaving(true);
       try {
-        await onPatchPolicy?.({ enabled_extractors: nextList });
+        await onPatchPolicy?.({ enabledExtractors: nextList });
       } catch (error) {
         const message = error instanceof Error ? error.message : '更新失败';
         toast.error(message);
@@ -266,7 +266,7 @@ export default function ExtractorPolicyDialog({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">
-                          {ext.display_name}
+                          {ext.displayName}
                         </div>
                         <div className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
                           <span className="font-mono">{ext.type}</span>
@@ -281,12 +281,12 @@ export default function ExtractorPolicyDialog({
                         >
                           {ext.available ? 'available' : 'unavailable'}
                         </div>
-                        {ext.requires_api_key ? (
+                        {ext.requiresApiKey ? (
                           <div className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200">
                             需要 API Key
                           </div>
                         ) : null}
-                        {ext.requires_service ? (
+                        {ext.requiresService ? (
                           <div className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200">
                             需要服务
                           </div>
@@ -297,20 +297,20 @@ export default function ExtractorPolicyDialog({
                         {ext.description}
                       </div>
 
-                      {ext.plugin_id ? (
+                      {ext.pluginId ? (
                         <div className="mt-1 text-[11px] text-gray-600 dark:text-slate-400">
-                          plugin: <span className="font-mono">{ext.plugin_id}</span>
+                          plugin: <span className="font-mono">{ext.pluginId}</span>
                         </div>
                       ) : null}
 
-                      {ext.error_code ? (
+                      {ext.errorCode ? (
                         <div className="mt-1 text-[11px] text-gray-600 dark:text-slate-400">
-                          error_code: <span className="font-mono">{ext.error_code}</span>
+                          errorCode: <span className="font-mono">{ext.errorCode}</span>
                           {ext.message ? ` · ${ext.message}` : ''}
                         </div>
                       ) : null}
 
-                      {ext.recovery_hint ? (
+                      {ext.recoveryHint ? (
                         <div className="mt-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 px-3 py-2">
                           <div className="flex items-center justify-between gap-2">
                             <div className="text-[11px] font-semibold text-gray-800 dark:text-slate-200">
@@ -318,7 +318,7 @@ export default function ExtractorPolicyDialog({
                             </div>
                             <button
                               type="button"
-                              onClick={() => void handleCopy(ext.recovery_hint ?? '')}
+                              onClick={() => void handleCopy(ext.recoveryHint ?? '')}
                               className="px-2 py-1 rounded-md text-[11px] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-1"
                             >
                               <ContentCopyIcon sx={{ fontSize: 14 }} />
@@ -326,7 +326,7 @@ export default function ExtractorPolicyDialog({
                             </button>
                           </div>
                           <pre className="mt-1 whitespace-pre-wrap text-[11px] text-gray-700 dark:text-slate-300">
-                            {ext.recovery_hint}
+                            {ext.recoveryHint}
                           </pre>
                         </div>
                       ) : null}

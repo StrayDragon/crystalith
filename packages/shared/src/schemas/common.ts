@@ -19,16 +19,16 @@ export const IdSchema = z.number().int().positive();
 
 /** Common audit columns present on most entities. */
 export const TimestampsSchema = z.object({
-  created_at: IsoTimestampSchema,
-  updated_at: IsoTimestampSchema,
+  createdAt: IsoTimestampSchema,
+  updatedAt: IsoTimestampSchema,
 });
 
 /** Standard error envelope returned by all v2 endpoints on failure. */
 export const ErrorEnvelopeSchema = z.object({
-  error_code: z.string(),
+  errorCode: z.string(),
   message: z.string(),
   details: z.unknown().optional(),
-  retry_after: z.number().int().nonnegative().optional(),
+  retryAfter: z.number().int().nonnegative().optional(),
 });
 export type ErrorEnvelope = z.infer<typeof ErrorEnvelopeSchema>;
 

@@ -5,7 +5,7 @@ import { buildQuerySeeds, rrfFuseSeeds } from '../../src/rag/multi-query.ts';
 import type { ChunkResult } from '../../src/rag/types.ts';
 
 function mkChunk(id: number, score = 0.5): ChunkResult {
-  return { chunk_id: id, text: `text-${id}`, score, source_id: 1, chunk_index: 0 };
+  return { chunkId: id, text: `text-${id}`, score, sourceId: 1, chunkIndex: 0 };
 }
 
 describe('buildQuerySeeds', () => {
@@ -33,7 +33,7 @@ describe('rrfFuseSeeds', () => {
     const listB = [mkChunk(2), mkChunk(4), mkChunk(1)];
     const fused = rrfFuseSeeds([listA, listB], 4);
     // Chunks 1 and 2 appear in both lists → higher RRF score.
-    const ids = fused.map((c) => c.chunk_id);
+    const ids = fused.map((c) => c.chunkId);
     expect(ids).toContain(1);
     expect(ids).toContain(2);
     expect(fused[0].score).toBeGreaterThan(0);

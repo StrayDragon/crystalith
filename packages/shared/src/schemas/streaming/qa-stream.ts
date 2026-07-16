@@ -6,7 +6,7 @@
 // the existing frontend renderer works with minimal adaptation.
 import { z } from 'zod';
 
-import { CitationSchema, IdSchema, JsonMetadataSchema } from '../common.js';
+import { CitationSchema, IdSchema, IsoTimestampSchema, JsonMetadataSchema } from '../common.js';
 import { ChatTurnSchema } from '../message.js';
 
 export const QaStreamChunkEventSchema = z.object({
@@ -14,15 +14,15 @@ export const QaStreamChunkEventSchema = z.object({
 });
 
 export const QaStreamStateSnapshotSchema = z.object({
-  message_id: IdSchema.nullable().optional(),
-  shared_state: JsonMetadataSchema.optional(),
+  messageId: IdSchema.nullable().optional(),
+  sharedState: JsonMetadataSchema.optional(),
 });
 
 export const QaStreamDoneEventSchema = z.object({
-  message_id: IdSchema.nullable().optional(),
+  messageId: IdSchema.nullable().optional(),
   citations: z.array(CitationSchema).default([]),
   /** Tool calls executed during the agent loop (for transparent UI). */
-  tool_calls: z
+  toolCalls: z
     .array(
       z.object({
         name: z.string(),
@@ -34,36 +34,36 @@ export const QaStreamDoneEventSchema = z.object({
   /** Confidence score in [0,1] derived from evidence (similarity + coverage). */
   confidence: z.number().min(0).max(1).optional(),
   /** Reason for no evidence (mirrors v1 no_evidence_reason). */
-  no_evidence_reason: z
+  noEvidenceReason: z
     .enum(['no_sources', 'embedding_empty', 'no_vector_hits', 'no_valid_chunks', 'low_similarity'])
     .optional(),
 });
 
 export const QaStreamErrorEventSchema = z.object({
   message: z.string(),
-  error_code: z.string().optional(),
+  errorCode: z.string().optional(),
 });
 
 /** Request body for POST /v2/qa/stream. */
 export const QaStreamRequestSchema = z.object({
-  session_id: IdSchema,
+  sessionId: IdSchema,
   question: z.string().min(1),
   /** Optional prior turns for multi-turn context (excludes the new question). */
   history: z.array(ChatTurnSchema).default([]),
   /** Override the default chat model id. */
-  model_id: z.string().optional(),
+  modelId: z.string().optional(),
   /** RAG strategy id (defaults to the notebook's active strategy). */
-  strategy_id: z.string().optional(),
-  top_k: z.number().int().positive().max(50).optional(),
+  strategyId: z.string().optional(),
+  topK: z.number().int().positive().max(50).optional(),
 });
 export type QaStreamRequest = z.infer<typeof QaStreamRequestSchema>;
 
 /** Non-streaming QA response (POST /v2/qa/ask). */
 export const QaAnswerSchema = z.object({
-  message_id: IdSchema,
+  messageId: IdSchema,
   answer: z.string(),
   citations: z.array(CitationSchema).default([]),
-  created_at: z.string(),
+  createdAt: IsoTimestampSchema,
 });
 export type QaAnswer = z.infer<typeof QaAnswerSchema>;
 

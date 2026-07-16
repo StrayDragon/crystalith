@@ -103,11 +103,11 @@ describe('retrieveForRefine (citation-aware)', () => {
     // Stub EmbedStrategy.retrieve to return this chunk (skip real embed+search).
     const mockResults: ChunkResult[] = [
       {
-        chunk_id: chunk.id,
+        chunkId: chunk.id,
         text: '  relevant evidence text here  ',
         score: 0.9,
-        source_id: src.id,
-        chunk_index: 0,
+        sourceId: src.id,
+        chunkIndex: 0,
       },
     ];
     EmbedStrategy.prototype.retrieve = async () => mockResults;
@@ -163,8 +163,8 @@ describe('retrieveForRefine (citation-aware)', () => {
 
     // retrieve returns both, but only src1 is requested
     EmbedStrategy.prototype.retrieve = async () => [
-      { chunk_id: c1.id, text: 'from src1', score: 0.9, source_id: src1.id, chunk_index: 0 },
-      { chunk_id: c2.id, text: 'from src2', score: 0.8, source_id: src2.id, chunk_index: 0 },
+      { chunkId: c1.id, text: 'from src1', score: 0.9, sourceId: src1.id, chunkIndex: 0 },
+      { chunkId: c2.id, text: 'from src2', score: 0.8, sourceId: src2.id, chunkIndex: 0 },
     ];
 
     const { retrieveForRefine } = await import('../../src/features/refine/retrieve.ts');

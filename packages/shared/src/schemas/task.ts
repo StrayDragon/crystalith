@@ -12,15 +12,15 @@ export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 
 export const TaskSchema = z.object({
   id: IdSchema,
-  notebook_id: IdSchema.nullable().optional(),
+  notebookId: IdSchema.nullable().optional(),
   type: TaskTypeSchema,
   status: TaskStatusSchema,
   payload: JsonMetadataSchema,
   result: JsonMetadataSchema.nullable().optional(),
   error: z.string().nullable().optional(),
   progress: z.number().int().min(0).max(100).default(0),
-  created_at: IsoTimestampSchema,
-  updated_at: IsoTimestampSchema,
+  createdAt: IsoTimestampSchema,
+  updatedAt: IsoTimestampSchema,
 });
 export type Task = z.infer<typeof TaskSchema>;
 

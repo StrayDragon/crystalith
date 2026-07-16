@@ -14,33 +14,33 @@ import {
 export const ResearchProgressEventSchema = z.discriminatedUnion('event', [
   z.object({
     event: z.literal('plan_ready'),
-    session_id: IdSchema,
+    sessionId: IdSchema,
     plan: SearchPlanSchema,
   }),
   z.object({
     event: z.literal('search_result'),
-    session_id: IdSchema,
+    sessionId: IdSchema,
     result: ResearchSearchResultSchema,
   }),
   z.object({
     event: z.literal('analysis'),
-    session_id: IdSchema,
+    sessionId: IdSchema,
     analysis: IterationAnalysisSchema.nullable(),
   }),
   z.object({
     event: z.literal('thinking'),
-    session_id: IdSchema,
+    sessionId: IdSchema,
     data: JsonMetadataSchema,
   }),
   z.object({
     event: z.literal('progress'),
-    session_id: IdSchema,
+    sessionId: IdSchema,
     data: JsonMetadataSchema,
   }),
   z.object({
     event: z.literal('done'),
-    session_id: IdSchema,
-    final_report: z.string().nullable().optional(),
+    sessionId: IdSchema,
+    finalReport: z.string().nullable().optional(),
     outputs: z
       .array(
         z.object({
@@ -53,7 +53,7 @@ export const ResearchProgressEventSchema = z.discriminatedUnion('event', [
   }),
   z.object({
     event: z.literal('error'),
-    session_id: IdSchema,
+    sessionId: IdSchema,
     message: z.string(),
   }),
 ]);

@@ -142,7 +142,7 @@ test('renders tree layout', () => {
   expect(screen.getByText('Child')).toBeInTheDocument();
 });
 
-test('falls back to JSON when render_descriptor is missing', () => {
+test('falls back to JSON when renderDescriptor is missing', () => {
   render(<GenericOutputRenderer content={{ x: 1 }} renderDescriptor={null} />);
   expect(screen.getByText(/"x": 1/)).toBeInTheDocument();
 });

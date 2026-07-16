@@ -70,7 +70,7 @@ describe('refine single-format via task queue (c29 v1-aligned)', () => {
   it('returns v1 response shape (evidence=false, no source_ids)', async () => {
     const nb = makeNotebook('refine-single');
     const { status, body } = await postRefine({
-      notebook_id: nb,
+      notebookId: nb,
       prompt: 'Summarize the topic',
       format: 'paragraph',
     });
@@ -90,7 +90,7 @@ describe('refine single-format via task queue (c29 v1-aligned)', () => {
 
   it('persists a completed task row', async () => {
     const nb = makeNotebook('refine-taskrow');
-    await postRefine({ notebook_id: nb, prompt: 'test', format: 'bullets' });
+    await postRefine({ notebookId: nb, prompt: 'test', format: 'bullets' });
 
     const rows = getOrm().select().from(tasks).all();
     const last = rows.at(-1)!;
@@ -101,7 +101,7 @@ describe('refine single-format via task queue (c29 v1-aligned)', () => {
   it('returns 400 for unsupported format', async () => {
     const nb = makeNotebook('refine-badformat');
     const { status, body } = await postRefine({
-      notebook_id: nb,
+      notebookId: nb,
       prompt: 'test',
       format: 'expand',
     });
@@ -112,7 +112,7 @@ describe('refine single-format via task queue (c29 v1-aligned)', () => {
 
   it('returns 404 when notebook does not exist', async () => {
     const { status } = await postRefine({
-      notebook_id: 99999,
+      notebookId: 99999,
       prompt: 'test',
       format: 'paragraph',
     });

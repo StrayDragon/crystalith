@@ -13,34 +13,34 @@ import { api } from '../../../../api/eden';
 const SWR_KEY = 'workspace/prompt-presets';
 
 export interface PromptPresetItem {
-  preset_id: number | null;
+  presetId: number | null;
   trigger: string;
   description: string | null;
-  system_prompt: string;
+  systemPrompt: string;
   enabled: boolean;
   source: 'builtin' | 'custom';
-  created_at: string | null;
-  updated_at: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
 function normalizePreset(raw: {
   id: number;
   trigger: string;
   description: string | null;
-  system_prompt: string;
+  systemPrompt: string;
   enabled: boolean;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 }): PromptPresetItem {
   return {
-    preset_id: raw.id,
+    presetId: raw.id,
     trigger: raw.trigger,
     description: raw.description ?? null,
-    system_prompt: raw.system_prompt,
+    systemPrompt: raw.systemPrompt,
     enabled: raw.enabled,
     source: 'custom',
-    created_at: raw.created_at ?? null,
-    updated_at: raw.updated_at ?? null,
+    createdAt: raw.createdAt ?? null,
+    updatedAt: raw.updatedAt ?? null,
   };
 }
 
@@ -78,7 +78,7 @@ export function usePromptPresets(_options?: { enabled?: boolean }) {
       const { data, error } = await api.v2['prompt-presets'].post({
         trigger: payload.trigger,
         description: payload.description ?? null,
-        system_prompt: payload.systemPrompt,
+        systemPrompt: payload.systemPrompt,
         enabled: payload.enabled ?? true,
       });
       if (error)
@@ -106,7 +106,7 @@ export function usePromptPresets(_options?: { enabled?: boolean }) {
       const body: Record<string, unknown> = {};
       if (payload.trigger !== undefined) body.trigger = payload.trigger;
       if (payload.description !== undefined) body.description = payload.description;
-      if (payload.systemPrompt !== undefined) body.system_prompt = payload.systemPrompt;
+      if (payload.systemPrompt !== undefined) body.systemPrompt = payload.systemPrompt;
       if (payload.enabled !== undefined) body.enabled = payload.enabled;
 
       const { data, error } = await api.v2['prompt-presets']({ id: presetId }).patch(body);
@@ -115,7 +115,7 @@ export function usePromptPresets(_options?: { enabled?: boolean }) {
       if (!data || !('id' in data)) throw new Error('prompt-preset update failed');
       const updated = normalizePreset(data);
       await mutate(
-        async (current) => current?.map((p) => (p.preset_id === presetId ? updated : p)) ?? [],
+        async (current) => current?.map((p) => (p.presetId === presetId ? updated : p)) ?? [],
         { revalidate: false },
       );
       return updated;
@@ -128,7 +128,7 @@ export function usePromptPresets(_options?: { enabled?: boolean }) {
       const { error } = await api.v2['prompt-presets']({ id: presetId }).delete();
       if (error)
         throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
-      await mutate(async (current) => current?.filter((p) => p.preset_id !== presetId) ?? [], {
+      await mutate(async (current) => current?.filter((p) => p.presetId !== presetId) ?? [], {
         revalidate: false,
       });
     },

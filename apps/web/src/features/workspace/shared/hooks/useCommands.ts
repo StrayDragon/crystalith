@@ -9,7 +9,7 @@ interface CommandItem {
   id: string;
   trigger: string;
   description: string | null;
-  system_prompt: string;
+  systemPrompt: string;
   enabled: boolean;
   kind?: string;
   source?: 'builtin' | 'custom';

@@ -16,10 +16,10 @@ export const RetrieveSourcesArgs = z.object({
 export type RetrieveSourcesArgs = z.infer<typeof RetrieveSourcesArgs>;
 
 export interface RetrievedChunk {
-  chunk_id: number;
-  chunk_index: number;
-  source_id: number;
-  source_name: string;
+  chunkId: number;
+  chunkIndex: number;
+  sourceId: number;
+  sourceName: string;
   text: string;
   score: number;
 }
@@ -52,10 +52,10 @@ export function retrieveSourcesTool(
       );
 
       return hits.map((h) => ({
-        chunk_id: h.rowid,
-        chunk_index: h.chunk_index,
-        source_id: h.source_id,
-        source_name: sourceMap.get(h.source_id) ?? 'unknown',
+        chunkId: h.rowid,
+        chunkIndex: h.chunk_index,
+        sourceId: h.source_id,
+        sourceName: sourceMap.get(h.source_id) ?? 'unknown',
         text: h.text,
         // sqlite-vec distance is L2 — convert to a similarity score in [0,1].
         score: Math.max(0, 1 - h.distance),
@@ -69,7 +69,7 @@ export function isRetrievedChunk(value: unknown): value is RetrievedChunk {
   return (
     typeof value === 'object' &&
     value !== null &&
-    typeof (value as RetrievedChunk).chunk_id === 'number' &&
+    typeof (value as RetrievedChunk).chunkId === 'number' &&
     typeof (value as RetrievedChunk).text === 'string'
   );
 }

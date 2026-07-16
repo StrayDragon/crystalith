@@ -90,22 +90,22 @@ beforeEach(() => {
   });
 
   server.use(
-    http.get('*/v1/notebooks/:notebook_id/sessions/:session_id/messages', () =>
+    http.get('*/v1/notebooks/:notebookId/sessions/:sessionId/messages', () =>
       HttpResponse.json([]),
     ),
-    http.get('*/v2/notebooks/:notebook_id/sessions/:session_id/messages', () =>
+    http.get('*/v2/notebooks/:notebookId/sessions/:sessionId/messages', () =>
       HttpResponse.json([]),
     ),
-    http.get('*/v1/notebooks/:notebook_id/sessions/:session_id/ui/state', () =>
+    http.get('*/v1/notebooks/:notebookId/sessions/:sessionId/ui/state', () =>
       HttpResponse.json({
-        session_id: 123,
+        sessionId: 123,
         shared_state: { ui: { v: 1, components: {}, datasets: {} } },
         shared_state_revision: 0,
       }),
     ),
-    http.get('*/v2/notebooks/:notebook_id/sessions/:session_id/ui/state', () =>
+    http.get('*/v2/notebooks/:notebookId/sessions/:sessionId/ui/state', () =>
       HttpResponse.json({
-        session_id: 123,
+        sessionId: 123,
         shared_state: { ui: { v: 1, components: {}, datasets: {} } },
         shared_state_revision: 0,
       }),
@@ -176,8 +176,8 @@ test('sendMessage non-streaming path stores assistant message and shared_state m
   expect(result.current.citations).toHaveLength(1);
   expect(capturedBody).toEqual({
     question: 'Hello',
-    notebook_id: 1,
-    session_id: 123,
+    notebookId: 1,
+    sessionId: 123,
   });
 });
 
@@ -216,13 +216,13 @@ test('sendMessage passes selected source ids', async () => {
 
   expect(capturedBody).toEqual({
     question: 'Hello',
-    notebook_id: 1,
-    session_id: 456,
-    source_ids: [101, 102],
+    notebookId: 1,
+    sessionId: 456,
+    sourceIds: [101, 102],
   });
 });
 
-test('sendMessage omits source_ids when nothing is selected (ungrounded)', async () => {
+test('sendMessage omits sourceIds when nothing is selected (ungrounded)', async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
     http.post('*/v2/qa', async ({ request }) => {
@@ -257,25 +257,25 @@ test('sendMessage omits source_ids when nothing is selected (ungrounded)', async
 
   expect(capturedBody).toEqual({
     question: 'Chat freely',
-    notebook_id: 1,
-    session_id: 789,
+    notebookId: 1,
+    sessionId: 789,
   });
-  expect(capturedBody).not.toHaveProperty('source_ids');
+  expect(capturedBody).not.toHaveProperty('sourceIds');
 });
 
 test('streaming path applies snapshot and delta with backend message id', async () => {
   // Mock reason: the SSE client is the boundary seam here; we emulate server events deterministically.
   const ssePostMock = vi.spyOn(client.sse, 'post');
   server.use(
-    http.get('*/v1/notebooks/:notebook_id/sessions/:session_id/messages', () =>
+    http.get('*/v1/notebooks/:notebookId/sessions/:sessionId/messages', () =>
       HttpResponse.json([
         { id: 1, role: 'user', content: 'Hello streaming', citations: null },
         { id: 9003, role: 'assistant', content: 'Answer', citations: [] },
       ]),
     ),
-    http.get('*/v1/notebooks/:notebook_id/sessions/:session_id/ui/state', () =>
+    http.get('*/v1/notebooks/:notebookId/sessions/:sessionId/ui/state', () =>
       HttpResponse.json({
-        session_id: 123,
+        sessionId: 123,
         shared_state: buildSharedState('9003', 'Stream mount'),
         shared_state_revision: 1,
       }),
@@ -356,7 +356,7 @@ test('streaming path applies snapshot and delta with backend message id', async 
 test('stopStreaming rolls back provisional assistant message before done', async () => {
   const ssePostMock = vi.spyOn(client.sse, 'post');
   server.use(
-    http.get('*/v1/notebooks/:notebook_id/sessions/:session_id/messages', () =>
+    http.get('*/v1/notebooks/:notebookId/sessions/:sessionId/messages', () =>
       HttpResponse.json([{ id: 1, role: 'user', content: 'Hello rollback', citations: null }]),
     ),
   );

@@ -5,8 +5,8 @@ import type { ChatTurn, Citation, ContextStats } from '@crystalith/shared';
 //
 // SSE event contract (backward-compatible with v1):
 //   event: chunk\ndata: {"text":"..."}\n\n
-//   event: state_snapshot\ndata: {"message_id":123}\n\n
-//   event: done\ndata: {"message_id":123,"citations":[...]}\n\n
+//   event: state_snapshot\ndata: {"messageId":123}\n\n
+//   event: done\ndata: {"messageId":123,"citations":[...]}\n\n
 //   event: error\ndata: {"message":"..."}\n\n
 import { streamText, isStepCount } from 'ai';
 import type { Tool } from 'ai';
@@ -77,7 +77,7 @@ export function streamQaResponse(opts: StreamQaOptions): Response {
         // Emit the stable message id early so the frontend can create the
         // assistant message placeholder before the first text delta.
         if (opts.messageId !== undefined) {
-          emit('state_snapshot', { message_id: opts.messageId });
+          emit('state_snapshot', { messageId: opts.messageId });
         }
 
         const result = streamText({
@@ -120,14 +120,14 @@ export function streamQaResponse(opts: StreamQaOptions): Response {
           : undefined;
 
         emit('done', {
-          message_id: opts.messageId ?? null,
+          messageId: opts.messageId ?? null,
           citations,
           confidence: opts.confidenceResolver ? await opts.confidenceResolver() : undefined,
           evidence: !noEvidence,
-          no_evidence_reason: noEvidence,
+          noEvidenceReason: noEvidence,
           context: opts.contextStats,
-          created_at: new Date().toISOString(),
-          tool_calls: [],
+          createdAt: new Date().toISOString(),
+          toolCalls: [],
         });
 
         opts.onMessageSettled?.(accumulated, false, citations);

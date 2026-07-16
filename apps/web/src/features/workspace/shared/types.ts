@@ -159,16 +159,16 @@ export interface PreviewDescriptor {
 
 export interface PluginConfigSchema {
   defaults?: SlideGenerationConfig | null;
-  quantity_options: ConfigOption[];
-  difficulty_options: ConfigOption[];
-  audience_options: ConfigOption[];
-  structure_options: ConfigOption[];
-  tone_options: ConfigOption[];
-  language_options: ConfigOption[];
-  density_options: ConfigOption[];
-  theme_preset_options: ThemePresetOption[];
-  topic_placeholder: string;
-  supports_topic: boolean;
+  quantityOptions: ConfigOption[];
+  difficultyOptions: ConfigOption[];
+  audienceOptions: ConfigOption[];
+  structureOptions: ConfigOption[];
+  toneOptions: ConfigOption[];
+  languageOptions: ConfigOption[];
+  densityOptions: ConfigOption[];
+  themePresetOptions: ThemePresetOption[];
+  topicPlaceholder: string;
+  supportsTopic: boolean;
   engine?: string | null;
   preview?: PreviewDescriptor | null;
 }
@@ -177,7 +177,7 @@ export type FrontendBundleKind = 'builtin';
 export type FrontendBundleApiVersion = 'v1';
 
 export interface FrontendBundleDescriptor {
-  api_version: FrontendBundleApiVersion;
+  apiVersion: FrontendBundleApiVersion;
   kind: FrontendBundleKind;
   id: string;
   export: string;
@@ -393,25 +393,25 @@ export interface LoadingState {
 export interface ApiNotebook {
   id: number;
   name?: string | null;
-  updated_at?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface ApiSession {
   id: number;
-  notebook_id: number;
+  notebookId: number;
   title?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface ApiMessage {
   id: number;
-  session_id: number;
+  sessionId: number;
   role: 'user' | 'assistant' | 'system';
   content: string;
   citations?: ApiCitation[] | null;
-  created_at?: string | null;
-  updated_at?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface ApiWorkspaceTool {
@@ -419,10 +419,10 @@ export interface ApiWorkspaceTool {
   label: string;
   description: string;
   tone: ToolTone;
-  output_type: OutputTypeId;
+  outputType: OutputTypeId;
   prompt: string;
-  render_descriptor?: RenderDescriptor | null;
-  config_schema?: PluginConfigSchema | null;
+  renderDescriptor?: RenderDescriptor | null;
+  configSchema?: PluginConfigSchema | null;
   badge?: string | null;
   enabled?: boolean | null;
 }
@@ -434,11 +434,11 @@ export interface ApiWorkspaceToolsResponse {
 
 interface ApiOutputBase {
   id: number;
-  notebook_id: number;
+  notebookId: number;
   prompt?: string | null;
-  chunk_ids?: number[] | null;
-  created_at?: string | null;
-  updated_at?: string | null;
+  chunkIds?: number[] | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export type ApiOutput = {
@@ -450,24 +450,24 @@ export type ApiOutput = {
 
 export interface ApiSource {
   id: number;
-  notebook_id?: number | null;
+  notebookId?: number | null;
   filename?: string | null;
-  mime_type?: string | null;
+  mimeType?: string | null;
   status?: string | null;
-  error_code?: string | null;
-  error_message?: string | null;
-  recovery_hint?: string | null;
-  last_error_at?: string | null;
-  chunk_count?: number | null;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  recoveryHint?: string | null;
+  lastErrorAt?: string | null;
+  chunkCount?: number | null;
   metadata?: Record<string, unknown> | null;
   tags?: string[] | null;
-  created_at?: string | null;
-  updated_at?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface ApiSourceDeleteResponse {
-  deleted_ids: number[];
-  deleted_count: number;
+  deletedIds: number[];
+  deletedCount: number;
 }
 
 export interface ApiSourceSearchResult {
@@ -484,7 +484,7 @@ export interface ApiSourceSearchResponse {
   mode: string;
   results: ApiSourceSearchResult[];
   message?: string | null;
-  created_at?: string | null;
+  createdAt?: string | null;
 }
 
 /** Wire/API citation shape (camelCase; matches packages/shared CitationSchema). */
@@ -504,7 +504,7 @@ export interface ApiAnswer {
   citations?: ApiCitation[];
   evidence?: boolean;
   confidence?: number;
-  created_at?: string | null;
+  createdAt?: string | null;
 }
 
 export interface ApiRefineOutput {

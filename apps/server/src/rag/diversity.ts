@@ -24,11 +24,11 @@ export function applyDiversity(
     const hash = createHash('sha256').update(r.text.trim()).digest('hex');
     // dedup near-identical
     if (seen.has(hash)) continue;
-    const count = perSource.get(r.source_id) ?? 0;
+    const count = perSource.get(r.sourceId) ?? 0;
     // source diversity cap
     if (count >= maxPerSource) continue;
     seen.add(hash);
-    perSource.set(r.source_id, count + 1);
+    perSource.set(r.sourceId, count + 1);
     out.push(r);
   }
   return out;

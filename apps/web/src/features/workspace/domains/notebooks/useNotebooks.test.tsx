@@ -71,8 +71,8 @@ test('loads notebooks and sets active notebook to the most recently updated', as
   server.use(
     http.get('*/v2/notebooks', () =>
       HttpResponse.json([
-        { id: 11, name: 'Core Notebook A', updated_at: '2026-01-01T00:00:00Z' },
-        { id: 12, name: 'Core Notebook B', updated_at: '2026-02-01T00:00:00Z' },
+        { id: 11, name: 'Core Notebook A', updatedAt: '2026-01-01T00:00:00Z' },
+        { id: 12, name: 'Core Notebook B', updatedAt: '2026-02-01T00:00:00Z' },
       ]),
     ),
   );
@@ -115,7 +115,7 @@ test('auto-creates a default notebook when list is empty', async () => {
       return HttpResponse.json({
         id: 21,
         name: '未命名笔记本',
-        updated_at: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
       });
     }),
   );
@@ -136,12 +136,12 @@ test('handleCreateNotebook creates notebook and makes it active', async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
     http.get('*/v2/notebooks', () =>
-      HttpResponse.json([{ id: 11, name: 'Existing', updated_at: '2026-01-01T00:00:00Z' }]),
+      HttpResponse.json([{ id: 11, name: 'Existing', updatedAt: '2026-01-01T00:00:00Z' }]),
     ),
     http.post('*/v2/notebooks', async ({ request }) => {
       createCalls += 1;
       capturedBody = (await request.json()) as Record<string, unknown>;
-      return HttpResponse.json({ id: 99, name: 'New One', updated_at: '2026-01-01T00:00:00Z' });
+      return HttpResponse.json({ id: 99, name: 'New One', updatedAt: '2026-01-01T00:00:00Z' });
     }),
   );
 

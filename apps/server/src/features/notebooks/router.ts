@@ -36,8 +36,8 @@ const apiDocs: OpenApiRoute[] = [
           {
             id: 1,
             name: '我的研究笔记',
-            created_at: '2026-07-14T07:15:57.000Z',
-            updated_at: '2026-07-14T07:15:57.000Z',
+            createdAt: '2026-07-14T07:15:57.000Z',
+            updatedAt: '2026-07-14T07:15:57.000Z',
           },
         ],
       },
@@ -56,8 +56,8 @@ const apiDocs: OpenApiRoute[] = [
         example: {
           id: 1,
           name: '我的研究笔记',
-          created_at: '2026-07-14T07:15:57.000Z',
-          updated_at: '2026-07-14T07:15:57.000Z',
+          createdAt: '2026-07-14T07:15:57.000Z',
+          updatedAt: '2026-07-14T07:15:57.000Z',
         },
       },
     },
@@ -75,8 +75,8 @@ const apiDocs: OpenApiRoute[] = [
         example: {
           id: 1,
           name: '我的研究笔记',
-          created_at: '2026-07-14T07:15:57.000Z',
-          updated_at: '2026-07-14T07:15:57.000Z',
+          createdAt: '2026-07-14T07:15:57.000Z',
+          updatedAt: '2026-07-14T07:15:57.000Z',
         },
       },
     },
@@ -110,8 +110,8 @@ function serializeNotebook(row: { id: number; name: string; createdAt: Date; upd
   return {
     id: row.id,
     name: row.name,
-    created_at: row.createdAt.toISOString(),
-    updated_at: row.updatedAt.toISOString(),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
@@ -134,8 +134,8 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks',
     ({ body, query, set }) => {
-      const templateId = (query as { template_id?: string }).template_id
-        ? Number((query as { template_id?: string }).template_id)
+      const templateId = (query as { templateId?: string }).templateId
+        ? Number((query as { templateId?: string }).templateId)
         : undefined;
 
       const row = db().insert(notebooks).values({ name: body.name }).returning().get();

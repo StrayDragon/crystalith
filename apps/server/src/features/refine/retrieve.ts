@@ -52,7 +52,7 @@ export async function retrieveForRefine(
 
   // ② post-filter by source_ids, cap at topK
   const idSet = new Set(sourceIds);
-  const filtered = results.filter((r) => idSet.has(r.source_id)).slice(0, topK);
+  const filtered = results.filter((r) => idSet.has(r.sourceId)).slice(0, topK);
 
   if (filtered.length === 0) return { citations: [], context: '', evidence: false };
 
@@ -68,7 +68,7 @@ export async function retrieveForRefine(
   // ④ context: full unstripped text, [N] Source: <filename> (chunk <idx>)\n<text>
   //    (v1 utils/context.py:13-24). Source names are needed here independently
   //    of the citation hydration above.
-  const uniqueSourceIds = [...new Set(filtered.map((r) => r.source_id))];
+  const uniqueSourceIds = [...new Set(filtered.map((r) => r.sourceId))];
   const sourceRows = db()
     .select({ id: sources.id, filename: sources.filename })
     .from(sources)
@@ -78,8 +78,8 @@ export async function retrieveForRefine(
 
   const context = filtered
     .map((r, i) => {
-      const name = sourceNameMap.get(r.source_id) ?? 'unknown';
-      return `[${i + 1}] Source: ${name} (chunk ${r.chunk_index + 1})\n${r.text}`;
+      const name = sourceNameMap.get(r.sourceId) ?? 'unknown';
+      return `[${i + 1}] Source: ${name} (chunk ${r.chunkIndex + 1})\n${r.text}`;
     })
     .join('\n\n');
 

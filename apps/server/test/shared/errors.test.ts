@@ -1,18 +1,18 @@
 // Unit tests for the shared error helper (c54).
 //
-// sendError MUST produce an ErrorEnvelope (error_code + message + optional
-// details/retry_after) and set the canonical HTTP status for each code.
+// sendError MUST produce an ErrorEnvelope (errorCode + message + optional
+// details/retryAfter) and set the canonical HTTP status for each code.
 import { describe, expect, it } from 'bun:test';
 
 import { ErrorCode, sendError } from '../../src/shared/errors.ts';
 
 describe('sendError', () => {
-  it('sets the canonical status and returns error_code + message', () => {
+  it('sets the canonical status and returns errorCode + message', () => {
     const set: { status?: number | string } = {};
     const body = sendError(set, ErrorCode.INVALID_REQUEST, 'source_ids must not be empty');
     expect(set.status).toBe(400);
     expect(body).toEqual({
-      error_code: 'INVALID_REQUEST',
+      errorCode: 'INVALID_REQUEST',
       message: 'source_ids must not be empty',
     });
   });
@@ -47,16 +47,16 @@ describe('sendError', () => {
     expect(body.details).toEqual({ existing_tag_id: 7 });
   });
 
-  it('includes retry_after when provided', () => {
+  it('includes retryAfter when provided', () => {
     const set: { status?: number | string } = {};
     const body = sendError(set, ErrorCode.RATE_LIMITED, 'Too many requests', undefined, 30);
     expect(set.status).toBe(429);
-    expect(body.retry_after).toBe(30);
+    expect(body.retryAfter).toBe(30);
   });
 
-  it('omits details and retry_after when not provided', () => {
+  it('omits details and retryAfter when not provided', () => {
     const body = sendError({}, ErrorCode.NOT_FOUND, 'missing');
     expect(body).not.toHaveProperty('details');
-    expect(body).not.toHaveProperty('retry_after');
+    expect(body).not.toHaveProperty('retryAfter');
   });
 });

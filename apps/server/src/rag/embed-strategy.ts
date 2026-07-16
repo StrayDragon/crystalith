@@ -130,12 +130,12 @@ export class EmbedStrategy implements RAGStrategy {
     const hits = searchVectors(db(), queryVec, notebookId, topK, sourceIds);
     return hits
       .map((h) => ({
-        chunk_id: h.rowid,
+        chunkId: h.rowid,
         text: h.text,
         // distance → similarity
         score: Math.max(0, 1 - h.distance),
-        source_id: h.source_id,
-        chunk_index: h.chunk_index,
+        sourceId: h.source_id,
+        chunkIndex: h.chunk_index,
       }))
       .filter((h) => h.score >= minScore);
   }
@@ -154,12 +154,12 @@ export class EmbedStrategy implements RAGStrategy {
       .where(and(inArray(chunks.id, chunkIds), eq(sources.notebookId, notebookId)))
       .all();
     return rows.map((r) => ({
-      chunk_id: r.id,
+      chunkId: r.id,
       text: r.text,
       // explicitly selected — max relevance
       score: 1,
-      source_id: r.sourceId,
-      chunk_index: r.chunkIndex,
+      sourceId: r.sourceId,
+      chunkIndex: r.chunkIndex,
     }));
   }
 

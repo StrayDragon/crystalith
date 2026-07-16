@@ -126,12 +126,12 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
   const queryTokens = countTokens(opts.question);
   const historyTokens = opts.historyTokens ?? 0;
   const emptyStats: ContextStats = {
-    total_tokens: systemTokens + historyTokens + queryTokens,
-    system_tokens: systemTokens,
-    history_tokens: historyTokens,
-    retrieval_tokens: 0,
-    query_tokens: queryTokens,
-    max_tokens: maxTokens,
+    totalTokens: systemTokens + historyTokens + queryTokens,
+    systemTokens: systemTokens,
+    historyTokens: historyTokens,
+    retrievalTokens: 0,
+    queryTokens: queryTokens,
+    maxTokens: maxTokens,
     compressed: false,
   };
 
@@ -186,7 +186,7 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
   }
 
   // Step 7: Filter — hydrate chunk metadata, check source.status==ready
-  const chunkIds = rawResults.map((r) => r.chunk_id);
+  const chunkIds = rawResults.map((r) => r.chunkId);
   const chunkRows = db()
     .select({
       id: chunks.id,
@@ -210,7 +210,7 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
 
   // Build valid results: chunk exists, source ready, text non-empty
   const validResults = rawResults.filter((r) => {
-    const chunk = chunkMap.get(r.chunk_id);
+    const chunk = chunkMap.get(r.chunkId);
     return chunk && chunk.text.trim().length > 0;
   });
 
@@ -220,7 +220,7 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
   }
 
   // Step 9: Build citations + context
-  const sourceIds = [...new Set(validResults.map((r) => r.source_id))];
+  const sourceIds = [...new Set(validResults.map((r) => r.sourceId))];
   const sourceRows = db()
     .select({ id: sources.id, filename: sources.filename })
     .from(sources)
@@ -229,17 +229,17 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
   const sourceMap = new Map(sourceRows.map((s) => [s.id, s.filename]));
 
   const citations: Citation[] = validResults.map((r) => {
-    const chunk = chunkMap.get(r.chunk_id)!;
+    const chunk = chunkMap.get(r.chunkId)!;
     const metadata = (chunk.metadata ?? {}) as Record<string, unknown>;
     const pageNumber = typeof metadata.page === 'number' ? metadata.page : null;
     const paragraphIndex =
       typeof metadata.paragraph_index === 'number' ? metadata.paragraph_index : null;
     return {
-      sourceId: r.source_id,
-      sourceName: sourceMap.get(r.source_id) ?? 'unknown',
-      chunkId: r.chunk_id,
-      // v1 stores 1-based (chunk.chunk_index + 1)
-      chunkIndex: r.chunk_index + 1,
+      sourceId: r.sourceId,
+      sourceName: sourceMap.get(r.sourceId) ?? 'unknown',
+      chunkId: r.chunkId,
+      // v1 stores 1-based (chunk.chunkIndex + 1)
+      chunkIndex: r.chunkIndex + 1,
       pageNumber: pageNumber,
       paragraphIndex: paragraphIndex,
       snippet: chunk.text.slice(0, 200),
@@ -250,9 +250,9 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
   // Step 9b: Format context (v1 format_context — [i] Source: filename (chunk N)\n<text>)
   // Keep the blocks so Step 12 can truncate block-by-block when over budget.
   const contextBlocks = validResults.map((r, i) => {
-    const chunk = chunkMap.get(r.chunk_id)!;
-    const name = sourceMap.get(r.source_id) ?? 'unknown';
-    return `[${i + 1}] Source: ${name} (chunk ${r.chunk_index + 1})\n${chunk.text}`;
+    const chunk = chunkMap.get(r.chunkId)!;
+    const name = sourceMap.get(r.sourceId) ?? 'unknown';
+    return `[${i + 1}] Source: ${name} (chunk ${r.chunkIndex + 1})\n${chunk.text}`;
   });
 
   // Step 10: Low similarity check (v1: similarity_avg < max(min_score, threshold))
@@ -295,12 +295,12 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
     context,
     confidence,
     contextStats: {
-      total_tokens: totalTokens,
-      system_tokens: systemTokens,
-      history_tokens: historyTokens,
-      retrieval_tokens: retrievalTokens,
-      query_tokens: queryTokens,
-      max_tokens: maxTokens,
+      totalTokens: totalTokens,
+      systemTokens: systemTokens,
+      historyTokens: historyTokens,
+      retrievalTokens: retrievalTokens,
+      queryTokens: queryTokens,
+      maxTokens: maxTokens,
       compressed,
     },
   };
@@ -331,9 +331,9 @@ function noEvidence(
  */
 export async function resolveCitations(
   retrievedChunks: Array<{
-    chunk_id: number;
-    source_id: number;
-    chunk_index: number;
+    chunkId: number;
+    sourceId: number;
+    chunkIndex: number;
     text: string;
     score: number;
   }>,

@@ -257,8 +257,8 @@ export function normalizeNotebook(row: ApiNotebook): Notebook {
   return {
     id: Number(row.id),
     title: row.name ?? '未命名笔记本',
-    updatedAt: formatTimestamp(row.updated_at ?? undefined),
-    updatedAtRaw: row.updated_at ?? undefined,
+    updatedAt: formatTimestamp(row.updatedAt ?? undefined),
+    updatedAtRaw: row.updatedAt ?? undefined,
   };
 }
 
@@ -283,8 +283,8 @@ export function normalizeSession(row: ApiSession): SessionSummary {
   return {
     id: Number(row.id),
     title: row.title ?? '未命名会话',
-    createdAt: formatTimestamp(row.created_at ?? undefined),
-    updatedAt: formatTimestamp(row.updated_at ?? undefined),
+    createdAt: formatTimestamp(row.createdAt ?? undefined),
+    updatedAt: formatTimestamp(row.updatedAt ?? undefined),
   };
 }
 
@@ -306,12 +306,12 @@ export function normalizeOutput(row: ApiOutput): OutputItem {
     id: Number(row.id),
     type: row.type,
     prompt: row.prompt ?? '',
-    chunkIds: row.chunk_ids ?? [],
+    chunkIds: row.chunkIds ?? [],
     content: normalizeOutputPayload(row.type, row.content),
-    createdAt: formatTimestamp(row.created_at ?? undefined),
-    updatedAt: formatTimestamp(row.updated_at ?? undefined),
-    createdAtRaw: row.created_at ?? undefined,
-    updatedAtRaw: row.updated_at ?? undefined,
+    createdAt: formatTimestamp(row.createdAt ?? undefined),
+    updatedAt: formatTimestamp(row.updatedAt ?? undefined),
+    createdAtRaw: row.createdAt ?? undefined,
+    updatedAtRaw: row.updatedAt ?? undefined,
   };
 }
 
@@ -320,9 +320,9 @@ export function formatSourceType(row: ApiSource): string {
   const extension = filename.split('.').pop()?.toLowerCase();
   if (extension === 'md' || extension === 'markdown') return 'Markdown';
   if (extension === 'txt') return 'TXT';
-  if (row.mime_type === 'text/markdown') return 'Markdown';
-  if (row.mime_type === 'text/plain') return 'TXT';
-  return row.mime_type || '未知';
+  if (row.mimeType === 'text/markdown') return 'Markdown';
+  if (row.mimeType === 'text/plain') return 'TXT';
+  return row.mimeType || '未知';
 }
 
 export function normalizeSource(row: ApiSource): SourceItem {
@@ -351,20 +351,19 @@ export function normalizeSource(row: ApiSource): SourceItem {
     type: formatSourceType(row),
     status: statusLabel,
     statusTone: statusKey,
-    errorCode: typeof row.error_code === 'string' && row.error_code ? row.error_code : null,
+    errorCode: typeof row.errorCode === 'string' && row.errorCode ? row.errorCode : null,
     errorMessage:
-      typeof row.error_message === 'string' && row.error_message ? row.error_message : null,
+      typeof row.errorMessage === 'string' && row.errorMessage ? row.errorMessage : null,
     recoveryHint:
-      typeof row.recovery_hint === 'string' && row.recovery_hint ? row.recovery_hint : null,
-    lastErrorAt:
-      typeof row.last_error_at === 'string' && row.last_error_at ? row.last_error_at : null,
+      typeof row.recoveryHint === 'string' && row.recoveryHint ? row.recoveryHint : null,
+    lastErrorAt: typeof row.lastErrorAt === 'string' && row.lastErrorAt ? row.lastErrorAt : null,
     indexProgress,
-    chunks: row.chunk_count ?? 0,
+    chunks: row.chunkCount ?? 0,
     tags: Array.isArray(row.tags)
       ? row.tags.filter((tag): tag is string => typeof tag === 'string' && tag.length > 0)
       : [],
-    createdAt: formatTimestamp(row.created_at ?? undefined),
-    createdAtRaw: row.created_at ?? undefined,
+    createdAt: formatTimestamp(row.createdAt ?? undefined),
+    createdAtRaw: row.createdAt ?? undefined,
   };
 }
 

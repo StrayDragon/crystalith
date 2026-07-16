@@ -67,7 +67,7 @@ export default function OutputContent({ output, onRetry, onDelete }: OutputConte
   const { isExporting, activeFormat, getSupportedFormats, exportOutput } = useExport();
   const renderDescriptor = useWorkspaceStore((s) => s.outputTypeRenderDescriptors[typeId] ?? null);
   const frontendBundle = useWorkspaceStore((s) => s.outputTypeFrontendBundles[typeId] ?? null);
-  const frontendBundleApiVersion = frontendBundle?.api_version ?? null;
+  const frontendBundleApiVersion = frontendBundle?.apiVersion ?? null;
   const frontendBundleExport = frontendBundle?.export ?? null;
   const frontendBundleId = frontendBundle?.id ?? null;
   const frontendBundleKind = frontendBundle?.kind ?? null;

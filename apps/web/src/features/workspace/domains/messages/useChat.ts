@@ -243,11 +243,11 @@ export function useChat({
       try {
         const body: Record<string, unknown> = {
           question: text,
-          notebook_id: notebookId,
-          session_id: sessionId,
+          notebookId: notebookId,
+          sessionId: sessionId,
         };
         if (explicitSourceIds.length) {
-          (body as Record<string, unknown>).source_ids = explicitSourceIds;
+          (body as Record<string, unknown>).sourceIds = explicitSourceIds;
         }
 
         const stream = streamRequest('/v2/qa/stream', {
@@ -282,10 +282,10 @@ export function useChat({
 
           if (eventType === 'state_snapshot' && eventData && typeof eventData === 'object') {
             const payload = eventData as {
-              message_id?: unknown;
+              messageId?: unknown;
               shared_state?: unknown;
             };
-            const nextMessageId = payload.message_id;
+            const nextMessageId = payload.messageId;
             if (
               typeof nextMessageId === 'number' &&
               Number.isFinite(nextMessageId) &&
@@ -305,13 +305,13 @@ export function useChat({
             receivedDone = true;
             const doneData = eventData as {
               citations?: WireCitation[];
-              message_id?: unknown;
+              messageId?: unknown;
             };
             const doneMessageId =
-              typeof doneData.message_id === 'number' &&
-              Number.isFinite(doneData.message_id) &&
-              doneData.message_id > 0
-                ? String(doneData.message_id)
+              typeof doneData.messageId === 'number' &&
+              Number.isFinite(doneData.messageId) &&
+              doneData.messageId > 0
+                ? String(doneData.messageId)
                 : stableAssistantMessageId;
             if (doneMessageId) {
               stableAssistantMessageId = doneMessageId;
@@ -407,16 +407,16 @@ export function useChat({
     try {
       const qaBody: {
         question: string;
-        notebook_id: number;
-        session_id: number;
-        source_ids?: number[];
+        notebookId: number;
+        sessionId: number;
+        sourceIds?: number[];
       } = {
         question: text,
-        notebook_id: notebookId,
-        session_id: sessionId,
+        notebookId: notebookId,
+        sessionId: sessionId,
       };
       if (explicitSourceIds.length) {
-        qaBody.source_ids = explicitSourceIds;
+        qaBody.sourceIds = explicitSourceIds;
       }
       const { data: qaResult, error: qaErr } = await api.v2.qa.post(qaBody);
       if (qaErr)
@@ -427,10 +427,10 @@ export function useChat({
         normalizeCitation(c as Parameters<typeof normalizeCitation>[0]),
       );
       const messageId =
-        typeof result.message_id === 'number' &&
-        Number.isFinite(result.message_id) &&
-        (result.message_id as number) > 0
-          ? String(result.message_id)
+        typeof result.messageId === 'number' &&
+        Number.isFinite(result.messageId) &&
+        (result.messageId as number) > 0
+          ? String(result.messageId)
           : createId();
       const assistantMessage: WorkspaceChatMessage = {
         id: messageId,
@@ -509,7 +509,7 @@ export function useChat({
       toast.success(
         t('messages.convert.to_source.success', {
           filename: result!.filename,
-          chunkCount: result!.chunk_count,
+          chunkCount: result!.chunkCount,
         }),
       );
     } catch (error) {
@@ -535,7 +535,7 @@ export function useChat({
           .notebooks({ nid: s.activeNotebookId })
           .sessions({ sid: s.activeSessionId })
           // eslint-disable-next-line no-unexpected-multiline
-          ['convert-to-output'].post({ output_type: outputType });
+          ['convert-to-output'].post({ outputType: outputType });
         if (convErr)
           throw new Error(
             typeof convErr === 'string' ? convErr : typeof convErr === 'string' ? convErr : '',

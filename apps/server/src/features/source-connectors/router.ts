@@ -121,10 +121,10 @@ class ConnectorUnavailableError extends Error {
     super(`Source connector "${connectorId}" is not available`);
     this.name = 'ConnectorUnavailableError';
     this.body = {
-      error_code: 'CONNECTOR_UNAVAILABLE',
+      errorCode: 'CONNECTOR_UNAVAILABLE',
       message: `Source connector "${connectorId}" is not available`,
       hint: `Install or enable the "${connectorId}" connector plugin`,
-      plugin_diagnostic: { connector_id: connectorId, loaded: false },
+      plugin_diagnostic: { connectorId: connectorId, loaded: false },
     };
   }
 }
@@ -212,9 +212,9 @@ async function runSyncCheck(
   const candidates = buildSyncCandidates(scopedBase, scopedCurrent);
   const result: SyncCheckResult = {
     id: crypto.randomUUID(),
-    checked_at: new Date().toISOString(),
-    base_snapshot: scopedBase,
-    current_snapshot: scopedCurrent,
+    checkedAt: new Date().toISOString(),
+    baseSnapshot: scopedBase,
+    currentSnapshot: scopedCurrent,
     candidates,
   };
 
@@ -242,7 +242,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
     const connectors = await Promise.all(
       BUILTIN_CONNECTORS.map(async (connector) => ({
         ...connector,
-        diagnostics: await getConnectorDiagnostics(connector.connector_id, null),
+        diagnostics: await getConnectorDiagnostics(connector.connectorId, null),
       })),
     );
 
@@ -263,10 +263,10 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
 
     // c53: validate connection_config against the connector's JSON schema
     // (v1 api.py:77-98,199-200 Draft7Validator). Malformed → 400.
-    const validationError = validateConnectionConfig(config, connector.connection_config_schema);
+    const validationError = validateConnectionConfig(config, connector.connectionConfigSchema);
     if (validationError) {
       return new Response(
-        JSON.stringify({ detail: validationError, error_code: 'INVALID_CONFIG' }),
+        JSON.stringify({ detail: validationError, errorCode: 'INVALID_CONFIG' }),
         {
           status: 400,
           headers: { 'Content-Type': 'application/json' },
@@ -304,7 +304,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       } catch (error) {
         const message = error instanceof Error ? error.message : '连接器快照枚举失败';
         apiError(set, 500, {
-          error_code: 'CONNECTOR_SNAPSHOT_FAILED',
+          errorCode: 'CONNECTOR_SNAPSHOT_FAILED',
           message: '连接器快照枚举失败',
           hint: '检查连接参数与目录权限，或查看后端日志。',
           details: { error: message },
@@ -330,7 +330,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
 
       if (!sync_check_id) {
         apiError(set, 400, {
-          error_code: 'SYNC_CHECK_ID_REQUIRED',
+          errorCode: 'SYNC_CHECK_ID_REQUIRED',
           message: 'sync_check_id is required',
         });
       }
@@ -346,7 +346,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
         };
         if (err.status) {
           apiError(set, err.status, {
-            error_code: err.error_code ?? 'SYNC_CHECK_APPLY_FAILED',
+            errorCode: err.error_code ?? 'SYNC_CHECK_APPLY_FAILED',
             message: err.message,
             ...(err.hint ? { hint: err.hint } : {}),
             ...(err.details ? { details: err.details } : {}),
@@ -372,7 +372,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       } catch (error) {
         const err = error as Error & { status?: number; error_code?: string; hint?: string };
         apiError(set, err.status ?? 400, {
-          error_code: err.error_code ?? 'IMPORT_SCOPE_INVALID',
+          errorCode: err.error_code ?? 'IMPORT_SCOPE_INVALID',
           message: err.message,
           ...(err.hint ? { hint: err.hint } : {}),
         });
@@ -387,7 +387,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       } catch (error) {
         const message = error instanceof Error ? error.message : '连接器快照枚举失败';
         apiError(set, 500, {
-          error_code: 'CONNECTOR_SNAPSHOT_FAILED',
+          errorCode: 'CONNECTOR_SNAPSHOT_FAILED',
           message: '连接器快照枚举失败',
           hint: '检查连接参数与目录权限，或查看后端日志。',
           details: { error: message },

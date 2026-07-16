@@ -264,7 +264,7 @@ export function useSources() {
           try {
             // eslint-disable-next-line no-await-in-loop -- Upload queue + dedup confirmation requires serial execution.
             await api.v2.sources.upload
-              .post({ file } as any, { query: { notebook_id: activeNotebookId } } as any)
+              .post({ file } as any, { query: { notebookId: activeNotebookId } } as any)
               .then((r) => {
                 // eslint-disable-next-line typescript/no-base-to-string
                 if (r.error) throw new Error(String(r.error));
@@ -287,13 +287,13 @@ export function useSources() {
               const reuse = window.confirm(
                 `检测到重复来源：${existingFilename}\n\n点击“确定”复用已有来源；点击“取消”仍创建新来源。`,
               );
-              const dedup_action = reuse ? 'reuse' : 'create_new';
+              const dedupAction = reuse ? 'reuse' : 'create_new';
               try {
                 // eslint-disable-next-line no-await-in-loop -- Keep per-file UI updates and dedup flow serial.
                 await api.v2.sources.upload
                   .post(
                     { file } as any,
-                    { query: { notebook_id: activeNotebookId, dedup_action } } as any,
+                    { query: { notebookId: activeNotebookId, dedupAction } } as any,
                   )
                   .then((r) => {
                     // eslint-disable-next-line typescript/no-base-to-string, eslint/preserve-caught-error
@@ -472,7 +472,7 @@ export function useSources() {
       try {
         const { error: delBatchErr } = (await api.v2
           .notebooks({ nid: activeNotebookId })
-          .sources.batch.delete.post({ source_ids: sourceIds } as any)) as any;
+          .sources.batch.delete.post({ sourceIds: sourceIds } as any)) as any;
         if (delBatchErr) throw delBatchErr;
         await mutate();
         toast.success('来源删除成功');
@@ -500,7 +500,7 @@ export function useSources() {
       setRemoveState('loading');
       try {
         await (api.v2.sources({ id: sourceId }) as any)
-          .delete(null, { query: { notebook_id: activeNotebookId } })
+          .delete(null, { query: { notebookId: activeNotebookId } })
           .then((r: any) => {
             if (r.error) throw r.error;
             return r.data as any;
@@ -534,7 +534,7 @@ export function useSources() {
       try {
         const { data: result, error: breErr } = await (
           api.v2.notebooks({ nid: activeNotebookId }) as any
-        ).sources.batch['re-embed'].post({ source_ids: sourceIds } as any);
+        ).sources.batch['re-embed'].post({ sourceIds: sourceIds } as any);
         if (breErr) throw breErr;
         await mutate();
         if (result.failed_count > 0) {
@@ -634,7 +634,7 @@ export function useSources() {
       try {
         const { error: atErr } = await (
           api.v2.notebooks({ nid: activeNotebookId }).sources.tags({ tid: tagId }) as any
-        ).sources.post({ source_ids: sourceIds } as any);
+        ).sources.post({ sourceIds: sourceIds } as any);
         if (atErr) throw atErr;
         await mutateTags();
         await mutate();
@@ -657,7 +657,7 @@ export function useSources() {
       try {
         const { error: rtErr } = await (api.v2.notebooks({ nid: activeNotebookId }) as any).sources
           .tags({ tid: tagId })
-          .sources.delete({ source_ids: sourceIds } as any);
+          .sources.delete({ sourceIds: sourceIds } as any);
         if (rtErr) throw rtErr;
         await mutateTags();
         await mutate();
@@ -708,8 +708,8 @@ export function useSources() {
       if (!activeNotebookId) {
         throw new Error('请先创建笔记本');
       }
-      const call = async (dedup_action?: 'reuse' | 'create_new') => {
-        const q = dedup_action ? { dedup_action } : undefined;
+      const call = async (dedupAction?: 'reuse' | 'create_new') => {
+        const q = dedupAction ? { dedupAction } : undefined;
         const body = {
           url,
           mode,
@@ -789,7 +789,7 @@ export function useSources() {
   }, [extractors]);
 
   const defaultExtractor = useMemo<ExtractorType | null>(() => {
-    return extractorsData?.default_extractor ?? null;
+    return extractorsData?.defaultExtractor ?? null;
   }, [extractorsData]);
 
   const extractorsPolicy = useMemo<NotebookExtractorsPolicy | null>(() => {
@@ -797,13 +797,12 @@ export function useSources() {
     if (!policy) return null;
     return {
       mode: policy.mode as NotebookExtractorsPolicy['mode'],
-      enabled_extractors: policy.enabled_extractors ?? undefined,
+      enabledExtractors: policy.enabledExtractors ?? undefined,
     };
   }, [extractorsData]);
 
   const extractorFallbackEnabled = useMemo<boolean | null>(() => {
-    if (typeof extractorsData?.fallback_enabled === 'boolean')
-      return extractorsData.fallback_enabled;
+    if (typeof extractorsData?.fallbackEnabled === 'boolean') return extractorsData.fallbackEnabled;
     return null;
   }, [extractorsData]);
 
@@ -863,7 +862,7 @@ export function useSources() {
       try {
         const { error: reErr } = (await (api.v2.sources({ id: sourceId }) as any)['re-embed'].post(
           null,
-          { query: { notebook_id: activeNotebookId } },
+          { query: { notebookId: activeNotebookId } },
         )) as any;
         if (reErr) throw reErr;
         toast.success('已重新嵌入来源');

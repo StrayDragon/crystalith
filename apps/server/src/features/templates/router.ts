@@ -53,9 +53,9 @@ function serializeTemplate(row: typeof templates.$inferSelect) {
     id: row.id,
     name: row.name,
     description: row.description,
-    config_json: row.configJson,
-    is_builtin: row.isBuiltin,
-    created_at: row.createdAt.toISOString(),
+    configJson: row.configJson,
+    isBuiltin: row.isBuiltin,
+    createdAt: row.createdAt.toISOString(),
   };
 }
 
@@ -72,7 +72,7 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
         .values({
           name: body.name,
           description: body.description ?? null,
-          configJson: body.config_json,
+          configJson: body.configJson,
         })
         .returning()
         .get();
@@ -101,7 +101,7 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
       const updateData: Record<string, unknown> = {};
       if (body.name !== undefined) updateData.name = body.name;
       if (body.description !== undefined) updateData.description = body.description ?? null;
-      if (body.config_json !== undefined) updateData.configJson = body.config_json;
+      if (body.configJson !== undefined) updateData.configJson = body.configJson;
 
       const updated = db()
         .update(templates)

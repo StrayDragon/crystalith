@@ -96,10 +96,10 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
   const startEdit = useCallback((preset: (typeof customPresets)[number]) => {
     setEditor({
       mode: 'edit',
-      presetId: preset.preset_id ?? null,
+      presetId: preset.presetId ?? null,
       trigger: preset.trigger,
       description: preset.description ?? '',
-      systemPrompt: preset.system_prompt,
+      systemPrompt: preset.systemPrompt,
       enabled: preset.enabled,
     });
   }, []);
@@ -111,7 +111,7 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
       presetId: null,
       trigger: base.slice(0, 32),
       description: preset.description ?? '',
-      systemPrompt: preset.system_prompt,
+      systemPrompt: preset.systemPrompt,
       enabled: true,
     });
   }, []);
@@ -420,7 +420,7 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                           <button
                             type="button"
                             onClick={() =>
-                              void handleCopySystemPrompt(toTextareaValue(preset.system_prompt))
+                              void handleCopySystemPrompt(toTextareaValue(preset.systemPrompt))
                             }
                             className="px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-white/80 dark:hover:bg-slate-800 text-[11px] flex items-center gap-1"
                           >
@@ -435,7 +435,7 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                           查看 system prompt
                         </summary>
                         <pre className="mt-2 p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-[11px] text-gray-800 dark:text-slate-200 overflow-x-auto whitespace-pre-wrap">
-                          {preset.system_prompt}
+                          {preset.systemPrompt}
                         </pre>
                       </details>
                     </div>
@@ -456,7 +456,7 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
               ) : (
                 <div className="space-y-2">
                   {customPresets.map((preset) => {
-                    const presetId = preset.preset_id ?? null;
+                    const presetId = preset.presetId ?? null;
                     return (
                       <div
                         key={`custom:${preset.trigger}:${presetId ?? 'na'}`}
@@ -538,7 +538,7 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                             <button
                               type="button"
                               onClick={() =>
-                                void handleCopySystemPrompt(toTextareaValue(preset.system_prompt))
+                                void handleCopySystemPrompt(toTextareaValue(preset.systemPrompt))
                               }
                               className="text-[11px] px-2 py-1 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-1"
                             >
@@ -547,7 +547,7 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                             </button>
                           </div>
                           <pre className="mt-2 p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-950/20 text-[11px] text-gray-800 dark:text-slate-200 overflow-x-auto whitespace-pre-wrap">
-                            {preset.system_prompt}
+                            {preset.systemPrompt}
                           </pre>
                         </details>
                       </div>

@@ -50,7 +50,7 @@ function ResearchCapsule({
     label: session.status,
     color: 'gray' as const,
   };
-  const progress = Math.round((session.current_iteration / session.max_iterations) * 100);
+  const progress = Math.round((session.currentIteration / session.maxIterations) * 100);
   const isActive = ['planning', 'searching', 'analyzing', 'waiting_user'].includes(session.status);
   const shouldAnimate = config.animate;
 
@@ -99,7 +99,7 @@ function ResearchCapsule({
         {/* Stats */}
         <div className="flex items-center justify-between text-xs text-gray-500">
           <span>
-            第 {session.current_iteration}/{session.max_iterations} 轮
+            第 {session.currentIteration}/{session.maxIterations} 轮
           </span>
           {session.status === 'waiting_user' && (
             <span className="text-amber-600 font-medium animate-pulse">需要您的确认</span>

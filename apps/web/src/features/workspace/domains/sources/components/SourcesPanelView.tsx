@@ -684,7 +684,7 @@ function SourcesPanelView({
     research.clearEvents();
     const session = await research.createSession(
       research.activeSession.topic,
-      research.activeSession.max_iterations,
+      research.activeSession.maxIterations,
     );
     if (session) {
       await research.startResearch(session.id);
@@ -1639,7 +1639,7 @@ function SourcesPanelView({
                           {session.topic}
                         </h4>
                         <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                          {session.max_iterations} 轮研究 · {session.result_count || 0} 条结果
+                          {session.maxIterations} 轮研究 · {session.result_count || 0} 条结果
                         </p>
                       </div>
                       <Chip
@@ -1650,7 +1650,7 @@ function SourcesPanelView({
                       />
                     </div>
                     <p className="text-xs text-gray-400 mt-2">
-                      {new Date(session.created_at).toLocaleString('zh-CN')}
+                      {new Date(session.createdAt).toLocaleString('zh-CN')}
                     </p>
                   </button>
                 ))}

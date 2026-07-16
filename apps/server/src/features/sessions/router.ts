@@ -75,12 +75,12 @@ function serializeSession(row: {
 }) {
   return {
     id: row.id,
-    notebook_id: row.notebookId,
+    notebookId: row.notebookId,
     title: row.title,
-    shared_state: row.sharedState,
-    shared_state_revision: row.sharedStateRevision,
-    created_at: row.createdAt.toISOString(),
-    updated_at: row.updatedAt.toISOString(),
+    sharedState: row.sharedState,
+    sharedStateRevision: row.sharedStateRevision,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
@@ -149,12 +149,12 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
       if (body.title !== undefined) updateData.title = body.title;
 
       // Optimistic-concurrency check: only apply if revision matches
-      if (body.shared_state_revision !== undefined) {
-        if (body.shared_state_revision !== existing.sharedStateRevision) {
+      if (body.sharedStateRevision !== undefined) {
+        if (body.sharedStateRevision !== existing.sharedStateRevision) {
           throw new NotFoundError('Session state has been modified by another client');
         }
-        if (body.shared_state !== undefined) {
-          updateData.sharedState = body.shared_state;
+        if (body.sharedState !== undefined) {
+          updateData.sharedState = body.sharedState;
           updateData.sharedStateRevision = existing.sharedStateRevision + 1;
         }
       }
@@ -190,21 +190,23 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
 
     // c52: honor message_ids filter (v1 api.py:257-268). When provided, only
     // convert the listed messages; missing ids → 404.
-    const { message_ids } = (body ?? {}) as { message_ids?: number[] };
+    const { messageIds } = (body ?? {}) as { messageIds?: number[] };
     let msgRows = db()
       .select()
       .from(messages)
       .where(eq(messages.sessionId, sid))
       .orderBy(messages.createdAt)
       .all();
-    if (message_ids && message_ids.length > 0) {
-      const wanted = new Set(message_ids);
+    if (messageIds && messageIds.length > 0) {
+      const wanted = new Set(messageIds);
       // v1 api.py:262-268: 404 if any requested id is missing in the session
-      const missing = message_ids.filter((id) => !msgRows.some((m) => m.id === id));
+      const missing = messageIds.filter(
+        (id: number) => !msgRows.some((m: { id: number }) => m.id === id),
+      );
       if (missing.length > 0) {
         throw new NotFoundError(`Message(s) not found in session: ${missing.join(', ')}`);
       }
-      msgRows = msgRows.filter((m) => wanted.has(m.id));
+      msgRows = msgRows.filter((m: { id: number }) => wanted.has(m.id));
     }
 
     if (msgRows.length === 0) {
@@ -293,10 +295,10 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
 
     set.status = 201;
     return {
-      source_id: source.id,
+      sourceId: source.id,
       filename,
-      chunk_count: chunkRows.length,
-      message_count: msgRows.length,
+      chunkCount: chunkRows.length,
+      messageCount: msgRows.length,
     };
   })
 
@@ -307,12 +309,12 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
     const sessionRow = db().select().from(sessions).where(eq(sessions.id, sid)).get();
     if (!sessionRow || sessionRow.notebookId !== nid) notFound(sid);
 
-    const { output_type, message_ids } = (body ?? {}) as {
-      output_type: string;
-      message_ids?: number[];
+    const { outputType, messageIds } = (body ?? {}) as {
+      outputType?: string;
+      messageIds?: number[];
     };
-    if (!['PARAGRAPH', 'BULLETS', 'STRUCTURED'].includes(output_type)) {
-      throw new NotFoundError(`Unsupported output type: ${output_type}`);
+    if (!['PARAGRAPH', 'BULLETS', 'STRUCTURED'].includes(outputType ?? '')) {
+      throw new NotFoundError(`Unsupported output type: ${outputType}`);
     }
 
     // c52: honor message_ids filter (v1 api.py:417-428)
@@ -322,13 +324,15 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
       .where(eq(messages.sessionId, sid))
       .orderBy(messages.createdAt)
       .all();
-    if (message_ids && message_ids.length > 0) {
-      const wanted = new Set(message_ids);
-      const missing = message_ids.filter((id) => !msgRows.some((m) => m.id === id));
+    if (messageIds && messageIds.length > 0) {
+      const wanted = new Set(messageIds);
+      const missing = messageIds.filter(
+        (id: number) => !msgRows.some((m: { id: number }) => m.id === id),
+      );
       if (missing.length > 0) {
         throw new NotFoundError(`Message(s) not found in session: ${missing.join(', ')}`);
       }
-      msgRows = msgRows.filter((m) => wanted.has(m.id));
+      msgRows = msgRows.filter((m: { id: number }) => wanted.has(m.id));
     }
 
     if (msgRows.length === 0) {
@@ -343,7 +347,7 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
 
     // Build output content per type
     let content: Record<string, unknown>;
-    if (output_type === 'BULLETS') {
+    if (outputType === 'BULLETS') {
       const lines = textContent
         .split('\n')
         .map((l) => l.trim())
@@ -357,7 +361,7 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
           message_count: msgRows.length,
         },
       };
-    } else if (output_type === 'STRUCTURED') {
+    } else if (outputType === 'STRUCTURED') {
       content = {
         title: `${title} - 结构化笔记`,
         sections: [{ title: '对话内容', content: textContent }],
@@ -391,7 +395,7 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
       .insert(outputs)
       .values({
         notebookId: nid,
-        type: output_type as 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED',
+        type: outputType as 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED',
         prompt: `Session conversion: ${title}`,
         chunkIds,
         content,
@@ -401,10 +405,10 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
 
     set.status = 201;
     return {
-      output_id: output.id,
-      output_type,
+      outputId: output.id,
+      outputType,
       title: content.title,
-      message_count: msgRows.length,
+      messageCount: msgRows.length,
     };
   });
 

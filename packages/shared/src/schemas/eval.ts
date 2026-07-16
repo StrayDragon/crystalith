@@ -11,12 +11,12 @@ import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from './common.js';
 
 export const EvalItemSchema = z.object({
   id: IdSchema,
-  dataset_id: IdSchema,
+  datasetId: IdSchema,
   question: z.string().min(1),
-  expected_answer: z.string().min(1),
-  expected_sources: z.array(IdSchema).nullable().optional(),
-  notebook_id: IdSchema,
-  created_at: IsoTimestampSchema,
+  expectedAnswer: z.string().min(1),
+  expectedSources: z.array(IdSchema).nullable().optional(),
+  notebookId: IdSchema,
+  createdAt: IsoTimestampSchema,
 });
 export type EvalItem = z.infer<typeof EvalItemSchema>;
 
@@ -24,24 +24,24 @@ export const EvalDatasetSchema = z.object({
   id: IdSchema,
   name: z.string().min(1).max(255),
   description: z.string().nullable().optional(),
-  notebook_id: IdSchema.nullable().optional(),
-  created_at: IsoTimestampSchema,
-  updated_at: IsoTimestampSchema,
+  notebookId: IdSchema.nullable().optional(),
+  createdAt: IsoTimestampSchema,
+  updatedAt: IsoTimestampSchema,
 });
 export type EvalDataset = z.infer<typeof EvalDatasetSchema>;
 
 export const EvalDatasetCreateSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().nullable().optional(),
-  notebook_id: IdSchema.nullable().optional(),
+  notebookId: IdSchema.nullable().optional(),
 });
 export type EvalDatasetCreate = z.infer<typeof EvalDatasetCreateSchema>;
 
 export const EvalItemCreateSchema = z.object({
   question: z.string().min(1),
-  expected_answer: z.string().min(1),
-  expected_sources: z.array(IdSchema).nullable().optional(),
-  notebook_id: IdSchema,
+  expectedAnswer: z.string().min(1),
+  expectedSources: z.array(IdSchema).nullable().optional(),
+  notebookId: IdSchema,
 });
 export type EvalItemCreate = z.infer<typeof EvalItemCreateSchema>;
 
@@ -54,11 +54,11 @@ export type EvalRunStatus = z.infer<typeof EvalRunStatusSchema>;
 
 export const EvalRunSchema = z.object({
   id: IdSchema,
-  dataset_id: IdSchema,
-  strategy_ids: z.array(z.string()),
+  datasetId: IdSchema,
+  strategyIds: z.array(z.string()),
   status: EvalRunStatusSchema,
-  started_at: IsoTimestampSchema,
-  finished_at: IsoTimestampSchema.nullable().optional(),
+  startedAt: IsoTimestampSchema,
+  finishedAt: IsoTimestampSchema.nullable().optional(),
   summary: JsonMetadataSchema.nullable().optional(),
 });
 export type EvalRun = z.infer<typeof EvalRunSchema>;
@@ -68,21 +68,21 @@ export const EvalMetricsSchema = z.object({
   relevance: z.number().min(0).max(1),
   recall: z.number().min(0).max(1).nullable().optional(),
   precision: z.number().min(0).max(1).nullable().optional(),
-  latency_ms: z.number().int().nonnegative(),
+  latencyMs: z.number().int().nonnegative(),
   explanation: z.string().nullable().optional(),
 });
 export type EvalMetrics = z.infer<typeof EvalMetricsSchema>;
 
 export const EvalRunItemSchema = z.object({
   id: IdSchema,
-  run_id: IdSchema,
-  item_id: IdSchema,
-  strategy_id: z.string(),
+  runId: IdSchema,
+  itemId: IdSchema,
+  strategyId: z.string(),
   question: z.string(),
   answer: z.string(),
-  retrieved_source_ids: z.array(IdSchema).default([]),
+  retrievedSourceIds: z.array(IdSchema).default([]),
   metrics: EvalMetricsSchema,
-  created_at: IsoTimestampSchema,
+  createdAt: IsoTimestampSchema,
 });
 export type EvalRunItem = z.infer<typeof EvalRunItemSchema>;
 
@@ -91,7 +91,7 @@ export type EvalRunItem = z.infer<typeof EvalRunItemSchema>;
 // ---------------------------------------------------------------------------
 
 export const EvalRunRequestSchema = z.object({
-  dataset_id: IdSchema,
-  strategy_ids: z.array(z.string()).min(1),
+  datasetId: IdSchema,
+  strategyIds: z.array(z.string()).min(1),
 });
 export type EvalRunRequest = z.infer<typeof EvalRunRequestSchema>;

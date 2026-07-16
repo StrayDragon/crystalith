@@ -24,15 +24,15 @@ type ExportTarget = 'source' | 'note';
 /**
  * Export research final report to a notebook source or Studio note.
  * Server contract (`POST /v2/research/:id/export`) only accepts `export_type`
- * and always exports the full `final_report` — UI matches that (no fake filters).
+ * and always exports the full `finalReport` — UI matches that (no fake filters).
  */
 function ResearchExportDialog({ session, onClose, onExportComplete }: ResearchExportDialogProps) {
   const [exportTarget, setExportTarget] = useState<ExportTarget>('source');
   const [isExporting, setIsExporting] = useState(false);
   const { style: modalStyle } = useLayer('modal');
 
-  const hasReport = Boolean(session.final_report?.trim());
-  const reportChars = session.final_report?.length ?? 0;
+  const hasReport = Boolean(session.finalReport?.trim());
+  const reportChars = session.finalReport?.length ?? 0;
 
   const handleExport = useCallback(async () => {
     if (!hasReport) {

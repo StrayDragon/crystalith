@@ -2,15 +2,17 @@ kind: llman.sdd.spec
 name: "frontend-eden-migration"
 purpose: "TBD - created by archiving change c35-add-v2-frontend-migration. Update purpose after archive."
 valid_scope[2]: src/,tests/
-requirements[5]{req_id,title,statement}:
-  fm1,Frontend API Client,The frontend MUST use eden treaty for all backend HTTP calls and MUST NOT import from api/generated/.
+requirements[6]{req_id,title,statement}:
+  fm1,Frontend uses Eden and shared camelCase types without parallel Api catalogs,"前端 MUST 使用 eden treaty 进行后端 HTTP 调用，类型 MUST 来自 App 推断与/或 @crystalith/shared。MUST NOT 依赖 api/generated/。MUST NOT 再维护与 wire 不一致的平行 Api* / shared-types 目录作为 SSOT；过渡删除后仅允许从 shared/eden re-export。"
   fm2,Streaming Endpoints,Streaming endpoints MUST use fetch() with manual SSE parsing against /v2/* URLs; SSE URLs MUST NOT reference /v1/.
   fm3,Code Cleanup,The api/generated/ directory MUST be deleted after all references are migrated.
   "frontend-sources-must-pass-notebook-id-query","Frontend sources single-item calls MUST pass notebook_id query for ownership check","前端调用 sources 单 source 路由（GET /sources/:id、DELETE /sources/:id、POST /sources/:id/re-embed、GET /sources/:id/chunks）MUST 传递 `notebook_id` query 参数以激活服务端归属校验。MUST NOT 省略此参数导致归属校验被跳过（服务端在 notebook_id 缺失时跳过检查，形成跨 notebook 访问漏洞）。notebook_id 从 workspace store 的 activeNotebookId 获取。"
   "frontend-error-envelope-must-use-shared-parser",Frontend eden error handling MUST use shared parseServerError helper,"前端 eden treaty 调用点的错误处理 MUST 使用共享 `parseServerError(error)` helper 解析 ErrorEnvelope（errorCode/message/details/status），MUST NOT 在各调用点 inline cast `{ errorCode?, details?, message? }` 导致逻辑重复与漂移。"
-scenarios[5]{req_id,id,given,when,then}:
-  fm1,"generated-client-eliminated",The frontend imports api/generated client,all imports are replaced with api/eden treaty calls,typecheck reports 0 generated client references
-  fm2,"streaming-migrated",A streaming feature like chat QA is used,the client sends a streaming request,the request hits /v2/qa/stream and SSE events are correctly parsed
-  fm3,"cleanup-complete",All generated client references have been migrated,the api/generated/ directory is deleted,typecheck and tests pass with 0 generated client errors
-  "frontend-sources-must-pass-notebook-id-query","delete-passes-notebook-id",a user deletes a source in notebook A,"the frontend calls DELETE /sources/:id",the request MUST include ?notebook_id=A so the server verifies ownership
-  "frontend-error-envelope-must-use-shared-parser","dedup-error-parsed-via-helper",an eden call returns an error with errorCode SOURCE_DEDUP_HIT,the frontend parses the error,it MUST use parseServerError to extract errorCode rather than inline casting
+  r286,"Frontend MUST NOT snake-to-camel normalize API payloads",在 wire 已为 camelCase 后，前端 MUST NOT 再实现针对 API 载荷的 snake_case→camelCase 字段重命名映射（normalize*）。允许保留与命名无关的 UI 派生（如状态文案、相对时间）。
+scenarios[6]{req_id,id,given,when,then,feature}:
+  fm1,"no-parallel-api-ssot",c65 前端清理完成,搜索手写 ApiNotebook/ApiSource 等平行线类型,"SHALL 不再存在与 shared 字段名冲突的平行 SSOT（或仅剩 re-export）",true
+  fm2,"streaming-migrated",A streaming feature like chat QA is used,the client sends a streaming request,the request hits /v2/qa/stream and SSE events are correctly parsed,true
+  fm3,"cleanup-complete",All generated client references have been migrated,the api/generated/ directory is deleted,typecheck and tests pass with 0 generated client errors,true
+  "frontend-sources-must-pass-notebook-id-query","delete-passes-notebook-id",a user deletes a source in notebook A,"the frontend calls DELETE /sources/:id",the request MUST include ?notebook_id=A so the server verifies ownership,true
+  "frontend-error-envelope-must-use-shared-parser","dedup-error-parsed-via-helper",an eden call returns an error with errorCode SOURCE_DEDUP_HIT,the frontend parses the error,it MUST use parseServerError to extract errorCode rather than inline casting,true
+  r286,"normalize-snake-maps-removed",wire camelCase 已上线,审查 apps/web normalize* 与 Api 映射,SHALL 不存在 notebook_id→notebookId 这类 API 字段重命名逻辑,true

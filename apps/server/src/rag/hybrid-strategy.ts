@@ -9,10 +9,10 @@ import type { RAGStrategy, ChunkResult } from './types.ts';
 const RRF_K = 60;
 
 interface RankedHit {
-  chunk_id: number;
+  chunkId: number;
   text: string;
-  source_id: number;
-  chunk_index: number;
+  sourceId: number;
+  chunkIndex: number;
   embedScore: number;
   bm25Score: number;
 }
@@ -28,18 +28,18 @@ function rrfFuse(
   for (let i = 0; i < embedResults.length; i++) {
     const r = embedResults[i];
     const rrfScore = 1 / (RRF_K + (i + 1));
-    const existing = scoreMap.get(r.chunk_id);
+    const existing = scoreMap.get(r.chunkId);
     if (existing) {
       existing.rrf += rrfScore;
       existing.hit.embedScore = r.score;
     } else {
-      scoreMap.set(r.chunk_id, {
+      scoreMap.set(r.chunkId, {
         rrf: rrfScore,
         hit: {
-          chunk_id: r.chunk_id,
+          chunkId: r.chunkId,
           text: r.text,
-          source_id: r.source_id,
-          chunk_index: r.chunk_index,
+          sourceId: r.sourceId,
+          chunkIndex: r.chunkIndex,
           embedScore: r.score,
           bm25Score: 0,
         },
@@ -51,18 +51,18 @@ function rrfFuse(
   for (let i = 0; i < bm25Results.length; i++) {
     const r = bm25Results[i];
     const rrfScore = 1 / (RRF_K + (i + 1));
-    const existing = scoreMap.get(r.chunk_id);
+    const existing = scoreMap.get(r.chunkId);
     if (existing) {
       existing.rrf += rrfScore;
       existing.hit.bm25Score = r.score;
     } else {
-      scoreMap.set(r.chunk_id, {
+      scoreMap.set(r.chunkId, {
         rrf: rrfScore,
         hit: {
-          chunk_id: r.chunk_id,
+          chunkId: r.chunkId,
           text: r.text,
-          source_id: r.source_id,
-          chunk_index: r.chunk_index,
+          sourceId: r.sourceId,
+          chunkIndex: r.chunkIndex,
           embedScore: 0,
           bm25Score: r.score,
         },
@@ -76,12 +76,12 @@ function rrfFuse(
     .slice(0, topK);
   const maxRrf = entries[0]?.rrf ?? 1;
   return entries.map((entry) => ({
-    chunk_id: entry.hit.chunk_id,
+    chunkId: entry.hit.chunkId,
     text: entry.hit.text,
     // normalized RRF as similarity
     score: maxRrf > 0 ? entry.rrf / maxRrf : 0,
-    source_id: entry.hit.source_id,
-    chunk_index: entry.hit.chunk_index,
+    sourceId: entry.hit.sourceId,
+    chunkIndex: entry.hit.chunkIndex,
   }));
 }
 

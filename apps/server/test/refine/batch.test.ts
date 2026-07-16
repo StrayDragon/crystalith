@@ -68,7 +68,7 @@ describe('refine batch (c29 v1-aligned)', () => {
   it('generates all 3 formats by default (formats=null)', async () => {
     const nb = makeNotebook('batch-default');
     const { status, body } = await postBatch({
-      notebook_id: nb,
+      notebookId: nb,
       prompt: 'Summarize everything',
     });
 
@@ -86,7 +86,7 @@ describe('refine batch (c29 v1-aligned)', () => {
   it('generates only requested formats', async () => {
     const nb = makeNotebook('batch-subset');
     const { status, body } = await postBatch({
-      notebook_id: nb,
+      notebookId: nb,
       prompt: 'Summarize',
       formats: ['paragraph'],
     });
@@ -99,7 +99,7 @@ describe('refine batch (c29 v1-aligned)', () => {
   it('shares citations across all formats (no source_ids → empty)', async () => {
     const nb = makeNotebook('batch-shared');
     const { body } = await postBatch({
-      notebook_id: nb,
+      notebookId: nb,
       prompt: 'test',
       formats: ['paragraph', 'bullets'],
     });
@@ -112,7 +112,7 @@ describe('refine batch (c29 v1-aligned)', () => {
   it('returns 400 for unsupported format in batch', async () => {
     const nb = makeNotebook('batch-badformat');
     const { status } = await postBatch({
-      notebook_id: nb,
+      notebookId: nb,
       prompt: 'test',
       formats: ['expand'],
     });

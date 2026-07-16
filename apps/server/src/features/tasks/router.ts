@@ -39,15 +39,15 @@ const apiDocs: OpenApiRoute[] = [
 function serializeTask(row: typeof tasksTable.$inferSelect) {
   return {
     id: row.id,
-    notebook_id: row.notebookId,
+    notebookId: row.notebookId,
     type: row.type,
     status: row.status,
     payload: row.payload,
     result: row.result,
     error: row.error,
     progress: row.progress,
-    created_at: row.createdAt.toISOString(),
-    updated_at: row.updatedAt.toISOString(),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 

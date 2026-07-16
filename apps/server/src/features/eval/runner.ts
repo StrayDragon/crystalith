@@ -84,7 +84,7 @@ export async function runEval(datasetId: number, strategyIds: string[]): Promise
         const chunks = await ragRegistry.retrieveWith(strategyId, item.notebookId, item.question, {
           topK: 5,
         });
-        const context = chunks.map((c) => `[${c.chunk_index}] ${c.text}`).join('\n\n');
+        const context = chunks.map((c) => `[${c.chunkIndex}] ${c.text}`).join('\n\n');
 
         // 2. Generate answer
         const genResult = await generateText({
@@ -110,7 +110,7 @@ export async function runEval(datasetId: number, strategyIds: string[]): Promise
           Array.isArray(item.expectedSources) &&
           item.expectedSources.length > 0
         ) {
-          const sourceIds = chunks.map((c) => c.source_id);
+          const sourceIds = chunks.map((c) => c.sourceId);
           metrics.recall = computeRecall(sourceIds, item.expectedSources as number[]);
           metrics.precision = computePrecision(sourceIds, item.expectedSources as number[]);
         }
@@ -124,7 +124,7 @@ export async function runEval(datasetId: number, strategyIds: string[]): Promise
             strategyId,
             question: item.question,
             answer,
-            retrievedSourceIds: chunks.map((c) => c.source_id),
+            retrievedSourceIds: chunks.map((c) => c.sourceId),
             metrics: {
               faithfulness: metrics.faithfulness,
               relevance: metrics.relevance,

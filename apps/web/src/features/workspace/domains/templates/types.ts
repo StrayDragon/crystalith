@@ -16,17 +16,17 @@ export interface WorkspaceTemplate {
 }
 
 export function normalizeTemplate(raw: any): WorkspaceTemplate {
-  const configJson = raw?.config_json ?? {};
+  const configJson = raw?.configJson ?? {};
   return {
     id: raw.id,
     name: raw.name ?? '',
     description: raw.description ?? '',
-    isBuiltin: Boolean(raw.is_builtin),
-    createdAt: raw.created_at ?? '',
+    isBuiltin: Boolean(raw.isBuiltin),
+    createdAt: raw.createdAt ?? '',
     config: {
-      sessionTitles: Array.isArray(configJson.session_titles) ? configJson.session_titles : [],
-      outputType: (configJson.output_type ?? null) as OutputTypeId | null,
-      sourceTags: Array.isArray(configJson.source_tags) ? configJson.source_tags : [],
+      sessionTitles: Array.isArray(configJson.sessionTitles) ? configJson.sessionTitles : [],
+      outputType: (configJson.outputType ?? null) as OutputTypeId | null,
+      sourceTags: Array.isArray(configJson.sourceTags) ? configJson.sourceTags : [],
     },
   };
 }

@@ -40,10 +40,10 @@ export interface TaskPayload {
   refineInput?: {
     prompt: string;
     format: 'paragraph' | 'bullets' | 'structured';
-    source_ids?: number[];
-    top_k?: number;
-    min_score?: number;
-    notebook_id?: number;
+    sourceIds?: number[];
+    topK?: number;
+    minScore?: number;
+    notebookId?: number;
   };
   sourceId?: number;
   notebookId?: number;
@@ -83,15 +83,15 @@ async function handleRefine(
   if (!trimmedPrompt) throw new Error('Refine task requires a prompt');
 
   const format = input.format ?? 'paragraph';
-  const topK = input.top_k ?? 5;
-  const minScore = input.min_score ?? 0.2;
+  const topK = input.topK ?? 5;
+  const minScore = input.minScore ?? 0.2;
 
   // ① Retrieve + citations + context (shared with batch via refine/retrieve.ts)
   const { retrieveForRefine } = await import('../refine/retrieve.ts');
   const { citations, context, evidence } = await retrieveForRefine(
     payload.notebookId,
     trimmedPrompt,
-    input.source_ids,
+    input.sourceIds,
     topK,
     minScore,
     signal,
@@ -131,7 +131,7 @@ async function handleRefine(
     ...applyFormat(format, answer, trimmedPrompt, citations),
     citations,
     evidence,
-    created_at: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
   };
 }
 

@@ -91,9 +91,9 @@ describe('resolveCitations (real, DB-backed)', () => {
 
     const retrieved = [
       {
-        chunk_id: chunk.id,
-        source_id: src.id,
-        chunk_index: 0,
+        chunkId: chunk.id,
+        sourceId: src.id,
+        chunkIndex: 0,
         text: 'some evidence text',
         score: 0.9,
       },
@@ -122,9 +122,9 @@ describe('resolveCitations (real, DB-backed)', () => {
 
     const citations = await resolveCitations([
       {
-        chunk_id: chunk.id,
-        source_id: src.id,
-        chunk_index: 0,
+        chunkId: chunk.id,
+        sourceId: src.id,
+        chunkIndex: 0,
         text: longText,
         score: 0.5,
       },
@@ -140,7 +140,7 @@ describe('resolveCitations (real, DB-backed)', () => {
   it('falls back to "unknown" for a missing source row', async () => {
     // source_id 99999 does not exist — resolveCitations must not throw.
     const citations = await resolveCitations([
-      { chunk_id: 1, source_id: 99999, chunk_index: 0, text: 'orphan', score: 0.1 },
+      { chunkId: 1, sourceId: 99999, chunkIndex: 0, text: 'orphan', score: 0.1 },
     ]);
     expect(citations[0].sourceName).toBe('unknown');
   });
@@ -166,7 +166,7 @@ describe('confidence from real citations', () => {
       .get();
 
     const citations = await resolveCitations([
-      { chunk_id: ch.id, source_id: src.id, chunk_index: 0, text: 'evidence', score: 0.9 },
+      { chunkId: ch.id, sourceId: src.id, chunkIndex: 0, text: 'evidence', score: 0.9 },
     ]);
     // 1 source in notebook → coverageRatio = 1/1 = 1
     const score = computeConfidence(citations, 1, 5);

@@ -8,7 +8,7 @@ import { normalizeTemplate, type WorkspaceTemplate } from './types';
 // Templates hook — CRUD over /v2/templates via eden treaty.
 //
 // The v2 backend (c12) restored full templates CRUD. This hook calls those
-// endpoints; config_json is assembled from discrete fields on write and
+// endpoints; configJson is assembled from discrete fields on write and
 // unpacked into WorkspaceTemplate.config on read (see normalizeTemplate).
 const SWR_KEY = 'workspace/templates';
 
@@ -44,9 +44,9 @@ export function useTemplates() {
       const { data, error } = await api.v2.templates.post({
         name: payload.name,
         description: payload.description ?? null,
-        config_json: {
+        configJson: {
           session_titles: payload.sessionTitles ?? [],
-          output_type: payload.outputType ?? null,
+          outputType: payload.outputType ?? null,
           source_tags: payload.sourceTags ?? [],
         },
       });
@@ -68,15 +68,15 @@ export function useTemplates() {
       description?: string;
       outputType?: OutputTypeId | null;
     }) => {
-      // The v2 backend stores templates with a flat config_json; notebookId is
+      // The v2 backend stores templates with a flat configJson; notebookId is
       // not persisted server-side (templates are notebook-agnostic), so we only
       // forward name/description + config.
       const { data, error } = await api.v2.templates.post({
         name: payload.name,
         description: payload.description ?? null,
-        config_json: {
+        configJson: {
           session_titles: [],
-          output_type: payload.outputType ?? null,
+          outputType: payload.outputType ?? null,
           source_tags: [],
         },
       });

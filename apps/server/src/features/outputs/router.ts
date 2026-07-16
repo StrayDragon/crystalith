@@ -77,13 +77,13 @@ const apiDocs: OpenApiRoute[] = [
 function serializeOutput(row: typeof outputs.$inferSelect) {
   return {
     id: row.id,
-    notebook_id: row.notebookId,
+    notebookId: row.notebookId,
     type: row.type,
     prompt: row.prompt,
-    chunk_ids: row.chunkIds,
+    chunkIds: row.chunkIds,
     content: row.content,
-    created_at: row.createdAt.toISOString(),
-    updated_at: row.updatedAt.toISOString(),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
@@ -93,7 +93,7 @@ function serializeOutput(row: typeof outputs.$inferSelect) {
  * pipeline.mapCitationsIntoContent already resolved numeric `citations` arrays
  * into full Citation dicts embedded on leaf nodes, so we recurse and dedup by
  * chunk_id in first-seen order. Returns the cited subset — NOT the full
- * retrieved-chunk superset stored in `outputs.chunk_ids`.
+ * retrieved-chunk superset stored in `outputs.chunkIds`.
  */
 export function collectCitedCitations(content: Record<string, unknown> | null): Citation[] {
   if (!content) return [];
@@ -135,21 +135,21 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
   // Generate an output
   .post('/outputs', async ({ body, set, request }) => {
     const {
-      notebook_id,
+      notebookId: nbIdRaw,
       type,
-      chunk_ids,
-      source_ids,
-      prompt,
+      chunkIds,
+      sourceIds,
+      prompt: promptRaw,
       preference,
-      top_k,
-      min_score,
-      model_id,
+      topK,
+      minScore,
+      modelId,
     } = body as Record<string, unknown>;
 
     // Normalize output type to uppercase (API accepts both 'faq' and 'FAQ')
     const normalizedType = (typeof type === 'string' ? type : '').toUpperCase();
 
-    const notebookId = Number(notebook_id);
+    const notebookId = Number(nbIdRaw);
 
     // Verify notebook
     const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
@@ -162,21 +162,21 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
       return sendError(set, ErrorCode.INVALID_REQUEST, 'Use slides endpoints for SLIDES output');
     }
 
-    // c38 gap fix: source_ids is required when chunk_ids is not provided (v1 api.py:292-293)
-    const resolvedSourceIds = source_ids ? (source_ids as number[]).map(Number) : undefined;
-    const resolvedChunkIds = chunk_ids ? (chunk_ids as number[]).map(Number) : undefined;
+    // c38 gap fix: sourceIds is required when chunkIds is not provided (v1 api.py:292-293)
+    const resolvedSourceIds = sourceIds ? (sourceIds as number[]).map(Number) : undefined;
+    const resolvedChunkIds = chunkIds ? (chunkIds as number[]).map(Number) : undefined;
     if (!resolvedChunkIds?.length && !resolvedSourceIds?.length) {
       return sendError(
         set,
         ErrorCode.INVALID_REQUEST,
-        'source_ids must not be empty (or provide chunk_ids)',
+        'sourceIds must not be empty (or provide chunkIds)',
       );
     }
 
-    // Resolve model (config default or explicit model_id override)
-    const modelConfig = model_id
+    // Resolve model (config default or explicit modelId override)
+    const modelConfig = modelId
       ? getModelById(
-          typeof model_id === 'string' ? model_id : typeof model_id === 'string' ? model_id : '',
+          typeof modelId === 'string' ? modelId : typeof modelId === 'string' ? modelId : '',
         )
       : getDefaultChatModel();
     // c42: granular error mapping (v1 api.py:309-361) — typed exceptions, not string matching
@@ -203,21 +203,15 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
         type: normalizedType as ToolOutputType,
         chunkIds: resolvedChunkIds,
         sourceIds: resolvedSourceIds,
-        prompt: prompt
-          ? typeof prompt === 'string'
-            ? prompt
-            : typeof prompt === 'string'
-              ? prompt
-              : ''
-          : undefined,
+        prompt: promptRaw ? (typeof promptRaw === 'string' ? promptRaw : '') : undefined,
         preference: preference === 'speed' ? 'speed' : 'quality',
-        topK: top_k ? Number(top_k) : undefined,
-        minScore: min_score ? Number(min_score) : undefined,
-        modelId: model_id
-          ? typeof model_id === 'string'
-            ? model_id
-            : typeof model_id === 'string'
-              ? model_id
+        topK: topK ? Number(topK) : undefined,
+        minScore: minScore ? Number(minScore) : undefined,
+        modelId: modelId
+          ? typeof modelId === 'string'
+            ? modelId
+            : typeof modelId === 'string'
+              ? modelId
               : ''
           : undefined,
         abortSignal: request.signal,
@@ -249,8 +243,8 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
 
   // List outputs for a notebook
   .get('/outputs', ({ query }) => {
-    const notebookId = Number((query as { notebook_id?: string }).notebook_id);
-    if (!notebookId) throw new NotFoundError('notebook_id query param required');
+    const notebookId = Number((query as { notebookId?: string }).notebookId);
+    if (!notebookId) throw new NotFoundError('notebookId query param required');
 
     const rows = db()
       .select()
@@ -262,17 +256,17 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     return rows.map(serializeOutput);
   })
 
-  // Get a single output (ownership enforced when notebook_id provided)
+  // Get a single output (ownership enforced when notebookId provided)
   .get('/outputs/:id', ({ params, query }) => {
     const id = Number(params.id);
-    const row = requireOutputInNotebook(id, (query as { notebook_id?: string }).notebook_id);
+    const row = requireOutputInNotebook(id, (query as { notebookId?: string }).notebookId);
     return serializeOutput(row);
   })
 
   // Delete output
   .delete('/outputs/:id', ({ params, query, set }) => {
     const id = Number(params.id);
-    requireOutputInNotebook(id, (query as { notebook_id?: string }).notebook_id);
+    requireOutputInNotebook(id, (query as { notebookId?: string }).notebookId);
     db().delete(outputs).where(eq(outputs.id, id)).run();
     set.status = 204;
     return '';
@@ -282,7 +276,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
   .get('/outputs/:id/export', ({ params, query }) => {
     const id = Number(params.id);
     const format = (query.format as 'markdown' | 'json') ?? 'markdown';
-    const row = requireOutputInNotebook(id, (query as { notebook_id?: string }).notebook_id);
+    const row = requireOutputInNotebook(id, (query as { notebookId?: string }).notebookId);
 
     const exportedAt = new Date().toISOString();
 
@@ -301,19 +295,19 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     if (format === 'json') {
       // c42: full citation fields + correct source metadata (v1 OutputExportJson)
       return {
-        notebook_id: row.notebookId,
-        output_id: row.id,
-        output_type: row.type,
+        notebookId: row.notebookId,
+        outputId: row.id,
+        outputType: row.type,
         prompt: row.prompt,
         content: row.content,
         citations,
         sources: sourceRows.map((s) => ({
-          source_id: s.id,
-          source_name: s.filename,
-          mime_type: s.mimeType,
-          parser_type: s.parserType,
+          sourceId: s.id,
+          sourceName: s.filename,
+          mimeType: s.mimeType,
+          parserType: s.parserType,
         })),
-        exported_at: exportedAt,
+        exportedAt,
       };
     }
 
@@ -417,9 +411,9 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
 
     set.status = 201;
     return {
-      source_id: sourceRow.id,
+      sourceId: sourceRow.id,
       filename: sourceRow.filename,
-      chunk_count: chunkTexts.length,
+      chunkCount: chunkTexts.length,
     };
   });
 

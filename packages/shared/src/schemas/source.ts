@@ -25,10 +25,10 @@ export const ExtractorPolicyModeSchema = z.enum(['inherit_global', 'custom']);
 
 export const ChunkSchema = z.object({
   id: IdSchema,
-  chunk_index: z.number().int().nonnegative(),
+  chunkIndex: z.number().int().nonnegative(),
   text: z.string(),
-  start_offset: z.number().int().nullable().optional(),
-  end_offset: z.number().int().nullable().optional(),
+  startOffset: z.number().int().nullable().optional(),
+  endOffset: z.number().int().nullable().optional(),
   metadata: JsonMetadataSchema.nullable().optional(),
 });
 export type Chunk = z.infer<typeof ChunkSchema>;
@@ -39,29 +39,29 @@ export type Chunk = z.infer<typeof ChunkSchema>;
 
 export const SourceSchema = z.object({
   id: IdSchema.describe(desc('source.id')),
-  notebook_id: IdSchema,
+  notebookId: IdSchema,
   filename: z.string().min(1).max(512).describe(desc('source.title')),
-  mime_type: z.string().nullable().optional(),
-  parser_type: z.string().min(1).max(64),
+  mimeType: z.string().nullable().optional(),
+  parserType: z.string().min(1).max(64),
   metadata: JsonMetadataSchema.nullable().optional(),
-  dedup_key: z.string().nullable().optional(),
+  dedupKey: z.string().nullable().optional(),
   status: SourceStatusSchema.describe(desc('source.status')),
-  error_code: z.string().nullable().optional(),
-  error_message: z.string().nullable().optional(),
-  recovery_hint: z.string().nullable().optional(),
-  last_error_at: OptionalTimestampSchema,
-  chunk_count: z.number().int().nonnegative().default(0),
+  errorCode: z.string().nullable().optional(),
+  errorMessage: z.string().nullable().optional(),
+  recoveryHint: z.string().nullable().optional(),
+  lastErrorAt: OptionalTimestampSchema,
+  chunkCount: z.number().int().nonnegative().default(0),
   tags: z.array(z.string()).default([]),
-  created_at: IsoTimestampSchema.describe(desc('source.created_at')),
-  updated_at: IsoTimestampSchema.describe(desc('source.updated_at')),
+  createdAt: IsoTimestampSchema.describe(desc('source.created_at')),
+  updatedAt: IsoTimestampSchema.describe(desc('source.updated_at')),
 });
 export type Source = z.infer<typeof SourceSchema>;
 
 export const SourceCreateSchema = z.object({
   filename: z.string().min(1).max(512),
   content: z.string().nullable().optional(),
-  mime_type: z.string().nullable().optional(),
-  parser_type: z.string().min(1).max(64).default('text'),
+  mimeType: z.string().nullable().optional(),
+  parserType: z.string().min(1).max(64).default('text'),
   metadata: JsonMetadataSchema.nullable().optional(),
 });
 export type SourceCreate = z.infer<typeof SourceCreateSchema>;
@@ -76,10 +76,10 @@ export const SourceListSchema = z.object({
 
 export const SourceTagSchema = z.object({
   id: IdSchema,
-  notebook_id: IdSchema,
+  notebookId: IdSchema,
   name: z.string().min(1).max(64),
-  created_at: IsoTimestampSchema,
-  updated_at: IsoTimestampSchema,
+  createdAt: IsoTimestampSchema,
+  updatedAt: IsoTimestampSchema,
 });
 export type SourceTag = z.infer<typeof SourceTagSchema>;
 
@@ -89,36 +89,36 @@ export const SourceTagCreateSchema = z.object({
 export type SourceTagCreate = z.infer<typeof SourceTagCreateSchema>;
 
 export const SourceTagBindingRequestSchema = z.object({
-  source_ids: z.array(IdSchema).min(1),
+  sourceIds: z.array(IdSchema).min(1),
 });
 
 export const SourceBatchItemResultSchema = z.object({
-  source_id: IdSchema,
+  sourceId: IdSchema,
   ok: z.boolean(),
-  error_code: z.string().nullable().optional(),
+  errorCode: z.string().nullable().optional(),
   message: z.string().nullable().optional(),
 });
 
 export const SourceBatchDeleteRequestSchema = z.object({
-  source_ids: z.array(IdSchema).min(1),
+  sourceIds: z.array(IdSchema).min(1),
 });
 
 export const SourceBatchDeleteResponseSchema = z.object({
   results: z.array(SourceBatchItemResultSchema).default([]),
-  deleted_ids: z.array(IdSchema),
-  deleted_count: z.number().int().nonnegative(),
+  deletedIds: z.array(IdSchema),
+  deletedCount: z.number().int().nonnegative(),
 });
 
 export const SourceBatchReembedRequestSchema = z.object({
-  source_ids: z.array(IdSchema).min(1),
+  sourceIds: z.array(IdSchema).min(1),
 });
 
 export const SourceBatchReembedResponseSchema = z.object({
   results: z.array(SourceBatchItemResultSchema).default([]),
-  reembedded_ids: z.array(IdSchema),
-  failed_ids: z.array(IdSchema),
-  reembedded_count: z.number().int().nonnegative(),
-  failed_count: z.number().int().nonnegative(),
+  reembeddedIds: z.array(IdSchema),
+  failedIds: z.array(IdSchema),
+  reembeddedCount: z.number().int().nonnegative(),
+  failedCount: z.number().int().nonnegative(),
 });
 
 // ---------------------------------------------------------------------------
@@ -127,14 +127,14 @@ export const SourceBatchReembedResponseSchema = z.object({
 
 export const SourceConnectorBindingSchema = z.object({
   id: IdSchema,
-  notebook_id: IdSchema,
-  connector_id: z.string().min(1).max(128),
-  connection_config: JsonMetadataSchema,
-  import_scope: JsonMetadataSchema.nullable().optional(),
-  last_confirmed_snapshot: JsonMetadataSchema.nullable().optional(),
-  last_sync_check_result: JsonMetadataSchema.nullable().optional(),
-  created_at: IsoTimestampSchema,
-  updated_at: IsoTimestampSchema,
+  notebookId: IdSchema,
+  connectorId: z.string().min(1).max(128),
+  connectionConfig: JsonMetadataSchema,
+  importScope: JsonMetadataSchema.nullable().optional(),
+  lastConfirmedSnapshot: JsonMetadataSchema.nullable().optional(),
+  lastSyncCheckResult: JsonMetadataSchema.nullable().optional(),
+  createdAt: IsoTimestampSchema,
+  updatedAt: IsoTimestampSchema,
 });
 export type SourceConnectorBinding = z.infer<typeof SourceConnectorBindingSchema>;
 
@@ -143,17 +143,17 @@ export type SourceConnectorBinding = z.infer<typeof SourceConnectorBindingSchema
 // ---------------------------------------------------------------------------
 
 export const NotebookExtractorPolicySchema = z.object({
-  notebook_id: IdSchema,
+  notebookId: IdSchema,
   mode: ExtractorPolicyModeSchema.default('inherit_global'),
-  enabled_extractors: z.array(z.string()).nullable().optional(),
-  created_at: IsoTimestampSchema,
-  updated_at: IsoTimestampSchema,
+  enabledExtractors: z.array(z.string()).nullable().optional(),
+  createdAt: IsoTimestampSchema,
+  updatedAt: IsoTimestampSchema,
 });
 export type NotebookExtractorPolicy = z.infer<typeof NotebookExtractorPolicySchema>;
 
 export const PatchNotebookExtractorPolicySchema = z.object({
   mode: ExtractorPolicyModeSchema.optional(),
-  enabled_extractors: z.array(z.string()).nullable().optional(),
+  enabledExtractors: z.array(z.string()).nullable().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -193,24 +193,24 @@ export type SourceFromUrlRequest = z.infer<typeof SourceFromUrlRequestSchema>;
 
 export const ExtractorInfoSchema = z.object({
   type: z.string(),
-  plugin_id: z.string().nullable().optional(),
+  pluginId: z.string().nullable().optional(),
   enabled: z.boolean(),
   available: z.boolean(),
-  display_name: z.string(),
+  displayName: z.string(),
   description: z.string(),
   priority: z.number().int(),
-  requires_api_key: z.boolean().default(false),
-  requires_service: z.boolean().default(false),
-  error_code: z.string().nullable().optional(),
+  requiresApiKey: z.boolean().default(false),
+  requiresService: z.boolean().default(false),
+  errorCode: z.string().nullable().optional(),
   message: z.string().nullable().optional(),
-  recovery_hint: z.string().nullable().optional(),
+  recoveryHint: z.string().nullable().optional(),
   details: JsonMetadataSchema.nullable().optional(),
 });
 
 export const ExtractorsListSchema = z.object({
   extractors: z.array(ExtractorInfoSchema),
-  default_extractor: z.string().nullable().optional(),
-  fallback_enabled: z.boolean().default(true),
+  defaultExtractor: z.string().nullable().optional(),
+  fallbackEnabled: z.boolean().default(true),
   policy: NotebookExtractorPolicySchema,
 });
 
@@ -240,7 +240,7 @@ export const SourceSearchResponseSchema = z.object({
   mode: z.string(),
   results: z.array(SourceSearchResultSchema),
   message: z.string().nullable().optional(),
-  created_at: IsoTimestampSchema,
+  createdAt: IsoTimestampSchema,
 });
 
 // ---------------------------------------------------------------------------
@@ -248,12 +248,12 @@ export const SourceSearchResponseSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const SourceSummarySchema = z.object({
-  source_id: IdSchema,
+  sourceId: IdSchema,
   summary: z.string(),
-  key_points: z.array(z.string()),
+  keyPoints: z.array(z.string()),
   topics: z.array(z.string()),
-  word_count: z.number().int().nonnegative(),
-  generated_at: IsoTimestampSchema,
+  wordCount: z.number().int().nonnegative(),
+  createdAt: IsoTimestampSchema,
 });
 
 export const SourceQARequestSchema = z.object({
@@ -261,9 +261,9 @@ export const SourceQARequestSchema = z.object({
 });
 
 export const SourceQAResponseSchema = z.object({
-  source_id: IdSchema,
+  sourceId: IdSchema,
   answer: z.string(),
-  created_at: IsoTimestampSchema,
+  createdAt: IsoTimestampSchema,
 });
 
 export const QAMessageSchema = z.object({
@@ -276,6 +276,6 @@ export const ConvertSourceQAToSourceRequestSchema = z.object({
 });
 
 export const ConvertSourceQAToSourceResponseSchema = z.object({
-  source_id: IdSchema,
+  sourceId: IdSchema,
   filename: z.string(),
 });

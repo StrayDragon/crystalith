@@ -172,21 +172,21 @@ function streamNoEvidence(answer: string, judgment: JudgeResult, opts: QaHandler
 
       try {
         if (opts.messageId !== undefined) {
-          emit('state_snapshot', { message_id: opts.messageId });
+          emit('state_snapshot', { messageId: opts.messageId });
         }
 
         // Stream the no-evidence answer as a single chunk
         emit('chunk', { text: answer });
 
         emit('done', {
-          message_id: opts.messageId ?? null,
+          messageId: opts.messageId ?? null,
           citations: judgment.citations,
           confidence: 0,
           evidence: false,
-          no_evidence_reason: judgment.reason,
+          noEvidenceReason: judgment.reason,
           context: judgment.contextStats,
-          created_at: new Date().toISOString(),
-          tool_calls: [],
+          createdAt: new Date().toISOString(),
+          toolCalls: [],
         });
 
         opts.onMessageSettled?.(answer, false);
@@ -228,20 +228,20 @@ function streamStatsAnswer(
 
       try {
         if (opts.messageId !== undefined) {
-          emit('state_snapshot', { message_id: opts.messageId });
+          emit('state_snapshot', { messageId: opts.messageId });
         }
         for (let i = 0; i < answer.length; i += chunkSize) {
           emit('chunk', { text: answer.slice(i, i + chunkSize) });
         }
         emit('done', {
-          message_id: opts.messageId ?? null,
+          messageId: opts.messageId ?? null,
           citations: judgment.citations,
           confidence: judgment.confidence,
           evidence: true,
-          no_evidence_reason: null,
+          noEvidenceReason: null,
           context: judgment.contextStats,
-          created_at: new Date().toISOString(),
-          tool_calls: [],
+          createdAt: new Date().toISOString(),
+          toolCalls: [],
         });
         opts.onMessageSettled?.(answer, false, judgment.citations);
       } catch {

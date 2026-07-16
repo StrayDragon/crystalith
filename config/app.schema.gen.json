@@ -551,7 +551,7 @@
               "model": {
                 "type": "string"
               },
-              "display_name": {
+              "displayName": {
                 "type": "string"
               },
               "description": {
@@ -588,13 +588,13 @@
                   ]
                 }
               },
-              "provider_config": {
+              "providerConfig": {
                 "type": "object",
                 "properties": {
-                  "api_key": {
+                  "apiKey": {
                     "type": "string"
                   },
-                  "base_url": {
+                  "baseUrl": {
                     "type": "string"
                   },
                   "organization": {
@@ -605,22 +605,22 @@
                   }
                 }
               },
-              "completion_options": {
+              "completionOptions": {
                 "type": "object",
                 "properties": {
-                  "context_length": {
+                  "contextLength": {
                     "type": "number"
                   },
-                  "max_tokens": {
+                  "maxTokens": {
                     "type": "number"
                   },
                   "temperature": {
                     "type": "number"
                   },
-                  "top_p": {
+                  "topP": {
                     "type": "number"
                   },
-                  "top_k": {
+                  "topK": {
                     "type": "number"
                   },
                   "stop": {
@@ -634,13 +634,13 @@
                   }
                 }
               },
-              "request_options": {
+              "requestOptions": {
                 "type": "object",
                 "properties": {
                   "timeout": {
                     "type": "number"
                   },
-                  "verify_ssl": {
+                  "verifySsl": {
                     "default": true,
                     "type": "boolean"
                   },
@@ -661,7 +661,7 @@
               "factory": {
                 "type": "string"
               },
-              "provider_options": {
+              "providerOptions": {
                 "type": "object",
                 "additionalProperties": {}
               }
@@ -677,10 +677,10 @@
       "additionalProperties": {
         "type": "object",
         "properties": {
-          "api_key": {
+          "apiKey": {
             "type": "string"
           },
-          "base_url": {
+          "baseUrl": {
             "type": "string"
           },
           "organization": {

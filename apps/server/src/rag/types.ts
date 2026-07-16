@@ -3,7 +3,7 @@
 // All RAG strategies implement this interface. The registry (c06) maps
 // strategy IDs to implementations.
 export interface ChunkResult {
-  chunk_id: number;
+  chunkId: number;
   text: string;
   /**
    * Similarity score in [0,1] (higher = more relevant). This is the canonical
@@ -15,8 +15,8 @@ export interface ChunkResult {
    * Filtering MUST use `score >= minScore` (higher is better).
    */
   score: number;
-  source_id: number;
-  chunk_index: number;
+  sourceId: number;
+  chunkIndex: number;
 }
 
 export interface RAGStrategy {

@@ -119,17 +119,17 @@ function createProps(overrides: Record<string, unknown> = {}) {
     sourceTags: [
       {
         id: 11,
-        notebook_id: 1,
+        notebookId: 1,
         name: '论文',
-        created_at: '2026-02-07T00:00:00Z',
-        updated_at: '2026-02-07T00:00:00Z',
+        createdAt: '2026-02-07T00:00:00Z',
+        updatedAt: '2026-02-07T00:00:00Z',
       },
       {
         id: 12,
-        notebook_id: 1,
+        notebookId: 1,
         name: '学习',
-        created_at: '2026-02-07T00:00:00Z',
-        updated_at: '2026-02-07T00:00:00Z',
+        createdAt: '2026-02-07T00:00:00Z',
+        updatedAt: '2026-02-07T00:00:00Z',
       },
     ],
     tagMutationState: 'idle' as const,

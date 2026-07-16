@@ -137,10 +137,10 @@ export async function runOutputPipeline(input: PipelineInput): Promise<PipelineR
     }
 
     chunkRows = searchResults.map((r) => ({
-      id: r.chunk_id,
+      id: r.chunkId,
       text: r.text,
-      sourceId: r.source_id,
-      chunkIndex: r.chunk_index,
+      sourceId: r.sourceId,
+      chunkIndex: r.chunkIndex,
       score: r.score,
     }));
   }
@@ -652,9 +652,9 @@ function buildCitationMap(chunkRows: ChunkRow[]): {
   if (chunkRows.length === 0) return { citations: [], citationMap: new Map() };
 
   const retrieved = chunkRows.map((c) => ({
-    chunk_id: c.id,
-    source_id: c.sourceId,
-    chunk_index: c.chunkIndex,
+    chunkId: c.id,
+    sourceId: c.sourceId,
+    chunkIndex: c.chunkIndex,
     text: c.text,
     score: c.score,
   }));

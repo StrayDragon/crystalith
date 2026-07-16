@@ -437,9 +437,9 @@ export default function DiagnosticsDialog({
                             : '未安装'}
                     </div>
                   </div>
-                  {slidesDiagnostic?.error_code ? (
+                  {slidesDiagnostic?.errorCode ? (
                     <div className="mt-2 text-[11px] text-gray-700 dark:text-slate-300">
-                      <span className="font-mono">{slidesDiagnostic.error_code}</span>
+                      <span className="font-mono">{slidesDiagnostic.errorCode}</span>
                       {slidesDiagnostic.message ? ` · ${slidesDiagnostic.message}` : ''}
                     </div>
                   ) : slidesDiagnostic?.message ? (
@@ -476,7 +476,7 @@ export default function DiagnosticsDialog({
                     <div className="space-y-2">
                       {Object.entries(skippedPlugins).map(([pluginId, _detail]) => {
                         const detail = _detail as {
-                          error_code?: string;
+                          errorCode?: string;
                           message?: string;
                           hint?: string;
                         };
@@ -491,7 +491,7 @@ export default function DiagnosticsDialog({
                                   <span className="font-mono">{pluginId}</span>
                                 </div>
                                 <div className="mt-0.5 text-[11px] text-gray-700 dark:text-slate-300">
-                                  <span className="font-mono">{detail.error_code}</span> ·{' '}
+                                  <span className="font-mono">{detail.errorCode}</span> ·{' '}
                                   {detail.message}
                                 </div>
                               </div>

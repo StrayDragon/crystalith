@@ -1,0 +1,8 @@
+kind: llman.sdd.delta
+ops[2]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r285,"HTTP JSON wire fields MUST be camelCase end-to-end",除 URL path 与 SSE event 名称外，对外 HTTP/SSE JSON（请求体、查询参数键、响应体、流式 done/error data）的字段名 MUST 为 camelCase，并以 packages/shared Zod 为 SSOT；MUST NOT 再使用 notebook_id/source_ids/created_at/error_code 等 snake_case wire 别名。DB 列名不受本要求约束。,null,null,null
+  modify_requirement,r75,Citation model remains camelCase within the global camelCase wire,citation 对象 MUST 继续使用 camelCase（sourceId/sourceName/chunkId/chunkIndex/pageNumber/paragraphIndex/snippet/score），并与全局 wire camelCase 规则一致；MUST NOT 回退 snake_case。,null,null,null
+op_scenarios[3]{req_id,id,given,when,then,feature}:
+  r285,"qa-request-response-camelcase",客户端调用 QA 或 messages 等核心端点,检查请求与响应 JSON 键名,SHALL 仅出现 camelCase 键（如 notebookId/sourceIds/createdAt），且 MUST NOT 依赖 snake_case 键,true
+  r285,"no-snake-compat-layer",服务端已切换为 camelCase wire,客户端仍发送 notebook_id 等 snake_case 字段,系统 SHALL 按校验失败或忽略未知键处理，MUST NOT 同时接受两套字段名作为正式合约,true
+  r75,"citation-stays-camelcase-under-c65",c65 全局 camelCase 已生效,读取 QA citations,citation 字段 SHALL 仍为 sourceId/sourceName/chunkId 等 camelCase,true

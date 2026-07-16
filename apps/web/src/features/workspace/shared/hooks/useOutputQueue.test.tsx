@@ -71,7 +71,7 @@ beforeEach(() => {
     },
   });
 
-  server.use(http.get('*/v1/notebooks/:notebook_id/outputs', () => HttpResponse.json([])));
+  server.use(http.get('*/v1/notebooks/:notebookId/outputs', () => HttpResponse.json([])));
 
   onQueueReset.mockClear();
   onQueueTotal.mockClear();
@@ -108,16 +108,16 @@ function useOutputQueueHarness({ isConnected }: { isConnected: boolean }) {
 test('enqueueOutputJob processes and updates outputs', async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/outputs/:output_type', async ({ request }) => {
+    http.post('*/v1/notebooks/:notebookId/outputs/:outputType', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         id: 10,
         type: 'FAQ',
         prompt: 'hello',
-        chunk_ids: [1],
+        chunkIds: [1],
         content: {},
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
       });
     }),
   );
@@ -145,7 +145,7 @@ test('enqueueOutputJob processes and updates outputs', async () => {
 
   expect(capturedBody).toEqual({
     prompt: 'hello',
-    source_ids: [1],
+    sourceIds: [1],
   });
 });
 
@@ -154,16 +154,16 @@ test('enqueueOutputJob propagates generation preference', async () => {
 
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/outputs/:output_type', async ({ request }) => {
+    http.post('*/v1/notebooks/:notebookId/outputs/:outputType', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         id: 12,
         type: 'FAQ',
         prompt: 'hello',
-        chunk_ids: [1],
+        chunkIds: [1],
         content: {},
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
       });
     }),
   );
@@ -187,7 +187,7 @@ test('enqueueOutputJob propagates generation preference', async () => {
 
   expect(capturedBody).toEqual({
     prompt: 'hello',
-    source_ids: [1],
+    sourceIds: [1],
     preference: 'speed',
   });
 });
@@ -202,13 +202,13 @@ test('cancelOutputJob aborts running output job', async () => {
         await delay(200);
         return HttpResponse.json({
           id: 11,
-          notebook_id: 1,
+          notebookId: 1,
           type: 'FAQ',
           prompt: 'hello',
-          chunk_ids: [1],
+          chunkIds: [1],
           content: {},
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z',
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z',
         });
       }),
       http.delete('*/v2/outputs/:id', () => {
@@ -324,70 +324,70 @@ test('enqueueSlidesJob settles from draft polling when stream terminal event is 
   let capturedBody: Record<string, unknown> | null = null;
 
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/slides/drafts', async ({ request }) => {
+    http.post('*/v1/notebooks/:notebookId/slides/drafts', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         id: 5,
-        notebook_id: 1,
+        notebookId: 1,
         output_id: null,
         title: 'Deck',
         prompt: 'Outline',
         engine: 'slidev',
-        chunk_ids: null,
-        source_ids: [1],
+        chunkIds: null,
+        sourceIds: [1],
         outline: null,
         markdown: null,
-        generation_config: {},
+        generationConfig: {},
         stage: 'input',
         status: 'idle',
         error_message: null,
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
       });
     }),
-    http.get('*/v1/notebooks/:notebook_id/slides/drafts/:slide_id', () => {
+    http.get('*/v1/notebooks/:notebookId/slides/drafts/:slide_id', () => {
       draftReads += 1;
       if (draftReads === 1) {
         return HttpResponse.json({
           id: 5,
-          notebook_id: 1,
+          notebookId: 1,
           output_id: null,
           title: 'Deck',
           prompt: 'Outline',
           engine: 'slidev',
-          chunk_ids: [1],
-          source_ids: [1],
+          chunkIds: [1],
+          sourceIds: [1],
           outline: { title: 'Deck', slides: [{ title: 'Intro', bullets: [] }] },
           markdown: null,
-          generation_config: {},
+          generationConfig: {},
           stage: 'outline',
           status: 'idle',
           error_message: null,
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:01Z',
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:01Z',
         });
       }
       outputsReady = true;
       return HttpResponse.json({
         id: 5,
-        notebook_id: 1,
+        notebookId: 1,
         output_id: 21,
         title: 'Deck',
         prompt: 'Outline',
         engine: 'slidev',
-        chunk_ids: [1],
-        source_ids: [1],
+        chunkIds: [1],
+        sourceIds: [1],
         outline: { title: 'Deck', slides: [{ title: 'Intro', bullets: [] }] },
         markdown: '# Deck',
-        generation_config: {},
+        generationConfig: {},
         stage: 'markdown',
         status: 'idle',
         error_message: null,
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:02Z',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:02Z',
       });
     }),
-    http.get('*/v1/notebooks/:notebook_id/outputs', () =>
+    http.get('*/v1/notebooks/:notebookId/outputs', () =>
       HttpResponse.json(
         outputsReady
           ? [
@@ -395,14 +395,14 @@ test('enqueueSlidesJob settles from draft polling when stream terminal event is 
                 id: 21,
                 type: 'SLIDES',
                 prompt: 'Outline',
-                chunk_ids: [1],
+                chunkIds: [1],
                 content: {
                   title: 'Deck',
                   slide_id: 5,
                   markdown: '# Deck',
                 },
-                created_at: '2024-01-01T00:00:02Z',
-                updated_at: '2024-01-01T00:00:02Z',
+                createdAt: '2024-01-01T00:00:02Z',
+                updatedAt: '2024-01-01T00:00:02Z',
               },
             ]
           : [],
@@ -436,8 +436,8 @@ test('enqueueSlidesJob settles from draft polling when stream terminal event is 
     expect(capturedBody).toEqual({
       title: 'Deck',
       prompt: 'Outline',
-      source_ids: [1],
-      generation_config: {},
+      sourceIds: [1],
+      generationConfig: {},
     });
     expect(markJobCompleted).toHaveBeenCalled();
   } finally {

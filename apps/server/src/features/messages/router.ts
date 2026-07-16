@@ -57,12 +57,12 @@ function serializeMessage(row: {
 }) {
   return {
     id: row.id,
-    session_id: row.sessionId,
+    sessionId: row.sessionId,
     role: row.role as 'user' | 'assistant' | 'system',
     content: row.content,
     citations: row.citations,
-    created_at: row.createdAt.toISOString(),
-    updated_at: row.updatedAt.toISOString(),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
