@@ -59,10 +59,12 @@ function refName(name: string): string {
  */
 export function registerApiDoc(routes: OpenApiRoute[]): void {
   for (const route of routes) {
+    // Scalar uses 'summary' as the collapsed endpoint title.
+    // We want the path visible, so swap: summary ← path, description ← summary.
     const pathItem: Record<string, unknown> = {
       tags: route.tags ?? [],
-      summary: route.summary ?? '',
-      description: route.description ?? '',
+      summary: route.path,
+      description: route.summary ?? '',
     };
 
     if (route.request?.body) {

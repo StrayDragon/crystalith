@@ -89,6 +89,13 @@ export function createApp() {
         provider: 'scalar',
         path: '/openapi',
         specPath: '/openapi.json',
+        scalar: {
+          showSidebar: true,
+          hideModels: true,
+          // Use path as endpoint heading (summary is now the path via registerApiDoc)
+          defaultOpenAllTags: false,
+          customCss: `:root { --scalar-radius: 6px; }`,
+        },
         documentation: {
           info: {
             title: 'Crystalith v2 API',
