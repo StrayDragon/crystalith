@@ -264,8 +264,6 @@ function renderFields(
             case 'citation':
               body = renderCitations(fieldValue);
               break;
-            case 'tree':
-            case 'text':
             default:
               body = (
                 <div className="text-sm text-gray-800 dark:text-slate-200 whitespace-pre-wrap">
@@ -544,9 +542,6 @@ function defaultItemsKey(layout: RenderLayout): string {
       return 'events';
     case 'sections':
       return 'sections';
-    case 'list':
-    case 'cards':
-    case 'table':
     default:
       return 'items';
   }
