@@ -54,7 +54,10 @@ export function useTasks() {
       const { data, error: fetchErr } = await api.v2
         .notebooks({ nid: activeNotebookId })
         .tasks.get();
-      if (fetchErr) throw new Error(String(fetchErr));
+      if (fetchErr)
+        throw new Error(
+          typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
+        );
       setTaskState({
         tasks: (data ?? []) as unknown as unknown as TaskItem[],
         isLoading: false,
@@ -76,7 +79,10 @@ export function useTasks() {
       if (!isConnected) return null;
       try {
         const { data, error: fetchErr } = await api.v2.tasks({ id: taskId }).get();
-        if (fetchErr) throw new Error(String(fetchErr));
+        if (fetchErr)
+          throw new Error(
+            typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
+          );
         const task = data as unknown as TaskItem;
         setTaskState((prev) => ({
           ...prev,

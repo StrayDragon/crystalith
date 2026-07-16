@@ -22,7 +22,10 @@ export function useSessions() {
       const { data, error: fetchErr } = await api.v2
         .notebooks({ nid: activeNotebookId! })
         .sessions.get();
-      if (fetchErr) throw new Error(String(fetchErr));
+      if (fetchErr)
+        throw new Error(
+          typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
+        );
       return data ?? [];
     },
     { revalidateOnFocus: false },
@@ -83,7 +86,14 @@ export function useSessions() {
           .sessions.post({
             title: title ?? null,
           });
-        if (createErr) throw new Error(String(createErr));
+        if (createErr)
+          throw new Error(
+            typeof createErr === 'string'
+              ? createErr
+              : typeof createErr === 'string'
+                ? createErr
+                : '',
+          );
         const newSession = created!;
         const normalized = normalizeSession(newSession);
         store.getState().setActiveSession(normalized.id);
@@ -131,7 +141,14 @@ export function useSessions() {
           .patch({
             title: title.trim() || undefined,
           });
-        if (updateErr) throw new Error(String(updateErr));
+        if (updateErr)
+          throw new Error(
+            typeof updateErr === 'string'
+              ? updateErr
+              : typeof updateErr === 'string'
+                ? updateErr
+                : '',
+          );
         const result = updated!;
         const normalized = normalizeSession(result);
         store
@@ -165,7 +182,14 @@ export function useSessions() {
           .notebooks({ nid: activeNotebookId })
           .sessions({ sid: sessionId })
           .delete();
-        if (deleteErr) throw new Error(String(deleteErr));
+        if (deleteErr)
+          throw new Error(
+            typeof deleteErr === 'string'
+              ? deleteErr
+              : typeof deleteErr === 'string'
+                ? deleteErr
+                : '',
+          );
         const s = store.getState();
         const remaining = s.sessions.filter((item) => item.id !== sessionId);
         s.setSessions(remaining);

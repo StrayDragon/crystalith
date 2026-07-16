@@ -27,9 +27,16 @@ import { useExport } from './useExport';
 
 /** Normalize raw content to MindmapViewer-compatible nodes. */
 function normalizeMindmapNode(node: unknown): MindmapNode {
-  if (!node || typeof node !== 'object') return { label: String(node ?? '') };
+  if (!node || typeof node !== 'object') return { label: typeof node === 'string' ? node : '' };
   const record = node as Record<string, unknown>;
-  const label = typeof record.label === 'string' ? record.label : String(record.label ?? '');
+  const label =
+    typeof record.label === 'string'
+      ? record.label
+      : typeof record.label === 'string'
+        ? record.label
+        : typeof record.label === 'string'
+          ? record.label
+          : '';
   const children = Array.isArray(record.children)
     ? record.children.map((child) => normalizeMindmapNode(child))
     : undefined;

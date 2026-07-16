@@ -87,7 +87,7 @@ function coerceText(value: unknown): string {
     if (typeof value.text === 'string') return value.text;
     return stringify(value);
   }
-  return String(value);
+  return typeof value === 'string' ? value : typeof value === 'string' ? value : '';
 }
 
 /**

@@ -135,7 +135,8 @@ async function fetchSourceSummary(notebookId: number, sourceId: number) {
     .notebooks({ nid: notebookId })
     .sources({ sid: sourceId })
     .summary.get();
-  if (error) throw new Error(String(error));
+  if (error)
+    throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
   return data as any;
 }
 
@@ -143,7 +144,8 @@ async function fetchSourceChunks(notebookId: number, sourceId: number) {
   const { data, error } = await api.v2
     .sources({ id: sourceId })
     .chunks.get({ query: { notebook_id: notebookId } } as any);
-  if (error) throw new Error(String(error));
+  if (error)
+    throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
   return data as any;
 }
 
@@ -311,7 +313,8 @@ export default function SourceDetailDialog({
         .notebooks({ nid: notebookId })
         .sources({ sid: source.id })
         .qa.post({ question: userMessage.content } as any);
-      if (qaErr) throw new Error(String(qaErr));
+      if (qaErr)
+        throw new Error(typeof qaErr === 'string' ? qaErr : typeof qaErr === 'string' ? qaErr : '');
       if (!response || !('answer' in response)) {
         throw new Error('source QA returned an unexpected payload');
       }

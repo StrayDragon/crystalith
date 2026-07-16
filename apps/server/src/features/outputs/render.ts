@@ -15,7 +15,7 @@ function jsonToText(value: unknown): string {
   try {
     return JSON.stringify(value);
   } catch {
-    return String(value);
+    return typeof value === 'string' ? value : typeof value === 'string' ? value : '';
   }
 }
 

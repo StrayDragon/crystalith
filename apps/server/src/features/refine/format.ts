@@ -92,7 +92,12 @@ export function applyFormat(
         return {
           structured: {
             // Explicit construction with defaults + str coercion (v1 api.py:182-186).
-            title: String(parsed.title ?? ''),
+            title:
+              typeof parsed.title === 'string'
+                ? parsed.title
+                : typeof parsed.title === 'string'
+                  ? parsed.title
+                  : '',
             bullets: Array.isArray(parsed.bullets) ? parsed.bullets.map(String) : [],
             terms: Array.isArray(parsed.terms) ? parsed.terms.map(String) : [],
             citations,

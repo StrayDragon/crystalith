@@ -102,7 +102,7 @@ export function resolveConnectorRoot(
   const primaryKey = rootPathKeyForConnector(connectorId);
   const fallbackKey = connectorId === 'local-directory' ? 'root_path' : null;
   const raw = connectionConfig[primaryKey] ?? (fallbackKey ? connectionConfig[fallbackKey] : null);
-  const text = String(raw ?? '').trim();
+  const text = (typeof raw === 'string' ? raw : '').trim();
 
   if (!text) {
     return {

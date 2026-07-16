@@ -151,7 +151,10 @@ export default function SourceConnectorsDialog({
       const { data: response, error: fetchErr } = await api.v2
         .notebooks({ nid: notebookId! })
         ['source-connectors'].get();
-      if (fetchErr) throw new Error(String(fetchErr));
+      if (fetchErr)
+        throw new Error(
+          typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
+        );
       return response as SourceConnectorsListResponse;
     },
     { revalidateOnFocus: false },
@@ -221,7 +224,14 @@ export default function SourceConnectorsDialog({
         .notebooks({ nid: notebookId })
         ['source-connectors']({ connectorId: selectedConnector.connector_id })
         .bindings.post({ connection_config: connectionConfig });
-      if (createErr) throw new Error(String(createErr));
+      if (createErr)
+        throw new Error(
+          typeof createErr === 'string'
+            ? createErr
+            : typeof createErr === 'string'
+              ? createErr
+              : '',
+        );
       if (!created) throw new Error('创建绑定失败');
       setBinding(created as ConnectorBindingRead);
       setSnapshot(null);
@@ -248,7 +258,10 @@ export default function SourceConnectorsDialog({
         .notebooks({ nid: notebookId })
         ['source-connector-bindings']({ bindingId: binding.id })
         .snapshot.post();
-      if (snapErr) throw new Error(String(snapErr));
+      if (snapErr)
+        throw new Error(
+          typeof snapErr === 'string' ? snapErr : typeof snapErr === 'string' ? snapErr : '',
+        );
       if (!snap) throw new Error('加载快照失败');
       setSnapshot(snap as Snapshot);
       toast.success(`快照已加载：${safeArray((snap as Snapshot).entries).length} 项`);
@@ -284,7 +297,14 @@ export default function SourceConnectorsDialog({
         .notebooks({ nid: notebookId })
         ['source-connector-bindings']({ bindingId: binding.id })
         ['import-scope'].post(scopePayload);
-      if (importErr) throw new Error(String(importErr));
+      if (importErr)
+        throw new Error(
+          typeof importErr === 'string'
+            ? importErr
+            : typeof importErr === 'string'
+              ? importErr
+              : '',
+        );
       if (!result) throw new Error('导入失败');
       setBinding((result as ImportScopeApplyResponse).binding);
       setImportResult(result as ImportScopeApplyResponse);
@@ -319,7 +339,10 @@ export default function SourceConnectorsDialog({
         .notebooks({ nid: notebookId })
         ['source-connector-bindings']({ bindingId: binding.id })
         ['sync-check'].post();
-      if (syncErr) throw new Error(String(syncErr));
+      if (syncErr)
+        throw new Error(
+          typeof syncErr === 'string' ? syncErr : typeof syncErr === 'string' ? syncErr : '',
+        );
       if (!result) throw new Error('同步检查失败');
       setSyncCheck(result as SyncCheckResult);
       toast.success('同步检查完成');
@@ -341,7 +364,10 @@ export default function SourceConnectorsDialog({
         .notebooks({ nid: notebookId })
         ['source-connector-bindings']({ bindingId: binding.id })
         ['sync-check'].apply.post({ sync_check_id: syncCheck.id });
-      if (applyErr) throw new Error(String(applyErr));
+      if (applyErr)
+        throw new Error(
+          typeof applyErr === 'string' ? applyErr : typeof applyErr === 'string' ? applyErr : '',
+        );
       if (!result) throw new Error('同步应用失败');
       setBinding((result as ImportScopeApplyResponse).binding);
       setSyncApplyResult(result as ImportScopeApplyResponse);
@@ -736,7 +762,15 @@ export default function SourceConnectorsDialog({
               <input
                 type={inputType}
                 className="mt-1 w-full rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-gray-900 dark:text-slate-100"
-                value={current == null ? '' : String(current)}
+                value={
+                  current == null
+                    ? ''
+                    : typeof current === 'string'
+                      ? current
+                      : typeof current === 'string'
+                        ? current
+                        : ''
+                }
                 onChange={(e) => handleUpdateConfig(key, e.target.value, typeHint)}
                 placeholder={key}
               />

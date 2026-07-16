@@ -47,7 +47,8 @@ export function useAnalysis() {
       const { data, error } = await api.v2.analysis.post({
         notebook_id: activeNotebookId,
       });
-      if (error) throw new Error(String(error));
+      if (error)
+        throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
       const analysis = (data ?? null) as AnalysisResult | null;
       setAnalysisState({
         analysis,

@@ -166,7 +166,7 @@ function apiError(
   detail: Record<string, unknown>,
 ): never {
   set.status = status;
-  throw new Error(String(detail));
+  throw new Error(typeof detail === 'string' ? detail : typeof detail === 'string' ? detail : '');
 }
 
 async function runSyncCheck(

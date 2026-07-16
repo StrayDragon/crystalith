@@ -150,8 +150,20 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
       .insert(studioSlides)
       .values({
         notebookId,
-        title: title ? String(title) : null,
-        prompt: prompt ? String(prompt) : null,
+        title: title
+          ? typeof title === 'string'
+            ? title
+            : typeof title === 'string'
+              ? title
+              : ''
+          : null,
+        prompt: prompt
+          ? typeof prompt === 'string'
+            ? prompt
+            : typeof prompt === 'string'
+              ? prompt
+              : ''
+          : null,
         sourceIds: requireSourceIds(source_ids),
         generationConfig: (generation_config as Record<string, unknown>) ?? null,
         stage: 'input',
@@ -197,8 +209,11 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     getSlideOrThrow(id);
     const { title, prompt, source_ids, generation_config } = body as Record<string, unknown>;
     const updateData: Record<string, unknown> = {};
-    if (title !== undefined) updateData.title = String(title);
-    if (prompt !== undefined) updateData.prompt = String(prompt);
+    if (title !== undefined)
+      updateData.title = typeof title === 'string' ? title : typeof title === 'string' ? title : '';
+    if (prompt !== undefined)
+      updateData.prompt =
+        typeof prompt === 'string' ? prompt : typeof prompt === 'string' ? prompt : '';
     if (source_ids !== undefined) updateData.sourceIds = requireSourceIds(source_ids);
     if (generation_config !== undefined)
       updateData.generationConfig = generation_config as Record<string, unknown>;

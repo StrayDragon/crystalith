@@ -37,7 +37,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = Object.fromEntries(
 function yamlValue(v: unknown): string {
   if (v === null || v === undefined) return 'null';
   if (typeof v === 'object') return JSON.stringify(v);
-  return String(v);
+  return typeof v === 'string' ? v : typeof v === 'string' ? v : '';
 }
 
 /**

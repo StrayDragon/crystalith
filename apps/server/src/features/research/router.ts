@@ -307,7 +307,13 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .post('/research', async ({ body, set }) => {
     const raw = body as Record<string, unknown>;
     // Accept both 'topic' (canonical) and 'goal' (some clients' convention)
-    const topic = String(raw.topic ?? raw.goal ?? '').trim() || '深度研究';
+    const topic =
+      (typeof raw.topic === 'string'
+        ? raw.topic
+        : typeof raw.goal === 'string'
+          ? raw.goal
+          : ''
+      ).trim() || '深度研究';
     const notebook_id = raw.notebook_id;
     const max_iterations = raw.max_iterations;
     const notebookId = Number(notebook_id);

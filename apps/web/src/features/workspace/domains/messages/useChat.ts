@@ -97,7 +97,10 @@ export function useChat({
         .notebooks({ nid: activeNotebookId! })
         .sessions({ sid: activeSessionId! })
         .messages.get({ query: { offset: 0, limit: 200 } });
-      if (fetchErr) throw new Error(String(fetchErr));
+      if (fetchErr)
+        throw new Error(
+          typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
+        );
       return result ?? [];
     },
     { revalidateOnFocus: false },
@@ -262,7 +265,10 @@ export function useChat({
             typeof eventData === 'object' &&
             'text' in eventData
           ) {
-            const chunkText = String((eventData as { text?: unknown }).text ?? '');
+            const chunkText =
+              typeof (eventData as { text?: unknown }).text === 'string'
+                ? ((eventData as { text?: unknown }).text as string)
+                : '';
             if (!chunkText) continue;
             streamingBufferRef.current += chunkText;
             if (!streamingFlushTimerRef.current) {
@@ -328,7 +334,9 @@ export function useChat({
           if (eventType === 'error') {
             terminalErrorMessage =
               eventData && typeof eventData === 'object' && 'message' in eventData
-                ? String((eventData as { message?: unknown }).message ?? '请求失败')
+                ? typeof (eventData as { message?: unknown }).message === 'string'
+                  ? (eventData as { message: string }).message
+                  : '请求失败'
                 : typeof eventData === 'string'
                   ? eventData
                   : '请求失败';
@@ -402,7 +410,8 @@ export function useChat({
         notebook_id: notebookId,
         session_id: sessionId,
       });
-      if (qaErr) throw new Error(String(qaErr));
+      if (qaErr)
+        throw new Error(typeof qaErr === 'string' ? qaErr : typeof qaErr === 'string' ? qaErr : '');
       const result = qaResult! as Record<string, unknown>;
 
       const normalizedCitations = ((result.citations as unknown[]) ?? []).map((c: unknown) =>
@@ -480,7 +489,10 @@ export function useChat({
         .notebooks({ nid: s.activeNotebookId })
         .sessions({ sid: s.activeSessionId })
         ['convert-to-source'].post();
-      if (convErr) throw new Error(String(convErr));
+      if (convErr)
+        throw new Error(
+          typeof convErr === 'string' ? convErr : typeof convErr === 'string' ? convErr : '',
+        );
       if (refreshSources) {
         await refreshSources();
       }
@@ -513,7 +525,10 @@ export function useChat({
           .notebooks({ nid: s.activeNotebookId })
           .sessions({ sid: s.activeSessionId })
           ['convert-to-output'].post({ output_type: outputType });
-        if (convErr) throw new Error(String(convErr));
+        if (convErr)
+          throw new Error(
+            typeof convErr === 'string' ? convErr : typeof convErr === 'string' ? convErr : '',
+          );
         if (refreshOutputs) {
           await refreshOutputs();
         }
