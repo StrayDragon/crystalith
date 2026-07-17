@@ -265,7 +265,15 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setIsLoading(true);
       setError('');
       try {
-        // v2 research delete via remove not directly exposed — use notebook-level removal
+        const { error: deleteErr } = await api.v2.research({ id: researchId }).delete();
+        if (deleteErr)
+          throw new Error(
+            typeof deleteErr === 'string'
+              ? deleteErr
+              : typeof deleteErr === 'string'
+                ? deleteErr
+                : '删除研究失败',
+          );
         setSessions((prev) => prev.filter((s) => s.id !== researchId));
         if (activeSession?.id === researchId) {
           setActiveSession(null);

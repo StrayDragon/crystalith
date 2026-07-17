@@ -196,8 +196,10 @@ export function useNotebooks() {
       s.setError('create', '');
 
       try {
-        // template_id is a query param; use the same POST but pass templateId info
-        const { data: created, error } = await api.v2.notebooks.post({ name: finalName });
+        const { data: created, error } = await api.v2.notebooks.post(
+          { name: finalName },
+          { query: { template_id: String(templateId) } },
+        );
         if (error)
           throw new Error(
             typeof error === 'string' ? error : typeof error === 'string' ? error : '',
