@@ -149,10 +149,17 @@ test('removeSources calls batch delete endpoint and refreshes list', async () =>
 
 test('handleUpload supports multiple files and exposes queue', async () => {
   let uploaded = 0;
+  const notebookIds: string[] = [];
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/sources', async () => {
+    http.post('*/v2/sources/upload', async ({ request }) => {
       uploaded += 1;
-      return HttpResponse.json({ id: uploaded });
+      notebookIds.push(new URL(request.url).searchParams.get('notebook_id') ?? '');
+      return HttpResponse.json({
+        sourceId: uploaded,
+        chunkCount: 1,
+        parserType: 'text',
+        status: 'ready',
+      });
     }),
   );
 
@@ -171,6 +178,7 @@ test('handleUpload supports multiple files and exposes queue', async () => {
   });
 
   expect(uploaded).toBe(2);
+  expect(notebookIds).toEqual(['11', '11']);
   expect(result.current.uploadQueue.length).toBeGreaterThanOrEqual(2);
   expect(result.current.uploadQueue.every((item: any) => item.status === 'success')).toBe(true);
 });

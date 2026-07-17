@@ -263,11 +263,13 @@ export function useSources() {
           );
           try {
             // eslint-disable-next-line no-await-in-loop -- Upload queue + dedup confirmation requires serial execution.
-            await api.v2.sources.upload.post({ file } as any).then((r) => {
-              // eslint-disable-next-line typescript/no-base-to-string
-              if (r.error) throw new Error(String(r.error));
-              return r.data as any;
-            });
+            await api.v2.sources.upload
+              .post({ file } as any, { query: { notebook_id: activeNotebookId } } as any)
+              .then((r) => {
+                // eslint-disable-next-line typescript/no-base-to-string
+                if (r.error) throw new Error(String(r.error));
+                return r.data as any;
+              });
             successCount += 1;
             setUploadQueue((prev) =>
               prev.map((item) => (item.id === queueId ? { ...item, status: 'success' } : item)),
@@ -289,7 +291,10 @@ export function useSources() {
               try {
                 // eslint-disable-next-line no-await-in-loop -- Keep per-file UI updates and dedup flow serial.
                 await api.v2.sources.upload
-                  .post({ file } as any, { query: { dedup_action } } as any)
+                  .post(
+                    { file } as any,
+                    { query: { notebook_id: activeNotebookId, dedup_action } } as any,
+                  )
                   .then((r) => {
                     // eslint-disable-next-line typescript/no-base-to-string, eslint/preserve-caught-error
                     if (r.error) throw new Error(String(r.error));
