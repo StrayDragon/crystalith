@@ -31,7 +31,6 @@ export interface GuideOutputContent extends OutputContentBase {
     title?: string | null;
     objective?: { text?: string | null } | null;
     keyPoints?: Array<{ text?: string | null }> | null;
-    key_points?: Array<{ text?: string | null }> | null;
   }>;
 }
 
@@ -66,7 +65,6 @@ export interface BriefingOutputContent extends OutputContentBase {
 
 export interface SlidesOutputContent extends OutputContentBase {
   slideId?: number | null;
-  slide_id?: number | null;
   engine?: string | null;
   outline?: {
     title?: string | null;
@@ -141,7 +139,6 @@ export interface ConfigOption {
   id: string;
   label: string;
   isDefault?: boolean;
-  is_default?: boolean;
 }
 
 export interface ThemePresetOption {
@@ -157,7 +154,6 @@ export interface PreviewDescriptor {
   service?: string | null;
   url?: string | null;
   openInNewTab?: boolean;
-  open_in_new_tab?: boolean;
   meta: Record<string, unknown>;
 }
 

@@ -135,8 +135,8 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks',
     ({ body, query, set }) => {
-      const queryParams = query as { templateId?: string; template_id?: string };
-      const templateIdRaw = queryParams.templateId ?? queryParams.template_id;
+      const queryParams = query as { templateId?: string };
+      const templateIdRaw = queryParams.templateId;
       const templateId = requireOptionalPositiveIntId(templateIdRaw, 'template id');
 
       const row = db().insert(notebooks).values({ name: body.name }).returning().get();
@@ -149,12 +149,10 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
         }
         const config = (template.configJson ?? {}) as {
           sessionTitles?: string[];
-          session_titles?: string[];
           sourceTags?: string[];
-          source_tags?: string[];
         };
-        const templateSessionTitles = config.sessionTitles ?? config.session_titles ?? [];
-        const templateSourceTags = config.sourceTags ?? config.source_tags ?? [];
+        const templateSessionTitles = config.sessionTitles ?? [];
+        const templateSourceTags = config.sourceTags ?? [];
         for (const title of templateSessionTitles) {
           db().insert(sessions).values({ notebookId: row.id, title }).run();
         }

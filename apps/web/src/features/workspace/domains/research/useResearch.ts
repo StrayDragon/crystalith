@@ -22,11 +22,8 @@ interface SSESearchProgressEvent {
   iteration: number;
   data: {
     resultCount?: number;
-    result_count?: number;
     newResults?: number;
-    new_results?: number;
     queriesExecuted?: number;
-    queries_executed?: number;
   };
 }
 
@@ -34,11 +31,8 @@ interface SSEAnalysisEvent {
   iteration: number;
   data: {
     summary?: string;
-    /** v2 agent stores camelCase coverageEstimate */
     coverageEstimate?: number;
-    coverage?: number;
     needMore?: boolean;
-    need_more_search?: boolean;
   };
 }
 
@@ -46,16 +40,13 @@ interface SSEReportEvent {
   iteration: number;
   data: {
     reportLength?: number;
-    report_length?: number;
   };
 }
 
 interface SSEDoneEvent {
   status: string;
   totalResults?: number;
-  total_results?: number;
   hasReport?: boolean;
-  has_report?: boolean;
 }
 
 interface SSEWaitingEvent {
@@ -105,7 +96,6 @@ export interface ResearchSessionItem {
   currentIteration: number;
   maxIterations: number;
   resultCount?: number;
-  result_count?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -122,7 +112,6 @@ export interface ResearchSessionDetail {
   steps?: Array<{
     type: string;
     outputData?: Record<string, unknown> | null;
-    output_data?: Record<string, unknown> | null;
     iteration: number;
   }>;
   createdAt: string;

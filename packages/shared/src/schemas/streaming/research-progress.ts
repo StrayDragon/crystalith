@@ -39,17 +39,9 @@ export const ResearchProgressEventSchema = z.discriminatedUnion('event', [
   }),
   z.object({
     event: z.literal('done'),
-    sessionId: IdSchema,
-    finalReport: z.string().nullable().optional(),
-    outputs: z
-      .array(
-        z.object({
-          type: z.enum(['report', 'sub_report', 'reference', 'link', 'raw_result']),
-          title: z.string(),
-          content: z.string(),
-        }),
-      )
-      .default([]),
+    status: z.string(),
+    totalResults: z.number(),
+    hasReport: z.boolean(),
   }),
   z.object({
     event: z.literal('error'),

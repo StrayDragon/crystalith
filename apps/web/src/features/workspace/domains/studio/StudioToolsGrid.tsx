@@ -104,12 +104,8 @@ export default function StudioToolsGrid({
           ? schema.quantityOptions
           : FALLBACK_QUANTITY_OPTIONS;
       const localDifficultyOptions = schema?.difficultyOptions ?? [];
-      setConfigQuantity(
-        localQuantityOptions.find((o) => o.isDefault ?? o.is_default)?.id || 'standard',
-      );
-      setConfigDifficulty(
-        localDifficultyOptions.find((o) => o.isDefault ?? o.is_default)?.id || 'medium',
-      );
+      setConfigQuantity(localQuantityOptions.find((o) => o.isDefault)?.id || 'standard');
+      setConfigDifficulty(localDifficultyOptions.find((o) => o.isDefault)?.id || 'medium');
       setConfigTopic('');
       setConfigModelId(null);
     },
@@ -323,7 +319,7 @@ export default function StudioToolsGrid({
                       configQuantity === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
                     }`}
                   >
-                    {configQuantity === option.id && (option.isDefault ?? option.is_default) && (
+                    {configQuantity === option.id && option.isDefault && (
                       <span className="mr-1">✓</span>
                     )}
                     {option.label}
@@ -349,7 +345,7 @@ export default function StudioToolsGrid({
                       configDifficulty === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
                     }`}
                   >
-                    {configDifficulty === option.id && (option.isDefault ?? option.is_default) && (
+                    {configDifficulty === option.id && option.isDefault && (
                       <span className="mr-1">✓</span>
                     )}
                     {option.label}
