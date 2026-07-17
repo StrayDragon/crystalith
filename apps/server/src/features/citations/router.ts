@@ -106,7 +106,7 @@ export const citationsRouter = new Elysia({ prefix: '/v2' })
       neighborsAfter: after,
     });
 
-    if (!result.citation.chunk_id) {
+    if (!result.citation.chunkId) {
       throw new NotFoundError('Chunk not found in notebook');
     }
 

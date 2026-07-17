@@ -51,16 +51,15 @@ export function PaginatedSchema<T extends z.ZodTypeAny>(item: T) {
 
 /**
  * Citation — wire/API grounded reference to a retrieved source chunk.
- * Field names are snake_case to match the HTTP JSON contract (legacy v1 parity).
- * Frontend UI MUST map through `normalizeCitation` into camelCase domain `Citation`.
+ * JSON field names are camelCase (SSOT for OpenAPI/eden and UI domain).
  */
 export const CitationSchema = z.object({
-  source_id: z.number().int(),
-  source_name: z.string(),
-  chunk_id: z.number().int(),
-  chunk_index: z.number().int(),
-  page_number: z.number().int().nullable().optional(),
-  paragraph_index: z.number().int().nullable().optional(),
+  sourceId: z.number().int(),
+  sourceName: z.string(),
+  chunkId: z.number().int(),
+  chunkIndex: z.number().int(),
+  pageNumber: z.number().int().nullable().optional(),
+  paragraphIndex: z.number().int().nullable().optional(),
   snippet: z.string(),
   score: z.number().nullable().optional(),
 });

@@ -381,8 +381,8 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
     const chunkIds = [
       ...new Set(
         msgRows
-          .flatMap((m) => (m.citations as Array<{ chunk_id?: number }> | null) ?? [])
-          .map((c) => c.chunk_id)
+          .flatMap((m) => (m.citations as Array<{ chunkId?: number }> | null) ?? [])
+          .map((c) => c.chunkId)
           .filter((id): id is number => typeof id === 'number'),
       ),
     ];

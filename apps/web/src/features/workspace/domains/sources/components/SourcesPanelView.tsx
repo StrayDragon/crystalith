@@ -300,7 +300,7 @@ function SourcesPanelView({
 
   // Handle saving QA as source
   const handleSaveQAAsSource = useCallback(
-    async (sourceTitle: string, messages: ChatMessage[]) => {
+    async (sourceName: string, messages: ChatMessage[]) => {
       if (!selectedSource || !onConvertSourceQAToSource) return;
       // Convert ChatMessage to QaMessage format
       const qaMessages: QaMessage[] = messages.map((msg) => ({

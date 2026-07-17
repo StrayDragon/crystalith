@@ -56,9 +56,9 @@ export interface ResearchSessionResponse {
 export type WorkspaceToolsDiagnostics = Record<string, any>;
 
 export interface CitationContextResponse {
-  chunk_id: number;
-  source_id: number;
-  source_title?: string;
+  chunkId: number;
+  sourceId: number;
+  sourceName?: string;
   text: string;
   // v2 server response may differ from v1 shape — accept any
   // biome-ignore lint/suspicious/noExplicitAny: v2 compat
@@ -70,14 +70,14 @@ export interface CitationContextResponse {
 }
 
 export type Citation = {
-  chunk_id: number;
-  source_id: number;
-  source_title?: string;
+  chunkId: number;
+  sourceId: number;
+  sourceName?: string;
   text?: string;
   score?: number;
-  page_number?: number | null;
-  paragraph_index?: number | null;
-  chunk_index?: number;
+  pageNumber?: number | null;
+  paragraphIndex?: number | null;
+  chunkIndex?: number;
   snippet?: string;
   // biome-ignore lint/suspicious/noExplicitAny: v2 compat
   [key: string]: any;

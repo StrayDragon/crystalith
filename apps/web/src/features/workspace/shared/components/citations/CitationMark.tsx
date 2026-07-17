@@ -80,7 +80,7 @@ export default function CitationMark({ index, citation, onHover, onJump }: Citat
         }}
         role="tooltip"
       >
-        <div className="text-xs font-semibold truncate text-gray-900">{citation.sourceTitle}</div>
+        <div className="text-xs font-semibold truncate text-gray-900">{citation.sourceName}</div>
         {pageLabel && (
           <div className="text-[10px] font-medium mt-0.5 text-gray-500">{pageLabel}</div>
         )}
@@ -103,7 +103,7 @@ export default function CitationMark({ index, citation, onHover, onJump }: Citat
         onFocus={handleOpen}
         onBlur={handleClose}
         onClick={handleJump}
-        aria-label={`查看引用 ${index}，来源 ${citation.sourceTitle}，${pageLabel ?? '页码未知'}`}
+        aria-label={`查看引用 ${index}，来源 ${citation.sourceName}，${pageLabel ?? '页码未知'}`}
       >
         [{index}]
       </button>

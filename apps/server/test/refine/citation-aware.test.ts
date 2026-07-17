@@ -57,7 +57,7 @@ describe('applyFormat (v1-aligned)', () => {
 
   it('structured: falls back on invalid JSON', () => {
     const out = applyFormat('structured', 'not json', 'my prompt', [
-      { source_id: 1, source_name: 's', chunk_id: 1, chunk_index: 0, snippet: 'snip', score: 0.9 },
+      { sourceId: 1, sourceName: 's', chunkId: 1, chunkIndex: 0, snippet: 'snip', score: 0.9 },
     ]);
     expect(out.structured?.title).toBe('my prompt');
     expect(out.structured?.bullets).toEqual(['snip']);
@@ -126,15 +126,15 @@ describe('retrieveForRefine (citation-aware)', () => {
     expect(result.evidence).toBe(true);
     expect(result.citations).toHaveLength(1);
     const cite = result.citations[0];
-    expect(cite.source_name).toBe('report.pdf');
+    expect(cite.sourceName).toBe('report.pdf');
     // snippet: strip THEN slice(0,200)
     expect(cite.snippet).toBe('relevant evidence text here');
-    expect(cite.page_number).toBe(3);
-    expect(cite.paragraph_index).toBe(7);
+    expect(cite.pageNumber).toBe(3);
+    expect(cite.paragraphIndex).toBe(7);
     // context: [N] Source: <filename> (chunk <idx>)\n<full text> — 1-based idx
     expect(result.context).toContain('[1] Source: report.pdf (chunk 1)');
     expect(result.context).toContain('relevant evidence text here');
-    expect(cite.chunk_index).toBe(1);
+    expect(cite.chunkIndex).toBe(1);
   });
 
   it('filters out chunks not in source_ids (post-filter)', async () => {
@@ -179,6 +179,6 @@ describe('retrieveForRefine (citation-aware)', () => {
     );
 
     expect(result.citations).toHaveLength(1);
-    expect(result.citations[0].source_name).toBe('a.txt');
+    expect(result.citations[0].sourceName).toBe('a.txt');
   });
 });

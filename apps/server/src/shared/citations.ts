@@ -50,8 +50,8 @@ function extractNumber(value: unknown, coerce: boolean): number | null {
 /**
  * Resolve retrieved chunks into Citation objects.
  *
- * Hydrates `source_name` from the sources table and `page_number`/
- * `paragraph_index` from chunk metadata. Empty input returns `[]` without
+ * Hydrates `sourceName` from the sources table and `pageNumber`/
+ * `paragraphIndex` from chunk metadata. Empty input returns `[]` without
  * hitting the DB. Behavior is identical to the previously-inlined blocks when
  * called with the matching `HydrateOptions`.
  */
@@ -82,13 +82,13 @@ export function hydrateCitations(
     const meta = (chunkMetaMap.get(c.chunk_id) ?? {}) as Record<string, unknown>;
     const snippet = trimSnippet ? c.text.trim().slice(0, 200) : c.text.slice(0, 200);
     return {
-      source_id: c.source_id,
-      source_name: sourceNameMap.get(c.source_id) ?? 'unknown',
-      chunk_id: c.chunk_id,
+      sourceId: c.source_id,
+      sourceName: sourceNameMap.get(c.source_id) ?? 'unknown',
+      chunkId: c.chunk_id,
       // v1 1-based
-      chunk_index: c.chunk_index + 1,
-      page_number: extractNumber(meta.page, coercePageNumber),
-      paragraph_index: extractNumber(meta.paragraph_index, coercePageNumber),
+      chunkIndex: c.chunk_index + 1,
+      pageNumber: extractNumber(meta.page, coercePageNumber),
+      paragraphIndex: extractNumber(meta.paragraph_index, coercePageNumber),
       snippet,
       score: c.score,
     };

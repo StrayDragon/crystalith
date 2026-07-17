@@ -73,7 +73,7 @@ interface WorkspaceOverlaysProps {
   citationSourceDetailFullscreen: boolean;
   onToggleCitationSourceDetailFullscreen: () => void;
   onSaveCitationSourceQAAsSource: (
-    sourceTitle: string,
+    sourceName: string,
     messages: SourceDialogMessage[],
   ) => Promise<void>;
 }

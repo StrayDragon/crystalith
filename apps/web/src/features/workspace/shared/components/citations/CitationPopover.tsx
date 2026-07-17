@@ -243,7 +243,7 @@ export default function CitationPopover({
                   {/* Content */}
                   <div className="flex-1 min-w-0 overflow-hidden">
                     <div className="text-xs font-semibold text-gray-900 truncate">
-                      {citation.sourceTitle}
+                      {citation.sourceName}
                     </div>
                     {pageLabel && (
                       <div className="text-[10px] font-medium text-gray-500 mt-0.5">
@@ -266,7 +266,7 @@ export default function CitationPopover({
                       className="w-6 h-6 rounded-full border border-gray-200 text-gray-400 flex items-center justify-center hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors opacity-70 group-hover:opacity-100"
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={(e) => handleLocateSource(e, citation)}
-                      aria-label={`定位来源：${citation.sourceTitle}`}
+                      aria-label={`定位来源：${citation.sourceName}`}
                       title="定位来源"
                     >
                       <LocateIcon style={{ fontSize: 14 }} />
@@ -278,7 +278,7 @@ export default function CitationPopover({
                       className="w-6 h-6 rounded-full border border-gray-200 text-gray-400 flex items-center justify-center hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors opacity-70 group-hover:opacity-100"
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={(e) => handleOpenSource(e, citation)}
-                      aria-label={`打开来源：${citation.sourceTitle}`}
+                      aria-label={`打开来源：${citation.sourceName}`}
                       title="打开来源"
                     >
                       <OpenInNewIcon style={{ fontSize: 14 }} />

@@ -22,7 +22,7 @@ export function computeConfidence(
   if (citations.length === 0) return 0;
 
   const similarityAvg = avg(citations.map((c) => c.score ?? 0));
-  const uniqueSources = new Set(citations.map((c) => c.source_id)).size;
+  const uniqueSources = new Set(citations.map((c) => c.sourceId)).size;
   const coverageRatio = notebookSources > 0 ? uniqueSources / notebookSources : 0;
   const citationRatio = Math.min(1, citations.length / Math.max(1, topK));
 

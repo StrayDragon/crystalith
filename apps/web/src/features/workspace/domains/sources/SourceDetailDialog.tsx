@@ -50,7 +50,7 @@ interface SourceDetailDialogProps {
   onClose: () => void;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
-  onSaveQAAsSource?: (sourceTitle: string, messages: ChatMessage[]) => Promise<void>;
+  onSaveQAAsSource?: (sourceName: string, messages: ChatMessage[]) => Promise<void>;
 }
 
 export interface ChatMessage {
