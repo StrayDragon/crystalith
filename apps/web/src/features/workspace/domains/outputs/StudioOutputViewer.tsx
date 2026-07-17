@@ -37,7 +37,6 @@ interface StudioOutputViewerProps {
   onSelectOutput: (outputId: number) => void;
   onDeleteOutput?: (outputId: number) => void;
   onJumpToCitation?: (citation: Citation, citations: Citation[]) => void;
-  onCitationHover?: (chunkId: number | null) => void;
   onLocateSource?: (citation: Citation) => void;
   /** 是否提升 z-index（用于从其他 overlay 中打开时） */
   elevated?: boolean;
@@ -66,7 +65,6 @@ export default function StudioOutputViewer({
   onSelectOutput,
   onDeleteOutput,
   onJumpToCitation,
-  onCitationHover,
   onLocateSource,
   elevated = false,
 }: StudioOutputViewerProps) {
@@ -313,7 +311,6 @@ export default function StudioOutputViewer({
                   </Typography>
                   <CitationsControl
                     citations={outputCitations}
-                    onCitationHover={onCitationHover}
                     onLocateSource={onLocateSource}
                     onOpenSource={(citation) => onJumpToCitation?.(citation, outputCitations)}
                     elevated

@@ -14,8 +14,6 @@ interface CitationPopoverProps {
   onClose: () => void;
   /** 锚点位置（直接传入 DOMRect） */
   anchorRect: DOMRect | null;
-  /** 悬停引用回调 */
-  onCitationHover?: (chunkId: number | null) => void;
   /** 定位到来源回调（在来源列表中高亮） */
   onLocateSource?: (citation: Citation) => void;
   /** 打开来源详情回调 */
@@ -74,7 +72,6 @@ export default function CitationPopover({
   isOpen,
   onClose,
   anchorRect,
-  onCitationHover,
   onLocateSource,
   onOpenSource,
   elevated = false,
@@ -122,13 +119,6 @@ export default function CitationPopover({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
-
-  const handleItemHover = useCallback(
-    (chunkId: number | null) => {
-      onCitationHover?.(chunkId);
-    },
-    [onCitationHover],
-  );
 
   const handleLocateSource = useCallback(
     (e: ReactMouseEvent<HTMLButtonElement>, citation: Citation) => {
@@ -209,14 +199,11 @@ export default function CitationPopover({
         <ul className="overflow-y-auto p-2" style={{ maxHeight: POPOVER_MAX_HEIGHT - 52 }}>
           {citations.map((citation, index) => {
             const pageLabel = citation.pageNumber ? `第 ${citation.pageNumber} 页` : null;
-            const chunkId = citation.chunkId ?? null;
 
             return (
               <li
                 key={citation.id}
                 className="flex gap-2 p-2.5 rounded-lg transition-colors hover:bg-gray-50 group min-w-0"
-                onMouseEnter={() => handleItemHover(chunkId)}
-                onMouseLeave={() => handleItemHover(null)}
               >
                 <button
                   type="button"

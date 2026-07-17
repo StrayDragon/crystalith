@@ -38,7 +38,6 @@ interface WorkspaceOverlaysProps {
   onSelectViewerOutput: (outputId: number) => void;
   onDeleteOutput: (outputId: number) => Promise<void>;
   onOutputCitationJump: (citation: Citation, citations: Citation[]) => void;
-  onCitationHover: (chunkId: number | null) => void;
   onLocateCitationSource: (citation: Citation) => void;
   slidesDialogOpen: boolean;
   onCloseSlidesDialog: () => void;
@@ -99,7 +98,6 @@ export function WorkspaceOverlays({
   onSelectViewerOutput,
   onDeleteOutput,
   onOutputCitationJump,
-  onCitationHover,
   onLocateCitationSource,
   slidesDialogOpen,
   onCloseSlidesDialog,
@@ -161,7 +159,6 @@ export function WorkspaceOverlays({
             void onDeleteOutput(...args);
           }}
           onJumpToCitation={onOutputCitationJump}
-          onCitationHover={onCitationHover}
           onLocateSource={onLocateCitationSource}
           elevated={viewerElevated}
         />

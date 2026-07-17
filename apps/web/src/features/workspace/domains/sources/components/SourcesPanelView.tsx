@@ -248,7 +248,6 @@ function SourcesPanelView({
   const [selectedSource, setSelectedSource] = useState<SourceItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sourceListRef = useRef<VirtuosoHandle | null>(null);
-  const sourceRefs = useRef(new Map<number, HTMLDivElement | null>());
   const researchModalRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const fastSearchDebounceTimerRef = useRef<number | null>(null);
@@ -402,14 +401,13 @@ function SourcesPanelView({
     if (!jumpToSource) return;
     const targetIndex = sourceIdToIndex.get(jumpToSource.id);
     if (targetIndex != null) {
+      // Prefer Virtuoso scroll — avoids scrollIntoView walking up and moving the chat panel.
       sourceListRef.current?.scrollToIndex({
         index: targetIndex,
         align: 'center',
         behavior: 'smooth',
       });
     }
-    const node = sourceRefs.current.get(jumpToSource.id);
-    if (node) node.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setHighlightedSourceId(jumpToSource.id);
     const timer = window.setTimeout(() => setHighlightedSourceId(null), 1800);
     return () => window.clearTimeout(timer);
@@ -1295,9 +1293,6 @@ function SourcesPanelView({
                     : 'red';
               return (
                 <div
-                  ref={(node) => {
-                    sourceRefs.current.set(source.id, node);
-                  }}
                   className={`group relative flex items-center rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-all hover:border-gray-300 hover:shadow mb-1.5 ux-slide-in ${
                     isHighlighted
                       ? 'border-blue-200 ring-2 ring-blue-300 bg-blue-50/70'

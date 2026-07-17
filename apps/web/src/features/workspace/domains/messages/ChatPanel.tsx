@@ -42,7 +42,6 @@ interface ChatPanelProps {
   isConnected: boolean;
   inputRef: RefObject<HTMLTextAreaElement | null>;
   citations: Citation[];
-  onCitationHover?: (chunkId: number | null, message: ChatMessage) => void;
   onCitationJump?: (citation: Citation, message: ChatMessage) => void;
   onCitationLocate?: (citation: Citation, message: ChatMessage) => void;
   isLoadingMessages: boolean;
@@ -71,7 +70,6 @@ function ChatPanel({
   isConnected,
   inputRef,
   citations,
-  onCitationHover,
   onCitationJump,
   onCitationLocate,
   isLoadingMessages,
@@ -271,7 +269,6 @@ function ChatPanel({
               <>
                 <CitationsControl
                   citations={messageCitationEntries.map((entry) => entry.citation)}
-                  onCitationHover={(chunkId) => onCitationHover?.(chunkId, message)}
                   onLocateSource={(citation) => onCitationLocate?.(citation, message)}
                   onOpenSource={(citation) => onCitationJump?.(citation, message)}
                 />

@@ -258,7 +258,16 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
   setDraft: (draft) => set({ draft }),
   setCitations: (citations) => set({ citations }),
   setHoveredCitation: (chunkId) => set({ hoveredCitationChunkId: chunkId }),
-  setHoveredMessageChunks: (chunkIds) => set({ hoveredMessageChunkIds: chunkIds }),
+  setHoveredMessageChunks: (chunkIds) =>
+    set((state) => {
+      if (
+        state.hoveredMessageChunkIds.length === chunkIds.length &&
+        state.hoveredMessageChunkIds.every((id, index) => id === chunkIds[index])
+      ) {
+        return state;
+      }
+      return { hoveredMessageChunkIds: chunkIds };
+    }),
   setJumpToCitation: (chunkId) => set({ jumpToCitationChunkId: chunkId }),
 
   // --- Outputs ---
