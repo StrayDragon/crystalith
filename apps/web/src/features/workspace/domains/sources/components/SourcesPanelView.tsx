@@ -404,8 +404,8 @@ function SourcesPanelView({
       // Prefer Virtuoso scroll — avoids scrollIntoView walking up and moving the chat panel.
       sourceListRef.current?.scrollToIndex({
         index: targetIndex,
-        align: 'center',
-        behavior: 'smooth',
+        align: 'nearest',
+        behavior: 'auto',
       });
     }
     setHighlightedSourceId(jumpToSource.id);

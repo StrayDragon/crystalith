@@ -476,7 +476,9 @@ function ChatPanel({
             initialItemCount={20}
             initialTopMostItemIndex={Math.max(0, messages.length - 1)}
             followOutput={(isAtBottom) =>
-              isAtBottom || isSending || isStreaming ? 'smooth' : false
+              // Only stick to bottom while generating — unrelated re-renders
+              // (e.g. citation locate) must not smooth-scroll the chat.
+              isAtBottom && (isSending || isStreaming) ? 'smooth' : false
             }
             itemContent={(_index, message) =>
               message ? renderMessage(message) : <div className="pb-4" />

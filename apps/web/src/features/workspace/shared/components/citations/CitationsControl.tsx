@@ -35,6 +35,11 @@ export default function CitationsControl({
   const handleClosePopover = useCallback(() => {
     setPopoverOpen(false);
     setAnchorRect(null);
+    // Prefer preventScroll if focus returns to the trigger later.
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && active !== document.body) {
+      active.blur();
+    }
   }, []);
 
   if (!citations || citations.length === 0) return null;
