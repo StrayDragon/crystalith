@@ -1,16 +1,23 @@
 /** Shared helpers for citation source vs chunk counts. */
 
-export function countUniqueCitationSources(
-  citations: Array<{ source_id?: number | null; source_name?: string | null }>,
-): number {
+type CitationSourceFields = {
+  sourceId?: number | null;
+  source_id?: number | null;
+  sourceTitle?: string | null;
+  source_name?: string | null;
+};
+
+export function countUniqueCitationSources(citations: CitationSourceFields[]): number {
   const keys = new Set<string>();
   for (const citation of citations) {
-    if (citation.source_id != null) {
-      keys.add(`id:${citation.source_id}`);
+    const sourceId = citation.sourceId ?? citation.source_id;
+    if (sourceId != null) {
+      keys.add(`id:${sourceId}`);
       continue;
     }
-    if (citation.source_name) {
-      keys.add(`name:${citation.source_name}`);
+    const sourceName = citation.sourceTitle ?? citation.source_name;
+    if (sourceName) {
+      keys.add(`name:${sourceName}`);
     }
   }
   return keys.size;
