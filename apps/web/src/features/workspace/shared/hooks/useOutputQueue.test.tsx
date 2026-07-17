@@ -195,12 +195,14 @@ test('enqueueOutputJob propagates generation preference', async () => {
 test('cancelOutputJob aborts running output job', async () => {
   // Mock reason: simulate in-flight request timing deterministically without wall-clock sleeps.
   vi.useFakeTimers();
+  let deleteCalled = false;
   try {
     server.use(
-      http.post('*/v1/notebooks/:notebook_id/outputs/:output_type', async () => {
+      http.post('*/v2/outputs', async () => {
         await delay(200);
         return HttpResponse.json({
           id: 11,
+          notebook_id: 1,
           type: 'FAQ',
           prompt: 'hello',
           chunk_ids: [1],
@@ -208,6 +210,10 @@ test('cancelOutputJob aborts running output job', async () => {
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z',
         });
+      }),
+      http.delete('*/v2/outputs/:id', () => {
+        deleteCalled = true;
+        return new HttpResponse(null, { status: 204 });
       }),
     );
 
@@ -246,6 +252,10 @@ test('cancelOutputJob aborts running output job', async () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(200);
     });
+
+    // AbortSignal should prevent a completed response from sticking; if a late
+    // response still arrives after cancel, cleanup deletes the server row.
+    expect(deleteCalled || result.current.outputQueueJobs[0]?.status === 'cancelled').toBe(true);
   } finally {
     vi.clearAllTimers();
     vi.useRealTimers();

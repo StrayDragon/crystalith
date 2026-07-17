@@ -7,10 +7,9 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { server } from '../../../../test-utils/msw/server';
 import { renderHook } from '../../../../test-utils/renderHook';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
-import { REFINE_TEMPLATES } from './data/refineTemplates';
 import { useRefine } from './useRefine';
 
-// Mock reason: isolate refine job behavior from independent output queue scheduler lifecycle.
+// Mock reason: isolate workspace tools normalization from output queue scheduler.
 vi.mock('../../shared/hooks/useOutputQueue', () => ({
   useOutputQueue: () => ({
     outputQueueJobs: [],
@@ -83,53 +82,6 @@ beforeEach(() => {
   });
 
   server.use(http.get('*/v1/workspace/tools', () => HttpResponse.json({ tools: [] })));
-});
-
-test('sets default refine prompt when empty', async () => {
-  const { result } = renderHook(() => useRefine(), { wrapper: wrapSWR });
-
-  await waitFor(() => {
-    expect(result.current.refinePrompt).toBe(REFINE_TEMPLATES[0].prompt);
-  });
-});
-
-test('onGenerateRefine enqueues job with selected source ids', async () => {
-  let capturedBody: Record<string, unknown> | null = null;
-  server.use(
-    http.post('*/v1/notebooks/:notebook_id/refine/batch', async ({ request }) => {
-      capturedBody = (await request.json()) as Record<string, unknown>;
-      return HttpResponse.json({
-        outputs: { paragraph: { paragraph: 'Answer', bullets: [], structured: null } },
-        citations: [{ chunk_id: 9, chunk_index: 1, source_name: 'Doc', snippet: 'S' }],
-      });
-    }),
-  );
-
-  const { result } = renderHook(() => useRefine(), { wrapper: wrapSWR });
-
-  act(() => {
-    const s = useWorkspaceStore.getState();
-    s.setConnectionState('live');
-    s.setActiveNotebook(1);
-    s.setRefinePrompt('提炼核心结论');
-    s.setSelectedSources({ 101: true, 102: true });
-  });
-
-  await act(async () => {
-    await result.current.onGenerateRefine();
-  });
-
-  await waitFor(() => {
-    expect(result.current.refineJobs).toHaveLength(1);
-  });
-
-  expect(result.current.refineJobs[0].sourceIds).toEqual([101, 102]);
-  expect(useWorkspaceStore.getState().activePanel).toBe('refine');
-  expect(capturedBody).toEqual({
-    prompt: '提炼核心结论',
-    formats: expect.any(Array),
-    source_ids: [101, 102],
-  });
 });
 
 test('normalizes slides tool config schema from workspace tools', async () => {

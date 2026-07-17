@@ -4,6 +4,7 @@ import {
   OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { api } from '../../../../../api/eden';
 import type { CitationContextResponse } from '../../../../../api/shared-types';
@@ -159,9 +160,9 @@ export default function CitationDrawer({
 
   if (!open) return null;
 
-  return (
+  const drawer = (
     <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-sm relative"
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm"
       style={modalStyle}
       role="dialog"
       aria-modal="true"
@@ -173,7 +174,7 @@ export default function CitationDrawer({
         onClick={onClose}
         aria-label="关闭引用上下文"
       />
-      <div className="absolute right-0 top-0 z-10 h-full w-full max-w-[520px] bg-white shadow-2xl dark:bg-slate-900 border-l border-gray-200 dark:border-slate-700">
+      <div className="absolute right-0 top-0 z-10 h-full w-full max-w-[520px] bg-white shadow-2xl dark:bg-slate-900 border-l border-gray-200 dark:border-slate-700 flex flex-col">
         <div className="flex items-start justify-between gap-3 px-4 py-4 border-b border-gray-200 dark:border-slate-700">
           <div className="min-w-0">
             <div className="text-sm font-semibold text-gray-900 truncate dark:text-slate-100">
@@ -187,7 +188,7 @@ export default function CitationDrawer({
           </div>
           <button
             type="button"
-            className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100 flex-shrink-0"
             onClick={onClose}
             aria-label="关闭"
           >
@@ -195,8 +196,8 @@ export default function CitationDrawer({
           </button>
         </div>
 
-        <div className="px-4 py-3 flex items-center justify-between gap-2 border-b border-gray-100 dark:border-slate-800">
-          <div className="text-xs font-medium text-gray-500 dark:text-slate-300 truncate">
+        <div className="px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 dark:border-slate-800">
+          <div className="text-xs font-medium text-gray-500 dark:text-slate-300 min-w-0 truncate">
             {citation?.snippet ? `"${citation.snippet}"` : '—'}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -225,7 +226,7 @@ export default function CitationDrawer({
           </div>
         </div>
 
-        <div className="px-4 py-4 overflow-y-auto h-[calc(100%-122px)]">
+        <div className="px-4 py-4 overflow-y-auto flex-1 min-h-0">
           {loading ? (
             <div className="text-sm text-gray-500 dark:text-slate-300">正在加载引用上下文…</div>
           ) : null}
@@ -261,4 +262,6 @@ export default function CitationDrawer({
       </div>
     </div>
   );
+
+  return createPortal(drawer, document.body);
 }

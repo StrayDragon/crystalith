@@ -80,8 +80,7 @@ export default function CitationPopover({
   elevated = false,
 }: CitationPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
-  // 使用 tooltip layer 确保始终在最上层，或者使用 modal + slot 提升
-  const { style: popoverStyle } = useLayer(elevated ? 'tooltip' : 'popover');
+  const { style: popoverStyle } = useLayer('modal', elevated ? 8 : 2);
 
   // 计算位置（带边界检测）
   const position = useMemo(() => {
@@ -155,10 +154,10 @@ export default function CitationPopover({
     position.placement === 'bottom' ? 'translate(-50%, 8px)' : 'translate(-50%, calc(-100% - 8px))';
 
   const popover = (
-    <div className="fixed inset-0" style={popoverStyle}>
+    <div className="fixed inset-0 pointer-events-none" style={popoverStyle}>
       <div
         ref={popoverRef}
-        className="absolute w-[320px] max-w-[90vw] rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden"
+        className="absolute w-[320px] max-w-[90vw] rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden pointer-events-auto"
         style={{
           left: position.x,
           top: position.y,
@@ -176,7 +175,7 @@ export default function CitationPopover({
           <button
             type="button"
             onClick={onClose}
-            className="w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+            className="w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer flex-shrink-0"
             aria-label="关闭"
           >
             <svg
@@ -200,7 +199,7 @@ export default function CitationPopover({
             return (
               <li
                 key={citation.id}
-                className="flex gap-3 p-2.5 rounded-lg transition-colors hover:bg-gray-50 group"
+                className="flex gap-2 p-2.5 rounded-lg transition-colors hover:bg-gray-50 group min-w-0"
                 onMouseEnter={() => handleItemHover(chunkId)}
                 onMouseLeave={() => handleItemHover(null)}
               >
@@ -215,7 +214,7 @@ export default function CitationPopover({
                   </span>
 
                   {/* Content */}
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 overflow-hidden">
                     <div className="text-xs font-semibold text-gray-900 truncate">
                       {citation.sourceTitle}
                     </div>
@@ -232,8 +231,8 @@ export default function CitationPopover({
                   </div>
                 </button>
 
-                {/* Actions */}
-                <div className="flex-shrink-0 flex flex-col items-center gap-2">
+                {/* Actions — keep inside card bounds */}
+                <div className="flex-shrink-0 flex flex-col items-center gap-2 self-start">
                   {onLocateSource && (
                     <button
                       type="button"

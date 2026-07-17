@@ -57,6 +57,7 @@
 | ------------------------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 知识图谱 / `POST /v2/analysis` | 2026-07-17 | 用户反馈价值低；前后端、spec、`_FEATURES` 条目已删除                                                                                                                        |
 | 孤儿前端 UI 存根批次           | 2026-07-17 | RefinePanel、OutputTypeSelector、音视频概览/播放器、消息 stats 卡片（Answer/BarChart/DataTable/ToolAction/JsonFallback）、`useTasks`；`useRefine` 与 `/v2/refine*` API 保留 |
+| `useRefine` refine-job 死路径  | 2026-07-17 | 删除 refineTemplates；仅保留 Studio/output queue 路径                                                                                                                       |
 
 > NOTE: 待盘点 — 其他功能仍按各条目 NOTE 填写
 
