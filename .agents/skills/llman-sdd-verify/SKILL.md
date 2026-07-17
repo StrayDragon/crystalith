@@ -1,120 +1,129 @@
 ---
 name: 'llman-sdd-verify'
-description: 'Verify that an implemented llman SDD change matches its specs, design, and tasks. Produces a report (CRITICAL / WARNING / SUGGESTION) comparing code to artifacts. Run after apply completes. If clean, the change is ready to archive.'
+description: '验证已实施的 llman SDD 变更是否与 specs/design/tasks 一致。产出分级报告（CRITICAL / WARNING / SUGGESTION），对比代码与工件。在 apply 完成后运行；全绿则可归档。'
 metadata:
-  version: '0.0.61'
+  version: '0.0.63'
 ---
 
 # LLMAN SDD Verify
 
-Use this skill to verify that the implementation matches the change's artifacts.
+使用此 skill 验证实现是否与该 change 的 artifacts 一致。
 
-## Pipeline Position
+## Pipeline 位置
 
 ```mermaid
 flowchart LR
-    apply["llman-sdd-apply<br/>Implement"] --> verify
-    verify["★ llman-sdd-verify ★<br/>Verify (you are here)"]
-    verify --> archive["llman-sdd-archive<br/>Archive"]
-    archive --> commit["git commit<br/>Done"]
+    apply["llman-sdd-apply<br/>实施"] --> verify
+    verify["★ llman-sdd-verify ★<br/>验证（你现在在这里）"]
+    verify --> archive["llman-sdd-archive<br/>归档"]
+    archive --> commit["git commit<br/>完成闭环"]
 
     style verify fill:#fff3cd,stroke:#ffc107,stroke-width:3px
 ```
 
-> 📍 You are in the verify phase → if pass: next `llman-sdd-archive` (archive); if fail: go back to `llman-sdd-apply` (fix)
+> 📍 你现在在验证阶段 → 通过后下一步 `llman-sdd-archive`（归档）；失败则回到 `llman-sdd-apply`（修复）
 
-## Hard Constraints
+## 硬约束
 
-- **Must pass apply phase all-green first**: don't skip to verify on changes that haven't been implemented.
-- **CRITICAL issues must be fixed**: CRITICAL problems must be resolved before archive.
-- **Don't ask "should I continue?"**: run the full verification flow, output a complete report.
+- **必须先通过 apply 阶段全绿**：未完成实现的 change 跳过验证。
+- **CRITICAL 必须修复**：标记为 CRITICAL 的问题归档前必须修复。
+- **不要问「要不要继续」**：跑完整个验证流程，输出完整报告。
 
-## Steps
+## 步骤
 
-1. Select the change id (or ask the user to pick from `llman sdd list --json`).
-2. Check the stage gate (authoritative):
+1. 确定 change id（不明确时让用户从 `llman sdd list --json` 选择）。
+2. 检查阶段守卫（权威）：
    ```bash
    stage=$(llman sdd show <id> --json --type change | jq -r .stage)
    ```
-   (If `jq` is unavailable, parse the `stage` value from the JSON with any tool.)
-   - If `stage` is not `full`, the change has nothing implemented to verify → STOP with a guard:
-     - `draft`: "Change <id> is a draft proposal (proposal.md only); nothing to verify yet. Generate full artifacts with llman-sdd-propose, then implement with llman-sdd-apply <id>."
-     - other non-full (`specified`/`designed`): "Change <id> is in <stage> stage, not ready to verify. Implement first with llman-sdd-apply."
-3. Run a fast validation gate:
+   （若无 `jq`，可用任意工具从 JSON 中解析 `stage` 值。）
+   - 若 `stage` 不为 `full`，变更尚未实现、无可验证内容 → 必须停止并给出守卫提示：
+     - `draft`："变更 <id> 是 draft 提案（仅 proposal.md），尚无可验证的实现。请先用 llman-sdd-propose 生成完整工件，再用 llman-sdd-apply <id> 实现。"
+     - 其他非 full 阶段（`specified`/`designed`）："变更 <id> 处于 <stage> 阶段，尚未准备好被验证。请先用 llman-sdd-apply 实现。"
+3. 先跑一个快速校验门禁：
    - `llman sdd validate <id> --strict --no-interactive`
-4. Read:
-   - Delta specs under `llmanspec/changes/<id>/specs/`
-   - `proposal.md` and `design.md` if present
-   - `tasks.md` to understand what was implemented
-5. Compare artifacts vs code:
-   - Identify mismatches (missing behavior, wrong behavior, missing tests/docs)
-   - Suggest minimal fixes or artifact updates
-6. **BDD-on verification** — only when `config.yaml` has a `bdd:` block:
-   - `llman sdd validate <spec>` auto-runs `bdd.run_command` after Gherkin parse; exit 0 = pass, non-zero = fail.
-   - Confirm `llman sdd solidify <id>` was run — `.feature` files should be up to date with delta scenarios.
+4. 阅读：
+   - `llmanspec/changes/<id>/specs/` 下的 delta specs
+   - `proposal.md` 与 `design.md`（如存在）
+   - `tasks.md`（理解实现范围）
+5. 对比 artifacts 与代码：
+   - 标出不一致（缺失行为、错误行为、缺测试/文档）
+   - 给出最小修复建议或建议更新 artifacts
+6. **BDD-on 验证（Git-native Partitioned SSOT）**——仅当 `config.yaml` 含 `bdd:` 段时：
+   - 确认 change 已 attach，且当前在对应 feature 分支上。
+   - `llman sdd validate --specs`：Gherkin + `@req`/双写门禁；默认跑 `bdd.run_command`（可用 `--no-check` 跳过）。
+   - 可选只读审查：`llman sdd change diff <id>`（或 `--export-patch <path>`）。diff 仅作审查/导出——绝不当作 apply 步骤。
+   - 归档前：工作区干净后运行 `llman sdd change checkpoint <id>`。
+   - 检查：可执行 GWT 只在 live `.feature`；`morphology.dualWriteCount` 应为 0；若已有活跃 `*.feature.delta.toon` 则先迁移（不要自创 solidify/找补步骤）。
 
-7. Produce a short report:
-   - **CRITICAL** (must fix before archive)
-   - **WARNING** (should fix)
-   - **SUGGESTION** (nice to have)
-8. If CRITICAL exists, suggest `llman-sdd-apply` for fixes. If clean, suggest archive: `llman sdd archive run <id>`.
+7. 输出简短报告：
+   - **CRITICAL**（归档前必须修复）
+   - **WARNING**（建议修复）
+   - **SUGGESTION**（可选优化）
+8. 若存在 CRITICAL，建议用 `llman-sdd-apply` 修复；若通过（BDD-on：且已 checkpoint）则建议归档：`llman sdd change archive <id>`。
 
-> 💡 Verify pass → next: `llman-sdd-archive` (archive); CRITICAL issues → go back to `llman-sdd-apply` (fix)
+> 💡 验证通过 → 下一步 `llman-sdd-archive`（归档）；有 CRITICAL → 回到 `llman-sdd-apply`（修复）
 
-Before acting, read `llmanspec/config.yaml` and follow its `context` and `rules` if present.
+行动前先阅读 `llmanspec/config.yaml`，并遵循其中的 `context` 与 `rules`（若有）。
 
-Common commands:
+常用命令：
 
-- `llman sdd context --task "<description>" --paths "<files>"` (find relevant specs). Uses the pageindex agentic tree backend (needs `LLMAN_SDD_INDEX_CHAT_MODEL`). Preset via `LLMAN_SDD_INDEX_BACKEND`.
-- `llman sdd list` (list changes)
-- `llman sdd list --specs` (list specs with purpose/scope metadata)
-- `llman sdd show <id>` (show change/spec)
-- `llman sdd validate <id>` (validate a change or spec)
-- `llman sdd validate --all` (bulk validate)
-- `llman sdd index rebuild` (rebuild the pageindex tree index — no model needed)
-- `llman sdd index check` (check index freshness)
-- `llman sdd archive run <id>` (archive a change)
-- `llman sdd archive freeze [--before YYYY-MM-DD] [--keep-recent N] [--dry-run]` (freeze archived dirs)
-- `llman sdd archive thaw [--change <id> ...] [--dest <path>]` (restore from cold-backup)
-- `llman sdd graph [CHANGE] [--format mermaid] [--scope active|archived|all] [--depth N]` (generate change dependency graph)
+- `llman sdd context --task "<描述>" --paths "<文件>"`（找相关 specs）。使用 pageindex agentic tree 后端（需 `LLMAN_SDD_INDEX_CHAT_MODEL`）。可用 `LLMAN_SDD_INDEX_BACKEND` 预设。
+- `llman sdd list`（列出变更）
+- `llman sdd list --specs`（列出 specs 及 purpose/scope 元数据）
+- `llman sdd show <id>`（展示 change/spec）
+- `llman sdd validate <id>`（校验 change 或 spec）
+- `llman sdd validate --all`（批量校验）
+- `llman sdd index rebuild`（重建 pageindex 树索引——不需要模型）
+- `llman sdd index check`（检查索引新鲜度）
+- `llman sdd change new <id>`（创建草稿 `changes/<id>/proposal.md`）
+- `llman sdd change attach <id> [--force]`（BDD-on：绑定 feature 分支 + base SHA）
+- `llman sdd change checkpoint <id> [--no-check]`（BDD-on：干净工作区 + 归档前门禁）
+- `llman sdd change diff <id> [--export-patch <path>]`（BDD-on：只读 `base...HEAD` 审查/导出）
+- `llman sdd change delta …`（仅 BDD-off：TOON delta 作者工具；BDD-on 会拒绝）
+- `llman sdd change archive <id>`（封存变更；BDD-on：checkpoint 后仅文档；BDD-off：合并 TOON delta）
+- `llman sdd archive freeze [--before YYYY-MM-DD] [--keep-recent N] [--dry-run]`（冻结已归档目录）
+- `llman sdd archive thaw [--change <id> ...] [--dest <path>]`（从冷备份恢复）
+- `llman sdd graph [CHANGE] [--format mermaid] [--scope active|archived|all] [--depth N]`（生成变更依赖图）
+- `llman sdd project migrate [--kind format|partitioned|legacy-bdd|auto]`（一次性迁移）
 
 ## Context
 
-- Gather the current change/spec state before acting.
-- Prefer `llman sdd context --task --paths` to discover relevant specs instead of guessing or full scans.
+- 执行前先确认当前 change/spec 状态。
+- 优先使用 `llman sdd context --task --paths` 获取相关 specs，而非全量读取或猜测。
 
 ## Goal
 
-- State the concrete outcome for this command/skill execution.
+- 明确本次命令/skill 要达成的可验证结果。
 
 ## Constraints
 
-- Keep changes minimal and scoped.
-- Avoid guessing when identifiers or intent are ambiguous.
-- Use `llman sdd context --task --paths` before reading full spec files.
-- Choose workflow path based on change scale: behavioral contract changes use full SDD, implementation changes use quick path.
+- 变更保持最小化且范围明确。
+- 标识符或意图不明确时禁止猜测。
+- 在读取 spec 全文前，先使用 `llman sdd context --task --paths` 获取相关 specs。
+- 判断变更规模后选择路径：行为合约变更走完整 SDD 流程，实现变更走快速路径。
 
 ## Workflow
 
-- Use `llman sdd` commands as the source of truth.
-- Validate outcomes when files or specs are updated.
-- Prefer `llman sdd context` over full reads or guessing.
-- When context is unavailable follow error guidance (rebuild index or fall back to `list --specs --json`).
+- 以 `llman sdd` 命令结果为事实来源。
+- 涉及文件/规范变更时执行校验。
+- 首选 `llman sdd context` 获取相关 specs，而非全量读取或猜测。
+- 当 context 不可用时，按错误提示处理（重建 index 或降级到 `list --specs --json`）。
 
 ## Decision Policy
 
-- Ask for clarification when a high-impact ambiguity remains.
-- Stop instead of forcing through known validation errors.
+- 高影响歧义必须先澄清。
+- 已知校验错误下禁止强行继续。
 
 ## Output Contract
 
-- Summarize actions taken.
-- Provide resulting paths and validation status.
+- 汇总已执行动作。
+- 给出结果路径与校验状态。
 
 ## Ethics Governance
 
-- `ethics.risk_level`: classify risk as `low|medium|high|critical`.
-- `ethics.prohibited_actions`: list actions that MUST NOT be performed.
-- `ethics.required_evidence`: list required evidence before high-impact output.
-- `ethics.refusal_contract`: define when to refuse and safe alternative response.
-- `ethics.escalation_policy`: define when to escalate to user confirmation/review.
+- `ethics.risk_level`：按 `low|medium|high|critical` 标注风险等级。
+- `ethics.prohibited_actions`：列出绝对禁止执行的动作。
+- `ethics.required_evidence`：列出高影响输出前必须具备的证据。
+- `ethics.refusal_contract`：定义何时拒答以及安全替代响应方式。
+- `ethics.escalation_policy`：定义何时必须升级为用户确认/人工复核。
