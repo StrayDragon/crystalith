@@ -74,6 +74,7 @@ export function guessMimeType(filename: string): string {
     htm: 'text/html',
     txt: 'text/plain',
     md: 'text/markdown',
+    markdown: 'text/markdown',
     csv: 'text/csv',
     json: 'application/json',
     xml: 'application/xml',
