@@ -405,11 +405,20 @@ export function useChat({
 
     // Non-streaming path
     try {
-      const { data: qaResult, error: qaErr } = await api.v2.qa.post({
+      const qaBody: {
+        question: string;
+        notebook_id: number;
+        session_id: number;
+        source_ids?: number[];
+      } = {
         question: text,
         notebook_id: notebookId,
         session_id: sessionId,
-      });
+      };
+      if (explicitSourceIds.length) {
+        qaBody.source_ids = explicitSourceIds;
+      }
+      const { data: qaResult, error: qaErr } = await api.v2.qa.post(qaBody);
       if (qaErr)
         throw new Error(typeof qaErr === 'string' ? qaErr : typeof qaErr === 'string' ? qaErr : '');
       const result = qaResult! as Record<string, unknown>;

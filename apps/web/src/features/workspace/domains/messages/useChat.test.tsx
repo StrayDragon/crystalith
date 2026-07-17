@@ -93,7 +93,17 @@ beforeEach(() => {
     http.get('*/v1/notebooks/:notebook_id/sessions/:session_id/messages', () =>
       HttpResponse.json([]),
     ),
+    http.get('*/v2/notebooks/:notebook_id/sessions/:session_id/messages', () =>
+      HttpResponse.json([]),
+    ),
     http.get('*/v1/notebooks/:notebook_id/sessions/:session_id/ui/state', () =>
+      HttpResponse.json({
+        session_id: 123,
+        shared_state: { ui: { v: 1, components: {}, datasets: {} } },
+        shared_state_revision: 0,
+      }),
+    ),
+    http.get('*/v2/notebooks/:notebook_id/sessions/:session_id/ui/state', () =>
       HttpResponse.json({
         session_id: 123,
         shared_state: { ui: { v: 1, components: {}, datasets: {} } },
@@ -125,7 +135,7 @@ test('sendMessage returns error when no notebook is active', async () => {
 test('sendMessage non-streaming path stores assistant message and shared_state mounts', async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/qa', async ({ request }) => {
+    http.post('*/v2/qa', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         answer: 'Answer',
@@ -166,6 +176,7 @@ test('sendMessage non-streaming path stores assistant message and shared_state m
   expect(result.current.citations).toHaveLength(1);
   expect(capturedBody).toEqual({
     question: 'Hello',
+    notebook_id: 1,
     session_id: 123,
   });
 });
@@ -173,7 +184,7 @@ test('sendMessage non-streaming path stores assistant message and shared_state m
 test('sendMessage passes selected source ids', async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/qa', async ({ request }) => {
+    http.post('*/v2/qa', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         answer: 'Answer',
@@ -205,9 +216,51 @@ test('sendMessage passes selected source ids', async () => {
 
   expect(capturedBody).toEqual({
     question: 'Hello',
+    notebook_id: 1,
     session_id: 456,
     source_ids: [101, 102],
   });
+});
+
+test('sendMessage omits source_ids when nothing is selected (ungrounded)', async () => {
+  let capturedBody: Record<string, unknown> | null = null;
+  server.use(
+    http.post('*/v2/qa', async ({ request }) => {
+      capturedBody = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json({
+        answer: 'Ungrounded answer',
+        citations: [],
+        message_id: 9004,
+        shared_state: { ui: { v: 1, components: {}, datasets: {} } },
+        shared_state_revision: 0,
+      });
+    }),
+  );
+
+  const ensureSession = vi.fn().mockResolvedValue(789);
+  const { result } = renderHook(() => useChat({ ensureSession, enableStreaming: false }), {
+    wrapper: wrapSWR,
+  });
+
+  act(() => {
+    const s = useWorkspaceStore.getState();
+    s.setConnectionState('live');
+    s.setActiveNotebook(1);
+    s.setActiveSession(789);
+    s.setSelectedSources({});
+    s.setDraft('Chat freely');
+  });
+
+  await act(async () => {
+    await result.current.sendMessage();
+  });
+
+  expect(capturedBody).toEqual({
+    question: 'Chat freely',
+    notebook_id: 1,
+    session_id: 789,
+  });
+  expect(capturedBody).not.toHaveProperty('source_ids');
 });
 
 test('streaming path applies snapshot and delta with backend message id', async () => {

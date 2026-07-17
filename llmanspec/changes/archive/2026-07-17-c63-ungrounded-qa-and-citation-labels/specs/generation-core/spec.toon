@@ -1,0 +1,8 @@
+kind: llman.sdd.delta
+ops[2]{op,req_id,title,statement,from,to,name}:
+  modify_requirement,"qa-retrieve-before-generate",QA MUST gate retrieval then optionally generate,"QA 管线 MUST 在进入 LLM 之前先解析 source_ids：当 source_ids 非空时 MUST 先做确定性检索并判定 evidence；当 source_ids 缺失或为空且笔记本仍有来源时 MUST 跳过检索并以无引用（citations=[]）进入 LLM 生成；当笔记本无任何来源时 MUST 返回 evidence=false 且 reason=no_sources 且不进入 LLM。",null,null,null
+  modify_requirement,r89,Source scope is explicit and validated,生成/问答请求中的 source_ids 语义 MUST 明确且可校验：非空列表 MUST 限定检索范围；缺失或空列表对 QA 表示 ungrounded（无 RAG）；非法或越权 id MUST 返回错误。,null,null,null
+op_scenarios[3]{req_id,id,given,when,then,feature}:
+  "qa-retrieve-before-generate","ungrounded-empty-selection",笔记本有已索引来源但请求未提供 source_ids（或为空数组）,用户提问,"系统 SHALL 跳过 RAG 检索进入 LLM 生成，且返回 citations=[]",true
+  "qa-retrieve-before-generate","no-sources-case",笔记本中无任何 source,用户提问,系统 SHALL 返回 evidence=false 且 reason=no_sources 的标准化回答，不进入 LLM 生成,true
+  r89,"empty-source-ids-means-ungrounded-qa",QA 请求 source_ids 缺失或为空且笔记本有来源,系统处理该请求,系统 SHALL 按 ungrounded 路径生成且不因空 scope 拒绝请求,true

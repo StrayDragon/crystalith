@@ -25,7 +25,7 @@ export const EVIDENCE_THRESHOLD_DEFAULT = 0.2;
 
 // Localized no-evidence answers (v1 service.py:27-32, 62-69)
 export const NO_EVIDENCE_ANSWER = '来源中未找到相关证据';
-export const NO_SOURCES_ANSWER = '请先选择至少一个来源后再提问';
+export const NO_SOURCES_ANSWER = '当前笔记本还没有来源，请先导入后再提问';
 export const NO_VECTOR_INDEX_ANSWER =
   '未在向量库中检索到相关内容。若刚切换运行环境，请对已导入来源重新索引。';
 export const SOURCES_NOT_READY_ANSWER = '所选来源尚未完成索引或内容为空，请等待来源状态变为就绪';
@@ -96,11 +96,14 @@ export interface RetrieveAndJudgeOptions {
 }
 
 /**
- * Deterministic retrieval + evidence judgment — the v1 `run_qa_pipeline` port.
+ * Deterministic retrieval + evidence judgment — the v1 `run_qa_pipeline` port,
+ * with c63 empty-scope ungrounded chat.
  *
- * 12-step pipeline (service.py:274-487):
+ * Pipeline:
  *  1. Normalize source_ids
- *  2. If no source_ids → no_sources
+ *  2. Empty/missing source_ids:
+ *     - notebook has no sources → no_sources (short-circuit)
+ *     - notebook has sources → ungrounded (skip retrieval, evidence=true, citations=[])
  *  3. Embed question
  *  4. If embedding empty → embedding_empty
  *  5. Vector search
@@ -132,10 +135,25 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
     compressed: false,
   };
 
-  // Step 1-2: empty/missing source_ids → no_sources (v1 service.py:295-316)
+  // Step 1-2: empty/missing source_ids — notebook-empty → no_sources;
+  // otherwise ungrounded chat (skip RAG, allow LLM with citations=[]).
   const normalizedSourceIds = opts.sourceIds?.length ? opts.sourceIds : undefined;
   if (!normalizedSourceIds) {
-    return noEvidence('no_sources', emptyStats);
+    const notebookSourceCount = db()
+      .select({ id: sources.id })
+      .from(sources)
+      .where(eq(sources.notebookId, opts.notebookId))
+      .all().length;
+    if (notebookSourceCount === 0) {
+      return noEvidence('no_sources', emptyStats);
+    }
+    return {
+      evidence: true,
+      citations: [],
+      context: '',
+      confidence: 0,
+      contextStats: emptyStats,
+    };
   }
 
   // Step 3-4: Retrieve via RAG strategy (embed + search happen inside).
