@@ -1,8 +1,8 @@
 ---
-name: "llman-sdd-verify"
-description: "Verify that an implemented llman SDD change matches its specs, design, and tasks. Produces a report (CRITICAL / WARNING / SUGGESTION) comparing code to artifacts. Run after apply completes. If clean, the change is ready to archive."
+name: 'llman-sdd-verify'
+description: 'Verify that an implemented llman SDD change matches its specs, design, and tasks. Produces a report (CRITICAL / WARNING / SUGGESTION) comparing code to artifacts. Run after apply completes. If clean, the change is ready to archive.'
 metadata:
-  version: "0.0.61"
+  version: '0.0.61'
 ---
 
 # LLMAN SDD Verify
@@ -30,6 +30,7 @@ flowchart LR
 - **Don't ask "should I continue?"**: run the full verification flow, output a complete report.
 
 ## Steps
+
 1. Select the change id (or ask the user to pick from `llman sdd list --json`).
 2. Check the stage gate (authoritative):
    ```bash
@@ -63,6 +64,7 @@ flowchart LR
 Before acting, read `llmanspec/config.yaml` and follow its `context` and `rules` if present.
 
 Common commands:
+
 - `llman sdd context --task "<description>" --paths "<files>"` (find relevant specs). Uses the pageindex agentic tree backend (needs `LLMAN_SDD_INDEX_CHAT_MODEL`). Preset via `LLMAN_SDD_INDEX_BACKEND`.
 - `llman sdd list` (list changes)
 - `llman sdd list --specs` (list specs with purpose/scope metadata)
@@ -76,35 +78,41 @@ Common commands:
 - `llman sdd archive thaw [--change <id> ...] [--dest <path>]` (restore from cold-backup)
 - `llman sdd graph [CHANGE] [--format mermaid] [--scope active|archived|all] [--depth N]` (generate change dependency graph)
 
-
 ## Context
+
 - Gather the current change/spec state before acting.
 - Prefer `llman sdd context --task --paths` to discover relevant specs instead of guessing or full scans.
 
 ## Goal
+
 - State the concrete outcome for this command/skill execution.
 
 ## Constraints
+
 - Keep changes minimal and scoped.
 - Avoid guessing when identifiers or intent are ambiguous.
 - Use `llman sdd context --task --paths` before reading full spec files.
 - Choose workflow path based on change scale: behavioral contract changes use full SDD, implementation changes use quick path.
 
 ## Workflow
+
 - Use `llman sdd` commands as the source of truth.
 - Validate outcomes when files or specs are updated.
 - Prefer `llman sdd context` over full reads or guessing.
 - When context is unavailable follow error guidance (rebuild index or fall back to `list --specs --json`).
 
 ## Decision Policy
+
 - Ask for clarification when a high-impact ambiguity remains.
 - Stop instead of forcing through known validation errors.
 
 ## Output Contract
+
 - Summarize actions taken.
 - Provide resulting paths and validation status.
 
 ## Ethics Governance
+
 - `ethics.risk_level`: classify risk as `low|medium|high|critical`.
 - `ethics.prohibited_actions`: list actions that MUST NOT be performed.
 - `ethics.required_evidence`: list required evidence before high-impact output.

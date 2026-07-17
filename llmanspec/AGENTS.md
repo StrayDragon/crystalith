@@ -11,6 +11,7 @@ Project-wide tech stack, commands, conventions, testing, git rules, and doc gove
 See `_E2E.md` for E2E test patterns and known-issues reference.
 
 Spec workflow paths:
+
 - Canonical specs: `llmanspec/specs`
 - Active change workspaces: `llmanspec/changes` (archive: `llmanspec/changes/archive`)
 - v2 changes use `c<NN>-` prefix: c00 (foundation) → later align/cleanup changes. Lower number ≈ earlier foundation; run `llman sdd list` for truth.
@@ -18,6 +19,7 @@ Spec workflow paths:
 - Do not archive a change solely because tasks.md marks ✅ — tasks.md may be incomplete.
 
 Spec-workflow-specific notes:
+
 - For v2, do NOT run `pnpm run api:sync` (v1 OpenAPI chain removed in v2).
 - OpenAPI: use `@asteasolutions/zod-to-openapi` from shared Zod schemas. NOT `@elysiajs/swagger`.
 - Stable entrypoints: `bun test`, `bun typecheck`.
