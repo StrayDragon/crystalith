@@ -1,24 +1,24 @@
 ---
 name: 'llman-sdd-quick'
-description: 'Handle small code changes that do NOT modify behavioral contracts — no MUST/SHALL changes, no spec modifications. Use for refactors, typo fixes, or perf tweaks. Switch to propose for anything affecting externally observable behavior.'
+description: '快速路径：处理不改行为合约的小改动——重构、修错字、性能优化。不涉及 MUST/SHALL 变更。如发现需要改合约，立即切换到 propose 完整路径。'
 metadata:
-  version: '0.0.61'
+  version: '0.0.63'
 ---
 
 # LLMAN SDD Quick Path
 
-Use this path for small changes that don't modify behavioral contracts.
+对于不涉及行为合约变更的小改动使用此路径。
 
-## Pipeline Position
+## Pipeline 位置
 
 ```mermaid
 flowchart LR
-    explore["llman-sdd-explore<br/>Explore"] --> quick
+    explore["llman-sdd-explore<br/>探索"] --> quick
 
-    quick["★ llman-sdd-quick ★<br/>Quick path (you are here)"]
-    quick --> commit["git commit<br/>Done"]
+    quick["★ llman-sdd-quick ★<br/>快速路径（你现在在这里）"]
+    quick --> commit["git commit<br/>完成"]
 
-    explore --> propose["Full path:<br/>propose → apply → verify → archive"]
+    explore --> propose["完整路径:<br/>propose → apply → verify → archive"]
     propose --> apply["..."]
     apply --> verify["..."]
     verify --> archive["..."]
@@ -26,86 +26,92 @@ flowchart LR
     style quick fill:#d4edda,stroke:#28a745,stroke-width:3px
 ```
 
-> 📍 Quick path: no behavioral contract changes, modify code and commit directly. If you find you need to change a contract → STOP, switch to full path `llman-sdd-propose`
+> 📍 快速路径：不改行为合约，直接改代码 commit。如果发现需要改合约 → STOP，改走完整路径 `llman-sdd-propose`
 
-## Conditions (all must hold)
+## 使用条件（所有条件必须满足）
 
-- Does not change any MUST/SHALL-defined externally observable behavior
-- Does not cross capability boundaries
-- Does not involve migration or compatibility concerns
-- Is not a meta-spec change (SDD templates/process)
+- 不改变任何 spec 中 MUST/SHALL 定义的外部可观测行为
+- 不涉及跨 capability 的修改
+- 不涉及迁移/兼容性
+- 不是 SDD 元规范变更
 
-## Steps
+## 步骤
 
-1. Use `llman sdd context --task "..." --paths "..."` to confirm no spec changes needed.
-   - If context returns `quality: "unavailable"`, rebuild with `llman sdd index rebuild` (default `pageindex`, no model needed).
-   - Use `llman sdd list --specs --json` for keyword-level spec metadata.
-2. Modify the code directly.
-3. If spec maintenance is needed (typo fix, scope tightening), edit the spec file directly and run `llman sdd validate --specs`.
-4. git commit (message must explain why).
-5. No change directory, no archive needed.
+1. 用 `llman sdd context --task "..." --paths "..."` 确认无相关 spec 变更需要。
+   - 如果 context 返回 `quality: "unavailable"`，运行 `llman sdd index rebuild`（默认 `pageindex`，无需模型）。
+   - 可以用 `llman sdd list --specs --json` 查看 specs 元数据。
+2. 直接修改代码。
+3. 如果涉及 spec 的维护性调整（修错字、收紧 scope），直接编辑 spec 文件并用 `llman sdd validate --specs` 校验。
+4. git commit（message 写明 why）。
+5. 无需 change 目录，无需 archive。
 
-## Boundary handling
+## 边界处理
 
-- If during modification you find a behavioral contract change → STOP, switch to `llman-sdd-propose` (full path).
-- If multiple files are involved and scope is unclear → verify with `llman sdd context` first.
+- 如果在修改中发现需要改变行为合约 → STOP，改走 `llman-sdd-propose`（完整路径）。
+- 如果涉及到多个文件且不确定 scope → 先用 `llman sdd context` 确认。
 
-> 💡 Quick path done → git commit. If you need the full path → `llman-sdd-propose` → `llman-sdd-apply` → `llman-sdd-verify` → `llman-sdd-archive`
+> 💡 快速路径完成 → git commit 即可。若需要走完整路径 → `llman-sdd-propose` → `llman-sdd-apply` → `llman-sdd-verify` → `llman-sdd-archive`
 
-Before acting, read `llmanspec/config.yaml` and follow its `context` and `rules` if present.
+行动前先阅读 `llmanspec/config.yaml`，并遵循其中的 `context` 与 `rules`（若有）。
 
-Common commands:
+常用命令：
 
-- `llman sdd context --task "<description>" --paths "<files>"` (find relevant specs). Uses the pageindex agentic tree backend (needs `LLMAN_SDD_INDEX_CHAT_MODEL`). Preset via `LLMAN_SDD_INDEX_BACKEND`.
-- `llman sdd list` (list changes)
-- `llman sdd list --specs` (list specs with purpose/scope metadata)
-- `llman sdd show <id>` (show change/spec)
-- `llman sdd validate <id>` (validate a change or spec)
-- `llman sdd validate --all` (bulk validate)
-- `llman sdd index rebuild` (rebuild the pageindex tree index — no model needed)
-- `llman sdd index check` (check index freshness)
-- `llman sdd archive run <id>` (archive a change)
-- `llman sdd archive freeze [--before YYYY-MM-DD] [--keep-recent N] [--dry-run]` (freeze archived dirs)
-- `llman sdd archive thaw [--change <id> ...] [--dest <path>]` (restore from cold-backup)
-- `llman sdd graph [CHANGE] [--format mermaid] [--scope active|archived|all] [--depth N]` (generate change dependency graph)
+- `llman sdd context --task "<描述>" --paths "<文件>"`（找相关 specs）。使用 pageindex agentic tree 后端（需 `LLMAN_SDD_INDEX_CHAT_MODEL`）。可用 `LLMAN_SDD_INDEX_BACKEND` 预设。
+- `llman sdd list`（列出变更）
+- `llman sdd list --specs`（列出 specs 及 purpose/scope 元数据）
+- `llman sdd show <id>`（展示 change/spec）
+- `llman sdd validate <id>`（校验 change 或 spec）
+- `llman sdd validate --all`（批量校验）
+- `llman sdd index rebuild`（重建 pageindex 树索引——不需要模型）
+- `llman sdd index check`（检查索引新鲜度）
+- `llman sdd change new <id>`（创建草稿 `changes/<id>/proposal.md`）
+- `llman sdd change attach <id> [--force]`（BDD-on：绑定 feature 分支 + base SHA）
+- `llman sdd change checkpoint <id> [--no-check]`（BDD-on：干净工作区 + 归档前门禁）
+- `llman sdd change diff <id> [--export-patch <path>]`（BDD-on：只读 `base...HEAD` 审查/导出）
+- `llman sdd change delta …`（仅 BDD-off：TOON delta 作者工具；BDD-on 会拒绝）
+- `llman sdd change archive <id>`（封存变更；BDD-on：checkpoint 后仅文档；BDD-off：合并 TOON delta）
+- `llman sdd archive freeze [--before YYYY-MM-DD] [--keep-recent N] [--dry-run]`（冻结已归档目录）
+- `llman sdd archive thaw [--change <id> ...] [--dest <path>]`（从冷备份恢复）
+- `llman sdd graph [CHANGE] [--format mermaid] [--scope active|archived|all] [--depth N]`（生成变更依赖图）
+- `llman sdd project migrate [--kind format|partitioned|legacy-bdd|auto]`（一次性迁移）
 
 ## Context
 
-- Gather the current change/spec state before acting.
-- Prefer `llman sdd context --task --paths` to discover relevant specs instead of guessing or full scans.
+- 执行前先确认当前 change/spec 状态。
+- 优先使用 `llman sdd context --task --paths` 获取相关 specs，而非全量读取或猜测。
 
 ## Goal
 
-- State the concrete outcome for this command/skill execution.
+- 明确本次命令/skill 要达成的可验证结果。
 
 ## Constraints
 
-- Keep changes minimal and scoped.
-- Avoid guessing when identifiers or intent are ambiguous.
-- Use `llman sdd context --task --paths` before reading full spec files.
-- Choose workflow path based on change scale: behavioral contract changes use full SDD, implementation changes use quick path.
+- 变更保持最小化且范围明确。
+- 标识符或意图不明确时禁止猜测。
+- 在读取 spec 全文前，先使用 `llman sdd context --task --paths` 获取相关 specs。
+- 判断变更规模后选择路径：行为合约变更走完整 SDD 流程，实现变更走快速路径。
 
 ## Workflow
 
-- Use `llman sdd` commands as the source of truth.
-- Validate outcomes when files or specs are updated.
-- Prefer `llman sdd context` over full reads or guessing.
-- When context is unavailable follow error guidance (rebuild index or fall back to `list --specs --json`).
+- 以 `llman sdd` 命令结果为事实来源。
+- 涉及文件/规范变更时执行校验。
+- 首选 `llman sdd context` 获取相关 specs，而非全量读取或猜测。
+- 当 context 不可用时，按错误提示处理（重建 index 或降级到 `list --specs --json`）。
 
 ## Decision Policy
 
-- Ask for clarification when a high-impact ambiguity remains.
-- Stop instead of forcing through known validation errors.
+- 高影响歧义必须先澄清。
+- 已知校验错误下禁止强行继续。
 
 ## Output Contract
 
-- Summarize actions taken.
-- Provide resulting paths and validation status.
+- 汇总已执行动作。
+- 给出结果路径与校验状态。
 
 ## Ethics Governance
 
-- `ethics.risk_level`: classify risk as `low|medium|high|critical`.
-- `ethics.prohibited_actions`: list actions that MUST NOT be performed.
-- `ethics.required_evidence`: list required evidence before high-impact output.
-- `ethics.refusal_contract`: define when to refuse and safe alternative response.
-- `ethics.escalation_policy`: define when to escalate to user confirmation/review.
+- `ethics.risk_level`：按 `low|medium|high|critical` 标注风险等级。
+- `ethics.prohibited_actions`：列出绝对禁止执行的动作。
+- `ethics.required_evidence`：列出高影响输出前必须具备的证据。
+- `ethics.refusal_contract`：定义何时拒答以及安全替代响应方式。
+- `ethics.escalation_policy`：定义何时必须升级为用户确认/人工复核。

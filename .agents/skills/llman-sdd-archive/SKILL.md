@@ -1,101 +1,114 @@
 ---
 name: 'llman-sdd-archive'
-description: 'Archive completed llman SDD changes — merge delta specs into main specs, validate, and guide the final commit. Use after verify reports all-clear. Supports single or batch archiving with full project validation.'
+description: '归档已完成的 llman SDD 变更。BDD-off 合并 TOON delta 到主 specs；BDD-on 在 attach/checkpoint 后仅封存 change 文档，再由 Git/PR merge 提升 live specs。在 verify 报告全绿后运行。'
 metadata:
-  version: '0.0.61'
+  version: '0.0.63'
 ---
 
-# LLMAN SDD Archive
+# LLMAN SDD 归档
 
-Use this skill to archive completed changes, merge delta specs into main specs, and guide the commit.
+使用此 skill 归档已完成的变更。**BDD-off**：合并 delta specs 到主 specs。**BDD-on**：仅移动 change 文档（specs 已在 feature 分支上 live），再经 Git/PR merge 提升。
 
-## Pipeline Position
+## Pipeline 位置
 
 ```mermaid
 flowchart LR
-    verify["llman-sdd-verify<br/>Verify"] --> archive
-    archive["★ llman-sdd-archive ★<br/>Archive (you are here)"]
-    archive --> commit["git commit<br/>Done"]
+    verify["llman-sdd-verify<br/>验证"] --> archive
+    archive["★ llman-sdd-archive ★<br/>归档（你现在在这里）"]
+    archive --> commit["git commit<br/>完成闭环"]
 
     style archive fill:#fff3cd,stroke:#ffc107,stroke-width:3px
 ```
 
-> 📍 You are in the archive phase: the last stop in the pipeline.
-> 📎 If specs get too large, run `llman-sdd-specs-compact` to compress.
+> 📍 你现在在归档阶段：pipeline 最后一站。
+> 📎 若 specs 逐渐膨胀，可运行 `llman-sdd-specs-compact` 压缩。
 
-## Hard Constraints
+## 硬约束
 
-- **Must pass verify phase all-green first**: don't archive changes that haven't passed verification.
-- **SSOT validation**: every change must pass `llman sdd validate <id> --strict --no-interactive` before archiving.
-- **Don't ask "should I continue?"**: execute the full batch to completion unless you hit an unresolvable error.
+- **必须先通过 verify 阶段全绿**：未通过验证的 change 禁止归档。
+- **SSOT 校验**：每个 change 归档前必须通过 `llman sdd validate <id> --strict --no-interactive`。
+- **不要问「要不要继续」**：批量归档时间线上一路执行到底，除非遇到无法自动解决的错误。
 
-## Steps
+## 步骤
 
 ### 0) Preflight
 
-- `git status --porcelain`: confirm working tree changes belong to completed changes.
-- If unexpected changes exist, handle them (stash or report).
+- `git status --porcelain`：确认工作区改动属于已完成的 change。
+- 若有未预期改动，先处理（stash 或报告）。
 
-### 1) Confirm target changes
+### 1) 确认目标变更
 
-- Determine target IDs: single or batch (from user input or `llman sdd list --json`).
-- Always announce: "Archiving IDs: <id1>, <id2>, ...".
-- Confirm each change has passed verify phase all-green.
+- 确定目标 ID：单个或批量（来自用户输入或 `llman sdd list --json`）。
+- 始终说明："归档 IDs：<id1>, <id2>, ..."。
+- 确认每个 change 都已通过 verify 阶段的全绿验证。
 
-### 2) Archive one by one
+### 2) 逐个归档
 
-- Validate each first: `llman sdd validate <id> --strict --no-interactive`.
-- Validation failure → STOP and report; don't skip validation and force archive.
-- Optional preview: `llman sdd archive <id> --dry-run`.
-- Execute archive:
-  - default: `llman sdd archive run <id>`
-  - tooling-only: `llman sdd archive run <id> --skip-specs`
-  - **stop immediately on first failure**, report remaining unprocessed IDs.
-- **BDD-on**: `archive run` merges the delta `spec.toon` into the main `spec.toon` only. `.feature` files are managed by `llman sdd solidify` — archive does NOT copy `.feature` files. Run `solidify <id>` before archive.
+- 先逐个校验：`llman sdd validate <id> --strict --no-interactive`。
+- 校验失败 → STOP 并报告；不要跳过校验强行归档。
+- 可选预览：`llman sdd change archive <id> --dry-run`。
+- 执行归档：
+  - 默认：`llman sdd change archive <id>`
+  - 仅工具类变更：`llman sdd change archive <id> --skip-specs`
+  - **任一失败立即停止**，报告剩余未处理 ID。
+- **BDD-on（Git-native Partitioned SSOT）**：
+  - 前置：已 `llman sdd change attach <id>`，再 `llman sdd change checkpoint <id>`（干净工作区 + 门禁），仍在 feature 分支上。
+  - `change archive` **只移动 change 文档**到 `changes/archive/`——**不会**把 TOON delta 当 SSOT 合并，也永不 apply `feature_delta`。
+  - change 下遗留活跃 `*.feature.delta.toon` 是迁移阻断项——归档前须移除/迁移。
+  - 归档后，通过正常 Git/PR 将 feature 分支合并进默认分支，以提升 live `llmanspec/specs/**`。
+- **BDD-off**：
+  - `change archive` 按今日流程将 change 内 TOON delta 合并进主 `spec.toon`。
+  - 不要求 attach / checkpoint / feature 分支 / harness。
 
-### 3) Full validation
+### 3) 全量校验
 
-- After all archives complete: `llman sdd validate --all --strict --no-interactive`.
-- Confirm post-archive spec artifacts are consistent.
+- 全部归档完成后执行：`llman sdd validate --all --strict --no-interactive`。
+- 确认归档后的 specs 工件一致。
 
-### 4) Commit guidance
+### 4) Commit / merge 引导
 
-- Output suggested commit message (format: `feat(sdd): archive <id1>, <id2> - <short summary>`).
-- Prompt user: `git add -A && git commit -m "..."`.
-- If user requests auto-commit, execute and output commit hash.
+- BDD-off：输出建议 commit message（格式：`feat(sdd): archive <id1>, <id2> - <简短总结>`），然后 `git add -A && git commit -m "..."`。
+- BDD-on：文档归档后，打开/合并 feature 分支 PR，使 live specs/features 进入默认分支。
+- 若用户要求自动 commit 归档文档提交，执行后输出 commit hash。
 
-> 💡 Previous phase `llman-sdd-verify` (passed verification) → this phase completes the loop. If specs grow too large, run `llman-sdd-specs-compact`.
+> 💡 上一阶段 `llman-sdd-verify`（验证通过）→ 本阶段归档后闭环结束。若 specs 逐渐膨胀，可运行 `llman-sdd-specs-compact` 压缩。
 
-## Archive Cold Backup Guidance
+## Archive 冷备引导
 
-- If archived directories are growing too large, use cold backup maintenance:
-  - Preview freeze candidates: `llman sdd archive freeze --dry-run`
-  - Freeze old archives: `llman sdd archive freeze --before <YYYY-MM-DD> --keep-recent <N>`
-  - Restore when needed: `llman sdd archive thaw --change <YYYY-MM-DD-id>`
-- Apply freeze/thaw only to dated archive directories (`YYYY-MM-DD-*`) and keep a small recent window unfrozen when possible.
+- 当 archive 目录增长过大时，使用冷备维护：
+  - 预览冻结候选：`llman sdd archive freeze --dry-run`
+  - 冻结旧归档：`llman sdd archive freeze --before <YYYY-MM-DD> --keep-recent <N>`
+  - 需要恢复时：`llman sdd archive thaw --change <YYYY-MM-DD-id>`
+- freeze/thaw 仅用于日期归档目录（`YYYY-MM-DD-*`）；建议保留少量最近目录不冻结。
 
-Before acting, read `llmanspec/config.yaml` and follow its `context` and `rules` if present.
+行动前先阅读 `llmanspec/config.yaml`，并遵循其中的 `context` 与 `rules`（若有）。
 
-Common commands:
+常用命令：
 
-- `llman sdd context --task "<description>" --paths "<files>"` (find relevant specs). Uses the pageindex agentic tree backend (needs `LLMAN_SDD_INDEX_CHAT_MODEL`). Preset via `LLMAN_SDD_INDEX_BACKEND`.
-- `llman sdd list` (list changes)
-- `llman sdd list --specs` (list specs with purpose/scope metadata)
-- `llman sdd show <id>` (show change/spec)
-- `llman sdd validate <id>` (validate a change or spec)
-- `llman sdd validate --all` (bulk validate)
-- `llman sdd index rebuild` (rebuild the pageindex tree index — no model needed)
-- `llman sdd index check` (check index freshness)
-- `llman sdd archive run <id>` (archive a change)
-- `llman sdd archive freeze [--before YYYY-MM-DD] [--keep-recent N] [--dry-run]` (freeze archived dirs)
-- `llman sdd archive thaw [--change <id> ...] [--dest <path>]` (restore from cold-backup)
-- `llman sdd graph [CHANGE] [--format mermaid] [--scope active|archived|all] [--depth N]` (generate change dependency graph)
+- `llman sdd context --task "<描述>" --paths "<文件>"`（找相关 specs）。使用 pageindex agentic tree 后端（需 `LLMAN_SDD_INDEX_CHAT_MODEL`）。可用 `LLMAN_SDD_INDEX_BACKEND` 预设。
+- `llman sdd list`（列出变更）
+- `llman sdd list --specs`（列出 specs 及 purpose/scope 元数据）
+- `llman sdd show <id>`（展示 change/spec）
+- `llman sdd validate <id>`（校验 change 或 spec）
+- `llman sdd validate --all`（批量校验）
+- `llman sdd index rebuild`（重建 pageindex 树索引——不需要模型）
+- `llman sdd index check`（检查索引新鲜度）
+- `llman sdd change new <id>`（创建草稿 `changes/<id>/proposal.md`）
+- `llman sdd change attach <id> [--force]`（BDD-on：绑定 feature 分支 + base SHA）
+- `llman sdd change checkpoint <id> [--no-check]`（BDD-on：干净工作区 + 归档前门禁）
+- `llman sdd change diff <id> [--export-patch <path>]`（BDD-on：只读 `base...HEAD` 审查/导出）
+- `llman sdd change delta …`（仅 BDD-off：TOON delta 作者工具；BDD-on 会拒绝）
+- `llman sdd change archive <id>`（封存变更；BDD-on：checkpoint 后仅文档；BDD-off：合并 TOON delta）
+- `llman sdd archive freeze [--before YYYY-MM-DD] [--keep-recent N] [--dry-run]`（冻结已归档目录）
+- `llman sdd archive thaw [--change <id> ...] [--dest <path>]`（从冷备份恢复）
+- `llman sdd graph [CHANGE] [--format mermaid] [--scope active|archived|all] [--depth N]`（生成变更依赖图）
+- `llman sdd project migrate [--kind format|partitioned|legacy-bdd|auto]`（一次性迁移）
 
-Validation fixes (TOON standalone specs):
+常见校验修复（TOON 独立文件 spec）：
 
-1. Missing validation scope (`Spec valid_scope must not be empty`):
-   Main specs MUST carry a non-empty `valid_scope` inside the `.toon` document.
-   `llmanspec/specs/<feature-id>/spec.toon`:
+1. 缺少校验作用域（`Spec valid_scope must not be empty`）：
+   Main spec 必须在 `.toon` 文档内携带非空的 `valid_scope`。
+   `llmanspec/specs/<feature-id>/spec.toon`：
 
 ```toon
 kind: llman.sdd.spec
@@ -108,8 +121,7 @@ scenarios[1]{req_id,id,given,when,then}:
   r1,happy,"",a trigger happens,the outcome is observed
 ```
 
-2. No delta ops in a change: add at least one op + scenario in
-   `llmanspec/changes/<change-id>/specs/<feature-id>/spec.toon`:
+2. Change 缺少 delta ops：至少补一个 op + scenario（`llmanspec/changes/<change-id>/specs/<feature-id>/spec.toon`）：
 
 ```toon
 kind: llman.sdd.delta
@@ -119,63 +131,63 @@ op_scenarios[1]{req_id,id,given,when,then}:
   r1,happy,"",a trigger happens,the outcome is observed
 ```
 
-3. Tabular value quoting error ("Expected N tabular row values, but got M"):
-   Values containing **spaces**, commas, colons, or brackets MUST be double-quoted in tabular rows.
+3. 表格化行引号错误（"Expected N tabular row values, but got M"）：
+   值包含**空格**、逗号、冒号或方括号时，必须用双引号包裹。
 
 ```toon
-# BAD: spaces in an unquoted value split it into multiple values
+# 错误：未加引号的空格值会被拆成多个值
 r1,happy,"",a trigger happens,the outcome is observed
 
-# GOOD: multi-word values quoted
+# 正确：多词值加引号
 r1,happy,"","a trigger happens","the outcome is observed"
 ```
 
-4. BDD spec guardrail (`BDD is enabled but this spec declares no requirements and has no .feature files`):
-   When `config.yaml` has a `bdd` block, behavior specs live in `spec.toon` `scenarios` (TOON is the SSOT). `.feature` files are derived by `llman sdd solidify`. A spec with empty `requirements` and empty `scenarios` is an ERROR.
+4. BDD-on 护栏（Git-native Partitioned SSOT）：
+   `config.yaml` 有 `bdd:` 时：`spec.toon`=约束/不可执行场景；`*.feature`=可执行 GWT（`@req`）。在非默认分支编辑 live 文件 → `change attach` / `checkpoint` → docs-only `change archive` → Git merge。不要找 solidify，也不要新建 `*.feature.delta.toon`（若已存在则是迁移阻断，跑 `project migrate --kind partitioned`）。空 requirements 且无 `.feature` = ERROR。
 
-Notes:
+备注：
 
-- Each spec is a single standalone `.toon` file; there is no Markdown shell or ```toon fence.
-- `null` represents missing optional fields.
-- Migrate legacy `.md`+fence specs with `llman sdd migrate`.
+- 每个 spec 是一个独立的 `.toon` 文件；没有 Markdown 外壳，也没有 ```toon fence。
+- `null` 表示可选字段缺失。
+- 从旧版 `.md`+fence 迁移请使用 `llman sdd migrate`。
 
 ## Context
 
-- Gather the current change/spec state before acting.
-- Prefer `llman sdd context --task --paths` to discover relevant specs instead of guessing or full scans.
+- 执行前先确认当前 change/spec 状态。
+- 优先使用 `llman sdd context --task --paths` 获取相关 specs，而非全量读取或猜测。
 
 ## Goal
 
-- State the concrete outcome for this command/skill execution.
+- 明确本次命令/skill 要达成的可验证结果。
 
 ## Constraints
 
-- Keep changes minimal and scoped.
-- Avoid guessing when identifiers or intent are ambiguous.
-- Use `llman sdd context --task --paths` before reading full spec files.
-- Choose workflow path based on change scale: behavioral contract changes use full SDD, implementation changes use quick path.
+- 变更保持最小化且范围明确。
+- 标识符或意图不明确时禁止猜测。
+- 在读取 spec 全文前，先使用 `llman sdd context --task --paths` 获取相关 specs。
+- 判断变更规模后选择路径：行为合约变更走完整 SDD 流程，实现变更走快速路径。
 
 ## Workflow
 
-- Use `llman sdd` commands as the source of truth.
-- Validate outcomes when files or specs are updated.
-- Prefer `llman sdd context` over full reads or guessing.
-- When context is unavailable follow error guidance (rebuild index or fall back to `list --specs --json`).
+- 以 `llman sdd` 命令结果为事实来源。
+- 涉及文件/规范变更时执行校验。
+- 首选 `llman sdd context` 获取相关 specs，而非全量读取或猜测。
+- 当 context 不可用时，按错误提示处理（重建 index 或降级到 `list --specs --json`）。
 
 ## Decision Policy
 
-- Ask for clarification when a high-impact ambiguity remains.
-- Stop instead of forcing through known validation errors.
+- 高影响歧义必须先澄清。
+- 已知校验错误下禁止强行继续。
 
 ## Output Contract
 
-- Summarize actions taken.
-- Provide resulting paths and validation status.
+- 汇总已执行动作。
+- 给出结果路径与校验状态。
 
 ## Ethics Governance
 
-- `ethics.risk_level`: classify risk as `low|medium|high|critical`.
-- `ethics.prohibited_actions`: list actions that MUST NOT be performed.
-- `ethics.required_evidence`: list required evidence before high-impact output.
-- `ethics.refusal_contract`: define when to refuse and safe alternative response.
-- `ethics.escalation_policy`: define when to escalate to user confirmation/review.
+- `ethics.risk_level`：按 `low|medium|high|critical` 标注风险等级。
+- `ethics.prohibited_actions`：列出绝对禁止执行的动作。
+- `ethics.required_evidence`：列出高影响输出前必须具备的证据。
+- `ethics.refusal_contract`：定义何时拒答以及安全替代响应方式。
+- `ethics.escalation_policy`：定义何时必须升级为用户确认/人工复核。
