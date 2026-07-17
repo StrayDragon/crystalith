@@ -206,9 +206,10 @@ export default function WorkspaceLayout() {
         toast.error('未找到对应来源，请先同步来源列表。');
         return;
       }
-      overlays.locateCitationSource(source.id);
+      // Write to store so only SourcesPanel re-renders (not Chat Virtuoso).
+      store.getState().locateSourceInList(source.id);
     },
-    [overlays, resolveCitationSource],
+    [resolveCitationSource, store],
   );
 
   const convertSourceQAToSource = sources.convertSourceQAToSource;
@@ -692,7 +693,6 @@ export default function WorkspaceLayout() {
           return (
             <SourcesPanel
               sources={sources.sources}
-              jumpToSource={overlays.jumpToSource}
               onUpload={(...args) => {
                 void sources.handleUpload(...args);
               }}

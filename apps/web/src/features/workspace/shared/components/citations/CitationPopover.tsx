@@ -124,13 +124,16 @@ export default function CitationPopover({
     (e: ReactMouseEvent<HTMLButtonElement>, citation: Citation) => {
       e.preventDefault();
       e.stopPropagation();
-      onLocateSource?.(citation);
-      // Blur before unmount — otherwise focus restores to「查看引用」and the
-      // browser scrolls the chat Virtuoso / widget shell to that button.
+      // Blur + close BEFORE locate: jumpToSource used to re-render Chat while
+      //「查看引用」still had focus, and Virtuoso scrollTo'd that button into view.
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
       onClose();
+      const target = citation;
+      requestAnimationFrame(() => {
+        onLocateSource?.(target);
+      });
     },
     [onLocateSource, onClose],
   );
@@ -139,27 +142,32 @@ export default function CitationPopover({
     (e: ReactMouseEvent<HTMLButtonElement>, citation: Citation) => {
       e.preventDefault();
       e.stopPropagation();
-      onOpenSource?.(citation);
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
       onClose();
+      const target = citation;
+      requestAnimationFrame(() => {
+        onOpenSource?.(target);
+      });
     },
     [onOpenSource, onClose],
   );
 
   const handleRowActivate = useCallback(
     (citation: Citation) => {
-      // Prefer locating in the current workspace; fall back to opening source.
-      if (onLocateSource) {
-        onLocateSource(citation);
-      } else {
-        onOpenSource?.(citation);
-      }
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
       onClose();
+      const target = citation;
+      requestAnimationFrame(() => {
+        if (onLocateSource) {
+          onLocateSource(target);
+        } else {
+          onOpenSource?.(target);
+        }
+      });
     },
     [onLocateSource, onOpenSource, onClose],
   );
