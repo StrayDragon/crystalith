@@ -19,22 +19,11 @@ import type {
   OutputTypeId,
   PluginConfigSchema,
   PreviewDescriptor,
-  RefineOutput,
   RenderDescriptor,
-  RefineJob,
-  RefineMode,
   SlideGenerationConfig,
   WorkspaceTool,
 } from '../../shared/types';
-import {
-  buildJobTitle,
-  collectOutputCitations,
-  createId,
-  formatTimestamp,
-  normalizeCitation,
-  resolveTemplateLabel,
-} from '../../shared/utils';
-import { REFINE_FORMATS, REFINE_TEMPLATES } from './data/refineTemplates';
+import { collectOutputCitations } from '../../shared/utils';
 
 function normalizeFieldDescriptor(field: ApiFieldDescriptor): FieldDescriptor {
   const f = field as unknown as Record<string, unknown>;
@@ -164,10 +153,6 @@ export function useRefine() {
   const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
   const activePanel = useWorkspaceStore((s) => s.activePanel);
   const connectionState = useWorkspaceStore((s) => s.connectionState);
-  const refineModeCurrent = useWorkspaceStore((s) => s.refineMode);
-  const refinePromptCurrent = useWorkspaceStore((s) => s.refinePrompt);
-  const refineJobsCurrent = useWorkspaceStore((s) => s.refineJobs);
-  const refineSettingsCurrent = useWorkspaceStore((s) => s.refineSettings);
   const hasNewOutputCurrent = useWorkspaceStore((s) => s.hasNewOutput);
   const recentCompletedJobIdCurrent = useWorkspaceStore((s) => s.recentCompletedJobId);
   const selectedSourceIdsCurrent = useWorkspaceStore((s) => s.selectedSourceIds);
@@ -176,13 +161,6 @@ export function useRefine() {
 
   const store = useWorkspaceStore;
   const isConnected = connectionState === 'live';
-
-  const refineFormats = useMemo(() => REFINE_FORMATS, []);
-  const refineTemplates = useMemo(() => REFINE_TEMPLATES, []);
-  const compareTemplate = useMemo(
-    () => refineTemplates.find((item) => item.id === 'compare-analysis') ?? null,
-    [refineTemplates],
-  );
 
   const {
     data: toolsData,
@@ -255,9 +233,6 @@ export function useRefine() {
 
   const activePanelRef = useRef(activePanel);
   const activeNotebookIdRef = useRef(activeNotebookId);
-  const refineQueueRef = useRef<RefineJob[]>(refineJobsCurrent);
-  const refineRunningRef = useRef(false);
-  const runNextRefineJobRef = useRef<() => void>(() => {});
   const [queueSummary, setQueueSummary] = useState({ total: 0, done: 0 });
 
   useEffect(() => {
@@ -271,19 +246,6 @@ export function useRefine() {
     activeNotebookIdRef.current = activeNotebookId;
   }, [activeNotebookId]);
 
-  useEffect(() => {
-    refineQueueRef.current = refineJobsCurrent;
-    if (refineRunningRef.current) return;
-    if (!refineJobsCurrent.some((job) => job.status === 'queued')) return;
-    runNextRefineJobRef.current();
-  }, [refineJobsCurrent]);
-
-  useEffect(() => {
-    if (refinePromptCurrent.trim().length > 0) return;
-    if (!refineTemplates[0]) return;
-    store.getState().setRefinePrompt(refineTemplates[0].prompt);
-  }, [refineTemplates, refinePromptCurrent, store]);
-
   const selectedSourceIds = useMemo(
     () =>
       Object.entries(selectedSourceIdsCurrent)
@@ -293,15 +255,18 @@ export function useRefine() {
     [selectedSourceIdsCurrent],
   );
 
+  const hasPendingRefineJobs = useCallback(() => false, []);
+
   const resolveSelectedSourceIds = useCallback(async () => selectedSourceIds, [selectedSourceIds]);
 
-  const updateRefineJobs = useCallback(
-    (updater: (jobs: RefineJob[]) => RefineJob[]) => {
-      const next = updater(refineQueueRef.current);
-      refineQueueRef.current = next;
-      store.getState().setRefineJobs(next);
+  const resolveOutputPrompt = useCallback(
+    (type: OutputTypeId, prompt?: string) => {
+      const normalized = prompt?.trim();
+      if (normalized) return normalized;
+      const fallback = outputTypeOptions.find((item) => item.id === type)?.prompt ?? '';
+      return fallback;
     },
-    [store],
+    [outputTypeOptions],
   );
 
   const resetQueueSummary = useCallback(() => {
@@ -329,16 +294,10 @@ export function useRefine() {
     [store],
   );
 
-  const hasPendingRefineJobs = useCallback(
-    () => refineQueueRef.current.some((job) => job.status === 'queued' || job.status === 'running'),
-    [],
-  );
-
   const {
     outputQueueJobs,
     enqueueOutputJob,
     enqueueSlidesJob,
-    hasPendingJobs,
     outputsLoading,
     outputsError,
     retryOutputs,
@@ -356,333 +315,9 @@ export function useRefine() {
     markJobCompleted,
   });
 
-  const processRefineJob = useCallback(
-    async (jobId: string, prompt: string, sourceIds: number[], jobNotebookId: number | null) => {
-      try {
-        const normalizedOutputs: Partial<Record<RefineMode, RefineOutput>> = {};
-        let resolvedCitations = null as ReturnType<typeof normalizeCitation>[] | null;
-        if (jobNotebookId && isConnected) {
-          const { data: response, error: refineErr } = await api.v2.refine.batch.post({
-            notebook_id: jobNotebookId,
-            prompt,
-            formats: [...refineFormats],
-            source_ids: sourceIds,
-          } as any);
-          if (refineErr)
-            throw new Error(
-              typeof refineErr === 'string'
-                ? refineErr
-                : typeof refineErr === 'string'
-                  ? refineErr
-                  : '',
-            );
-          if (!response || !('outputs' in response)) {
-            throw new Error('refine batch returned an unexpected payload');
-          }
-          const batch = response as {
-            outputs: Record<
-              string,
-              {
-                paragraph?: string | null;
-                bullets?: string[] | null;
-                structured?: RefineOutput['structured'] | null;
-              }
-            >;
-            citations?: unknown[];
-            evidence: boolean;
-          };
-          resolvedCitations = (batch.citations as any)?.map(normalizeCitation) ?? [];
-          for (const [format, output] of Object.entries(batch.outputs ?? {})) {
-            if (!output) continue;
-            const key = format as RefineMode;
-            normalizedOutputs[key] = {
-              paragraph: output.paragraph ?? '',
-              bullets: output.bullets ?? [],
-              structured: output.structured ?? null,
-              evidence: batch.evidence,
-            };
-          }
-        } else {
-          throw new Error('backend unavailable');
-        }
-
-        const completedAt = new Date().toISOString();
-        const isCurrentNotebook =
-          jobNotebookId != null && jobNotebookId === activeNotebookIdRef.current;
-        updateRefineJobs((prev) =>
-          prev.map((job) =>
-            job.id === jobId
-              ? {
-                  ...job,
-                  status: 'done',
-                  outputs: normalizedOutputs,
-                  error: '',
-                  citations: resolvedCitations ?? job.citations,
-                  completedAt,
-                  completedAtLabel: formatTimestamp(completedAt),
-                }
-              : job,
-          ),
-        );
-        const stillTracked = refineQueueRef.current.some((job) => job.id === jobId);
-        if (stillTracked) {
-          incrementQueueDone();
-        }
-        if (isCurrentNotebook && stillTracked) {
-          markJobCompleted(jobId);
-        }
-        if (resolvedCitations && isCurrentNotebook && stillTracked) {
-          store.getState().setCitations(resolvedCitations);
-        }
-      } catch (error) {
-        const completedAt = new Date().toISOString();
-        const isCurrentNotebook =
-          jobNotebookId != null && jobNotebookId === activeNotebookIdRef.current;
-
-        // Extract meaningful error message
-        let errorMessage = '提炼失败，请稍后重试。';
-        let userFacingError = '提炼生成失败。';
-
-        if (error instanceof Error) {
-          const statusError = error as Error & { status?: number };
-
-          if (statusError.status === 503) {
-            errorMessage = '可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置。';
-            userFacingError = '可选 AI 服务暂时不可用，请稍后重试或切换模型。';
-          } else if (statusError.status === 404) {
-            errorMessage = '笔记本不存在或已被删除。';
-            userFacingError = '笔记本已失效，请刷新页面。';
-          } else if (statusError.status === 400) {
-            errorMessage = '请求参数无效，请检查输入。';
-            userFacingError = '输入参数有误。';
-          } else if (statusError.status === 500) {
-            errorMessage = '服务器内部错误，请稍后重试。';
-            userFacingError = '服务器错误，请稍后重试。';
-          } else if (error.message && error.message.length < 100) {
-            errorMessage = error.message;
-            userFacingError = error.message;
-          }
-        }
-
-        updateRefineJobs((prev) =>
-          prev.map((job) =>
-            job.id === jobId
-              ? {
-                  ...job,
-                  status: 'error',
-                  error: errorMessage,
-                  completedAt,
-                  completedAtLabel: formatTimestamp(completedAt),
-                }
-              : job,
-          ),
-        );
-        const stillTracked = refineQueueRef.current.some((job) => job.id === jobId);
-        if (stillTracked) {
-          incrementQueueDone();
-        }
-        if (isCurrentNotebook && stillTracked) {
-          markJobCompleted(jobId);
-          store.getState().setError('send', userFacingError);
-        }
-      } finally {
-        refineRunningRef.current = false;
-        runNextRefineJobRef.current();
-      }
-    },
-    [isConnected, incrementQueueDone, markJobCompleted, refineFormats, store, updateRefineJobs],
-  );
-
-  const runNextRefineJob = useCallback(() => {
-    if (refineRunningRef.current) return;
-    const nextJob = refineQueueRef.current.find((job) => job.status === 'queued');
-    if (!nextJob) return;
-
-    refineRunningRef.current = true;
-    updateRefineJobs((prev) =>
-      prev.map((job) => (job.id === nextJob.id ? { ...job, status: 'running' } : job)),
-    );
-    void processRefineJob(nextJob.id, nextJob.prompt, nextJob.sourceIds ?? [], nextJob.notebookId);
-  }, [processRefineJob, updateRefineJobs]);
-
-  runNextRefineJobRef.current = runNextRefineJob;
-
-  const enqueueRefineJob = useCallback(
-    ({
-      prompt: jobPrompt,
-      sourceIds,
-      label,
-    }: {
-      prompt: string;
-      sourceIds?: number[];
-      label?: string;
-    }) => {
-      const createdAt = new Date().toISOString();
-      const jobLabel = label ?? resolveTemplateLabel(jobPrompt, refineTemplates);
-      if (!hasPendingJobs()) {
-        resetQueueSummary();
-      }
-      incrementQueueTotal();
-      const job: RefineJob = {
-        id: createId(),
-        prompt: jobPrompt,
-        status: 'queued',
-        sourceIds,
-        outputs: null,
-        error: '',
-        createdAt,
-        createdAtLabel: formatTimestamp(createdAt),
-        completedAt: null,
-        completedAtLabel: '',
-        pinned: false,
-        title: buildJobTitle(jobLabel, createdAt),
-        notebookId: activeNotebookId,
-      };
-      updateRefineJobs((prev) => [job, ...prev]);
-      return job;
-    },
-    [
-      hasPendingJobs,
-      incrementQueueTotal,
-      refineTemplates,
-      resetQueueSummary,
-      activeNotebookId,
-      updateRefineJobs,
-    ],
-  );
-
-  const resolveOutputPrompt = useCallback(
-    (type: OutputTypeId, prompt?: string) => {
-      const normalized = prompt?.trim();
-      if (normalized) return normalized;
-      const fallback = outputTypeOptions.find((item) => item.id === type)?.prompt ?? '';
-      return fallback;
-    },
-    [outputTypeOptions],
-  );
-
-  const handleRefineGenerate = useCallback(async () => {
-    const s = store.getState();
-    if (!isConnected) {
-      s.setError('send', '未连接到后端服务。');
-      return;
-    }
-    if (!s.activeNotebookId) {
-      s.setError('send', '请先创建笔记本。');
-      return;
-    }
-    const trimmed = s.refinePrompt.trim();
-    if (!trimmed) return;
-    const resolvedSourceIds = await resolveSelectedSourceIds();
-    enqueueRefineJob({
-      prompt: trimmed,
-      sourceIds: resolvedSourceIds.length ? [...resolvedSourceIds] : [],
-      label: resolveTemplateLabel(trimmed, refineTemplates),
-    });
-    s.setActivePanel('refine');
-  }, [enqueueRefineJob, isConnected, refineTemplates, resolveSelectedSourceIds, store]);
-
-  const handleCompareSelectedCitations = useCallback(async () => {
-    const s = store.getState();
-    if (!isConnected) {
-      s.setError('send', '未连接到后端服务。');
-      return;
-    }
-    if (!s.activeNotebookId) {
-      s.setError('send', '请先创建笔记本。');
-      return;
-    }
-    const resolvedSourceIds = await resolveSelectedSourceIds();
-    const promptText =
-      compareTemplate?.prompt ?? '基于选中来源生成对比分析，输出相同点 / 差异点 / 结论。';
-    s.setRefinePrompt(promptText);
-    enqueueRefineJob({
-      prompt: promptText,
-      sourceIds: [...resolvedSourceIds],
-      label: compareTemplate?.label ?? '对比分析',
-    });
-    s.setActivePanel('refine');
-  }, [
-    compareTemplate?.label,
-    compareTemplate?.prompt,
-    enqueueRefineJob,
-    isConnected,
-    resolveSelectedSourceIds,
-    store,
-  ]);
-
-  const handleReplayRefineJob = useCallback(
-    (job: RefineJob) => {
-      const s = store.getState();
-      if (!isConnected) {
-        s.setError('send', '未连接到后端服务。');
-        return;
-      }
-      if (!s.activeNotebookId) {
-        s.setError('send', '请先创建笔记本。');
-        return;
-      }
-      if (!job.prompt.trim()) return;
-      s.setRefinePrompt(job.prompt);
-      enqueueRefineJob({
-        prompt: job.prompt,
-        sourceIds: job.sourceIds ?? [],
-        label: resolveTemplateLabel(job.prompt, refineTemplates),
-      });
-      s.setActivePanel('refine');
-    },
-    [enqueueRefineJob, isConnected, refineTemplates, store],
-  );
-
-  const handleToggleRefinePin = useCallback(
-    (jobId: string) => {
-      updateRefineJobs((prev) =>
-        prev.map((job) => (job.id === jobId ? { ...job, pinned: !job.pinned } : job)),
-      );
-    },
-    [updateRefineJobs],
-  );
-
-  const handleDeleteRefineJob = useCallback(
-    (jobId: string) => {
-      updateRefineJobs((prev) => prev.filter((job) => job.id !== jobId));
-    },
-    [updateRefineJobs],
-  );
-
-  const handleClearRefineJobs = useCallback(() => {
-    refineRunningRef.current = false;
-    updateRefineJobs(() => []);
-    const s = store.getState();
-    s.setHasNewOutput(false);
-    s.setRecentCompletedJob(null);
-  }, [store, updateRefineJobs]);
-
-  const handleToggleRefineSetting = useCallback(
-    (key: keyof typeof refineSettingsCurrent) => {
-      const s = store.getState();
-      s.setRefineSettings({ ...s.refineSettings, [key]: !s.refineSettings[key] });
-    },
-    [store],
-  );
-
   const setOutputType = useCallback(
     (value: OutputTypeId) => {
       store.getState().setOutputType(value);
-    },
-    [store],
-  );
-
-  const setRefineMode = useCallback(
-    (mode: RefineMode) => {
-      store.getState().setRefineMode(mode);
-    },
-    [store],
-  );
-
-  const setRefinePrompt = useCallback(
-    (value: string) => {
-      store.getState().setRefinePrompt(value);
     },
     [store],
   );
@@ -809,30 +444,14 @@ export function useRefine() {
   );
 
   return {
-    refineFormats,
-    refineTemplates,
-    compareTemplate,
     tools,
     toolsDiagnostics,
     toolsLoading,
     toolsError: !isConnected ? '未连接到后端服务。' : toolsError ? '工具加载失败' : '',
     refreshTools,
     selectedSourceIds,
-    refineMode: refineModeCurrent,
-    setRefineMode,
-    refinePrompt: refinePromptCurrent,
-    setRefinePrompt,
-    refineJobs: refineJobsCurrent,
-    refineSettings: refineSettingsCurrent,
     hasNewOutput: hasNewOutputCurrent,
     recentCompletedJobId: recentCompletedJobIdCurrent,
-    onGenerateRefine: handleRefineGenerate,
-    onCompareSelected: handleCompareSelectedCitations,
-    onReplayRefineJob: handleReplayRefineJob,
-    onTogglePin: handleToggleRefinePin,
-    onDeleteJob: handleDeleteRefineJob,
-    onClearJobs: handleClearRefineJobs,
-    onToggleSetting: handleToggleRefineSetting,
     outputTypeOptions,
     outputType: outputTypeCurrent,
     setOutputType,

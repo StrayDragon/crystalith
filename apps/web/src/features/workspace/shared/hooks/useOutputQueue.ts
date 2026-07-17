@@ -376,7 +376,9 @@ export function useOutputQueue({
             model_id: job.modelId || undefined,
           };
           if (preference) Object.assign(body, { preference });
-          const { data: response, error: createErr } = await api.v2.outputs.post(body);
+          const { data: response, error: createErr } = await api.v2.outputs.post(body, {
+            fetch: { signal: abortController.signal },
+          });
           if (createErr)
             throw new Error(
               typeof createErr === 'string'
@@ -385,7 +387,19 @@ export function useOutputQueue({
                   ? createErr
                   : '',
             );
+          // Server may have already persisted the row before the client abort
+          // landed — delete it so a page refresh does not resurrect the job.
           if (isCancelled()) {
+            const createdId = (response as { id?: number } | null)?.id;
+            if (typeof createdId === 'number') {
+              try {
+                await api.v2.outputs({ id: createdId }).delete({
+                  query: { notebook_id: String(job.notebookId) },
+                });
+              } catch {
+                // Best-effort cleanup; UI already shows cancelled.
+              }
+            }
             const abortError = new Error('aborted');
             abortError.name = 'AbortError';
             throw abortError;

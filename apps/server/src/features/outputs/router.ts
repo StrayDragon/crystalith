@@ -133,7 +133,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
   .get('/outputs/types', () => listOutputTypes())
 
   // Generate an output
-  .post('/outputs', async ({ body, set }) => {
+  .post('/outputs', async ({ body, set, request }) => {
     const {
       notebook_id,
       type,
@@ -220,8 +220,13 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
               ? model_id
               : ''
           : undefined,
+        abortSignal: request.signal,
       });
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        set.status = 499;
+        return { detail: 'Client cancelled' };
+      }
       const msg = error instanceof Error ? error.message : String(error);
       // Typed error mapping (v1 api.py:309-361)
       if (error instanceof TypeValidationError || error instanceof NoObjectGeneratedError) {

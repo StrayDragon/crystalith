@@ -39,15 +39,10 @@
 
 ### `refine-templates-data`
 
-- **名称:** Refine 模板静态数据
-- **位置:** `useRefine.ts` 内 dead refine-job 路径引用（RefinePanel 已移除）
-- **入口:** 无生产 UI 入口
-- **操作:** 预设 prompt 模板列表（仅遗留 refine-job 分支读取）
-- **Server:** —
-- **代码:** `apps/web/src/features/workspace/domains/refine/data/refineTemplates.ts`
-- **截图:** —（无独立 UI）
+- **名称:** refineTemplates 数据（已删除）
+- **状态:** 2026-07-17 随 `useRefine` 死路径 prune 一并删除；Studio 笔记类型经 `POST /v2/outputs`
 
-> NOTE: 待后续 prune — 文件仍存在，仅 dead path；Studio PARAGRAPH/BULLETS/STRUCTURED 经 `POST /v2/outputs`
+> NOTE: 已删除
 
 ---
 

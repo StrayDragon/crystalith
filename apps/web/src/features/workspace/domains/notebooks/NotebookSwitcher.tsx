@@ -21,9 +21,10 @@ import {
   Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
-import { LAYER_LEVELS } from '../../../../shared/layer';
+import { useLayer } from '../../../../shared/layer';
 import type { AsyncStatus } from '../../../../shared/types';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { Notebook } from '../../shared/types';
@@ -94,6 +95,9 @@ export default function NotebookSwitcher({
   const editInputRef = useRef<HTMLInputElement | null>(null);
   const createInputHostRef = useRef<HTMLDivElement | null>(null);
   const lastRequestTokenRef = useRef<number | null>(null);
+  // Backdrop + panel must sit above WorkspaceHeader / GridStack stacking contexts.
+  const { style: backdropStyle } = useLayer('modal', 0);
+  const { style: panelStyle } = useLayer('modal', 1);
 
   const createLoading = createState === 'loading';
   const createDisabled = !isConnected || createLoading || createName.trim().length === 0;
@@ -290,10 +294,19 @@ export default function NotebookSwitcher({
             />
           </button>
         </PopoverHandler>
-        <PopoverContent
-          className="w-[340px] max-h-[420px] p-0 overflow-hidden"
-          style={{ zIndex: LAYER_LEVELS.popover }}
-        >
+        {isOpen
+          ? createPortal(
+              <button
+                type="button"
+                className="fixed inset-0 bg-black/40 backdrop-blur-sm cursor-default"
+                style={backdropStyle}
+                aria-label="关闭笔记本切换器"
+                onClick={onClose}
+              />,
+              document.body,
+            )
+          : null}
+        <PopoverContent className="w-[340px] max-h-[420px] p-0 overflow-hidden" style={panelStyle}>
           <div className="p-3 border-b border-gray-200">
             <div className="relative w-full">
               <div className="absolute top-2/4 left-3 -translate-y-2/4 text-gray-500">
@@ -495,7 +508,7 @@ export default function NotebookSwitcher({
             {createLoading ? <Spinner className="h-3 w-3" /> : <AddIcon style={{ fontSize: 18 }} />}
           </IconButton>
         </PopoverHandler>
-        <PopoverContent className="w-64 p-4" style={{ zIndex: LAYER_LEVELS.popover }}>
+        <PopoverContent className="w-64 p-4" style={panelStyle}>
           <Typography variant="small" className="font-semibold text-gray-600 text-[11px] mb-2">
             新建笔记本
           </Typography>

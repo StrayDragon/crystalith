@@ -42,6 +42,8 @@ export interface PipelineInput {
   minScore?: number;
   /** Model override (v1 model_id). */
   modelId?: string;
+  /** Abort when the client cancels / disconnects. */
+  abortSignal?: AbortSignal;
 }
 
 export interface PipelineResult {
@@ -207,6 +209,12 @@ async function finishPipeline(
     sanitized.changed || warnings.length > 0,
     allWarnings,
   );
+
+  if (input.abortSignal?.aborted) {
+    const err = new Error('Output generation aborted');
+    err.name = 'AbortError';
+    throw err;
+  }
 
   // Persist — content now has resolved citation objects (not bare integers)
   const row = db()
