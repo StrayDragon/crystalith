@@ -1,4 +1,5 @@
 <!-- LLMANSPEC:START -->
+
 # LLMAN Spec-Driven Development
 
 This project uses llman SDD. Read `llmanspec/config.yaml` for SDD command behavior configuration, and `llmanspec/AGENTS.md` for additional project-specific rules.
