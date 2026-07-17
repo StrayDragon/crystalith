@@ -409,7 +409,7 @@ function SourcesPanelView({
       });
     }
     setHighlightedSourceId(jumpToSource.id);
-    const timer = window.setTimeout(() => setHighlightedSourceId(null), 1800);
+    const timer = window.setTimeout(() => setHighlightedSourceId(null), 1500);
     return () => window.clearTimeout(timer);
   }, [jumpToSource, sourceIdToIndex]);
 
@@ -1293,10 +1293,15 @@ function SourcesPanelView({
                     : 'red';
               return (
                 <div
-                  className={`group relative flex items-center rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-all hover:border-gray-300 hover:shadow mb-1.5 ux-slide-in ${
+                  key={
                     isHighlighted
-                      ? 'border-blue-200 ring-2 ring-blue-300 bg-blue-50/70'
-                      : 'border-gray-200 dark:border-slate-700'
+                      ? `source-${source.id}-locate-${jumpToSource?.token ?? 0}`
+                      : `source-${source.id}`
+                  }
+                  className={`group relative flex items-center rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-[border-color,box-shadow] hover:border-gray-300 hover:shadow mb-1.5 ${
+                    isHighlighted
+                      ? 'ux-source-locate-flash'
+                      : 'border-gray-200 dark:border-slate-700 ux-slide-in'
                   }`}
                 >
                   <button
