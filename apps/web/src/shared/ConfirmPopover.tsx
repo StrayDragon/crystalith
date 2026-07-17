@@ -92,7 +92,7 @@ function calculateBestPlacement(anchorRect: DOMRect, preferredPlacement: Placeme
     return 'right';
   }
 
-  // Try opposite placement first
+  // Prefer the opposite of the preferred placement
   const opposites: Record<Placement, Placement> = {
     top: 'bottom',
     bottom: 'top',
@@ -131,7 +131,8 @@ export default function ConfirmPopover({
   const [open, setOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
-  const { style } = useLayer('popover');
+  // Sit above portaled dropdown panels (e.g. NotebookSwitcher at tooltip/0).
+  const { style } = useLayer('tooltip', 1);
 
   const updateAnchor = useCallback(() => {
     if (triggerRef.current) {
@@ -163,17 +164,20 @@ export default function ConfirmPopover({
   useEffect(() => {
     if (!open) return;
     updateAnchor();
+    // Capture + stopImmediatePropagation so parent dropdowns (e.g. NotebookSwitcher)
+    // do not also close on the same Escape press.
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false);
-      }
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setOpen(false);
     };
     const handleResize = () => updateAnchor();
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
     window.addEventListener('resize', handleResize);
     window.addEventListener('scroll', handleResize, true);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('scroll', handleResize, true);
     };
@@ -273,7 +277,14 @@ export default function ConfirmPopover({
       })}
       {open && anchor
         ? createPortal(
-            <div className="fixed inset-0" style={style}>
+            <div
+              className="fixed inset-0"
+              style={style}
+              data-confirm-popover=""
+              // Keep parent dropdown click-outside handlers from treating this
+              // portal as an outside click (Confirm lives on document.body).
+              onMouseDown={(event) => event.stopPropagation()}
+            >
               <button
                 type="button"
                 className="absolute inset-0"
