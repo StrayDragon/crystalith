@@ -12,7 +12,7 @@
 - **用户可见:** API-only
 - **代码:** `apps/server/src/features/eval/router.ts`、`eval/dataset.ts`
 
-> NOTE: 待盘点
+> NOTE: 保留 — API-only 开发/评测工具；有 spec r11；无生产 UI 与 CI 接线
 
 ---
 
@@ -24,7 +24,7 @@
 - **用户可见:** API-only
 - **代码:** `apps/server/src/features/eval/router.ts`
 
-> NOTE: 待盘点
+> NOTE: 保留 — API-only 开发/评测工具；有 spec r11；无生产 UI 与 CI 接线
 
 ---
 
@@ -36,7 +36,7 @@
 - **用户可见:** API-only
 - **代码:** `apps/server/src/features/eval/router.ts`
 
-> NOTE: 待盘点
+> NOTE: 保留 — API-only 开发/评测工具；有 spec r11；无生产 UI 与 CI 接线
 
 ---
 
@@ -48,7 +48,7 @@
 - **用户可见:** API-only
 - **代码:** `apps/server/src/features/eval/router.ts`
 
-> NOTE: 待盘点
+> NOTE: 保留 — API-only 开发/评测工具；有 spec r11；无生产 UI 与 CI 接线
 
 ---
 
@@ -60,7 +60,7 @@
 - **用户可见:** API-only
 - **代码:** `apps/server/src/features/eval/router.ts`
 
-> NOTE: 待盘点
+> NOTE: 保留 — API-only 开发/评测工具；有 spec r11；无生产 UI 与 CI 接线
 
 ---
 
@@ -72,7 +72,7 @@
 - **用户可见:** API-only
 - **代码:** `apps/server/src/features/eval/router.ts`
 
-> NOTE: 待盘点
+> NOTE: 保留 — API-only 开发/评测工具；有 spec r11；无生产 UI 与 CI 接线
 
 ---
 
@@ -84,7 +84,7 @@
 - **用户可见:** API-only
 - **代码:** `apps/server/src/features/eval/router.ts`
 
-> NOTE: 待盘点
+> NOTE: 保留 — API-only 开发/评测工具；有 spec r11；无生产 UI 与 CI 接线
 
 ---
 
@@ -96,4 +96,4 @@
 - **用户可见:** API-only
 - **代码:** `apps/server/src/features/eval/router.ts`、`eval/runner.ts`、`eval/metrics.ts`
 
-> NOTE: 待盘点
+> NOTE: 保留 — API-only 开发/评测工具；有 spec r11；无生产 UI 与 CI 接线

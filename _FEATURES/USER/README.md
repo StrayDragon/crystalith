@@ -18,9 +18,9 @@ Crystalith 工作区（`apps/web/src/features/workspace/`）用户可见功能�
 | [10-plugins.md](10-plugins.md)                           | 结构化 Output 插件渲染         | 8            |
 | [11-settings-diagnostics.md](11-settings-diagnostics.md) | 系统配置与诊断                 | 2            |
 | [12-command-palette.md](12-command-palette.md)           | 命令面板                       | 1            |
-| [13-orphaned-and-stubs.md](13-orphaned-and-stubs.md)     | 孤儿组件、存根、未使用 Hook    | 15           |
+| [13-orphaned-and-stubs.md](13-orphaned-and-stubs.md)     | 孤儿组件、存根、未使用 Hook    | 3            |
 
-**合计主路径约 88 项 + 孤儿/存根约 15 项。**
+**合计主路径约 88 项 + 孤儿/存根约 3 项。**
 
 ## 条目模板
 
