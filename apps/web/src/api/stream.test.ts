@@ -1,6 +1,6 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 
-import { parseSseBlock } from './stream.ts';
+import { parseSseBlock } from './stream';
 
 describe('parseSseBlock', () => {
   test('pairs event name with JSON data', () => {
@@ -10,10 +10,10 @@ describe('parseSseBlock', () => {
 
   test('parses done event with nested payload', () => {
     const event = parseSseBlock(
-      'event: done\ndata: {"message_id":42,"citations":[],"evidence":false}',
+      'event: done\ndata: {"messageId":42,"citations":[],"evidence":false}',
     );
     expect(event?.event).toBe('done');
-    expect(event?.data).toEqual({ message_id: 42, citations: [], evidence: false });
+    expect(event?.data).toEqual({ messageId: 42, citations: [], evidence: false });
   });
 
   test('defaults event name to message when omitted', () => {

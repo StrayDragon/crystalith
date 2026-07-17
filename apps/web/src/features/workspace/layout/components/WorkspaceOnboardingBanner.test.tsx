@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
+import { TestProviders } from '../../../../test-utils/providers';
 import type { WorkspaceReadiness } from '../hooks/useWorkspaceReadiness';
 import WorkspaceOnboardingBanner from './WorkspaceOnboardingBanner';
 
@@ -34,7 +35,11 @@ function renderBanner(
     onOpenShortcutHelp: vi.fn(),
     ...overrides,
   };
-  const view = render(<WorkspaceOnboardingBanner {...props} />);
+  const view = render(
+    <TestProviders>
+      <WorkspaceOnboardingBanner {...props} />
+    </TestProviders>,
+  );
   return { ...view, props };
 }
 

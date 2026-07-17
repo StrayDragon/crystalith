@@ -12,7 +12,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "strict": true,
-    "types": ["vitest/globals"],
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
     "paths": {
       "*": ["./*"],
       "@crystalith-slidev": ["../../packages/crystalith-slidev/src/index.ts"],

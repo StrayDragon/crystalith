@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
 
-import { LayerProvider } from '../../../../shared/layer';
+import { TestProviders } from '../../../../test-utils/providers';
 import AddSearchResultDialog from './AddSearchResultDialog';
 
 const sampleResult = {
@@ -17,7 +17,7 @@ test('dialog supports retrying failed source import', async () => {
     .mockResolvedValueOnce(undefined);
 
   render(
-    <LayerProvider>
+    <TestProviders>
       <AddSearchResultDialog
         open
         onClose={vi.fn()}
@@ -26,7 +26,7 @@ test('dialog supports retrying failed source import', async () => {
         onAddSource={onAddSource}
         onComplete={vi.fn()}
       />
-    </LayerProvider>,
+    </TestProviders>,
   );
 
   await waitFor(() => {
@@ -57,7 +57,7 @@ test('dialog shows progress text while batch adding sources', async () => {
     .mockResolvedValue(undefined);
 
   render(
-    <LayerProvider>
+    <TestProviders>
       <AddSearchResultDialog
         open
         onClose={vi.fn()}
@@ -70,7 +70,7 @@ test('dialog shows progress text while batch adding sources', async () => {
         onAddSource={onAddSource}
         onComplete={vi.fn()}
       />
-    </LayerProvider>,
+    </TestProviders>,
   );
 
   await waitFor(() => {

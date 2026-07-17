@@ -3,6 +3,10 @@ import path from 'path';
 import react from '@vitejs/plugin-react';
 import { configDefaults, defineConfig } from 'vitest/config';
 
+/** Force a single React copy for Vitest (MT / emotion / RTL must share one dispatcher). */
+const reactRoot = path.resolve(__dirname, 'node_modules/react');
+const reactDomRoot = path.resolve(__dirname, 'node_modules/react-dom');
+
 const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8032';
 const includeExperimentalTests = process.env.VITEST_INCLUDE_EXPERIMENTAL === '1';
 
@@ -110,6 +114,10 @@ export default defineConfig({
     alias: {
       '@crystalith/shared': path.resolve(__dirname, '../../packages/shared/src'),
       '@crystalith-slidev': path.resolve(__dirname, '../../packages/crystalith-slidev/src'),
+      react: reactRoot,
+      'react-dom': reactDomRoot,
+      'react/jsx-runtime': path.join(reactRoot, 'jsx-runtime.js'),
+      'react/jsx-dev-runtime': path.join(reactRoot, 'jsx-dev-runtime.js'),
     },
     dedupe: ['react', 'react-dom'],
   },

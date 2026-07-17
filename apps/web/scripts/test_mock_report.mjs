@@ -2,8 +2,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import * as ts from 'typescript';
-
 const scriptDir = import.meta.dirname;
 const frontendDir = path.resolve(scriptDir, '..');
 const srcDir = path.resolve(frontendDir, 'src');
@@ -53,34 +51,12 @@ function analyzeFile(filePath) {
   /** @type {Record<string, number>} */
   const opCounts = { ...VI_OPS };
 
-  const scriptKind = filePath.endsWith('.tsx')
-    ? ts.ScriptKind.TSX
-    : filePath.endsWith('.jsx')
-      ? ts.ScriptKind.JSX
-      : filePath.endsWith('.js') || filePath.endsWith('.mjs') || filePath.endsWith('.cjs')
-        ? ts.ScriptKind.JS
-        : ts.ScriptKind.TS;
-
-  const sourceFile = ts.createSourceFile(filePath, text, ts.ScriptTarget.Latest, true, scriptKind);
-
-  function visit(node) {
-    if (ts.isCallExpression(node)) {
-      const expr = node.expression;
-      if (
-        ts.isPropertyAccessExpression(expr) &&
-        ts.isIdentifier(expr.expression) &&
-        expr.expression.text === 'vi'
-      ) {
-        const name = expr.name.text;
-        if (name in opCounts) {
-          opCounts[name] += 1;
-        }
-      }
-    }
-    ts.forEachChild(node, visit);
+  // Regex scan: TS 7 no longer exposes classic createSourceFile/forEachChild on
+  // `import * as ts from 'typescript'`, and this gate only needs vi.* call counts.
+  for (const name of Object.keys(opCounts)) {
+    const re = new RegExp(`\\bvi\\.${name}\\s*\\(`, 'gu');
+    opCounts[name] = text.match(re)?.length ?? 0;
   }
-
-  visit(sourceFile);
 
   const totalOps = Object.values(opCounts).reduce((acc, value) => acc + value, 0);
   return { filePath, isExperimental, hasMockReason, opCounts, totalOps };

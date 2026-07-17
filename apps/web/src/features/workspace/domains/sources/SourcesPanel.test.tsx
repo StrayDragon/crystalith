@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { LayerProvider } from '../../../../shared/layer';
 import { toast } from '../../../../shared/toast';
+import { TestProviders } from '../../../../test-utils/providers';
 import type { SourceItem } from '../../shared/types';
 import SourcesPanel from './SourcesPanel';
 
@@ -162,9 +162,9 @@ test('supports ctrl/shift multi-select and batch re-embed', async () => {
   });
 
   render(
-    <LayerProvider>
+    <TestProviders>
       <SourcesPanel {...props} />
-    </LayerProvider>,
+    </TestProviders>,
   );
 
   const checkboxes = screen.getAllByRole('checkbox');
@@ -202,9 +202,9 @@ test('supports sort/filter controls and multi-file upload', async () => {
   });
 
   render(
-    <LayerProvider>
+    <TestProviders>
       <SourcesPanel {...props} />
-    </LayerProvider>,
+    </TestProviders>,
   );
 
   const fileA = new File(['a'], 'a.txt', { type: 'text/plain' });
@@ -231,9 +231,9 @@ test('toggles deep research mode placeholder and hint', async () => {
   const props = createProps();
 
   render(
-    <LayerProvider>
+    <TestProviders>
       <SourcesPanel {...props} />
-    </LayerProvider>,
+    </TestProviders>,
   );
 
   expect(screen.getByPlaceholderText('在网络中搜索新来源')).toBeInTheDocument();
@@ -258,9 +258,9 @@ test('filters unsupported upload files and shows warning', () => {
   const props = createProps({ onUpload: uploadSpy });
 
   render(
-    <LayerProvider>
+    <TestProviders>
       <SourcesPanel {...props} />
-    </LayerProvider>,
+    </TestProviders>,
   );
 
   const supported = new File(['ok'], 'doc.md', { type: 'text/markdown' });
@@ -282,9 +282,9 @@ test('accepts PDF upload via drag-and-drop', () => {
   const props = createProps({ onUpload: uploadSpy });
 
   render(
-    <LayerProvider>
+    <TestProviders>
       <SourcesPanel {...props} />
-    </LayerProvider>,
+    </TestProviders>,
   );
 
   const pdf = new File(['pdf'], 'paper.pdf', { type: 'application/pdf' });

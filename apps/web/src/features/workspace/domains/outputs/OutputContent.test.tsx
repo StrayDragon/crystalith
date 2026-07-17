@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
+import { TestProviders } from '../../../../test-utils/providers';
 import type { OutputItem } from '../../shared/types';
 import OutputContent from './OutputContent';
 import { useExport } from './useExport';
@@ -46,7 +47,11 @@ test('shows export menu and triggers selected format export', async () => {
     questions: [{ question: '2+2?', options: ['3', '4'], answer: '4' }],
   });
 
-  render(<OutputContent output={output} />);
+  render(
+    <TestProviders>
+      <OutputContent output={output} />
+    </TestProviders>,
+  );
 
   fireEvent.click(screen.getByRole('button', { name: '导出输出' }));
 
@@ -65,7 +70,11 @@ test('only shows markdown for timeline export', async () => {
     events: [{ date: '2024', event: '上线', description: '产品发布' }],
   });
 
-  render(<OutputContent output={output} />);
+  render(
+    <TestProviders>
+      <OutputContent output={output} />
+    </TestProviders>,
+  );
 
   fireEvent.click(screen.getByRole('button', { name: '导出输出' }));
 
@@ -78,7 +87,11 @@ test('falls back to raw JSON renderer when payload shape is invalid', () => {
     wrong: true,
   });
 
-  render(<OutputContent output={output} />);
+  render(
+    <TestProviders>
+      <OutputContent output={output} />
+    </TestProviders>,
+  );
 
   expect(screen.getByText(/"wrong": true/)).toBeInTheDocument();
 });

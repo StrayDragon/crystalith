@@ -3,12 +3,16 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 /* eslint-disable eslint/max-classes-per-file */
-import '@testing-library/jest-dom/vitest';
-import { afterAll, afterEach, beforeAll } from 'vitest';
+// Prefer explicit expect.extend: `@testing-library/jest-dom/vitest` uses
+// CJS `require('vitest')`, which can extend a different expect instance than
+// Vite's ESM vitest under Bun (→ Invalid Chai property: toBeInTheDocument).
+import * as matchers from '@testing-library/jest-dom/matchers';
+import { afterAll, afterEach, beforeAll, expect } from 'vitest';
 
 import './api/setup';
 import { server } from './test-utils/msw/server';
 
+expect.extend(matchers);
 // Mock client — minimal config stub (generated client removed in c14)
 const client: { setConfig: (opts: Record<string, unknown>) => void } = { setConfig: () => {} };
 

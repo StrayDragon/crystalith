@@ -4,12 +4,17 @@ import type { ReactNode } from 'react';
 import { SWRConfig } from 'swr';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-// Mock client — minimal stub for SSE endpoint testing
-const client = { sse: { post: vi.fn() } };
 import { server } from '../../../../test-utils/msw/server';
 import { renderHook } from '../../../../test-utils/renderHook';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import { useChat } from './useChat';
+
+const streamRequestMock = vi.fn();
+
+// Mock reason: deterministic SSE events for streaming chat path without real fetch streams.
+vi.mock('../../../../api/stream', () => ({
+  streamRequest: (...args: unknown[]) => streamRequestMock(...args),
+}));
 
 function wrapSWR({ children }: { children: ReactNode }) {
   return (
@@ -42,6 +47,8 @@ function buildSharedState(messageId: string, description = 'Mounted summary') {
 }
 
 beforeEach(() => {
+  streamRequestMock.mockReset();
+
   useWorkspaceStore.setState({
     notebooks: [],
     activeNotebookId: null,
@@ -90,25 +97,8 @@ beforeEach(() => {
   });
 
   server.use(
-    http.get('*/v1/notebooks/:notebookId/sessions/:sessionId/messages', () =>
-      HttpResponse.json([]),
-    ),
     http.get('*/v2/notebooks/:notebookId/sessions/:sessionId/messages', () =>
       HttpResponse.json([]),
-    ),
-    http.get('*/v1/notebooks/:notebookId/sessions/:sessionId/ui/state', () =>
-      HttpResponse.json({
-        sessionId: 123,
-        shared_state: { ui: { v: 1, components: {}, datasets: {} } },
-        shared_state_revision: 0,
-      }),
-    ),
-    http.get('*/v2/notebooks/:notebookId/sessions/:sessionId/ui/state', () =>
-      HttpResponse.json({
-        sessionId: 123,
-        shared_state: { ui: { v: 1, components: {}, datasets: {} } },
-        shared_state_revision: 0,
-      }),
     ),
   );
 });
@@ -140,7 +130,7 @@ test('sendMessage non-streaming path stores assistant message and shared_state m
       return HttpResponse.json({
         answer: 'Answer',
         citations: [{ chunkId: 5, chunkIndex: 1, sourceName: 'Doc', snippet: 'S' }],
-        message_id: 9001,
+        messageId: 9001,
         shared_state: buildSharedState('9001'),
         shared_state_revision: 1,
       });
@@ -189,7 +179,7 @@ test('sendMessage passes selected source ids', async () => {
       return HttpResponse.json({
         answer: 'Answer',
         citations: [],
-        message_id: 9002,
+        messageId: 9002,
         shared_state: { ui: { v: 1, components: {}, datasets: {} } },
         shared_state_revision: 0,
       });
@@ -230,7 +220,7 @@ test('sendMessage omits sourceIds when nothing is selected (ungrounded)', async 
       return HttpResponse.json({
         answer: 'Ungrounded answer',
         citations: [],
-        message_id: 9004,
+        messageId: 9004,
         shared_state: { ui: { v: 1, components: {}, datasets: {} } },
         shared_state_revision: 0,
       });
@@ -264,35 +254,26 @@ test('sendMessage omits sourceIds when nothing is selected (ungrounded)', async 
 });
 
 test('streaming path applies snapshot and delta with backend message id', async () => {
-  // Mock reason: the SSE client is the boundary seam here; we emulate server events deterministically.
-  const ssePostMock = vi.spyOn(client.sse, 'post');
   server.use(
-    http.get('*/v1/notebooks/:notebookId/sessions/:sessionId/messages', () =>
+    http.get('*/v2/notebooks/:notebookId/sessions/:sessionId/messages', () =>
       HttpResponse.json([
         { id: 1, role: 'user', content: 'Hello streaming', citations: null },
         { id: 9003, role: 'assistant', content: 'Answer', citations: [] },
       ]),
     ),
-    http.get('*/v1/notebooks/:notebookId/sessions/:sessionId/ui/state', () =>
-      HttpResponse.json({
-        sessionId: 123,
-        shared_state: buildSharedState('9003', 'Stream mount'),
-        shared_state_revision: 1,
-      }),
-    ),
   );
 
-  ssePostMock.mockImplementation(async ({ onSseEvent }: any) => {
-    onSseEvent({
+  streamRequestMock.mockImplementation(async function* () {
+    yield {
       event: 'state_snapshot',
       data: {
-        message_id: 9003,
+        messageId: 9003,
         shared_state: { ui: { v: 1, components: {}, datasets: {} } },
         shared_state_revision: 0,
       },
-    });
-    onSseEvent({ event: 'chunk', data: { text: 'Answer' } });
-    onSseEvent({
+    };
+    yield { event: 'chunk', data: { text: 'Answer' } };
+    yield {
       event: 'state_delta',
       data: {
         delta: [
@@ -310,20 +291,15 @@ test('streaming path applies snapshot and delta with backend message id', async 
           },
         ],
       },
-    });
-    onSseEvent({
+    };
+    yield {
       event: 'done',
       data: {
-        message_id: 9003,
+        messageId: 9003,
         citations: [],
         shared_state_revision: 1,
       },
-    });
-    return {
-      stream: (async function* streamEvents() {
-        yield { event: 'done' };
-      })(),
-    } as any;
+    };
   });
 
   const ensureSession = vi.fn().mockResolvedValue(123);
@@ -349,37 +325,43 @@ test('streaming path applies snapshot and delta with backend message id', async 
 
   expect(result.current.messages[1].id).toBe('9003');
   expect(result.current.messages[1].content).toBe('Answer');
-
-  ssePostMock.mockRestore();
+  expect(streamRequestMock).toHaveBeenCalledWith(
+    '/v2/qa/stream',
+    expect.objectContaining({
+      method: 'POST',
+      body: expect.objectContaining({
+        question: 'Hello streaming',
+        notebookId: 1,
+        sessionId: 123,
+      }),
+    }),
+  );
 });
 
 test('stopStreaming rolls back provisional assistant message before done', async () => {
-  const ssePostMock = vi.spyOn(client.sse, 'post');
   server.use(
-    http.get('*/v1/notebooks/:notebookId/sessions/:sessionId/messages', () =>
+    http.get('*/v2/notebooks/:notebookId/sessions/:sessionId/messages', () =>
       HttpResponse.json([{ id: 1, role: 'user', content: 'Hello rollback', citations: null }]),
     ),
   );
 
-  ssePostMock.mockImplementation(async ({ signal, onSseEvent }: any) => {
-    onSseEvent({
+  streamRequestMock.mockImplementation(async function* (
+    _path: string,
+    options: { signal?: AbortSignal } = {},
+  ) {
+    yield {
       event: 'state_snapshot',
       data: {
-        message_id: 9004,
+        messageId: 9004,
         shared_state: { ui: { v: 1, components: {}, datasets: {} } },
         shared_state_revision: 0,
       },
-    });
-    onSseEvent({ event: 'chunk', data: { text: 'Partial answer' } });
-    return {
-      stream: (async function* streamEvents() {
-        yield* [];
-        while (!signal.aborted) {
-          // eslint-disable-next-line no-await-in-loop -- Intentional polling in mocked SSE stream until aborted.
-          await new Promise((resolve) => setTimeout(resolve, 10));
-        }
-      })(),
-    } as any;
+    };
+    yield { event: 'chunk', data: { text: 'Partial answer' } };
+    while (!options.signal?.aborted) {
+      // eslint-disable-next-line no-await-in-loop -- Intentional polling in mocked SSE stream until aborted.
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
   });
 
   const ensureSession = vi.fn().mockResolvedValue(123);
@@ -417,6 +399,4 @@ test('stopStreaming rolls back provisional assistant message before done', async
   expect(
     useWorkspaceStore.getState().messages.filter((message) => message.role === 'user'),
   ).toHaveLength(1);
-
-  ssePostMock.mockRestore();
 });
