@@ -3,38 +3,38 @@ name: "source-ingestion-upload-and-url"
 purpose: 定义通过上传文件与 URL 创建来源的契约：格式支持、校验、异常语义、网页抓取安全与提取器策略。该规范强调输入错误可预测且安全默认值优先，避免在抓取路径引入 SSRF 风险。
 valid_scope[2]: src/,tests/
 requirements[16]{req_id,title,statement}:
-  r1,Upload endpoint returns created source on success,上传成功 MUST 返回 201 与来源对象；失败语义区分 400/415/500。
-  r2,"Supported formats are parser-driven",支持类型 MUST 由 parser 能力决定；无匹配 parser 的文件 MUST 返回 415 且不创建来源。
-  r3,上传端点必须保留受支持写作工具的 Markdown 语义,对于标准 Markdown 上传，系统 MUST 在进入 `chunk / embed / store` 之前执行语义预处理，以兼容常见写作工具的 Markdown 扩展语法，并将可提取的文档元数据写入 source metadata。
-  r4,Core upload supports CSV sources,系统的核心发行版 MUST 支持通过上传方式创建 CSV 来源：`.csv` 扩展名与 `text/csv` MIME MUST 被识别并由匹配 parser 处理。
-  r5,CSV sources are chunked by rows to avoid oversized single chunks,系统 MUST 将 CSV 内容按行块切分为多个可索引 chunks，以避免单个超大 chunk 导致检索与引用不稳定。
-  r6,Deterministic input errors do not create source rows,空文件或无可索引内容等确定性输入错误 MUST 返回 400 且不创建来源。
-  r7,Oversized uploads are rejected deterministically with 413,当 HTTP guardrails 启用且配置了上传上限时，上传接口 MUST 对单次上传施加 `upload_max_bytes` 限制；超过上限 MUST 返回 413，且 MUST 不创建来源记录。
-  r8,"URL from-source supports link and fetch modes","`from-url` MUST 支持 `link|fetch`，`link` 不抓网页正文，`fetch` 抓取并分块。"
-  r9,Fetch applies SSRF validation before network calls,`fetch` MUST 在请求前做 SSRF 校验并拒绝高风险目标（含逐跳重定向重验）。
-  r10,"Extractor preference, fallback, retry, and proxy are scoped",系统 MUST 支持提取器指定、可控 fallback、可重试错误重试、按提取器粒度代理配置。
-  r11,Unsupported formats are rejected with actionable diagnostics,"当上传/URL 抓取的内容无匹配 parser（例如缺失对应插件）时，系统 MUST 返回 415 且 MUST 提供可机器读取的诊断信息（error_code/message/details），其中 details MUST 包含恢复提示（例如需要安装/启用的 `parser-*` 插件 id）。"
-  r12,Extractor selection errors are diagnosable,当用户在 fetch 模式显式指定某 extractor 但其不可用（未安装/禁用/依赖缺失/服务不可达）时，系统 MUST 返回稳定错误语义或按策略回退；无论哪种路径，系统 MUST 输出可诊断信息说明发生了什么与如何恢复。
+  r50,Upload endpoint returns created source on success,上传成功 MUST 返回 201 与来源对象；失败语义区分 400/415/500。
+  r108,"Supported formats are parser-driven",支持类型 MUST 由 parser 能力决定；无匹配 parser 的文件 MUST 返回 415 且不创建来源。
+  r145,上传端点必须保留受支持写作工具的 Markdown 语义,对于标准 Markdown 上传，系统 MUST 在进入 `chunk / embed / store` 之前执行语义预处理，以兼容常见写作工具的 Markdown 扩展语法，并将可提取的文档元数据写入 source metadata。
+  r180,Core upload supports CSV sources,系统的核心发行版 MUST 支持通过上传方式创建 CSV 来源：`.csv` 扩展名与 `text/csv` MIME MUST 被识别并由匹配 parser 处理。
+  r212,CSV sources are chunked by rows to avoid oversized single chunks,系统 MUST 将 CSV 内容按行块切分为多个可索引 chunks，以避免单个超大 chunk 导致检索与引用不稳定。
+  r239,Deterministic input errors do not create source rows,空文件或无可索引内容等确定性输入错误 MUST 返回 400 且不创建来源。
+  r257,Oversized uploads are rejected deterministically with 413,当 HTTP guardrails 启用且配置了上传上限时，上传接口 MUST 对单次上传施加 `upload_max_bytes` 限制；超过上限 MUST 返回 413，且 MUST 不创建来源记录。
+  r269,"URL from-source supports link and fetch modes","`from-url` MUST 支持 `link|fetch`，`link` 不抓网页正文，`fetch` 抓取并分块。"
+  r278,Fetch applies SSRF validation before network calls,`fetch` MUST 在请求前做 SSRF 校验并拒绝高风险目标（含逐跳重定向重验）。
+  r61,"Extractor preference, fallback, retry, and proxy are scoped",系统 MUST 支持提取器指定、可控 fallback、可重试错误重试、按提取器粒度代理配置。
+  r67,Unsupported formats are rejected with actionable diagnostics,"当上传/URL 抓取的内容无匹配 parser（例如缺失对应插件）时，系统 MUST 返回 415 且 MUST 提供可机器读取的诊断信息（error_code/message/details），其中 details MUST 包含恢复提示（例如需要安装/启用的 `parser-*` 插件 id）。"
+  r72,Extractor selection errors are diagnosable,当用户在 fetch 模式显式指定某 extractor 但其不可用（未安装/禁用/依赖缺失/服务不可达）时，系统 MUST 返回稳定错误语义或按策略回退；无论哪种路径，系统 MUST 输出可诊断信息说明发生了什么与如何恢复。
   "sources-search-web",Sources search MUST perform real web search,POST /sources/search MUST 调用 web search 引擎（SearXNG）返回真实 web 结果，MUST NOT 返回 notebook 内向量匹配作为 placeholder
   "sources-dedup-config-gated",Dedup MUST be gated by config,sources 去重 MUST 受 config source_ingestion.dedup.enabled 门控，为 false 时 MUST 跳过 dedup 直接创建新 source
   r_ssrf_config,SSRF policy driven by config,系统 MUST 从配置解析 hostAllowlist 与 domainAllowlist 与 cidrAllowlist 与 allowlist_only 为 SsrfPolicy 并应用于 URL fetch 校验。无配置时 MUST 回退默认姿态 (拒绝私网与元数据 IP)。
   r_upload_size_config,Upload size limit configurable,系统 MUST 从配置读取上传大小上限。无配置时 MUST 默认 50MB。
-scenarios[18]{req_id,id,given,when,then}:
-  r1,"upload-success-returns-created-source","",用户上传一个可解析且可索引的文件,系统 SHALL 返回 201 与创建的来源对象
-  r2,"unsupported-format-is-rejected","",用户上传一个无匹配 parser 的文件,系统 SHALL 返回 415 且不创建来源
-  r3,"上传-obsidian-风格-wikilink-时进行标准化","","用户上传一个 `.md` / `text/markdown` 文件，内容包含 `[[page]]` 或 `[[page|alias]]`",系统 SHALL 将其转换为标准 Markdown 链接文本后再进行 chunking
-  r3,"上传-obsidian-风格嵌入时转为文本引用","","上传的 Markdown 文件包含 `![[file]]` 或 `![[file|alias]]`",系统 SHALL 将其转换为可检索的文本引用
-  r3,"上传-markdown-时提取-frontmatter-到来源元数据","",上传的 Markdown 文件包含可解析的 YAML frontmatter,系统 SHALL 将支持字段（`title`、`tags`、`aliases`、`date`）写入 `source.metadata.frontmatter`
-  r4,"uploading-a-csv-is-accepted","",用户上传一个 `.csv` 文件（`text/csv` 或扩展名 `.csv`）,系统 SHALL 选择匹配的 parser 解析该文件
-  r5,"large-csv-produces-multiple-chunks","",用户上传一个包含大量行的 CSV,系统 SHALL 生成多个 chunk（每个 chunk 覆盖一段行范围）
-  r6,"deterministic-input-error-does-not-create-source","",用户上传空文件或无可索引内容的输入,系统 SHALL 返回 400 且不创建来源
-  r7,"upload-larger-than-max-bytes-returns-413-and-does-not-create","",guardrails 启用,系统 SHALL 返回 413
-  r8,"link-mode-does-not-fetch-content","","用户使用 `from-url` 的 `link` 模式创建来源",系统 SHALL 仅保存链接而不抓取网页正文
-  r9,"ssrf-validation-runs-before-fetch","",用户使用 `fetch` 抓取一个高风险 URL（含重定向链）,系统 SHALL 在网络请求前执行 SSRF 校验并拒绝不安全目标
-  r10,"extractor-fallback-is-controlled","",指定提取器失败且存在可控 fallback,系统 SHALL 按策略回退并对可重试错误进行重试，同时保持代理配置按提取器粒度生效
-  r11,"uploading-a-pdf-without-parser-plugin-yields-a-hint","",用户上传一个 PDF 且当前环境未安装/未启用 PDF parser 插件,系统 SHALL 返回 415
-  r12,"preferred-extractor-unavailable-is-explained","",用户指定 `preferred_extractor=X` 但 X 不可用,系统 SHALL 返回明确的不可用原因（或在回退后返回回退链路的诊断信息）
-  "sources-search-web","client-searches",客户端请求 /sources/search 带查询词,搜索执行,系统 SHALL 返回 web search 结果而非 notebook 内向量匹配
-  "sources-dedup-config-gated","dedup-disabled",config dedup.enabled=false,上传重复内容 source,系统 SHALL 跳过 dedup 直接创建新 source
-  r_ssrf_config,allowlist_only_blocks,配置了 allowlist_only=true 且 hostAllowlist 含 trusted.com,用户从非白名单主机 fetch URL,系统 SHALL 拒绝该 fetch
-  r_upload_size_config,over_limit_rejected,配置上传上限 10MB,用户上传 20MB 文件,系统 SHALL 拒绝 (413)
+scenarios[18]{req_id,id,given,when,then,feature}:
+  r50,"upload-success-returns-created-source","",用户上传一个可解析且可索引的文件,系统 SHALL 返回 201 与创建的来源对象,true
+  r108,"unsupported-format-is-rejected","",用户上传一个无匹配 parser 的文件,系统 SHALL 返回 415 且不创建来源,true
+  r145,"上传-obsidian-风格-wikilink-时进行标准化","","用户上传一个 `.md` / `text/markdown` 文件，内容包含 `[[page]]` 或 `[[page|alias]]`",系统 SHALL 将其转换为标准 Markdown 链接文本后再进行 chunking,true
+  r145,"上传-obsidian-风格嵌入时转为文本引用","","上传的 Markdown 文件包含 `![[file]]` 或 `![[file|alias]]`",系统 SHALL 将其转换为可检索的文本引用,true
+  r145,"上传-markdown-时提取-frontmatter-到来源元数据","",上传的 Markdown 文件包含可解析的 YAML frontmatter,系统 SHALL 将支持字段（`title`、`tags`、`aliases`、`date`）写入 `source.metadata.frontmatter`,true
+  r180,"uploading-a-csv-is-accepted","",用户上传一个 `.csv` 文件（`text/csv` 或扩展名 `.csv`）,系统 SHALL 选择匹配的 parser 解析该文件,true
+  r212,"large-csv-produces-multiple-chunks","",用户上传一个包含大量行的 CSV,系统 SHALL 生成多个 chunk（每个 chunk 覆盖一段行范围）,true
+  r239,"deterministic-input-error-does-not-create-source","",用户上传空文件或无可索引内容的输入,系统 SHALL 返回 400 且不创建来源,true
+  r257,"upload-larger-than-max-bytes-returns-413-and-does-not-create","",guardrails 启用,系统 SHALL 返回 413,true
+  r269,"link-mode-does-not-fetch-content","","用户使用 `from-url` 的 `link` 模式创建来源",系统 SHALL 仅保存链接而不抓取网页正文,true
+  r278,"ssrf-validation-runs-before-fetch","",用户使用 `fetch` 抓取一个高风险 URL（含重定向链）,系统 SHALL 在网络请求前执行 SSRF 校验并拒绝不安全目标,true
+  r61,"extractor-fallback-is-controlled","",指定提取器失败且存在可控 fallback,系统 SHALL 按策略回退并对可重试错误进行重试，同时保持代理配置按提取器粒度生效,true
+  r67,"uploading-a-pdf-without-parser-plugin-yields-a-hint","",用户上传一个 PDF 且当前环境未安装/未启用 PDF parser 插件,系统 SHALL 返回 415,true
+  r72,"preferred-extractor-unavailable-is-explained","",用户指定 `preferred_extractor=X` 但 X 不可用,系统 SHALL 返回明确的不可用原因（或在回退后返回回退链路的诊断信息）,true
+  "sources-search-web","client-searches",客户端请求 /sources/search 带查询词,搜索执行,系统 SHALL 返回 web search 结果而非 notebook 内向量匹配,true
+  "sources-dedup-config-gated","dedup-disabled",config dedup.enabled=false,上传重复内容 source,系统 SHALL 跳过 dedup 直接创建新 source,true
+  r_ssrf_config,allowlist_only_blocks,配置了 allowlist_only=true 且 hostAllowlist 含 trusted.com,用户从非白名单主机 fetch URL,系统 SHALL 拒绝该 fetch,true
+  r_upload_size_config,over_limit_rejected,配置上传上限 10MB,用户上传 20MB 文件,系统 SHALL 拒绝 (413),true

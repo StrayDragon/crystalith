@@ -3,35 +3,35 @@ name: "workspace-ui-panels"
 purpose: 定义 Workspace 业务面板（Sources/Chat/Studio/Research 与引用交互）的最小 UI 契约：面板装配、流式反馈、状态与取消语义、错误可恢复路径。该规范聚焦“用户可观察行为与稳定边界”，不绑定具体组件实现。
 valid_scope[2]: src/,tests/
 requirements[13]{req_id,title,statement}:
-  r1,Panel composition is stable,Workspace MUST 以稳定的面板集合装配 Sources/Chat/Studio/Research 等能力，并保持各面板的基本区域划分与入口可发现。
-  r2,Streaming UX supports send/chunk/done/error and cancel,涉及流式输出的面板（如 Chat/Research）MUST 显式呈现 send/chunk/done/error 状态，并 MUST 支持用户取消以停止继续追加内容。
-  r3,"Chat input supports /prompt directives as user-facing commands","Workspace 的 Chat 面板 MUST 允许用户在输入框中使用 `/prompt:<preset> <query>` 指令来请求受控的预设生成模式。"
-  r4,Chat input provides command autocomplete for /prompt presets,"Workspace 的 Chat 输入框 MUST 使用 `GET /v1/commands` 获取命令列表，并在用户输入 `/` 或 `/prompt:` 前缀时提供自动补全 UI。"
-  r5,System config UI allows users to manage prompt presets,"Workspace UI MUST 提供“系统配置”入口，并允许用户对 custom `/prompt:*` presets 执行 CRUD（触发词、描述、system prompt、启用状态）。"
-  r6,Chat panel renders plain assistant text plus Rivu mounts,Chat 面板 MUST 将 assistant `message.content` 作为纯文本/markdown 渲染，并 MUST 基于 session `shared_state.ui` 的 mounts 在消息气泡下方渲染结构化 UI。前端 MUST 不再解析 `message.content` 中的 legacy envelope。
-  r7,"Streaming UX applies server-authoritative snapshots and deltas",当一次对话响应以流式方式生成时，Chat 面板 MUST 使用服务端发送的 `state_snapshot`/`state_delta` 驱动 UI，并以服务端稳定 `message_id` 关联消息与 mounts。
-  r8,"Tool/action cards enforce confirmation and auto-exec whitelist","当消息包含 `tool_use` parts 时，Chat 面板 MUST： - 仅对宿主白名单内且标记为 `auto_execute=true` 的动作执行自动执行 - 对需要确认或非白名单动作提供显式确认入口 - 对每次执行展示对应 `tool_result` 的结果与错误恢复路径（如允许重试）"
-  r9,Sources workflows are gated and explicit,Sources 相关操作 MUST 对“未选择来源/来源未就绪/来源失败”等情况进行显式 gating，并 MUST 提供可理解的提示与可恢复路径。
-  r10,"Ingestion feedback is queue-based and deterministic",上传/抓取/搜索等 ingest 操作 MUST 以队列项呈现并可并发显示状态，且每个队列项 MUST 有确定的终态（done/error/cancelled）与重试入口。
-  r11,Sources upload file type support is consistent and includes PDF,Workspace 的 Sources 上传入口 MUST 支持后端核心发行版的常见内置解析格式，且前端 `accept`、预过滤与提示文案 MUST 保持一致。 该支持集 SHALL 至少包含：`.txt/.md/.markdown` 与 `.pdf`（`application/pdf`），以及 `.csv`（`text/csv`）。
-  r13,"Studio queue, rendering fallback, and export gating are explicit",Studio MUST 明确展示生成队列状态并支持取消；渲染 MUST 定义确定的回退顺序；导出选项 MUST 仅显示当前输出类型支持项。
+  r59,Panel composition is stable,Workspace MUST 以稳定的面板集合装配 Sources/Chat/Studio/Research 等能力，并保持各面板的基本区域划分与入口可发现。
+  r117,Streaming UX supports send/chunk/done/error and cancel,涉及流式输出的面板（如 Chat/Research）MUST 显式呈现 send/chunk/done/error 状态，并 MUST 支持用户取消以停止继续追加内容。
+  r154,"Chat input supports /prompt directives as user-facing commands","Workspace 的 Chat 面板 MUST 允许用户在输入框中使用 `/prompt:<preset> <query>` 指令来请求受控的预设生成模式。"
+  r189,Chat input provides command autocomplete for /prompt presets,"Workspace 的 Chat 输入框 MUST 使用 `GET /v1/commands` 获取命令列表，并在用户输入 `/` 或 `/prompt:` 前缀时提供自动补全 UI。"
+  r220,System config UI allows users to manage prompt presets,"Workspace UI MUST 提供“系统配置”入口，并允许用户对 custom `/prompt:*` presets 执行 CRUD（触发词、描述、system prompt、启用状态）。"
+  r246,Chat panel renders plain assistant text plus Rivu mounts,Chat 面板 MUST 将 assistant `message.content` 作为纯文本/markdown 渲染，并 MUST 基于 session `shared_state.ui` 的 mounts 在消息气泡下方渲染结构化 UI。前端 MUST 不再解析 `message.content` 中的 legacy envelope。
+  r264,"Streaming UX applies server-authoritative snapshots and deltas",当一次对话响应以流式方式生成时，Chat 面板 MUST 使用服务端发送的 `state_snapshot`/`state_delta` 驱动 UI，并以服务端稳定 `message_id` 关联消息与 mounts。
+  r275,"Tool/action cards enforce confirmation and auto-exec whitelist","当消息包含 `tool_use` parts 时，Chat 面板 MUST： - 仅对宿主白名单内且标记为 `auto_execute=true` 的动作执行自动执行 - 对需要确认或非白名单动作提供显式确认入口 - 对每次执行展示对应 `tool_result` 的结果与错误恢复路径（如允许重试）"
+  r282,Sources workflows are gated and explicit,Sources 相关操作 MUST 对“未选择来源/来源未就绪/来源失败”等情况进行显式 gating，并 MUST 提供可理解的提示与可恢复路径。
+  r65,"Ingestion feedback is queue-based and deterministic",上传/抓取/搜索等 ingest 操作 MUST 以队列项呈现并可并发显示状态，且每个队列项 MUST 有确定的终态（done/error/cancelled）与重试入口。
+  r71,Sources upload file type support is consistent and includes PDF,Workspace 的 Sources 上传入口 MUST 支持后端核心发行版的常见内置解析格式，且前端 `accept`、预过滤与提示文案 MUST 保持一致。 该支持集 SHALL 至少包含：`.txt/.md/.markdown` 与 `.pdf`（`application/pdf`），以及 `.csv`（`text/csv`）。
+  r76,"Studio queue, rendering fallback, and export gating are explicit",Studio MUST 明确展示生成队列状态并支持取消；渲染 MUST 定义确定的回退顺序；导出选项 MUST 仅显示当前输出类型支持项。
   "frontend-extractor-types-must-not-duplicate",Frontend MUST NOT keep stale duplicate type definitions that diverge from the SSOT,"前端 MUST NOT 在 api/shared-types.ts 中保留与 api/generated（SSOT）重复且字段不全的类型定义（如 ExtractorInfoResponse 缺 priority/display_name/requires_api_key/requires_service/recovery_hint 等字段）。重复类型 MUST 删除以消除混淆，统一从 api/generated 导入。"
-scenarios[18]{req_id,id,given,when,then}:
-  r1,"panels-are-consistently-discoverable","",用户进入 Workspace 并切换面板,系统 SHALL 以一致的方式展示面板入口与基本区域，不因刷新或重连丢失
-  r2,"cancel-stops-streaming","",用户在流式生成过程中点击取消,系统 SHALL 停止继续追加 chunk，并展示取消后的可恢复状态（如可重试）
-  r3,"user-can-send-a-prompt-message","","用户在 Chat 输入框中输入以 `/prompt:` 开头的内容并发送（无论是否打开自动补全）",UI SHALL 将该文本作为一次消息发送（不应在前端预过滤为“非法输入”）
-  r4,"tab-accepts-the-selected-suggestion","",用户打开补全菜单并选中某项命令,UI SHALL 将该命令的 `trigger` 插入到输入框中（替换当前 token）
-  r4,"disabled-commands-are-not-selectable","",补全列表中某条命令 `enabled=false`,UI SHALL 将其展示为 disabled
-  r5,"preset-crud-updates-autocomplete","",用户在“系统配置”中创建/更新/删除 custom preset,UI SHALL 刷新 `GET /v1/commands` 的缓存并更新补全列表
-  r6,"render-mounted-components-for-a-message","","`shared_state.ui` 中存在 `messageId` 指向某条 assistant message、且 `slot=\"inline\"` 的 mounts",Chat 面板 SHALL 在该消息正文下方渲染对应的 Rivu components
-  r6,"unknown-component-falls-back-safely","",`shared_state.ui` 中出现未注册的 component type 或 props 校验失败,Chat 面板 SHALL 使用安全回退渲染
-  r7,"streaming-restores-mounts-after-reload","",用户刷新页面后重新进入同一个 session,Chat 面板 SHALL 通过 `/ui/state` 恢复此前已持久化的 mounts
-  r7,"cancel-rolls-back-provisional-ui","",用户在流式生成过程中点击取消，且该次回答尚未 `done`,Chat 面板 SHALL 停止继续追加内容
-  r8,"auto-exec-runs-only-for-whitelisted-tools","",tool_use 标记为 `auto_execute=true` 但 `name` 不在白名单,Chat 面板 SHALL 不自动执行
-  r9,"generation-is-disabled-without-ready-sources","",用户未选择任何 `ready` 来源或当前来源未就绪,系统 SHALL 禁用依赖来源的生成入口并给出明确提示
-  r10,"parallel-ingestion-items-do-not-overwrite","",用户连续发起多次搜索或导入操作,系统 SHALL 为每次操作创建独立队列项并分别展示进度与结果
-  r11,"uploading-a-pdf-is-accepted-by-the-ui","",用户在 Sources 面板通过“选择文件”或“拖拽”方式上传 `.pdf`,UI SHALL 接受该文件并进入上传队列
-  r11,"uploading-a-csv-is-accepted-by-the-ui","",用户在 Sources 面板通过“选择文件”或“拖拽”方式上传 `.csv`,UI SHALL 接受该文件并进入上传队列
-  r11,"unsupported-formats-are-rejected-with-clear-feedback","",用户上传一个明确不支持的格式（如 `.docx`）,UI SHALL 拒绝该文件
-  r13,"rendering-falls-back-deterministically","",专用渲染器不可用或渲染失败,系统 SHALL 按既定顺序回退到通用渲染或原始 JSON，且不展示不支持的导出格式
-  "frontend-extractor-types-must-not-duplicate","stale-extractor-type-removed","the api/shared-types.ts has a stale ExtractorInfoResponse missing fields",the change is applied,the stale type MUST be deleted and all imports MUST reference the complete api/generated version
+scenarios[18]{req_id,id,given,when,then,feature}:
+  r59,"panels-are-consistently-discoverable","",用户进入 Workspace 并切换面板,系统 SHALL 以一致的方式展示面板入口与基本区域，不因刷新或重连丢失,true
+  r117,"cancel-stops-streaming","",用户在流式生成过程中点击取消,系统 SHALL 停止继续追加 chunk，并展示取消后的可恢复状态（如可重试）,true
+  r154,"user-can-send-a-prompt-message","","用户在 Chat 输入框中输入以 `/prompt:` 开头的内容并发送（无论是否打开自动补全）",UI SHALL 将该文本作为一次消息发送（不应在前端预过滤为“非法输入”）,true
+  r189,"tab-accepts-the-selected-suggestion","",用户打开补全菜单并选中某项命令,UI SHALL 将该命令的 `trigger` 插入到输入框中（替换当前 token）,true
+  r189,"disabled-commands-are-not-selectable","",补全列表中某条命令 `enabled=false`,UI SHALL 将其展示为 disabled,true
+  r220,"preset-crud-updates-autocomplete","",用户在“系统配置”中创建/更新/删除 custom preset,UI SHALL 刷新 `GET /v1/commands` 的缓存并更新补全列表,true
+  r246,"render-mounted-components-for-a-message","","`shared_state.ui` 中存在 `messageId` 指向某条 assistant message、且 `slot=\"inline\"` 的 mounts",Chat 面板 SHALL 在该消息正文下方渲染对应的 Rivu components,true
+  r246,"unknown-component-falls-back-safely","",`shared_state.ui` 中出现未注册的 component type 或 props 校验失败,Chat 面板 SHALL 使用安全回退渲染,true
+  r264,"streaming-restores-mounts-after-reload","",用户刷新页面后重新进入同一个 session,Chat 面板 SHALL 通过 `/ui/state` 恢复此前已持久化的 mounts,true
+  r264,"cancel-rolls-back-provisional-ui","",用户在流式生成过程中点击取消，且该次回答尚未 `done`,Chat 面板 SHALL 停止继续追加内容,true
+  r275,"auto-exec-runs-only-for-whitelisted-tools","",tool_use 标记为 `auto_execute=true` 但 `name` 不在白名单,Chat 面板 SHALL 不自动执行,true
+  r282,"generation-is-disabled-without-ready-sources","",用户未选择任何 `ready` 来源或当前来源未就绪,系统 SHALL 禁用依赖来源的生成入口并给出明确提示,true
+  r65,"parallel-ingestion-items-do-not-overwrite","",用户连续发起多次搜索或导入操作,系统 SHALL 为每次操作创建独立队列项并分别展示进度与结果,true
+  r71,"uploading-a-pdf-is-accepted-by-the-ui","",用户在 Sources 面板通过“选择文件”或“拖拽”方式上传 `.pdf`,UI SHALL 接受该文件并进入上传队列,true
+  r71,"uploading-a-csv-is-accepted-by-the-ui","",用户在 Sources 面板通过“选择文件”或“拖拽”方式上传 `.csv`,UI SHALL 接受该文件并进入上传队列,true
+  r71,"unsupported-formats-are-rejected-with-clear-feedback","",用户上传一个明确不支持的格式（如 `.docx`）,UI SHALL 拒绝该文件,true
+  r76,"rendering-falls-back-deterministically","",专用渲染器不可用或渲染失败,系统 SHALL 按既定顺序回退到通用渲染或原始 JSON，且不展示不支持的导出格式,true
+  "frontend-extractor-types-must-not-duplicate","stale-extractor-type-removed","the api/shared-types.ts has a stale ExtractorInfoResponse missing fields",the change is applied,the stale type MUST be deleted and all imports MUST reference the complete api/generated version,true
