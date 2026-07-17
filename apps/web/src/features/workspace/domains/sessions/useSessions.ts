@@ -52,14 +52,20 @@ export function useSessions() {
     }
     if (data) {
       const normalized = data.map(normalizeSession);
-      const activeId = activeSessionId;
-      const nextActive =
-        normalized.find((item) => item.id === activeId)?.id ?? normalized[0]?.id ?? null;
       const s = store.getState();
+      // Read latest from store — createSession may have set activeId before SWR data lands.
+      const activeId = s.activeSessionId;
       s.setSessions(normalized);
       s.setError('sessions', '');
-      if (nextActive !== activeId) {
-        s.setActiveSession(nextActive);
+      if (activeId == null) {
+        if (normalized[0]) s.setActiveSession(normalized[0].id);
+        return;
+      }
+      const stillExists = normalized.some((item) => item.id === activeId);
+      if (!stillExists) {
+        // Keep activeId during create race (mutate not yet reflected). Only clear
+        // when the list is empty; delete handlers already switch explicitly.
+        if (normalized.length === 0) s.setActiveSession(null);
       }
     }
   }, [data, error, isConnected, activeNotebookId, activeSessionId, store]);
@@ -96,7 +102,11 @@ export function useSessions() {
           );
         const newSession = created!;
         const normalized = normalizeSession(newSession);
-        store.getState().setActiveSession(normalized.id);
+        const s = store.getState();
+        // Update local list before switching so the sessions effect cannot fall
+        // back to an older session while SWR data is still catching up.
+        s.setSessions([normalized, ...s.sessions.filter((item) => item.id !== normalized.id)]);
+        s.setActiveSession(normalized.id);
         await mutate(async (current) => (current ? [newSession, ...current] : [newSession]), {
           revalidate: false,
         });

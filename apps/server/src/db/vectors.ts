@@ -70,11 +70,11 @@ export function deleteSourceVectors(orm: Orm, sourceId: number): void {
  * joined with the `chunks` table for text. The query vector and integer
  * filters are bound as parameters (no injection surface).
  *
- * When `sourceIds` is provided (c40 — v1 source-scoping), the search
- * over-fetches (3× topK) then post-filters to the given sources, because
- * sqlite-vec vec0 partitions only support equality predicates on partition
- * columns, not `source_id IN (...)`. The over-fetch factor ensures enough
- * candidates survive the post-filter to fill the requested topK.
+ * When `sourceIds` is provided (c40 — v1 source-scoping), run one KNN per
+ * source using the `source_id` partition equality predicate, then merge by
+ * distance. sqlite-vec vec0 partitions do not support `source_id IN (...)`,
+ * and an over-fetch+post-filter approach misses small sources when the
+ * notebook has many other indexed chunks.
  */
 export function searchVectors(
   orm: Orm,
@@ -83,24 +83,48 @@ export function searchVectors(
   topK = 10,
   sourceIds?: number[],
 ): VectorHit[] {
-  const searchK = sourceIds?.length ? topK * 3 : topK;
-  const hits = orm.all<VectorHit>(sql`
-    SELECT v.rowid AS rowid,
-           v.source_id AS source_id,
-           v.notebook_id AS notebook_id,
-           v.distance AS distance,
-           c.text AS text,
-           c.chunk_index AS chunk_index
-      FROM vec_chunks v
-      JOIN chunks c ON c.id = v.rowid
-     WHERE v.embedding MATCH ${toBytes(queryVec)}
-       AND v.k = ${searchK}
-       AND v.notebook_id = ${notebookId}
-     ORDER BY v.distance;
-  `);
-  if (!sourceIds?.length) return hits.slice(0, topK);
-  const allowed = new Set(sourceIds);
-  return hits.filter((h) => allowed.has(h.source_id)).slice(0, topK);
+  const queryBytes = toBytes(queryVec);
+
+  if (!sourceIds?.length) {
+    return orm.all<VectorHit>(sql`
+      SELECT v.rowid AS rowid,
+             v.source_id AS source_id,
+             v.notebook_id AS notebook_id,
+             v.distance AS distance,
+             c.text AS text,
+             c.chunk_index AS chunk_index
+        FROM vec_chunks v
+        JOIN chunks c ON c.id = v.rowid
+       WHERE v.embedding MATCH ${queryBytes}
+         AND v.k = ${topK}
+         AND v.notebook_id = ${notebookId}
+       ORDER BY v.distance;
+    `);
+  }
+
+  // Unique positive ids only — avoid duplicate partition queries.
+  const uniqueSourceIds = [...new Set(sourceIds.filter((id) => Number.isFinite(id) && id > 0))];
+  const merged: VectorHit[] = [];
+  for (const sourceId of uniqueSourceIds) {
+    const hits = orm.all<VectorHit>(sql`
+      SELECT v.rowid AS rowid,
+             v.source_id AS source_id,
+             v.notebook_id AS notebook_id,
+             v.distance AS distance,
+             c.text AS text,
+             c.chunk_index AS chunk_index
+        FROM vec_chunks v
+        JOIN chunks c ON c.id = v.rowid
+       WHERE v.embedding MATCH ${queryBytes}
+         AND v.k = ${topK}
+         AND v.notebook_id = ${notebookId}
+         AND v.source_id = ${sourceId}
+       ORDER BY v.distance;
+    `);
+    merged.push(...hits);
+  }
+  merged.sort((a, b) => a.distance - b.distance);
+  return merged.slice(0, topK);
 }
 
 /** Count indexed vectors for a notebook (used to check `isIndexed`). */

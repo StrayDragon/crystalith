@@ -676,6 +676,7 @@ export default function WorkspaceLayout() {
           onSelect={sessions.setActiveSessionId}
           onCreate={async () => {
             await sessions.createSession();
+            overlays.closeSessionSwitcher();
           }}
           onUpdate={sessions.updateSession}
           onDelete={sessions.deleteSession}

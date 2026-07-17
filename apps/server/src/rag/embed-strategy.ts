@@ -96,7 +96,11 @@ export class EmbedStrategy implements RAGStrategy {
     }
 
     // Epoch cache: identical query+params within the same epoch skips re-embed.
-    const paramsKey = `${topK}:${minScore}:${opts?.multiQuery ?? false}:${opts?.outputType ?? ''}`;
+    // Include sourceIds so an empty scoped miss cannot poison other scopes.
+    const sourceKey = opts?.sourceIds?.length
+      ? [...opts.sourceIds].sort((a, b) => a - b).join(',')
+      : '';
+    const paramsKey = `${topK}:${minScore}:${opts?.multiQuery ?? false}:${opts?.outputType ?? ''}:src=${sourceKey}`;
     const cached = getCached(notebookId, query, paramsKey);
     if (cached) return applyDiversity(cached, opts?.maxPerSource);
 

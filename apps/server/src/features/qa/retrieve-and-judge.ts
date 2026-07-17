@@ -29,6 +29,9 @@ export const NO_SOURCES_ANSWER = '请先选择至少一个来源后再提问';
 export const NO_VECTOR_INDEX_ANSWER =
   '未在向量库中检索到相关内容。若刚切换运行环境，请对已导入来源重新索引。';
 export const SOURCES_NOT_READY_ANSWER = '所选来源尚未完成索引或内容为空，请等待来源状态变为就绪';
+export const LOW_SIMILARITY_ANSWER =
+  '检索到了片段，但与问题的相似度偏低，不足以作为可靠证据。请换个问法，或确认已勾选正确来源。';
+export const EMBEDDING_EMPTY_ANSWER = '问题向量化失败，请检查 Embedding 模型配置后重试。';
 
 /** Localized answer for each no-evidence reason (v1 no_evidence_answer_for_reason). */
 export function noEvidenceAnswerForReason(reason: NoEvidenceReason | null): string {
@@ -39,6 +42,10 @@ export function noEvidenceAnswerForReason(reason: NoEvidenceReason | null): stri
       return NO_VECTOR_INDEX_ANSWER;
     case 'no_valid_chunks':
       return SOURCES_NOT_READY_ANSWER;
+    case 'low_similarity':
+      return LOW_SIMILARITY_ANSWER;
+    case 'embedding_empty':
+      return EMBEDDING_EMPTY_ANSWER;
     default:
       return NO_EVIDENCE_ANSWER;
   }
@@ -131,7 +138,9 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
     return noEvidence('no_sources', emptyStats);
   }
 
-  // Step 3-4: Retrieve via RAG strategy (embed + search happen inside)
+  // Step 3-4: Retrieve via RAG strategy (embed + search happen inside).
+  // Pass minScore: 0 so strategy does not pre-drop weak hits — Step 10 applies
+  // the evidence threshold and can distinguish low_similarity from empty index.
   const strategyId = opts.strategyId ?? ragRegistry.getForNotebook(opts.notebookId)[0] ?? 'embed';
   const strategy = ragRegistry.get(strategyId);
 
@@ -139,7 +148,7 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
   try {
     rawResults = await strategy.retrieve(opts.question, opts.notebookId, {
       topK,
-      minScore,
+      minScore: 0,
       sourceIds: normalizedSourceIds,
       // c48: deterministic single-embed retrieval — do NOT enable multiQuery.
       // v1 service.py:319-327 embeds the question once and runs a single
@@ -149,11 +158,11 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
       multiQuery: false,
     });
   } catch {
-    // Embedding/search failure — treat as no_vector_hits
+    // Embedding/search failure
     return noEvidence('embedding_empty', emptyStats);
   }
 
-  // Step 6: No hits
+  // Step 6: No hits (empty vector index / scoped miss — not low similarity)
   if (rawResults.length === 0) {
     return noEvidence('no_vector_hits', emptyStats);
   }
