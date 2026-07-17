@@ -12,17 +12,17 @@ beforeEach(() => {
 
 test('fetchSessions stores list data', async () => {
   server.use(
-    http.get('*/v1/notebooks/:notebook_id/research', () =>
+    http.get('*/v1/notebooks/:notebookId/research', () =>
       HttpResponse.json([
         {
           id: 1,
-          notebook_id: 1,
+          notebookId: 1,
           topic: 'Topic',
           status: 'planning',
           current_iteration: 0,
           max_iterations: 3,
-          created_at: '2024-01-01',
-          updated_at: '2024-01-01',
+          createdAt: '2024-01-01',
+          updatedAt: '2024-01-01',
         },
       ]),
     ),
@@ -42,17 +42,17 @@ test('fetchSessions stores list data', async () => {
 
 test('createSession updates sessions and activeSession', async () => {
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/research', async ({ request, params }) => {
+    http.post('*/v1/notebooks/:notebookId/research', async ({ request, params }) => {
       const body = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         id: 2,
-        notebook_id: Number(params.notebook_id),
+        notebookId: Number(params.notebookId),
         topic: String(body.topic ?? 'New Topic'),
         status: 'planning',
         current_iteration: 0,
         max_iterations: Number(body.max_iterations ?? 4),
-        created_at: '2024-01-02',
-        updated_at: '2024-01-02',
+        createdAt: '2024-01-02',
+        updatedAt: '2024-01-02',
       });
     }),
   );
@@ -73,20 +73,20 @@ test('createSession updates sessions and activeSession', async () => {
 
 test('deleteSession removes session and clears active session', async () => {
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/research', async ({ request, params }) => {
+    http.post('*/v1/notebooks/:notebookId/research', async ({ request, params }) => {
       const body = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         id: 22,
-        notebook_id: Number(params.notebook_id),
+        notebookId: Number(params.notebookId),
         topic: String(body.topic ?? 'Topic'),
         status: 'planning',
         current_iteration: 0,
         max_iterations: Number(body.max_iterations ?? 4),
-        created_at: '2024-01-01',
-        updated_at: '2024-01-01',
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-01',
       });
     }),
-    http.delete('*/v1/notebooks/:notebook_id/research/:research_id', () => HttpResponse.json({})),
+    http.delete('*/v1/notebooks/:notebookId/research/:research_id', () => HttpResponse.json({})),
   );
 
   const { result } = renderHook(() => useResearch(1));
@@ -136,18 +136,18 @@ test('SSE reconnect does not use stale session state after completion', async ()
 
   const baseSession = {
     id: 1,
-    notebook_id: 1,
+    notebookId: 1,
     topic: 'Topic',
     status: 'planning',
     current_iteration: 0,
     max_iterations: 3,
-    created_at: '2024-01-01',
-    updated_at: '2024-01-01',
+    createdAt: '2024-01-01',
+    updatedAt: '2024-01-01',
   };
 
   let listCount = 0;
   server.use(
-    http.get('*/v1/notebooks/:notebook_id/research', () => {
+    http.get('*/v1/notebooks/:notebookId/research', () => {
       listCount += 1;
       if (listCount === 1) {
         return HttpResponse.json([baseSession]);

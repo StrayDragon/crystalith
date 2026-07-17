@@ -447,7 +447,7 @@ function ResearchDetailPanel({
               });
             }
 
-            if (needMore && iteration < session.max_iterations) {
+            if (needMore && iteration < session.maxIterations) {
               timeline.push({
                 type: 'decision',
                 message: '🔄 需要更多搜索，准备下一轮...',
@@ -469,7 +469,7 @@ function ResearchDetailPanel({
         });
 
         // Add iteration completion marker
-        if (iteration < session.max_iterations || session.status === 'completed') {
+        if (iteration < session.maxIterations || session.status === 'completed') {
           timeline.push({
             type: 'completed',
             message: `✅ 已完成第 ${iteration} 轮研究`,
@@ -481,7 +481,7 @@ function ResearchDetailPanel({
     }
 
     return timeline;
-  }, [sseEvents, session.steps, session.topic, session.max_iterations, session.status]);
+  }, [sseEvents, session.steps, session.topic, session.maxIterations, session.status]);
   const thinkingWindow = useMemo(() => {
     const total = thinkingTimeline.length;
     const expandedCap = total > maxExpandedThinking ? maxExpandedThinking : total;
@@ -781,12 +781,12 @@ function ResearchDetailPanel({
   );
 
   const completedIterations = Object.keys(stepsByIteration).length;
-  const totalResults = session.aggregated_results?.length || 0;
+  const totalResults = session.aggregatedResults?.length || 0;
 
   // For completed sessions, use the actual completed iterations from steps
   // This handles cases where current_iteration wasn't properly updated in the database
   const displayIteration =
-    isCompleted && completedIterations > 0 ? completedIterations : session.current_iteration;
+    isCompleted && completedIterations > 0 ? completedIterations : session.currentIteration;
 
   return (
     <div className={`flex flex-col ${isFullscreen ? 'h-[90vh]' : 'h-[600px]'}`}>
@@ -809,7 +809,7 @@ function ResearchDetailPanel({
                 {STATUS_LABELS[statusKey]}
               </span>
               <span className="text-xs text-gray-400 flex-shrink-0">
-                第 {session.current_iteration}/{session.max_iterations} 轮
+                第 {session.currentIteration}/{session.maxIterations} 轮
               </span>
             </div>
           </div>
@@ -974,13 +974,13 @@ function ResearchDetailPanel({
                       isCompleted ? 'bg-green-500' : 'bg-blue-500'
                     } ${isSearching || isAnalyzing ? 'animate-pulse' : ''}`}
                     style={{
-                      width: `${isCompleted ? 100 : Math.round(((displayIteration - 1) / session.max_iterations) * 100 + 100 / session.max_iterations / 2)}%`,
+                      width: `${isCompleted ? 100 : Math.round(((displayIteration - 1) / session.maxIterations) * 100 + 100 / session.maxIterations / 2)}%`,
                     }}
                   />
                 </div>
               </div>
               <span className="text-xs text-gray-500 whitespace-nowrap">
-                第 {displayIteration}/{session.max_iterations} 轮
+                第 {displayIteration}/{session.maxIterations} 轮
               </span>
             </div>
             {latestErrorEvent && !isCompleted && !isCancelled && (
@@ -1308,7 +1308,7 @@ function ResearchDetailPanel({
             )}
 
             {/* Final Report */}
-            {isCompleted && session.final_report && (
+            {isCompleted && session.finalReport && (
               <div className="bg-green-50 border border-green-100 rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <AssignmentIcon className="w-5 h-5 text-green-600" />
@@ -1316,7 +1316,7 @@ function ResearchDetailPanel({
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-green-100 max-h-64 overflow-y-auto">
                   <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">
-                    {session.final_report}
+                    {session.finalReport}
                   </pre>
                 </div>
                 <div className="flex gap-2 mt-4">
@@ -1335,8 +1335,8 @@ function ResearchDetailPanel({
                     color="gray"
                     className="flex-1"
                     onClick={() => {
-                      if (session.final_report) {
-                        void copyToClipboard(session.final_report).then((success) => {
+                      if (session.finalReport) {
+                        void copyToClipboard(session.finalReport).then((success) => {
                           if (success) {
                             toast.success('报告已复制到剪贴板');
                           } else {
@@ -1420,7 +1420,7 @@ function ResearchDetailPanel({
       )}
 
       {/* Results Dialog */}
-      {showResultsDialog && session.aggregated_results && (
+      {showResultsDialog && session.aggregatedResults && (
         <ResultsDialogContent
           session={session}
           selectedResults={selectedResults}
@@ -1461,7 +1461,7 @@ function ResultsDialogContent({
   setIsAddingSources,
 }: ResultsDialogContentProps) {
   const { style: modalStyle } = useLayer('modal');
-  const aggregatedResults = session.aggregated_results ?? [];
+  const aggregatedResults = session.aggregatedResults ?? [];
 
   const handleCopyLinks = () => {
     const selectedUrls = Array.from(selectedResults)

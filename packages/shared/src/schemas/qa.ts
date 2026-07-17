@@ -15,12 +15,12 @@ import { z } from 'zod';
  * retrieval_tokens / query_tokens / max_tokens / compressed.
  */
 export const ContextStatsSchema = z.object({
-  total_tokens: z.number().int().nonnegative(),
-  system_tokens: z.number().int().nonnegative(),
-  history_tokens: z.number().int().nonnegative(),
-  retrieval_tokens: z.number().int().nonnegative(),
-  query_tokens: z.number().int().nonnegative(),
-  max_tokens: z.number().int().nonnegative(),
+  totalTokens: z.number().int().nonnegative(),
+  systemTokens: z.number().int().nonnegative(),
+  historyTokens: z.number().int().nonnegative(),
+  retrievalTokens: z.number().int().nonnegative(),
+  queryTokens: z.number().int().nonnegative(),
+  maxTokens: z.number().int().nonnegative(),
   compressed: z.boolean(),
 });
 export type ContextStats = z.infer<typeof ContextStatsSchema>;

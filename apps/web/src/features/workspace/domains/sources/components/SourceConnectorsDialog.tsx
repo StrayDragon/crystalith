@@ -40,7 +40,7 @@ function safeArray<T>(value: T[] | null | undefined): T[] {
 }
 
 function titleForEntry(entry: SnapshotEntry): string | null {
-  const title = entry.frontmatter_summary?.title;
+  const title = entry.frontmatterSummary?.title;
   return typeof title === 'string' && title.trim() ? title.trim() : null;
 }
 
@@ -61,7 +61,7 @@ function buildDirectories(entries: SnapshotEntry[]): string[] {
   const seen = new Set<string>();
   const dirs: string[] = [];
   for (const entry of entries) {
-    for (const dir of allParentDirs(entry.relative_path)) {
+    for (const dir of allParentDirs(entry.relativePath)) {
       if (seen.has(dir)) continue;
       seen.add(dir);
       dirs.push(dir);
@@ -164,7 +164,7 @@ export default function SourceConnectorsDialog({
   const selectedConnector = useMemo<SourceConnectorDescriptor | null>(() => {
     const normalized = selectedConnectorId.trim();
     if (!normalized) return null;
-    return connectors.find((item) => item.connector_id === normalized) ?? null;
+    return connectors.find((item) => item.connectorId === normalized) ?? null;
   }, [connectors, selectedConnectorId]);
 
   const snapshotEntries = useMemo(() => safeArray(snapshot?.entries), [snapshot?.entries]);
@@ -172,7 +172,7 @@ export default function SourceConnectorsDialog({
   const filteredEntries = useMemo(() => {
     const query = snapshotFilter.trim().toLowerCase();
     if (!query) return snapshotEntries;
-    return snapshotEntries.filter((entry) => entry.relative_path.toLowerCase().includes(query));
+    return snapshotEntries.filter((entry) => entry.relativePath.toLowerCase().includes(query));
   }, [snapshotEntries, snapshotFilter]);
 
   const scopeDirectories = useMemo(
@@ -185,8 +185,8 @@ export default function SourceConnectorsDialog({
   );
   const scopePayload: ImportScope = useMemo(
     () => ({
-      include_directories: scopeDirectories.length ? scopeDirectories : null,
-      include_files: scopeFiles.length ? scopeFiles : null,
+      includeDirectories: scopeDirectories.length ? scopeDirectories : null,
+      includeFiles: scopeFiles.length ? scopeFiles : null,
     }),
     [scopeDirectories, scopeFiles],
   );
@@ -222,7 +222,7 @@ export default function SourceConnectorsDialog({
     try {
       const { data: created, error: createErr } = await api.v2
         .notebooks({ nid: notebookId }) // eslint-disable-next-line no-unexpected-multiline
-        ['source-connectors']({ connectorId: selectedConnector.connector_id })
+        ['source-connectors']({ connectorId: selectedConnector.connectorId })
         .bindings.post({ connection_config: connectionConfig });
       if (createErr)
         throw new Error(
@@ -310,7 +310,7 @@ export default function SourceConnectorsDialog({
       setImportResult(result as ImportScopeApplyResponse);
       await onSourcesChanged?.();
       toast.success(
-        `导入完成：新增 ${safeArray((result as ImportScopeApplyResponse).imported_source_ids).length} · 复用 ${safeArray((result as ImportScopeApplyResponse).reused_source_ids).length}`,
+        `导入完成：新增 ${safeArray((result as ImportScopeApplyResponse).importedSourceIds).length} · 复用 ${safeArray((result as ImportScopeApplyResponse).reusedSourceIds).length}`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : '导入失败';
@@ -373,7 +373,7 @@ export default function SourceConnectorsDialog({
       setSyncApplyResult(result as ImportScopeApplyResponse);
       await onSourcesChanged?.();
       toast.success(
-        `同步应用完成：新增 ${safeArray((result as ImportScopeApplyResponse).imported_source_ids).length} · 复用 ${safeArray((result as ImportScopeApplyResponse).reused_source_ids).length}`,
+        `同步应用完成：新增 ${safeArray((result as ImportScopeApplyResponse).importedSourceIds).length} · 复用 ${safeArray((result as ImportScopeApplyResponse).reusedSourceIds).length}`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : '同步应用失败';
@@ -383,7 +383,7 @@ export default function SourceConnectorsDialog({
     }
   }, [binding, busy, notebookId, onSourcesChanged, syncCheck]);
 
-  const configSchema = selectedConnector?.connection_config_schema ?? null;
+  const configSchema = selectedConnector?.connectionConfigSchema ?? null;
   const configProps = useMemo(() => schemaProperties(configSchema), [configSchema]);
   const configRequired = useMemo(() => schemaRequired(configSchema), [configSchema]);
 
@@ -411,7 +411,7 @@ export default function SourceConnectorsDialog({
         <div className="min-w-0">
           <div className="text-base font-semibold text-gray-900 dark:text-slate-100">{title}</div>
           <div className="mt-0.5 text-[11px] text-gray-600 dark:text-slate-400">
-            {selectedConnector ? `连接器：${selectedConnector.display_name}` : ''}
+            {selectedConnector ? `连接器：${selectedConnector.displayName}` : ''}
             {binding ? ` · binding #${binding.id}` : ''}
           </div>
         </div>
@@ -608,13 +608,13 @@ export default function SourceConnectorsDialog({
     return (
       <div className="space-y-2">
         {connectors.map((connector) => {
-          const selected = connector.connector_id === selectedConnectorId;
+          const selected = connector.connectorId === selectedConnectorId;
           const diags = safeArray(connector.diagnostics);
           return (
             <button
-              key={connector.connector_id}
+              key={connector.connectorId}
               type="button"
-              onClick={() => setSelectedConnectorId(connector.connector_id)}
+              onClick={() => setSelectedConnectorId(connector.connectorId)}
               className={`w-full text-left rounded-xl border px-4 py-3 transition-colors ${
                 selected
                   ? 'border-gray-900 bg-gray-900 text-white'
@@ -623,14 +623,14 @@ export default function SourceConnectorsDialog({
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold truncate">{connector.display_name}</div>
+                  <div className="text-sm font-semibold truncate">{connector.displayName}</div>
                   <div className="mt-0.5 text-[11px] opacity-80 truncate">
-                    {connector.description || connector.connector_id}
+                    {connector.description || connector.connectorId}
                   </div>
                 </div>
                 <div className="text-[10px] opacity-80 whitespace-nowrap">
-                  snapshot:{connector.capabilities?.supports_snapshot ? '✓' : '×'} · sync:
-                  {connector.capabilities?.supports_sync_check ? '✓' : '×'}
+                  snapshot:{connector.capabilities?.supportsSnapshot ? '✓' : '×'} · sync:
+                  {connector.capabilities?.supportsSyncCheck ? '✓' : '×'}
                 </div>
               </div>
               {diags.length ? (
@@ -638,8 +638,8 @@ export default function SourceConnectorsDialog({
                   className={`mt-2 text-[11px] ${selected ? 'text-white/80' : 'text-amber-700 dark:text-amber-300'}`}
                 >
                   {diags.slice(0, 2).map((d) => (
-                    <div key={`${connector.connector_id}-${d.error_code}`} className="truncate">
-                      [{d.error_code}] {d.message}
+                    <div key={`${connector.connectorId}-${d.errorCode}`} className="truncate">
+                      [{d.errorCode}] {d.message}
                     </div>
                   ))}
                 </div>
@@ -817,13 +817,13 @@ export default function SourceConnectorsDialog({
               const title = titleForEntry(entry);
               return (
                 <div
-                  key={entry.relative_path}
+                  key={entry.relativePath}
                   className="px-4 py-2 border-b border-gray-100 dark:border-slate-800 last:border-b-0"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-xs font-mono text-gray-900 dark:text-slate-100 truncate">
-                        {entry.relative_path}
+                        {entry.relativePath}
                       </div>
                       {title ? (
                         <div className="mt-0.5 text-[11px] text-gray-600 dark:text-slate-400 truncate">
@@ -832,11 +832,11 @@ export default function SourceConnectorsDialog({
                       ) : null}
                     </div>
                     <div className="text-[10px] text-gray-500 dark:text-slate-400 whitespace-nowrap">
-                      {Number.isFinite(entry.size_bytes) ? `${entry.size_bytes} B` : ''}
+                      {Number.isFinite(entry.sizeBytes) ? `${entry.sizeBytes} B` : ''}
                     </div>
                   </div>
                   <div className="mt-0.5 text-[10px] text-gray-500 dark:text-slate-500 truncate">
-                    {entry.modified_at}
+                    {entry.modifiedAt}
                   </div>
                 </div>
               );
@@ -895,21 +895,21 @@ export default function SourceConnectorsDialog({
             <div className="max-h-[40vh] overflow-y-auto">
               {snapshotEntries.map((entry) => (
                 <label
-                  key={entry.relative_path}
+                  key={entry.relativePath}
                   className="flex items-center gap-2 px-4 py-2 border-b border-gray-100 dark:border-slate-800 last:border-b-0"
                 >
                   <input
                     type="checkbox"
-                    checked={Boolean(selectedFiles[entry.relative_path])}
+                    checked={Boolean(selectedFiles[entry.relativePath])}
                     onChange={(e) =>
                       setSelectedFiles((prev) => ({
                         ...prev,
-                        [entry.relative_path]: e.target.checked,
+                        [entry.relativePath]: e.target.checked,
                       }))
                     }
                   />
                   <span className="text-xs font-mono text-gray-900 dark:text-slate-100 truncate">
-                    {entry.relative_path}
+                    {entry.relativePath}
                   </span>
                 </label>
               ))}
@@ -925,24 +925,24 @@ export default function SourceConnectorsDialog({
             <div className="max-h-[30vh] overflow-y-auto">
               {results.map((item: ImportResultItem) => (
                 <div
-                  key={`${item.relative_path}-${item.status}-${item.source_id ?? 'none'}`}
+                  key={`${item.relativePath}-${item.status}-${item.sourceId ?? 'none'}`}
                   className="px-4 py-2 border-b border-gray-100 dark:border-slate-800 last:border-b-0"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-xs font-mono text-gray-900 dark:text-slate-100 truncate">
-                        {item.relative_path}
+                        {item.relativePath}
                       </div>
                       {item.diagnostic ? (
                         <div className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300 truncate">
-                          [{item.diagnostic.error_code}] {item.diagnostic.message}
+                          [{item.diagnostic.errorCode}] {item.diagnostic.message}
                           {item.diagnostic.hint ? ` · ${item.diagnostic.hint}` : ''}
                         </div>
                       ) : null}
                     </div>
                     <div className="text-[10px] text-gray-500 dark:text-slate-400 whitespace-nowrap">
                       {item.status}
-                      {item.source_id ? ` #${item.source_id}` : ''}
+                      {item.sourceId ? ` #${item.sourceId}` : ''}
                     </div>
                   </div>
                 </div>
@@ -1003,11 +1003,11 @@ export default function SourceConnectorsDialog({
                 <div className="max-h-[35vh] overflow-y-auto">
                   {group.items.map((item: any) => (
                     <div
-                      key={`${group.label}-${item.relative_path}`}
+                      key={`${group.label}-${item.relativePath}`}
                       className="px-4 py-2 border-b border-gray-100 dark:border-slate-800 last:border-b-0"
                     >
                       <div className="text-xs font-mono text-gray-900 dark:text-slate-100 truncate">
-                        {item.relative_path}
+                        {item.relativePath}
                       </div>
                       {item.reason ? (
                         <div className="mt-0.5 text-[11px] text-gray-600 dark:text-slate-400 truncate">
@@ -1030,24 +1030,24 @@ export default function SourceConnectorsDialog({
             <div className="max-h-[30vh] overflow-y-auto">
               {applyResults.map((item: ImportResultItem) => (
                 <div
-                  key={`${item.relative_path}-${item.status}-${item.source_id ?? 'none'}`}
+                  key={`${item.relativePath}-${item.status}-${item.sourceId ?? 'none'}`}
                   className="px-4 py-2 border-b border-gray-100 dark:border-slate-800 last:border-b-0"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-xs font-mono text-gray-900 dark:text-slate-100 truncate">
-                        {item.relative_path}
+                        {item.relativePath}
                       </div>
                       {item.diagnostic ? (
                         <div className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300 truncate">
-                          [{item.diagnostic.error_code}] {item.diagnostic.message}
+                          [{item.diagnostic.errorCode}] {item.diagnostic.message}
                           {item.diagnostic.hint ? ` · ${item.diagnostic.hint}` : ''}
                         </div>
                       ) : null}
                     </div>
                     <div className="text-[10px] text-gray-500 dark:text-slate-400 whitespace-nowrap">
                       {item.status}
-                      {item.source_id ? ` #${item.source_id}` : ''}
+                      {item.sourceId ? ` #${item.sourceId}` : ''}
                     </div>
                   </div>
                 </div>

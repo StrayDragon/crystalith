@@ -18,21 +18,21 @@ export type SlideStatus = z.infer<typeof SlideStatusSchema>;
 
 export const StudioSlideSchema = z.object({
   id: IdSchema,
-  notebook_id: IdSchema,
-  output_id: IdSchema.nullable().optional(),
+  notebookId: IdSchema,
+  outputId: IdSchema.nullable().optional(),
   title: z.string().nullable().optional(),
   prompt: z.string().nullable().optional(),
   engine: z.string().default('slidev'),
-  chunk_ids: z.array(IdSchema).nullable().optional(),
-  source_ids: z.array(IdSchema).nullable().optional(),
+  chunkIds: z.array(IdSchema).nullable().optional(),
+  sourceIds: z.array(IdSchema).nullable().optional(),
   outline: SlidesOutlineSchema.nullable().optional(),
   markdown: z.string().nullable().optional(),
-  generation_config: JsonMetadataSchema.nullable().optional(),
+  generationConfig: JsonMetadataSchema.nullable().optional(),
   stage: SlideStageSchema,
   status: SlideStatusSchema,
-  error_message: z.string().nullable().optional(),
-  created_at: IsoTimestampSchema,
-  updated_at: IsoTimestampSchema,
+  errorMessage: z.string().nullable().optional(),
+  createdAt: IsoTimestampSchema,
+  updatedAt: IsoTimestampSchema,
 });
 export type StudioSlide = z.infer<typeof StudioSlideSchema>;
 
@@ -40,8 +40,8 @@ export const SlideDraftCreateSchema = z.object({
   title: z.string().nullable().optional(),
   prompt: z.string().nullable().optional(),
   engine: z.string().default('slidev'),
-  source_ids: z.array(IdSchema).nullable().optional(),
-  generation_config: JsonMetadataSchema.nullable().optional(),
+  sourceIds: z.array(IdSchema).nullable().optional(),
+  generationConfig: JsonMetadataSchema.nullable().optional(),
 });
 export type SlideDraftCreate = z.infer<typeof SlideDraftCreateSchema>;
 
@@ -49,8 +49,8 @@ export const SlideDraftUpdateSchema = z.object({
   title: z.string().nullable().optional(),
   prompt: z.string().nullable().optional(),
   engine: z.string().optional(),
-  source_ids: z.array(IdSchema).nullable().optional(),
-  generation_config: JsonMetadataSchema.nullable().optional(),
+  sourceIds: z.array(IdSchema).nullable().optional(),
+  generationConfig: JsonMetadataSchema.nullable().optional(),
   outline: SlidesOutlineSchema.nullable().optional(),
   markdown: z.string().nullable().optional(),
   stage: SlideStageSchema.optional(),
@@ -76,7 +76,7 @@ export const SlideGenerationConfigSchema = z.object({
   tone: z.string().nullable().optional(),
   language: z.string().nullable().optional(),
   density: z.string().nullable().optional(),
-  theme_preset: z.string().nullable().optional(),
+  themePreset: z.string().nullable().optional(),
   frontmatter: z.string().nullable().optional(),
 });
 export type SlideGenerationConfig = z.infer<typeof SlideGenerationConfigSchema>;
@@ -85,7 +85,7 @@ export type SlideGenerationConfig = z.infer<typeof SlideGenerationConfigSchema>;
 export const ConfigOptionSchema = z.object({
   id: z.string(),
   label: z.string(),
-  is_default: z.boolean().default(false),
+  isDefault: z.boolean().default(false),
 });
 export type ConfigOption = z.infer<typeof ConfigOptionSchema>;
 
@@ -104,20 +104,20 @@ export type ThemePresetOption = z.infer<typeof ThemePresetOptionSchema>;
  */
 export const SlidesConfigSchemaSchema = z.object({
   defaults: JsonMetadataSchema.default({}),
-  quantity_options: z.array(ConfigOptionSchema).default([]),
-  audience_options: z.array(ConfigOptionSchema).default([]),
-  structure_options: z.array(ConfigOptionSchema).default([]),
-  tone_options: z.array(ConfigOptionSchema).default([]),
-  language_options: z.array(ConfigOptionSchema).default([]),
-  density_options: z.array(ConfigOptionSchema).default([]),
-  theme_preset_options: z.array(ThemePresetOptionSchema).default([]),
+  quantityOptions: z.array(ConfigOptionSchema).default([]),
+  audienceOptions: z.array(ConfigOptionSchema).default([]),
+  structureOptions: z.array(ConfigOptionSchema).default([]),
+  toneOptions: z.array(ConfigOptionSchema).default([]),
+  languageOptions: z.array(ConfigOptionSchema).default([]),
+  densityOptions: z.array(ConfigOptionSchema).default([]),
+  themePresetOptions: z.array(ThemePresetOptionSchema).default([]),
   engine: z.string().nullable().optional(),
   preview: z
     .object({
       kind: z.string(),
       service: z.string().nullable().optional(),
       url: z.string().nullable().optional(),
-      open_in_new_tab: z.boolean().nullable().optional(),
+      openInNewTab: z.boolean().nullable().optional(),
       meta: z.record(z.string(), z.unknown()).default({}),
     })
     .nullable()
@@ -128,5 +128,5 @@ export type SlidesConfigSchema = z.infer<typeof SlidesConfigSchemaSchema>;
 /** Re-export so consumers can import slide outline shape from one place. */
 export { SlidesOutlineSchema };
 
-/** Optional marker kept for parity with v1 last_error_at pattern. */
+/** Optional marker kept for parity with v1 lastErrorAt pattern. */
 export const _SlideOptionalTimestamp = OptionalTimestampSchema;

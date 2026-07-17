@@ -11,7 +11,7 @@ describe('c60: ContextStats system_tokens real counting', () => {
       question: 'test question',
       systemPrompt: 'You are a helpful assistant that answers questions based on provided sources.',
     });
-    expect(result.contextStats.system_tokens).toBeGreaterThan(0);
+    expect(result.contextStats.systemTokens).toBeGreaterThan(0);
   });
 
   it('system_tokens is 0 when systemPrompt is absent', async () => {
@@ -19,7 +19,7 @@ describe('c60: ContextStats system_tokens real counting', () => {
       notebookId: 999,
       question: 'test question',
     });
-    expect(result.contextStats.system_tokens).toBe(0);
+    expect(result.contextStats.systemTokens).toBe(0);
   });
 
   it('system_tokens scales with systemPrompt length', async () => {
@@ -33,8 +33,8 @@ describe('c60: ContextStats system_tokens real counting', () => {
       question: 'q',
       systemPrompt: 'You are a helpful assistant. '.repeat(100),
     });
-    expect(longResult.contextStats.system_tokens).toBeGreaterThan(
-      shortResult.contextStats.system_tokens,
+    expect(longResult.contextStats.systemTokens).toBeGreaterThan(
+      shortResult.contextStats.systemTokens,
     );
   });
 
@@ -44,8 +44,8 @@ describe('c60: ContextStats system_tokens real counting', () => {
       question: 'test',
       systemPrompt: 'System prompt with some tokens here.',
     });
-    expect(result.contextStats.total_tokens).toBeGreaterThanOrEqual(
-      result.contextStats.system_tokens + result.contextStats.query_tokens,
+    expect(result.contextStats.totalTokens).toBeGreaterThanOrEqual(
+      result.contextStats.systemTokens + result.contextStats.queryTokens,
     );
   });
 });

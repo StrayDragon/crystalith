@@ -109,7 +109,7 @@ export function resolveConnectorRoot(
       root: null,
       diagnostics: [
         {
-          error_code: 'CONFIG_REQUIRED',
+          errorCode: 'CONFIG_REQUIRED',
           message: `缺少必填配置：${primaryKey}`,
           hint: '请填写有效的本地目录路径。',
         },
@@ -126,7 +126,7 @@ export function resolveConnectorRoot(
       root: null,
       diagnostics: [
         {
-          error_code: 'PATH_UNRESOLVABLE',
+          errorCode: 'PATH_UNRESOLVABLE',
           message: '目录路径无法解析',
           details: { path: text },
         },
@@ -144,7 +144,7 @@ async function validateRoot(root: string): Promise<Diagnostic[] | null> {
   } catch {
     return [
       {
-        error_code: 'PATH_NOT_FOUND',
+        errorCode: 'PATH_NOT_FOUND',
         message: '目录不存在',
         hint: '请检查路径是否正确，或确认后端进程有权限访问该目录。',
         details: { path: root },
@@ -155,7 +155,7 @@ async function validateRoot(root: string): Promise<Diagnostic[] | null> {
   if (!st.isDirectory()) {
     return [
       {
-        error_code: 'NOT_A_DIRECTORY',
+        errorCode: 'NOT_A_DIRECTORY',
         message: '路径不是目录',
         details: { path: root },
       },
@@ -231,9 +231,9 @@ async function walkDirectory(
       }
 
       entries.push({
-        relative_path: relativePath,
-        size_bytes: st.size,
-        modified_at: modifiedAt,
+        relativePath: relativePath,
+        sizeBytes: st.size,
+        modifiedAt: modifiedAt,
         ...(contentHash ? { content_hash: contentHash } : {}),
         ...(frontmatter ? { frontmatter_summary: frontmatter } : {}),
       });
@@ -241,7 +241,7 @@ async function walkDirectory(
   }
 
   await walk(root);
-  entries.sort((a, b) => a.relative_path.localeCompare(b.relative_path));
+  entries.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
   return entries;
 }
 
@@ -266,7 +266,7 @@ export async function buildFilesystemSnapshot(
   const entries = await walkDirectory(resolvedRoot, extensions, includeFrontmatter);
 
   return {
-    generated_at: new Date().toISOString(),
+    generatedAt: new Date().toISOString(),
     entries,
   };
 }

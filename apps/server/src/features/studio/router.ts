@@ -98,22 +98,22 @@ const apiDocs: OpenApiRoute[] = [
 function serializeSlide(row: typeof studioSlides.$inferSelect) {
   return {
     id: row.id,
-    notebook_id: row.notebookId,
-    // c51: v1 SlideDraftRead (api.py:76-94) includes output_id + generation_config
-    output_id: row.outputId ?? null,
+    notebookId: row.notebookId,
+    // c51: v1 SlideDraftRead (api.py:76-94) includes outputId + generationConfig
+    outputId: row.outputId ?? null,
     title: row.title,
     prompt: row.prompt,
     engine: row.engine,
-    chunk_ids: row.chunkIds,
-    source_ids: row.sourceIds,
+    chunkIds: row.chunkIds,
+    sourceIds: row.sourceIds,
     outline: row.outline,
     markdown: row.markdown,
-    generation_config: row.generationConfig ?? null,
+    generationConfig: row.generationConfig ?? null,
     stage: row.stage,
     status: row.status,
-    error_message: row.errorMessage,
-    created_at: row.createdAt.toISOString(),
-    updated_at: row.updatedAt.toISOString(),
+    errorMessage: row.errorMessage,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
@@ -136,12 +136,15 @@ function requireSourceIds(raw: unknown): number[] {
 export const studioRouter = new Elysia({ prefix: '/v2' })
   // Create slide draft
   .post('/studio/slides', ({ body }) => {
-    const { notebook_id, title, prompt, source_ids, generation_config } = body as Record<
-      string,
-      unknown
-    >;
-    const notebookId = Number(notebook_id);
-    if (!notebookId) throw new Error('notebook_id required');
+    const {
+      notebookId: nbId,
+      title,
+      prompt,
+      sourceIds,
+      generationConfig,
+    } = body as Record<string, unknown>;
+    const notebookId = Number(nbId);
+    if (!notebookId) throw new Error('notebookId required');
 
     const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
     if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
@@ -164,8 +167,8 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
               ? prompt
               : ''
           : null,
-        sourceIds: requireSourceIds(source_ids),
-        generationConfig: (generation_config as Record<string, unknown>) ?? null,
+        sourceIds: requireSourceIds(sourceIds),
+        generationConfig: (generationConfig as Record<string, unknown>) ?? null,
         stage: 'input',
         status: 'idle',
       })
@@ -176,8 +179,8 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
 
   // List slide drafts
   .get('/studio/slides', ({ query }) => {
-    const notebookId = Number((query as { notebook_id?: string }).notebook_id);
-    if (!notebookId) throw new NotFoundError('notebook_id required');
+    const notebookId = Number((query as { notebookId?: string }).notebookId);
+    if (!notebookId) throw new NotFoundError('notebookId required');
     return db()
       .select()
       .from(studioSlides)
@@ -191,8 +194,8 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
 
   // c43: Get latest draft (v1 api.py:232-247)
   .get('/studio/slides/latest', ({ query }) => {
-    const notebookId = Number((query as { notebook_id?: string }).notebook_id);
-    if (!notebookId) throw new NotFoundError('notebook_id required');
+    const notebookId = Number((query as { notebookId?: string }).notebookId);
+    if (!notebookId) throw new NotFoundError('notebookId required');
     const row = db()
       .select()
       .from(studioSlides)
@@ -207,16 +210,16 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
   .patch('/studio/slides/:id', ({ params, body }) => {
     const id = Number(params.id);
     getSlideOrThrow(id);
-    const { title, prompt, source_ids, generation_config } = body as Record<string, unknown>;
+    const { title, prompt, sourceIds, generationConfig } = body as Record<string, unknown>;
     const updateData: Record<string, unknown> = {};
     if (title !== undefined)
       updateData.title = typeof title === 'string' ? title : typeof title === 'string' ? title : '';
     if (prompt !== undefined)
       updateData.prompt =
         typeof prompt === 'string' ? prompt : typeof prompt === 'string' ? prompt : '';
-    if (source_ids !== undefined) updateData.sourceIds = requireSourceIds(source_ids);
-    if (generation_config !== undefined)
-      updateData.generationConfig = generation_config as Record<string, unknown>;
+    if (sourceIds !== undefined) updateData.sourceIds = requireSourceIds(sourceIds);
+    if (generationConfig !== undefined)
+      updateData.generationConfig = generationConfig as Record<string, unknown>;
     updateData.errorMessage = null;
     db().update(studioSlides).set(updateData).where(eq(studioSlides.id, id)).run();
     return serializeSlide(getSlideOrThrow(id));

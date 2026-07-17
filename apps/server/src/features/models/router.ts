@@ -52,7 +52,7 @@ export const modelsRouter = new Elysia({ prefix: '/v2' })
         id: m.id,
         provider: m.provider,
         model: m.model,
-        display_name: m.display_name,
+        displayName: m.displayName,
         description: m.description,
         roles: m.roles,
         capabilities: m.capabilities,

@@ -9,12 +9,12 @@ export type MessageRole = z.infer<typeof MessageRoleSchema>;
 
 export const MessageSchema = z.object({
   id: IdSchema.describe(desc('message.id')),
-  session_id: IdSchema.describe(desc('message.session_id')),
+  sessionId: IdSchema.describe(desc('message.session_id')),
   role: MessageRoleSchema.describe(desc('message.role')),
   content: z.string().min(1).describe(desc('message.content')),
   citations: z.array(CitationSchema).nullable().optional(),
-  created_at: IsoTimestampSchema.describe(desc('message.created_at')),
-  updated_at: IsoTimestampSchema,
+  createdAt: IsoTimestampSchema.describe(desc('message.created_at')),
+  updatedAt: IsoTimestampSchema,
 });
 export type Message = z.infer<typeof MessageSchema>;
 

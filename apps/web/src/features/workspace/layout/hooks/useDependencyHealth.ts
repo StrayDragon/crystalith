@@ -11,7 +11,7 @@ export interface DependencyServiceStatus {
   status: OptionalServiceStatus;
   healthy: boolean | null;
   error?: string | null;
-  error_code?: string | null;
+  errorCode?: string | null;
   recovery_hint?: string | null;
   last_probe?: string | null;
   degrade_policy?: string | null;
@@ -71,7 +71,7 @@ export function toOptionalServiceDiagnostics(
       status: entry.status,
       enabled: entry.enabled,
       endpoint: entry.endpoint ?? null,
-      errorCode: entry.error_code ?? null,
+      errorCode: entry.errorCode ?? null,
       error: entry.error ?? null,
       recoveryHint: entry.recovery_hint ?? null,
       lastProbe: entry.last_probe ?? null,

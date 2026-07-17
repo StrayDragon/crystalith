@@ -91,7 +91,7 @@ async function get(path: string): Promise<{ status: number; body: unknown }> {
 
 describe('citation context — resolve by chunk_id', () => {
   it('resolves target chunk by chunk_id', async () => {
-    const { status, body } = await get(ctxPath(`?chunk_id=${chunkIds[2]}&before=1&after=1`));
+    const { status, body } = await get(ctxPath(`?chunkId=${chunkIds[2]}&before=1&after=1`));
     expect(status).toBe(200);
     const result = body as {
       citation: { chunkId: number; sourceName: string };
@@ -108,7 +108,7 @@ describe('citation context — resolve by chunk_id', () => {
   });
 
   it('enriches page_number and paragraph_index from metadata', async () => {
-    const { body } = await get(ctxPath(`?chunk_id=${chunkIds[1]}&before=0&after=0`));
+    const { body } = await get(ctxPath(`?chunkId=${chunkIds[1]}&before=0&after=0`));
     const result = body as {
       chunk: { pageNumber: number | null; paragraphIndex: number | null };
     };
@@ -119,7 +119,7 @@ describe('citation context — resolve by chunk_id', () => {
 
 describe('citation context — resolve by source_id + chunk_index', () => {
   it('resolves by source_id and 1-based chunk_index', async () => {
-    const { status, body } = await get(ctxPath(`?source_id=${sourceId}&chunk_index=1`));
+    const { status, body } = await get(ctxPath(`?sourceId=${sourceId}&chunkIndex=1`));
     expect(status).toBe(200);
     const result = body as { chunk: { chunkId: number; text: string; chunkIndex: number } };
     expect(result.chunk.chunkId).toBe(chunkIds[0]);
@@ -128,21 +128,21 @@ describe('citation context — resolve by source_id + chunk_index', () => {
   });
 
   it('returns 404 for out-of-range chunk_index', async () => {
-    const { status } = await get(ctxPath(`?source_id=${sourceId}&chunk_index=99`));
+    const { status } = await get(ctxPath(`?sourceId=${sourceId}&chunkIndex=99`));
     expect(status).toBe(404);
   });
 });
 
 describe('citation context — neighborhood window', () => {
   it('returns before and after chunks from the same source', async () => {
-    const { body } = await get(ctxPath(`?chunk_id=${chunkIds[2]}&before=2&after=2`));
+    const { body } = await get(ctxPath(`?chunkId=${chunkIds[2]}&before=2&after=2`));
     const result = body as { before: unknown[]; after: unknown[] };
     expect(result.before).toHaveLength(2);
     expect(result.after).toHaveLength(2);
   });
 
   it('before chunks are ordered by ascending chunk_index', async () => {
-    const { body } = await get(ctxPath(`?chunk_id=${chunkIds[2]}&before=2&after=1`));
+    const { body } = await get(ctxPath(`?chunkId=${chunkIds[2]}&before=2&after=1`));
     const result = body as {
       before: Array<{ chunkIndex: number }>;
       after: Array<{ chunkIndex: number }>;
@@ -156,7 +156,7 @@ describe('citation context — neighborhood window', () => {
   });
 
   it('capped at source boundary (do not cross into other sources)', async () => {
-    const { body } = await get(ctxPath(`?chunk_id=${chunkIds[0]}&before=5&after=1`));
+    const { body } = await get(ctxPath(`?chunkId=${chunkIds[0]}&before=5&after=1`));
     const result = body as { before: unknown[] };
     // chunk_index=0 has no chunks before it
     expect(result.before).toHaveLength(0);
@@ -166,7 +166,7 @@ describe('citation context — neighborhood window', () => {
 describe('citation context — validation', () => {
   it('returns 400 when both chunk_id and source_id+chunk_index are provided', async () => {
     const { status } = await get(
-      ctxPath(`?chunk_id=${chunkIds[0]}&source_id=${sourceId}&chunk_index=1`),
+      ctxPath(`?chunkId=${chunkIds[0]}&sourceId=${sourceId}&chunkIndex=1`),
     );
     expect(status).toBe(400);
   });
@@ -177,13 +177,13 @@ describe('citation context — validation', () => {
   });
 
   it('returns 404 for nonexistent chunk_id', async () => {
-    const { status } = await get(ctxPath(`?chunk_id=99999`));
+    const { status } = await get(ctxPath(`?chunkId=99999`));
     expect(status).toBe(404);
   });
 
   it('clamps before/after to [0, 5] range', async () => {
     // before=99 should be clamped to 5
-    const { status } = await get(ctxPath(`?chunk_id=${chunkIds[2]}&before=99&after=-1`));
+    const { status } = await get(ctxPath(`?chunkId=${chunkIds[2]}&before=99&after=-1`));
     expect(status).toBe(200);
   });
 });

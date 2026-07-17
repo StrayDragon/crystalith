@@ -1,14 +1,14 @@
 // Shared error-response helper — c54.
 //
 // All non-SSE error responses MUST go through `sendError` so the body matches
-// the ErrorEnvelopeSchema from @crystalith/shared (error_code + message +
-// optional details + optional retry_after). This replaces the ad-hoc
-// `{ error: string }` / `{ error, error_code }` shapes that were inlined across
+// the ErrorEnvelopeSchema from @crystalith/shared (errorCode + message +
+// optional details + optional retryAfter). This replaces the ad-hoc
+// `{ error: string }` / `{ error, errorCode }` shapes that were inlined across
 // feature routers.
 //
 // Usage in an Elysia handler:
-//   return sendError(set, 'INVALID_REQUEST', 'source_ids must not be empty');
-//   return sendError(set, 'CONFLICT', 'Tag name already exists', { existing_tag_id });
+//   return sendError(set, 'INVALID_REQUEST', 'sourceIds must not be empty');
+//   return sendError(set, 'CONFLICT', 'Tag name already exists', { existingTagId });
 //   return sendError(set, 'RATE_LIMITED', 'Too many requests', undefined, 30);
 import type { ErrorEnvelope } from '@crystalith/shared';
 
@@ -61,8 +61,8 @@ export function sendError(
   retryAfter?: number,
 ): ErrorEnvelope {
   set.status = STATUS_BY_CODE[code];
-  const body: ErrorEnvelope = { error_code: code, message };
+  const body: ErrorEnvelope = { errorCode: code, message };
   if (details !== undefined) body.details = details;
-  if (retryAfter !== undefined) body.retry_after = retryAfter;
+  if (retryAfter !== undefined) body.retryAfter = retryAfter;
   return body;
 }

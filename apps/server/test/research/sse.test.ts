@@ -166,8 +166,8 @@ describe('research SSE stream', () => {
   it('emits approval_request and done events during a full cycle', async () => {
     const { body: startRes } = await post('/v2/research', {
       topic: 'SSE event test',
-      notebook_id: notebookId,
-      max_iterations: 1,
+      notebookId: notebookId,
+      maxIterations: 1,
     });
     const sessionId = startRes.id;
 
@@ -197,8 +197,8 @@ describe('research SSE stream', () => {
   it('emits done event with cancelled status when cancelled', async () => {
     const { body: startRes } = await post('/v2/research', {
       topic: 'SSE cancel test',
-      notebook_id: notebookId,
-      max_iterations: 3,
+      notebookId: notebookId,
+      maxIterations: 3,
     });
     const sessionId = startRes.id;
 
@@ -219,8 +219,8 @@ describe('research SSE stream', () => {
   it('plan_ready contains the search plan data', async () => {
     const { body: startRes } = await post('/v2/research', {
       topic: 'Plan data in SSE',
-      notebook_id: notebookId,
-      max_iterations: 1,
+      notebookId: notebookId,
+      maxIterations: 1,
     });
     const sessionId = startRes.id;
 

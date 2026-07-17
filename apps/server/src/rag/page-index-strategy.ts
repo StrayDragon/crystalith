@@ -13,7 +13,7 @@ interface PageGroup {
   page: number;
   chunkIds: number[];
   text: string;
-  source_id: number;
+  sourceId: number;
 }
 
 export class PageIndexStrategy implements RAGStrategy {
@@ -64,7 +64,7 @@ export class PageIndexStrategy implements RAGStrategy {
           page,
           chunkIds: [row.id],
           text: row.text,
-          source_id: row.sourceId,
+          sourceId: row.sourceId,
         });
       }
     }
@@ -85,12 +85,12 @@ export class PageIndexStrategy implements RAGStrategy {
 
       if (score >= minScore) {
         results.push({
-          chunk_id: group.chunkIds[0],
+          chunkId: group.chunkIds[0],
           text: group.text.slice(0, 500),
           // substring-match density (0-1, higher = better)
           score,
-          source_id: group.source_id,
-          chunk_index: group.page,
+          sourceId: group.sourceId,
+          chunkIndex: group.page,
         });
       }
     }
@@ -100,7 +100,7 @@ export class PageIndexStrategy implements RAGStrategy {
 
   async isIndexed(notebookId: number): Promise<boolean> {
     const row = db().get<{ c: number }>(
-      sql`SELECT COUNT(*) AS c FROM ${chunks} c JOIN ${sources} s ON s.id = c.source_id WHERE s.notebook_id = ${notebookId}`,
+      sql`SELECT COUNT(*) AS c FROM ${chunks} c JOIN ${sources} s ON s.id = c.sourceId WHERE s.notebook_id = ${notebookId}`,
     );
     return (row?.c ?? 0) > 0;
   }

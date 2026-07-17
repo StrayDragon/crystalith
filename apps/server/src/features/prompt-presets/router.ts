@@ -77,10 +77,10 @@ function serializePreset(row: typeof promptPresets.$inferSelect) {
     id: row.id,
     trigger: row.trigger,
     description: row.description,
-    system_prompt: row.systemPrompt,
+    systemPrompt: row.systemPrompt,
     enabled: row.enabled,
-    created_at: row.createdAt.toISOString(),
-    updated_at: row.updatedAt.toISOString(),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
@@ -103,7 +103,7 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
         .values({
           trigger: body.trigger,
           description: body.description ?? null,
-          systemPrompt: body.system_prompt,
+          systemPrompt: body.systemPrompt,
           enabled: body.enabled ?? true,
         })
         .returning()
@@ -131,7 +131,7 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
       const updateData: Record<string, unknown> = {};
       if (body.trigger !== undefined) updateData.trigger = body.trigger;
       if (body.description !== undefined) updateData.description = body.description;
-      if (body.system_prompt !== undefined) updateData.systemPrompt = body.system_prompt;
+      if (body.systemPrompt !== undefined) updateData.systemPrompt = body.systemPrompt;
       if (body.enabled !== undefined) updateData.enabled = body.enabled;
 
       const updated = db()

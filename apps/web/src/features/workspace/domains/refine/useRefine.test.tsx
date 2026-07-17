@@ -94,16 +94,16 @@ test('normalizes slides tool config schema from workspace tools', async () => {
             label: '演示',
             description: '演示文稿',
             tone: 'indigo',
-            output_type: 'SLIDES',
+            outputType: 'SLIDES',
             prompt: '生成 slides',
             enabled: true,
-            config_schema: {
+            configSchema: {
               engine: 'slidev',
               preview: {
                 kind: 'external_url',
                 service: 'slidev',
               },
-              theme_preset_options: [
+              themePresetOptions: [
                 {
                   id: 'default',
                   label: 'Default',
@@ -137,7 +137,7 @@ test('normalizes slides tool config schema from workspace tools', async () => {
     expect(result.current.tools).toHaveLength(1);
   });
 
-  expect(result.current.tools[0].configSchema?.theme_preset_options).toEqual([
+  expect(result.current.tools[0].configSchema?.themePresetOptions).toEqual([
     {
       id: 'default',
       label: 'Default',

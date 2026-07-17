@@ -156,7 +156,7 @@ export const SlidesOutlineSchema = z.object({
 });
 
 export const SlidesContentSchema = OutputContentBaseSchema.extend({
-  slide_id: z.number().int().nullable().optional(),
+  slideId: z.number().int().nullable().optional(),
   engine: z.string().nullable().optional(),
   outline: SlidesOutlineSchema.nullable().optional(),
   markdown: z.string().nullable().optional(),
@@ -223,13 +223,13 @@ export type OutputContent = z.infer<typeof OutputContentSchema>;
 
 export const OutputSchema = z.object({
   id: IdSchema.describe(desc('output.id')),
-  notebook_id: IdSchema,
+  notebookId: IdSchema,
   type: OutputTypeSchema.describe(desc('output.type')),
   prompt: z.string().nullable().optional(),
-  chunk_ids: z.array(IdSchema).nullable().optional(),
+  chunkIds: z.array(IdSchema).nullable().optional(),
   content: OutputContentSchema.describe(desc('output.content')),
-  created_at: IsoTimestampSchema.describe(desc('output.created_at')),
-  updated_at: IsoTimestampSchema,
+  createdAt: IsoTimestampSchema.describe(desc('output.created_at')),
+  updatedAt: IsoTimestampSchema,
 });
 export type Output = z.infer<typeof OutputSchema>;
 
@@ -243,13 +243,13 @@ export const OutputListSchema = z.object({
   outputs: z.array(OutputSchema),
 });
 
-/** Metadata describing an output type for UI selectors (tone/prompt/is_tool). */
+/** Metadata describing an output type for UI selectors (tone/prompt/isTool). */
 export const OutputTypeMetaSchema = z.object({
   type: OutputTypeSchema,
-  display_text: z.string(),
+  displayText: z.string(),
   description: z.string(),
   tone: z.string(),
   prompt: z.string(),
-  is_tool: z.boolean(),
+  isTool: z.boolean(),
 });
 export type OutputTypeMeta = z.infer<typeof OutputTypeMetaSchema>;

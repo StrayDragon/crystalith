@@ -48,7 +48,7 @@ function ensureFts(orm = db()) {
 }
 
 function bm25Score(
-  row: { text: string; source_id: number; chunk_index: number; rank: number },
+  row: { text: string; sourceId: number; chunkIndex: number; rank: number },
   totalResults: number,
 ): number {
   // Normalize BM25 rank to 0–1 range (lower rank = better)
@@ -87,19 +87,19 @@ export class KeywordStrategy implements RAGStrategy {
     // scope to notebook via JOIN
     const rows = db().all<{
       text: string;
-      source_id: number;
-      chunk_index: number;
-      chunk_id: number;
+      sourceId: number;
+      chunkIndex: number;
+      chunkId: number;
       rank: number;
     }>(sql`
       SELECT c.text AS text,
-             c.source_id AS source_id,
-             c.chunk_index AS chunk_index,
+             c.sourceId AS source_id,
+             c.chunkIndex AS chunk_index,
              c.id AS chunk_id,
              fts.rank AS rank
         FROM ${sql.raw(FTS_TABLE)} fts
         JOIN chunks c ON c.id = fts.rowid
-        JOIN sources s ON s.id = c.source_id
+        JOIN sources s ON s.id = c.sourceId
        WHERE ${FTS_TABLE} MATCH ${query}
          AND s.notebook_id = ${notebookId}
        ORDER BY fts.rank
@@ -109,12 +109,12 @@ export class KeywordStrategy implements RAGStrategy {
     const total = rows.length;
     return rows
       .map((r) => ({
-        chunk_id: r.chunk_id,
+        chunkId: r.chunkId,
         text: r.text,
         // normalized BM25 rank (0-1, higher = better)
         score: bm25Score(r, total),
-        source_id: r.source_id,
-        chunk_index: r.chunk_index,
+        sourceId: r.sourceId,
+        chunkIndex: r.chunkIndex,
       }))
       .filter((r) => r.score >= minScore);
   }
@@ -124,7 +124,7 @@ export class KeywordStrategy implements RAGStrategy {
     // FTS is always synced; check if notebook has any chunks
     const row = db().get<{ c: number }>(sql`
       SELECT COUNT(*) AS c FROM chunks c
-      JOIN sources s ON s.id = c.source_id
+      JOIN sources s ON s.id = c.sourceId
       WHERE s.notebook_id = ${notebookId};
     `);
     return (row?.c ?? 0) > 0;

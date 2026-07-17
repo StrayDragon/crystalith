@@ -56,7 +56,7 @@ test('useDependencyHealth fetches data and refresh updates from force endpoint',
 
       return HttpResponse.json({
         status: 'ok',
-        generated_at: '2026-01-01T00:00:00Z',
+        generatedAt: '2026-01-01T00:00:00Z',
         last_probe: forced ? 'forced' : 'initial',
         core: {
           frontend: { service: 'web', healthy: true },

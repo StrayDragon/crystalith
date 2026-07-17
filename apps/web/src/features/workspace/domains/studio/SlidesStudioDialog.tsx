@@ -66,21 +66,21 @@ function resolveOptionId(value: string | null | undefined, options: ConfigOption
 function normalizeDraft(raw: any): SlideDraft {
   return {
     id: Number(raw.id),
-    notebookId: Number(raw.notebook_id ?? raw.notebookId ?? 0),
-    outputId: raw.output_id ?? raw.outputId ?? null,
+    notebookId: Number(raw.notebookId ?? 0),
+    outputId: raw.outputId ?? null,
     title: raw.title ?? null,
     prompt: raw.prompt ?? null,
     engine: typeof raw.engine === 'string' ? raw.engine : '',
-    chunkIds: raw.chunk_ids ?? raw.chunkIds ?? null,
-    sourceIds: raw.source_ids ?? raw.sourceIds ?? null,
+    chunkIds: raw.chunkIds ?? null,
+    sourceIds: raw.sourceIds ?? null,
     outline: raw.outline ?? null,
     markdown: raw.markdown ?? null,
-    generationConfig: normalizeGenerationConfig(raw.generation_config ?? raw.generationConfig),
+    generationConfig: normalizeGenerationConfig(raw.generationConfig),
     stage: raw.stage ?? 'input',
     status: raw.status ?? 'idle',
-    errorMessage: raw.error_message ?? raw.errorMessage ?? null,
-    createdAt: raw.created_at ?? raw.createdAt ?? '',
-    updatedAt: raw.updated_at ?? raw.updatedAt ?? '',
+    errorMessage: raw.errorMessage ?? null,
+    createdAt: raw.createdAt ?? '',
+    updatedAt: raw.updatedAt ?? '',
   };
 }
 
@@ -246,10 +246,10 @@ export default function SlidesStudioDialog({
   }, [draft?.sourceIds, isPreviewMode, selectedSourceIds]);
 
   const selectedThemePreset = useMemo(() => {
-    const options = slidesConfig?.theme_preset_options ?? [];
+    const options = slidesConfig?.themePresetOptions ?? [];
     if (!options.length) return null;
     return options.find((option) => option.id === configThemePreset) ?? options[0] ?? null;
-  }, [configThemePreset, slidesConfig?.theme_preset_options]);
+  }, [configThemePreset, slidesConfig?.themePresetOptions]);
   const configDefaults = slidesConfig?.defaults ?? null;
 
   const frontmatterPreview = useMemo(
@@ -296,13 +296,13 @@ export default function SlidesStudioDialog({
 
   const resetDraftState = useCallback(() => {
     const defaults = configDefaults;
-    const quantityOptions = slidesConfig?.quantity_options ?? [];
-    const audienceOptions = slidesConfig?.audience_options ?? [];
-    const structureOptions = slidesConfig?.structure_options ?? [];
-    const toneOptions = slidesConfig?.tone_options ?? [];
-    const languageOptions = slidesConfig?.language_options ?? [];
-    const densityOptions = slidesConfig?.density_options ?? [];
-    const themeOptions = slidesConfig?.theme_preset_options ?? [];
+    const quantityOptions = slidesConfig?.quantityOptions ?? [];
+    const audienceOptions = slidesConfig?.audienceOptions ?? [];
+    const structureOptions = slidesConfig?.structureOptions ?? [];
+    const toneOptions = slidesConfig?.toneOptions ?? [];
+    const languageOptions = slidesConfig?.languageOptions ?? [];
+    const densityOptions = slidesConfig?.densityOptions ?? [];
+    const themeOptions = slidesConfig?.themePresetOptions ?? [];
     setDraft(null);
     setActiveStage('input');
     setLoading(false);
@@ -337,13 +337,13 @@ export default function SlidesStudioDialog({
   const applyGenerationConfig = useCallback(
     (config: SlideGenerationConfig | null | undefined) => {
       const defaults = configDefaults;
-      const quantityOptions = slidesConfig?.quantity_options ?? [];
-      const audienceOptions = slidesConfig?.audience_options ?? [];
-      const structureOptions = slidesConfig?.structure_options ?? [];
-      const toneOptions = slidesConfig?.tone_options ?? [];
-      const languageOptions = slidesConfig?.language_options ?? [];
-      const densityOptions = slidesConfig?.density_options ?? [];
-      const themeOptions = slidesConfig?.theme_preset_options ?? [];
+      const quantityOptions = slidesConfig?.quantityOptions ?? [];
+      const audienceOptions = slidesConfig?.audienceOptions ?? [];
+      const structureOptions = slidesConfig?.structureOptions ?? [];
+      const toneOptions = slidesConfig?.toneOptions ?? [];
+      const languageOptions = slidesConfig?.languageOptions ?? [];
+      const densityOptions = slidesConfig?.densityOptions ?? [];
+      const themeOptions = slidesConfig?.themePresetOptions ?? [];
       const preferenceValue =
         config?.preference === 'quality' || config?.preference === 'speed'
           ? config.preference
@@ -413,7 +413,7 @@ export default function SlidesStudioDialog({
         syncFromDraft(normalizeDraft(data));
       } else {
         const { data, error: fetchErr } = await api.v2.studio.slides.get({
-          query: { notebook_id: String(notebookId) },
+          query: { notebookId: String(notebookId) },
         });
         if (fetchErr)
           throw new Error(
@@ -480,31 +480,31 @@ export default function SlidesStudioDialog({
     if (!open || !slidesConfig) return;
     setConfigQuantity(
       (prev) =>
-        prev || resolveOptionId(configDefaults?.quantity ?? null, slidesConfig.quantity_options),
+        prev || resolveOptionId(configDefaults?.quantity ?? null, slidesConfig.quantityOptions),
     );
     setConfigAudience(
       (prev) =>
-        prev || resolveOptionId(configDefaults?.audience ?? null, slidesConfig.audience_options),
+        prev || resolveOptionId(configDefaults?.audience ?? null, slidesConfig.audienceOptions),
     );
     setConfigStructure(
       (prev) =>
-        prev || resolveOptionId(configDefaults?.structure ?? null, slidesConfig.structure_options),
+        prev || resolveOptionId(configDefaults?.structure ?? null, slidesConfig.structureOptions),
     );
     setConfigTone(
-      (prev) => prev || resolveOptionId(configDefaults?.tone ?? null, slidesConfig.tone_options),
+      (prev) => prev || resolveOptionId(configDefaults?.tone ?? null, slidesConfig.toneOptions),
     );
     setConfigLanguage(
       (prev) =>
-        prev || resolveOptionId(configDefaults?.language ?? null, slidesConfig.language_options),
+        prev || resolveOptionId(configDefaults?.language ?? null, slidesConfig.languageOptions),
     );
     setConfigDensity(
       (prev) =>
-        prev || resolveOptionId(configDefaults?.density ?? null, slidesConfig.density_options),
+        prev || resolveOptionId(configDefaults?.density ?? null, slidesConfig.densityOptions),
     );
     setConfigThemePreset(
       (prev) =>
         prev ||
-        resolveOptionId(configDefaults?.themePreset ?? null, slidesConfig.theme_preset_options),
+        resolveOptionId(configDefaults?.themePreset ?? null, slidesConfig.themePresetOptions),
     );
     setConfigFrontmatter((prev) => prev || configDefaults?.frontmatter || '');
   }, [configDefaults, open, slidesConfig]);
@@ -584,7 +584,7 @@ export default function SlidesStudioDialog({
       tone: config.tone,
       language: config.language,
       density: config.density,
-      theme_preset: config.themePreset,
+      themePreset: config.themePreset,
       frontmatter: config.frontmatter,
     };
   }, [buildGenerationConfig]);
@@ -604,12 +604,12 @@ export default function SlidesStudioDialog({
     const payload = {
       title: title.trim() || undefined,
       prompt: prompt.trim() || undefined,
-      source_ids: resolvedSourceIds,
-      generation_config: buildGenerationConfigPayload(),
+      sourceIds: resolvedSourceIds,
+      generationConfig: buildGenerationConfigPayload(),
     };
     if (!draft) {
       const { data: created, error: createErr } = await api.v2.studio.slides.post({
-        notebook_id: notebookId,
+        notebookId: notebookId,
         ...payload,
       });
       if (createErr)
@@ -1557,13 +1557,13 @@ export default function SlidesStudioDialog({
   const configActionsDisabled =
     !isConnected || slidesConfigLoading || Boolean(slidesConfigErrorMessage) || !hasSelectedSources;
 
-  const quantityOptions = slidesConfig?.quantity_options ?? [];
-  const structureOptions = slidesConfig?.structure_options ?? [];
-  const audienceOptions = slidesConfig?.audience_options ?? [];
-  const toneOptions = slidesConfig?.tone_options ?? [];
-  const languageOptions = slidesConfig?.language_options ?? [];
-  const densityOptions = slidesConfig?.density_options ?? [];
-  const themePresetOptions = slidesConfig?.theme_preset_options ?? [];
+  const quantityOptions = slidesConfig?.quantityOptions ?? [];
+  const structureOptions = slidesConfig?.structureOptions ?? [];
+  const audienceOptions = slidesConfig?.audienceOptions ?? [];
+  const toneOptions = slidesConfig?.toneOptions ?? [];
+  const languageOptions = slidesConfig?.languageOptions ?? [];
+  const densityOptions = slidesConfig?.densityOptions ?? [];
+  const themePresetOptions = slidesConfig?.themePresetOptions ?? [];
 
   useFocusTrap({
     active: open,

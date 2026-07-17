@@ -87,7 +87,7 @@ function ChunkItem({ chunk }: { chunk: ChunkRead }) {
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-xs font-medium">
-              #{chunk.chunk_index + 1}
+              #{chunk.chunkIndex + 1}
             </span>
           </div>
           <div className="flex-1 min-w-0">
@@ -109,9 +109,9 @@ function ChunkItem({ chunk }: { chunk: ChunkRead }) {
         </div>
         <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400 dark:text-slate-500">
           <span>{charCount} 字符</span>
-          {chunk.start_offset !== null && chunk.end_offset !== null && (
+          {chunk.startOffset !== null && chunk.endOffset !== null && (
             <span>
-              位置: {chunk.start_offset}-{chunk.end_offset}
+              位置: {chunk.startOffset}-{chunk.endOffset}
             </span>
           )}
           {chunk.metadata && Object.keys(chunk.metadata).length > 0 && (
@@ -143,7 +143,7 @@ async function fetchSourceSummary(notebookId: number, sourceId: number) {
 async function fetchSourceChunks(notebookId: number, sourceId: number) {
   const { data, error } = await api.v2
     .sources({ id: sourceId })
-    .chunks.get({ query: { notebook_id: notebookId } } as any);
+    .chunks.get({ query: { notebookId: notebookId } } as any);
   if (error)
     throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
   return data as any;
@@ -322,7 +322,7 @@ export default function SourceDetailDialog({
         id: `assistant-${Date.now()}`,
         role: 'assistant',
         content: response.answer,
-        timestamp: new Date((response as { created_at?: string }).created_at || Date.now()),
+        timestamp: new Date((response as { createdAt?: string }).createdAt || Date.now()),
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {

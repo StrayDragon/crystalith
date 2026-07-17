@@ -61,7 +61,7 @@ function normalizeSlideGenerationConfig(config?: SlideGenerationConfig | null) {
     tone: config.tone ?? undefined,
     language: config.language ?? undefined,
     density: config.density ?? undefined,
-    theme_preset: config.themePreset ?? undefined,
+    themePreset: config.themePreset ?? undefined,
     frontmatter: config.frontmatter ?? undefined,
   };
 }
@@ -148,7 +148,7 @@ export function useOutputQueue({
     activeNotebookId && isConnected ? ['workspace/outputs', activeNotebookId] : null,
     async () => {
       const { data, error: fetchErr } = await api.v2.outputs.get({
-        query: { notebook_id: String(activeNotebookId ?? 0) },
+        query: { notebookId: String(activeNotebookId ?? 0) },
       });
       if (fetchErr)
         throw new Error(
@@ -279,11 +279,11 @@ export function useOutputQueue({
       }
 
       const payload = {
-        notebook_id: activeNotebookId,
+        notebookId: activeNotebookId,
         title: title.trim() || undefined,
         prompt: prompt.trim() || undefined,
-        source_ids: sourceIds,
-        generation_config: normalizeSlideGenerationConfig(generationConfig),
+        sourceIds,
+        generationConfig: normalizeSlideGenerationConfig(generationConfig),
       };
       const { data: created, error: createErr } = await api.v2.studio.slides.post(payload);
       if (createErr)
@@ -369,10 +369,10 @@ export function useOutputQueue({
         } else if (job.notebookId) {
           const preference = job.preference;
           const body: Record<string, unknown> = {
-            notebook_id: job.notebookId,
+            notebookId: job.notebookId,
             type: job.type,
             prompt: job.prompt || undefined,
-            source_ids: job.sourceIds.length ? job.sourceIds : undefined,
+            sourceIds: job.sourceIds.length ? job.sourceIds : undefined,
             model_id: job.modelId || undefined,
           };
           if (preference) Object.assign(body, { preference });
@@ -394,7 +394,7 @@ export function useOutputQueue({
             if (typeof createdId === 'number') {
               try {
                 await api.v2.outputs({ id: createdId }).delete({
-                  query: { notebook_id: String(job.notebookId) },
+                  query: { notebookId: String(job.notebookId) },
                 });
               } catch {
                 // Best-effort cleanup; UI already shows cancelled.

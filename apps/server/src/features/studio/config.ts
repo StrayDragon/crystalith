@@ -131,7 +131,7 @@ export const DEFAULT_CONFIG = {
   tone: 'professional',
   language: 'zh',
   density: 'standard',
-  theme_preset: 'minimal-clean',
+  themePreset: 'minimal-clean',
   frontmatter: '',
 };
 
@@ -140,42 +140,42 @@ export const DEFAULT_CONFIG = {
 // ---------------------------------------------------------------------------
 
 export const QUANTITY_OPTIONS: ConfigOption[] = [
-  { id: 'short', label: '精简（6-8）', is_default: false },
-  { id: 'standard', label: '标准（8-12）', is_default: true },
-  { id: 'detailed', label: '详尽（12-18）', is_default: false },
+  { id: 'short', label: '精简（6-8）', isDefault: false },
+  { id: 'standard', label: '标准（8-12）', isDefault: true },
+  { id: 'detailed', label: '详尽（12-18）', isDefault: false },
 ];
 
 export const AUDIENCE_OPTIONS: ConfigOption[] = [
-  { id: 'general', label: '通用受众', is_default: true },
-  { id: 'executive', label: '管理层', is_default: false },
-  { id: 'technical', label: '技术受众', is_default: false },
-  { id: 'external', label: '外部受众', is_default: false },
+  { id: 'general', label: '通用受众', isDefault: true },
+  { id: 'executive', label: '管理层', isDefault: false },
+  { id: 'technical', label: '技术受众', isDefault: false },
+  { id: 'external', label: '外部受众', isDefault: false },
 ];
 
 export const STRUCTURE_OPTIONS: ConfigOption[] = [
-  { id: 'standard', label: '通用结构', is_default: true },
-  { id: 'problem-solution', label: '问题/方案', is_default: false },
-  { id: 'story', label: '故事叙事', is_default: false },
-  { id: 'project-review', label: '项目复盘', is_default: false },
-  { id: 'training', label: '培训课程', is_default: false },
+  { id: 'standard', label: '通用结构', isDefault: true },
+  { id: 'problem-solution', label: '问题/方案', isDefault: false },
+  { id: 'story', label: '故事叙事', isDefault: false },
+  { id: 'project-review', label: '项目复盘', isDefault: false },
+  { id: 'training', label: '培训课程', isDefault: false },
 ];
 
 export const TONE_OPTIONS: ConfigOption[] = [
-  { id: 'professional', label: '正式专业', is_default: true },
-  { id: 'friendly', label: '亲和易读', is_default: false },
-  { id: 'inspiring', label: '鼓舞愿景', is_default: false },
-  { id: 'serious', label: '严谨客观', is_default: false },
+  { id: 'professional', label: '正式专业', isDefault: true },
+  { id: 'friendly', label: '亲和易读', isDefault: false },
+  { id: 'inspiring', label: '鼓舞愿景', isDefault: false },
+  { id: 'serious', label: '严谨客观', isDefault: false },
 ];
 
 export const LANGUAGE_OPTIONS: ConfigOption[] = [
-  { id: 'zh', label: '中文', is_default: true },
-  { id: 'en', label: '英文', is_default: false },
+  { id: 'zh', label: '中文', isDefault: true },
+  { id: 'en', label: '英文', isDefault: false },
 ];
 
 export const DENSITY_OPTIONS: ConfigOption[] = [
-  { id: 'sparse', label: '稀疏（2-3 要点）', is_default: false },
-  { id: 'standard', label: '标准（3-5 要点）', is_default: true },
-  { id: 'dense', label: '密集（5-7 要点）', is_default: false },
+  { id: 'sparse', label: '稀疏（2-3 要点）', isDefault: false },
+  { id: 'standard', label: '标准（3-5 要点）', isDefault: true },
+  { id: 'dense', label: '密集（5-7 要点）', isDefault: false },
 ];
 
 export const THEME_PRESET_OPTIONS: ThemePresetOption[] = (
@@ -232,13 +232,13 @@ export function resolveThemePreset(preset?: string | null): string {
 export function buildSlidesConfigSchema(): SlidesConfigSchema {
   return {
     defaults: { ...DEFAULT_CONFIG },
-    quantity_options: QUANTITY_OPTIONS,
-    audience_options: AUDIENCE_OPTIONS,
-    structure_options: STRUCTURE_OPTIONS,
-    tone_options: TONE_OPTIONS,
-    language_options: LANGUAGE_OPTIONS,
-    density_options: DENSITY_OPTIONS,
-    theme_preset_options: THEME_PRESET_OPTIONS,
+    quantityOptions: QUANTITY_OPTIONS,
+    audienceOptions: AUDIENCE_OPTIONS,
+    structureOptions: STRUCTURE_OPTIONS,
+    toneOptions: TONE_OPTIONS,
+    languageOptions: LANGUAGE_OPTIONS,
+    densityOptions: DENSITY_OPTIONS,
+    themePresetOptions: THEME_PRESET_OPTIONS,
     engine: 'slidev',
     // c56: preview descriptor tells frontend where to open slide preview
     // (v1 SlidevSlidesWorkflowPlugin.preview_descriptor)

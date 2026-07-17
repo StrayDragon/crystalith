@@ -161,8 +161,8 @@ describe('research execution — search + dedup', () => {
   it('aggregates search results and deduplicates by URL', async () => {
     const { body } = await post('/v2/research', {
       topic: 'TypeScript language features',
-      notebook_id: notebookId,
-      max_iterations: 1,
+      notebookId: notebookId,
+      maxIterations: 1,
     });
     const sessionId = body.id;
 
@@ -195,8 +195,8 @@ describe('research execution — search + dedup', () => {
   it('persists search steps with output data', async () => {
     const { body } = await post('/v2/research', {
       topic: 'Step persistence test',
-      notebook_id: notebookId,
-      max_iterations: 1,
+      notebookId: notebookId,
+      maxIterations: 1,
     });
     const sessionId = body.id;
 
@@ -223,8 +223,8 @@ describe('research execution — search + dedup', () => {
   it('search concurrency processes multiple queries', async () => {
     const { body } = await post('/v2/research', {
       topic: 'Concurrency test — Bun Elysia TypeScript',
-      notebook_id: notebookId,
-      max_iterations: 1,
+      notebookId: notebookId,
+      maxIterations: 1,
     });
     const sessionId = body.id;
 
@@ -260,8 +260,8 @@ describe('research execution — search + dedup', () => {
     try {
       const { body } = await post('/v2/research', {
         topic: 'Empty results test',
-        notebook_id: notebookId,
-        max_iterations: 1,
+        notebookId: notebookId,
+        maxIterations: 1,
       });
       await waitForStatus(body.id, 'waiting_user');
       await post(`/v2/research/${body.id}/approve`);

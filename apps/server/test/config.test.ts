@@ -42,7 +42,7 @@ models:
     - id: "fallback-chat"
       provider: "openai"
       model: "gpt-4o"
-      display_name: "Fallback"
+      displayName: "Fallback"
       roles: [chat]
 `,
     );
@@ -61,12 +61,12 @@ models:
     - id: "fb"
       provider: "openai"
       model: "m"
-      display_name: "F"
+      displayName: "F"
       roles: [chat]
     - id: "custom"
       provider: "openai"
       model: "m2"
-      display_name: "C"
+      displayName: "C"
       roles: [chat]
 `,
     );
@@ -104,7 +104,7 @@ models:
     - id: "m1"
       provider: "openai"
       model: "gpt"
-      display_name: "M1"
+      displayName: "M1"
       roles: [chat]
 `,
     );

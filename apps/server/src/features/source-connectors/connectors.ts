@@ -14,10 +14,10 @@ export const LOCAL_DIRECTORY_EXTENSIONS = [
 
 export const BUILTIN_CONNECTORS: SourceConnectorDescriptor[] = [
   {
-    connector_id: 'obsidian',
-    display_name: 'Obsidian Vault',
+    connectorId: 'obsidian',
+    displayName: 'Obsidian Vault',
     description: '从本地 Obsidian vault 枚举 Markdown 笔记并导入。',
-    connection_config_schema: {
+    connectionConfigSchema: {
       type: 'object',
       properties: {
         vault_path: {
@@ -32,15 +32,15 @@ export const BUILTIN_CONNECTORS: SourceConnectorDescriptor[] = [
     },
     diagnostics: null,
     capabilities: {
-      supports_snapshot: true,
-      supports_sync_check: true,
+      supportsSnapshot: true,
+      supportsSyncCheck: true,
     },
   },
   {
-    connector_id: 'local-directory',
-    display_name: 'Local Directory',
+    connectorId: 'local-directory',
+    displayName: 'Local Directory',
     description: '从本地目录枚举文件并导入。',
-    connection_config_schema: {
+    connectionConfigSchema: {
       type: 'object',
       properties: {
         directory_path: {
@@ -55,14 +55,14 @@ export const BUILTIN_CONNECTORS: SourceConnectorDescriptor[] = [
     },
     diagnostics: null,
     capabilities: {
-      supports_snapshot: true,
-      supports_sync_check: true,
+      supportsSnapshot: true,
+      supportsSyncCheck: true,
     },
   },
 ];
 
 export function getBuiltinConnector(connectorId: string): SourceConnectorDescriptor | undefined {
-  return BUILTIN_CONNECTORS.find((c) => c.connector_id === connectorId);
+  return BUILTIN_CONNECTORS.find((c) => c.connectorId === connectorId);
 }
 
 export function rootPathKeyForConnector(connectorId: string): string {

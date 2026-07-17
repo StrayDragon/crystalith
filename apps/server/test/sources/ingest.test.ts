@@ -58,9 +58,9 @@ async function uploadFile(
 ): Promise<{ status: number; body: unknown }> {
   const fd = new FormData();
   fd.append('file', new File([content], filename, { type: 'text/plain' }));
-  const qs = dedupAction ? `&dedup_action=${dedupAction}` : '';
+  const qs = dedupAction ? `&dedupAction=${dedupAction}` : '';
   const res = await app.handle(
-    new Request(`${BASE}/v2/sources/upload?notebook_id=${notebookId}${qs}`, {
+    new Request(`${BASE}/v2/sources/upload?notebookId=${notebookId}${qs}`, {
       method: 'POST',
       body: fd,
     }),
@@ -112,20 +112,20 @@ describe('sources upload + ingest', () => {
 // ---------------------------------------------------------------------------
 
 describe('source dedup', () => {
-  it('returns 409 SOURCE_DEDUP_HIT on repeat upload with dedup_action=prompt', async () => {
+  it('returns 409 SOURCE_DEDUP_HIT on repeat upload with dedupAction=prompt', async () => {
     const nb = makeNotebook('dedup-prompt');
     const content = 'identical content for dedup test';
     await uploadFile(nb, 'a.txt', content);
 
     const { status, body } = await uploadFile(nb, 'b.txt', content, 'prompt');
     expect(status).toBe(409);
-    // c54: errors now use the unified ErrorEnvelope (error_code + message).
+    // c54: errors now use the unified ErrorEnvelope (errorCode + message).
     // Dedup is surfaced as CONFLICT with existing_source_id in details.
-    expect((body as { error_code: string }).error_code).toBe('CONFLICT');
+    expect((body as { errorCode: string }).errorCode).toBe('CONFLICT');
     expect((body as { details: { existing_source_id?: number } }).details).toBeDefined();
   });
 
-  it('reuses the existing source with dedup_action=reuse', async () => {
+  it('reuses the existing source with dedupAction=reuse', async () => {
     const nb = makeNotebook('dedup-reuse');
     const content = 'reuse me content';
     const first = await uploadFile(nb, 'first.txt', content);
@@ -138,7 +138,7 @@ describe('source dedup', () => {
     expect(result.source.id).toBe(firstId);
   });
 
-  it('creates a distinct source with dedup_action=create_new (default)', async () => {
+  it('creates a distinct source with dedupAction=create_new (default)', async () => {
     const nb = makeNotebook('dedup-createnew');
     const content = 'create new each time';
     const first = await uploadFile(nb, 'first.txt', content);

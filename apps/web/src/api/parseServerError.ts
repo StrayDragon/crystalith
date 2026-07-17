@@ -2,7 +2,7 @@
 //
 // eden treaty surfaces server errors as the raw response body, which for v2
 // non-SSE routes is the ErrorEnvelope from @crystalith/shared
-// ({ error_code, message, details?, retry_after? }). This helper normalizes
+// ({ errorCode, message, details?, retryAfter? }). This helper normalizes
 // that envelope (plus a couple of legacy/alternate shapes) into a stable
 // camelCase form so call sites stop hand-rolling inline
 // `{ errorCode?, details?, message? }` casts that drift from the SSOT.
@@ -17,8 +17,8 @@ export interface ParsedServerError {
 /**
  * Parse an eden treaty error (or any thrown value) into a stable shape.
  *
- * Reads `error_code` (the ErrorEnvelope SSOT field) first, then falls back to
- * `code` / `errorCode` for robustness. Exposes the code as `errorCode`.
+ * Reads `errorCode` (the ErrorEnvelope SSOT field) first, then falls back to
+ * `code` for robustness. Exposes the code as `errorCode`.
  */
 export function parseServerError(error: unknown): ParsedServerError {
   if (!error || typeof error !== 'object') {
@@ -26,8 +26,8 @@ export function parseServerError(error: unknown): ParsedServerError {
   }
   const e = error as Record<string, unknown>;
   const errorCode =
-    typeof e.error_code === 'string'
-      ? e.error_code
+    typeof e.errorCode === 'string'
+      ? e.errorCode
       : typeof e.code === 'string'
         ? e.code
         : typeof e.errorCode === 'string'

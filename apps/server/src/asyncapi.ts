@@ -35,8 +35,8 @@ const QA_STREAM_CHANNEL: AsyncApiChannel = {
       payload: {
         type: 'object',
         properties: {
-          message_id: { type: 'integer', nullable: true },
-          shared_state: { type: 'object' },
+          messageId: { type: 'integer', nullable: true },
+          sharedState: { type: 'object' },
         },
       },
     },
@@ -46,9 +46,9 @@ const QA_STREAM_CHANNEL: AsyncApiChannel = {
       payload: {
         type: 'object',
         properties: {
-          message_id: { type: 'integer', nullable: true },
+          messageId: { type: 'integer', nullable: true },
           citations: { type: 'array', items: { type: 'object' } },
-          tool_calls: { type: 'array', items: { type: 'object' } },
+          toolCalls: { type: 'array', items: { type: 'object' } },
         },
       },
     },
@@ -57,7 +57,7 @@ const QA_STREAM_CHANNEL: AsyncApiChannel = {
       description: 'Error event with a human-readable message.',
       payload: {
         type: 'object',
-        properties: { message: { type: 'string' }, error_code: { type: 'string' } },
+        properties: { message: { type: 'string' }, errorCode: { type: 'string' } },
         required: ['message'],
       },
     },
@@ -74,7 +74,7 @@ const RESEARCH_PROGRESS_CHANNEL: AsyncApiChannel = {
       description: 'Search plan is ready for user review.',
       payload: {
         type: 'object',
-        properties: { session_id: { type: 'integer' }, plan: { type: 'object' } },
+        properties: { sessionId: { type: 'integer' }, plan: { type: 'object' } },
       },
     },
     {
@@ -82,7 +82,7 @@ const RESEARCH_PROGRESS_CHANNEL: AsyncApiChannel = {
       description: 'A web search result was retrieved.',
       payload: {
         type: 'object',
-        properties: { session_id: { type: 'integer' }, result: { type: 'object' } },
+        properties: { sessionId: { type: 'integer' }, result: { type: 'object' } },
       },
     },
     {
@@ -90,7 +90,7 @@ const RESEARCH_PROGRESS_CHANNEL: AsyncApiChannel = {
       description: 'Analysis result for the current iteration.',
       payload: {
         type: 'object',
-        properties: { session_id: { type: 'integer' }, analysis: { type: 'object' } },
+        properties: { sessionId: { type: 'integer' }, analysis: { type: 'object' } },
       },
     },
     {
@@ -99,7 +99,7 @@ const RESEARCH_PROGRESS_CHANNEL: AsyncApiChannel = {
       payload: {
         type: 'object',
         properties: {
-          session_id: { type: 'integer' },
+          sessionId: { type: 'integer' },
           final_report: { type: 'string', nullable: true },
           outputs: { type: 'array', items: { type: 'object' } },
         },
@@ -110,7 +110,7 @@ const RESEARCH_PROGRESS_CHANNEL: AsyncApiChannel = {
       description: 'Research encountered an error.',
       payload: {
         type: 'object',
-        properties: { session_id: { type: 'integer' }, message: { type: 'string' } },
+        properties: { sessionId: { type: 'integer' }, message: { type: 'string' } },
         required: ['message'],
       },
     },

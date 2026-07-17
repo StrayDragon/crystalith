@@ -41,7 +41,7 @@ export const citationsRouter = new Elysia({ prefix: '/v2' })
     if (!msg) throw new NotFoundError(`Message ${messageId} not found`);
 
     return {
-      message_id: messageId,
+      messageId,
       citations: msg.citations ?? [],
     };
   })
@@ -55,29 +55,29 @@ export const citationsRouter = new Elysia({ prefix: '/v2' })
     if (!notebookId) throw new NotFoundError('notebook_id path param required');
 
     const q = query as {
-      chunk_id?: string;
-      source_id?: string;
-      chunk_index?: string;
+      chunkId?: string;
+      sourceId?: string;
+      chunkIndex?: string;
       before?: string;
       after?: string;
     };
 
-    const hasChunkId = q.chunk_id !== undefined && q.chunk_id !== '';
+    const hasChunkId = q.chunkId !== undefined && q.chunkId !== '';
     const hasSourceLocator =
-      q.source_id !== undefined &&
-      q.source_id !== '' &&
-      q.chunk_index !== undefined &&
-      q.chunk_index !== '';
+      q.sourceId !== undefined &&
+      q.sourceId !== '' &&
+      q.chunkIndex !== undefined &&
+      q.chunkIndex !== '';
 
     // Validation: exactly one resolution method
     if (hasChunkId && hasSourceLocator) {
       return new Response(
-        JSON.stringify({ detail: 'Provide either chunk_id or source_id+chunk_index (not both)' }),
+        JSON.stringify({ detail: 'Provide chunkId or sourceId+chunkIndex (not both)' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } },
       );
     }
     if (!hasChunkId && !hasSourceLocator) {
-      return new Response(JSON.stringify({ detail: 'Provide chunk_id or source_id+chunk_index' }), {
+      return new Response(JSON.stringify({ detail: 'Provide chunkId or sourceId+chunkIndex' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -92,10 +92,10 @@ export const citationsRouter = new Elysia({ prefix: '/v2' })
     let chunkIndex: number | undefined;
 
     if (hasChunkId) {
-      chunkId = Number(q.chunk_id);
+      chunkId = Number(q.chunkId);
     } else {
-      sourceId = Number(q.source_id);
-      chunkIndex = Number(q.chunk_index);
+      sourceId = Number(q.sourceId);
+      chunkIndex = Number(q.chunkIndex);
     }
 
     const result = await resolveChunkContext(notebookId, {

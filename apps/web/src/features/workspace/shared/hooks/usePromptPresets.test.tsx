@@ -9,8 +9,8 @@ import { renderHook } from '../../../../test-utils/renderHook';
 import { usePromptPresets } from './usePromptPresets';
 
 // The v2 backend serializePreset returns: { id, trigger, description,
-// system_prompt, enabled, created_at, updated_at } (no preset_id / source).
-// The hook normalizes these into PromptPresetItem (preset_id, source), so tests
+// systemPrompt, enabled, createdAt, updatedAt } (no presetId / source).
+// The hook normalizes these into PromptPresetItem (presetId, source), so tests
 // mock the raw v2 shape and assert on the normalized fields.
 
 beforeEach(() => {
@@ -29,19 +29,19 @@ test('lists custom prompt presets', async () => {
           id: 1,
           trigger: 'stats',
           description: 'Stats preset',
-          system_prompt: 'builtin',
+          systemPrompt: 'builtin',
           enabled: true,
-          created_at: '2026-03-01T00:00:00Z',
-          updated_at: '2026-03-01T00:00:00Z',
+          createdAt: '2026-03-01T00:00:00Z',
+          updatedAt: '2026-03-01T00:00:00Z',
         },
         {
           id: 2,
           trigger: 'demo',
           description: 'Demo preset',
-          system_prompt: 'demo',
+          systemPrompt: 'demo',
           enabled: false,
-          created_at: '2026-03-02T00:00:00Z',
-          updated_at: '2026-03-02T00:00:00Z',
+          createdAt: '2026-03-02T00:00:00Z',
+          updatedAt: '2026-03-02T00:00:00Z',
         },
       ]),
     ),
@@ -64,10 +64,10 @@ test('createCustomPreset appends the created preset', async () => {
           id: 1,
           trigger: 'stats',
           description: 'Stats preset',
-          system_prompt: 'builtin',
+          systemPrompt: 'builtin',
           enabled: true,
-          created_at: '2026-03-01T00:00:00Z',
-          updated_at: '2026-03-01T00:00:00Z',
+          createdAt: '2026-03-01T00:00:00Z',
+          updatedAt: '2026-03-01T00:00:00Z',
         },
       ]),
     ),
@@ -77,10 +77,10 @@ test('createCustomPreset appends the created preset', async () => {
         id: 2,
         trigger: body.trigger ?? 'demo',
         description: body.description ?? null,
-        system_prompt: body.system_prompt ?? '',
+        systemPrompt: body.systemPrompt ?? '',
         enabled: body.enabled ?? true,
-        created_at: '2026-03-02T00:00:00Z',
-        updated_at: '2026-03-02T00:00:00Z',
+        createdAt: '2026-03-02T00:00:00Z',
+        updatedAt: '2026-03-02T00:00:00Z',
       });
     }),
   );
@@ -113,19 +113,19 @@ test('updateCustomPreset patches and updates local list', async () => {
           id: 1,
           trigger: 'stats',
           description: 'Stats preset',
-          system_prompt: 'builtin',
+          systemPrompt: 'builtin',
           enabled: true,
-          created_at: '2026-03-01T00:00:00Z',
-          updated_at: '2026-03-01T00:00:00Z',
+          createdAt: '2026-03-01T00:00:00Z',
+          updatedAt: '2026-03-01T00:00:00Z',
         },
         {
           id: 3,
           trigger: 'demo',
           description: 'Old',
-          system_prompt: 'old',
+          systemPrompt: 'old',
           enabled: true,
-          created_at: '2026-03-02T00:00:00Z',
-          updated_at: '2026-03-02T00:00:00Z',
+          createdAt: '2026-03-02T00:00:00Z',
+          updatedAt: '2026-03-02T00:00:00Z',
         },
       ]),
     ),
@@ -135,10 +135,10 @@ test('updateCustomPreset patches and updates local list', async () => {
         id: Number(params.id),
         trigger: body.trigger ?? 'demo',
         description: body.description ?? null,
-        system_prompt: body.system_prompt ?? 'old',
+        systemPrompt: body.systemPrompt ?? 'old',
         enabled: body.enabled ?? true,
-        created_at: '2026-03-02T00:00:00Z',
-        updated_at: '2026-03-02T00:00:00Z',
+        createdAt: '2026-03-02T00:00:00Z',
+        updatedAt: '2026-03-02T00:00:00Z',
       });
     }),
   );
@@ -157,7 +157,7 @@ test('updateCustomPreset patches and updates local list', async () => {
   });
 
   await waitFor(() => {
-    const updated = result.current.presets.find((item) => item.preset_id === 3);
+    const updated = result.current.presets.find((item) => item.presetId === 3);
     expect(updated?.enabled).toBe(false);
     expect(updated?.description).toBe('Updated');
   });
@@ -171,19 +171,19 @@ test('deleteCustomPreset deletes and removes from local list', async () => {
           id: 1,
           trigger: 'stats',
           description: 'Stats preset',
-          system_prompt: 'builtin',
+          systemPrompt: 'builtin',
           enabled: true,
-          created_at: '2026-03-01T00:00:00Z',
-          updated_at: '2026-03-01T00:00:00Z',
+          createdAt: '2026-03-01T00:00:00Z',
+          updatedAt: '2026-03-01T00:00:00Z',
         },
         {
           id: 4,
           trigger: 'demo',
           description: 'Demo',
-          system_prompt: 'demo',
+          systemPrompt: 'demo',
           enabled: true,
-          created_at: '2026-03-02T00:00:00Z',
-          updated_at: '2026-03-02T00:00:00Z',
+          createdAt: '2026-03-02T00:00:00Z',
+          updatedAt: '2026-03-02T00:00:00Z',
         },
       ]),
     ),

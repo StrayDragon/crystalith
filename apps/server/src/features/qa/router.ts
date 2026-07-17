@@ -56,18 +56,18 @@ const apiDocs: OpenApiRoute[] = [
 
 interface QaRequest {
   question: string;
-  notebook_id: number;
-  session_id?: number;
+  notebookId: number;
+  sessionId?: number;
   preset?: string;
   directive?: 'Sources_only' | 'Knowledge_only' | 'Mixed';
   /** RAG strategy override. */
-  strategy_id?: string;
+  strategyId?: string;
   /** Retrieval top-K (default 5). */
-  top_k?: number;
+  topK?: number;
   /** Minimum similarity score (default 0.2). */
-  min_score?: number;
-  /** Scope retrieval to specific sources (v1 source_ids). */
-  source_ids?: number[];
+  minScore?: number;
+  /** Scope retrieval to specific sources (v1 sourceIds). */
+  sourceIds?: number[];
 }
 
 function loadHistory(
@@ -117,7 +117,7 @@ function parsePromptDirective(
   return { preset: (bodyPreset ?? 'default').toLowerCase(), question };
 }
 
-/** Validate notebook exists + optional session/source_ids ownership (v1 qa/api.py). */
+/** Validate notebook exists + optional session/sourceIds ownership (v1 qa/api.py). */
 function assertQaOwnership(opts: {
   notebookId: number;
   sessionId?: number;
@@ -140,7 +140,7 @@ function assertQaOwnership(opts: {
       .where(and(eq(sources.notebookId, opts.notebookId), inArray(sources.id, opts.sourceIds)))
       .all();
     if (found.length !== opts.sourceIds.length) {
-      throw new Error('Unknown source_id in source_ids');
+      throw new Error('Unknown source_id in sourceIds');
     }
   }
 }
@@ -158,14 +158,14 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
     const {
       question: rawQuestion,
       content: rawContent,
-      notebook_id,
-      session_id,
+      notebookId,
+      sessionId,
       preset: bodyPreset,
       directive,
-      strategy_id,
-      top_k,
-      min_score,
-      source_ids,
+      strategyId,
+      topK,
+      minScore,
+      sourceIds,
     } = body as unknown as QaRequest & { content?: string };
 
     // c45: parse /prompt:<preset> directive from question text (v1 presets.py:9-30)
@@ -178,20 +178,17 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
     const { preset, question } = parsePromptDirective(resolvedQuestion, bodyPreset);
 
     assertQaOwnership({
-      notebookId: notebook_id,
-      sessionId: session_id,
-      sourceIds: source_ids,
+      notebookId,
+      sessionId,
+      sourceIds,
     });
 
-    const history = session_id ? loadHistory(session_id) : [];
+    const history = sessionId ? loadHistory(sessionId) : [];
 
     // Create user message + auto-title
-    if (session_id) {
-      db()
-        .insert(messages)
-        .values({ sessionId: session_id, role: 'user', content: question })
-        .run();
-      maybeSetSessionTitle(session_id, question);
+    if (sessionId) {
+      db().insert(messages).values({ sessionId: sessionId, role: 'user', content: question }).run();
+      maybeSetSessionTitle(sessionId, question);
     }
 
     // Resolve model
@@ -202,10 +199,10 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
 
     // Create provisional assistant message
     let messageId: number | undefined;
-    if (session_id) {
+    if (sessionId) {
       const msg = db()
         .insert(messages)
-        .values({ sessionId: session_id, role: 'assistant', content: '' })
+        .values({ sessionId: sessionId, role: 'assistant', content: '' })
         .returning()
         .get();
       messageId = msg.id;
@@ -215,14 +212,14 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
     const result = await generateQaDirect({
       model,
       question,
-      notebookId: notebook_id,
+      notebookId: notebookId,
       history,
       systemPrompt,
       messageId,
-      strategyId: strategy_id,
-      topK: top_k,
-      minScore: min_score,
-      sourceIds: source_ids,
+      strategyId: strategyId,
+      topK: topK,
+      minScore: minScore,
+      sourceIds: sourceIds,
       preset,
       onMessageSettled: (text, _failed, citations) => {
         if (messageId) {
@@ -238,11 +235,11 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
     return {
       answer: result.answer,
       citations: result.citations,
-      message_id: messageId ?? null,
-      session_id,
+      messageId: messageId ?? null,
+      sessionId,
       confidence: result.confidence,
       evidence: result.evidence,
-      no_evidence_reason: result.noEvidenceReason,
+      noEvidenceReason: result.noEvidenceReason,
     };
   })
 
@@ -250,34 +247,31 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
   .post('/qa/stream', async ({ body }) => {
     const {
       question: rawQuestion,
-      notebook_id,
-      session_id,
+      notebookId,
+      sessionId,
       preset: bodyPreset,
       directive,
-      strategy_id,
-      top_k,
-      min_score,
-      source_ids,
+      strategyId,
+      topK,
+      minScore,
+      sourceIds,
     } = body as unknown as QaRequest;
 
     // c45: parse /prompt:<preset> directive from question text
     const { preset, question } = parsePromptDirective(rawQuestion, bodyPreset);
 
     assertQaOwnership({
-      notebookId: notebook_id,
-      sessionId: session_id,
-      sourceIds: source_ids,
+      notebookId: notebookId,
+      sessionId: sessionId,
+      sourceIds: sourceIds,
     });
 
-    const history = session_id ? loadHistory(session_id) : [];
+    const history = sessionId ? loadHistory(sessionId) : [];
 
     // Create user message + auto-title
-    if (session_id) {
-      db()
-        .insert(messages)
-        .values({ sessionId: session_id, role: 'user', content: question })
-        .run();
-      maybeSetSessionTitle(session_id, question);
+    if (sessionId) {
+      db().insert(messages).values({ sessionId: sessionId, role: 'user', content: question }).run();
+      maybeSetSessionTitle(sessionId, question);
     }
 
     const modelConfig = getDefaultChatModel();
@@ -287,10 +281,10 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
 
     // Create provisional assistant message
     let messageId: number | undefined;
-    if (session_id) {
+    if (sessionId) {
       const msg = db()
         .insert(messages)
-        .values({ sessionId: session_id, role: 'assistant', content: '' })
+        .values({ sessionId: sessionId, role: 'assistant', content: '' })
         .returning()
         .get();
       messageId = msg.id;
@@ -299,14 +293,14 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
     return streamQa({
       model,
       question,
-      notebookId: notebook_id,
+      notebookId: notebookId,
       history,
       systemPrompt,
       messageId,
-      strategyId: strategy_id,
-      topK: top_k,
-      minScore: min_score,
-      sourceIds: source_ids,
+      strategyId: strategyId,
+      topK: topK,
+      minScore: minScore,
+      sourceIds: sourceIds,
       preset,
       onMessageSettled: (text, failed, citations) => {
         if (!messageId) return;
@@ -325,11 +319,11 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
 
   // QA Export — markdown or json (v1 api.py:613-717)
   .get('/qa/export', ({ query }) => {
-    const sessionId = Number(query.session_id);
-    const messageId = query.message_id ? Number(query.message_id) : undefined;
+    const sessionId = Number(query.sessionId);
+    const messageId = query.messageId ? Number(query.messageId) : undefined;
     const format = (query.format as 'markdown' | 'json') ?? 'markdown';
 
-    if (!sessionId) throw new Error('session_id is required');
+    if (!sessionId) throw new Error('sessionId is required');
 
     // Find the assistant message to export
     let assistantMessage;
@@ -364,8 +358,8 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
 
     const citations = (assistantMessage.citations as unknown[] | null) ?? [];
 
-    // c48: resolve notebook_id from session (v1 export is notebook-scoped,
-    // api.py:669 filters sources by notebook_id) for sources meta + top-level.
+    // c48: resolve notebookId from session (v1 export is notebook-scoped,
+    // api.py:669 filters sources by notebookId) for sources meta + top-level.
     const sessionRow = db().select().from(sessions).where(eq(sessions.id, sessionId)).get();
     const notebookId = sessionRow?.notebookId;
 
@@ -397,31 +391,31 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
     const sourcesMeta = [
       // Existing sources (notebook-scoped)
       ...sourceRows.map((s) => ({
-        source_id: s.id,
+        sourceId: s.id,
         source_name: s.filename,
-        mime_type: s.mimeType,
-        parser_type: s.parserType,
+        mimeType: s.mimeType,
+        parserType: s.parserType,
       })),
       // Fallback entries for cited-but-deleted sources (v1 api.py:584-595)
       ...citedSourceIds
         .filter((id) => !foundIds.has(id))
         .toSorted((a, b) => a - b)
         .map((id) => ({
-          source_id: id,
+          sourceId: id,
           source_name: fallbackNames.get(id) ?? '未知来源',
-          mime_type: null,
-          parser_type: null,
+          mimeType: null,
+          parserType: null,
         })),
     ];
 
     const exportedAt = new Date().toISOString();
 
     if (format === 'json') {
-      // c48: JSON — add notebook_id (v1 api.py:679); sources meta in v1 shape.
+      // c48: JSON — add notebookId (v1 api.py:679); sources meta in v1 shape.
       return {
-        notebook_id: notebookId,
-        session_id: sessionId,
-        message_id: assistantMessage.id,
+        notebookId: notebookId,
+        sessionId: sessionId,
+        messageId: assistantMessage.id,
         question,
         answer: assistantMessage.content,
         citations,

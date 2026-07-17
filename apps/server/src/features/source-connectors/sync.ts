@@ -27,14 +27,14 @@ export function serializeBinding(
 ): ConnectorBindingRead {
   return {
     id: row.id,
-    notebook_id: row.notebookId,
-    connector_id: row.connectorId,
-    connection_config: row.connectionConfig as Record<string, unknown>,
-    import_scope: (row.importScope as ImportScope | null) ?? null,
-    last_confirmed_snapshot: (row.lastConfirmedSnapshot as Snapshot | null) ?? null,
-    last_sync_check_result: (row.lastSyncCheckResult as SyncCheckResult | null) ?? null,
-    created_at: row.createdAt.toISOString(),
-    updated_at: row.updatedAt.toISOString(),
+    notebookId: row.notebookId,
+    connectorId: row.connectorId,
+    connectionConfig: row.connectionConfig as Record<string, unknown>,
+    importScope: (row.importScope as ImportScope | null) ?? null,
+    lastConfirmedSnapshot: (row.lastConfirmedSnapshot as Snapshot | null) ?? null,
+    lastSyncCheckResult: (row.lastSyncCheckResult as SyncCheckResult | null) ?? null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
@@ -42,13 +42,13 @@ export function normalizeImportScope(scope: ImportScope): {
   directories: string[];
   files: string[];
 } {
-  const rawDirectories = scope.include_directories ?? [];
-  const rawFiles = scope.include_files ?? [];
+  const rawDirectories = scope.includeDirectories ?? [];
+  const rawFiles = scope.includeFiles ?? [];
 
   if (!rawDirectories.length && !rawFiles.length) {
     throw Object.assign(new Error('导入范围不能为空'), {
       status: 400,
-      error_code: 'IMPORT_SCOPE_EMPTY',
+      errorCode: 'IMPORT_SCOPE_EMPTY',
       hint: '至少选择一个目录或文件。',
     });
   }
@@ -73,7 +73,7 @@ export function normalizeImportScope(scope: ImportScope): {
   if (!uniqueDirectories.length && !uniqueFiles.length) {
     throw Object.assign(new Error('导入范围不能为空'), {
       status: 400,
-      error_code: 'IMPORT_SCOPE_EMPTY',
+      errorCode: 'IMPORT_SCOPE_EMPTY',
       hint: '至少选择一个目录或文件。',
     });
   }
@@ -87,9 +87,9 @@ export function filterSnapshotByScope(
   files: string[],
 ): Snapshot {
   return {
-    generated_at: snapshot.generated_at,
+    generatedAt: snapshot.generatedAt,
     entries: snapshot.entries.filter((entry) =>
-      pathInScope(entry.relative_path, directories, files),
+      pathInScope(entry.relativePath, directories, files),
     ),
   };
 }
@@ -99,8 +99,8 @@ export function buildSyncCandidates(
   currentSnapshot: Snapshot,
 ): SyncCandidates {
   const baseEntries = baseSnapshot?.entries ?? [];
-  const baseMap = new Map(baseEntries.map((entry) => [entry.relative_path, entry]));
-  const currentMap = new Map(currentSnapshot.entries.map((entry) => [entry.relative_path, entry]));
+  const baseMap = new Map(baseEntries.map((entry) => [entry.relativePath, entry]));
+  const currentMap = new Map(currentSnapshot.entries.map((entry) => [entry.relativePath, entry]));
 
   const added: SyncCandidate[] = [];
   const updated: SyncCandidate[] = [];
@@ -109,15 +109,15 @@ export function buildSyncCandidates(
   for (const [path, current] of currentMap) {
     const base = baseMap.get(path);
     if (!base) {
-      added.push({ relative_path: path, current, base: null, reason: null });
+      added.push({ relativePath: path, current, base: null, reason: null });
       continue;
     }
-    if (base.size_bytes !== current.size_bytes || base.modified_at !== current.modified_at) {
+    if (base.sizeBytes !== current.sizeBytes || base.modifiedAt !== current.modifiedAt) {
       const reasons: string[] = [];
-      if (base.size_bytes !== current.size_bytes) reasons.push('size_bytes 变化');
-      if (base.modified_at !== current.modified_at) reasons.push('modified_at 变化');
+      if (base.sizeBytes !== current.sizeBytes) reasons.push('size_bytes 变化');
+      if (base.modifiedAt !== current.modifiedAt) reasons.push('modified_at 变化');
       updated.push({
-        relative_path: path,
+        relativePath: path,
         current,
         base,
         reason: reasons.length ? reasons.join('; ') : null,
@@ -127,12 +127,12 @@ export function buildSyncCandidates(
 
   for (const [path, base] of baseMap) {
     if (!currentMap.has(path)) {
-      missing.push({ relative_path: path, current: null, base, reason: null });
+      missing.push({ relativePath: path, current: null, base, reason: null });
     }
   }
 
   const sortByPath = (a: SyncCandidate, b: SyncCandidate) =>
-    a.relative_path.localeCompare(b.relative_path);
+    a.relativePath.localeCompare(b.relativePath);
   added.sort(sortByPath);
   updated.sort(sortByPath);
   missing.sort(sortByPath);
@@ -165,18 +165,18 @@ async function ingestConnectorEntry(
     raw = await readConnectorFileBytes(
       binding.connectorId,
       binding.connectionConfig as Record<string, unknown>,
-      entry.relative_path,
+      entry.relativePath,
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : '读取文件失败';
     return {
       vectorsChanged: false,
       item: {
-        relative_path: entry.relative_path,
+        relativePath: entry.relativePath,
         status: 'failed',
-        source_id: null,
+        sourceId: null,
         diagnostic: {
-          error_code: 'CONNECTOR_READ_FAILED',
+          errorCode: 'CONNECTOR_READ_FAILED',
           message: '读取文件失败',
           hint: '检查连接参数与文件权限，或查看后端日志。',
           details: { error: message },
@@ -189,11 +189,11 @@ async function ingestConnectorEntry(
     return {
       vectorsChanged: false,
       item: {
-        relative_path: entry.relative_path,
+        relativePath: entry.relativePath,
         status: 'failed',
-        source_id: null,
+        sourceId: null,
         diagnostic: {
-          error_code: 'EMPTY_DOCUMENT',
+          errorCode: 'EMPTY_DOCUMENT',
           message: '空文档，无法导入',
           hint: '请检查文件内容是否为空。',
         },
@@ -210,9 +210,9 @@ async function ingestConnectorEntry(
     return {
       vectorsChanged: false,
       item: {
-        relative_path: entry.relative_path,
+        relativePath: entry.relativePath,
         status: 'reused',
-        source_id: dedup.existingSourceId,
+        sourceId: dedup.existingSourceId,
         diagnostic: null,
       },
     };
@@ -220,9 +220,9 @@ async function ingestConnectorEntry(
 
   const result = await ingestSource({
     buffer: raw,
-    filename: entry.relative_path,
+    filename: entry.relativePath,
     notebookId,
-    mimeType: mimeTypeForPath(entry.relative_path),
+    mimeType: mimeTypeForPath(entry.relativePath),
     dedupKey,
   });
 
@@ -230,11 +230,11 @@ async function ingestConnectorEntry(
     return {
       vectorsChanged: false,
       item: {
-        relative_path: entry.relative_path,
+        relativePath: entry.relativePath,
         status: 'failed',
-        source_id: result.sourceId,
+        sourceId: result.sourceId,
         diagnostic: {
-          error_code: result.errorCode ?? 'INGESTION_FAILED',
+          errorCode: result.errorCode ?? 'INGESTION_FAILED',
           message: result.errorMessage ?? '导入失败',
           hint: '可稍后重试；若持续失败，检查日志或依赖服务状态。',
         },
@@ -262,9 +262,9 @@ async function ingestConnectorEntry(
   return {
     vectorsChanged: true,
     item: {
-      relative_path: entry.relative_path,
+      relativePath: entry.relativePath,
       status: 'imported',
-      source_id: result.sourceId,
+      sourceId: result.sourceId,
       diagnostic: null,
     },
   };
@@ -290,9 +290,9 @@ export async function importSnapshotEntries(
 
   for (const entry of entries) {
     const connectorMetadata: Record<string, unknown> = {
-      connector_id: binding.connectorId,
+      connectorId: binding.connectorId,
       binding_id: binding.id,
-      relative_path: entry.relative_path,
+      relativePath: entry.relativePath,
       snapshot_entry: entry,
       ...(options?.syncCheckId ? { sync_check_id: options.syncCheckId } : {}),
     };
@@ -305,15 +305,15 @@ export async function importSnapshotEntries(
     );
 
     if (item.status === 'failed') hadFailures = true;
-    if (item.status === 'imported' && item.source_id) importedSourceIds.push(item.source_id);
-    if (item.status === 'reused' && item.source_id) reusedSourceIds.push(item.source_id);
+    if (item.status === 'imported' && item.sourceId) importedSourceIds.push(item.sourceId);
+    if (item.status === 'reused' && item.sourceId) reusedSourceIds.push(item.sourceId);
     if (changed) vectorsChanged = true;
 
     if (
       options?.skipUnsupportedAsSkipped &&
       item.diagnostic &&
-      (item.diagnostic.error_code === 'PARSER_PLUGIN_REQUIRED' ||
-        item.diagnostic.error_code === 'UNSUPPORTED_FILE_TYPE')
+      (item.diagnostic.errorCode === 'PARSER_PLUGIN_REQUIRED' ||
+        item.diagnostic.errorCode === 'UNSUPPORTED_FILE_TYPE')
     ) {
       results.push({ ...item, status: 'skipped' });
     } else {
@@ -332,7 +332,7 @@ export async function applySyncCheckToBinding(
   if (!binding.lastSyncCheckResult) {
     throw Object.assign(new Error('请先执行 sync_check'), {
       status: 409,
-      error_code: 'SYNC_CHECK_REQUIRED',
+      errorCode: 'SYNC_CHECK_REQUIRED',
     });
   }
 
@@ -340,7 +340,7 @@ export async function applySyncCheckToBinding(
   if (stored.id !== syncCheckId) {
     throw Object.assign(new Error('sync_check 已过期'), {
       status: 409,
-      error_code: 'SYNC_CHECK_OUTDATED',
+      errorCode: 'SYNC_CHECK_OUTDATED',
       hint: '请重新执行 sync_check 并确认后再应用。',
       details: { expected: stored.id, got: syncCheckId },
     });
@@ -350,8 +350,8 @@ export async function applySyncCheckToBinding(
   const seenPaths = new Set<string>();
   for (const candidate of [...stored.candidates.added, ...stored.candidates.updated]) {
     const entry = candidate.current;
-    if (!entry || seenPaths.has(entry.relative_path)) continue;
-    seenPaths.add(entry.relative_path);
+    if (!entry || seenPaths.has(entry.relativePath)) continue;
+    seenPaths.add(entry.relativePath);
     entriesToImport.push(entry);
   }
 
@@ -365,7 +365,7 @@ export async function applySyncCheckToBinding(
     updatedBinding = db()
       .update(sourceConnectorBindings)
       .set({
-        lastConfirmedSnapshot: stored.current_snapshot as unknown as Record<string, unknown>,
+        lastConfirmedSnapshot: stored.currentSnapshot as unknown as Record<string, unknown>,
         lastSyncCheckResult: null,
         updatedAt: new Date(),
       })
@@ -376,8 +376,8 @@ export async function applySyncCheckToBinding(
 
   return {
     binding: serializeBinding(updatedBinding),
-    imported_source_ids: importedSourceIds,
-    reused_source_ids: reusedSourceIds,
+    importedSourceIds: importedSourceIds,
+    reusedSourceIds: reusedSourceIds,
     results,
     ...(vectorsChanged ? {} : {}),
   };
@@ -391,12 +391,12 @@ export async function applyImportScopeToBinding(
 ): Promise<ImportScopeApplyResponse> {
   const { directories, files } = normalizeImportScope(scope);
   const normalizedScope: ImportScope = {
-    include_directories: directories.length ? directories : null,
-    include_files: files.length ? files : null,
+    includeDirectories: directories.length ? directories : null,
+    includeFiles: files.length ? files : null,
   };
 
   const selectedEntries = currentSnapshot.entries.filter((entry) =>
-    pathInScope(entry.relative_path, directories, files),
+    pathInScope(entry.relativePath, directories, files),
   );
 
   const { results, importedSourceIds, reusedSourceIds } = await importSnapshotEntries(
@@ -425,8 +425,8 @@ export async function applyImportScopeToBinding(
 
   return {
     binding: serializeBinding(updatedBinding),
-    imported_source_ids: importedSourceIds,
-    reused_source_ids: reusedSourceIds,
+    importedSourceIds: importedSourceIds,
+    reusedSourceIds: reusedSourceIds,
     results,
   };
 }

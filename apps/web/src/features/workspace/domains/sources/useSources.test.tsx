@@ -64,9 +64,9 @@ beforeEach(() => {
   });
 
   server.use(
-    http.get('*/v1/notebooks/:notebook_id/sources', () => HttpResponse.json([])),
-    http.get('*/v1/notebooks/:notebook_id/sources/tags', () => HttpResponse.json([])),
-    http.get('*/v1/notebooks/:notebook_id/sources/extractors', () =>
+    http.get('*/v1/notebooks/:notebookId/sources', () => HttpResponse.json([])),
+    http.get('*/v1/notebooks/:notebookId/sources/tags', () => HttpResponse.json([])),
+    http.get('*/v1/notebooks/:notebookId/sources/extractors', () =>
       HttpResponse.json({ extractors: [] }),
     ),
   );
@@ -75,7 +75,7 @@ beforeEach(() => {
 test('handleSearch updates queue status and notice on success', async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/sources/search', async ({ request }) => {
+    http.post('*/v1/notebooks/:notebookId/sources/search', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         results: [{ url: 'https://example.com', title: 'Example' }],
@@ -115,11 +115,11 @@ test('removeSources calls batch delete endpoint and refreshes list', async () =>
   let deleteCalls = 0;
   let sourceListHits = 0;
   server.use(
-    http.get('*/v1/notebooks/:notebook_id/sources', () => {
+    http.get('*/v1/notebooks/:notebookId/sources', () => {
       sourceListHits += 1;
       return HttpResponse.json([]);
     }),
-    http.delete('*/v1/notebooks/:notebook_id/sources/batch', async () => {
+    http.delete('*/v1/notebooks/:notebookId/sources/batch', async () => {
       deleteCalls += 1;
       return HttpResponse.json({
         deleted_count: 2,
@@ -153,7 +153,7 @@ test('handleUpload supports multiple files and exposes queue', async () => {
   server.use(
     http.post('*/v2/sources/upload', async ({ request }) => {
       uploaded += 1;
-      notebookIds.push(new URL(request.url).searchParams.get('notebook_id') ?? '');
+      notebookIds.push(new URL(request.url).searchParams.get('notebookId') ?? '');
       return HttpResponse.json({
         sourceId: uploaded,
         chunkCount: 1,
@@ -186,7 +186,7 @@ test('handleUpload supports multiple files and exposes queue', async () => {
 test('batchReembedSources calls dedicated batch endpoint', async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/sources/batch/re-embed', async ({ request }) => {
+    http.post('*/v1/notebooks/:notebookId/sources/batch/re-embed', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         reembedded_count: 2,
@@ -210,17 +210,17 @@ test('batchReembedSources calls dedicated batch endpoint', async () => {
   });
 
   expect(success).toBe(true);
-  expect(capturedBody).toEqual({ source_ids: [5, 6] });
+  expect(capturedBody).toEqual({ sourceIds: [5, 6] });
 });
 
 test('assignTagToSources sends selected source ids', async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/sources/tags/:tag_id/sources', async ({ request }) => {
+    http.post('*/v1/notebooks/:notebookId/sources/tags/:tag_id/sources', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         tag_id: 3,
-        source_ids: [1, 2],
+        sourceIds: [1, 2],
         count: 2,
       });
     }),
@@ -239,5 +239,5 @@ test('assignTagToSources sends selected source ids', async () => {
   });
 
   expect(success).toBe(true);
-  expect(capturedBody).toEqual({ source_ids: [1, 2] });
+  expect(capturedBody).toEqual({ sourceIds: [1, 2] });
 });

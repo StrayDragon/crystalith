@@ -117,13 +117,13 @@ test('normalizeSource resolves type and status labels', () => {
 test('normalizeOutput keeps typed payload when shape matches', () => {
   const output = normalizeOutput({
     id: 8,
-    notebook_id: 1,
+    notebookId: 1,
     type: 'FAQ',
     prompt: 'faq',
-    chunk_ids: [1],
+    chunkIds: [1],
     content: { items: [{ question: 'Q1', answer: 'A1' }] },
-    created_at: '2026-01-01T10:00:00Z',
-    updated_at: '2026-01-01T10:00:00Z',
+    createdAt: '2026-01-01T10:00:00Z',
+    updatedAt: '2026-01-01T10:00:00Z',
   });
 
   const decoded = decodeOutputItem(output);
@@ -137,13 +137,13 @@ test('normalizeOutput keeps typed payload when shape matches', () => {
 test('normalizeOutput falls back for invalid payload shape', () => {
   const output = normalizeOutput({
     id: 9,
-    notebook_id: 1,
+    notebookId: 1,
     type: 'GUIDE',
     prompt: 'guide',
-    chunk_ids: [1],
+    chunkIds: [1],
     content: { not_modules: true },
-    created_at: '2026-01-01T10:00:00Z',
-    updated_at: '2026-01-01T10:00:00Z',
+    createdAt: '2026-01-01T10:00:00Z',
+    updatedAt: '2026-01-01T10:00:00Z',
   });
 
   expect(isFallbackOutputPayload(output.content)).toBe(true);

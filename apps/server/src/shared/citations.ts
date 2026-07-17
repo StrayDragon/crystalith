@@ -18,9 +18,9 @@ import { chunks, sources } from '../db/schema.ts';
  * v1 1-based form (`chunk_index + 1`).
  */
 export interface RetrievedChunk {
-  chunk_id: number;
-  source_id: number;
-  chunk_index: number;
+  chunkId: number;
+  sourceId: number;
+  chunkIndex: number;
   text: string;
   score: number;
 }
@@ -62,7 +62,7 @@ export function hydrateCitations(
   if (retrieved.length === 0) return [];
   const { trimSnippet = false, coercePageNumber = false } = options;
 
-  const sourceIds = [...new Set(retrieved.map((c) => c.source_id))];
+  const sourceIds = [...new Set(retrieved.map((c) => c.sourceId))];
   const sourceRows = db()
     .select({ id: sources.id, filename: sources.filename })
     .from(sources)
@@ -70,7 +70,7 @@ export function hydrateCitations(
     .all();
   const sourceNameMap = new Map(sourceRows.map((s) => [s.id, s.filename]));
 
-  const chunkIds = retrieved.map((c) => c.chunk_id);
+  const chunkIds = retrieved.map((c) => c.chunkId);
   const chunkRows = db()
     .select({ id: chunks.id, metadata: chunks.metadata })
     .from(chunks)
@@ -79,14 +79,14 @@ export function hydrateCitations(
   const chunkMetaMap = new Map(chunkRows.map((c) => [c.id, c.metadata]));
 
   return retrieved.map((c) => {
-    const meta = (chunkMetaMap.get(c.chunk_id) ?? {}) as Record<string, unknown>;
+    const meta = (chunkMetaMap.get(c.chunkId) ?? {}) as Record<string, unknown>;
     const snippet = trimSnippet ? c.text.trim().slice(0, 200) : c.text.slice(0, 200);
     return {
-      sourceId: c.source_id,
-      sourceName: sourceNameMap.get(c.source_id) ?? 'unknown',
-      chunkId: c.chunk_id,
+      sourceId: c.sourceId,
+      sourceName: sourceNameMap.get(c.sourceId) ?? 'unknown',
+      chunkId: c.chunkId,
       // v1 1-based
-      chunkIndex: c.chunk_index + 1,
+      chunkIndex: c.chunkIndex + 1,
       pageNumber: extractNumber(meta.page, coercePageNumber),
       paragraphIndex: extractNumber(meta.paragraph_index, coercePageNumber),
       snippet,

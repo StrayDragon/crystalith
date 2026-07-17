@@ -18,18 +18,18 @@ export type RefineFormat = z.infer<typeof RefineFormatSchema>;
 export const RefineRequestSchema = z.object({
   prompt: z.string().min(1),
   format: RefineFormatSchema.default('paragraph'),
-  source_ids: z.array(IdSchema).optional(),
-  top_k: z.number().int().min(1).max(20).default(5),
-  min_score: z.number().min(0).max(1).default(0.2),
+  sourceIds: z.array(IdSchema).optional(),
+  topK: z.number().int().min(1).max(20).default(5),
+  minScore: z.number().min(0).max(1).default(0.2),
 });
 export type RefineRequest = z.infer<typeof RefineRequestSchema>;
 
 export const RefineBatchRequestSchema = z.object({
   prompt: z.string().min(1),
   formats: z.array(RefineFormatSchema).optional(),
-  source_ids: z.array(IdSchema).optional(),
-  top_k: z.number().int().min(1).max(20).default(5),
-  min_score: z.number().min(0).max(1).default(0.2),
+  sourceIds: z.array(IdSchema).optional(),
+  topK: z.number().int().min(1).max(20).default(5),
+  minScore: z.number().min(0).max(1).default(0.2),
 });
 export type RefineBatchRequest = z.infer<typeof RefineBatchRequestSchema>;
 
@@ -52,7 +52,7 @@ export const RefineResponseSchema = z.object({
   structured: StructuredRefineSchema.nullable().optional(),
   citations: z.array(CitationSchema),
   evidence: z.boolean(),
-  created_at: IsoTimestampSchema,
+  createdAt: IsoTimestampSchema,
 });
 export type RefineResponse = z.infer<typeof RefineResponseSchema>;
 
@@ -67,6 +67,6 @@ export const RefineBatchResponseSchema = z.object({
   outputs: z.record(z.string(), RefineBatchOutputSchema),
   citations: z.array(CitationSchema),
   evidence: z.boolean(),
-  created_at: IsoTimestampSchema,
+  createdAt: IsoTimestampSchema,
 });
 export type RefineBatchResponse = z.infer<typeof RefineBatchResponseSchema>;

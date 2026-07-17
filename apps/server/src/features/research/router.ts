@@ -144,15 +144,15 @@ const activeResearch = new Map<number, AbortController>();
 function serializeSession(row: typeof researchSessions.$inferSelect) {
   return {
     id: row.id,
-    notebook_id: row.notebookId,
+    notebookId: row.notebookId,
     topic: row.topic,
     status: row.status,
-    current_iteration: row.currentIteration,
-    max_iterations: row.maxIterations,
-    aggregated_results: row.aggregatedResults as Array<Record<string, unknown>> | null,
-    final_report: row.finalReport,
-    created_at: row.createdAt?.toISOString?.() ?? String(row.createdAt),
-    updated_at: row.updatedAt?.toISOString?.() ?? String(row.updatedAt),
+    currentIteration: row.currentIteration,
+    maxIterations: row.maxIterations,
+    aggregatedResults: row.aggregatedResults as Array<Record<string, unknown>> | null,
+    finalReport: row.finalReport,
+    createdAt: row.createdAt?.toISOString?.() ?? String(row.createdAt),
+    updatedAt: row.updatedAt?.toISOString?.() ?? String(row.updatedAt),
   };
 }
 
@@ -314,20 +314,20 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
           ? raw.goal
           : ''
       ).trim() || '深度研究';
-    const notebook_id = raw.notebook_id;
-    const max_iterations = raw.max_iterations;
-    const notebookId = Number(notebook_id);
+    const notebookId = raw.notebookId;
+    const maxIterations = raw.maxIterations;
+    const nid = Number(notebookId);
 
-    const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
-    if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
+    const nb = db().select().from(notebooks).where(eq(notebooks.id, nid)).get();
+    if (!nb) throw new NotFoundError(`Notebook ${nid} not found`);
 
     const session = db()
       .insert(researchSessions)
       .values({
-        notebookId,
+        notebookId: nid,
         topic,
         status: 'planning',
-        maxIterations: Number(max_iterations ?? 4),
+        maxIterations: Number(maxIterations ?? 4),
       })
       .returning()
       .get();
@@ -339,7 +339,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
   // List research sessions
   .get('/research', ({ query }) => {
-    const notebookId = Number((query as { notebook_id?: string }).notebook_id);
+    const notebookId = Number((query as { notebookId?: string }).notebookId);
     let q = db().select().from(researchSessions).$dynamic();
     if (notebookId) {
       q = q.where(eq(researchSessions.notebookId, notebookId));
@@ -649,7 +649,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
         })
         .returning()
         .get();
-      return { success: true, export_type: 'note', output_id: output.id };
+      return { success: true, exportType: 'note', outputId: output.id };
     }
 
     // Default: export as source (v1 api.py:1245-1430)
@@ -710,9 +710,9 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
     return {
       success: true,
-      export_type: 'source',
+      exportType: 'source',
       message: `报告已导出为来源：${filename}`,
-      source_id: source.id,
+      sourceId: source.id,
     };
   })
 

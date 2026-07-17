@@ -1,11 +1,9 @@
 /**
- * Re-exported types from the generated client, now defined locally
- * as generic Record alias for the eden treaty migration.
- * These match the v2 server response shapes (research, etc.).
+ * Shared API types — camelCase wire (c65).
  *
- * Using Record<string, unknown> for complex types to avoid drift
- * with the actual server responses. Components should use type
- * assertions as needed.
+ * Prefer importing from `@crystalith/shared` for server-contract types.
+ * This file contains only types not yet re-exported from shared, or
+ * frontend-specific UI transformations.
  */
 
 export type ResearchStatus =
@@ -19,36 +17,36 @@ export type ResearchStatus =
 
 export interface ResearchSessionListItem {
   id: number;
-  notebook_id: number;
+  notebookId: number;
   topic: string;
   status: ResearchStatus;
-  current_iteration: number;
-  max_iterations: number;
-  created_at: string;
-  updated_at: string;
+  currentIteration: number;
+  maxIterations: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ResearchStepResponse {
   id: number;
   type: string;
   iteration: number;
-  input_data: Record<string, unknown> | null;
-  output_data: Record<string, unknown> | null;
+  inputData: Record<string, unknown> | null;
+  outputData: Record<string, unknown> | null;
   status: string;
-  created_at: string;
+  createdAt: string;
 }
 
 export interface ResearchSessionResponse {
   id: number;
-  notebook_id: number;
+  notebookId: number;
   topic: string;
   status: ResearchStatus;
-  current_iteration: number;
-  max_iterations: number;
-  aggregated_results: Array<Record<string, unknown>> | null;
-  final_report: string | null;
-  created_at: string;
-  updated_at: string;
+  currentIteration: number;
+  maxIterations: number;
+  aggregatedResults: Array<Record<string, unknown>> | null;
+  finalReport: string | null;
+  createdAt: string;
+  updatedAt: string;
   steps?: ResearchStepResponse[];
 }
 
@@ -60,11 +58,10 @@ export interface CitationContextResponse {
   sourceId: number;
   sourceName?: string;
   text: string;
-  // v2 server response may differ from v1 shape — accept any
   // biome-ignore lint/suspicious/noExplicitAny: v2 compat
-  before_chunks?: Array<Record<string, any>>;
+  beforeChunks?: Array<Record<string, any>>;
   // biome-ignore lint/suspicious/noExplicitAny: v2 compat
-  after_chunks?: Array<Record<string, any>>;
+  afterChunks?: Array<Record<string, any>>;
   // biome-ignore lint/suspicious/noExplicitAny: v2 compat
   [key: string]: any;
 }
@@ -85,10 +82,10 @@ export type Citation = {
 
 export interface SourceTagRead {
   id: number;
-  notebook_id: number;
+  notebookId: number;
   name: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface QaMessage {
@@ -103,9 +100,9 @@ export interface TaskRead {
   type: string;
   status: string;
   title: string;
-  notebook_id: number;
-  created_at: string;
-  updated_at: string;
+  notebookId: number;
+  createdAt: string;
+  updatedAt: string;
   error?: string;
 }
 
@@ -119,48 +116,48 @@ export interface ExtractorInfoResponse {
   available: boolean;
   description: string;
   details?: Record<string, unknown> | null;
-  display_name?: string;
+  displayName?: string;
   type: string;
   enabled: boolean;
   priority?: number;
-  requires_api_key?: boolean;
-  requires_service: boolean;
-  plugin_id?: string;
-  error_code?: string;
+  requiresApiKey?: boolean;
+  requiresService: boolean;
+  pluginId?: string;
+  errorCode?: string;
   message?: string;
-  recovery_hint?: string;
+  recoveryHint?: string;
   metadata?: Record<string, unknown>;
 }
 
 export interface ExtractorsListResponse {
-  notebook_id: number;
+  notebookId: number;
   policy: {
     mode: string;
-    enabled_extractors: string[] | null;
+    enabledExtractors: string[] | null;
   };
   extractors: ExtractorInfoResponse[];
-  default_extractor: string;
-  fallback_enabled: boolean;
+  defaultExtractor: string;
+  fallbackEnabled: boolean;
 }
 
 export interface ChunkRead {
-  chunk_index: number;
-  end_offset: number | null;
+  chunkIndex: number;
+  endOffset: number | null;
   id: number;
   metadata: Record<string, unknown> | null;
-  source_id: number;
-  start_offset: number | null;
+  sourceId: number;
+  startOffset: number | null;
   text: string;
-  token_count: number;
+  tokenCount: number;
 }
 
 export interface NotebookExtractorsPolicy {
-  enabled_extractors?: string[];
+  enabledExtractors?: string[];
   mode?: 'custom' | 'inherit_global';
 }
 
 export interface PatchNotebookExtractorsPolicyRequest {
-  enabled_extractors?: string[] | null;
+  enabledExtractors?: string[] | null;
   mode?: 'custom' | 'inherit_global' | null;
 }
 
@@ -186,7 +183,7 @@ export interface PreviewDescriptor {
 }
 
 export interface FrontendBundleDescriptor {
-  api_version: string;
+  apiVersion: string;
   kind: string;
   id: string;
   export: string;
@@ -195,7 +192,7 @@ export interface FrontendBundleDescriptor {
 export interface PluginConfigSchema {
   description?: string;
   preview?: PreviewDescriptor | null;
-  frontend_bundle?: FrontendBundleDescriptor | null;
+  frontendBundle?: FrontendBundleDescriptor | null;
   [key: string]: unknown;
 }
 
@@ -205,11 +202,11 @@ export interface WorkspaceTool {
   label: string;
   description: string;
   tone?: string;
-  output_type: string;
+  outputType: string;
   prompt: string;
-  is_tool: boolean;
+  isTool: boolean;
   enabled: boolean;
-  config_schema?: PluginConfigSchema | null;
-  render_descriptor?: RenderDescriptor | null;
-  frontend_bundle?: FrontendBundleDescriptor | null;
+  configSchema?: PluginConfigSchema | null;
+  renderDescriptor?: RenderDescriptor | null;
+  frontendBundle?: FrontendBundleDescriptor | null;
 }

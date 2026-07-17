@@ -104,10 +104,10 @@ async function post(path: string, body?: unknown): Promise<{ status: number; bod
 describe('studio two-stage generation', () => {
   it('creates a slide draft in the input stage', async () => {
     const { status, body } = await post('/v2/studio/slides', {
-      notebook_id: notebookId,
+      notebookId: notebookId,
       title: 'My Deck',
       prompt: 'Focus on clarity',
-      source_ids: [sourceId],
+      sourceIds: [sourceId],
     });
     expect(status).toBe(200);
     const slide = body as { id: number; stage: string; status: string };
@@ -156,9 +156,9 @@ describe('studio two-stage generation', () => {
     // (no PATCH endpoint exists) to simulate a user review, and confirm the
     // stored value changes.
     const created = await post('/v2/studio/slides', {
-      notebook_id: notebookId,
+      notebookId: notebookId,
       title: 'Review Deck',
-      source_ids: [sourceId],
+      sourceIds: [sourceId],
     });
     const id = (created.body as { id: number }).id;
     await post(`/v2/studio/slides/${id}/outline`);
@@ -173,9 +173,9 @@ describe('studio two-stage generation', () => {
 
   it('returns 404 when generating markdown before an outline exists', async () => {
     const created = await post('/v2/studio/slides', {
-      notebook_id: notebookId,
+      notebookId: notebookId,
       title: 'No Outline Deck',
-      source_ids: [sourceId],
+      sourceIds: [sourceId],
     });
     const id = (created.body as { id: number }).id;
 

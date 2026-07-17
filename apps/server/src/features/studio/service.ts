@@ -87,7 +87,7 @@ export function buildConfigHints(config: Record<string, unknown> | null): string
     typeof config.structure === 'string' ? config.structure : null,
   );
   const themePreset = resolveThemePreset(
-    typeof config.theme_preset === 'string' ? config.theme_preset : null,
+    typeof config.themePreset === 'string' ? config.themePreset : null,
   );
 
   const lines: string[] = [];
@@ -275,7 +275,7 @@ export async function generateMarkdown(
   const model = withRetry(await resolveModel(modelConfig));
 
   const config = slide.generationConfig as Record<string, unknown> | null;
-  const themePreset = (config?.theme_preset as string) ?? 'minimal-clean';
+  const themePreset = (config?.themePreset as string) ?? 'minimal-clean';
   const frontmatterOverride =
     typeof config?.frontmatter === 'string' && config.frontmatter.trim()
       ? config.frontmatter

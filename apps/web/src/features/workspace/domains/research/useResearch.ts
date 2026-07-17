@@ -93,32 +93,32 @@ export type ResearchStatus =
 
 export interface ResearchSessionItem {
   id: number;
-  notebook_id: number;
+  notebookId: number;
   topic: string;
   status: string;
-  current_iteration: number;
-  max_iterations: number;
+  currentIteration: number;
+  maxIterations: number;
   result_count?: number;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ResearchSessionDetail {
   id: number;
-  notebook_id: number;
+  notebookId: number;
   topic: string;
   status: string;
-  current_iteration: number;
-  max_iterations: number;
-  aggregated_results: Array<Record<string, unknown>> | null;
-  final_report: string | null;
+  currentIteration: number;
+  maxIterations: number;
+  aggregatedResults: Array<Record<string, unknown>> | null;
+  finalReport: string | null;
   steps?: Array<{
     type: string;
     output_data?: Record<string, unknown> | null;
     iteration: number;
   }>;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface UseResearchResult {
@@ -181,7 +181,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     setError('');
     try {
       const { data, error: fetchErr } = await api.v2.research.get({
-        query: { notebook_id: String(notebookId) },
+        query: { notebookId: String(notebookId) },
       });
       if (fetchErr)
         throw new Error(
@@ -226,8 +226,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       try {
         const { data, error: postErr } = await api.v2.research.post({
           topic,
-          notebook_id: notebookId,
-          max_iterations: maxIterations,
+          notebookId: notebookId,
+          maxIterations: maxIterations,
         });
         if (postErr)
           throw new Error(
@@ -237,13 +237,13 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
         setSessions((prev) => [
           {
             id: sessionData.id,
-            notebook_id: sessionData.notebook_id,
+            notebookId: sessionData.notebookId,
             topic: sessionData.topic,
             status: sessionData.status,
-            current_iteration: sessionData.current_iteration,
-            max_iterations: sessionData.max_iterations,
-            created_at: sessionData.created_at,
-            updated_at: sessionData.created_at,
+            currentIteration: sessionData.currentIteration,
+            maxIterations: sessionData.maxIterations,
+            createdAt: sessionData.createdAt,
+            updatedAt: sessionData.createdAt,
           },
           ...prev,
         ]);
@@ -411,7 +411,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
               ? {
                   ...s,
                   status: sessionData.status,
-                  current_iteration: sessionData.current_iteration,
+                  currentIteration: sessionData.currentIteration,
                 }
               : s,
           ),
@@ -541,7 +541,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
                 prev
                   ? {
                       ...prev,
-                      current_iteration: (data.iteration as number) ?? prev.current_iteration,
+                      currentIteration: (data.iteration as number) ?? prev.currentIteration,
                       status: data.status as string,
                     }
                   : prev,
@@ -551,7 +551,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
                   s.id === researchId
                     ? {
                         ...s,
-                        current_iteration: (data.iteration as number) ?? s.current_iteration,
+                        currentIteration: (data.iteration as number) ?? s.currentIteration,
                         status: data.status as string,
                       }
                     : s,

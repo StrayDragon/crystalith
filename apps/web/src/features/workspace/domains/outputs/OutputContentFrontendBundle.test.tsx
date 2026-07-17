@@ -64,10 +64,10 @@ afterEach(async () => {
   });
 });
 
-test('renders with frontend_bundle renderer when available', async () => {
+test('renders with frontendBundle renderer when available', async () => {
   useWorkspaceStore.getState().setOutputTypeFrontendBundles({
     QUIZ: {
-      api_version: 'v1',
+      apiVersion: 'v1',
       kind: 'builtin',
       id: 'output-quiz',
       export: 'render',

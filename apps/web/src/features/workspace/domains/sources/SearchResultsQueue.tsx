@@ -744,7 +744,7 @@ export default function SearchResultsQueue({
                             }`}
                           >
                             <div className="flex-1">
-                              <div className="font-medium">{ext.display_name}</div>
+                              <div className="font-medium">{ext.displayName}</div>
                               <div className="text-[10px] text-gray-500 line-clamp-1">
                                 {ext.description}
                               </div>

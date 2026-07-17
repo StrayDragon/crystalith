@@ -7,8 +7,8 @@ import { desc } from './i18n.js';
 export const NotebookSchema = z.object({
   id: IdSchema.describe(desc('notebook.id')),
   name: z.string().min(1).max(255).describe(desc('notebook.name')),
-  created_at: IsoTimestampSchema.describe(desc('notebook.created_at')),
-  updated_at: IsoTimestampSchema.describe(desc('notebook.updated_at')),
+  createdAt: IsoTimestampSchema.describe(desc('notebook.created_at')),
+  updatedAt: IsoTimestampSchema.describe(desc('notebook.updated_at')),
 });
 export type Notebook = z.infer<typeof NotebookSchema>;
 

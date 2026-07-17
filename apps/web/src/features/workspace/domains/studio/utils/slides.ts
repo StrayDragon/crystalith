@@ -11,7 +11,7 @@ export function normalizeGenerationConfig(raw: any): SlideGenerationConfig | nul
     tone: config.tone ?? null,
     language: config.language ?? null,
     density: config.density ?? null,
-    themePreset: config.themePreset ?? config.theme_preset ?? null,
+    themePreset: config.themePreset ?? null,
     frontmatter: config.frontmatter ?? null,
   };
 }

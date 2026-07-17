@@ -66,10 +66,7 @@ function normalizeSlideGenerationDefaults(
     tone: (raw.tone as string | null | undefined) ?? null,
     language: (raw.language as string | null | undefined) ?? null,
     density: (raw.density as string | null | undefined) ?? null,
-    themePreset:
-      (raw.themePreset as string | null | undefined) ??
-      (raw.theme_preset as string | null | undefined) ??
-      null,
+    themePreset: (raw.themePreset as string | null | undefined) ?? null,
     frontmatter: (raw.frontmatter as string | null | undefined) ?? null,
   };
 }
@@ -95,22 +92,22 @@ function normalizeConfigSchema(schema?: ApiPluginConfigSchema | null): PluginCon
     defaults: normalizeSlideGenerationDefaults(
       (s.defaults ?? null) as Record<string, unknown> | null,
     ),
-    quantity_options: (s.quantity_options ?? []) as PluginConfigSchema['quantity_options'],
-    difficulty_options: (s.difficulty_options ?? []) as PluginConfigSchema['difficulty_options'],
-    audience_options: (s.audience_options ?? []) as PluginConfigSchema['audience_options'],
-    structure_options: (s.structure_options ?? []) as PluginConfigSchema['structure_options'],
-    tone_options: (s.tone_options ?? []) as PluginConfigSchema['tone_options'],
-    language_options: (s.language_options ?? []) as PluginConfigSchema['language_options'],
-    density_options: (s.density_options ?? []) as PluginConfigSchema['density_options'],
-    theme_preset_options: ((s.theme_preset_options ?? []) as Array<Record<string, unknown>>).map(
+    quantityOptions: (s.quantityOptions ?? []) as PluginConfigSchema['quantityOptions'],
+    difficultyOptions: (s.difficultyOptions ?? []) as PluginConfigSchema['difficultyOptions'],
+    audienceOptions: (s.audienceOptions ?? []) as PluginConfigSchema['audienceOptions'],
+    structureOptions: (s.structureOptions ?? []) as PluginConfigSchema['structureOptions'],
+    toneOptions: (s.toneOptions ?? []) as PluginConfigSchema['toneOptions'],
+    languageOptions: (s.languageOptions ?? []) as PluginConfigSchema['languageOptions'],
+    densityOptions: (s.densityOptions ?? []) as PluginConfigSchema['densityOptions'],
+    themePresetOptions: ((s.themePresetOptions ?? []) as Array<Record<string, unknown>>).map(
       (option) => ({
         id: option.id as string,
         label: option.label as string,
         template: (option.template ?? {}) as Record<string, unknown>,
       }),
     ),
-    topic_placeholder: (s.topic_placeholder as string) ?? '',
-    supports_topic: (s.supports_topic as boolean) ?? false,
+    topicPlaceholder: (s.topicPlaceholder as string) ?? '',
+    supportsTopic: (s.supportsTopic as boolean) ?? false,
     engine: (s.engine as string | null) ?? null,
     preview: normalizePreviewDescriptor((s.preview as ApiPreviewDescriptor | null) ?? null),
   };
@@ -122,7 +119,7 @@ function normalizeFrontendBundle(
   if (!bundle) return null;
   const b = bundle as unknown as Record<string, unknown>;
   return {
-    api_version: (b.api_version as FrontendBundleDescriptor['api_version']) ?? 'v1',
+    apiVersion: (b.apiVersion as FrontendBundleDescriptor['apiVersion']) ?? 'v1',
     kind: (b.kind as FrontendBundleDescriptor['kind']) ?? 'builtin',
     id: b.id as string,
     export: (b.export as string) ?? 'render',
@@ -137,12 +134,12 @@ function normalizeTool(tool: ApiWorkspaceTool): WorkspaceTool {
     label: t.label as string,
     description: t.description as string,
     tone: t.tone as WorkspaceTool['tone'],
-    outputType: t.output_type as WorkspaceTool['outputType'],
+    outputType: t.outputType as WorkspaceTool['outputType'],
     prompt: t.prompt as string,
-    renderDescriptor: normalizeRenderDescriptor(t.render_descriptor as ApiRenderDescriptor | null),
-    configSchema: normalizeConfigSchema(t.config_schema as ApiPluginConfigSchema | null),
+    renderDescriptor: normalizeRenderDescriptor(t.renderDescriptor as ApiRenderDescriptor | null),
+    configSchema: normalizeConfigSchema(t.configSchema as ApiPluginConfigSchema | null),
     frontendBundle: normalizeFrontendBundle(
-      (t.frontend_bundle ?? null) as ApiFrontendBundleDescriptor | null,
+      (t.frontendBundle ?? null) as ApiFrontendBundleDescriptor | null,
     ),
     badge: (t.badge as string | undefined) ?? undefined,
     enabled: (t.enabled as boolean) !== false,

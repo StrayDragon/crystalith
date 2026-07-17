@@ -13,8 +13,8 @@ import { JsonMetadataSchema } from './common.js';
 
 export const ProviderConfigSchema = z
   .object({
-    api_key: z.string().nullable().optional(),
-    base_url: z.string().nullable().optional(),
+    apiKey: z.string().nullable().optional(),
+    baseUrl: z.string().nullable().optional(),
     organization: z.string().nullable().optional(),
     project: z.string().nullable().optional(),
   })
@@ -26,11 +26,11 @@ export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
 // ---------------------------------------------------------------------------
 
 export const CompletionOptionsSchema = z.object({
-  context_length: z.number().int().positive().nullable().optional(),
-  max_tokens: z.number().int().positive().nullable().optional(),
+  contextLength: z.number().int().positive().nullable().optional(),
+  maxTokens: z.number().int().positive().nullable().optional(),
   temperature: z.number().min(0).max(2).nullable().optional(),
-  top_p: z.number().min(0).max(1).nullable().optional(),
-  top_k: z.number().int().nonnegative().nullable().optional(),
+  topP: z.number().min(0).max(1).nullable().optional(),
+  topK: z.number().int().nonnegative().nullable().optional(),
   stop: z.array(z.string()).nullable().optional(),
   reasoning: z.boolean().nullable().optional(),
 });
@@ -38,7 +38,7 @@ export type CompletionOptions = z.infer<typeof CompletionOptionsSchema>;
 
 export const RequestOptionsSchema = z.object({
   timeout: z.number().int().positive().nullable().optional(),
-  verify_ssl: z.boolean().default(true),
+  verifySsl: z.boolean().default(true),
   proxy: z.string().nullable().optional(),
   headers: z.record(z.string(), z.string()).nullable().optional(),
 });
@@ -75,18 +75,18 @@ export const ModelConfigSchema = z.object({
   /** Registry key: openai | anthropic | google | deepseek | openai-compatible | groq | together | bedrock | <custom> */
   provider: z.string().min(1),
   model: z.string().min(1),
-  display_name: z.string().min(1),
+  displayName: z.string().min(1),
   description: z.string().default(''),
   roles: z.array(ModelRoleSchema).default(['chat']),
   capabilities: z.array(ModelCapabilitySchema).default([]),
-  provider_config: ProviderConfigSchema.nullable().optional(),
-  completion_options: CompletionOptionsSchema.nullable().optional(),
-  request_options: RequestOptionsSchema.nullable().optional(),
+  providerConfig: ProviderConfigSchema.nullable().optional(),
+  completionOptions: CompletionOptionsSchema.nullable().optional(),
+  requestOptions: RequestOptionsSchema.nullable().optional(),
   /** Advanced escape hatch: override the SDK package + factory directly. */
   sdk: z.string().optional(),
   factory: z.string().optional(),
   /** Extra passthrough for provider-specific knobs. */
-  provider_options: JsonMetadataSchema.optional(),
+  providerOptions: JsonMetadataSchema.optional(),
 });
 export type ModelConfig = z.infer<typeof ModelConfigSchema>;
 
@@ -130,12 +130,12 @@ export const ModelInfoSchema = z.object({
   id: z.string(),
   provider: z.string(),
   model: z.string(),
-  display_name: z.string(),
+  displayName: z.string(),
   description: z.string(),
   roles: z.array(ModelRoleSchema),
   capabilities: z.array(ModelCapabilitySchema),
-  is_default_chat: z.boolean(),
-  is_default_embedding: z.boolean(),
+  isDefaultChat: z.boolean(),
+  isDefaultEmbedding: z.boolean(),
 });
 export type ModelInfo = z.infer<typeof ModelInfoSchema>;
 

@@ -7,8 +7,8 @@ import * as S from '../src/index.ts';
 
 describe('common schemas', () => {
   it('parses an error envelope', () => {
-    const ee = S.ErrorEnvelopeSchema.parse({ error_code: 'BAD', message: 'nope' });
-    expect(ee.error_code).toBe('BAD');
+    const ee = S.ErrorEnvelopeSchema.parse({ errorCode: 'BAD', message: 'nope' });
+    expect(ee.errorCode).toBe('BAD');
     expect(ee.details).toBeUndefined();
   });
 
@@ -83,7 +83,7 @@ describe('domain schemas', () => {
 
   it('qa stream request has sensible defaults', () => {
     const r = S.QaStreamRequestSchema.parse({
-      session_id: 1,
+      sessionId: 1,
       question: 'hi',
     });
     expect(r.history).toEqual([]);
@@ -93,8 +93,8 @@ describe('domain schemas', () => {
   it('research progress event union discriminates', () => {
     const ev = S.ResearchProgressEventSchema.parse({
       event: 'plan_ready',
-      session_id: 1,
-      plan: { iteration: 1, queries: [], reasoning: '', estimated_results: 5 },
+      sessionId: 1,
+      plan: { iteration: 1, queries: [], reasoning: '', estimatedResults: 5 },
     });
     expect(ev.event).toBe('plan_ready');
   });
@@ -104,7 +104,7 @@ describe('domain schemas', () => {
       S.EvalMetricsSchema.safeParse({
         faithfulness: 1.5,
         relevance: 0.5,
-        latency_ms: 10,
+        latencyMs: 10,
       }).success,
     ).toBe(false);
   });
