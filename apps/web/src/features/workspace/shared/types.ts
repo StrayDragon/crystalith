@@ -208,6 +208,10 @@ export interface SourceItem {
   createdAtRaw?: string;
 }
 
+/**
+ * UI-domain citation (camelCase).
+ * Wire/API payloads use snake_case `ApiCitation`; always convert via `normalizeCitation`.
+ */
 export interface Citation {
   id: string;
   chunkId: number | null;
@@ -483,6 +487,7 @@ export interface ApiSourceSearchResponse {
   created_at?: string | null;
 }
 
+/** Wire/API citation shape (snake_case; matches packages/shared CitationSchema). */
 export interface ApiCitation {
   source_id?: number | null;
   source_name?: string | null;

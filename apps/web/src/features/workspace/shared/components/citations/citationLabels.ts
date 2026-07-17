@@ -1,23 +1,21 @@
-/** Shared helpers for citation source vs chunk counts. */
+/** Citation scope labels — UI domain uses camelCase `Citation` only. */
 
-type CitationSourceFields = {
-  sourceId?: number | null;
-  source_id?: number | null;
-  sourceTitle?: string | null;
-  source_name?: string | null;
-};
+import type { Citation } from '../../types';
 
-export function countUniqueCitationSources(citations: CitationSourceFields[]): number {
+/**
+ * Count unique sources among already-normalized UI citations.
+ * Wire/API snake_case (`source_id`) MUST be mapped via `normalizeCitation` first.
+ */
+export function countUniqueCitationSources(citations: Citation[]): number {
   const keys = new Set<string>();
   for (const citation of citations) {
-    const sourceId = citation.sourceId ?? citation.source_id;
-    if (sourceId != null) {
-      keys.add(`id:${sourceId}`);
+    if (citation.sourceId != null) {
+      keys.add(`id:${citation.sourceId}`);
       continue;
     }
-    const sourceName = citation.sourceTitle ?? citation.source_name;
-    if (sourceName) {
-      keys.add(`name:${sourceName}`);
+    const title = citation.sourceTitle?.trim();
+    if (title) {
+      keys.add(`name:${title}`);
     }
   }
   return keys.size;

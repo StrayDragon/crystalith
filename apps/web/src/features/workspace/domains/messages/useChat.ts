@@ -1,4 +1,4 @@
-import type { Citation } from '@crystalith/shared';
+import type { Citation as WireCitation } from '@crystalith/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 
@@ -304,7 +304,7 @@ export function useChat({
           if (eventType === 'done' && eventData && typeof eventData === 'object') {
             receivedDone = true;
             const doneData = eventData as {
-              citations?: Citation[];
+              citations?: WireCitation[];
               message_id?: unknown;
             };
             const doneMessageId =
