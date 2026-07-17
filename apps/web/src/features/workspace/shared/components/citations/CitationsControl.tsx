@@ -2,7 +2,6 @@ import { FormatQuote as QuoteIcon } from '@mui/icons-material';
 import { useCallback, useMemo, useState } from 'react';
 
 import type { Citation } from '../../types';
-import CitationDrawer from './CitationDrawer';
 import CitationPopover from './CitationPopover';
 
 interface CitationsControlProps {
@@ -26,7 +25,6 @@ export default function CitationsControl({
 }: CitationsControlProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
-  const [selected, setSelected] = useState<Citation | null>(null);
 
   const countLabel = useMemo(() => citations.length, [citations.length]);
   const ariaLabel = triggerLabel ?? `查看全部 ${countLabel} 条引用`;
@@ -39,10 +37,6 @@ export default function CitationsControl({
   const handleClosePopover = useCallback(() => {
     setPopoverOpen(false);
     setAnchorRect(null);
-  }, []);
-
-  const handleSelectCitation = useCallback((citation: Citation) => {
-    setSelected(citation);
   }, []);
 
   if (!citations || citations.length === 0) return null;
@@ -67,20 +61,9 @@ export default function CitationsControl({
         isOpen={popoverOpen}
         onClose={handleClosePopover}
         anchorRect={anchorRect}
-        onJumpToCitation={(citation) => {
-          handleSelectCitation(citation);
-        }}
         onCitationHover={onCitationHover}
         onLocateSource={onLocateSource}
-        elevated={elevated}
-      />
-
-      <CitationDrawer
-        open={selected != null}
-        citation={selected}
-        onClose={() => setSelected(null)}
-        onLocateSource={(citation) => onLocateSource?.(citation)}
-        onOpenSource={(citation) => onOpenSource?.(citation)}
+        onOpenSource={onOpenSource}
         elevated={elevated}
       />
     </>
