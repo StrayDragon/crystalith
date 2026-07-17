@@ -21,15 +21,15 @@ test('normalizeMessage maps role, citations, and chunk ids', () => {
     content: 'Answer',
     citations: [
       {
-        chunk_id: 12,
-        chunk_index: 1,
-        source_name: 'Doc A',
+        chunkId: 12,
+        chunkIndex: 1,
+        sourceName: 'Doc A',
         snippet: 'Snippet',
       },
       {
-        chunk_id: null,
-        chunk_index: 2,
-        source_name: 'Doc B',
+        chunkId: null,
+        chunkIndex: 2,
+        sourceName: 'Doc B',
         snippet: 'Snippet',
       },
     ],
@@ -40,21 +40,21 @@ test('normalizeMessage maps role, citations, and chunk ids', () => {
   expect(message.citationChunkIds).toEqual([12]);
 });
 
-test('normalizeCitation maps wire snake_case to UI camelCase', () => {
+test('normalizeCitation maps wire camelCase to UI camelCase', () => {
   const citation = normalizeCitation({
-    source_id: 42,
-    source_name: 'excel-column-residency.md',
-    chunk_id: 7,
-    chunk_index: 2,
-    page_number: 3,
-    paragraph_index: 1,
+    sourceId: 42,
+    sourceName: 'excel-column-residency.md',
+    chunkId: 7,
+    chunkIndex: 2,
+    pageNumber: 3,
+    paragraphIndex: 1,
     snippet: 'snippet',
     score: 0.9,
   });
 
   expect(citation).toMatchObject({
     sourceId: 42,
-    sourceTitle: 'excel-column-residency.md',
+    sourceName: 'excel-column-residency.md',
     chunkId: 7,
     chunkIndex: 2,
     pageNumber: 3,
@@ -66,15 +66,15 @@ test('normalizeCitation maps wire snake_case to UI camelCase', () => {
 
 test('normalizeCitation handles missing chunk id', () => {
   const citation = normalizeCitation({
-    chunk_id: null,
-    chunk_index: 3,
-    source_name: 'Doc',
+    chunkId: null,
+    chunkIndex: 3,
+    sourceName: 'Doc',
     snippet: 'Snippet',
   } as any);
 
   expect(citation.id).toBe('3');
   expect(citation.chunkId).toBeNull();
-  expect(citation.sourceTitle).toBe('Doc');
+  expect(citation.sourceName).toBe('Doc');
 });
 
 test('collectChunkIds filters invalid and non-positive values', () => {

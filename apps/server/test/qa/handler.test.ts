@@ -28,10 +28,10 @@ describe('computeConfidence (real)', () => {
   it('approaches ~1 when similarity, coverage, and citation depth are all maxed', () => {
     // 5 citations across 5 sources, all score 1.0, topK 5.
     const citations: Citation[] = Array.from({ length: 5 }, (_, i) => ({
-      source_id: i + 1,
-      source_name: `s${i}`,
-      chunk_id: i + 1,
-      chunk_index: i,
+      sourceId: i + 1,
+      sourceName: `s${i}`,
+      chunkId: i + 1,
+      chunkIndex: i,
       snippet: 'x',
       score: 1,
     }));
@@ -41,10 +41,10 @@ describe('computeConfidence (real)', () => {
 
   it('citation ratio caps at 1 even when citations exceed topK', () => {
     const citations: Citation[] = Array.from({ length: 10 }, (_, i) => ({
-      source_id: 1,
-      source_name: 's',
-      chunk_id: i + 1,
-      chunk_index: i,
+      sourceId: 1,
+      sourceName: 's',
+      chunkId: i + 1,
+      chunkIndex: i,
       snippet: 'x',
       score: 1,
     }));
@@ -57,10 +57,10 @@ describe('computeConfidence (real)', () => {
   it('more citations (up to topK) yield a higher score, all else equal', () => {
     const mk = (n: number): Citation[] =>
       Array.from({ length: n }, (_, i) => ({
-        source_id: i + 1,
-        source_name: `s${i}`,
-        chunk_id: i + 1,
-        chunk_index: i,
+        sourceId: i + 1,
+        sourceName: `s${i}`,
+        chunkId: i + 1,
+        chunkIndex: i,
         snippet: 'x',
         score: 0.8,
       }));
@@ -101,7 +101,7 @@ describe('resolveCitations (real, DB-backed)', () => {
 
     const citations = await resolveCitations(retrieved);
     expect(citations).toHaveLength(1);
-    expect(citations[0].source_name).toBe('report.pdf');
+    expect(citations[0].sourceName).toBe('report.pdf');
     expect(citations[0].score).toBe(0.9);
   });
 
@@ -142,7 +142,7 @@ describe('resolveCitations (real, DB-backed)', () => {
     const citations = await resolveCitations([
       { chunk_id: 1, source_id: 99999, chunk_index: 0, text: 'orphan', score: 0.1 },
     ]);
-    expect(citations[0].source_name).toBe('unknown');
+    expect(citations[0].sourceName).toBe('unknown');
   });
 });
 

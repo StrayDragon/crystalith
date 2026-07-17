@@ -4,7 +4,7 @@ import type { Citation } from '../../types';
 
 /**
  * Count unique sources among already-normalized UI citations.
- * Wire/API snake_case (`source_id`) MUST be mapped via `normalizeCitation` first.
+ * Wire/API camelCase (`sourceId`) MUST be mapped via `normalizeCitation` first.
  */
 export function countUniqueCitationSources(citations: Citation[]): number {
   const keys = new Set<string>();
@@ -13,7 +13,7 @@ export function countUniqueCitationSources(citations: Citation[]): number {
       keys.add(`id:${citation.sourceId}`);
       continue;
     }
-    const title = citation.sourceTitle?.trim();
+    const title = citation.sourceName?.trim();
     if (title) {
       keys.add(`name:${title}`);
     }

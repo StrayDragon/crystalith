@@ -375,15 +375,15 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
     const citedSourceIds = [
       ...new Set(
         citations
-          .map((c) => (c as { source_id?: number }).source_id)
+          .map((c) => (c as { sourceId?: number }).sourceId)
           .filter((id): id is number => typeof id === 'number'),
       ),
     ];
     const fallbackNames = new Map<number, string>();
     for (const c of citations) {
-      const cit = c as { source_id?: number; source_name?: string };
-      if (typeof cit.source_id === 'number')
-        fallbackNames.set(cit.source_id, cit.source_name ?? '未知来源');
+      const cit = c as { sourceId?: number; sourceName?: string };
+      if (typeof cit.sourceId === 'number')
+        fallbackNames.set(cit.sourceId, cit.sourceName ?? '未知来源');
     }
     const sourceRows =
       citedSourceIds.length && notebookId !== undefined
@@ -434,18 +434,18 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
     // [i] name · chunk N · page N · para N + blockquote snippet.
     const citationLines = citations.map((c, i) => {
       const cit = c as {
-        source_name?: string;
-        chunk_index?: number;
-        page_number?: number | null;
-        paragraph_index?: number | null;
+        sourceName?: string;
+        chunkIndex?: number;
+        pageNumber?: number | null;
+        paragraphIndex?: number | null;
         snippet?: string;
       };
-      const parts = [`[${i + 1}] ${cit.source_name ?? 'unknown'}`];
-      if (typeof cit.chunk_index === 'number') parts.push(`chunk ${cit.chunk_index}`);
-      if (cit.page_number !== null && cit.page_number !== undefined)
-        parts.push(`page ${cit.page_number}`);
-      if (cit.paragraph_index !== null && cit.paragraph_index !== undefined)
-        parts.push(`para ${cit.paragraph_index}`);
+      const parts = [`[${i + 1}] ${cit.sourceName ?? 'unknown'}`];
+      if (typeof cit.chunkIndex === 'number') parts.push(`chunk ${cit.chunkIndex}`);
+      if (cit.pageNumber !== null && cit.pageNumber !== undefined)
+        parts.push(`page ${cit.pageNumber}`);
+      if (cit.paragraphIndex !== null && cit.paragraphIndex !== undefined)
+        parts.push(`para ${cit.paragraphIndex}`);
       const prefix = parts.join(' · ');
       const snippet = cit.snippet?.trim();
       return snippet ? `${prefix}\n> ${snippet}` : prefix;

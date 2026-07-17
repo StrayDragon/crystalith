@@ -94,26 +94,26 @@ describe('citation context — resolve by chunk_id', () => {
     const { status, body } = await get(ctxPath(`?chunk_id=${chunkIds[2]}&before=1&after=1`));
     expect(status).toBe(200);
     const result = body as {
-      citation: { chunk_id: number; source_name: string };
-      chunk: { chunk_id: number; text: string; chunk_index: number };
+      citation: { chunkId: number; sourceName: string };
+      chunk: { chunkId: number; text: string; chunkIndex: number };
       before: unknown[];
       after: unknown[];
     };
-    expect(result.citation.chunk_id).toBe(chunkIds[2]);
-    expect(result.citation.source_name).toBe('research-paper.pdf');
-    expect(result.chunk.chunk_id).toBe(chunkIds[2]);
+    expect(result.citation.chunkId).toBe(chunkIds[2]);
+    expect(result.citation.sourceName).toBe('research-paper.pdf');
+    expect(result.chunk.chunkId).toBe(chunkIds[2]);
     expect(result.chunk.text).toContain('Core finding');
-    // chunk_index should be 1-based
-    expect(result.chunk.chunk_index).toBe(3); // DB 2 → API 3
+    // chunkIndex should be 1-based
+    expect(result.chunk.chunkIndex).toBe(3); // DB 2 → API 3
   });
 
   it('enriches page_number and paragraph_index from metadata', async () => {
     const { body } = await get(ctxPath(`?chunk_id=${chunkIds[1]}&before=0&after=0`));
     const result = body as {
-      chunk: { page_number: number | null; paragraph_index: number | null };
+      chunk: { pageNumber: number | null; paragraphIndex: number | null };
     };
-    expect(result.chunk.page_number).toBe(2); // chunk_index=1 → page 2
-    expect(result.chunk.paragraph_index).toBe(2); // chunk_index=1 → para 2
+    expect(result.chunk.pageNumber).toBe(2); // chunk_index=1 → page 2
+    expect(result.chunk.paragraphIndex).toBe(2); // chunk_index=1 → para 2
   });
 });
 
@@ -121,9 +121,9 @@ describe('citation context — resolve by source_id + chunk_index', () => {
   it('resolves by source_id and 1-based chunk_index', async () => {
     const { status, body } = await get(ctxPath(`?source_id=${sourceId}&chunk_index=1`));
     expect(status).toBe(200);
-    const result = body as { chunk: { chunk_id: number; text: string; chunk_index: number } };
-    expect(result.chunk.chunk_id).toBe(chunkIds[0]);
-    expect(result.chunk.chunk_index).toBe(1); // 1-based
+    const result = body as { chunk: { chunkId: number; text: string; chunkIndex: number } };
+    expect(result.chunk.chunkId).toBe(chunkIds[0]);
+    expect(result.chunk.chunkIndex).toBe(1); // 1-based
     expect(result.chunk.text).toContain('Intro paragraph');
   });
 
@@ -144,15 +144,15 @@ describe('citation context — neighborhood window', () => {
   it('before chunks are ordered by ascending chunk_index', async () => {
     const { body } = await get(ctxPath(`?chunk_id=${chunkIds[2]}&before=2&after=1`));
     const result = body as {
-      before: Array<{ chunk_index: number }>;
-      after: Array<{ chunk_index: number }>;
+      before: Array<{ chunkIndex: number }>;
+      after: Array<{ chunkIndex: number }>;
     };
-    // before[0].chunk_index < before[1].chunk_index < chunk.chunk_index
-    expect(result.before[0].chunk_index).toBeLessThan(result.before[1].chunk_index);
+    // before[0].chunkIndex < before[1].chunkIndex < chunk.chunkIndex
+    expect(result.before[0].chunkIndex).toBeLessThan(result.before[1].chunkIndex);
     // chunk is at index 3 (1-based)
-    expect(result.before[1].chunk_index).toBeLessThan(3);
-    // after[0] > chunk_index
-    expect(result.after[0].chunk_index).toBeGreaterThan(3);
+    expect(result.before[1].chunkIndex).toBeLessThan(3);
+    // after[0] > chunkIndex
+    expect(result.after[0].chunkIndex).toBeGreaterThan(3);
   });
 
   it('capped at source boundary (do not cross into other sources)', async () => {

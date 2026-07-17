@@ -139,7 +139,7 @@ test('sendMessage non-streaming path stores assistant message and shared_state m
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         answer: 'Answer',
-        citations: [{ chunk_id: 5, chunk_index: 1, source_name: 'Doc', snippet: 'S' }],
+        citations: [{ chunkId: 5, chunkIndex: 1, sourceName: 'Doc', snippet: 'S' }],
         message_id: 9001,
         shared_state: buildSharedState('9001'),
         shared_state_revision: 1,

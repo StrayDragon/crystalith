@@ -26,14 +26,14 @@ describe('common schemas', () => {
 
   it('parses a citation with optional fields', () => {
     const c = S.CitationSchema.parse({
-      source_id: 1,
-      source_name: 'doc',
-      chunk_id: 3,
-      chunk_index: 0,
+      sourceId: 1,
+      sourceName: 'doc',
+      chunkId: 3,
+      chunkIndex: 0,
       snippet: 'hello',
     });
     expect(c.score).toBeUndefined();
-    expect(c.page_number).toBeUndefined();
+    expect(c.pageNumber).toBeUndefined();
   });
 });
 

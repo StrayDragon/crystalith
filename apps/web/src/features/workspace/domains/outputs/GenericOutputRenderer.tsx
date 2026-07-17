@@ -138,7 +138,7 @@ function renderCitations(value: unknown): ReactNode {
       {value.slice(0, 6).map((item, index) => {
         // best-effort
         const sourceName = isRecord(item)
-          ? (item.source_name ?? item.sourceTitle ?? item.source_title ?? item.source)
+          ? (item.source_name ?? item.sourceName ?? item.source_title ?? item.source)
           : null;
         const label =
           typeof sourceName === 'string' && sourceName.trim()

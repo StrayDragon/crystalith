@@ -235,13 +235,13 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
     const paragraphIndex =
       typeof metadata.paragraph_index === 'number' ? metadata.paragraph_index : null;
     return {
-      source_id: r.source_id,
-      source_name: sourceMap.get(r.source_id) ?? 'unknown',
-      chunk_id: r.chunk_id,
+      sourceId: r.source_id,
+      sourceName: sourceMap.get(r.source_id) ?? 'unknown',
+      chunkId: r.chunk_id,
       // v1 stores 1-based (chunk.chunk_index + 1)
-      chunk_index: r.chunk_index + 1,
-      page_number: pageNumber,
-      paragraph_index: paragraphIndex,
+      chunkIndex: r.chunk_index + 1,
+      pageNumber: pageNumber,
+      paragraphIndex: paragraphIndex,
       snippet: chunk.text.slice(0, 200),
       score: r.score,
     };

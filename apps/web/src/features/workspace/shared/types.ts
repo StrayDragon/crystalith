@@ -209,14 +209,14 @@ export interface SourceItem {
 }
 
 /**
- * UI-domain citation (camelCase).
- * Wire/API payloads use snake_case `ApiCitation`; always convert via `normalizeCitation`.
+ * UI-domain citation (camelCase, aligned with packages/shared CitationSchema).
+ * `normalizeCitation` only adds UI `id` and fills defaults — no snake_case remap.
  */
 export interface Citation {
   id: string;
   chunkId: number | null;
   sourceId?: number | null;
-  sourceTitle: string;
+  sourceName: string;
   snippet: string;
   chunkIndex: number;
   pageNumber?: number | null;
@@ -487,14 +487,14 @@ export interface ApiSourceSearchResponse {
   created_at?: string | null;
 }
 
-/** Wire/API citation shape (snake_case; matches packages/shared CitationSchema). */
+/** Wire/API citation shape (camelCase; matches packages/shared CitationSchema). */
 export interface ApiCitation {
-  source_id?: number | null;
-  source_name?: string | null;
-  chunk_id?: number | string | null;
-  chunk_index?: number | null;
-  page_number?: number | null;
-  paragraph_index?: number | null;
+  sourceId?: number | null;
+  sourceName?: string | null;
+  chunkId?: number | string | null;
+  chunkIndex?: number | null;
+  pageNumber?: number | null;
+  paragraphIndex?: number | null;
   snippet?: string | null;
   score?: number | null;
 }

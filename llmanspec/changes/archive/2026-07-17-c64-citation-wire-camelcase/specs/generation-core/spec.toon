@@ -1,0 +1,5 @@
+kind: llman.sdd.delta
+ops[1]{op,req_id,title,statement,from,to,name}:
+  modify_requirement,"outputs-citation-tree-mapping",Citations MUST be mapped into content tree with camelCase Citation dicts,outputs 生成管线 MUST 递归遍历 content 对象，把每个 citations 数字索引数组替换为完整 Citation dict（camelCase 字段），并持久化映射后的 content；同时返回扁平 citations 数组。,null,null,null
+op_scenarios[1]{req_id,id,given,when,then,feature}:
+  "outputs-citation-tree-mapping","persisted-citation-dicts-are-camelcase","content 树中某节点含 citations:[1]",管线持久化,写入的 Citation dict SHALL 使用 sourceId/sourceName/chunkId 等 camelCase 键,true

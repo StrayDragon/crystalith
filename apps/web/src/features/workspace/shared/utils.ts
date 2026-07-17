@@ -369,16 +369,16 @@ export function normalizeSource(row: ApiSource): SourceItem {
 }
 
 export function normalizeCitation(row: ApiCitation): Citation {
-  const chunkId = row.chunk_id != null ? Number(row.chunk_id) : null;
+  const chunkId = row.chunkId != null ? Number(row.chunkId) : null;
   return {
-    id: `${row.chunk_id ?? row.chunk_index ?? ''}`,
+    id: `${row.chunkId ?? row.chunkIndex ?? ''}`,
     chunkId: Number.isFinite(chunkId) ? chunkId : null,
-    sourceId: row.source_id ?? null,
-    sourceTitle: row.source_name ?? '未知来源',
+    sourceId: row.sourceId ?? null,
+    sourceName: row.sourceName ?? '未知来源',
     snippet: row.snippet ?? '',
-    chunkIndex: row.chunk_index ?? 0,
-    pageNumber: row.page_number ?? null,
-    paragraphIndex: row.paragraph_index ?? null,
+    chunkIndex: row.chunkIndex ?? 0,
+    pageNumber: row.pageNumber ?? null,
+    paragraphIndex: row.paragraphIndex ?? null,
     score: row.score ?? undefined,
   };
 }
@@ -396,27 +396,20 @@ export function collectOutputCitations(content: unknown): Citation[] {
   const pushCitation = (raw: unknown) => {
     if (!raw || typeof raw !== 'object') return;
     const record = raw as Record<string, unknown>;
-    const chunkId =
-      typeof record.chunk_id === 'number'
-        ? record.chunk_id
-        : typeof record.chunkId === 'number'
-          ? record.chunkId
-          : null;
+    const chunkId = typeof record.chunkId === 'number' ? record.chunkId : null;
     if (!chunkId || seen.has(chunkId)) return;
-    const mapped = {
-      source_id: record.source_id ?? record.sourceId,
-      source_name: record.source_name ?? record.sourceName,
-      chunk_id: record.chunk_id ?? record.chunkId,
-      chunk_index: record.chunk_index ?? record.chunkIndex,
-      page_number: record.page_number ?? record.pageNumber,
-      paragraph_index: record.paragraph_index ?? record.paragraphIndex,
-      snippet: record.snippet,
-      score: record.score,
-    } as ApiCitation;
+    const mapped: ApiCitation = {
+      sourceId: typeof record.sourceId === 'number' ? record.sourceId : null,
+      sourceName: typeof record.sourceName === 'string' ? record.sourceName : null,
+      chunkId,
+      chunkIndex: typeof record.chunkIndex === 'number' ? record.chunkIndex : null,
+      pageNumber: typeof record.pageNumber === 'number' ? record.pageNumber : null,
+      paragraphIndex: typeof record.paragraphIndex === 'number' ? record.paragraphIndex : null,
+      snippet: typeof record.snippet === 'string' ? record.snippet : null,
+      score: typeof record.score === 'number' ? record.score : null,
+    };
     const normalized = normalizeCitation(mapped);
-    if (normalized.chunkId && !seen.has(normalized.chunkId)) {
-      seen.set(normalized.chunkId, normalized);
-    }
+    seen.set(chunkId, normalized);
   };
   const walk = (value: unknown) => {
     if (!value) return;
@@ -442,7 +435,7 @@ export function buildCitationScopeSnapshot(
   const sources = Array.from(
     new Set(
       (citations ?? [])
-        .map((citation) => citation.sourceTitle)
+        .map((citation) => citation.sourceName)
         .filter((value): value is string => Boolean(value)),
     ),
   );

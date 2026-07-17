@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "workspace-api-contract"
 purpose: 定义前后端协作所依赖的稳定 API 契约：版本前缀、错误信封、核心端点稳定字段与 SSE 事件最小形状。
 valid_scope[2]: src/,tests/
-requirements[37]{req_id,title,statement}:
+requirements[38]{req_id,title,statement}:
   r56,API major version prefix is stable,对外 API MUST 使用 `/v1` 前缀；同一 major 内保持兼容。
   r114,"Optional API key authentication is supported for self-host","自托管部署 MUST 支持可选的 API key 鉴权基线：当配置了鉴权密钥时，所有 `/v1/**` 端点 MUST 要求 `Authorization: Bearer <token>`（或等价 API key 头）；未配置密钥时系统 MAY 允许匿名访问以保持本地开发低摩擦。"
   r151,"Non-SSE errors use unified envelope","非 SSE 错误响应 MUST 使用统一结构：`error_code`, `message`, `details?`, `retry_after?`。"
@@ -15,7 +15,7 @@ requirements[37]{req_id,title,statement}:
   r63,Prompt presets CRUD endpoints are stable,"系统 MUST 提供 prompt presets 的 CRUD 端点集合： - `GET /v1/prompt-presets`：返回 built-in + custom 的 preset 列表 - `POST /v1/prompt-presets`：创建 custom preset 并返回 201 - `PATCH /v1/prompt-presets/{preset_id}`：更新 custom preset 并返回更新后的对象 - `DELETE /v1/prompt-presets/{preset_id}`：删除 custom preset 并返回 204"
   r69,"QA endpoints accept in-band prompt directives in question","QA 端点 MUST 支持在 `question: string` 中内嵌 `/prompt:<preset> <query>` 指令，并在启用 presets 功能时以该指令选择受控的预设生成策略。"
   r73,"QA endpoints provide stable stream and non-stream contracts",`/qa` 与 `/qa/stream` MUST 保持稳定字段语义，stream 至少包含 `chunk|done|error` 事件。
-  r75,Citation model is unified across APIs,citation 对象 MUST 在 QA/messages/outputs 等对外 API 中保持字段语义一致，并包含最小可定位字段集。
+  r75,Citation model is unified across APIs as camelCase,citation 对象 MUST 在 QA/messages/outputs/streaming done 等对外 API 中保持字段语义一致，且 JSON 字段名 MUST 为 camelCase：sourceId、sourceName、chunkId、chunkIndex、pageNumber、paragraphIndex、snippet、score；MUST NOT 再使用 source_id/source_name/chunk_id 等 snake_case 别名。
   r77,Citation context lookup is supported,系统 MUST 提供可按 citation 定位并获取上下文的稳定端点，以支持用户复查证据链。
   r78,Exports can include citations,系统 MUST 支持将 QA/Outputs 导出为包含 citations 的格式（Markdown/JSON 或等价），以便分享与复盘。
   r79,Workspace tools and outputs endpoints are stable,`/v1/workspace/tools` 与 outputs/slides 相关端点 MUST 保持可用与向后兼容；其中 `/v1/workspace/tools` 的“可用工具集合”允许随已安装/已启用插件变化而变化，但响应形状与字段语义 MUST 稳定。
@@ -40,7 +40,8 @@ requirements[37]{req_id,title,statement}:
   "error-envelope-actually-emitted-by-routes","Server routes MUST emit the ErrorEnvelope shape not ad-hoc error objects","All non-SSE error responses MUST return the ErrorEnvelope shape defined in packages/shared (error_code plus message plus optional details plus optional retry_after). MUST NOT return ad-hoc shapes such as {error: string} or {error plus error_code} or {error plus max_bytes plus uploaded_bytes}. Current feature routers return at least 5 ad-hoc shapes using field name error instead of canonical message, violating existing r3."
   "shared-error-envelope-helper","Server MUST provide a shared error-response helper consuming ErrorEnvelopeSchema","The system MUST provide a shared helper (sendError or setError) that consumes the ErrorEnvelopeSchema from packages/shared and centralizes the HTTP status to error_code mapping (400 maps to INVALID_REQUEST plus 404 maps to NOT_FOUND plus 409 maps to CONFLICT plus 422 maps to SCHEMA_VALIDATION_FAILED plus 429 maps to RATE_LIMITED plus 503 maps to MODEL_ERROR). Feature routers MUST return errors via this helper rather than constructing ad-hoc error bodies inline."
   "slides-config-schema-options-must-be-complete",SLIDES tool config_schema MUST expose all config axes with options and defaults,当 SLIDES 工具在 `/v1/workspace/tools` 响应中可用时，其 `config_schema` MUST 返回完整的 options 列表（每个 option 含 id/label/is_default）与 defaults 对象，MUST NOT 省略任一配置轴（quantity/audience/structure/tone/language/density/theme_preset）。这强化 r20 的既有 MUST：当前 v2 workspace router 的 SLIDES tool 不返回 config_schema，前端无法驱动配置 UI。
-scenarios[46]{req_id,id,given,when,then,feature}:
+  r284,CitationSchema SSOT is camelCase in packages/shared,packages/shared 的 CitationSchema MUST 以 camelCase 字段作为 Zod SSOT，并驱动 OpenAPI/eden 类型；服务端序列化与前端消费 MUST 直接使用该 schema 推断类型，不得并行维护一套 snake_case Citation 线类型。
+scenarios[47]{req_id,id,given,when,then,feature}:
   r56,"client-targets-stable-major-prefix","",客户端调用对外 API,端点 SHALL 使用 `/v1` 前缀且在同一 major 内保持兼容,true
   r114,"auth-enabled-requires-bearer-token-for-v1","",运维启用鉴权并配置了 API key,客户端请求任意 `/v1/**` 端点若未携带有效 token SHALL 返回 401,true
   r114,"health-endpoints-remain-accessible-without-auth","",运维启用鉴权并配置了 API key,`/health` 与 `/health/dependencies` SHALL 保持匿名可访问以支持探活与运维诊断,true
@@ -59,7 +60,7 @@ scenarios[46]{req_id,id,given,when,then,feature}:
   r69,"qa-stream-respects-prompt-directive","","客户端调用 `/v1/notebooks/{notebook_id}/qa/stream` 且 `question` 以 `/prompt:` 开头",系统 SHALL 解析指令并在 stream 中保持 `chunk|done|error` 的最小事件集语义稳定,true
   r73,"qa-stream-emits-minimal-event-set","",客户端使用 `/qa/stream` 发起问答,stream SHALL 至少包含 `chunk|done|error` 事件并保持字段语义稳定,true
   r73,"qa-stream-carries-shared-ui-state-updates","",客户端使用 `/qa/stream` 发起问答且该回答包含交互 UI,stream SHALL 保持 `chunk|done|error` 的最小事件集稳定,true
-  r75,"citations-are-consistent-across-endpoints","",QA/messages/outputs 返回 citation 对象,citation 结构 SHALL 保持一致,true
+  r75,"citation-wire-fields-are-camelcase",一次 QA 或 messages 响应包含 citations,客户端读取 citation 对象字段,JSON 中 SHALL 出现 sourceId/sourceName/chunkId 等 camelCase 键，且 MUST NOT 依赖 source_id 等 snake_case 键,true
   r77,"fetch-citation-context","",客户端请求某 citation 的上下文,系统 SHALL 返回片段前后文（或等价上下文）与页码/段落等元信息（如可用）,true
   r78,"export-includes-citation-list","",用户导出 QA 或某个 Output,导出结果 SHALL 包含引用清单与可定位信息（source_id 或可解析来源标识）,true
   r79,"tools-endpoint-stays-compatible-while-tool-set-is-dynamic","",前端依赖 `/v1/workspace/tools` 获取工具列表,系统 SHALL 保持端点可用且字段语义稳定,true
@@ -87,3 +88,4 @@ scenarios[46]{req_id,id,given,when,then,feature}:
   "error-envelope-actually-emitted-by-routes","field-name-is-message",the client triggers a 400 error such as a missing field,the system returns an error response,the message field MUST be named message (aligned with ErrorEnvelopeSchema) and MUST NOT be named error,true
   "shared-error-envelope-helper","single-helper-source",a developer adds a new error branch in a feature router,returning the error via the shared helper,the helper output MUST be consistent with other routers and error_code MUST come from the centralized mapping table not a custom string,true
   "slides-config-schema-options-must-be-complete","slides-config-options-all-present",the SLIDES tool is available (returned in /v1/workspace/tools),a client reads the SLIDES tool's config_schema,"the config_schema MUST contain non-empty quantity_options, audience_options, structure_options, tone_options, language_options, density_options, and theme_preset_options arrays, plus a defaults object; each option MUST have id, label, and is_default fields",true
+  r284,"shared-citation-schema-camelcase",CitationSchema 已更新为 camelCase,服务端构建 citations 或前端类型检查 Citation,两端 SHALL 共用同一 camelCase 字段集且类型检查通过,true

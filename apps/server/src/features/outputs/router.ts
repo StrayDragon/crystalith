@@ -111,7 +111,7 @@ export function collectCitedCitations(content: Record<string, unknown> | null): 
       for (const c of cited) {
         if (!c || typeof c !== 'object') continue;
         const cit = c as Record<string, unknown>;
-        const chunkId = cit.chunk_id;
+        const chunkId = cit.chunkId;
         if (typeof chunkId !== 'number' || seen.has(chunkId)) continue;
         seen.add(chunkId);
         out.push(cit as unknown as Citation);
@@ -293,7 +293,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     // This replaces the prior `row.chunkIds` join which listed ALL retrieved
     // chunks (the superset), not just the cited ones.
     const citations = collectCitedCitations(row.content as Record<string, unknown> | null);
-    const sourceIds = [...new Set(citations.map((c) => c.source_id))];
+    const sourceIds = [...new Set(citations.map((c) => c.sourceId))];
     const sourceRows = sourceIds.length
       ? db().select().from(sources).where(inArray(sources.id, sourceIds)).all()
       : [];
@@ -328,11 +328,10 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
       row.prompt,
     );
     const citationLines = citations.map((c, i) => {
-      const parts = [`[${i + 1}] ${c.source_name}`, `chunk ${c.chunk_index}`];
-      if (c.page_number !== null && c.page_number !== undefined)
-        parts.push(`page ${c.page_number}`);
-      if (c.paragraph_index !== null && c.paragraph_index !== undefined)
-        parts.push(`para ${c.paragraph_index}`);
+      const parts = [`[${i + 1}] ${c.sourceName}`, `chunk ${c.chunkIndex}`];
+      if (c.pageNumber !== null && c.pageNumber !== undefined) parts.push(`page ${c.pageNumber}`);
+      if (c.paragraphIndex !== null && c.paragraphIndex !== undefined)
+        parts.push(`para ${c.paragraphIndex}`);
       const line = parts.join(' · ');
       const snippet = (c.snippet ?? '').trim();
       return snippet ? `${line}\n> ${snippet}` : line;

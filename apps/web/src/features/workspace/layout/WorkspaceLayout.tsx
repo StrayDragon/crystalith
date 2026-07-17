@@ -123,7 +123,7 @@ export default function WorkspaceLayout() {
           return sourceById.get(sourceId) ?? null;
         }
       }
-      const title = citation.sourceTitle?.trim();
+      const title = citation.sourceName?.trim();
       if (title) {
         const match = sources.sources.find((source) => source.title === title);
         if (match) return match;
@@ -215,7 +215,7 @@ export default function WorkspaceLayout() {
   const convertSourceQAToSource = sources.convertSourceQAToSource;
 
   const handleCitationSaveQAAsSource = useCallback(
-    async (_sourceTitle: string, messages: SourceDialogMessage[]) => {
+    async (_sourceName: string, messages: SourceDialogMessage[]) => {
       if (!overlays.citationSelectedSource || !convertSourceQAToSource) return;
       const qaMessages = messages.map((msg) => ({
         role: msg.role,

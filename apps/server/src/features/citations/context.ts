@@ -17,19 +17,19 @@ import { chunks, sources } from '../../db/schema.ts';
 // ---------------------------------------------------------------------------
 
 export interface CitationContextChunk {
-  chunk_id: number;
+  chunkId: number;
   // 1-based for v1 API compatibility
-  chunk_index: number;
+  chunkIndex: number;
   // full text (v1 returns untruncated)
   text: string;
-  page_number: number | null;
-  paragraph_index: number | null;
+  pageNumber: number | null;
+  paragraphIndex: number | null;
 }
 
 export interface CitationContextResult {
   citation: CitationContextChunk & {
-    source_id: number;
-    source_name: string;
+    sourceId: number;
+    sourceName: string;
     snippet: string;
     score: number | null;
   };
@@ -170,8 +170,8 @@ export async function resolveChunkContext(
   return {
     citation: {
       ...toContextChunk(target.chunk),
-      source_id: target.source.id,
-      source_name: target.source.filename,
+      sourceId: target.source.id,
+      sourceName: target.source.filename,
       snippet: (target.chunk.text ?? '').slice(0, 200),
       score: null,
     },
@@ -188,12 +188,12 @@ export async function resolveChunkContext(
 function toContextChunk(chunk: typeof chunks.$inferSelect): CitationContextChunk {
   const meta = chunk.metadata as ChunkMetadata;
   return {
-    chunk_id: chunk.id,
+    chunkId: chunk.id,
     // 1-based (v1 compat)
-    chunk_index: chunk.chunkIndex + 1,
+    chunkIndex: chunk.chunkIndex + 1,
     // full text (v1 returns untruncated — c39 gap fix)
     text: chunk.text ?? '',
-    page_number: extractPageNumber(meta),
-    paragraph_index: extractParagraphIndex(meta),
+    pageNumber: extractPageNumber(meta),
+    paragraphIndex: extractParagraphIndex(meta),
   };
 }
