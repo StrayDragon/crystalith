@@ -2,6 +2,7 @@ import { FormatQuote as QuoteIcon } from '@mui/icons-material';
 import { useCallback, useMemo, useState } from 'react';
 
 import type { Citation } from '../../types';
+import { countUniqueCitationSources, formatCitationScopeLabel } from './citationLabels';
 import CitationPopover from './CitationPopover';
 
 interface CitationsControlProps {
@@ -24,8 +25,13 @@ export default function CitationsControl({
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
 
-  const countLabel = useMemo(() => citations.length, [citations.length]);
-  const ariaLabel = triggerLabel ?? `查看全部 ${countLabel} 条引用`;
+  const chunkCount = citations.length;
+  const sourceCount = useMemo(() => countUniqueCitationSources(citations), [citations]);
+  const scopeLabel = useMemo(
+    () => formatCitationScopeLabel(sourceCount, chunkCount),
+    [sourceCount, chunkCount],
+  );
+  const ariaLabel = triggerLabel ?? `查看引用：${scopeLabel}`;
 
   const handleOpenPopover = useCallback((rect: DOMRect) => {
     setAnchorRect(rect);
@@ -56,7 +62,7 @@ export default function CitationsControl({
         aria-label={ariaLabel}
       >
         <QuoteIcon style={{ fontSize: 14 }} />
-        查看引用 ({citations.length})
+        查看引用 ({scopeLabel})
       </button>
 
       <CitationPopover

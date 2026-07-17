@@ -117,8 +117,9 @@ export async function streamQa(opts: QaHandlerOptions): Promise<Response> {
   // c48: stats preset (v1 api.py:457-504) — generate full text non-streamed,
   // parse JSON, then stream fallback_markdown in chunks. Falls through to
   // normal streaming generation if JSON parsing fails.
+  const systemWithContext = withOptionalSourceMaterial(opts.systemPrompt, judgment.context);
+
   if (opts.preset === 'stats') {
-    const systemWithContext = `${opts.systemPrompt}\n\nSource material:\n${judgment.context}`;
     try {
       const { text } = await generateText({
         model: opts.model,
@@ -136,9 +137,7 @@ export async function streamQa(opts: QaHandlerOptions): Promise<Response> {
     }
   }
 
-  // Step 3: Evidence found → generate with context injection
-  const systemWithContext = `${opts.systemPrompt}\n\nSource material:\n${judgment.context}`;
-
+  // Step 3: Evidence found (or ungrounded) → generate; inject Source material only when present
   return streamQaResponse({
     model: opts.model,
     systemPrompt: systemWithContext,
@@ -267,6 +266,13 @@ function estimateTokens(text: string): number {
   return countTokens(text);
 }
 
+/** Inject retrieved context only when non-empty (c63 ungrounded chat skips RAG). */
+function withOptionalSourceMaterial(systemPrompt: string, context: string): string {
+  const trimmed = context.trim();
+  if (!trimmed) return systemPrompt;
+  return `${systemPrompt}\n\nSource material:\n${trimmed}`;
+}
+
 // ---------------------------------------------------------------------------
 // H7: Non-streaming QA — direct generate (replaces SSE re-parse)
 // ---------------------------------------------------------------------------
@@ -316,8 +322,8 @@ export async function generateQaDirect(opts: QaHandlerOptions): Promise<QaDirect
     };
   }
 
-  // Evidence found → generate with context injection (direct, no SSE)
-  const systemWithContext = `${opts.systemPrompt}\n\nSource material:\n${judgment.context}`;
+  // Evidence found (or ungrounded) → generate; inject Source material only when present
+  const systemWithContext = withOptionalSourceMaterial(opts.systemPrompt, judgment.context);
   const { text } = await generateText({
     model: opts.model,
     system: systemWithContext,

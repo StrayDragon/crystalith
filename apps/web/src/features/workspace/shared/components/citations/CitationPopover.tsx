@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 
 import { useLayer } from '../../../../../shared/layer';
 import type { Citation } from '../../types';
+import { countUniqueCitationSources, formatCitationScopeLabel } from './citationLabels';
 
 interface CitationPopoverProps {
   /** 引用列表 */
@@ -84,6 +85,11 @@ export default function CitationPopover({
     if (!anchorRect) return null;
     return calculatePosition(anchorRect);
   }, [anchorRect]);
+
+  const scopeLabel = useMemo(
+    () => formatCitationScopeLabel(countUniqueCitationSources(citations), citations.length),
+    [citations],
+  );
 
   // 点击外部关闭
   useEffect(() => {
@@ -190,14 +196,12 @@ export default function CitationPopover({
           maxHeight: POPOVER_MAX_HEIGHT,
         }}
         role="dialog"
-        aria-label="引用详情"
+        aria-label={`引用详情：${scopeLabel}`}
         data-testid="citation-popover"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-          <span className="text-sm font-semibold text-gray-900">
-            引用详情 ({citations.length} 条)
-          </span>
+          <span className="text-sm font-semibold text-gray-900">引用详情 ({scopeLabel})</span>
           <button
             type="button"
             onClick={onClose}
