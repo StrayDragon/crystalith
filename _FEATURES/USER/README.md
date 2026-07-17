@@ -13,7 +13,6 @@ Crystalith 工作区（`apps/web/src/features/workspace/`）用户可见功能�
 | [04-messages.md](04-messages.md)                         | 对话面板与消息操作             | 14           |
 | [05-sources.md](05-sources.md)                           | 来源面板、导入、标签、连接器   | 18           |
 | [06-research.md](06-research.md)                         | 深度研究（Deep Research）      | 4            |
-| [07-analysis.md](07-analysis.md)                         | 知识图谱分析视图               | 1            |
 | [08-studio.md](08-studio.md)                             | Studio 笔记与生成工具          | 7            |
 | [09-outputs.md](09-outputs.md)                           | Output 查看、导出、队列        | 11           |
 | [10-plugins.md](10-plugins.md)                           | 结构化 Output 插件渲染         | 8            |

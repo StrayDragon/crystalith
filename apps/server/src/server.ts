@@ -3,8 +3,7 @@ import { Elysia } from 'elysia';
 
 import { generateAsyncApiDocument } from './asyncapi.ts';
 // Feature routers — each exports an Elysia instance + registers OpenAPI docs
-// 20 routers total, matching v1's 18 routers
-import { analysisRouter } from './features/analysis/router.ts';
+// 19 routers total, matching v1's 18 routers
 import { citationsRouter } from './features/citations/router.ts';
 import { commandsRouter } from './features/commands/router.ts';
 import { evalRouter } from './features/eval/router.ts';
@@ -75,7 +74,7 @@ apiDocs.push({
 });
 
 // ---------------------------------------------------------------------------
-// App — 20 feature routers + 1 rag router
+// App — 19 feature routers + 1 rag router
 //
 // `createApp()` builds the Elysia instance without listening; the production
 // entry calls `.listen()` below, while tests import `createApp` to run
@@ -186,7 +185,6 @@ export function createApp() {
     .use(researchRouter)
     .use(outputsRouter)
     .use(modelsRouter)
-    .use(analysisRouter)
     .use(studioRouter)
     .use(refineRouter(taskQueue))
     .use(templatesRouter)

@@ -1,9 +1,9 @@
 kind: llman.sdd.spec
 name: "workspace-ui-panels"
-purpose: 定义 Workspace 业务面板（Sources/Chat/Studio/Analysis/Research 与引用交互）的最小 UI 契约：面板装配、流式反馈、状态与取消语义、错误可恢复路径。该规范聚焦“用户可观察行为与稳定边界”，不绑定具体组件实现。
+purpose: 定义 Workspace 业务面板（Sources/Chat/Studio/Research 与引用交互）的最小 UI 契约：面板装配、流式反馈、状态与取消语义、错误可恢复路径。该规范聚焦“用户可观察行为与稳定边界”，不绑定具体组件实现。
 valid_scope[2]: src/,tests/
-requirements[14]{req_id,title,statement}:
-  r1,Panel composition is stable,Workspace MUST 以稳定的面板集合装配 Sources/Chat/Studio/Analysis/Research 等能力，并保持各面板的基本区域划分与入口可发现。
+requirements[13]{req_id,title,statement}:
+  r1,Panel composition is stable,Workspace MUST 以稳定的面板集合装配 Sources/Chat/Studio/Research 等能力，并保持各面板的基本区域划分与入口可发现。
   r2,Streaming UX supports send/chunk/done/error and cancel,涉及流式输出的面板（如 Chat/Research）MUST 显式呈现 send/chunk/done/error 状态，并 MUST 支持用户取消以停止继续追加内容。
   r3,"Chat input supports /prompt directives as user-facing commands","Workspace 的 Chat 面板 MUST 允许用户在输入框中使用 `/prompt:<preset> <query>` 指令来请求受控的预设生成模式。"
   r4,Chat input provides command autocomplete for /prompt presets,"Workspace 的 Chat 输入框 MUST 使用 `GET /v1/commands` 获取命令列表，并在用户输入 `/` 或 `/prompt:` 前缀时提供自动补全 UI。"
@@ -14,10 +14,9 @@ requirements[14]{req_id,title,statement}:
   r9,Sources workflows are gated and explicit,Sources 相关操作 MUST 对“未选择来源/来源未就绪/来源失败”等情况进行显式 gating，并 MUST 提供可理解的提示与可恢复路径。
   r10,"Ingestion feedback is queue-based and deterministic",上传/抓取/搜索等 ingest 操作 MUST 以队列项呈现并可并发显示状态，且每个队列项 MUST 有确定的终态（done/error/cancelled）与重试入口。
   r11,Sources upload file type support is consistent and includes PDF,Workspace 的 Sources 上传入口 MUST 支持后端核心发行版的常见内置解析格式，且前端 `accept`、预过滤与提示文案 MUST 保持一致。 该支持集 SHALL 至少包含：`.txt/.md/.markdown` 与 `.pdf`（`application/pdf`），以及 `.csv`（`text/csv`）。
-  r12,Analysis view is bounded and refreshable,Analysis 面板 MUST 提供可刷新与全屏查看的交互，并 MUST 对渲染规模做有界处理以避免 UI 失控或崩溃。
   r13,"Studio queue, rendering fallback, and export gating are explicit",Studio MUST 明确展示生成队列状态并支持取消；渲染 MUST 定义确定的回退顺序；导出选项 MUST 仅显示当前输出类型支持项。
   "frontend-extractor-types-must-not-duplicate",Frontend MUST NOT keep stale duplicate type definitions that diverge from the SSOT,"前端 MUST NOT 在 api/shared-types.ts 中保留与 api/generated（SSOT）重复且字段不全的类型定义（如 ExtractorInfoResponse 缺 priority/display_name/requires_api_key/requires_service/recovery_hint 等字段）。重复类型 MUST 删除以消除混淆，统一从 api/generated 导入。"
-scenarios[19]{req_id,id,given,when,then}:
+scenarios[18]{req_id,id,given,when,then}:
   r1,"panels-are-consistently-discoverable","",用户进入 Workspace 并切换面板,系统 SHALL 以一致的方式展示面板入口与基本区域，不因刷新或重连丢失
   r2,"cancel-stops-streaming","",用户在流式生成过程中点击取消,系统 SHALL 停止继续追加 chunk，并展示取消后的可恢复状态（如可重试）
   r3,"user-can-send-a-prompt-message","","用户在 Chat 输入框中输入以 `/prompt:` 开头的内容并发送（无论是否打开自动补全）",UI SHALL 将该文本作为一次消息发送（不应在前端预过滤为“非法输入”）
@@ -34,6 +33,5 @@ scenarios[19]{req_id,id,given,when,then}:
   r11,"uploading-a-pdf-is-accepted-by-the-ui","",用户在 Sources 面板通过“选择文件”或“拖拽”方式上传 `.pdf`,UI SHALL 接受该文件并进入上传队列
   r11,"uploading-a-csv-is-accepted-by-the-ui","",用户在 Sources 面板通过“选择文件”或“拖拽”方式上传 `.csv`,UI SHALL 接受该文件并进入上传队列
   r11,"unsupported-formats-are-rejected-with-clear-feedback","",用户上传一个明确不支持的格式（如 `.docx`）,UI SHALL 拒绝该文件
-  r12,"large-analysis-output-is-bounded","",分析结果包含超大 topics/relations 列表,系统 SHALL 以截断/分页/限量等方式保持 UI 可用
   r13,"rendering-falls-back-deterministically","",专用渲染器不可用或渲染失败,系统 SHALL 按既定顺序回退到通用渲染或原始 JSON，且不展示不支持的导出格式
   "frontend-extractor-types-must-not-duplicate","stale-extractor-type-removed","the api/shared-types.ts has a stale ExtractorInfoResponse missing fields",the change is applied,the stale type MUST be deleted and all imports MUST reference the complete api/generated version

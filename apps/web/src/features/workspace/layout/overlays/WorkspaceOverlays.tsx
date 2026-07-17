@@ -1,19 +1,11 @@
 import { Suspense, lazy } from 'react';
 
-import type { AnalysisResult, WorkspaceToolsDiagnostics } from '../../../../api/shared-types';
-import SessionDetailDialog from '../../domains/sessions/SessionDetailDialog';
+import type { WorkspaceToolsDiagnostics } from '../../../../api/shared-types';
 import type { ChatMessage as SourceDialogMessage } from '../../domains/sources/SourceDetailDialog';
 import { SkeletonCard } from '../../shared/components/Skeleton';
 import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';
 import { WORKSPACE_SHORTCUTS } from '../../shared/shortcuts';
-import type {
-  ChatMessage,
-  Citation,
-  OutputItem,
-  SessionSummary,
-  SourceItem,
-  WorkspaceTool,
-} from '../../shared/types';
+import type { Citation, OutputItem, SourceItem, WorkspaceTool } from '../../shared/types';
 import {
   CommandPalette,
   type CommandItem,
@@ -23,7 +15,6 @@ import {
 import ShortcutHelpPanel from '../ShortcutHelpPanel';
 
 const StudioOutputViewer = lazy(() => import('../../domains/outputs/StudioOutputViewer'));
-const KnowledgeGraphView = lazy(() => import('../../domains/analysis/KnowledgeGraphView'));
 const SlidesStudioDialog = lazy(() => import('../../domains/studio/SlidesStudioDialog'));
 const SourceDetailDialog = lazy(() => import('../../domains/sources/SourceDetailDialog'));
 
@@ -77,30 +68,6 @@ interface WorkspaceOverlaysProps {
     };
     modelId?: string | null;
   }) => Promise<{ draftId?: number | null } | null>;
-  graphViewOpen: boolean;
-  onCloseGraphView: () => void;
-  onRefreshGraph: () => void;
-  onGraphSourceClick: (source: SourceItem) => void;
-  onGraphOutputClick: (output: OutputItem) => void;
-  onGraphSessionClick: (session: SessionSummary) => Promise<void>;
-  graphSources: SourceItem[];
-  graphOutputs: OutputItem[];
-  graphSessions: SessionSummary[];
-  graphMessages: ChatMessage[];
-  graphAnalysis: AnalysisResult | null;
-  graphAnalysisLoading: boolean;
-  graphAnalysisError: string;
-  activeSessionId: number | null;
-  graphConnected: boolean;
-  graphSourceDetailOpen: boolean;
-  graphSelectedSource: SourceItem | null;
-  onCloseGraphSourceDetail: () => void;
-  graphSourceDetailFullscreen: boolean;
-  onToggleGraphSourceDetailFullscreen: () => void;
-  onSaveGraphSourceQAAsSource: (
-    sourceTitle: string,
-    messages: SourceDialogMessage[],
-  ) => Promise<void>;
   citationSourceDetailOpen: boolean;
   citationSelectedSource: SourceItem | null;
   onCloseCitationSourceDetail: () => void;
@@ -110,13 +77,6 @@ interface WorkspaceOverlaysProps {
     sourceTitle: string,
     messages: SourceDialogMessage[],
   ) => Promise<void>;
-  graphSessionDetailOpen: boolean;
-  graphSelectedSession: SessionSummary | null;
-  graphSessionMessages: ChatMessage[];
-  onCloseGraphSessionDetail: () => void;
-  graphSessionDetailFullscreen: boolean;
-  onToggleGraphSessionDetailFullscreen: () => void;
-  graphSessionMessagesLoading: boolean;
 }
 
 export function WorkspaceOverlays({
@@ -153,40 +113,12 @@ export function WorkspaceOverlays({
   slidesTool,
   toolsDiagnostics,
   onQueueSlides,
-  graphViewOpen,
-  onCloseGraphView,
-  onRefreshGraph,
-  onGraphSourceClick,
-  onGraphOutputClick,
-  onGraphSessionClick,
-  graphSources,
-  graphOutputs,
-  graphSessions,
-  graphMessages,
-  graphAnalysis,
-  graphAnalysisLoading,
-  graphAnalysisError,
-  activeSessionId,
-  graphConnected,
-  graphSourceDetailOpen,
-  graphSelectedSource,
-  onCloseGraphSourceDetail,
-  graphSourceDetailFullscreen,
-  onToggleGraphSourceDetailFullscreen,
-  onSaveGraphSourceQAAsSource,
   citationSourceDetailOpen,
   citationSelectedSource,
   onCloseCitationSourceDetail,
   citationSourceDetailFullscreen,
   onToggleCitationSourceDetailFullscreen,
   onSaveCitationSourceQAAsSource,
-  graphSessionDetailOpen,
-  graphSelectedSession,
-  graphSessionMessages,
-  onCloseGraphSessionDetail,
-  graphSessionDetailFullscreen,
-  onToggleGraphSessionDetailFullscreen,
-  graphSessionMessagesLoading,
 }: WorkspaceOverlaysProps) {
   return (
     <>
@@ -262,58 +194,6 @@ export function WorkspaceOverlays({
         </Suspense>
       )}
 
-      {graphViewOpen && (
-        <Suspense
-          fallback={
-            <div className="fixed inset-0 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60">
-              <div className="w-[520px]">
-                <SkeletonCard lines={6} />
-              </div>
-            </div>
-          }
-        >
-          <KnowledgeGraphView
-            sources={graphSources}
-            outputs={graphOutputs}
-            sessions={graphSessions}
-            messages={graphMessages}
-            analysis={graphAnalysis}
-            isLoading={graphAnalysisLoading}
-            error={graphAnalysisError}
-            activeSessionId={activeSessionId}
-            onClose={onCloseGraphView}
-            onRefresh={onRefreshGraph}
-            onSourceClick={onGraphSourceClick}
-            onOutputClick={onGraphOutputClick}
-            onSessionClick={(...args) => {
-              void onGraphSessionClick(...args);
-            }}
-            isConnected={graphConnected}
-          />
-        </Suspense>
-      )}
-
-      {graphSourceDetailOpen && (
-        <Suspense
-          fallback={
-            <div className="fixed inset-0 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60">
-              <div className="w-[520px]">
-                <SkeletonCard lines={5} />
-              </div>
-            </div>
-          }
-        >
-          <SourceDetailDialog
-            open={graphSourceDetailOpen}
-            source={graphSelectedSource}
-            onClose={onCloseGraphSourceDetail}
-            isFullscreen={graphSourceDetailFullscreen}
-            onToggleFullscreen={onToggleGraphSourceDetailFullscreen}
-            onSaveQAAsSource={onSaveGraphSourceQAAsSource}
-          />
-        </Suspense>
-      )}
-
       {citationSourceDetailOpen && (
         <Suspense
           fallback={
@@ -334,16 +214,6 @@ export function WorkspaceOverlays({
           />
         </Suspense>
       )}
-
-      <SessionDetailDialog
-        open={graphSessionDetailOpen}
-        session={graphSelectedSession}
-        messages={graphSessionMessages}
-        onClose={onCloseGraphSessionDetail}
-        isFullscreen={graphSessionDetailFullscreen}
-        onToggleFullscreen={onToggleGraphSessionDetailFullscreen}
-        isLoading={graphSessionMessagesLoading}
-      />
     </>
   );
 }

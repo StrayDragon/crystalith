@@ -37,7 +37,7 @@ crystalith/
 ├── packages/
 │   ├── shared/            # Zod schemas + types SSOT
 │   │   └── src/schemas/   # notebook, session, message, source, qa, output,
-│   │                      # research, analysis, studio, refine, model, etc.
+│   │                      # research, studio, refine, model, etc.
 │   └── crystalith-slidev/ # Slidev integration
 ├── config/                # Runtime config (app.yaml + secret.env)
 ├── llmanspec/             # Spec-driven development specs + changes

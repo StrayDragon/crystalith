@@ -1,23 +1,14 @@
 import { useCallback, useState } from 'react';
 
 import type { SourceItem } from '../../shared/types';
-import { useGraphSessionDetail, type GraphSessionTarget } from './useGraphSessionDetail';
 
 type SlideOpenMode = 'config' | 'preview';
 
 interface UseWorkspaceOverlaysOptions {
-  activeNotebookId: number | null;
   resolveSlideDraftId: (outputId: number) => number | null;
-  fetchAnalysisIfNeeded: () => void;
 }
 
-export function useWorkspaceOverlays({
-  activeNotebookId,
-  resolveSlideDraftId,
-  fetchAnalysisIfNeeded,
-}: UseWorkspaceOverlaysOptions) {
-  const graphSessionDetail = useGraphSessionDetail();
-
+export function useWorkspaceOverlays({ resolveSlideDraftId }: UseWorkspaceOverlaysOptions) {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showCatalog, setShowCatalog] = useState(false);
   const [isSessionSwitcherOpen, setIsSessionSwitcherOpen] = useState(false);
@@ -28,10 +19,6 @@ export function useWorkspaceOverlays({
   const [isViewerFullscreen, setIsViewerFullscreen] = useState(false);
   const [viewerOutputId, setViewerOutputId] = useState<number | null>(null);
   const [isViewerElevated, setIsViewerElevated] = useState(false);
-  const [isGraphViewOpen, setIsGraphViewOpen] = useState(false);
-  const [graphSourceDetailOpen, setGraphSourceDetailOpen] = useState(false);
-  const [graphSelectedSource, setGraphSelectedSource] = useState<SourceItem | null>(null);
-  const [graphSourceDetailFullscreen, setGraphSourceDetailFullscreen] = useState(false);
   const [citationSourceDetailOpen, setCitationSourceDetailOpen] = useState(false);
   const [citationSelectedSource, setCitationSelectedSource] = useState<SourceItem | null>(null);
   const [citationSourceDetailFullscreen, setCitationSourceDetailFullscreen] = useState(false);
@@ -157,30 +144,6 @@ export function useWorkspaceOverlays({
     [openSlidesDialog, resolveSlideDraftId],
   );
 
-  const openGraphView = useCallback(() => {
-    setIsGraphViewOpen(true);
-    fetchAnalysisIfNeeded();
-  }, [fetchAnalysisIfNeeded]);
-
-  const closeGraphView = useCallback(() => {
-    setIsGraphViewOpen(false);
-  }, []);
-
-  const openGraphSourceDetail = useCallback((source: SourceItem) => {
-    setGraphSelectedSource(source);
-    setGraphSourceDetailOpen(true);
-    setGraphSourceDetailFullscreen(false);
-  }, []);
-
-  const closeGraphSourceDetail = useCallback(() => {
-    setGraphSourceDetailOpen(false);
-    setGraphSourceDetailFullscreen(false);
-  }, []);
-
-  const toggleGraphSourceDetailFullscreen = useCallback(() => {
-    setGraphSourceDetailFullscreen((prev) => !prev);
-  }, []);
-
   const openCitationSourceDetail = useCallback((source: SourceItem) => {
     setCitationSelectedSource(source);
     setCitationSourceDetailOpen(true);
@@ -204,16 +167,6 @@ export function useWorkspaceOverlays({
     }));
   }, []);
 
-  const openGraphSessionDetail = useCallback(
-    async (session: GraphSessionTarget) => {
-      graphSessionDetail.openSessionDetail(session);
-      if (activeNotebookId) {
-        await graphSessionDetail.fetchMessages(activeNotebookId, session.id);
-      }
-    },
-    [activeNotebookId, graphSessionDetail],
-  );
-
   const closeActiveOverlay = useCallback(() => {
     if (showCommandPalette) {
       closeCommandPalette();
@@ -235,16 +188,8 @@ export function useWorkspaceOverlays({
       closeSystemConfig();
       return true;
     }
-    if (graphSessionDetail.isOpen) {
-      graphSessionDetail.closeSessionDetail();
-      return true;
-    }
     if (citationSourceDetailOpen) {
       closeCitationSourceDetail();
-      return true;
-    }
-    if (graphSourceDetailOpen) {
-      closeGraphSourceDetail();
       return true;
     }
     if (isSlidesDialogOpen) {
@@ -253,10 +198,6 @@ export function useWorkspaceOverlays({
     }
     if (isViewerOpen) {
       closeOutputViewer();
-      return true;
-    }
-    if (isGraphViewOpen) {
-      closeGraphView();
       return true;
     }
     if (isSessionSwitcherOpen) {
@@ -275,27 +216,15 @@ export function useWorkspaceOverlays({
     closeDiagnostics,
     isSystemConfigOpen,
     closeSystemConfig,
-    graphSessionDetail,
     citationSourceDetailOpen,
     closeCitationSourceDetail,
-    graphSourceDetailOpen,
-    closeGraphSourceDetail,
     isSlidesDialogOpen,
     closeSlidesDialog,
     isViewerOpen,
     closeOutputViewer,
-    isGraphViewOpen,
-    closeGraphView,
     isSessionSwitcherOpen,
     closeSessionSwitcher,
   ]);
-
-  const handleGraphSessionClick = useCallback(
-    async (session: GraphSessionTarget) => {
-      await openGraphSessionDetail(session);
-    },
-    [openGraphSessionDetail],
-  );
 
   const openCommandPalette = useCallback(() => {
     setShowCommandPalette(true);
@@ -320,10 +249,6 @@ export function useWorkspaceOverlays({
     isViewerFullscreen,
     viewerOutputId,
     isViewerElevated,
-    isGraphViewOpen,
-    graphSourceDetailOpen,
-    graphSelectedSource,
-    graphSourceDetailFullscreen,
     citationSourceDetailOpen,
     citationSelectedSource,
     citationSourceDetailFullscreen,
@@ -332,11 +257,6 @@ export function useWorkspaceOverlays({
     slidesOpenMode,
     slidesDraftId,
     slidesQueueJobId,
-    graphSessionDetailOpen: graphSessionDetail.isOpen,
-    graphSelectedSession: graphSessionDetail.selectedSession,
-    graphSessionDetailFullscreen: graphSessionDetail.isFullscreen,
-    graphSessionMessages: graphSessionDetail.messages,
-    graphSessionMessagesLoading: graphSessionDetail.isLoading,
     openCommandPalette,
     toggleCommandPalette,
     closeCommandPalette,
@@ -357,20 +277,12 @@ export function useWorkspaceOverlays({
     toggleOutputViewer,
     selectOutput,
     setViewerOutputId,
-    openGraphView,
-    closeGraphView,
-    openGraphSourceDetail,
-    closeGraphSourceDetail,
-    toggleGraphSourceDetailFullscreen,
     openCitationSourceDetail,
     closeCitationSourceDetail,
     toggleCitationSourceDetailFullscreen,
     locateCitationSource,
     openSlidesDialog,
     closeSlidesDialog,
-    handleGraphSessionClick,
     closeActiveOverlay,
-    closeGraphSessionDetail: graphSessionDetail.closeSessionDetail,
-    toggleGraphSessionDetailFullscreen: graphSessionDetail.toggleFullscreen,
   };
 }

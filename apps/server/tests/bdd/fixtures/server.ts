@@ -30,7 +30,7 @@ beforeAll(() => {
   orm = createDb(tmpDbPath);
   resetDb(orm);
   // Empty config: most BDD scenarios test pure CRUD and never touch models;
-  // those that do (qa/research/analysis) are marked @experimental and skipped.
+  // those that do (qa/research) are marked @experimental and skipped.
   resetConfig({ models: { defaults: {}, available: [] }, raw: {} });
   app = createApp();
 });

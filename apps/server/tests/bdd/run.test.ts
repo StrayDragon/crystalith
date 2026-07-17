@@ -21,7 +21,6 @@ const FEATURES_DIR = join(import.meta.dirname, 'features');
 // To enable a domain: remove it from the set below and re-run. The failures
 // that appear map directly to v2 router work needed for v1 parity.
 const SKIP_FEATURE_DIRS = new Set([
-  'analysis', // LLM-backed clustering
   'citations', // v2 router path diverges from v1 (/notebooks/:nid/citations/context)
   'commands', // depends on prompt-presets data
   'models', // depends on config models (empty in tests)

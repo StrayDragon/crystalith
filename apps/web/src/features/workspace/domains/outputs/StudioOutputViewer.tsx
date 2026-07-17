@@ -39,7 +39,7 @@ interface StudioOutputViewerProps {
   onJumpToCitation?: (citation: Citation, citations: Citation[]) => void;
   onCitationHover?: (chunkId: number | null) => void;
   onLocateSource?: (citation: Citation) => void;
-  /** 是否提升 z-index（用于从其他 modal 如知识图谱中打开时） */
+  /** 是否提升 z-index（用于从其他 overlay 中打开时） */
   elevated?: boolean;
 }
 
@@ -97,7 +97,7 @@ export default function StudioOutputViewer({
     [onDeleteOutput, outputs, selectedOutputId, onClose],
   );
 
-  // 使用 slot 参数来提升 z-index（当从其他 modal 如知识图谱中打开时）
+  // 使用 slot 参数来提升 z-index（当从其他 overlay 中打开时）
   const { style: modalStyle } = useLayer('modal', elevated ? 10 : 0);
 
   if (!isOpen) return null;

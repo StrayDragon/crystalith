@@ -88,10 +88,6 @@ export type Translation = {
   'research.status': string;
   'research.depth': string;
   'research.result': string;
-  'analysis.id': string;
-  'analysis.content': string;
-  'analysis.type': string;
-  'analysis.created_at': string;
   'refine.id': string;
   'refine.content': string;
   'refine.feedback': string;

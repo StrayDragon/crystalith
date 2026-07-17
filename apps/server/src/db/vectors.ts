@@ -126,37 +126,3 @@ export function getAllVectors(orm: Orm, notebookId: number): VectorHit[] {
      ORDER BY c.chunk_index;
   `);
 }
-
-/** A stored vector entry with its raw embedding (for analysis clustering/correlation). */
-export interface StoredVector {
-  chunkId: number;
-  sourceId: number;
-  /** Raw embedding vector (float32). */
-  vector: Float32Array;
-}
-
-/**
- * Fetch all stored embeddings for a notebook, with chunk + source ids.
- *
- * sqlite-vec stores embeddings as BLOBs in the `embedding` column; selecting
- * it returns raw float32 bytes which we reconstruct into Float32Array.
- * Used by analysis clustering/correlation (c28 — replaces keyword-TF fallback).
- */
-export function getStoredVectors(orm: Orm, notebookId: number): StoredVector[] {
-  const rows = orm.all<{ rowid: number; source_id: number; embedding: Uint8Array }>(sql`
-    SELECT v.rowid AS rowid,
-           v.source_id AS source_id,
-           v.embedding AS embedding
-      FROM vec_chunks v
-     WHERE v.notebook_id = ${notebookId};
-  `);
-  return rows.map((r) => ({
-    chunkId: r.rowid,
-    sourceId: r.source_id,
-    vector: new Float32Array(
-      r.embedding.buffer,
-      r.embedding.byteOffset,
-      r.embedding.byteLength / 4,
-    ),
-  }));
-}
