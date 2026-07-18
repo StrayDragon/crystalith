@@ -43,10 +43,12 @@ export const modelsRouter = new Elysia({ prefix: '/v2' })
       available = available.filter((m) => m.roles.includes(roleFilter as 'chat' | 'embed'));
     }
     return {
-      // c52: v1 ModelsListResponse (api.py:42-43,95-97) puts defaults + providers
-      // on the envelope. providers = sorted({openai} ∪ knownProviders()).
-      default_chat: defaults.chat,
-      default_embedding: defaults.embedding,
+      defaults: {
+        chat: defaults.chat ?? null,
+        embedding: defaults.embedding ?? null,
+        edit: defaults.edit ?? null,
+        autocomplete: defaults.autocomplete ?? null,
+      },
       providers: [...new Set(['openai', ...knownProviders()])].toSorted(),
       models: available.map((m) => ({
         id: m.id,
@@ -56,6 +58,8 @@ export const modelsRouter = new Elysia({ prefix: '/v2' })
         description: m.description,
         roles: m.roles,
         capabilities: m.capabilities,
+        isDefaultChat: m.id === defaults.chat,
+        isDefaultEmbedding: m.id === defaults.embedding,
       })),
     };
   })

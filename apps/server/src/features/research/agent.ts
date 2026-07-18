@@ -247,7 +247,7 @@ async function executeSearches(
             snippet: r.snippet,
             source: r.engine,
             iteration: state.iteration,
-            relevance_score: 0,
+            relevanceScore: 0,
             query: r.query,
           } as Record<string, unknown>,
           status: 'completed' as const,

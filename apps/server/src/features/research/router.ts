@@ -461,7 +461,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       .where(eq(researchSessions.id, id))
       .run();
 
-    return { id, status: 'planning', skipped: true, next_iteration: nextIteration };
+    return { id, status: 'planning', skipped: true, nextIteration };
   })
 
   // Finish early (c37: record step; 2026-07-13: non-blocking report generation)
@@ -535,7 +535,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
           .run();
       });
 
-    return { id, status: 'completed', report_generated: 'pending' as const };
+    return { id, status: 'completed', reportGenerated: 'pending' as const };
   })
 
   // Cancel (c37: record step + release lock)
@@ -613,7 +613,10 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       throw new NotFoundError('Research has no final report to export');
     }
 
-    const export_type = (body as { export_type?: string })?.export_type ?? 'source';
+    const exportType =
+      (body as { exportType?: string; export_type?: string })?.exportType ??
+      (body as { export_type?: string })?.export_type ??
+      'source';
 
     // Build markdown report content
     const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, '-');
@@ -628,9 +631,8 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       row.finalReport,
     ].join('\n');
 
-    if (export_type === 'note') {
+    if (exportType === 'note') {
       // c49: create an Output with type=STRUCTURED + v1 content shape
-      // (v1 api.py:1434-1448: type=OutputType.STRUCTURED, content={title,text,metadata})
       const output = db()
         .insert(outputs)
         .values({
@@ -641,9 +643,9 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
             title: `研究报告：${row.topic}`,
             text: row.finalReport,
             metadata: {
-              research_id: id,
-              research_topic: row.topic,
-              export_timestamp: timestamp,
+              researchId: id,
+              researchTopic: row.topic,
+              exportTimestamp: timestamp,
             },
           },
         })
@@ -844,7 +846,7 @@ function deriveNamedEvent(step: typeof researchSteps.$inferSelect): {
       return { event: 'search_progress', data: { ...base, type: 'search_progress' } };
     case 'search_result':
       // P0-2: per-result event (v1 on_search_result, graph.py:497-498).
-      // outputData carries {title,url,snippet,source,iteration,relevance_score}
+      // outputData carries {title,url,snippet,source,iteration,relevanceScore}
       // matching shared ResearchSearchResultSchema.
       return {
         event: 'search_result',
@@ -863,7 +865,7 @@ function deriveNamedEvent(step: typeof researchSteps.$inferSelect): {
         data: {
           iteration: step.iteration,
           type: 'thinking',
-          step_type: step.type,
+          stepType: step.type,
           message: thinkingMessageForStep(step),
           data: step.outputData,
         },

@@ -8,8 +8,8 @@ import { generateObject } from 'ai';
 import type { z } from 'zod';
 
 /**
- * Render field descriptor (v1 FieldDescriptor) — tells frontend how to render
- * a field within an output item. mirrors apps/web/src/.../types.ts FieldDescriptor.
+ * Render field descriptor — tells frontend how to render a field within an
+ * output item. Wire fields are camelCase (c65).
  */
 export interface FieldDescriptor {
   key: string;
@@ -18,65 +18,65 @@ export interface FieldDescriptor {
 }
 
 /**
- * Render descriptor (v1 RenderDescriptor) — tells frontend GenericOutputRenderer
- * how to display a structured output type as visual cards/tree/sections/etc.
+ * Render descriptor — tells frontend GenericOutputRenderer how to display a
+ * structured output type as visual cards/tree/sections/etc.
  */
 export interface RenderDescriptor {
   layout: 'cards' | 'list' | 'sections' | 'timeline' | 'table' | 'tree';
-  item_schema: { fields: FieldDescriptor[] } | null;
+  itemSchema: { fields: FieldDescriptor[] } | null;
   options: Record<string, unknown>;
 }
 
 /**
- * Metadata for each output type — maps to v1 OutputTypeMeta.
+ * Metadata for each output type — maps to v1 OutputTypeMeta (camelCase wire).
  */
 export interface OutputMeta {
   type: OutputType;
-  display_text: string;
+  displayText: string;
   description: string;
   tone: StudioTone;
   prompt: string;
-  is_tool: boolean;
+  isTool: boolean;
   /**
    * Render descriptor for frontend GenericOutputRenderer.
    * When provided, the frontend renders output content as structured visual
-   * elements instead of raw JSON. Mirrors v1 plugin.render_descriptor.
+   * elements instead of raw JSON.
    */
-  render_descriptor: RenderDescriptor | null;
+  renderDescriptor: RenderDescriptor | null;
 }
 
 // ---------------------------------------------------------------------------
-// Render descriptors (v1 plugins' render_descriptor) — tell frontend how to
-// render each output type as structured visual elements instead of raw JSON.
-// SSOT: backend/py/plugins/crystalith-output-{faq,guide,mindmap,timeline,quiz,briefing}/.../plugin.py
+// Render descriptors — tell frontend how to render each output type.
+// Option keys and itemSchema are camelCase on the wire (c65).
+// Field `key` values still match content-schema property names (e.g. key_points).
 // ---------------------------------------------------------------------------
 
 const RENDER_DESCRIPTORS: Record<string, RenderDescriptor> = {
   FAQ: {
     layout: 'cards',
-    item_schema: {
+    itemSchema: {
       fields: [
         { key: 'question', type: 'heading', label: '问题' },
         { key: 'answer', type: 'text', label: '回答' },
         { key: 'citations', type: 'citation', label: null },
       ],
     },
-    options: { items_key: 'items' },
+    options: { itemsKey: 'items' },
   },
   GUIDE: {
     layout: 'sections',
-    item_schema: {
+    itemSchema: {
       fields: [
         { key: 'title', type: 'heading', label: '模块' },
         { key: 'objective', type: 'text', label: '目标' },
         { key: 'key_points', type: 'list', label: '要点' },
       ],
     },
-    options: { items_key: 'modules' },
+    options: { itemsKey: 'modules' },
   },
   TIMELINE: {
     layout: 'timeline',
-    item_schema: {
+    itemSchema: {
       fields: [
         { key: 'date', type: 'date', label: '日期' },
         { key: 'event', type: 'heading', label: '事件' },
@@ -84,21 +84,21 @@ const RENDER_DESCRIPTORS: Record<string, RenderDescriptor> = {
         { key: 'citations', type: 'citation', label: null },
       ],
     },
-    options: { items_key: 'events' },
+    options: { itemsKey: 'events' },
   },
   MINDMAP: {
     layout: 'tree',
-    item_schema: {
+    itemSchema: {
       fields: [
         { key: 'label', type: 'heading', label: null },
         { key: 'citations', type: 'citation', label: null },
       ],
     },
-    options: { root_key: 'root', children_key: 'children', label_key: 'label' },
+    options: { rootKey: 'root', childrenKey: 'children', labelKey: 'label' },
   },
   QUIZ: {
     layout: 'cards',
-    item_schema: {
+    itemSchema: {
       fields: [
         { key: 'question', type: 'heading', label: '问题' },
         { key: 'options', type: 'list', label: '选项' },
@@ -107,126 +107,126 @@ const RENDER_DESCRIPTORS: Record<string, RenderDescriptor> = {
         { key: 'citations', type: 'citation', label: null },
       ],
     },
-    options: { items_key: 'questions' },
+    options: { itemsKey: 'questions' },
   },
   BRIEFING: {
     layout: 'sections',
-    item_schema: {
+    itemSchema: {
       fields: [
         { key: 'heading', type: 'heading', label: '章节' },
         { key: 'points', type: 'list', label: '要点' },
       ],
     },
-    options: { items_key: 'sections' },
+    options: { itemsKey: 'sections' },
   },
 };
 
 export const OUTPUT_META: Record<string, OutputMeta> = {
   FAQ: {
     type: 'FAQ',
-    display_text: '闪卡',
+    displayText: '闪卡',
     description: '问答清单',
     tone: 'blue',
     prompt:
       'Generate a structured FAQ (Frequently Asked Questions) list based on the provided context. Each item should have a question and a detailed answer.',
-    is_tool: true,
-    render_descriptor: RENDER_DESCRIPTORS.FAQ,
+    isTool: true,
+    renderDescriptor: RENDER_DESCRIPTORS.FAQ,
   },
   GUIDE: {
     type: 'GUIDE',
-    display_text: '指南',
+    displayText: '指南',
     description: '学习/行动指南',
     tone: 'green',
     prompt:
       'Generate a structured learning guide based on the provided context. Organize into modules with objectives and key points.',
-    is_tool: true,
-    render_descriptor: RENDER_DESCRIPTORS.GUIDE,
+    isTool: true,
+    renderDescriptor: RENDER_DESCRIPTORS.GUIDE,
   },
   TIMELINE: {
     type: 'TIMELINE',
-    display_text: '时间线',
+    displayText: '时间线',
     description: '时间线',
     tone: 'rose',
     prompt:
       'Generate a chronological timeline based on the provided context. Each event should have a date, title, and description.',
-    is_tool: true,
-    render_descriptor: RENDER_DESCRIPTORS.TIMELINE,
+    isTool: true,
+    renderDescriptor: RENDER_DESCRIPTORS.TIMELINE,
   },
   MINDMAP: {
     type: 'MINDMAP',
-    display_text: '思维导图',
+    displayText: '思维导图',
     description: '思维导图',
     tone: 'indigo',
     prompt:
       'Generate a mind map structure based on the provided context. Output a hierarchical tree with a root node and nested children.',
-    is_tool: true,
-    render_descriptor: RENDER_DESCRIPTORS.MINDMAP,
+    isTool: true,
+    renderDescriptor: RENDER_DESCRIPTORS.MINDMAP,
   },
   QUIZ: {
     type: 'QUIZ',
-    display_text: '测验',
+    displayText: '测验',
     description: '测验',
     tone: 'teal',
     prompt:
       'Generate a quiz based on the provided context. Include questions with options, correct answers, and explanations.',
-    is_tool: true,
-    render_descriptor: RENDER_DESCRIPTORS.QUIZ,
+    isTool: true,
+    renderDescriptor: RENDER_DESCRIPTORS.QUIZ,
   },
   BRIEFING: {
     type: 'BRIEFING',
-    display_text: '简报',
+    displayText: '简报',
     description: '简报',
     tone: 'amber',
     prompt:
       'Generate a briefing document based on the provided context. Organize into sections with headings and bullet points.',
-    is_tool: false,
-    render_descriptor: RENDER_DESCRIPTORS.BRIEFING,
+    isTool: false,
+    renderDescriptor: RENDER_DESCRIPTORS.BRIEFING,
   },
   SLIDES: {
     type: 'SLIDES',
-    display_text: '幻灯片',
+    displayText: '幻灯片',
     description: '幻灯片',
     tone: 'slate',
     prompt:
       'Generate a slide deck outline based on the provided context. Include a title and slides with bullet points.',
-    is_tool: false,
-    render_descriptor: null,
+    isTool: false,
+    renderDescriptor: null,
   },
   PARAGRAPH: {
     type: 'PARAGRAPH',
-    display_text: '段落',
+    displayText: '段落',
     description: '连贯段落',
     tone: 'slate',
     prompt:
       'Generate a coherent paragraph summarizing the provided context. Write in clear, flowing prose.',
-    is_tool: false,
-    render_descriptor: null,
+    isTool: false,
+    renderDescriptor: null,
   },
   BULLETS: {
     type: 'BULLETS',
-    display_text: '要点',
+    displayText: '要点',
     description: '要点列表',
     tone: 'slate',
     prompt:
       'Generate a bullet-point summary of the provided context. Each bullet should be a concise key point.',
-    is_tool: false,
-    render_descriptor: null,
+    isTool: false,
+    renderDescriptor: null,
   },
   STRUCTURED: {
     type: 'STRUCTURED',
-    display_text: '结构化',
+    displayText: '结构化',
     description: '结构化 JSON',
     tone: 'slate',
     prompt:
       'Generate structured JSON output based on the provided context. Include a title, bullet points, and term definitions.',
-    is_tool: false,
-    render_descriptor: null,
+    isTool: false,
+    renderDescriptor: null,
   },
 };
 
 export type { OutputType };
 
-// Alias for backward compatibility — consumers import ToolOutputType.
+/** Alias for backward compatibility — consumers import ToolOutputType. */
 export type ToolOutputType = OutputType;
 
 /**
@@ -244,7 +244,7 @@ export async function generateOutputByType(
   if (!meta) throw new Error(`Unknown output type: ${type}`);
 
   const systemPrompt = customPrompt || meta.prompt;
-  const fullPrompt = `Context:\n${context}\n\nGenerate a ${meta.display_text} (${meta.description}) based on the above context.`;
+  const fullPrompt = `Context:\n${context}\n\nGenerate a ${meta.displayText} (${meta.description}) based on the above context.`;
 
   const { object } = await generateObject({
     model,
@@ -270,7 +270,7 @@ export function listOutputTypes(): OutputMeta[] {
  */
 export function buildOutputQuery(type: OutputType, prompt?: string): string {
   const meta = OUTPUT_META[type];
-  const typeLabel = meta?.display_text ?? type;
+  const typeLabel = meta?.displayText ?? type;
   const typeDesc = meta?.description ?? '';
 
   if (prompt?.trim()) {

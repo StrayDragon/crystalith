@@ -242,11 +242,15 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       | 'prompt'
       | 'reuse'
       | 'create_new';
-    if (!notebookId) throw new NotFoundError('notebookId query param is required');
+    if (!notebookId) {
+      return sendError(set, ErrorCode.INVALID_REQUEST, 'notebookId query param is required');
+    }
 
     // body is FormData; Elysia parses multipart into { filename, file }
     const file = (body as { file?: File }).file;
-    if (!file) throw new NotFoundError('No file provided');
+    if (!file) {
+      return sendError(set, ErrorCode.INVALID_REQUEST, 'No file provided');
+    }
 
     // Upload size limit (configurable, default 50 MB).
     const maxBytes = getUploadMaxBytes();

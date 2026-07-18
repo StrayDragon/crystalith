@@ -40,14 +40,17 @@ function normalizeRenderDescriptor(
 ): RenderDescriptor | null {
   if (!descriptor) return null;
   const d = descriptor as unknown as Record<string, unknown>;
+  const rawItemSchema = (d.itemSchema ?? d.item_schema) as
+    | Record<string, unknown>
+    | null
+    | undefined;
   return {
     layout: d.layout as RenderDescriptor['layout'],
-    item_schema: d.item_schema
+    itemSchema: rawItemSchema
       ? {
-          fields: (
-            ((d.item_schema as Record<string, unknown>)
-              .fields as unknown as ApiFieldDescriptor[]) ?? []
-          ).map(normalizeFieldDescriptor),
+          fields: ((rawItemSchema.fields as unknown as ApiFieldDescriptor[]) ?? []).map(
+            normalizeFieldDescriptor,
+          ),
         }
       : null,
     options: (d.options as Record<string, unknown>) ?? {},

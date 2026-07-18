@@ -131,7 +131,7 @@ export interface ItemSchema {
 
 export interface RenderDescriptor {
   layout: RenderLayout;
-  item_schema: ItemSchema | null;
+  itemSchema: ItemSchema | null;
   options: Record<string, unknown>;
 }
 

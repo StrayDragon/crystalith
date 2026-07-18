@@ -10,6 +10,9 @@
 //   return sendError(set, 'INVALID_REQUEST', 'sourceIds must not be empty');
 //   return sendError(set, 'CONFLICT', 'Tag name already exists', { existingTagId });
 //   return sendError(set, 'RATE_LIMITED', 'Too many requests', undefined, 30);
+//
+// Prefer `throw new AppHttpError(...)` when the handler's success return type
+// must stay narrow for Eden (returning sendError widens the treaty union).
 import type { ErrorEnvelope } from '@crystalith/shared';
 
 /** Semantic error codes mapped to canonical HTTP statuses. */
@@ -46,6 +49,22 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
 /** Elysia `set` object (only the status field is touched). */
 interface SetStatus {
   status?: number | string;
+}
+
+/**
+ * Throw from handlers when the success body type must stay narrow for Eden.
+ * Mapped to ErrorEnvelope by the global `onError` hook in `server.ts`.
+ */
+export class AppHttpError extends Error {
+  constructor(
+    public code: ErrorCode,
+    message: string,
+    public details?: Record<string, unknown>,
+    public retryAfter?: number,
+  ) {
+    super(message);
+    this.name = 'AppHttpError';
+  }
 }
 
 /**

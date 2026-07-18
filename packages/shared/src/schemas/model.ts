@@ -141,6 +141,7 @@ export type ModelInfo = z.infer<typeof ModelInfoSchema>;
 
 export const ModelListSchema = z.object({
   defaults: ModelDefaultsSchema,
+  providers: z.array(z.string()).default([]),
   models: z.array(ModelInfoSchema),
 });
 

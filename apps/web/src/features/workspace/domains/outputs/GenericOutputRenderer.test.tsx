@@ -7,10 +7,10 @@ import GenericOutputRenderer from './GenericOutputRenderer';
 test('renders list layout', () => {
   const renderDescriptor: RenderDescriptor = {
     layout: 'list',
-    item_schema: {
+    itemSchema: {
       fields: [{ key: 'name', type: 'text', label: 'Name', children: [] }],
     },
-    options: { items_key: 'items' },
+    options: { itemsKey: 'items' },
   };
 
   render(
@@ -28,10 +28,10 @@ test('renders list layout', () => {
 test('renders cards layout', () => {
   const renderDescriptor: RenderDescriptor = {
     layout: 'cards',
-    item_schema: {
+    itemSchema: {
       fields: [{ key: 'title', type: 'heading', label: 'Title', children: [] }],
     },
-    options: { items_key: 'items' },
+    options: { itemsKey: 'items' },
   };
 
   render(
@@ -49,14 +49,14 @@ test('renders cards layout', () => {
 test('renders timeline layout', () => {
   const renderDescriptor: RenderDescriptor = {
     layout: 'timeline',
-    item_schema: {
+    itemSchema: {
       fields: [
         { key: 'date', type: 'date', label: 'Date', children: [] },
         { key: 'event', type: 'heading', label: 'Event', children: [] },
         { key: 'description', type: 'text', label: 'Desc', children: [] },
       ],
     },
-    options: { items_key: 'events' },
+    options: { itemsKey: 'events' },
   };
 
   render(
@@ -76,13 +76,13 @@ test('renders timeline layout', () => {
 test('renders sections layout', () => {
   const renderDescriptor: RenderDescriptor = {
     layout: 'sections',
-    item_schema: {
+    itemSchema: {
       fields: [
         { key: 'heading', type: 'heading', label: null, children: [] },
         { key: 'body', type: 'text', label: 'Body', children: [] },
       ],
     },
-    options: { items_key: 'sections' },
+    options: { itemsKey: 'sections' },
   };
 
   render(
@@ -100,13 +100,13 @@ test('renders sections layout', () => {
 test('renders table layout', () => {
   const renderDescriptor: RenderDescriptor = {
     layout: 'table',
-    item_schema: {
+    itemSchema: {
       fields: [
         { key: 'col1', type: 'text', label: 'Col 1', children: [] },
         { key: 'col2', type: 'text', label: 'Col 2', children: [] },
       ],
     },
-    options: { items_key: 'rows' },
+    options: { itemsKey: 'rows' },
   };
 
   render(
@@ -125,8 +125,8 @@ test('renders table layout', () => {
 test('renders tree layout', () => {
   const renderDescriptor: RenderDescriptor = {
     layout: 'tree',
-    item_schema: { fields: [] },
-    options: { root_key: 'root', children_key: 'children', label_key: 'label' },
+    itemSchema: { fields: [] },
+    options: { rootKey: 'root', childrenKey: 'children', labelKey: 'label' },
   };
 
   render(
@@ -156,7 +156,7 @@ test('falls back to JSON for unsupported layout and logs warning', () => {
       renderDescriptor={
         {
           layout: 'unknown',
-          item_schema: null,
+          itemSchema: null,
           options: {},
         } as unknown as RenderDescriptor
       }
@@ -171,7 +171,7 @@ test('falls back to JSON for unsupported layout and logs warning', () => {
 test('renders nested FieldDescriptor children', () => {
   const renderDescriptor: RenderDescriptor = {
     layout: 'cards',
-    item_schema: {
+    itemSchema: {
       fields: [
         {
           key: 'parent',
@@ -181,7 +181,7 @@ test('renders nested FieldDescriptor children', () => {
         },
       ],
     },
-    options: { items_key: 'items' },
+    options: { itemsKey: 'items' },
   };
 
   render(
