@@ -84,7 +84,7 @@ export const GuideContentSchema = OutputContentBaseSchema.extend({
     z.object({
       title: nullableText,
       objective: z.object({ text: nullableText }).nullable().optional(),
-      key_points: z.array(textItem).nullable().optional(),
+      keyPoints: z.array(textItem).nullable().optional(),
     }),
   ),
 });

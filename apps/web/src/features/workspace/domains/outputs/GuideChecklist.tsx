@@ -5,6 +5,7 @@ import { CollapsibleSection, ProgressIndicator } from './StudioPrimitives';
 export interface GuideModule {
   title?: string | null;
   objective?: { text?: string | null } | null;
+  keyPoints?: Array<{ text?: string | null }> | null;
   key_points?: Array<{ text?: string | null }> | null;
 }
 
@@ -53,7 +54,7 @@ export default function GuideChecklist({ modules, className }: GuideChecklistPro
       <div className="mt-4 space-y-3">
         {modules.map((module, index) => {
           const isDone = completed.has(index);
-          const keyPoints = module.key_points ?? [];
+          const keyPoints = module.keyPoints ?? module.key_points ?? [];
           const summary = module.objective?.text || '';
           const moduleKeyBase = JSON.stringify({
             title: module.title ?? '',

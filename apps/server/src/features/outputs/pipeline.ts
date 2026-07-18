@@ -348,9 +348,13 @@ export function ensureMinimumContentFields(
             const obj = m.objective as Record<string, unknown>;
             if (!Array.isArray(obj.citations)) obj.citations = [1];
           }
-          // backfill key_points with at least one entry
-          if (!Array.isArray(m.key_points) || (m.key_points as unknown[]).length === 0) {
-            m.key_points = [
+          // Normalize legacy key_points → keyPoints, then backfill
+          if (!Array.isArray(m.keyPoints) && Array.isArray(m.key_points)) {
+            m.keyPoints = m.key_points;
+            delete m.key_points;
+          }
+          if (!Array.isArray(m.keyPoints) || (m.keyPoints as unknown[]).length === 0) {
+            m.keyPoints = [
               leaf(
                 typeof m.title === 'string' ? m.title : typeof m.title === 'string' ? m.title : '',
               ),
@@ -580,7 +584,7 @@ export function generateFallbackContent(
           {
             title: title || errorNote,
             objective: { text: errorNote, citations: [] },
-            key_points: [],
+            keyPoints: [],
             examples: [],
             exercises: [],
           },

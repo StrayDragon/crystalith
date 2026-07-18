@@ -45,11 +45,22 @@ describe('c59: ensureMinimumContentFields nested backfill', () => {
     expect(obj.citations).toEqual([1]);
   });
 
-  it('GUIDE backfills key_points with a leaf', () => {
+  it('GUIDE backfills keyPoints with a leaf', () => {
     const content = ensureMinimumContentFields({ modules: [{}] }, 'GUIDE');
     const mod = (content.modules as Array<Record<string, unknown>>)[0]!;
-    const kp = mod.key_points as Array<Record<string, unknown>>;
+    const kp = mod.keyPoints as Array<Record<string, unknown>>;
     expect(kp[0]?.citations).toEqual([1]);
+  });
+
+  it('GUIDE normalizes legacy key_points to keyPoints', () => {
+    const content = ensureMinimumContentFields(
+      { modules: [{ title: 'T', key_points: [{ text: 'legacy', citations: [1] }] }] },
+      'GUIDE',
+    );
+    const mod = (content.modules as Array<Record<string, unknown>>)[0]!;
+    expect(mod.key_points).toBeUndefined();
+    const kp = mod.keyPoints as Array<Record<string, unknown>>;
+    expect(kp[0]?.text).toBe('legacy');
   });
 
   it('MINDMAP backfills root.citations + synthetic child', () => {

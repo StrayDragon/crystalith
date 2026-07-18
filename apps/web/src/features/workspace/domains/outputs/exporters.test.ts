@@ -48,7 +48,7 @@ test('buildMarkdownExport keeps guide/timeline/briefing readable', () => {
   const guide = buildMarkdownExport(
     createOutput('GUIDE', {
       modules: [
-        { title: '模块一', objective: { text: '理解基础' }, key_points: [{ text: '要点 A' }] },
+        { title: '模块一', objective: { text: '理解基础' }, keyPoints: [{ text: '要点 A' }] },
       ],
     }),
   );

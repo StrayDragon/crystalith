@@ -177,7 +177,11 @@ function renderGuide(content: Record<string, unknown>, parts: string[]): void {
       const objText = jsonToText((objective as Record<string, unknown>).text);
       if (objText) parts.push(objText);
     }
-    const keyPoints = d.key_points;
+    const keyPoints = Array.isArray(d.keyPoints)
+      ? d.keyPoints
+      : Array.isArray(d.key_points)
+        ? d.key_points
+        : null;
     if (Array.isArray(keyPoints) && keyPoints.length > 0) {
       parts.push('', '### 要点');
       for (const point of keyPoints) {
