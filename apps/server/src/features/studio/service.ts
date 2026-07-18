@@ -203,7 +203,7 @@ export function syncSlideOutput(slide: typeof studioSlides.$inferSelect, markdow
     engine: slide.engine,
     outline: slide.outline,
     markdown,
-    slide_id: slide.id,
+    slideId: slide.id,
   };
 
   if (outputId) {
@@ -307,44 +307,41 @@ export async function generateMarkdown(
 
 export type SseEmit = (event: string, data: unknown) => void;
 
-/** c51: context handed to the SSE run callback — trace_id for event correlation. */
+/** c51: context handed to the SSE run callback — traceId for event correlation. */
 export interface SseContext {
   /** Per-request trace id; MUST be included in every event payload (v1 api.py:428,538). */
-  trace_id: string;
+  traceId: string;
   /** The slide id. */
-  slide_id: number;
+  slideId: number;
 }
 
 /**
  * Create an SSE response with shared headers, busy guard, and error handling.
- * The `run` callback receives an `emit` function + context (trace_id) and can
+ * The `run` callback receives an `emit` function + context (traceId) and can
  * yield progress/toolcall/done/error events. Errors are caught and emitted as
  * `error` events, then the stream closes.
  *
- * c51: generates a trace_id per request; the done payload is {trace_id, slide_id}
+ * c51: generates a traceId per request; the done payload is {traceId, slideId}
  * (v1 api.py:428,538), not a full serialized slide.
  */
 export function createSseResponse(
   slideId: number,
   run: (emit: SseEmit, ctx: SseContext) => Promise<void>,
 ): Response {
-  const trace_id = crypto.randomUUID();
-  const ctx: SseContext = { trace_id, slide_id: slideId };
+  const traceId = crypto.randomUUID();
+  const ctx: SseContext = { traceId, slideId };
   const sse = (event: string, data: unknown): string =>
-    `event: ${event}\ndata: ${JSON.stringify({ trace_id, ...(data as object) })}\n\n`;
+    `event: ${event}\ndata: ${JSON.stringify({ traceId, ...(data as object) })}\n\n`;
 
   // Check busy guard before starting stream
   if (!clearStaleRunning(slideId)) {
-    return new Response(
-      sse('busy', { message: '演示正在生成中，请稍后重试。', slide_id: slideId }),
-      {
-        headers: {
-          'content-type': 'text/event-stream',
-          'cache-control': 'no-cache',
-          'x-accel-buffering': 'no',
-        },
+    return new Response(sse('busy', { message: '演示正在生成中，请稍后重试。', slideId }), {
+      headers: {
+        'content-type': 'text/event-stream',
+        'cache-control': 'no-cache',
+        'x-accel-buffering': 'no',
       },
-    );
+    });
   }
 
   const stream = new ReadableStream<Uint8Array>({
@@ -356,7 +353,7 @@ export function createSseResponse(
       try {
         await run(emit, ctx);
       } catch (error) {
-        emit('error', { message: String(error), slide_id: slideId });
+        emit('error', { message: String(error), slideId });
       }
       controller.close();
     },

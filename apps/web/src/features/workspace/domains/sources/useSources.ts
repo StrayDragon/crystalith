@@ -537,12 +537,14 @@ export function useSources() {
         ).sources.batch['re-embed'].post({ sourceIds: sourceIds } as any);
         if (breErr) throw breErr;
         await mutate();
-        if (result.failed_count > 0) {
-          toast.warning(`部分来源重新嵌入失败（${result.failed_count} 个）。`);
+        if ((result.failedCount ?? result.failed_count) > 0) {
+          toast.warning(
+            `部分来源重新嵌入失败（${result.failedCount ?? result.failed_count} 个）。`,
+          );
         } else {
-          toast.success(`已重新嵌入 ${result.reembedded_count} 个来源`);
+          toast.success(`已重新嵌入 ${result.reembeddedCount ?? result.reembedded_count} 个来源`);
         }
-        return result.failed_count === 0;
+        return (result.failedCount ?? result.failed_count) === 0;
       } catch {
         toast.error('批量重新嵌入失败，请稍后重试。');
         return false;

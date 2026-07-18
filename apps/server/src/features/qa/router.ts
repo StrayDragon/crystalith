@@ -399,7 +399,7 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       // Existing sources (notebook-scoped)
       ...sourceRows.map((s) => ({
         sourceId: s.id,
-        source_name: s.filename,
+        sourceName: s.filename,
         mimeType: s.mimeType,
         parserType: s.parserType,
       })),
@@ -409,7 +409,7 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
         .toSorted((a, b) => a - b)
         .map((id) => ({
           sourceId: id,
-          source_name: fallbackNames.get(id) ?? '未知来源',
+          sourceName: fallbackNames.get(id) ?? '未知来源',
           mimeType: null,
           parserType: null,
         })),
@@ -427,7 +427,7 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
         answer: assistantMessage.content,
         citations,
         sources: sourcesMeta,
-        exported_at: exportedAt,
+        exportedAt,
       };
     }
 

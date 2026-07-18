@@ -223,7 +223,7 @@ export default function SourceConnectorsDialog({
       const { data: created, error: createErr } = await api.v2
         .notebooks({ nid: notebookId }) // eslint-disable-next-line no-unexpected-multiline
         ['source-connectors']({ connectorId: selectedConnector.connectorId })
-        .bindings.post({ connection_config: connectionConfig });
+        .bindings.post({ connectionConfig });
       if (createErr)
         throw new Error(
           typeof createErr === 'string'
@@ -363,7 +363,7 @@ export default function SourceConnectorsDialog({
       const { data: result, error: applyErr } = await api.v2
         .notebooks({ nid: notebookId }) // eslint-disable-next-line no-unexpected-multiline
         ['source-connector-bindings']({ bindingId: binding.id }) // eslint-disable-next-line no-unexpected-multiline
-        ['sync-check'].apply.post({ sync_check_id: syncCheck.id });
+        ['sync-check'].apply.post({ syncCheckId: syncCheck.id });
       if (applyErr)
         throw new Error(
           typeof applyErr === 'string' ? applyErr : typeof applyErr === 'string' ? applyErr : '',

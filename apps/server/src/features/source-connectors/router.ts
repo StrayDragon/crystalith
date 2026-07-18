@@ -8,7 +8,11 @@ import { db } from '../../db/index.ts';
 import { notebooks, sourceConnectorBindings } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
-import { BUILTIN_CONNECTORS, getBuiltinConnector } from './connectors.ts';
+import {
+  BUILTIN_CONNECTORS,
+  getBuiltinConnector,
+  normalizeConnectionConfig,
+} from './connectors.ts';
 import { buildFilesystemSnapshot, getConnectorDiagnostics } from './scanner.ts';
 import {
   applyImportScopeToBinding,
@@ -125,7 +129,7 @@ class ConnectorUnavailableError extends Error {
       errorCode: 'CONNECTOR_UNAVAILABLE',
       message: `Source connector "${connectorId}" is not available`,
       hint: `Install or enable the "${connectorId}" connector plugin`,
-      plugin_diagnostic: { connectorId: connectorId, loaded: false },
+      pluginDiagnostic: { connectorId: connectorId, loaded: false },
     };
   }
 }
@@ -257,10 +261,14 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
     const connectorId = String(params.connectorId ?? '').trim();
     const connector = getConnectorOr404(connectorId);
 
-    const { connection_config } = (body ?? {}) as {
+    const { connectionConfig, connection_config } = (body ?? {}) as {
+      connectionConfig?: Record<string, unknown>;
       connection_config?: Record<string, unknown>;
     };
-    const config = connection_config ?? {};
+    const config = normalizeConnectionConfig(
+      connectorId,
+      connectionConfig ?? connection_config ?? {},
+    );
 
     // c53: validate connection_config against the connector's JSON schema
     // (v1 api.py:77-98,199-200 Draft7Validator). Malformed → 400.
@@ -327,17 +335,18 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const bindingId = requirePositiveIntId(params.bindingId, 'binding id');
       const binding = getBindingOr404(nid, bindingId);
-      const { sync_check_id } = (body ?? {}) as { sync_check_id?: string };
+      const payload = (body ?? {}) as { syncCheckId?: string; sync_check_id?: string };
+      const syncCheckId = payload.syncCheckId ?? payload.sync_check_id;
 
-      if (!sync_check_id) {
+      if (!syncCheckId) {
         apiError(set, 400, {
           errorCode: 'SYNC_CHECK_ID_REQUIRED',
-          message: 'sync_check_id is required',
+          message: 'syncCheckId is required',
         });
       }
 
       try {
-        return await applySyncCheckToBinding(nid, binding, sync_check_id);
+        return await applySyncCheckToBinding(nid, binding, syncCheckId);
       } catch (error) {
         const err = error as Error & {
           status?: number;

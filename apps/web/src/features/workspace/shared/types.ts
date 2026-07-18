@@ -65,6 +65,7 @@ export interface BriefingOutputContent extends OutputContentBase {
 }
 
 export interface SlidesOutputContent extends OutputContentBase {
+  slideId?: number | null;
   slide_id?: number | null;
   engine?: string | null;
   outline?: {
@@ -139,6 +140,7 @@ export interface RenderDescriptor {
 export interface ConfigOption {
   id: string;
   label: string;
+  isDefault?: boolean;
   is_default?: boolean;
 }
 
@@ -154,6 +156,7 @@ export interface PreviewDescriptor {
   kind: PreviewKind;
   service?: string | null;
   url?: string | null;
+  openInNewTab?: boolean;
   open_in_new_tab?: boolean;
   meta: Record<string, unknown>;
 }

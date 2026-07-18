@@ -234,9 +234,9 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
         filename,
         status: 'processing',
         metadata: {
-          converted_from_session: sid,
-          conversion_timestamp: new Date().toISOString(),
-          message_count: msgRows.length,
+          convertedFromSession: sid,
+          conversionTimestamp: new Date().toISOString(),
+          messageCount: msgRows.length,
         },
       })
       .returning()
@@ -358,8 +358,8 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
         title: `${title} - 要点笔记`,
         bullets: lines,
         _metadata: {
-          converted_from_session: sid,
-          message_count: msgRows.length,
+          convertedFromSession: sid,
+          messageCount: msgRows.length,
         },
       };
     } else if (outputType === 'STRUCTURED') {
@@ -367,8 +367,8 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
         title: `${title} - 结构化笔记`,
         sections: [{ title: '对话内容', content: textContent }],
         _metadata: {
-          converted_from_session: sid,
-          message_count: msgRows.length,
+          convertedFromSession: sid,
+          messageCount: msgRows.length,
         },
       };
     } else {
@@ -376,8 +376,8 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
         title: `${title} - 段落笔记`,
         text: textContent,
         _metadata: {
-          converted_from_session: sid,
-          message_count: msgRows.length,
+          convertedFromSession: sid,
+          messageCount: msgRows.length,
         },
       };
     }

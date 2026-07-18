@@ -55,7 +55,16 @@ describe('outputPayload decoder', () => {
     expect(getOutputPayloadWarnings(payload)).toContain('Invalid payload for GUIDE');
   });
 
-  it('extracts slide id from typed slides payload', () => {
+  it('extracts slide id from typed slides payload (camelCase)', () => {
+    const output = createOutput({
+      type: 'SLIDES',
+      content: { slideId: 99, title: 'Deck' },
+    });
+
+    expect(getSlideIdFromOutput(output)).toBe(99);
+  });
+
+  it('extracts slide id from legacy snake_case slides payload', () => {
     const output = createOutput({
       type: 'SLIDES',
       content: { slide_id: 99, title: 'Deck' },

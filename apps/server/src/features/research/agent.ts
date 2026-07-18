@@ -220,8 +220,8 @@ async function executeSearches(
       iteration: state.iteration,
       type: 'search',
       outputData: {
-        result_count: deduped.length,
-        queries_executed: plan.queries.length,
+        resultCount: deduped.length,
+        queriesExecuted: plan.queries.length,
       } as Record<string, unknown>,
       status: 'completed',
     })
@@ -751,7 +751,7 @@ export async function generateFinalReport(state: ResearchState): Promise<string>
       sessionId: state.sessionId,
       iteration: state.iteration,
       type: 'summary',
-      outputData: { report_length: fullReport.length } as Record<string, unknown>,
+      outputData: { reportLength: fullReport.length } as Record<string, unknown>,
       status: 'completed',
     })
     .run();

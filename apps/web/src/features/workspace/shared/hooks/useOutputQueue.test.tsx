@@ -317,7 +317,7 @@ test('enqueueSlidesJob settles when outline+markdown generation completes', asyn
       return HttpResponse.json({
         id: 5,
         notebookId: 1,
-        output_id: null,
+        outputId: null,
         title: 'Deck',
         prompt: 'Outline',
         engine: 'slidev',
@@ -328,7 +328,7 @@ test('enqueueSlidesJob settles when outline+markdown generation completes', asyn
         generationConfig: {},
         stage: 'input',
         status: 'idle',
-        error_message: null,
+        errorMessage: null,
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
       });
@@ -346,7 +346,7 @@ test('enqueueSlidesJob settles when outline+markdown generation completes', asyn
         return HttpResponse.json({
           id: 5,
           notebookId: 1,
-          output_id: null,
+          outputId: null,
           title: 'Deck',
           prompt: 'Outline',
           engine: 'slidev',
@@ -357,7 +357,7 @@ test('enqueueSlidesJob settles when outline+markdown generation completes', asyn
           generationConfig: {},
           stage: 'outline',
           status: 'idle',
-          error_message: null,
+          errorMessage: null,
           createdAt: '2024-01-01T00:00:00Z',
           updatedAt: '2024-01-01T00:00:01Z',
         });
@@ -365,7 +365,7 @@ test('enqueueSlidesJob settles when outline+markdown generation completes', asyn
       return HttpResponse.json({
         id: 5,
         notebookId: 1,
-        output_id: 21,
+        outputId: 21,
         title: 'Deck',
         prompt: 'Outline',
         engine: 'slidev',
@@ -376,7 +376,7 @@ test('enqueueSlidesJob settles when outline+markdown generation completes', asyn
         generationConfig: {},
         stage: 'markdown',
         status: 'idle',
-        error_message: null,
+        errorMessage: null,
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:02Z',
       });
@@ -393,7 +393,7 @@ test('enqueueSlidesJob settles when outline+markdown generation completes', asyn
                 chunkIds: [1],
                 content: {
                   title: 'Deck',
-                  slide_id: 5,
+                  slideId: 5,
                   markdown: '# Deck',
                 },
                 createdAt: '2024-01-01T00:00:02Z',

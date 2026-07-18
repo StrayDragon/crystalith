@@ -191,10 +191,10 @@ test('batchReembedSources calls dedicated batch endpoint', async () => {
     http.post('*/v2/notebooks/:notebookId/sources/batch/re-embed', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
-        reembedded_count: 2,
-        failed_count: 0,
-        reembedded_ids: [5, 6],
-        failed_ids: [],
+        reembeddedCount: 2,
+        failedCount: 0,
+        reembeddedIds: [5, 6],
+        failedIds: [],
       });
     }),
   );

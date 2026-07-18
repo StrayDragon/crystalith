@@ -59,6 +59,7 @@ function isSlidesContent(content: unknown): content is OutputContentByType['SLID
   if (!isRecord(content)) return false;
   if (typeof content.title === 'string') return true;
   if (typeof content.markdown === 'string') return true;
+  if (typeof content.slideId === 'number' || content.slideId === null) return true;
   if (typeof content.slide_id === 'number' || content.slide_id === null) return true;
   if (isRecord(content.outline)) return true;
   return false;
@@ -156,7 +157,8 @@ export function getSlideIdFromOutput(output: OutputItem): number | null {
   if (output.type !== 'SLIDES') return null;
   const slides = decodeOutputContent('SLIDES', output.content);
   if (!slides) return null;
-  return typeof slides.slide_id === 'number' ? slides.slide_id : null;
+  const slideId = slides.slideId ?? slides.slide_id;
+  return typeof slideId === 'number' ? slideId : null;
 }
 
 export function pickTextValue(value: string | { text?: string | null } | null | undefined): string {

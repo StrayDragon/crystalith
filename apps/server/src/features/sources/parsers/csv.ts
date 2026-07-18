@@ -129,9 +129,9 @@ export const csvParser: Parser = {
       pages,
       metadata: {
         parser: 'csv',
-        row_count: dataRows.length,
-        column_count: header.length,
-        chunk_count: pages.length,
+        rowCount: dataRows.length,
+        columnCount: header.length,
+        chunkCount: pages.length,
       },
     };
   },

@@ -100,8 +100,17 @@ export function resolveConnectorRoot(
   connectionConfig: Record<string, unknown>,
 ): { root: string | null; diagnostics: Diagnostic[] | null } {
   const primaryKey = rootPathKeyForConnector(connectorId);
+  const legacyKey =
+    connectorId === 'obsidian'
+      ? 'vault_path'
+      : connectorId === 'local-directory'
+        ? 'directory_path'
+        : null;
   const fallbackKey = connectorId === 'local-directory' ? 'root_path' : null;
-  const raw = connectionConfig[primaryKey] ?? (fallbackKey ? connectionConfig[fallbackKey] : null);
+  const raw =
+    connectionConfig[primaryKey] ??
+    (legacyKey ? connectionConfig[legacyKey] : null) ??
+    (fallbackKey ? connectionConfig[fallbackKey] : null);
   const text = (typeof raw === 'string' ? raw : '').trim();
 
   if (!text) {
@@ -234,8 +243,8 @@ async function walkDirectory(
         relativePath: relativePath,
         sizeBytes: st.size,
         modifiedAt: modifiedAt,
-        ...(contentHash ? { content_hash: contentHash } : {}),
-        ...(frontmatter ? { frontmatter_summary: frontmatter } : {}),
+        ...(contentHash ? { contentHash } : {}),
+        ...(frontmatter ? { frontmatterSummary: frontmatter } : {}),
       });
     }
   }

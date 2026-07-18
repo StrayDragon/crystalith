@@ -45,9 +45,9 @@ export function useTemplates() {
         name: payload.name,
         description: payload.description ?? null,
         configJson: {
-          session_titles: payload.sessionTitles ?? [],
+          sessionTitles: payload.sessionTitles ?? [],
           outputType: payload.outputType ?? null,
-          source_tags: payload.sourceTags ?? [],
+          sourceTags: payload.sourceTags ?? [],
         },
       });
       if (error)
@@ -75,9 +75,9 @@ export function useTemplates() {
         name: payload.name,
         description: payload.description ?? null,
         configJson: {
-          session_titles: [],
+          sessionTitles: [],
           outputType: payload.outputType ?? null,
-          source_tags: [],
+          sourceTags: [],
         },
       });
       if (error)

@@ -20,14 +20,14 @@ export const BUILTIN_CONNECTORS: SourceConnectorDescriptor[] = [
     connectionConfigSchema: {
       type: 'object',
       properties: {
-        vault_path: {
+        vaultPath: {
           type: 'string',
           title: 'Vault 路径',
           description: 'Obsidian vault 的本地目录路径（后端可读）。',
           minLength: 1,
         },
       },
-      required: ['vault_path'],
+      required: ['vaultPath'],
       additionalProperties: false,
     },
     diagnostics: null,
@@ -43,14 +43,14 @@ export const BUILTIN_CONNECTORS: SourceConnectorDescriptor[] = [
     connectionConfigSchema: {
       type: 'object',
       properties: {
-        directory_path: {
+        directoryPath: {
           type: 'string',
           title: '目录路径',
           description: '要导入的本地目录路径（后端可读）。',
           minLength: 1,
         },
       },
-      required: ['directory_path'],
+      required: ['directoryPath'],
       additionalProperties: false,
     },
     diagnostics: null,
@@ -66,9 +66,34 @@ export function getBuiltinConnector(connectorId: string): SourceConnectorDescrip
 }
 
 export function rootPathKeyForConnector(connectorId: string): string {
-  if (connectorId === 'obsidian') return 'vault_path';
-  if (connectorId === 'local-directory') return 'directory_path';
-  return 'directory_path';
+  if (connectorId === 'obsidian') return 'vaultPath';
+  if (connectorId === 'local-directory') return 'directoryPath';
+  return 'directoryPath';
+}
+
+/** Normalize legacy snake_case connection config keys to camelCase for storage. */
+export function normalizeConnectionConfig(
+  connectorId: string,
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const normalized = { ...config };
+  if (connectorId === 'obsidian') {
+    if (typeof normalized.vault_path === 'string' && normalized.vaultPath === undefined) {
+      normalized.vaultPath = normalized.vault_path;
+    }
+    delete normalized.vault_path;
+  }
+  if (connectorId === 'local-directory') {
+    if (typeof normalized.directory_path === 'string' && normalized.directoryPath === undefined) {
+      normalized.directoryPath = normalized.directory_path;
+    }
+    if (typeof normalized.root_path === 'string' && normalized.directoryPath === undefined) {
+      normalized.directoryPath = normalized.root_path;
+    }
+    delete normalized.directory_path;
+    delete normalized.root_path;
+  }
+  return normalized;
 }
 
 export function extensionsForConnector(connectorId: string): readonly string[] {

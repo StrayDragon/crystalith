@@ -24,9 +24,9 @@ import { ModelSelector } from './ModelSelector';
 import { getToolIcon, resolveTypeLabel, type StudioTone, TONE_COLORS } from './studioUtils';
 
 const FALLBACK_QUANTITY_OPTIONS: ConfigOption[] = [
-  { id: 'less', label: '更少', is_default: false },
-  { id: 'standard', label: '标准（默认）', is_default: true },
-  { id: 'more', label: '更多', is_default: false },
+  { id: 'less', label: '更少', isDefault: false },
+  { id: 'standard', label: '标准（默认）', isDefault: true },
+  { id: 'more', label: '更多', isDefault: false },
 ];
 
 interface StudioToolsGridProps {
@@ -104,8 +104,12 @@ export default function StudioToolsGrid({
           ? schema.quantityOptions
           : FALLBACK_QUANTITY_OPTIONS;
       const localDifficultyOptions = schema?.difficultyOptions ?? [];
-      setConfigQuantity(localQuantityOptions.find((o) => o.is_default)?.id || 'standard');
-      setConfigDifficulty(localDifficultyOptions.find((o) => o.is_default)?.id || 'medium');
+      setConfigQuantity(
+        localQuantityOptions.find((o) => o.isDefault ?? o.is_default)?.id || 'standard',
+      );
+      setConfigDifficulty(
+        localDifficultyOptions.find((o) => o.isDefault ?? o.is_default)?.id || 'medium',
+      );
       setConfigTopic('');
       setConfigModelId(null);
     },
@@ -319,7 +323,7 @@ export default function StudioToolsGrid({
                       configQuantity === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
                     }`}
                   >
-                    {configQuantity === option.id && option.is_default && (
+                    {configQuantity === option.id && (option.isDefault ?? option.is_default) && (
                       <span className="mr-1">✓</span>
                     )}
                     {option.label}
@@ -345,7 +349,7 @@ export default function StudioToolsGrid({
                       configDifficulty === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
                     }`}
                   >
-                    {configDifficulty === option.id && option.is_default && (
+                    {configDifficulty === option.id && (option.isDefault ?? option.is_default) && (
                       <span className="mr-1">✓</span>
                     )}
                     {option.label}
