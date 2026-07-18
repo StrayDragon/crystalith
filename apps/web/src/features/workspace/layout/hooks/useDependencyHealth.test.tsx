@@ -22,15 +22,15 @@ beforeEach(() => {
 
 test('toOptionalServiceDiagnostics orders and normalizes optional services', () => {
   const diagnostics = toOptionalServiceDiagnostics({
-    storage_chroma: { service: 'chroma', enabled: false, status: 'disabled', healthy: null },
-    cache_redis: {
+    storageChroma: { service: 'chroma', enabled: false, status: 'disabled', healthy: null },
+    cacheRedis: {
       service: 'redis',
       enabled: true,
       status: 'degraded',
       healthy: false,
       error: 'boom',
     },
-    search_searxng: {
+    searchSearxng: {
       service: 'searxng',
       enabled: true,
       status: 'healthy',
@@ -39,11 +39,7 @@ test('toOptionalServiceDiagnostics orders and normalizes optional services', () 
     },
   });
 
-  expect(diagnostics.map((d) => d.key)).toEqual([
-    'storage_chroma',
-    'cache_redis',
-    'search_searxng',
-  ]);
+  expect(diagnostics.map((d) => d.key)).toEqual(['storageChroma', 'cacheRedis', 'searchSearxng']);
   expect(diagnostics[1]?.error).toBe('boom');
   expect(diagnostics[2]?.endpoint).toBe('http://searx');
 });
@@ -57,21 +53,21 @@ test('useDependencyHealth fetches data and refresh updates from force endpoint',
       return HttpResponse.json({
         status: 'ok',
         generatedAt: '2026-01-01T00:00:00Z',
-        last_probe: forced ? 'forced' : 'initial',
+        lastProbe: forced ? 'forced' : 'initial',
         core: {
           frontend: { service: 'web', healthy: true },
           backend: { service: 'api', healthy: true },
         },
         optional: {
-          storage_chroma: { service: 'chroma', enabled: false, status: 'disabled', healthy: null },
-          cache_redis: {
+          storageChroma: { service: 'chroma', enabled: false, status: 'disabled', healthy: null },
+          cacheRedis: {
             service: 'redis',
             enabled: true,
             status: forced ? 'degraded' : 'healthy',
             healthy: !forced,
             error: forced ? 'timeout' : null,
           },
-          search_searxng: { service: 'searxng', enabled: false, status: 'disabled', healthy: null },
+          searchSearxng: { service: 'searxng', enabled: false, status: 'disabled', healthy: null },
         },
       });
     }),
@@ -80,17 +76,17 @@ test('useDependencyHealth fetches data and refresh updates from force endpoint',
   const { result } = renderHook(() => useDependencyHealth({ enabled: true }), { wrapper: wrapSWR });
 
   await waitFor(() => {
-    expect(result.current.data?.last_probe).toBe('initial');
+    expect(result.current.data?.lastProbe).toBe('initial');
   });
   expect(result.current.error).toBe('');
-  expect(result.current.data?.optional.cache_redis.status).toBe('healthy');
+  expect(result.current.data?.optional.cacheRedis.status).toBe('healthy');
 
   await act(async () => {
     await result.current.refresh();
   });
 
   await waitFor(() => {
-    expect(result.current.data?.last_probe).toBe('forced');
+    expect(result.current.data?.lastProbe).toBe('forced');
   });
-  expect(result.current.data?.optional.cache_redis.status).toBe('degraded');
+  expect(result.current.data?.optional.cacheRedis.status).toBe('degraded');
 });

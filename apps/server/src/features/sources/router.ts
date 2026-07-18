@@ -174,12 +174,18 @@ function enrichSources(
 // ---------------------------------------------------------------------------
 
 export const sourcesRouter = new Elysia({ prefix: '/v2' })
-  // List sources for a notebook (c39: tag filter + sort_by + N+1 fix)
+  // List sources for a notebook (c39: tag filter + sortBy + N+1 fix)
   .get('/notebooks/:nid/sources', ({ params, query }) => {
     const nid = requirePositiveIntId(params.nid, 'notebook id');
     const tagFilter = (query as { tag?: string }).tag;
-    const sortBy = (query as { sort_by?: string }).sort_by ?? 'date';
-    const sortOrder = (query as { sort_order?: string }).sort_order ?? 'desc';
+    const q = query as {
+      sortBy?: string;
+      sortOrder?: string;
+      sort_by?: string;
+      sort_order?: string;
+    };
+    const sortBy = q.sortBy ?? q.sort_by ?? 'date';
+    const sortOrder = q.sortOrder ?? q.sort_order ?? 'desc';
 
     let rows = db().select().from(sources).where(eq(sources.notebookId, nid)).all();
 
@@ -257,8 +263,8 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     const maxBytes = getUploadMaxBytes();
     if (file.size > maxBytes) {
       return sendError(set, ErrorCode.PAYLOAD_TOO_LARGE, 'Payload Too Large', {
-        max_bytes: maxBytes,
-        uploaded_bytes: file.size,
+        maxBytes: maxBytes,
+        uploadedBytes: file.size,
       });
     }
 
@@ -931,42 +937,47 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     // Use factory's listExtractorMetadata — reads real config, not env vars (H2 fix)
     const allExtractors = listExtractorMetadata(config().raw);
 
-    // K8 fix: nest mode/enabled_extractors under 'policy' key to match
-    // the frontend ExtractorsListResponse type (generated from OpenAPI spec).
-    // Without this nesting, frontend reads extractorsData?.policy?.mode
-    // which is always undefined, so the mode display never updates.
+    // Nest mode/enabledExtractors under policy to match ExtractorsListResponse.
     return {
       notebookId: nid,
       policy: {
         mode,
-        enabled_extractors: enabledExtractors,
+        enabledExtractors: enabledExtractors,
       },
       extractors: allExtractors,
-      // c62: derive default by availability (v1), not hardcoded
-      default_extractor: getDefaultExtractor(config().raw),
-      fallback_enabled: mode === 'inherit_global',
+      defaultExtractor: getDefaultExtractor(config().raw),
+      fallbackEnabled: mode === 'inherit_global',
     };
   })
   .patch('/notebooks/:nid/extractors', ({ params, body, set }) => {
     const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const { mode, enabled_extractors } = body as {
+    const raw = body as {
       mode?: string;
+      enabledExtractors?: string[];
       enabled_extractors?: string[];
     };
+    const mode = raw.mode;
+    const enabledExtractorsBody = raw.enabledExtractors ?? raw.enabled_extractors;
     // c62: validate mode enum (v1 api_ingest.py:179-211)
     if (mode !== undefined && !['inherit_global', 'custom'].includes(mode)) {
-      set.status = 400;
-      return { error: `Invalid mode '${mode}'; must be 'inherit_global' or 'custom'` };
+      return sendError(
+        set,
+        ErrorCode.INVALID_REQUEST,
+        `Invalid mode '${mode}'; must be 'inherit_global' or 'custom'`,
+      );
     }
-    // c62: validate enabled_extractors entries against registered set
+    // c62: validate enabledExtractors entries against registered set
     const validExtractors = Object.keys(extractors);
     if (
-      enabled_extractors !== undefined &&
-      !enabled_extractors.every((e) => validExtractors.includes(e))
+      enabledExtractorsBody !== undefined &&
+      !enabledExtractorsBody.every((e) => validExtractors.includes(e))
     ) {
-      const invalid = enabled_extractors.filter((e) => !validExtractors.includes(e));
-      set.status = 400;
-      return { error: `Unknown extractor(s): ${invalid.join(', ')}` };
+      const invalid = enabledExtractorsBody.filter((e) => !validExtractors.includes(e));
+      return sendError(
+        set,
+        ErrorCode.INVALID_REQUEST,
+        `Unknown extractor(s): ${invalid.join(', ')}`,
+      );
     }
     const existing = db()
       .select()
@@ -978,7 +989,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         .update(notebookExtractorPolicies)
         .set({
           mode: mode ?? existing.mode,
-          enabledExtractors: enabled_extractors ?? existing.enabledExtractors,
+          enabledExtractors: enabledExtractorsBody ?? existing.enabledExtractors,
         })
         .where(eq(notebookExtractorPolicies.notebookId, nid))
         .run();
@@ -988,7 +999,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         .values({
           notebookId: nid,
           mode: mode ?? 'inherit_global',
-          enabledExtractors: enabled_extractors ?? null,
+          enabledExtractors: enabledExtractorsBody ?? null,
         })
         .run();
     }
@@ -997,16 +1008,15 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       .from(notebookExtractorPolicies)
       .where(eq(notebookExtractorPolicies.notebookId, nid))
       .get();
-    // K8 fix: match GET response shape — nest under 'policy' key
     return {
       notebookId: nid,
       policy: {
         mode: updated!.mode,
-        enabled_extractors: updated!.enabledExtractors,
+        enabledExtractors: updated!.enabledExtractors,
       },
       extractors: listExtractorMetadata(config().raw),
-      default_extractor: getDefaultExtractor(config().raw),
-      fallback_enabled: updated!.mode === 'inherit_global',
+      defaultExtractor: getDefaultExtractor(config().raw),
+      fallbackEnabled: updated!.mode === 'inherit_global',
     };
   });
 

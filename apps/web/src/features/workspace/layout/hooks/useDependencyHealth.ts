@@ -2,7 +2,7 @@ import useSWR from 'swr';
 
 export type OptionalServiceStatus = 'unknown' | 'disabled' | 'healthy' | 'degraded';
 
-export type OptionalServiceKey = 'storage_chroma' | 'cache_redis' | 'search_searxng';
+export type OptionalServiceKey = 'storageChroma' | 'cacheRedis' | 'searchSearxng';
 
 export interface DependencyServiceStatus {
   service: string;
@@ -12,23 +12,23 @@ export interface DependencyServiceStatus {
   healthy: boolean | null;
   error?: string | null;
   errorCode?: string | null;
-  recovery_hint?: string | null;
-  last_probe?: string | null;
-  degrade_policy?: string | null;
+  recoveryHint?: string | null;
+  lastProbe?: string | null;
+  degradePolicy?: string | null;
   hosts?: Record<
     string,
     {
       healthy: boolean;
       error?: string | null;
-      model_count?: number | null;
+      modelCount?: number | null;
     }
   >;
 }
 
 export interface DependencyHealthResponse {
   status: string;
-  generated_at: string;
-  last_probe: string | null;
+  generatedAt: string;
+  lastProbe: string | null;
   core: Record<
     string,
     {
@@ -53,16 +53,16 @@ export interface DependencyDiagnosticItem {
 }
 
 const OPTIONAL_SERVICE_LABELS: Record<OptionalServiceKey, string> = {
-  storage_chroma: 'Chroma (Vector Store)',
-  cache_redis: 'Redis (Cache)',
-  search_searxng: 'SearXNG (Search)',
+  storageChroma: 'Chroma (Vector Store)',
+  cacheRedis: 'Redis (Cache)',
+  searchSearxng: 'SearXNG (Search)',
 };
 
 export function toOptionalServiceDiagnostics(
   optional: DependencyHealthResponse['optional'] | null | undefined,
 ): DependencyDiagnosticItem[] {
   if (!optional) return [];
-  const keys: OptionalServiceKey[] = ['storage_chroma', 'cache_redis', 'search_searxng'];
+  const keys: OptionalServiceKey[] = ['storageChroma', 'cacheRedis', 'searchSearxng'];
   return keys.map((key) => {
     const entry = optional[key];
     return {
@@ -73,8 +73,8 @@ export function toOptionalServiceDiagnostics(
       endpoint: entry.endpoint ?? null,
       errorCode: entry.errorCode ?? null,
       error: entry.error ?? null,
-      recoveryHint: entry.recovery_hint ?? null,
-      lastProbe: entry.last_probe ?? null,
+      recoveryHint: entry.recoveryHint ?? null,
+      lastProbe: entry.lastProbe ?? null,
     };
   });
 }
