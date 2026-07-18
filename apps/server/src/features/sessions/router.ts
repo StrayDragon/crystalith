@@ -8,6 +8,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { db } from '../../db/index.ts';
 import { sessions, messages, chunks, sources, outputs } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { requirePositiveIntId } from '../../shared/ids.ts';
 
 // ---------------------------------------------------------------------------
 // OpenAPI doc registration
@@ -95,7 +96,7 @@ function notFound(id: number): never {
 export const sessionsRouter = new Elysia({ prefix: '/v2' })
   // List sessions for a notebook
   .get('/notebooks/:nid/sessions', ({ params, query }) => {
-    const nid = Number(params.nid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
     const offset = Number((query as { offset?: string }).offset ?? 0);
     const limit = Math.min(200, Math.max(1, Number((query as { limit?: string }).limit ?? 50)));
     const rows = db()
@@ -110,8 +111,8 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
 
   // Get a single session (c39: v1 api.py:200-209)
   .get('/notebooks/:nid/sessions/:sid', ({ params }) => {
-    const nid = Number(params.nid);
-    const sid = Number(params.sid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const sid = requirePositiveIntId(params.sid, 'session id');
     const row = db().select().from(sessions).where(eq(sessions.id, sid)).get();
     if (!row || row.notebookId !== nid) notFound(sid);
     return serializeSession(row);
@@ -121,7 +122,7 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/sessions',
     ({ params, body, set }) => {
-      const nid = Number(params.nid);
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
       const row = db()
         .insert(sessions)
         .values({
@@ -140,8 +141,8 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
   .patch(
     '/notebooks/:nid/sessions/:sid',
     ({ params, body }) => {
-      const nid = Number(params.nid);
-      const sid = Number(params.sid);
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const sid = requirePositiveIntId(params.sid, 'session id');
       const existing = db().select().from(sessions).where(eq(sessions.id, sid)).get();
       if (!existing || existing.notebookId !== nid) notFound(sid);
 
@@ -172,8 +173,8 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
 
   // Delete a session (c39: notebook ownership check)
   .delete('/notebooks/:nid/sessions/:sid', ({ params, set }) => {
-    const nid = Number(params.nid);
-    const sid = Number(params.sid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const sid = requirePositiveIntId(params.sid, 'session id');
     const existing = db().select().from(sessions).where(eq(sessions.id, sid)).get();
     if (!existing || existing.notebookId !== nid) notFound(sid);
     db().delete(sessions).where(eq(sessions.id, sid)).run();
@@ -183,8 +184,8 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
 
   // Convert session to source (c34: chunk + embed + vector — v1 behavior; c39: ownership + 201)
   .post('/notebooks/:nid/sessions/:sid/convert-to-source', async ({ params, body, set }) => {
-    const nid = Number(params.nid);
-    const sid = Number(params.sid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const sid = requirePositiveIntId(params.sid, 'session id');
     const sessionRow = db().select().from(sessions).where(eq(sessions.id, sid)).get();
     if (!sessionRow || sessionRow.notebookId !== nid) notFound(sid);
 
@@ -304,8 +305,8 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
 
   // Convert session to output (c34: v1 parity; c39: ownership + 201 + chunk_ids)
   .post('/notebooks/:nid/sessions/:sid/convert-to-output', ({ params, body, set }) => {
-    const nid = Number(params.nid);
-    const sid = Number(params.sid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const sid = requirePositiveIntId(params.sid, 'session id');
     const sessionRow = db().select().from(sessions).where(eq(sessions.id, sid)).get();
     if (!sessionRow || sessionRow.notebookId !== nid) notFound(sid);
 

@@ -9,6 +9,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { db } from '../../db/index.ts';
 import { messages, sessions } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { requirePositiveIntId } from '../../shared/ids.ts';
 
 // ---------------------------------------------------------------------------
 // OpenAPI doc registration
@@ -75,8 +76,8 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/notebooks/:nid/sessions/:sid/messages',
     ({ params, query }) => {
-      const nid = Number(params.nid);
-      const sid = Number(params.sid);
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const sid = requirePositiveIntId(params.sid, 'session id');
       const offset = query.offset ?? 0;
       const limit = query.limit ?? 200;
 
@@ -104,8 +105,8 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/sessions/:sid/messages',
     ({ params, body }) => {
-      const nid = Number(params.nid);
-      const sid = Number(params.sid);
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const sid = requirePositiveIntId(params.sid, 'session id');
       const session = db().select().from(sessions).where(eq(sessions.id, sid)).get();
       if (!session || session.notebookId !== nid)
         throw new NotFoundError(`Session ${sid} not found`);

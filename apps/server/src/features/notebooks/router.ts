@@ -15,8 +15,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { db } from '../../db/index.ts';
 import { notebooks, sessions, sourceTags, templates } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
-import { ErrorCode, AppHttpError } from '../../shared/errors.ts';
-import { parsePositiveIntId } from '../../shared/ids.ts';
+import { requirePositiveIntId, requireOptionalPositiveIntId } from '../../shared/ids.ts';
 
 // ---------------------------------------------------------------------------
 // OpenAPI doc registration (manual spec — @elysiajs/openapi auto-gen uses
@@ -137,14 +136,7 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
     '/notebooks',
     ({ body, query, set }) => {
       const templateIdRaw = (query as { templateId?: string }).templateId;
-      let templateId: number | undefined;
-      if (templateIdRaw !== undefined && templateIdRaw !== '') {
-        const parsed = parsePositiveIntId(templateIdRaw);
-        if (parsed === null) {
-          throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Invalid templateId: ${templateIdRaw}`);
-        }
-        templateId = parsed;
-      }
+      const templateId = requireOptionalPositiveIntId(templateIdRaw, 'template id');
 
       const row = db().insert(notebooks).values({ name: body.name }).returning().get();
 
@@ -174,10 +166,7 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
 
   // Get a single notebook
   .get('/notebooks/:nid', ({ params }) => {
-    const id = parsePositiveIntId(params.nid);
-    if (id === null) {
-      throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Invalid notebook id: ${params.nid}`);
-    }
+    const id = requirePositiveIntId(params.nid, 'notebook id');
     const row = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
     if (!row) notFound(id);
     return serializeNotebook(row);
@@ -187,10 +176,7 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
   .patch(
     '/notebooks/:nid',
     ({ params, body }) => {
-      const id = parsePositiveIntId(params.nid);
-      if (id === null) {
-        throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Invalid notebook id: ${params.nid}`);
-      }
+      const id = requirePositiveIntId(params.nid, 'notebook id');
       const existing = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
       if (!existing) notFound(id);
       const updated = db()
@@ -206,10 +192,7 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
 
   // Delete a notebook
   .delete('/notebooks/:nid', ({ params, set }) => {
-    const id = parsePositiveIntId(params.nid);
-    if (id === null) {
-      throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Invalid notebook id: ${params.nid}`);
-    }
+    const id = requirePositiveIntId(params.nid, 'notebook id');
     const existing = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
     if (!existing) notFound(id);
     db().delete(notebooks).where(eq(notebooks.id, id)).run();

@@ -9,6 +9,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { db } from '../../db/index.ts';
 import { templates } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { requirePositiveIntId } from '../../shared/ids.ts';
 
 const apiDocs: OpenApiRoute[] = [
   {
@@ -81,7 +82,7 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
     { body: TemplateCreateSchema },
   )
   .get('/templates/:id', ({ params }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'template id');
     const row = db().select().from(templates).where(eq(templates.id, id)).get();
     if (!row) throw new NotFoundError(`Template ${id} not found`);
     return serializeTemplate(row);
@@ -89,7 +90,7 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
   .patch(
     '/templates/:id',
     ({ params, body, set }) => {
-      const id = Number(params.id);
+      const id = requirePositiveIntId(params.id, 'template id');
       const existing = db().select().from(templates).where(eq(templates.id, id)).get();
       if (!existing) throw new NotFoundError(`Template ${id} not found`);
       // c61: builtin templates cannot be modified (v1 service.py:110-111)
@@ -114,7 +115,7 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
     { body: TemplateCreateSchema.partial() },
   )
   .delete('/templates/:id', ({ params, set }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'template id');
     const existing = db().select().from(templates).where(eq(templates.id, id)).get();
     if (!existing) throw new NotFoundError(`Template ${id} not found`);
     // c61: builtin templates cannot be deleted (v1 service.py:126-127)

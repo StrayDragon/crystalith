@@ -10,6 +10,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { db } from '../../db/index.ts';
 import { promptPresets } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { requirePositiveIntId } from '../../shared/ids.ts';
 import { listPresets } from '../qa/presets.ts';
 
 /** c61: builtin preset trigger set for conflict detection. */
@@ -115,7 +116,7 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
   .patch(
     '/prompt-presets/:id',
     ({ params, body, set }) => {
-      const id = Number(params.id);
+      const id = requirePositiveIntId(params.id, 'preset id');
       const existing = db().select().from(promptPresets).where(eq(promptPresets.id, id)).get();
       if (!existing) throw new NotFoundError(`Preset ${id} not found`);
 
@@ -145,7 +146,7 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
     { body: PromptPresetCreateSchema.partial() },
   )
   .delete('/prompt-presets/:id', ({ params, set }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'preset id');
     const existing = db().select().from(promptPresets).where(eq(promptPresets.id, id)).get();
     if (!existing) throw new NotFoundError(`Preset ${id} not found`);
     db().delete(promptPresets).where(eq(promptPresets.id, id)).run();

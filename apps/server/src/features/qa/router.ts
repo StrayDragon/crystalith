@@ -12,6 +12,7 @@ import { messages, notebooks, sessions, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { ErrorCode, sendError } from '../../shared/errors.ts';
+import { requirePositiveIntId, requireOptionalPositiveIntId } from '../../shared/ids.ts';
 import { streamQa, generateQaDirect } from './handler.ts';
 import { resolvePreset, listPresets } from './presets.ts';
 
@@ -327,11 +328,9 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
 
   // QA Export — markdown or json (v1 api.py:613-717)
   .get('/qa/export', ({ query }) => {
-    const sessionId = Number(query.sessionId);
-    const messageId = query.messageId ? Number(query.messageId) : undefined;
+    const sessionId = requirePositiveIntId(query.sessionId, 'session id');
+    const messageId = requireOptionalPositiveIntId(query.messageId, 'message id');
     const format = (query.format as 'markdown' | 'json') ?? 'markdown';
-
-    if (!sessionId) throw new Error('sessionId is required');
 
     // Find the assistant message to export
     let assistantMessage;

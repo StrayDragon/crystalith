@@ -17,6 +17,7 @@ import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
 import { ErrorCode, sendError } from '../../shared/errors.ts';
+import { requirePositiveIntId } from '../../shared/ids.ts';
 import { listOutputTypes, type ToolOutputType } from './generator.ts';
 import { runOutputPipeline } from './pipeline.ts';
 import { renderOutputToMarkdown, splitTextToChunks } from './render.ts';
@@ -28,7 +29,8 @@ function requireOutputInNotebook(
   const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
   if (!row) throw new NotFoundError(`Output ${id} not found`);
   if (notebookIdRaw !== undefined && notebookIdRaw !== '') {
-    if (row.notebookId !== Number(notebookIdRaw)) {
+    const notebookId = requirePositiveIntId(notebookIdRaw, 'notebook id');
+    if (row.notebookId !== notebookId) {
       throw new NotFoundError(`Output ${id} not found`);
     }
   }
@@ -149,7 +151,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     // Normalize output type to uppercase (API accepts both 'faq' and 'FAQ')
     const normalizedType = (typeof type === 'string' ? type : '').toUpperCase();
 
-    const notebookId = Number(nbIdRaw);
+    const notebookId = requirePositiveIntId(nbIdRaw, 'notebook id');
 
     // Verify notebook
     const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
@@ -243,8 +245,10 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
 
   // List outputs for a notebook
   .get('/outputs', ({ query }) => {
-    const notebookId = Number((query as { notebookId?: string }).notebookId);
-    if (!notebookId) throw new NotFoundError('notebookId query param required');
+    const notebookId = requirePositiveIntId(
+      (query as { notebookId?: string }).notebookId,
+      'notebook id',
+    );
 
     const rows = db()
       .select()
@@ -258,14 +262,14 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
 
   // Get a single output (ownership enforced when notebookId provided)
   .get('/outputs/:id', ({ params, query }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'output id');
     const row = requireOutputInNotebook(id, (query as { notebookId?: string }).notebookId);
     return serializeOutput(row);
   })
 
   // Delete output
   .delete('/outputs/:id', ({ params, query, set }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'output id');
     requireOutputInNotebook(id, (query as { notebookId?: string }).notebookId);
     db().delete(outputs).where(eq(outputs.id, id)).run();
     set.status = 204;
@@ -274,7 +278,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
 
   // Export output as markdown or json
   .get('/outputs/:id/export', ({ params, query }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'output id');
     const format = (query.format as 'markdown' | 'json') ?? 'markdown';
     const row = requireOutputInNotebook(id, (query as { notebookId?: string }).notebookId);
 
@@ -351,7 +355,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
   // Convert output to source — type-aware markdown rendering + chunking
   // (v1 api.py:515-739: _extract_text_from_output + _split_text_to_chunks)
   .post('/outputs/:id/convert-to-source', async ({ params, set }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'output id');
     const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
     if (!row) throw new NotFoundError(`Output ${id} not found`);
 

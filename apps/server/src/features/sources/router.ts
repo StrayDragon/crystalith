@@ -29,6 +29,7 @@ import {
   getDefaultExtractor,
   listExtractorMetadata,
 } from '../../shared/extraction/factory.ts';
+import { requirePositiveIntId, requireOptionalPositiveIntId } from '../../shared/ids.ts';
 import { fetchWithRedirectGuard } from '../../shared/net/fetch-with-redirect-guard.ts';
 import { validateUrlForFetch, SsrfBlockedError } from '../../shared/net/url-safety.ts';
 import { uploadDedupKey, urlDedupKey } from './dedup.ts';
@@ -175,7 +176,7 @@ function enrichSources(
 export const sourcesRouter = new Elysia({ prefix: '/v2' })
   // List sources for a notebook (c39: tag filter + sort_by + N+1 fix)
   .get('/notebooks/:nid/sources', ({ params, query }) => {
-    const nid = Number(params.nid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
     const tagFilter = (query as { tag?: string }).tag;
     const sortBy = (query as { sort_by?: string }).sort_by ?? 'date';
     const sortOrder = (query as { sort_order?: string }).sort_order ?? 'desc';
@@ -237,14 +238,11 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
 
   // Upload + ingest a file
   .post('/sources/upload', async ({ body, query, set }) => {
-    const notebookId = Number(query?.notebookId);
+    const notebookId = requirePositiveIntId(query?.notebookId, 'notebook id');
     const dedupAction = ((query as Record<string, string> | undefined)?.dedupAction ?? 'prompt') as
       | 'prompt'
       | 'reuse'
       | 'create_new';
-    if (!notebookId) {
-      return sendError(set, ErrorCode.INVALID_REQUEST, 'notebookId query param is required');
-    }
 
     // body is FormData; Elysia parses multipart into { filename, file }
     const file = (body as { file?: File }).file;
@@ -299,8 +297,11 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   // c57: notebook ownership check — requires ?notebookId= query, returns 404
   // if the source doesn't belong to that notebook (prevents cross-notebook access)
   .get('/sources/:id', ({ params, query }) => {
-    const id = Number(params.id);
-    const nid = Number((query as Record<string, string> | undefined)?.notebookId);
+    const id = requirePositiveIntId(params.id, 'source id');
+    const nid = requireOptionalPositiveIntId(
+      (query as Record<string, string> | undefined)?.notebookId,
+      'notebook id',
+    );
     const row = db().select().from(sources).where(eq(sources.id, id)).get();
     if (!row || (nid && row.notebookId !== nid)) sourceNotFound(id);
 
@@ -325,8 +326,11 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   // Delete a source
   // c57: notebook ownership check via ?notebookId= query
   .delete('/sources/:id', ({ params, query, set }) => {
-    const id = Number(params.id);
-    const nid = Number((query as Record<string, string> | undefined)?.notebookId);
+    const id = requirePositiveIntId(params.id, 'source id');
+    const nid = requireOptionalPositiveIntId(
+      (query as Record<string, string> | undefined)?.notebookId,
+      'notebook id',
+    );
     const row = db().select().from(sources).where(eq(sources.id, id)).get();
     if (!row || (nid && row.notebookId !== nid)) sourceNotFound(id);
 
@@ -355,7 +359,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
 
   // Tag CRUD (c39: uniqueness check + notebook ownership + idempotent assign/remove)
   .get('/notebooks/:nid/sources/tags', ({ params }) => {
-    const nid = Number(params.nid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
     return db()
       .select()
       .from(sourceTags)
@@ -371,7 +375,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   .post('/notebooks/:nid/sources/tags', ({ params, body, set }) => {
-    const nid = Number(params.nid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
     const rawName = (body as { name: string }).name?.trim().slice(0, 64);
     if (!rawName) {
       set.status = 400;
@@ -406,8 +410,8 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   .patch('/notebooks/:nid/sources/tags/:tid', ({ params, body, set }) => {
-    const nid = Number(params.nid);
-    const tid = Number(params.tid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const tid = requirePositiveIntId(params.tid, 'tag id');
     const rawName = (body as { name: string }).name?.trim().slice(0, 64);
     if (!rawName) {
       set.status = 400;
@@ -446,8 +450,8 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   .delete('/notebooks/:nid/sources/tags/:tid', ({ params, set }) => {
-    const nid = Number(params.nid);
-    const tid = Number(params.tid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const tid = requirePositiveIntId(params.tid, 'tag id');
     // Ownership check (v1 api_tags.py:110)
     const existing = db()
       .select()
@@ -463,8 +467,8 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   .post('/notebooks/:nid/sources/tags/:tid/sources', ({ params, body }) => {
-    const nid = Number(params.nid);
-    const tid = Number(params.tid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const tid = requirePositiveIntId(params.tid, 'tag id');
     const { sourceIds } = body as { sourceIds: number[] };
     // c53: per-item diagnostics (v1 api_tags.py:142-185 SourceBatchItemResult).
     // Was: silent continue on missing source + only counts returned.
@@ -506,8 +510,8 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   .delete('/notebooks/:nid/sources/tags/:tid/sources', ({ params, body }) => {
-    const nid = Number(params.nid);
-    const tid = Number(params.tid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const tid = requirePositiveIntId(params.tid, 'tag id');
     const { sourceIds } = body as { sourceIds: number[] };
     // c53: per-item diagnostics (v1 api_tags.py:142-185)
     const results: Array<{
@@ -544,8 +548,11 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   // Get source chunks
   // c57: notebook ownership check via ?notebookId= query
   .get('/sources/:id/chunks', ({ params, query }) => {
-    const id = Number(params.id);
-    const nid = Number((query as Record<string, string> | undefined)?.notebookId);
+    const id = requirePositiveIntId(params.id, 'source id');
+    const nid = requireOptionalPositiveIntId(
+      (query as Record<string, string> | undefined)?.notebookId,
+      'notebook id',
+    );
     const row = db().select().from(sources).where(eq(sources.id, id)).get();
     if (!row || (nid && row.notebookId !== nid)) sourceNotFound(id);
     const rows = db()
@@ -567,8 +574,11 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   // Re-embed a source (v1: requires FAILED status; processing → ready/failed)
   // c57: notebook ownership check via ?notebookId= query
   .post('/sources/:id/re-embed', async ({ params, query }) => {
-    const id = Number(params.id);
-    const nid = Number((query as Record<string, string> | undefined)?.notebookId);
+    const id = requirePositiveIntId(params.id, 'source id');
+    const nid = requireOptionalPositiveIntId(
+      (query as Record<string, string> | undefined)?.notebookId,
+      'notebook id',
+    );
     const row = db().select().from(sources).where(eq(sources.id, id)).get();
     if (!row || (nid && row.notebookId !== nid)) sourceNotFound(id);
     // c44: v1 _reembed_existing_source rejects non-failed with 400
@@ -649,7 +659,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   // Batch delete sources
   // c57: per-item results array (v1 api_schemas.py:111-114 SourceBatchDeleteResponse)
   .post('/notebooks/:nid/sources/batch/delete', ({ params, body }) => {
-    const nid = Number(params.nid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
     const { sourceIds } = body as { sourceIds: number[] };
     const deletedIds: number[] = [];
     const results: Array<{
@@ -681,7 +691,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   // Batch re-embed sources
   // c57: per-item results array + clear all error fields
   .post('/notebooks/:nid/sources/batch/re-embed', async ({ params, body }) => {
-    const nid = Number(params.nid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
     const { sourceIds } = body as { sourceIds: number[] };
     const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
     const strategy = new EmbedStrategy();
@@ -750,7 +760,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
 
   // Ingest from URL (c39: dedup default prompt + link mode + SSRF fallback fix)
   .post('/notebooks/:nid/sources/from-url', async ({ params, body, query, set }) => {
-    const nid = Number(params.nid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
     const { url, mode, title, extractor, snippet } = body as {
       url: string;
       mode?: string;
@@ -906,7 +916,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
 
   // c44: Extractor policy routes — GET returns full ExtractorsListResponse (v1 api_ingest.py:79-153)
   .get('/notebooks/:nid/extractors', ({ params }) => {
-    const nid = Number(params.nid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
     const policy = db()
       .select()
       .from(notebookExtractorPolicies)
@@ -935,7 +945,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     };
   })
   .patch('/notebooks/:nid/extractors', ({ params, body, set }) => {
-    const nid = Number(params.nid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
     const { mode, enabled_extractors } = body as {
       mode?: string;
       enabled_extractors?: string[];

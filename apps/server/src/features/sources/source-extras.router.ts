@@ -13,6 +13,7 @@ import { chunks, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { ErrorCode, sendError } from '../../shared/errors.ts';
+import { requirePositiveIntId } from '../../shared/ids.ts';
 
 const apiDocs: OpenApiRoute[] = [
   {
@@ -93,8 +94,8 @@ function parseSummaryResponse(response: string): {
 export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
   // Source summary (v1 api_summary.py parity)
   .get('/notebooks/:nid/sources/:sid/summary', async ({ params, set }) => {
-    const nid = Number(params.nid);
-    const sid = Number(params.sid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const sid = requirePositiveIntId(params.sid, 'source id');
     const source = db().select().from(sources).where(eq(sources.id, sid)).get();
     if (!source) throw new NotFoundError(`Source ${sid} not found`);
     // c44: verify notebook ownership (v1 api_summary.py:82)
@@ -154,8 +155,8 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
 
   // Per-source QA (c39: vector retrieval instead of first-N chunks — v1 api_qa.py:82-119)
   .post('/notebooks/:nid/sources/:sid/qa', async ({ params, body, set }) => {
-    const nid = Number(params.nid);
-    const sid = Number(params.sid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const sid = requirePositiveIntId(params.sid, 'source id');
     const source = db().select().from(sources).where(eq(sources.id, sid)).get();
     if (!source) throw new NotFoundError(`Source ${sid} not found`);
     // c44: verify notebook ownership (v1 api_qa.py:64)
@@ -219,8 +220,8 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
 
   // Convert per-source QA to a source (v1 api_qa.py:204 parity)
   .post('/notebooks/:nid/sources/:sid/qa-to-source', async ({ params, body }) => {
-    const nid = Number(params.nid);
-    const sid = Number(params.sid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const sid = requirePositiveIntId(params.sid, 'source id');
     const source = db().select().from(sources).where(eq(sources.id, sid)).get();
     if (!source) throw new NotFoundError(`Source ${sid} not found`);
     // c44: verify notebook ownership (v1 api_qa.py:221)
