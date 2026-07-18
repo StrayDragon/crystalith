@@ -31,6 +31,7 @@ import { Virtuoso } from 'react-virtuoso';
 
 import type { ExtractorInfoResponse as ExtractorInfo } from '../../../../api/shared-types';
 import { LAYER_LEVELS } from '../../../../shared/layer';
+import { TestIds, tid } from '../../../../shared/testids';
 import SearchResultCard, { type SearchResultItem } from './SearchResultCard';
 import type { SearchQueueItem } from './useSources';
 
@@ -190,7 +191,7 @@ export default function SearchResultsQueue({
               ? 'border-red-200 bg-red-50/50'
               : 'border-blue-200 bg-blue-50/50'
         }`}
-        data-testid="search-queue-item"
+        {...tid(TestIds.searchQueueItem)}
         data-queue-query={queueItem.query}
       >
         {/* Header */}
@@ -198,7 +199,7 @@ export default function SearchResultsQueue({
           type="button"
           onClick={() => toggleQueueItemExpanded(queueItem.id)}
           className="flex items-center justify-between w-full px-3 py-2 hover:bg-blue-100/50 transition-colors"
-          data-testid="search-queue-toggle"
+          {...tid(TestIds.searchQueueToggle)}
         >
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <div
@@ -403,7 +404,7 @@ export default function SearchResultsQueue({
   return (
     <>
       {/* 搜索队列项列表 */}
-      <div className="flex flex-col gap-2" data-testid="search-queue-list">
+      <div className="flex flex-col gap-2" {...tid(TestIds.searchQueueList)}>
         {searchQueue.map(renderQueueItem)}
       </div>
 

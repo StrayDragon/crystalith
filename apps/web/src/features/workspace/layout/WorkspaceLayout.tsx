@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
+import { TestIds, tid } from '../../../shared/testids';
 import { toast } from '../../../shared/toast';
 import ChatPanel from '../domains/messages/ChatPanel';
 import { useChat } from '../domains/messages/useChat';
@@ -852,7 +853,10 @@ export default function WorkspaceLayout() {
   const mobileWidgetId = WORKSPACE_PANEL_TO_WIDGET[activePanel];
 
   return (
-    <div className="flex flex-col cl-h-dvh bg-gray-50/50 dark:bg-slate-950 overflow-hidden text-gray-900 dark:text-gray-100">
+    <div
+      className="flex flex-col cl-h-dvh bg-gray-50/50 dark:bg-slate-950 overflow-hidden text-gray-900 dark:text-gray-100"
+      {...tid(TestIds.workspaceRoot)}
+    >
       <input
         ref={uploadFileInputRef}
         type="file"

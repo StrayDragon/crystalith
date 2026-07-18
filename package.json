@@ -5,7 +5,8 @@
   "workspaces": [
     "apps/server",
     "apps/web",
-    "packages/*"
+    "packages/*",
+    "e2e"
   ],
   "scripts": {
     "dev:server": "cd apps/server && bun run dev",
@@ -14,8 +15,12 @@
     "dev:overmind": "overmind start -N -c slidev -f Procfile",
     "dev:slidev": "cd packages/crystalith-slidev && bun run dev",
     "build": "bun --filter '*' build",
-    "test": "bun --filter '*' test",
-    "typecheck": "bun --filter '*' typecheck",
+    "test": "bun --filter './apps/*' --filter './packages/*' test",
+    "e2e": "cd e2e && bunx playwright test --grep @p0",
+    "e2e:p0": "cd e2e && bunx playwright test --grep @p0",
+    "e2e:all": "cd e2e && bunx playwright test",
+    "e2e:install": "cd e2e && bunx playwright install chromium",
+    "typecheck": "bun --filter './apps/*' --filter './packages/*' typecheck",
     "lint": "oxlint",
     "lint:type-aware": "oxlint --type-aware --tsconfig tsconfig.lint.json",
     "lint:fix": "oxlint --fix",

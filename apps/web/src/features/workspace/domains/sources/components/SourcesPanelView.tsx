@@ -42,6 +42,7 @@ import type {
 import { copyToClipboard } from '../../../../../shared/clipboard';
 import ConfirmPopover from '../../../../../shared/ConfirmPopover';
 import { t } from '../../../../../shared/i18n';
+import { TestIds, tid } from '../../../../../shared/testids';
 import { LAYER_LEVELS } from '../../../../../shared/layer';
 import { toast } from '../../../../../shared/toast';
 import type { AsyncStatus } from '../../../../../shared/types';
@@ -703,6 +704,7 @@ function SourcesPanelView({
   return (
     <div
       className={`flex flex-1 flex-col min-h-0 ${isFullscreen ? 'max-w-4xl mx-auto w-full' : ''}`}
+      {...tid(TestIds.sourcesPanel)}
     >
       {/* Fixed Header: Upload & Search - Always visible */}
       <div className="flex-shrink-0 px-3 sm:px-4 pt-3 sm:pt-4 pb-2 flex flex-col gap-3 border-b border-gray-100 dark:border-slate-700">
@@ -750,6 +752,7 @@ function SourcesPanelView({
               size="sm"
               disabled={uploadDisabled}
               className="flex items-center justify-center gap-2 py-2 rounded-full border-dashed border-gray-400 normal-case font-normal text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 hover:border-gray-500"
+              {...tid(TestIds.sourcesAdd)}
               onClick={() => fileInputRef.current?.click()}
             >
               {uploadState === 'loading' ? (
@@ -768,6 +771,7 @@ function SourcesPanelView({
                 hidden
                 multiple
                 accept={SOURCE_UPLOAD_ACCEPT}
+                {...tid(TestIds.sourcesUploadInput)}
                 onChange={(event) => {
                   const selectedFiles = Array.from(event.target.files ?? []);
                   const { supported, unsupported } = splitUploadFiles(selectedFiles);
@@ -800,6 +804,7 @@ function SourcesPanelView({
             size="sm"
             disabled={connectorDisabled}
             className="flex items-center justify-center gap-2 py-2 rounded-full border-gray-300 normal-case font-normal text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 hover:border-gray-400"
+            {...tid(TestIds.sourcesConnectors)}
             onClick={() => setConnectorsOpen(true)}
           >
             <SettingsIcon style={{ fontSize: 18 }} />
@@ -888,6 +893,7 @@ function SourcesPanelView({
                     type="button"
                     onClick={handleToggleSearchMode}
                     aria-label={searchModeToggleLabel}
+                    {...tid(TestIds.sourcesModeToggle)}
                     className="flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200 hover:shadow-sm active:scale-[0.98] bg-gray-50 text-gray-600 dark:bg-slate-800 dark:text-slate-300"
                   >
                     <span key={isDeepResearchMode ? 'deep' : 'fast'} className="ux-fade-in">
@@ -905,6 +911,7 @@ function SourcesPanelView({
                   className="min-w-0 flex-1 h-9 px-3 rounded-lg bg-transparent border border-transparent outline-none text-sm text-gray-800 placeholder-gray-500 focus:ring-0 transition-colors duration-200"
                   placeholder={searchPlaceholder}
                   value={searchQuery}
+                  {...tid(TestIds.sourcesSearchInput)}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
@@ -929,6 +936,7 @@ function SourcesPanelView({
                       : t('sources.search.action.fast')
                   }
                   className="rounded-full w-9 h-9 transition-all duration-200 active:scale-[0.98] bg-blue-500 hover:bg-blue-600"
+                  {...tid(TestIds.sourcesSearchSubmit)}
                   onClick={() => {
                     void handleSearch();
                   }}
@@ -965,6 +973,7 @@ function SourcesPanelView({
                   onClick={() => setExtractorPolicyOpen(true)}
                   disabled={!isConnected}
                   className="text-[11px] text-blue-600 hover:text-blue-700 disabled:opacity-60 flex items-center gap-1 flex-shrink-0 whitespace-nowrap"
+                  {...tid(TestIds.sourcesExtractorSettings)}
                 >
                   <SettingsIcon style={{ fontSize: 14 }} />
                   提取器设置
@@ -1053,6 +1062,7 @@ function SourcesPanelView({
           <Typography
             variant="small"
             className="text-[11px] text-gray-500 dark:text-slate-400 whitespace-nowrap"
+            {...tid(TestIds.sourcesCount)}
           >
             {selectedIds.length > 0
               ? `已选 ${selectedIds.length}/${sources.length}`
@@ -1069,11 +1079,15 @@ function SourcesPanelView({
                 variant="text"
                 aria-label="来源排序与筛选"
                 className="w-6 h-6 min-w-[24px] rounded-full text-gray-400 dark:text-slate-500 hover:bg-gray-100 dark:hover:bg-slate-800"
+                {...tid(TestIds.sourcesSortMenu)}
               >
                 <ExpandMoreIcon style={{ fontSize: 16 }} />
               </IconButton>
             </MenuHandler>
-            <MenuList className="p-1 min-w-[160px] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg">
+            <MenuList
+              className="p-1 min-w-[160px] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg"
+              {...tid(TestIds.sourcesSortMenuList)}
+            >
               <div className="px-3 py-1 text-[9px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider">
                 排序字段
               </div>
@@ -1264,7 +1278,10 @@ function SourcesPanelView({
         {isLoading ? (
           <SkeletonList items={3} />
         ) : sources.length === 0 ? (
-          <div className="p-3 text-center border border-dashed border-gray-300 rounded-lg bg-gray-100 dark:bg-slate-800">
+          <div
+            className="p-3 text-center border border-dashed border-gray-300 rounded-lg bg-gray-100 dark:bg-slate-800"
+            {...tid(TestIds.sourcesEmpty)}
+          >
             <Typography
               variant="small"
               className="text-gray-700 dark:text-slate-200 text-[11px] font-semibold"
@@ -1309,6 +1326,7 @@ function SourcesPanelView({
                 >
                   <button
                     className="flex flex-1 items-center gap-3 p-2 text-left min-w-0"
+                    {...tid(TestIds.sourceRow)}
                     onClick={(event) => {
                       if (event.shiftKey || event.ctrlKey || event.metaKey) {
                         handleToggleSource(source.id, event.nativeEvent);

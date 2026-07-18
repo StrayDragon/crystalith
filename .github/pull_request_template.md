@@ -13,11 +13,9 @@ Describe what changed and why.
 
 ## Testing / 测试
 
-- [ ] `cd apps/web && bun run test:ci`
-- [ ] `cd apps/web && bun run typecheck`
-- [ ] `cd apps/web && bun run lint`
-- [ ] `cd apps/server && bun test`（若改动 server）
-- [ ] `bun typecheck`（根工作区，若跨包）
+- [ ] `just qa`（终极门禁：typecheck + lint + format + schema + unit + **e2e @p0**）
+- [ ] 或分项：`just e2e` / `cd apps/web && bun run test:ci` / `cd apps/server && bun test`
+- [ ] `bun typecheck`（跨包时）
 
 Results:
 
@@ -28,3 +26,4 @@ Results:
 - [ ] No secrets or tokens committed
 - [ ] Docs updated (if needed) — see `AGENTS.md`
 - [ ] Critical-path UI copy is centralized via `t()` (avoid new hardcoded strings) / 关键路径文案集中管理（避免新增硬编码）
+- [ ] New critical UI controls use `data-testid` from `apps/web/src/shared/testids.ts` (E2E must not rely on Chinese copy)

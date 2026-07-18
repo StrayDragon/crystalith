@@ -10,6 +10,7 @@ import type { WorkspaceToolsDiagnostics } from '../../../../api/shared-types';
 import { copyToClipboard } from '../../../../shared/clipboard';
 import { t } from '../../../../shared/i18n';
 import { useLayer } from '../../../../shared/layer';
+import { TestIds, tid } from '../../../../shared/testids';
 import { toast } from '../../../../shared/toast';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import {
@@ -153,6 +154,7 @@ export default function DiagnosticsDialog({
       role="dialog"
       aria-modal="true"
       aria-label={t('workspace.diagnostics.title')}
+      {...tid(TestIds.diagnosticsDialog)}
     >
       <button
         type="button"
