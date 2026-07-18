@@ -238,7 +238,10 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
 
   // Upload + ingest a file
   .post('/sources/upload', async ({ body, query, set }) => {
-    const notebookId = requirePositiveIntId(query?.notebookId, 'notebook id');
+    if (query?.notebookId === undefined || query?.notebookId === '') {
+      return sendError(set, ErrorCode.INVALID_REQUEST, 'notebookId query param is required');
+    }
+    const notebookId = requirePositiveIntId(query.notebookId, 'notebook id');
     const dedupAction = ((query as Record<string, string> | undefined)?.dedupAction ?? 'prompt') as
       | 'prompt'
       | 'reuse'
