@@ -9,7 +9,7 @@ requirements[7]{req_id,title,statement}:
   r175,生成请求与结果必须显式表达生效的来源模式,系统 MUST 在生成请求与结果元数据中显式表达本次生效的来源模式，以支持可解释行为与一致的 UI 呈现。
   r207,来源模式必须影响检索与上下文构造行为,系统 MUST 让来源模式影响检索、上下文构造与证据约束行为，而不是只改变展示文案。
   r235,用户可见的来源模式标签不得直接暴露内部策略术语,系统 MUST 使用可理解的产品概念向用户表达来源模式，而不是把内部策略术语直接当作产品标签。
-  "outputs-source-scoping",Outputs retrieval MUST filter by source_ids,outputs 生成检索 MUST 支持通过 source_ids 参数将检索范围限定到指定 source 子集
+  "outputs-source-scoping",Outputs retrieval MUST filter by sourceIds,outputs 生成检索 MUST 支持通过 sourceIds 参数将检索范围限定到指定 source 子集
 scenarios[9]{req_id,id,given,when,then,feature}:
   r45,某个生成类型需要严格来源约束,"",系统注册一种需要强证据支持的生成类型,该类型 SHALL 能声明对应的来源使用模式,true
   r103,用户查看不同来源模式的结果,"",两个结果采用不同来源使用模式,系统 SHALL 能在 citation 预期或来源展示上体现差异,true
@@ -19,4 +19,4 @@ scenarios[9]{req_id,id,given,when,then,feature}:
   r207,"strict-evidence-模式下的生成","",某次生成以 strict_evidence 模式执行,系统 SHALL 以可引用的来源片段构造上下文并强制 citation 预期,true
   r207,"brainstorming-模式下的生成","",某次生成以 brainstorming 模式执行,系统 SHALL 允许在不强制 citation 的前提下生成,true
   r235,"ui-展示来源模式","",UI 展示某次结果的来源依赖方式,系统/前端 SHALL 使用用户可理解的来源模式标签与解释文案,true
-  "outputs-source-scoping","scoped-generation",notebook 有 5 个 source,"用户指定 source_ids=[2,4] 生成 output",系统 SHALL 仅在 source 2 和 4 的 chunk 范围内检索,true
+  "outputs-source-scoping","scoped-generation",notebook 有 5 个 source,"用户指定 sourceIds=[2,4] 生成 output",系统 SHALL 仅在 source 2 和 4 的 chunk 范围内检索,true

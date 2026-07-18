@@ -9,10 +9,10 @@ requirements[39]{req_id,title,statement}:
   r186,Rate limited responses use unified envelope and retryAfter,系统 MUST 为 HTTP rate limiting 提供稳定的对外语义：返回 429，并在统一错误信封中暴露 `retryAfter` 指引。
   r218,Health endpoints remain exempt from HTTP guardrails,系统的健康检查端点 MUST 保持可用于运维探活与诊断，不应因 guardrails 被拒绝。
   r244,Notebook/session/message endpoints are stable,notebook、session、message 的范围归属与 404/400 语义 MUST 稳定。
-  r262,"Assistant message content remains plain text while UI is transported out-of-band","系统 MUST 将 assistant 消息 `content: string` 保持为纯文本/markdown 回答；结构化 UI MUST 通过 session-scoped `shared_state.ui` 提供，而不是嵌入 `content`。"
-  r273,"Session UI state endpoints are stable and server-authoritative","系统 MUST 提供 session-scoped UI 状态端点： - `GET /v1/notebooks/{notebook_id}/sessions/{session_id}/ui/state` - `POST /v1/notebooks/{notebook_id}/sessions/{session_id}/ui/event` `GET` MUST 返回 `session_id`、`shared_state`、`shared_state_revision`；`POST` MUST 接收 `CUSTOM(name=\"ui.v1.event\")`，并返回 `delta` 与最新 `shared_state_revision`。"
+  r262,"Assistant message content remains plain text while UI is transported out-of-band","系统 MUST 将 assistant 消息 `content: string` 保持为纯文本/markdown 回答；结构化 UI MUST 通过 session-scoped `sharedState.ui` 提供，而不是嵌入 `content`。"
+  r273,"Session UI state endpoints are stable and server-authoritative","系统 MUST 提供 session-scoped UI 状态端点： - `GET /v1/notebooks/{notebookId}/sessions/{sessionId}/ui/state` - `POST /v1/notebooks/{notebookId}/sessions/{sessionId}/ui/event` `GET` MUST 返回 `sessionId`、`sharedState`、`sharedStateRevision`；`POST` MUST 接收 `CUSTOM(name=\"ui.v1.event\")`，并返回 `delta` 与最新 `sharedStateRevision`。"
   r280,Commands endpoint is available for autocomplete,系统 MUST 提供 `GET /v1/commands` 端点，供前端获取结构化命令列表以驱动自动补全。
-  r63,Prompt presets CRUD endpoints are stable,"系统 MUST 提供 prompt presets 的 CRUD 端点集合： - `GET /v1/prompt-presets`：返回 built-in + custom 的 preset 列表 - `POST /v1/prompt-presets`：创建 custom preset 并返回 201 - `PATCH /v1/prompt-presets/{preset_id}`：更新 custom preset 并返回更新后的对象 - `DELETE /v1/prompt-presets/{preset_id}`：删除 custom preset 并返回 204"
+  r63,Prompt presets CRUD endpoints are stable,"系统 MUST 提供 prompt presets 的 CRUD 端点集合： - `GET /v1/prompt-presets`：返回 built-in + custom 的 preset 列表 - `POST /v1/prompt-presets`：创建 custom preset 并返回 201 - `PATCH /v1/prompt-presets/{presetId}`：更新 custom preset 并返回更新后的对象 - `DELETE /v1/prompt-presets/{presetId}`：删除 custom preset 并返回 204"
   r69,"QA endpoints accept in-band prompt directives in question","QA 端点 MUST 支持在 `question: string` 中内嵌 `/prompt:<preset> <query>` 指令，并在启用 presets 功能时以该指令选择受控的预设生成策略。"
   r73,"QA endpoints provide stable stream and non-stream contracts",`/qa` 与 `/qa/stream` MUST 保持稳定字段语义，stream 至少包含 `chunk|done|error` 事件。
   r75,Citation model remains camelCase within the global camelCase wire,citation 对象 MUST 继续使用 camelCase（sourceId/sourceName/chunkId/chunkIndex/pageNumber/paragraphIndex/snippet/score），并与全局 wire camelCase 规则一致；MUST NOT 回退 snake_case。
@@ -20,17 +20,17 @@ requirements[39]{req_id,title,statement}:
   r78,Exports can include citations,系统 MUST 支持将 QA/Outputs 导出为包含 citations 的格式（Markdown/JSON 或等价），以便分享与复盘。
   r79,Workspace tools and outputs endpoints are stable,`/v1/workspace/tools` 与 outputs/slides 相关端点 MUST 保持可用与向后兼容；其中 `/v1/workspace/tools` 的“可用工具集合”允许随已安装/已启用插件变化而变化，但响应形状与字段语义 MUST 稳定。
   r17,Workspace tools list returns available tools only,`/v1/workspace/tools` 返回的 tools 列表 MUST 仅包含“当前可用”的工具项（可用 = core 内置能力 + 已安装且已启用、并通过兼容性门禁的插件能力）。对于 `SLIDES`，其可用性 MUST 由当前 active `SlidesWorkflowPlugin` 决定，而不是由 core 默认内置。
-  r18,"Tools endpoint exposes diagnostics in a machine-readable form","`/v1/workspace/tools` 响应 MUST 暴露 `diagnostics` 字段，用于解释插件能力为什么可用/不可用，并为 UI 与自托管排障提供可执行提示。 `diagnostics` MUST 至少包含： - `diagnostics.plugins.loaded: string[]`：本次启动加载成功的插件 id 列表 - `diagnostics.plugins.skipped: { [plugin_id: string]: { error_code: string, message: string, hint?: string, details?: object } }`：加载被跳过的插件与稳定 skip detail 为覆盖“官方插件未安装（无 entry point，因此不会出现在 skipped）”的场景，`diagnostics` MUST 额外包含一个轻量的 official catalog（仅字符串/提示，不引入重依赖），用于给出明确的安装/启用指引。 official catalog MUST 覆盖当前版本所定义的**全部官方插件**，包括官方"
-  r19,Workspace tools can expose frontend_bundle descriptor,`/v1/workspace/tools` 返回的 tool 对象 MUST 支持可选字段 `frontend_bundle`，用于声明该输出类型的前端渲染 bundle。
-  r20,Workspace tools expose a complete config_schema,`/v1/workspace/tools` 返回的工具对象 MUST 包含可直接驱动 UI 的 `config_schema`（如支持主题、数量/难度选项与默认值）。对于 `SLIDES`，该 `config_schema` MUST 覆盖 defaults、quantity / audience / structure / tone / language / density / theme / frontmatter，以及 active plugin 声明的 engine / preview 相关元数据；客户端 MUST NOT 依赖独立 slides config 端点。
-  r21,Tool config endpoint stays consistent (if present),"若 `/v1/workspace/tools/{tool_id}/config` 端点存在，其返回值 MUST 与 tools 列表中的 `config_schema` 语义一致。"
+  r18,"Tools endpoint exposes diagnostics in a machine-readable form","`/v1/workspace/tools` 响应 MUST 暴露 `diagnostics` 字段，用于解释插件能力为什么可用/不可用，并为 UI 与自托管排障提供可执行提示。 `diagnostics` MUST 至少包含： - `diagnostics.plugins.loaded: string[]`：本次启动加载成功的插件 id 列表 - `diagnostics.plugins.skipped: { [pluginId: string]: { errorCode: string, message: string, hint?: string, details?: object } }`：加载被跳过的插件与稳定 skip detail 为覆盖“官方插件未安装（无 entry point，因此不会出现在 skipped）”的场景，`diagnostics` MUST 额外包含一个轻量的 official catalog（仅字符串/提示，不引入重依赖），用于给出明确的安装/启用指引。 official catalog MUST 覆盖当前版本所定义的**全部官方插件**，包括官方"
+  r19,Workspace tools can expose frontendBundle descriptor,`/v1/workspace/tools` 返回的 tool 对象 MUST 支持可选字段 `frontendBundle`，用于声明该输出类型的前端渲染 bundle。
+  r20,Workspace tools expose a complete configSchema,`/v1/workspace/tools` 返回的工具对象 MUST 包含可直接驱动 UI 的 `configSchema`（如支持主题、数量/难度选项与默认值）。对于 `SLIDES`，该 `configSchema` MUST 覆盖 defaults、quantity / audience / structure / tone / language / density / theme / frontmatter，以及 active plugin 声明的 engine / preview 相关元数据；客户端 MUST NOT 依赖独立 slides config 端点。
+  r21,Tool config endpoint stays consistent (if present),"若 `/v1/workspace/tools/{toolId}/config` 端点存在，其返回值 MUST 与 tools 列表中的 `configSchema` 语义一致。"
   "models-list-must-return-providers-envelope",Models list MUST return providers field on the list envelope (not only separate endpoint),"models 列表端点 MUST 在响应 envelope 返回 providers 字段（对齐 v1 ModelsListResponse, api.py:42-43 与 95-97：sorted({openai} ∪ plugins.list_ai_providers())），MUST NOT 只在单独的 /models/providers 端点暴露；当前 v2 router.ts:43-56 envelope 缺 providers 字段，前端读 resp.providers 会 break"
   "models-must-filter-by-provider-availability",Models endpoints MUST filter by provider availability like v1,"models GET list 与 GET single MUST 按 provider 可用性过滤（对齐 v1 api.py:83 与 109-110 用 plugins.is_provider_available）：未配置 provider 的 model 在 list 中不出现，GET single 时返回 404；当前 v2 router.ts:38-42 只按 role 过滤、shared/config.ts:213-215 的 getModelById 做裸 find 无 provider 检查，未配置 provider 的 model 仍会出现"
-  "sessions-convert-must-honor-message-ids","Sessions convert-to-source and convert-to-output MUST honor message_ids filter","sessions 的 convert-to-source 与 convert-to-output MUST 接受 message_ids 过滤（对齐 v1 api.py:34-41 与 51-57 与 257-268 与 417-428）：仅转换指定消息，缺失 id 时 404；当前 v2 router.ts:185（convert-to-source）无 request body schema、总是转换所有消息，router.ts:298（convert-to-output）只读 output_type 不读 message_ids。多轮历史无法选择性转换"
+  "sessions-convert-must-honor-message-ids","Sessions convert-to-source and convert-to-output MUST honor messageIds filter","sessions 的 convert-to-source 与 convert-to-output MUST 接受 messageIds 过滤（对齐 v1 api.py:34-41 与 51-57 与 257-268 与 417-428）：仅转换指定消息，缺失 id 时 404；当前 v2 router.ts:185（convert-to-source）无 request body schema、总是转换所有消息，router.ts:298（convert-to-output）只读 outputType 不读 messageIds。多轮历史无法选择性转换"
   "sessions-convert-text-format-must-align-v1",Sessions convert text format MUST match v1 role labels and separators,"sessions convert 的文本格式 MUST 对齐 v1：(1) convert-to-source 用中文角色标签 **用户**:/**助手**: + \\n\\n 分隔（v1 api.py:110-123），当前 v2 router.ts:203-208 用英文 **Assistant**:/**User**: + \\n\\n---\\n\\n。(2) convert-to-output 用 raw 文本（无角色前缀，v1 text_format=raw, api.py:438），当前 v2 router.ts:314-319 加 [Assistant]/[User] 前缀。跨版本导出内容 diff 噪音"
-  "models-response-default-shape-must-align-v1","Models response MUST put defaults on envelope (not inline per-model) for list endpoint","models 列表端点 MUST 把 default_chat/default_embedding 放在 envelope 顶层（对齐 v1 api.py:42-43 与 96-97），GET single 不返回 default 信息（对齐 v1 get_model 返回裸 ModelRead）；当前 v2 router.ts:53-54 给每个 model 挂 is_default_chat/is_default_embedding，GET single 也内联默认标记，与 v1 契约不一致"
+  "models-response-default-shape-must-align-v1","Models response MUST put defaults on envelope (not inline per-model) for list endpoint","models 列表端点 MUST 把 `defaults.chat`/`defaults.embedding` 放在 envelope 顶层（对齐 v1 api.py:42-43 与 96-97），GET single 不返回 default 信息（对齐 v1 get_model 返回裸 ModelRead）；当前 v2 router.ts:53-54 给每个 model 挂 isDefaultChat/isDefaultEmbedding，GET single 也内联默认标记，与 v1 契约不一致"
   "qa-export-endpoint",API MUST provide QA export endpoint,系统 MUST 提供 QA 导出端点支持 markdown 和 json 两种格式
-  "qa-sse-done-shape",QA done SSE event MUST include evidence and context fields,QA 流式 done 事件 MUST 包含 evidence 和 context 和 created_at 字段
+  "qa-sse-done-shape",QA done SSE event MUST include evidence and context fields,QA 流式 done 事件 MUST 包含 evidence 和 context 和 createdAt 字段
   "qa-response-confidence-field","QA non-streaming response MUST include confidence and evidence",QA 非流式响应 MUST 在 body 中包含 confidence 和 evidence 字段
   "research-resume-infer-state",Resume MUST infer state from persisted steps,research resume 端点 MUST 通过检查已持久化的 steps 推断恢复状态和迭代号，而非强制从头重跑
   "research-control-actions-record-steps",Control endpoints MUST record steps and resume,research 的 approve/modify/skip/finish/cancel 端点 MUST 记录对应的 user_input step 并确保后台 resume
@@ -39,7 +39,7 @@ requirements[39]{req_id,title,statement}:
   "research-sse-named-events",Research SSE MUST emit named events,"research 流式端点 MUST 发送带 event: 字段的命名 SSE 事件"
   "error-envelope-actually-emitted-by-routes","Server routes MUST emit the ErrorEnvelope shape not ad-hoc error objects","All non-SSE error responses MUST return the ErrorEnvelope shape defined in packages/shared (errorCode plus message plus optional details plus optional retryAfter). MUST NOT return ad-hoc shapes such as {error: string}."
   "shared-error-envelope-helper","Server MUST provide a shared error-response helper consuming ErrorEnvelopeSchema","The system MUST provide a shared helper (sendError) that consumes ErrorEnvelopeSchema and centralizes HTTP status to errorCode mapping. Feature routers MUST return errors via this helper."
-  "slides-config-schema-options-must-be-complete",SLIDES tool config_schema MUST expose all config axes with options and defaults,当 SLIDES 工具在 `/v1/workspace/tools` 响应中可用时，其 `config_schema` MUST 返回完整的 options 列表（每个 option 含 id/label/is_default）与 defaults 对象，MUST NOT 省略任一配置轴（quantity/audience/structure/tone/language/density/theme_preset）。这强化 r20 的既有 MUST：当前 v2 workspace router 的 SLIDES tool 不返回 config_schema，前端无法驱动配置 UI。
+  "slides-config-schema-options-must-be-complete",SLIDES tool configSchema MUST expose all config axes with options and defaults,当 SLIDES 工具在 `/v1/workspace/tools` 响应中可用时，其 `configSchema` MUST 返回完整的 options 列表（每个 option 含 id/label/isDefault）与 defaults 对象，MUST NOT 省略任一配置轴（quantity/audience/structure/tone/language/density/themePreset）。这强化 r20 的既有 MUST：当前 v2 workspace router 的 SLIDES tool 不返回 configSchema，前端无法驱动配置 UI。
   r284,CitationSchema SSOT is camelCase in packages/shared,packages/shared 的 CitationSchema MUST 以 camelCase 字段作为 Zod SSOT，并驱动 OpenAPI/eden 类型；服务端序列化与前端消费 MUST 直接使用该 schema 推断类型，不得并行维护一套 snake_case Citation 线类型。
   r285,"HTTP JSON wire fields MUST be camelCase end-to-end",除 URL path 与 SSE event 名称外，对外 HTTP/SSE JSON（请求体、查询参数键、响应体、流式 done/error data）的字段名 MUST 为 camelCase，并以 packages/shared Zod 为 SSOT；MUST NOT 再使用 notebook_id/source_ids/created_at/error_code 等 snake_case wire 别名。DB 列名不受本要求约束。
 scenarios[49]{req_id,id,given,when,then,feature}:
@@ -51,34 +51,34 @@ scenarios[49]{req_id,id,given,when,then,feature}:
   r218,"health-stays-accessible-while-guardrails-are-enabled","",运维启用 guardrails（非本地暴露或显式 enabled）,`/health` 与 `/health/dependencies` SHALL 仍可匿名访问,true
   r244,"stable-error-semantics-for-ownership-and-validation","",请求引用了不存在或不属于当前 notebook 的 session/message,系统 SHALL 以稳定的 404/400 语义响应,true
   r262,"list-messages-returns-plain-assistant-content","",客户端调用 messages 列表端点获取某条 assistant 消息,响应中的 `content` SHALL 仅包含回答文本,true
-  r273,"ui-state-snapshot-restores-a-session","",客户端请求 `/ui/state`,系统 SHALL 返回该 session 当前的完整 `shared_state` snapshot 与 revision,true
+  r273,"ui-state-snapshot-restores-a-session","",客户端请求 `/ui/state`,系统 SHALL 返回该 session 当前的完整 `sharedState` snapshot 与 revision,true
   r273,"ui-event-endpoint-is-revision-aware-and-idempotent","",客户端向 `/ui/event` 发送带 `clientRequestId` 与 `baseRevision` 的 `ui.v1.event`,系统 SHALL 做幂等处理与 revision 冲突检查,true
   r280,"commands-endpoint-returns-command-list","",客户端请求 `GET /v1/commands`,系统 SHALL 返回命令列表,true
   r63,"list-includes-built-in-and-custom","","客户端请求 `GET /v1/prompt-presets`","返回列表 SHALL 同时包含 `source=\"builtin\"` 与 `source=\"custom\"` 项（如存在）",true
   r63,"creating-a-preset-returns-409-on-conflicts","","客户端创建一个 trigger 与 built-in 或已存在 custom 冲突的 preset",系统 SHALL 返回 409,true
-  r63,"updating-deleting-missing-preset-returns-404","",客户端更新或删除一个不存在的 `preset_id`,系统 SHALL 返回 404,true
-  r69,"qa-non-stream-respects-prompt-directive","","客户端调用 `/v1/notebooks/{notebook_id}/qa` 且 `question` 以 `/prompt:` 开头",系统 SHALL 在不改变 `/v1` payload 字段形状的前提下解析指令并选择对应 preset,true
-  r69,"qa-stream-respects-prompt-directive","","客户端调用 `/v1/notebooks/{notebook_id}/qa/stream` 且 `question` 以 `/prompt:` 开头",系统 SHALL 解析指令并在 stream 中保持 `chunk|done|error` 的最小事件集语义稳定,true
+  r63,"updating-deleting-missing-preset-returns-404","",客户端更新或删除一个不存在的 `presetId`,系统 SHALL 返回 404,true
+  r69,"qa-non-stream-respects-prompt-directive","","客户端调用 `/v1/notebooks/{notebookId}/qa` 且 `question` 以 `/prompt:` 开头",系统 SHALL 在不改变 `/v1` payload 字段形状的前提下解析指令并选择对应 preset,true
+  r69,"qa-stream-respects-prompt-directive","","客户端调用 `/v1/notebooks/{notebookId}/qa/stream` 且 `question` 以 `/prompt:` 开头",系统 SHALL 解析指令并在 stream 中保持 `chunk|done|error` 的最小事件集语义稳定,true
   r73,"qa-stream-emits-minimal-event-set","",客户端使用 `/qa/stream` 发起问答,stream SHALL 至少包含 `chunk|done|error` 事件并保持字段语义稳定,true
   r73,"qa-stream-carries-shared-ui-state-updates","",客户端使用 `/qa/stream` 发起问答且该回答包含交互 UI,stream SHALL 保持 `chunk|done|error` 的最小事件集稳定,true
   r75,"citation-stays-camelcase-under-c65",c65 全局 camelCase 已生效,读取 QA citations,citation 字段 SHALL 仍为 sourceId/sourceName/chunkId 等 camelCase,true
   r77,"fetch-citation-context","",客户端请求某 citation 的上下文,系统 SHALL 返回片段前后文（或等价上下文）与页码/段落等元信息（如可用）,true
-  r78,"export-includes-citation-list","",用户导出 QA 或某个 Output,导出结果 SHALL 包含引用清单与可定位信息（source_id 或可解析来源标识）,true
+  r78,"export-includes-citation-list","",用户导出 QA 或某个 Output,导出结果 SHALL 包含引用清单与可定位信息（sourceId 或可解析来源标识）,true
   r79,"tools-endpoint-stays-compatible-while-tool-set-is-dynamic","",前端依赖 `/v1/workspace/tools` 获取工具列表,系统 SHALL 保持端点可用且字段语义稳定,true
   r17,"disabled-plugin-removes-tool-but-yields-diagnostics","",某输出类型插件被禁用或加载失败,tools 列表 SHALL 不包含该 tool,true
   r17,"missing-or-ambiguous-slides-plugin-removes-tool-and-yields-d","",系统未加载任何可生效的 slides workflow plugin，或同时发现多个候选但未能唯一确定 active plugin,tools 列表 SHALL 不包含 `SLIDES`,true
   r18,"client-renders-missing-capability-hints","",客户端收到 tools 响应,客户端 SHALL 能定位到缺失/禁用/未安装的插件条目,true
-  r19,"tools-response-includes-optional-frontend-bundle","",客户端请求 `/v1/workspace/tools`,每个 tool 对象 MAY 包含 `frontend_bundle`,true
-  r20,"studio-ui-renders-from-tools-list-only","",客户端请求 `/v1/workspace/tools`,返回的每个 tool SHALL 包含其 `config_schema`（若该 tool 支持配置）,true
-  r20,"slides-config-is-derived-from-tools-response-only","",客户端请求 `/v1/workspace/tools`,`SLIDES` tool（若存在） SHALL 在其 `config_schema` 中返回完整配置语义,true
-  r21,"config-endpoint-matches-config-schema","","客户端请求 `/v1/workspace/tools/{tool_id}/config`",返回的选项集合与默认值语义 SHALL 与对应 tool 的 `config_schema` 一致,true
+  r19,"tools-response-includes-optional-frontend-bundle","",客户端请求 `/v1/workspace/tools`,每个 tool 对象 MAY 包含 `frontendBundle`,true
+  r20,"studio-ui-renders-from-tools-list-only","",客户端请求 `/v1/workspace/tools`,返回的每个 tool SHALL 包含其 `configSchema`（若该 tool 支持配置）,true
+  r20,"slides-config-is-derived-from-tools-response-only","",客户端请求 `/v1/workspace/tools`,`SLIDES` tool（若存在） SHALL 在其 `configSchema` 中返回完整配置语义,true
+  r21,"config-endpoint-matches-config-schema","","客户端请求 `/v1/workspace/tools/{toolId}/config`",返回的选项集合与默认值语义 SHALL 与对应 tool 的 `configSchema` 一致,true
   "models-list-must-return-providers-envelope","read-providers",前端读 GET /models 响应的 providers 字段,系统返回 models list,envelope SHALL 含 providers 字段（与 v1 一致）,true
   "models-must-filter-by-provider-availability","unconfigured-provider-model",某 model 的 provider 未配置,系统返回 models list / GET single,该 model SHALL 不出现在 list；GET single SHALL 404,true
-  "sessions-convert-must-honor-message-ids","convert-subset","客户端传 message_ids=[1,3] 转换","系统执行 convert-to-source/output",SHALL 仅转换消息 1 与 3；缺失 id → 404,true
+  "sessions-convert-must-honor-message-ids","convert-subset","客户端传 messageIds=[1,3] 转换","系统执行 convert-to-source/output",SHALL 仅转换消息 1 与 3；缺失 id → 404,true
   "sessions-convert-text-format-must-align-v1","convert-text-format",用户转换 session 为 source/output,系统生成文本,"source 用中文角色标签 + \\n\\n；output 用 raw 文本（与 v1 一致）",true
-  "models-response-default-shape-must-align-v1","defaults-envelope",前端读 GET /models 的默认 model,系统返回 list,default_chat/default_embedding SHALL 在 envelope 顶层（非每 model 内联）,true
-  "qa-export-endpoint","markdown-export",一个 session 有 assistant 回答,客户端请求 GET /v2/qa/export?session_id=X&format=markdown,"系统 SHALL 返回 text/markdown 内容含 question/answer/citations 三段结构及 Content-Disposition header",true
-  "qa-sse-done-shape","done-event-fields",QA 流式完成,done 事件发出,事件 payload SHALL 包含 evidence 和 context 和 created_at 和 confidence 和 citations 和 message_id,true
+  "models-response-default-shape-must-align-v1","defaults-envelope",前端读 GET /models 的默认 model,系统返回 list,`defaults.chat`/`defaults.embedding` SHALL 在 envelope 顶层（非每 model 内联）,true
+  "qa-export-endpoint","markdown-export",一个 session 有 assistant 回答,客户端请求 GET /v2/qa/export?sessionId=X&format=markdown,"系统 SHALL 返回 text/markdown 内容含 question/answer/citations 三段结构及 Content-Disposition header",true
+  "qa-sse-done-shape","done-event-fields",QA 流式完成,done 事件发出,事件 payload SHALL 包含 evidence 和 context 和 createdAt 和 confidence 和 citations 和 messageId,true
   "qa-response-confidence-field","non-streaming-response",客户端发送非流式 QA 请求,响应返回,响应 body SHALL 包含 confidence 和 evidence 字段,true
   "research-resume-infer-state","resume-after-search",研究在第 2 轮搜索后中断,用户调 resume,系统 SHALL 推断 SEARCHING 状态和 iteration=2，从断点恢复而非重跑,true
   "research-control-actions-record-steps","skip-action",研究在 WAITING_USER 等待用户决策,用户调 skip,系统 SHALL 记录 skip step 并推进 iteration 然后恢复,true

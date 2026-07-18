@@ -6,8 +6,8 @@ requirements[12]{req_id,title,statement}:
   r38,Output payload is modeled as discriminated union,前端 MUST 以 `output.type` 作为判别字段建模 payload，保证类型 narrowing 可用；当输出类型来自插件且客户端未知时，类型系统 MUST 提供一个 “unknown/other” 分支以避免编译期与运行期崩溃。
   r96,Runtime decode provides safe fallback,运行时 decoder/guard MUST 在 shape 不匹配时回退到 raw/unknown 渲染，不得崩溃。
   r133,GenericOutputRenderer supports canonical layouts,通用渲染器 MUST 支持规范布局类型与字段描述符递归渲染。
-  r169,RenderDescriptor contract is stable,workspace tools 返回的 `render_descriptor`/`config_schema` 字段语义 MUST 稳定。
-  r202,Rendering priority is deterministic,"渲染优先级 MUST 为 `frontend_bundle renderer > GenericOutputRenderer > Raw JSON`： - `frontend_bundle renderer`：由后端在 `/v1/workspace/tools` 返回的 `frontend_bundle` 声明驱动加载与渲染 - `GenericOutputRenderer`：由后端返回的 `render_descriptor` 驱动的声明式渲染 - `Raw JSON`：最终安全回退"
+  r169,RenderDescriptor contract is stable,workspace tools 返回的 `renderDescriptor`/`configSchema` 字段语义 MUST 稳定。
+  r202,Rendering priority is deterministic,"渲染优先级 MUST 为 `frontendBundle renderer > GenericOutputRenderer > Raw JSON`： - `frontendBundle renderer`：由后端在 `/v1/workspace/tools` 返回的 `frontendBundle` 声明驱动加载与渲染 - `GenericOutputRenderer`：由后端返回的 `renderDescriptor` 驱动的声明式渲染 - `Raw JSON`：最终安全回退"
   "outputs-response-contract",POST outputs MUST return OutputRead contract,POST /v2/outputs MUST 返回 camelCase OutputRead 实体（id/notebookId/type/prompt/chunkIds/content/createdAt/updatedAt），与 packages/shared Zod / c65 wire 一致；MUST NOT 返回 snake_case 或裸 PipelineResult
   "outputs-export-fields",Export JSON citations and sources MUST match camelCase wire,"GET /outputs/:id/export?format=json 的 citations MUST 包含 chunkIndex/pageNumber/paragraphIndex/score；sources MUST 使用 {sourceId,sourceName,mimeType,parserType} 字段名"
   "outputs-error-mapping",Output generation errors MUST map to granular HTTP codes,输出生成错误 MUST 映射到细分 HTTP 状态码：model 不可用→503、schema 校验失败→422、值错误→400，MUST NOT 统一返回 500
@@ -19,9 +19,9 @@ scenarios[13]{req_id,id,given,when,then,feature}:
   r38,"type-narrowing-supports-unknown-plugin-output-types","",前端收到一个带有未知 `output.type` 的输出 payload（未在客户端枚举/联合类型中声明）,系统 SHALL 将其归入 unknown 分支并进入安全降级渲染路径,true
   r96,"unknown-output-shape-does-not-crash-ui","",输出 payload 的 shape 与预期类型不匹配,系统 SHALL 回退到 raw/unknown 渲染并保持 UI 不崩溃,true
   r133,"render-canonical-layout","",输出使用规范布局与字段描述符,GenericOutputRenderer SHALL 能递归渲染该布局,true
-  r169,"tool-schemas-remain-compatible","",前端基于 `render_descriptor`/`config_schema` 渲染工具输出,字段语义 SHALL 保持稳定以避免客户端漂移,true
-  r202,"renderer-selection-follows-priority","",某输出类型同时存在 `frontend_bundle` 与 `render_descriptor`,系统 SHALL 优先选择 `frontend_bundle` 对应的专用渲染器,true
-  r202,"unsupported-or-broken-bundle-falls-back-safely","",`frontend_bundle` 的 `api_version` 不受支持，或 bundle 加载/导出解析失败,系统 SHALL 回退到 `render_descriptor` 驱动的通用渲染器（若存在）,true
+  r169,"tool-schemas-remain-compatible","",前端基于 `renderDescriptor`/`configSchema` 渲染工具输出,字段语义 SHALL 保持稳定以避免客户端漂移,true
+  r202,"renderer-selection-follows-priority","",某输出类型同时存在 `frontendBundle` 与 `renderDescriptor`,系统 SHALL 优先选择 `frontendBundle` 对应的专用渲染器,true
+  r202,"unsupported-or-broken-bundle-falls-back-safely","",`frontendBundle` 的 `apiVersion` 不受支持，或 bundle 加载/导出解析失败,系统 SHALL 回退到 `renderDescriptor` 驱动的通用渲染器（若存在）,true
   "outputs-response-contract","post-returns-output-read",客户端 POST 创建 output,请求成功,系统 SHALL 返回 camelCase OutputRead（含 id/notebookId/createdAt 等字段）,true
   "outputs-export-fields","json-export-citations",客户端请求 format=json 导出,导出构建,citations SHALL 含 chunkIndex/pageNumber/paragraphIndex/score 且 sources 用 sourceId/sourceName/mimeType/parserType,true
   "outputs-error-mapping","model-unavailable",配置的 model 不可用,生成阶段,系统 SHALL 返回 503 而非 500,true
