@@ -17,7 +17,7 @@ type WorkspacePanelShellProps = {
   headerExtras?: ReactNode;
   errorTitle: string;
   errorDescription: string;
-  sectionRef?: RefObject<HTMLElement | null>;
+  sectionRef?: RefObject<HTMLElement>;
   children: ReactNode;
 };
 
