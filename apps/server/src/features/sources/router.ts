@@ -6,6 +6,7 @@ import {
   SourceSchema,
   SourceSearchRequestSchema,
   SourceTagBindingRequestSchema,
+  SourceTagBindingResponseSchema,
   SourceTagCreateSchema,
   SourceUploadQuerySchema,
 } from '@crystalith/shared';
@@ -496,7 +497,6 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       const tid = requirePositiveIntId(params.tid, 'tag id');
       const { sourceIds } = body;
       // c53: per-item diagnostics (v1 api_tags.py:142-185 SourceBatchItemResult).
-      // Was: silent continue on missing source + only counts returned.
       const results: Array<{
         sourceId: number;
         ok: boolean;
@@ -533,7 +533,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       if (applied > 0) bumpSourcesEpoch(nid);
       return { tagId: tid, sourceIds, applied, skipped, results };
     },
-    { body: SourceTagBindingRequestSchema },
+    { body: SourceTagBindingRequestSchema, response: SourceTagBindingResponseSchema },
   )
 
   .delete(
@@ -552,6 +552,15 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       let removed = 0;
       let skipped = 0;
       for (const sid of sourceIds) {
+        const src = db()
+          .select({ id: sources.id })
+          .from(sources)
+          .where(and(eq(sources.id, sid), eq(sources.notebookId, nid)))
+          .get();
+        if (!src) {
+          results.push({ sourceId: sid, ok: false, errorCode: 'SOURCE_NOT_FOUND' });
+          continue;
+        }
         const existing = db()
           .select()
           .from(sourceTagMap)
@@ -573,7 +582,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       if (removed > 0) bumpSourcesEpoch(nid);
       return { tagId: tid, sourceIds, removed, skipped, results };
     },
-    { body: SourceTagBindingRequestSchema },
+    { body: SourceTagBindingRequestSchema, response: SourceTagBindingResponseSchema },
   )
 
   // Get source chunks
