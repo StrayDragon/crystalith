@@ -166,10 +166,9 @@ export function formatStructuredOutputForCopy(output: OutputItem): string {
           const lines: string[] = [];
           lines.push(module.title || '模块');
           lines.push(`目标：${module.objective?.text || '暂无目标'}`);
-          if (Array.isArray(module.key_points)) {
-            lines.push(
-              ...module.key_points.map((item) => formatOutputLine(`- ${item.text || '要点'}`, 0)),
-            );
+          const keyPoints = module.keyPoints ?? module.key_points;
+          if (Array.isArray(keyPoints)) {
+            lines.push(...keyPoints.map((item) => formatOutputLine(`- ${item.text || '要点'}`, 0)));
           }
           return lines.join('\n');
         })

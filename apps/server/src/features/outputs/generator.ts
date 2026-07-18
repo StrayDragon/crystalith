@@ -47,8 +47,7 @@ export interface OutputMeta {
 
 // ---------------------------------------------------------------------------
 // Render descriptors — tell frontend how to render each output type.
-// Option keys and itemSchema are camelCase on the wire (c65).
-// Field `key` values still match content-schema property names (e.g. key_points).
+// Option keys, itemSchema, and content field keys are camelCase on the wire (c65+).
 // ---------------------------------------------------------------------------
 
 const RENDER_DESCRIPTORS: Record<string, RenderDescriptor> = {
@@ -69,7 +68,7 @@ const RENDER_DESCRIPTORS: Record<string, RenderDescriptor> = {
       fields: [
         { key: 'title', type: 'heading', label: '模块' },
         { key: 'objective', type: 'text', label: '目标' },
-        { key: 'key_points', type: 'list', label: '要点' },
+        { key: 'keyPoints', type: 'list', label: '要点' },
       ],
     },
     options: { itemsKey: 'modules' },

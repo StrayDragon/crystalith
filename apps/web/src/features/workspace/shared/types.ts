@@ -30,6 +30,7 @@ export interface GuideOutputContent extends OutputContentBase {
   modules: Array<{
     title?: string | null;
     objective?: { text?: string | null } | null;
+    keyPoints?: Array<{ text?: string | null }> | null;
     key_points?: Array<{ text?: string | null }> | null;
   }>;
 }
