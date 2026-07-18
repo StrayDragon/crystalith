@@ -25,7 +25,7 @@ export function parseSseBlock(block: string): SseEvent | null {
   const dataLines: string[] = [];
 
   for (const raw of lines) {
-    const line = raw.replace(/\r$/, '');
+    const line = raw.replace(/\r$/u, '');
     if (!line || line.startsWith(':')) continue;
 
     if (line.startsWith('event:')) {
@@ -115,7 +115,7 @@ export async function* streamRequest(
 
       buffer += decoder.decode(value, { stream: true });
       // SSE events are delimited by a blank line (\n\n)
-      const parts = buffer.split(/\n\n/);
+      const parts = buffer.split(/\n\n/u);
       buffer = parts.pop() ?? '';
 
       for (const part of parts) {

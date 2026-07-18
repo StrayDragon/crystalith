@@ -106,7 +106,7 @@ export default function WorkspaceHeader({
   const [autoNotebookHintDismissedFor, setAutoNotebookHintDismissedFor] = useState<number | null>(
     readAutoNotebookHintDismissedFor,
   );
-  const notebookSearchRef = useRef<HTMLInputElement | null>(null);
+  const notebookSearchRef = useRef<HTMLInputElement>(null);
   const { theme, setTheme } = useTheme();
 
   const autoNotebookTitle = useMemo(() => {

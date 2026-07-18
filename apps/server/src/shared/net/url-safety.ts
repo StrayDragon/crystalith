@@ -41,6 +41,26 @@ export class SsrfBlockedError extends Error {
 
 const BLOCKED_IP4_ADDRS = new Set(['169.254.169.254', '0.0.0.0', '255.255.255.255']);
 
+/** Cap DNS wait so SSRF checks cannot hang forever on broken resolvers. */
+const DNS_LOOKUP_TIMEOUT_MS = 5_000;
+
+async function lookupHostIps(host: string): Promise<{ address: string }[]> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      dnsLookup(host, { all: true, family: 4 }),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`DNS lookup timed out after ${DNS_LOOKUP_TIMEOUT_MS}ms`)),
+          DNS_LOOKUP_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
 /** Check whether an IP address (v4 or v6) should be blocked. */
 function isBlockedIp(ip: string): boolean {
   // Block well-known metadata endpoints and broadcast addresses.
@@ -148,7 +168,7 @@ export async function validateUrlForFetch(url: string, policy?: SsrfPolicy): Pro
   // 5. hostname: DNS resolve and check each IP.
   let records: { address: string }[];
   try {
-    records = await dnsLookup(host, { all: true, family: 4 });
+    records = await lookupHostIps(host);
   } catch (error) {
     // DNS failure: in allowlist-only mode a host that matches the host/domain
     // allowlist is permitted (its IPs are unknowable); otherwise block.

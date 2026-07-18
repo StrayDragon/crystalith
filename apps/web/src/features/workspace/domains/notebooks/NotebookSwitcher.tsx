@@ -36,7 +36,7 @@ interface NotebookSwitcherProps {
   isLoading: boolean;
   error: string;
   isConnected: boolean;
-  searchInputRef?: RefObject<HTMLInputElement | null>;
+  searchInputRef?: RefObject<HTMLInputElement>;
   createName: string;
   createState: AsyncStatus;
   createError: string;

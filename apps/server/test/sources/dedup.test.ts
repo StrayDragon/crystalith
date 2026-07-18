@@ -85,17 +85,17 @@ describe('canonicalizeUrlForDedup', () => {
 // SSRF validation (async — throws on invalid URLs)
 // ---------------------------------------------------------------------------
 
-// We test validateUrlForFetch with the async API since it resolves DNS.
-// Skipping the full test for now as it requires DNS resolution and private-ip
-// which may behave differently in the test environment.
-// See url-safety.ts for the full implementation.
+// Unit tests avoid live DNS (resolvers may hang offline). Positive path uses a
+// public IP literal; hostname DNS is covered by the timeout + error path in
+// url-safety.ts. See url-safety.ts for the full implementation.
 
 describe('validateUrlForFetch', async () => {
   const { validateUrlForFetch, SsrfBlockedError } =
     await import('../../src/shared/net/url-safety.ts');
 
   it('allows public HTTPS URLs', async () => {
-    await expect(validateUrlForFetch('https://example.com/page')).resolves.toBeUndefined();
+    // 1.1.1.1 is a public unicast IP — no DNS required.
+    await expect(validateUrlForFetch('https://1.1.1.1/page')).resolves.toBeUndefined();
   });
 
   it('blocks file:// scheme', async () => {

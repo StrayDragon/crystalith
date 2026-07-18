@@ -1,8 +1,8 @@
 ---
-name: "llman-sdd-explore"
-description: "进入 llman SDD 探索模式：理清思路、调查需求、分析问题。仅思考，禁止写代码。用于意图不明确或需要分析后再行动的场景。"
+name: 'llman-sdd-explore'
+description: '进入 llman SDD 探索模式：理清思路、调查需求、分析问题。仅思考，禁止写代码。用于意图不明确或需要分析后再行动的场景。'
 metadata:
-  version: "0.0.64"
+  version: '0.0.64'
 ---
 
 # LLMAN SDD Explore
@@ -10,6 +10,7 @@ metadata:
 当用户希望在开始实现之前先理清思路、调查问题或澄清需求时，使用此 skill。
 
 **重要：探索模式只用于思考，不用于实现。**
+
 - 你可以阅读文件、搜索代码、调查代码库。
 - 如果用户需要，你可以创建/更新 llman SDD artifacts（proposal/specs/design/tasks）。
 - 你绝对不能在探索模式下写应用代码或实现功能。
@@ -32,12 +33,14 @@ flowchart LR
 > 📎 如果是小改动（不改行为合约），可直接走 `llman-sdd-quick`（快速路径）
 
 ## 探索姿态
+
 - 好奇而不教条
 - 以真实代码为依据
 - 需要时用 ASCII 图可视化
 - 同时保留多个选项与权衡
 
 ## 建议动作
+
 1. 使用 `llman sdd context --task "<任务>" --paths "<文件>"` 快速定位相关 specs。
    - 阅读 context 的 `direct` 列出的 spec 全文（这些是必须理解的合约）。
    - 如果 context 不可用，运行 `llman sdd index rebuild`（默认 `pageindex`，无需模型）后重试。
@@ -56,17 +59,20 @@ flowchart LR
 > BDD-on（Git-native Partitioned）：feature 分支 + live `.feature`/`spec.toon` 为 SSOT；用 `change attach` 绑定；无 solidify / feature_delta。
 
 ## 退出探索模式
+
 当用户准备开始实现时，根据变更规模选择路径：
+
 - 行为合约变更 → `llman-sdd-propose`（创建提案工件）
 - 小改动 / 不改合约 → `llman-sdd-quick`（快速路径）
 - 已有完整 change 工件 → `llman-sdd-apply`（按 tasks 实施）
-若用户在探索模式中要求你开始实现，STOP 并提醒其先退出探索模式。
+  若用户在探索模式中要求你开始实现，STOP 并提醒其先退出探索模式。
 
 > 💡 探索完成 → 下一步 `llman-sdd-propose`（保单）或 `llman-sdd-quick`（快速路径）
 
 行动前先阅读 `llmanspec/config.yaml`，并遵循其中的 `context` 与 `rules`（若有）。
 
 常用命令：
+
 - `llman sdd context --task "<描述>" --paths "<文件>"`（找相关 specs）。使用 pageindex agentic tree 后端（需 `LLMAN_SDD_INDEX_CHAT_MODEL`）。可用 `LLMAN_SDD_INDEX_BACKEND` 预设。
 - `llman sdd list`（列出变更）
 - `llman sdd list --specs`（列出 specs 及 purpose/scope 元数据）
@@ -86,35 +92,41 @@ flowchart LR
 - `llman sdd graph [CHANGE] [--format mermaid] [--scope active|archived|all] [--depth N]`（生成变更依赖图）
 - `llman sdd project migrate [--kind format|partitioned|legacy-bdd|auto]`（一次性迁移）
 
-
 ## Context
+
 - 执行前先确认当前 change/spec 状态。
 - 优先使用 `llman sdd context --task --paths` 获取相关 specs，而非全量读取或猜测。
 
 ## Goal
+
 - 明确本次命令/skill 要达成的可验证结果。
 
 ## Constraints
+
 - 变更保持最小化且范围明确。
 - 标识符或意图不明确时禁止猜测。
 - 在读取 spec 全文前，先使用 `llman sdd context --task --paths` 获取相关 specs。
 - 判断变更规模后选择路径：行为合约变更走完整 SDD 流程，实现变更走快速路径。
 
 ## Workflow
+
 - 以 `llman sdd` 命令结果为事实来源。
 - 涉及文件/规范变更时执行校验。
 - 首选 `llman sdd context` 获取相关 specs，而非全量读取或猜测。
 - 当 context 不可用时，按错误提示处理（重建 index 或降级到 `list --specs --json`）。
 
 ## Decision Policy
+
 - 高影响歧义必须先澄清。
 - 已知校验错误下禁止强行继续。
 
 ## Output Contract
+
 - 汇总已执行动作。
 - 给出结果路径与校验状态。
 
 ## Ethics Governance
+
 - `ethics.risk_level`：按 `low|medium|high|critical` 标注风险等级。
 - `ethics.prohibited_actions`：列出绝对禁止执行的动作。
 - `ethics.required_evidence`：列出高影响输出前必须具备的证据。

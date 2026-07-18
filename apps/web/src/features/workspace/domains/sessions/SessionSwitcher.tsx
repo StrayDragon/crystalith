@@ -28,7 +28,7 @@ interface SessionSwitcherProps {
   isLoading: boolean;
   error: string;
   isConnected: boolean;
-  searchInputRef: RefObject<HTMLInputElement | null>;
+  searchInputRef: RefObject<HTMLInputElement>;
   onToggle: () => void;
   onClose: () => void;
   onSelect: (sessionId: number | null) => void;

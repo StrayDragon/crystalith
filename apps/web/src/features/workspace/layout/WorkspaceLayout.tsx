@@ -67,9 +67,9 @@ export default function WorkspaceLayout() {
   const canvasRef = useRef<ModularCanvasHandle>(null);
   const [locked, setLocked] = useState(true);
   const [activeWidgetIds, setActiveWidgetIds] = useState<string[]>([]);
-  const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
-  const sessionSearchRef = useRef<HTMLInputElement | null>(null);
-  const uploadFileInputRef = useRef<HTMLInputElement | null>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
+  const sessionSearchRef = useRef<HTMLInputElement>(null);
+  const uploadFileInputRef = useRef<HTMLInputElement>(null);
   const [addSourceFromUrlOpen, setAddSourceFromUrlOpen] = useState(false);
 
   const notebooks = useNotebooks();
