@@ -149,8 +149,8 @@ export function createApp() {
 
       return {
         status: 'ok',
-        generated_at: now,
-        last_probe: now,
+        generatedAt: now,
+        lastProbe: now,
         core: {
           backend: { service: 'api', healthy: true },
           frontend: {
@@ -160,21 +160,21 @@ export function createApp() {
           },
         },
         optional: {
-          storage_chroma: {
+          storageChroma: {
             service: 'Chroma (Vector Store)',
             enabled: opt.chroma.enabled,
             endpoint: opt.chroma.enabled ? opt.chroma.endpoint : null,
             status: opt.chroma.enabled ? 'unknown' : 'disabled',
             healthy: null,
           },
-          cache_redis: {
+          cacheRedis: {
             service: 'Redis (Cache)',
             enabled: false,
             endpoint: null,
             status: 'disabled',
             healthy: null,
           },
-          search_searxng: {
+          searchSearxng: {
             service: 'SearXNG (Search)',
             enabled: opt.searxng.enabled,
             endpoint: opt.searxng.enabled ? opt.searxng.endpoint : null,

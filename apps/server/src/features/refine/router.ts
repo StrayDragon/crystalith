@@ -17,6 +17,7 @@ import { notebooks, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { ErrorCode, sendError } from '../../shared/errors.ts';
+import { requirePositiveIntId } from '../../shared/ids.ts';
 import type { TaskQueue } from '../../shared/queue.ts';
 import { Semaphore } from '../../shared/semaphore.ts';
 import { createStageLimiters } from '../tasks/worker.ts';
@@ -126,11 +127,16 @@ export function refineRouter(taskQueue: TaskQueue) {
       // Single-format refine — via task queue (v1 POST "")
       .post('/refine', async ({ body, set }) => {
         const b = body as Record<string, unknown>;
-        const notebookId = Number(b.notebookId);
+        const notebookId = requirePositiveIntId(b.notebookId, 'notebook id');
 
         // ① notebook existence → 404
         const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
         if (!nb) throw new NotFoundError('Notebook not found');
+
+        const prompt = String(b.prompt ?? '').trim();
+        if (!prompt) {
+          return sendError(set, ErrorCode.INVALID_REQUEST, 'Refine task requires a prompt');
+        }
 
         // ② format + source_ids validation → 400
         let format: RefineFormat;
@@ -152,7 +158,7 @@ export function refineRouter(taskQueue: TaskQueue) {
           notebookId,
           payload: {
             refineInput: {
-              prompt: String(b.prompt),
+              prompt,
               format,
               sourceIds: sourceIds.length ? sourceIds : undefined,
               topK: topK,
@@ -180,7 +186,7 @@ export function refineRouter(taskQueue: TaskQueue) {
       // Batch refine — direct concurrent (v1 POST /batch, NOT via queue)
       .post('/refine/batch', async ({ body, set }) => {
         const b = body as Record<string, unknown>;
-        const notebookId = Number(b.notebookId);
+        const notebookId = requirePositiveIntId(b.notebookId, 'notebook id');
 
         const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
         if (!nb) throw new NotFoundError('Notebook not found');
@@ -201,7 +207,7 @@ export function refineRouter(taskQueue: TaskQueue) {
 
         const topK = Number(b.topK ?? 5);
         const minScore = Number(b.minScore ?? 0.2);
-        const prompt = String(b.prompt).trim();
+        const prompt = String(b.prompt ?? '').trim();
         if (!prompt) {
           return sendError(set, ErrorCode.INVALID_REQUEST, 'Refine task requires a prompt');
         }

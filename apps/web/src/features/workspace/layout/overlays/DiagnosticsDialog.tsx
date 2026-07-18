@@ -173,8 +173,8 @@ export default function DiagnosticsDialog({
               {t('workspace.diagnostics.title')}
             </div>
             <div className="mt-0.5 text-[11px] text-gray-600 dark:text-slate-400">
-              {data?.generated_at
-                ? t('workspace.diagnostics.generated_at', { timestamp: data.generated_at })
+              {data?.generatedAt
+                ? t('workspace.diagnostics.generated_at', { timestamp: data.generatedAt })
                 : t('workspace.diagnostics.description')}
             </div>
           </div>

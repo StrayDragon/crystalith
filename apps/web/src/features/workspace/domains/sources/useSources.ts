@@ -96,8 +96,8 @@ export function useSources() {
 
   const sourceListQuery = useMemo(
     () => ({
-      sort_by: sortBy,
-      sort_order: sortOrder,
+      sortBy,
+      sortOrder,
       tag: tagFilter.trim() || undefined,
     }),
     [sortBy, sortOrder, tagFilter],
@@ -108,8 +108,8 @@ export function useSources() {
       ? [
           'workspace/sources',
           activeNotebookId,
-          sourceListQuery.sort_by,
-          sourceListQuery.sort_order,
+          sourceListQuery.sortBy,
+          sourceListQuery.sortOrder,
           sourceListQuery.tag ?? '',
         ]
       : null,
