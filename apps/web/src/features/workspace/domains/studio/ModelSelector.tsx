@@ -9,9 +9,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../../../api/eden';
 
 interface ModelsListResponse {
-  models: Array<{ id: string; name: string; provider: string; capabilities: string[] }>;
-  default_chat?: string | null;
-  default_embedding?: string | null;
+  models: Array<{
+    id: string;
+    displayName: string;
+    provider: string;
+    capabilities: string[];
+    isDefaultChat?: boolean;
+    isDefaultEmbedding?: boolean;
+  }>;
+  defaults?: {
+    chat?: string | null;
+    embedding?: string | null;
+  };
+  providers?: string[];
 }
 
 export interface ModelSelectorProps {
@@ -88,7 +98,7 @@ export function ModelSelector({
     if (!modelsData) return;
 
     const defaultModel =
-      capability === 'embedding' ? modelsData.default_embedding : modelsData.default_chat;
+      capability === 'embedding' ? modelsData.defaults?.embedding : modelsData.defaults?.chat;
     if (defaultModel) onChange(defaultModel);
   }, [capability, modelsData, onChange, value]);
 

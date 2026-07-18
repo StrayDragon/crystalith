@@ -1,5 +1,5 @@
 import { openapi } from '@elysiajs/openapi';
-import { Elysia } from 'elysia';
+import { Elysia, NotFoundError } from 'elysia';
 
 import { generateAsyncApiDocument } from './asyncapi.ts';
 // Feature routers — each exports an Elysia instance + registers OpenAPI docs
@@ -27,6 +27,7 @@ import { workspaceRouter } from './features/workspace/router.ts';
 import { generateOpenApiDocument, registerApiDoc, type OpenApiRoute } from './openapi.ts';
 import { strategiesRouter } from './rag/router.ts';
 import { getOptionalServices } from './shared/config.ts';
+import { ErrorCode, sendError, AppHttpError } from './shared/errors.ts';
 import { TaskQueue } from './shared/queue.ts';
 
 // ---------------------------------------------------------------------------
@@ -83,6 +84,23 @@ apiDocs.push({
 
 export function createApp() {
   return new Elysia()
+    .onError(({ error, set, code }) => {
+      if (error instanceof AppHttpError) {
+        return sendError(set, error.code, error.message, error.details, error.retryAfter);
+      }
+      // Normalize Elysia NotFoundError / NOT_FOUND into ErrorEnvelope (c65).
+      if (code === 'NOT_FOUND' || error instanceof NotFoundError) {
+        const message =
+          error instanceof Error && error.message ? error.message : 'Resource not found';
+        return sendError(set, ErrorCode.NOT_FOUND, message);
+      }
+      // Validation failures → structured envelope instead of plain text.
+      if (code === 'VALIDATION') {
+        const message =
+          error instanceof Error && error.message ? error.message : 'Request validation failed';
+        return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, message);
+      }
+    })
     .use(
       openapi({
         provider: 'scalar',

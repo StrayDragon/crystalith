@@ -244,9 +244,10 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Streaming QA
-  .post('/qa/stream', async ({ body }) => {
+  .post('/qa/stream', async ({ body, set }) => {
     const {
       question: rawQuestion,
+      content: rawContent,
       notebookId,
       sessionId,
       preset: bodyPreset,
@@ -255,10 +256,17 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       topK,
       minScore,
       sourceIds,
-    } = body as unknown as QaRequest;
+    } = body as unknown as QaRequest & { content?: string };
+
+    // Accept both 'question' (API canonical) and 'content' (parity with /v2/qa)
+    const resolvedQuestion = rawQuestion ?? rawContent;
+    if (!resolvedQuestion) {
+      set.status = 400;
+      return sendError(set, ErrorCode.INVALID_REQUEST, 'question is required');
+    }
 
     // c45: parse /prompt:<preset> directive from question text
-    const { preset, question } = parsePromptDirective(rawQuestion, bodyPreset);
+    const { preset, question } = parsePromptDirective(resolvedQuestion, bodyPreset);
 
     assertQaOwnership({
       notebookId: notebookId,

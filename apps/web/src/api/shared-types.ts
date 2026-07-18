@@ -171,7 +171,7 @@ export interface FieldDescriptor {
 
 export interface RenderDescriptor {
   layout: string;
-  item_schema: { fields: FieldDescriptor[] } | null;
+  itemSchema: { fields: FieldDescriptor[] } | null;
   options: Record<string, unknown>;
 }
 

@@ -561,14 +561,14 @@ export default function GenericOutputRenderer({
 
   const layout = renderDescriptor.layout;
   const options = isRecord(renderDescriptor.options) ? renderDescriptor.options : {};
-  const fields = renderDescriptor.item_schema?.fields ?? [];
+  const fields = renderDescriptor.itemSchema?.fields ?? [];
 
-  const itemsKey = resolveOptionString(options, 'items_key', defaultItemsKey(layout));
+  const itemsKey = resolveOptionString(options, 'itemsKey', defaultItemsKey(layout));
   const ordered = resolveOptionBool(options, 'ordered', false);
 
-  const rootKey = resolveOptionString(options, 'root_key', 'root');
-  const childrenKey = resolveOptionString(options, 'children_key', 'children');
-  const labelKey = resolveOptionString(options, 'label_key', 'label');
+  const rootKey = resolveOptionString(options, 'rootKey', 'root');
+  const childrenKey = resolveOptionString(options, 'childrenKey', 'children');
+  const labelKey = resolveOptionString(options, 'labelKey', 'label');
 
   switch (layout) {
     case 'list':

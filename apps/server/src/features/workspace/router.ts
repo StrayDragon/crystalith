@@ -2,6 +2,7 @@
 //
 // Lists available workspace tools (output types as tools) for the frontend
 // workspace command palette / tool selector. Mirrors v1 `features/workspace/api.py`.
+// Wire fields are camelCase (c65).
 import { Elysia, NotFoundError } from 'elysia';
 
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
@@ -31,21 +32,19 @@ export const workspaceRouter = new Elysia({ prefix: '/v2' })
   .get('/workspace/tools', () => {
     const tools = Object.entries(OUTPUT_META).map(([type, meta]) => ({
       id: type.toLowerCase(),
-      kind: 'output_type',
-      label: meta.display_text,
+      kind: 'outputType',
+      label: meta.displayText,
       description: meta.description,
       tone: meta.tone,
-      output_type: type,
+      outputType: type,
       prompt: meta.prompt,
-      is_tool: meta.is_tool,
+      isTool: meta.isTool,
       enabled: true,
-      // c56: SLIDES tool MUST carry config_schema to drive the frontend config UI
-      // (workspace-api-contract r20). Other output types have no config UI yet.
-      config_schema: type === 'SLIDES' ? buildSlidesConfigSchema() : null,
-      // render_descriptor tells frontend GenericOutputRenderer how to display
+      // c56: SLIDES tool MUST carry configSchema to drive the frontend config UI
+      configSchema: type === 'SLIDES' ? buildSlidesConfigSchema() : null,
+      // renderDescriptor tells frontend GenericOutputRenderer how to display
       // structured output content (FAQ→cards, GUIDE→sections, MINDMAP→tree, etc.)
-      // Without this, frontend falls back to raw JSON. Mirrors v1 plugin.render_descriptor.
-      render_descriptor: meta.render_descriptor,
+      renderDescriptor: meta.renderDescriptor,
     }));
 
     return {
@@ -62,18 +61,17 @@ export const workspaceRouter = new Elysia({ prefix: '/v2' })
     const type = params.id.toUpperCase();
     const meta = OUTPUT_META[type];
     if (!meta) throw new NotFoundError(`Tool ${params.id} not found`);
-    // c56: /tools/:id/config MUST be consistent with the tools list config_schema
-    // (workspace-api-contract r21). SLIDES returns the full SlidesConfigSchema.
+    // c56: /tools/:id/config MUST be consistent with the tools list configSchema
     if (type === 'SLIDES') {
       return {
-        tool_id: params.id,
-        tool_label: meta.display_text,
+        toolId: params.id,
+        toolLabel: meta.displayText,
         ...buildSlidesConfigSchema(),
       };
     }
     return {
-      tool_id: params.id,
-      tool_label: meta.display_text,
+      toolId: params.id,
+      toolLabel: meta.displayText,
       type: meta.type,
       prompt: meta.prompt,
     };
