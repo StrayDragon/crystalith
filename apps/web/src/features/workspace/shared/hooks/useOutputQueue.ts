@@ -25,6 +25,24 @@ type SlidesDraftSnapshot = {
 
 const SLIDES_GENERATE_TIMEOUT_MS = 180000;
 
+/**
+ * Attach AbortSignal to Eden treaty calls when the runtime accepts it.
+ * jsdom's AbortSignal is a different realm from Node/undici `fetch` (Vitest+MSW),
+ * so `new Request(..., { signal })` throws there — omit the signal and rely on
+ * cooperative cancellation (`signal.aborted` / job status checks) instead.
+ */
+function edenFetchOptions(signal?: AbortSignal): { fetch: { signal: AbortSignal } } | undefined {
+  if (!signal) return undefined;
+  try {
+    // Probe realm compatibility (jsdom AbortSignal fails here under Vitest+MSW).
+    const probe = new Request('http://local.invalid/', { signal });
+    void probe;
+    return { fetch: { signal } };
+  } catch {
+    return undefined;
+  }
+}
+
 export interface OutputQueueJob {
   id: string;
   type: OutputTypeId;
@@ -91,10 +109,11 @@ async function runSlidesGenerate(
   const combined = signal != null ? AbortSignal.any([signal, timeout]) : timeout;
 
   const slides = api.v2.studio.slides({ id: slideId });
+  const fetchOpts = edenFetchOptions(combined);
   const { error } =
     stage === 'outline'
-      ? await slides.outline.post(undefined, { fetch: { signal: combined } })
-      : await slides.markdown.post(undefined, { fetch: { signal: combined } });
+      ? await slides.outline.post(undefined, fetchOpts)
+      : await slides.markdown.post(undefined, fetchOpts);
 
   if (error) {
     const rawValue =
@@ -376,9 +395,10 @@ export function useOutputQueue({
             modelId: job.modelId || undefined,
           };
           if (preference) Object.assign(body, { preference });
-          const { data: response, error: createErr } = await api.v2.outputs.post(body, {
-            fetch: { signal: abortController.signal },
-          });
+          const { data: response, error: createErr } = await api.v2.outputs.post(
+            body,
+            edenFetchOptions(abortController.signal),
+          );
           if (createErr)
             throw new Error(
               typeof createErr === 'string'

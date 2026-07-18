@@ -199,8 +199,8 @@ async function runSyncCheck(
       scopeDirectories = normalized.directories;
       scopeFiles = normalized.files;
     } catch (error) {
-      const err = error as Error & { error_code?: string };
-      if (err.error_code !== 'IMPORT_SCOPE_EMPTY') throw error;
+      const err = error as Error & { errorCode?: string };
+      if (err.errorCode !== 'IMPORT_SCOPE_EMPTY') throw error;
     }
   }
 
@@ -346,13 +346,13 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       } catch (error) {
         const err = error as Error & {
           status?: number;
-          error_code?: string;
+          errorCode?: string;
           hint?: string;
           details?: unknown;
         };
         if (err.status) {
           apiError(set, err.status, {
-            errorCode: err.error_code ?? 'SYNC_CHECK_APPLY_FAILED',
+            errorCode: err.errorCode ?? 'SYNC_CHECK_APPLY_FAILED',
             message: err.message,
             ...(err.hint ? { hint: err.hint } : {}),
             ...(err.details ? { details: err.details } : {}),
@@ -376,9 +376,9 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       try {
         normalizeImportScope(scope);
       } catch (error) {
-        const err = error as Error & { status?: number; error_code?: string; hint?: string };
+        const err = error as Error & { status?: number; errorCode?: string; hint?: string };
         apiError(set, err.status ?? 400, {
-          errorCode: err.error_code ?? 'IMPORT_SCOPE_INVALID',
+          errorCode: err.errorCode ?? 'IMPORT_SCOPE_INVALID',
           message: err.message,
           ...(err.hint ? { hint: err.hint } : {}),
         });
