@@ -408,27 +408,27 @@ export default function DiagnosticsDialog({
                         Slides 工作流
                       </div>
                       <div className="mt-0.5 text-[11px] text-gray-700 dark:text-slate-300">
-                        {slidesDiagnostic?.active_plugin_id
-                          ? `active: ${slidesDiagnostic.active_plugin_id}${slidesDiagnostic.engine ? ` · engine: ${slidesDiagnostic.engine}` : ''}`
+                        {(slidesDiagnostic?.activePluginId ?? slidesDiagnostic?.active_plugin_id)
+                          ? `active: ${slidesDiagnostic?.activePluginId ?? slidesDiagnostic?.active_plugin_id}${slidesDiagnostic.engine ? ` · engine: ${slidesDiagnostic.engine}` : ''}`
                           : '当前未激活 slides workflow plugin'}
                       </div>
                     </div>
                     <div
                       className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                         toneForPluginStatus(
-                          slidesDiagnostic?.active_plugin_id
+                          (slidesDiagnostic?.activePluginId ?? slidesDiagnostic?.active_plugin_id)
                             ? 'loaded'
                             : (slidesOfficial?.status ?? 'not_installed'),
                         ).bg
                       } ${
                         toneForPluginStatus(
-                          slidesDiagnostic?.active_plugin_id
+                          (slidesDiagnostic?.activePluginId ?? slidesDiagnostic?.active_plugin_id)
                             ? 'loaded'
                             : (slidesOfficial?.status ?? 'not_installed'),
                         ).text
                       }`}
                     >
-                      {slidesDiagnostic?.active_plugin_id
+                      {(slidesDiagnostic?.activePluginId ?? slidesDiagnostic?.active_plugin_id)
                         ? '可用'
                         : slidesOfficial?.status === 'loaded'
                           ? '待配置'

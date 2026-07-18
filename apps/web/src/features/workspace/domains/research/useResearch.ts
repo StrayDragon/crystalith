@@ -21,8 +21,11 @@ interface SSEPlanEvent {
 interface SSESearchProgressEvent {
   iteration: number;
   data: {
+    resultCount?: number;
     result_count?: number;
+    newResults?: number;
     new_results?: number;
+    queriesExecuted?: number;
     queries_executed?: number;
   };
 }
@@ -42,14 +45,17 @@ interface SSEAnalysisEvent {
 interface SSEReportEvent {
   iteration: number;
   data: {
-    report_length: number;
+    reportLength?: number;
+    report_length?: number;
   };
 }
 
 interface SSEDoneEvent {
   status: string;
-  total_results: number;
-  has_report: boolean;
+  totalResults?: number;
+  total_results?: number;
+  hasReport?: boolean;
+  has_report?: boolean;
 }
 
 interface SSEWaitingEvent {
@@ -98,6 +104,7 @@ export interface ResearchSessionItem {
   status: string;
   currentIteration: number;
   maxIterations: number;
+  resultCount?: number;
   result_count?: number;
   createdAt: string;
   updatedAt: string;
@@ -114,6 +121,7 @@ export interface ResearchSessionDetail {
   finalReport: string | null;
   steps?: Array<{
     type: string;
+    outputData?: Record<string, unknown> | null;
     output_data?: Record<string, unknown> | null;
     iteration: number;
   }>;

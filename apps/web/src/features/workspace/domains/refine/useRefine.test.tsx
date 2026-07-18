@@ -118,7 +118,7 @@ test('normalizes slides tool config schema from workspace tools', async () => {
             skipped: {},
           },
           slides: {
-            active_plugin_id: 'slides-slidev',
+            activePluginId: 'slides-slidev',
             engine: 'slidev',
           },
         },

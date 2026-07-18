@@ -24,9 +24,17 @@ export function normalizeTemplate(raw: any): WorkspaceTemplate {
     isBuiltin: Boolean(raw.isBuiltin),
     createdAt: raw.createdAt ?? '',
     config: {
-      sessionTitles: Array.isArray(configJson.sessionTitles) ? configJson.sessionTitles : [],
+      sessionTitles: Array.isArray(configJson.sessionTitles)
+        ? configJson.sessionTitles
+        : Array.isArray(configJson.session_titles)
+          ? configJson.session_titles
+          : [],
       outputType: (configJson.outputType ?? null) as OutputTypeId | null,
-      sourceTags: Array.isArray(configJson.sourceTags) ? configJson.sourceTags : [],
+      sourceTags: Array.isArray(configJson.sourceTags)
+        ? configJson.sourceTags
+        : Array.isArray(configJson.source_tags)
+          ? configJson.source_tags
+          : [],
     },
   };
 }

@@ -22,7 +22,7 @@ export const pdfParser: Parser = {
     return {
       text: fullText,
       pages: typedPages,
-      metadata: { page_count: typedPages.length },
+      metadata: { pageCount: typedPages.length },
     };
   },
 };

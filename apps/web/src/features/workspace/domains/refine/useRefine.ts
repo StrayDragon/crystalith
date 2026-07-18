@@ -83,7 +83,7 @@ function normalizePreviewDescriptor(
     kind: (d.kind as PreviewDescriptor['kind']) ?? 'external_url',
     service: (d.service as string | null) ?? null,
     url: (d.url as string | null) ?? null,
-    open_in_new_tab: (d.open_in_new_tab as boolean) ?? false,
+    openInNewTab: (d.openInNewTab as boolean) ?? (d.open_in_new_tab as boolean) ?? false,
     meta: (d.meta as Record<string, unknown>) ?? {},
   };
 }

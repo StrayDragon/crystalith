@@ -253,7 +253,7 @@ async function ingestConnectorEntry(
     .set({
       metadata: {
         ...(existing?.metadata as Record<string, unknown> | null | undefined),
-        source_connector: connectorMetadata,
+        sourceConnector: connectorMetadata,
       },
     })
     .where(and(eq(sources.id, result.sourceId), eq(sources.notebookId, notebookId)))
@@ -291,10 +291,10 @@ export async function importSnapshotEntries(
   for (const entry of entries) {
     const connectorMetadata: Record<string, unknown> = {
       connectorId: binding.connectorId,
-      binding_id: binding.id,
+      bindingId: binding.id,
       relativePath: entry.relativePath,
-      snapshot_entry: entry,
-      ...(options?.syncCheckId ? { sync_check_id: options.syncCheckId } : {}),
+      snapshotEntry: entry,
+      ...(options?.syncCheckId ? { syncCheckId: options.syncCheckId } : {}),
     };
 
     const { item, vectorsChanged: changed } = await ingestConnectorEntry(

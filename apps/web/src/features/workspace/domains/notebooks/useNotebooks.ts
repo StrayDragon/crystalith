@@ -198,7 +198,7 @@ export function useNotebooks() {
       try {
         const { data: created, error } = await api.v2.notebooks.post(
           { name: finalName },
-          { query: { template_id: String(templateId) } },
+          { query: { templateId: String(templateId) } },
         );
         if (error)
           throw new Error(

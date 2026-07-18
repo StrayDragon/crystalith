@@ -18,7 +18,9 @@ type SlidesStreamStage = 'outline' | 'markdown';
 type SlidesDraftSnapshot = {
   stage?: string | null;
   status?: string | null;
+  outputId?: number | null;
   output_id?: number | null;
+  errorMessage?: string | null;
   error_message?: string | null;
   markdown?: string | null;
 };
@@ -71,7 +73,10 @@ function hasSlidesStageCompleted(stage: SlidesStreamStage, draft: SlidesDraftSna
   if (stage === 'outline') {
     return draft.stage === 'outline' || draft.stage === 'markdown';
   }
-  return draft.stage === 'markdown' && (draft.output_id != null || Boolean(draft.markdown?.trim()));
+  return (
+    draft.stage === 'markdown' &&
+    (draft.outputId != null || draft.output_id != null || Boolean(draft.markdown?.trim()))
+  );
 }
 
 /** Generate outline/markdown via v2 POST (non-SSE). Replaces v1 EventSource streams. */
@@ -113,7 +118,9 @@ async function runSlidesGenerate(
     );
   const snapshot = draft as SlidesDraftSnapshot;
   if (snapshot.status === 'error') {
-    throw new Error(snapshot.error_message?.trim() || '生成失败，请稍后重试。');
+    throw new Error(
+      (snapshot.errorMessage ?? snapshot.error_message)?.trim() || '生成失败，请稍后重试。',
+    );
   }
   if (!hasSlidesStageCompleted(stage, snapshot)) {
     throw new Error('生成未完成，请稍后重试。');
@@ -373,7 +380,7 @@ export function useOutputQueue({
             type: job.type,
             prompt: job.prompt || undefined,
             sourceIds: job.sourceIds.length ? job.sourceIds : undefined,
-            model_id: job.modelId || undefined,
+            modelId: job.modelId || undefined,
           };
           if (preference) Object.assign(body, { preference });
           const { data: response, error: createErr } = await api.v2.outputs.post(body, {

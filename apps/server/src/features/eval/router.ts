@@ -131,22 +131,26 @@ export const evalRouter = new Elysia({ prefix: '/v2' })
       .all()
       .map((r) => ({
         id: r.id,
-        dataset_id: r.datasetId,
-        strategy_ids: r.strategyIds,
+        datasetId: r.datasetId,
+        strategyIds: r.strategyIds,
         status: r.status,
-        started_at: r.startedAt?.toISOString(),
-        finished_at: r.finishedAt?.toISOString(),
+        startedAt: r.startedAt?.toISOString(),
+        finishedAt: r.finishedAt?.toISOString(),
         summary: r.summary,
       }));
   })
 
   // Run evaluation
   .post('/eval/runs', async ({ body }) => {
-    const { dataset_id, strategy_ids } = body as {
-      dataset_id: number;
-      strategy_ids: string[];
+    const payload = body as {
+      datasetId?: number;
+      dataset_id?: number;
+      strategyIds?: string[];
+      strategy_ids?: string[];
     };
-    const result = await runEval(dataset_id, strategy_ids);
+    const datasetId = payload.datasetId ?? payload.dataset_id;
+    const strategyIds = payload.strategyIds ?? payload.strategy_ids;
+    const result = await runEval(datasetId!, strategyIds!);
     return result;
   });
 

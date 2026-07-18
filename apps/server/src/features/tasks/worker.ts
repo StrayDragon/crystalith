@@ -228,5 +228,5 @@ async function handleDocumentParse(
   const { bumpSourcesEpoch } = await import('../../rag/cache.ts');
   bumpSourcesEpoch(sourceRow.notebookId);
 
-  return { source_id: sourceId, chunk_count: chunked.length, status: 'ready' };
+  return { sourceId, chunkCount: chunked.length, status: 'ready' };
 }

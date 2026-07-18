@@ -361,7 +361,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     return listParsers().map((p) => ({
       id: p.id,
       name: p.name,
-      mime_types: p.mimeTypes,
+      mimeTypes: p.mimeTypes,
       extensions: p.extensions,
     }));
   })
@@ -615,7 +615,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       await strategy.indexSource(id, row.notebookId);
       db().update(sources).set({ status: 'ready' }).where(eq(sources.id, id)).run();
       bumpSourcesEpoch(row.notebookId);
-      return { sourceId: id, re_embedded: true };
+      return { sourceId: id, reEmbedded: true };
     } catch (error) {
       db()
         .update(sources)
@@ -694,7 +694,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       }
     }
     if (deletedIds.length) bumpSourcesEpoch(nid);
-    return { results, deleted_ids: deletedIds, deleted_count: deletedIds.length };
+    return { results, deletedIds, deletedCount: deletedIds.length };
   })
 
   // Batch re-embed sources
@@ -760,10 +760,10 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     if (reembedded.length || failed.length) bumpSourcesEpoch(nid);
     return {
       results,
-      reembedded_ids: reembedded,
-      failed_ids: failed,
-      reembedded_count: reembedded.length,
-      failed_count: failed.length,
+      reembeddedIds: reembedded,
+      failedIds: failed,
+      reembeddedCount: reembedded.length,
+      failedCount: failed.length,
     };
   })
 
@@ -891,7 +891,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         mimeType: 'text/html',
         dedupKey,
       });
-      return { ...result, extracted_by: extracted.extractorUsed, title: extracted.title };
+      return { ...result, extractedBy: extracted.extractorUsed, title: extracted.title };
     } catch {
       // Fallback to raw fetch if extractors all fail.
       // P0-3: use fetchWithRedirectGuard so the initial URL AND every redirect

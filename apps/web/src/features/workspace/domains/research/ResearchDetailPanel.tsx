@@ -27,9 +27,14 @@ import type { ResearchSessionDetail, SSEEvent } from './useResearch';
 
 type ResearchStepResponse = {
   type: string;
+  outputData?: Record<string, unknown> | null;
   output_data?: Record<string, unknown> | null;
   iteration: number;
 };
+
+function stepOutputData(step: ResearchStepResponse): Record<string, unknown> | null | undefined {
+  return step.outputData ?? step.output_data ?? null;
+}
 
 // Typewriter component for streaming text effect
 interface TypewriterTextProps {
@@ -312,9 +317,10 @@ function ResearchDetailPanel({
     if (!session.steps || session.steps.length === 0) return null;
     const planStep = [...session.steps]
       .toReversed()
-      .find((step) => step.type === 'plan' && step.output_data);
-    if (!planStep || !planStep.output_data) return null;
-    const plan = planStep.output_data as {
+      .find((step) => step.type === 'plan' && stepOutputData(step));
+    const planData = planStep ? stepOutputData(planStep) : null;
+    if (!planStep || !planData) return null;
+    const plan = planData as {
       queries?: Array<{ query: string; engine: string; priority: number; reason: string }>;
       reasoning?: string;
     };
@@ -392,10 +398,11 @@ function ResearchDetailPanel({
         const iteration = Number(iterStr);
 
         iterationSteps.forEach((step) => {
-          if (step.type === 'plan' && step.output_data) {
+          const output = stepOutputData(step);
+          if (step.type === 'plan' && output) {
             // Plan step
-            const reasoning = step.output_data.reasoning as string | undefined;
-            const queryItems = step.output_data.queries as Array<{ query: string }> | undefined;
+            const reasoning = output.reasoning as string | undefined;
+            const queryItems = output.queries as Array<{ query: string }> | undefined;
 
             if (reasoning) {
               timeline.push({
@@ -414,10 +421,10 @@ function ResearchDetailPanel({
                 queries: queryItems.map((q) => q.query),
               });
             }
-          } else if (step.type === 'search' && step.output_data) {
+          } else if (step.type === 'search' && output) {
             // Search step
-            const resultCount = step.output_data.result_count as number | undefined;
-            const newResults = step.output_data.new_results as number | undefined;
+            const resultCount = (output.resultCount ?? output.result_count) as number | undefined;
+            const newResults = (output.newResults ?? output.new_results) as number | undefined;
 
             timeline.push({
               type: 'search_complete',
@@ -425,11 +432,13 @@ function ResearchDetailPanel({
               timestamp: timestampCounter++,
               iteration,
             });
-          } else if (step.type === 'analyze' && step.output_data) {
+          } else if (step.type === 'analyze' && output) {
             // Analyze step
-            const coverage = step.output_data.coverage as number | undefined;
-            const summary = step.output_data.summary as string | undefined;
-            const needMore = step.output_data.need_more_search as boolean | undefined;
+            const coverage =
+              (output.coverageEstimate as number | undefined) ??
+              (output.coverage as number | undefined);
+            const summary = output.summary as string | undefined;
+            const needMore = (output.needMore ?? output.need_more_search) as boolean | undefined;
 
             timeline.push({
               type: 'analysis_complete',
@@ -455,9 +464,11 @@ function ResearchDetailPanel({
                 iteration,
               });
             }
-          } else if (step.type === 'summary' && step.output_data) {
+          } else if (step.type === 'summary' && output) {
             // Summary step
-            const reportLength = step.output_data.report_length as number | undefined;
+            const reportLength = (output.reportLength ?? output.report_length) as
+              | number
+              | undefined;
 
             timeline.push({
               type: 'report_complete',
@@ -1149,11 +1160,11 @@ function ResearchDetailPanel({
                         <>
                           已获取{' '}
                           <span className="font-medium text-purple-600">
-                            {searchProgress.result_count}
+                            {searchProgress.resultCount ?? searchProgress.result_count}
                           </span>{' '}
                           条结果，新增{' '}
                           <span className="font-medium text-purple-600">
-                            {searchProgress.new_results}
+                            {searchProgress.newResults ?? searchProgress.new_results}
                           </span>{' '}
                           条
                         </>

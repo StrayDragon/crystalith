@@ -341,7 +341,7 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
         .run();
 
       // c51: emit toolcall before the generation stage (v1 api.py:401)
-      emit('toolcall', { tool: 'slides_generate_outline', slide_id: id });
+      emit('toolcall', { tool: 'slides_generate_outline', slideId: id });
       const outline = await generateOutline(slide, context);
       emit('progress', { stage: 'outline', progress: 90, message: '大纲生成完成' });
       db()
@@ -349,8 +349,8 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
         .set({ outline: outline as Record<string, unknown>, stage: 'outline', status: 'idle' })
         .where(eq(studioSlides.id, id))
         .run();
-      // c51: done payload = {trace_id, slide_id} (v1 api.py:428)
-      emit('done', { trace_id: ctx.trace_id, slide_id: id });
+      // c51: done payload = {traceId, slideId} (v1 api.py:428)
+      emit('done', { traceId: ctx.traceId, slideId: id });
     });
   })
 
@@ -370,7 +370,7 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
         .run();
 
       // c51: emit toolcall before the generation stage (v1 api.py:506)
-      emit('toolcall', { tool: 'slides_generate_markdown', slide_id: id });
+      emit('toolcall', { tool: 'slides_generate_markdown', slideId: id });
       const markdown = await generateMarkdown(slide, context, (delta) => {
         emit('progress', { stage: 'markdown', delta });
       });
@@ -382,8 +382,8 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
         .run();
       writeSlideFile(slide.notebookId, id, markdown);
       syncSlideOutput(slide, markdown);
-      // c51: done payload = {trace_id, slide_id} (v1 api.py:538)
-      emit('done', { trace_id: ctx.trace_id, slide_id: id });
+      // c51: done payload = {traceId, slideId} (v1 api.py:538)
+      emit('done', { traceId: ctx.traceId, slideId: id });
     });
   });
 

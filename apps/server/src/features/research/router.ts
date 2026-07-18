@@ -806,8 +806,8 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
               emit('done', {
                 type: 'done',
                 status: current.status,
-                total_results: (current.aggregatedResults as unknown[] | null)?.length ?? 0,
-                has_report: !!current.finalReport,
+                totalResults: (current.aggregatedResults as unknown[] | null)?.length ?? 0,
+                hasReport: !!current.finalReport,
               });
               closed = true;
               clearInterval(heartbeat);
