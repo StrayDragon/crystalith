@@ -3,7 +3,7 @@
  *
  * Prefer Eden `treaty<App>` inferred types, then `@crystalith/shared`.
  * This file is a shrinking island of types not yet migrated (see `_PROGRESS.md` P1.4).
- * Research session types live in `@crystalith/shared` / Eden — do not re-add here.
+ * Research + workspace tool descriptors removed — do not re-add wire DTOs here.
  */
 
 // biome-ignore lint/suspicious/noExplicitAny: dynamic v2 response shapes
@@ -22,20 +22,6 @@ export interface CitationContextResponse {
   [key: string]: any;
 }
 
-export type Citation = {
-  chunkId: number;
-  sourceId: number;
-  sourceName?: string;
-  text?: string;
-  score?: number;
-  pageNumber?: number | null;
-  paragraphIndex?: number | null;
-  chunkIndex?: number;
-  snippet?: string;
-  // biome-ignore lint/suspicious/noExplicitAny: v2 compat
-  [key: string]: any;
-};
-
 export interface SourceTagRead {
   id: number;
   notebookId: number;
@@ -49,21 +35,8 @@ export interface QaMessage {
   content: string;
 }
 
-export type OutputTypeInput = 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED' | 'SLIDES';
-
-export interface TaskRead {
-  id: number;
-  type: string;
-  status: string;
-  title: string;
-  notebookId: number;
-  createdAt: string;
-  updatedAt: string;
-  error?: string;
-}
-
 // -----------------------------------------------------------------------
-// Source/Extractor types (migrated from api/generated/types.gen.ts)
+// Source/Extractor types (migrated from api/generated/types.gen.ts) — P1.4 sources next
 // -----------------------------------------------------------------------
 
 export type SourceFromUrlMode = 'fetch' | 'link';
@@ -115,54 +88,4 @@ export interface NotebookExtractorsPolicy {
 export interface PatchNotebookExtractorsPolicyRequest {
   enabledExtractors?: string[] | null;
   mode?: 'custom' | 'inherit_global' | null;
-}
-
-export interface FieldDescriptor {
-  key: string;
-  type: string;
-  label: string | null;
-  options?: Record<string, unknown>;
-  children?: FieldDescriptor[];
-}
-
-export interface RenderDescriptor {
-  layout: string;
-  itemSchema: { fields: FieldDescriptor[] } | null;
-  options: Record<string, unknown>;
-}
-
-export interface PreviewDescriptor {
-  type: string;
-  url?: string;
-  label?: string;
-  requires?: string[];
-}
-
-export interface FrontendBundleDescriptor {
-  apiVersion: string;
-  kind: string;
-  id: string;
-  export: string;
-}
-
-export interface PluginConfigSchema {
-  description?: string;
-  preview?: PreviewDescriptor | null;
-  frontendBundle?: FrontendBundleDescriptor | null;
-  [key: string]: unknown;
-}
-
-export interface WorkspaceTool {
-  id: string;
-  kind: string;
-  label: string;
-  description: string;
-  tone?: string;
-  outputType: string;
-  prompt: string;
-  isTool: boolean;
-  enabled: boolean;
-  configSchema?: PluginConfigSchema | null;
-  renderDescriptor?: RenderDescriptor | null;
-  frontendBundle?: FrontendBundleDescriptor | null;
 }

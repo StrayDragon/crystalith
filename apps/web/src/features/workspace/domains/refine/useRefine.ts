@@ -2,14 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
 import { api } from '../../../../api/eden';
-import type {
-  FieldDescriptor as ApiFieldDescriptor,
-  FrontendBundleDescriptor as ApiFrontendBundleDescriptor,
-  PluginConfigSchema as ApiPluginConfigSchema,
-  PreviewDescriptor as ApiPreviewDescriptor,
-  RenderDescriptor as ApiRenderDescriptor,
-  WorkspaceTool as ApiWorkspaceTool,
-} from '../../../../api/shared-types';
 import { useOutputQueue } from '../../shared/hooks/useOutputQueue';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type {
@@ -25,29 +17,31 @@ import type {
 } from '../../shared/types';
 import { collectOutputCitations } from '../../shared/utils';
 
-function normalizeFieldDescriptor(field: ApiFieldDescriptor): FieldDescriptor {
-  const f = field as unknown as Record<string, unknown>;
+/** Wire payloads from Eden `workspace/tools` — normalize into UI types (no shared-types island). */
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function normalizeFieldDescriptor(field: unknown): FieldDescriptor {
+  const f = asRecord(field);
+  const children = Array.isArray(f.children) ? f.children : [];
   return {
     key: f.key as string,
     type: f.type as FieldDescriptor['type'],
     label: (f.label as string | null) ?? null,
-    children: ((f.children ?? []) as unknown as ApiFieldDescriptor[]).map(normalizeFieldDescriptor),
+    children: children.map(normalizeFieldDescriptor),
   };
 }
 
-function normalizeRenderDescriptor(
-  descriptor?: ApiRenderDescriptor | null,
-): RenderDescriptor | null {
+function normalizeRenderDescriptor(descriptor?: unknown | null): RenderDescriptor | null {
   if (!descriptor) return null;
-  const d = descriptor as unknown as Record<string, unknown>;
+  const d = asRecord(descriptor);
   const rawItemSchema = d.itemSchema as Record<string, unknown> | null | undefined;
   return {
     layout: d.layout as RenderDescriptor['layout'],
     itemSchema: rawItemSchema
       ? {
-          fields: ((rawItemSchema.fields as unknown as ApiFieldDescriptor[]) ?? []).map(
-            normalizeFieldDescriptor,
-          ),
+          fields: ((rawItemSchema.fields as unknown[]) ?? []).map(normalizeFieldDescriptor),
         }
       : null,
     options: (d.options as Record<string, unknown>) ?? {},
@@ -71,11 +65,9 @@ function normalizeSlideGenerationDefaults(
   };
 }
 
-function normalizePreviewDescriptor(
-  descriptor?: ApiPreviewDescriptor | null,
-): PreviewDescriptor | null {
+function normalizePreviewDescriptor(descriptor?: unknown | null): PreviewDescriptor | null {
   if (!descriptor) return null;
-  const d = descriptor as unknown as Record<string, unknown>;
+  const d = asRecord(descriptor);
   return {
     kind: (d.kind as PreviewDescriptor['kind']) ?? 'external_url',
     service: (d.service as string | null) ?? null,
@@ -85,9 +77,9 @@ function normalizePreviewDescriptor(
   };
 }
 
-function normalizeConfigSchema(schema?: ApiPluginConfigSchema | null): PluginConfigSchema | null {
+function normalizeConfigSchema(schema?: unknown | null): PluginConfigSchema | null {
   if (!schema) return null;
-  const s = schema as Record<string, unknown>;
+  const s = asRecord(schema);
   return {
     defaults: normalizeSlideGenerationDefaults(
       (s.defaults ?? null) as Record<string, unknown> | null,
@@ -109,15 +101,13 @@ function normalizeConfigSchema(schema?: ApiPluginConfigSchema | null): PluginCon
     topicPlaceholder: (s.topicPlaceholder as string) ?? '',
     supportsTopic: (s.supportsTopic as boolean) ?? false,
     engine: (s.engine as string | null) ?? null,
-    preview: normalizePreviewDescriptor((s.preview as ApiPreviewDescriptor | null) ?? null),
+    preview: normalizePreviewDescriptor(s.preview ?? null),
   };
 }
 
-function normalizeFrontendBundle(
-  bundle?: ApiFrontendBundleDescriptor | null,
-): FrontendBundleDescriptor | null {
+function normalizeFrontendBundle(bundle?: unknown | null): FrontendBundleDescriptor | null {
   if (!bundle) return null;
-  const b = bundle as unknown as Record<string, unknown>;
+  const b = asRecord(bundle);
   return {
     apiVersion: (b.apiVersion as FrontendBundleDescriptor['apiVersion']) ?? 'v1',
     kind: (b.kind as FrontendBundleDescriptor['kind']) ?? 'builtin',
@@ -127,8 +117,8 @@ function normalizeFrontendBundle(
   };
 }
 
-function normalizeTool(tool: ApiWorkspaceTool): WorkspaceTool {
-  const t = tool as unknown as Record<string, unknown>;
+function normalizeTool(tool: unknown): WorkspaceTool {
+  const t = asRecord(tool);
   return {
     id: t.id as string,
     label: t.label as string,
@@ -136,11 +126,9 @@ function normalizeTool(tool: ApiWorkspaceTool): WorkspaceTool {
     tone: t.tone as WorkspaceTool['tone'],
     outputType: t.outputType as WorkspaceTool['outputType'],
     prompt: t.prompt as string,
-    renderDescriptor: normalizeRenderDescriptor(t.renderDescriptor as ApiRenderDescriptor | null),
-    configSchema: normalizeConfigSchema(t.configSchema as ApiPluginConfigSchema | null),
-    frontendBundle: normalizeFrontendBundle(
-      (t.frontendBundle ?? null) as ApiFrontendBundleDescriptor | null,
-    ),
+    renderDescriptor: normalizeRenderDescriptor(t.renderDescriptor ?? null),
+    configSchema: normalizeConfigSchema(t.configSchema ?? null),
+    frontendBundle: normalizeFrontendBundle(t.frontendBundle ?? null),
     badge: (t.badge as string | undefined) ?? undefined,
     enabled: (t.enabled as boolean) !== false,
   };
