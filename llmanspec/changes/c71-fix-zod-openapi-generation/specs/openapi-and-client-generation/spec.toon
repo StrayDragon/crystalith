@@ -1,0 +1,5 @@
+kind: llman.sdd.delta
+ops[1]{op,req_id,title,statement,from,to,name}:
+  add_requirement,"openapi-json-generates-without-crash","OpenAPI JSON MUST generate without crash","加载全部对外 router 后，OpenAPI 文档生成（/openapi.json 或等价 generateOpenApiDocument）MUST 在合理时间内成功完成且 MUST NOT stack overflow / hang。生成结果 MUST 包含关键 path（至少 notebooks、qa、outputs、citations context）。MUST NOT 恢复 api/generated 作为一等 TS client。",null,null,null
+op_scenarios[1]{req_id,id,given,when,then,feature}:
+  "openapi-json-generates-without-crash","openapi-json-smoke","server 已挂载全部对外路由","请求 /openapi.json 或运行文档生成","进程 SHALL 成功返回 OpenAPI 文档且含关键 path，MUST NOT 因 Zod 转换崩溃",false

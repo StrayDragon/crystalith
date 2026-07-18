@@ -1,0 +1,7 @@
+kind: llman.sdd.delta
+ops[2]{op,req_id,title,statement,from,to,name}:
+  add_requirement,"qa-stream-remains-post-with-body","QA stream MUST remain POST with body","交互式 QA SSE（含 notebook 嵌套路径）MUST 使用 POST，并在 body 中携带问题与上下文（sourceIds/策略等）。MUST NOT 要求客户端把大 payload 塞进 query string。",null,null,null
+  add_requirement,"progress-streams-use-get","Existing-resource progress streams MUST use GET","对已存在资源的进度/订阅类 SSE（至少 research session stream、studio slides outline/content stream）MUST 使用 GET .../stream。AsyncAPI/OpenAPI 登记的 method 与 path MUST 与实现一致。",null,null,null
+op_scenarios[2]{req_id,id,given,when,then,feature}:
+  "qa-stream-remains-post-with-body","qa-stream-post","notebook 与 sources 就绪","客户端 POST /v2/notebooks/:nid/qa/stream（或等价 canonical）携带 body","服务端 SHALL 以 SSE 流式返回且 MUST NOT 要求 GET+query 传全文",false
+  "progress-streams-use-get","research-stream-get","research session 已创建","客户端 GET .../research/:id/stream","服务端 SHALL 以 SSE 推送进度且文档 method SHALL 为 GET",false
