@@ -689,7 +689,7 @@ export function useSources() {
           ['convert-to-source'].post()) as any;
         if (coErr) throw coErr;
         await mutate();
-        toast.success(`已转换为来源：${result.filename}（${result.chunk_count} 个分块）`);
+        toast.success(`已转换为来源：${result.filename}（${result.chunkCount} 个分块）`);
       } catch (error) {
         const message = error instanceof Error ? error.message : '转换失败';
         toast.error(`转换失败：${message}`);

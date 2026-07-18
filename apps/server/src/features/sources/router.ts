@@ -399,7 +399,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       .find((t) => t.name.toLowerCase() === rawName.toLowerCase());
     if (existing) {
       return sendError(set, ErrorCode.CONFLICT, 'Tag name already exists', {
-        existing_tagId: existing.id,
+        existingTagId: existing.id,
       });
     }
     const row = db()
@@ -442,7 +442,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       .find((t) => t.id !== tid && t.name.toLowerCase() === rawName.toLowerCase());
     if (conflict) {
       return sendError(set, ErrorCode.CONFLICT, 'Tag name already exists', {
-        existing_tagId: conflict.id,
+        existingTagId: conflict.id,
       });
     }
     db().update(sourceTags).set({ name: rawName }).where(eq(sourceTags.id, tid)).run();

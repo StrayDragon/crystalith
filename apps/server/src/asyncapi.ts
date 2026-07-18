@@ -95,13 +95,14 @@ const RESEARCH_PROGRESS_CHANNEL: AsyncApiChannel = {
     },
     {
       name: 'done',
-      description: 'Research completed with a final report.',
+      description: 'Research completed (or cancelled). Matches runtime SSE done payload.',
       payload: {
         type: 'object',
         properties: {
-          sessionId: { type: 'integer' },
-          final_report: { type: 'string', nullable: true },
-          outputs: { type: 'array', items: { type: 'object' } },
+          type: { type: 'string', const: 'done' },
+          status: { type: 'string' },
+          totalResults: { type: 'integer' },
+          hasReport: { type: 'boolean' },
         },
       },
     },
