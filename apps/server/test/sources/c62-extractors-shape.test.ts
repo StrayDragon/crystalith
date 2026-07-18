@@ -4,14 +4,15 @@ import { describe, expect, it } from 'bun:test';
 import { getDefaultExtractor, listExtractorMetadata } from '../../src/shared/extraction/factory.ts';
 
 describe('c62: listExtractorMetadata field shape', () => {
-  it('each extractor has type, enabled, description, requires_service', () => {
+  it('each extractor has type, enabled, description, requiresService', () => {
     const meta = listExtractorMetadata({});
     for (const e of meta) {
       expect(e.type).toBeDefined();
       expect(typeof e.enabled).toBe('boolean');
       expect(typeof e.description).toBe('string');
       expect(e.description.length).toBeGreaterThan(0);
-      expect(typeof e.requires_service).toBe('boolean');
+      expect(typeof e.requiresService).toBe('boolean');
+      expect(typeof e.displayName).toBe('string');
     }
   });
 
@@ -20,9 +21,9 @@ describe('c62: listExtractorMetadata field shape', () => {
     const readability = meta.find((e) => e.name === 'readability')!;
     const jina = meta.find((e) => e.name === 'jina')!;
     const firecrawl = meta.find((e) => e.name === 'firecrawl')!;
-    expect(readability.requires_service).toBe(false);
-    expect(jina.requires_service).toBe(true);
-    expect(firecrawl.requires_service).toBe(true);
+    expect(readability.requiresService).toBe(false);
+    expect(jina.requiresService).toBe(true);
+    expect(firecrawl.requiresService).toBe(true);
   });
 });
 

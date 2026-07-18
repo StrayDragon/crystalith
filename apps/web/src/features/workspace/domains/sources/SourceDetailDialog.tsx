@@ -217,10 +217,10 @@ export default function SourceDetailDialog({
       .then((response) => {
         const newBrief: SourceBrief = {
           summary: response.summary,
-          keyPoints: response.key_points,
+          keyPoints: response.keyPoints,
           topics: response.topics,
-          wordCount: response.word_count,
-          generatedAt: new Date(response.generated_at),
+          wordCount: response.wordCount,
+          generatedAt: new Date(response.generatedAt),
         };
         briefCache.set(source.id, newBrief);
         setBrief(newBrief);
@@ -356,10 +356,10 @@ export default function SourceDetailDialog({
       .then((response) => {
         const newBrief: SourceBrief = {
           summary: response.summary,
-          keyPoints: response.key_points,
+          keyPoints: response.keyPoints,
           topics: response.topics,
-          wordCount: response.word_count,
-          generatedAt: new Date(response.generated_at),
+          wordCount: response.wordCount,
+          generatedAt: new Date(response.generatedAt),
         };
         briefCache.set(source.id, newBrief);
         setBrief(newBrief);
