@@ -8,13 +8,13 @@ requirements[16]{req_id,title,statement}:
   r146,局部 refinement 与整篇重生成必须有清楚边界,系统 MUST 明确哪些改良请求适合局部完成，哪些必须回到整篇重生成路径。
   r181,局部改良请求必须显式表达变更范围与操作类型,系统 MUST 在局部改良请求中显式表达“作用范围（scope）”与“操作类型（local refinement vs full regeneration）”，避免 API/UI 混淆。
   r213,局部改良必须保留未改动部分并记录改良历史,系统 MUST 在局部改良写回时保留未改动部分的内容稳定，并记录改良动作、范围与时间线，以支持持续打磨与可追溯性。
-  r2a,Refine MUST retrieve via vector search,系统 MUST 在 refine 请求携带 source_ids 时通过向量检索从相关 chunk 获取上下文 并附 citations 返回 而非拼接全部 chunk 文本或接受字面 text 输入
+  r2a,Refine MUST retrieve via vector search,系统 MUST 在 refine 请求携带 sourceIds 时通过向量检索从相关 chunk 获取上下文 并附 citations 返回 而非拼接全部 chunk 文本或接受字面 text 输入
   r240,Refine MUST support three summary formats,系统 MUST 支持 paragraph 段落摘要 与 bullets 要点列表 与 structured 结构化 title/bullets/terms 三种 refine 格式 每种格式有对应的 LLM 指令和后处理
   r258,"Refine MUST support batch multi-format concurrency",系统 MUST 提供 batch refine 端点 一次请求对多个格式并发生成 共享同一检索上下文与 citations
-  r270,Refine MUST validate request bounds,系统 MUST 校验 prompt 非空 与 format 属于允许集合 与 source_ids 为正整数且去重且在 notebook 内存在 与 top_k 在 1 到 20 与 min_score 在 0 到 1 否则返回 400
-  r279,Refine citations MUST include enriched fields,系统 MUST 在 refine 返回的 citations 中包含 source_name(hydrate filename) 与 snippet(先 strip 再截 200 字符) 与 page_number(从 chunk metadata 提取) 与 paragraph_index(从 chunk metadata 提取)
+  r270,Refine MUST validate request bounds,系统 MUST 校验 prompt 非空 与 format 属于允许集合 与 sourceIds 为正整数且去重且在 notebook 内存在 与 topK 在 1 到 20 与 minScore 在 0 到 1 否则返回 400
+  r279,Refine citations MUST include enriched fields,系统 MUST 在 refine 返回的 citations 中包含 sourceName(hydrate filename) 与 snippet(先 strip 再截 200 字符) 与 pageNumber(从 chunk metadata 提取) 与 paragraphIndex(从 chunk metadata 提取)
   r62,Refine context MUST use full text numbered format,"系统 MUST 用完整未截断的 chunk text 构建 LLM context 格式为 N-based 编号的 Source filename chunk index 与 text 块 以空行连接"
-  r68,Refine error handling MUST use correct status codes,系统 MUST 在 notebook 不存在时返回 404 与 format 非法或 source_ids 未知时返回 400 与任务取消时返回 409 与任务失败时返回 500
+  r68,Refine error handling MUST use correct status codes,系统 MUST 在 notebook 不存在时返回 404 与 format 非法或 sourceIds 未知时返回 400 与任务取消时返回 409 与任务失败时返回 500
   "research-report-rich-prompt","Research report MUST use structured 6-section prompt",research report 生成 MUST 使用 v1 结构化 REPORT_SYSTEM_PROMPT（Executive Summary/Background/Key Findings/Analysis/Recommendations/References 六段），MUST NOT 用一行通用 prompt
   "research-ai-failure-fallback",Research MUST have AI failure fallbacks for plan and analyze,"research plan/analyze 失败时 MUST 有 fallback（plan→2-query fallback；analyze→coverage heuristic），MUST NOT 直接中止整个 run"
   "research-waiting-heartbeat",Research SSE MUST emit waiting heartbeat while awaiting approval,research stream 在 status=waiting_user 时 MUST 定期重发 waiting 事件作为心跳，MUST NOT 只发一次
@@ -23,15 +23,15 @@ scenarios[19]{req_id,id,given,when,then,feature}:
   r51,用户查看可改良结果,"",用户打开一个支持 refinement 的结果,系统 SHALL 能标识可被操作的结构单元,true
   r109,用户只重写结果中的一个部分,"",用户对某个结构单元发起改良请求,系统 SHALL 仅对该作用范围执行 refinement,true
   r146,某个改良请求超出局部边界,"",用户请求的改动超出单个结构单元可承载范围,系统 SHALL 引导其进入整篇重生成或更高层改写流程,true
-  r181,用户对某个结构单元发起局部改良,"",用户对某个结构单元发起改良,系统 SHALL 在请求中显式携带作用范围（至少包含目标 unit_id 与动作）,true
+  r181,用户对某个结构单元发起局部改良,"",用户对某个结构单元发起改良,系统 SHALL 在请求中显式携带作用范围（至少包含目标 unitId 与动作）,true
   r213,用户对结果的一个部分进行改良并应用,"",用户对某个结构单元应用局部改良,系统 SHALL 仅更新该作用范围内的内容,true
-  r2a,"refine-with-source-ids",notebook 有已索引的 source 和 chunk,用户发起 refine 请求携带 prompt 和 source_ids,系统 SHALL 向量检索相关 chunk 并附 citations 返回,true
-  r2a,"refine-no-source-ids",用户发起 refine 请求不携带 source_ids,请求到达 refine 端点,系统 SHALL 返回 evidence=false 且 citations 为空,true
+  r2a,"refine-with-source-ids",notebook 有已索引的 source 和 chunk,用户发起 refine 请求携带 prompt 和 sourceIds,系统 SHALL 向量检索相关 chunk 并附 citations 返回,true
+  r2a,"refine-no-source-ids",用户发起 refine 请求不携带 sourceIds,请求到达 refine 端点,系统 SHALL 返回 evidence=false 且 citations 为空,true
   r240,"refine-structured-fallback",structured 格式 LLM 输出非合法 JSON,applyFormat 解析结果,系统 SHALL 回退为 fallback structured 含 title 为 prompt 片段 且 bullets 为 citation snippets,true
   r240,"refine-parse-bullets",bullets 格式 LLM 输出含前导短横线行,parseBullets 逐行处理,系统 SHALL 对每行 strip 加 lstrip 短横线 加 strip 后仅保留非空行 不匹配 圆点 或星号 或数字,true
   r258,"refine-batch-shared-context",用户发起 batch refine 携带多个格式,请求到达 batch 端点,系统 SHALL 仅检索一次并为所有格式共享同一 citations 和 context,true
   r270,"refine-invalid-format",用户提交非法 format 值,请求到达 refine 端点,系统 SHALL 返回 400 Unsupported refine format,true
-  r270,"refine-duplicate-source-ids",用户提交含重复 source_ids,请求到达 refine 端点,系统 SHALL 去重后校验存在性,true
+  r270,"refine-duplicate-source-ids",用户提交含重复 sourceIds,请求到达 refine 端点,系统 SHALL 去重后校验存在性,true
   r279,"refine-citation-snippet-strip",检索到的 chunk text 含首尾空白,构建 citation snippet,系统 SHALL 先 trim 再 slice 0 到 200 字符,true
   r62,"refine-context-full-text",检索返回多个 chunk,构建 LLM context,"系统 SHALL 用完整未截断 text 并以 N-based 编号 Source filename chunk index 格式拼接",true
   r68,"refine-task-cancelled",单格式 refine 任务在队列中被取消,waitForCompletion 抛出 Task cancelled,系统 SHALL 返回 409 Task cancelled,true

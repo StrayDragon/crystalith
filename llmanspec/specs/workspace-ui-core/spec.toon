@@ -30,6 +30,6 @@ scenarios[17]{req_id,id,given,when,then,feature}:
   r281,"no-backend-connection","",前端无法连接后端或连接状态为 error,Workspace SHALL 显示可见的错误提示,true
   r281,"notebook-exists-but-has-no-sources","",当前 notebook 下来源列表为空,Workspace SHALL 引导用户上传文件、从 URL 导入或使用搜索导入,true
   r281,"sources-exist-but-no-session-yet","",当前 notebook 已有来源但尚无可用会话,Workspace SHALL 提供“一键开始会话”的明确入口,true
-  r64,"optional-services-are-degraded","",可选服务（如 chroma/redis/ollama/searxng）处于 degraded/unknown,Workspace SHALL 呈现该状态与 recovery_hint,true
+  r64,"optional-services-are-degraded","",可选服务（如 chroma/redis/ollama/searxng）处于 degraded/unknown,Workspace SHALL 呈现该状态与 recoveryHint,true
   r70,"open-command-palette","",用户触发 Ctrl+K（或等价入口）,系统 SHALL 打开命令面板,true
   r74,"missing-slides-capability-shows-guidance-instead-of-a-broken","",`/v1/workspace/tools` 未返回 `SLIDES`，且 diagnostics / official catalog 提供 slides 相关恢复提示,客户端 SHALL 不渲染可直接打开的 slides 入口,true

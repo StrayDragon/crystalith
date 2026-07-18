@@ -13,7 +13,7 @@ requirements[14]{req_id,title,statement}:
   r268,"Batch operations return per-item results and keep epoch consistent","批量删除、批量 re-embed 与 tag 绑定/解绑 MUST 返回逐项结果并保持 `sources_epoch` 失效语义可预测。"
   r277,Optional source dedup does not silently drop data,系统 MAY 支持来源去重，但在命中去重时 MUST 不得静默丢弃用户导入请求。
   "sources-reembed-requires-failed","Re-embed MUST require FAILED status","POST /sources/:id/re-embed MUST 校验 source 状态为 failed，非 failed MUST 返回 400"
-  "sources-batch-per-item-results","Batch endpoints MUST return per-item results","batch re-embed 和 batch delete MUST 返回 per-item results 数组（含 error_code/message），且 batch delete MUST 使用 DELETE 方法"
+  "sources-batch-per-item-results","Batch endpoints MUST return per-item results","batch re-embed 和 batch delete MUST 返回 per-item results 数组（含 errorCode/message），且 batch delete MUST 使用 DELETE 方法"
   "tag-binding-response-and-ownership",Tag binding MUST return v1 response shape and verify ownership,"tag binding MUST 返回 {count, results:[SourceBatchItemResult]} 结构，且 DELETE binding MUST 校验 source 属于该 notebook"
   "tags-uniqueness-and-ownership",Tag operations MUST enforce uniqueness and notebook ownership,"source tag 的创建和更新 MUST 强制名称唯一性（case-insensitive，返回 409），所有 tag 操作 MUST 校验 tag 属于指定 notebook"
   "tags-assign-idempotent",Tag assign and remove MUST be idempotent,tag 的 assign 和 remove 操作 MUST 验证 source 存在且具备幂等性
@@ -24,7 +24,7 @@ scenarios[14]{req_id,id,given,when,then,feature}:
   r178,"re-embed-recomputes-vectors-without-changing-chunks","","用户对一个来源执行 re-embed",系统 SHALL 使用既有 chunks 重算向量并维护 epoch 一致性,true
   r210,"tags-are-unique-case-insensitively","",用户在同一 notebook 创建 tag `AI` 与 `ai`,系统 SHALL 将其视为冲突并保持大小写不敏感唯一性,true
   r238,"tag-changes-invalidate-list-cache","",用户成功创建/更新/删除/绑定/解绑某个 tag,系统 SHALL bump `sources_epoch` 以使来源列表缓存失效,true
-  r256,"source-ingestion-fails-with-stable-error-code","",某来源导入/解析/索引失败并进入 FAILED 状态,系统 SHALL 返回稳定的 `error_code`,true
+  r256,"source-ingestion-fails-with-stable-error-code","",某来源导入/解析/索引失败并进入 FAILED 状态,系统 SHALL 返回稳定的 `errorCode`,true
   r268,"batch-delete-returns-partial-failures","",用户发起批量删除且其中部分来源不可删除或不存在,系统 SHALL 返回逐项成功/失败结果,true
   r277,"dedup-hit-requires-explicit-user-choice","",系统检测到新导入来源与既有来源 dedup_key 冲突,系统 SHALL 提供“复用既有来源”或“仍创建新来源”的明确选择（或等价机制）,true
   "sources-reembed-requires-failed","reembed-ready-source",source 状态为 ready,"客户端请求 re-embed",系统 SHALL 返回 400 拒绝,true
