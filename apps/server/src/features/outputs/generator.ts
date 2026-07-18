@@ -3,47 +3,16 @@
 // Each output type has its own Zod schema (from shared). generateObject
 // is called with the schema, system prompt, and chunk context.
 import type { LanguageModelV4 } from '@ai-sdk/provider';
-import { OutputContentSchemaByType, type OutputType, type StudioTone } from '@crystalith/shared';
+import {
+  OutputContentSchemaByType,
+  type OutputMeta,
+  type OutputType,
+  type RenderDescriptor,
+} from '@crystalith/shared';
 import { generateObject } from 'ai';
 import type { z } from 'zod';
 
-/**
- * Render field descriptor — tells frontend how to render a field within an
- * output item. Wire fields are camelCase (c65).
- */
-export interface FieldDescriptor {
-  key: string;
-  type: 'heading' | 'text' | 'list' | 'badge' | 'date' | 'tree' | 'citation' | 'code';
-  label: string | null;
-}
-
-/**
- * Render descriptor — tells frontend GenericOutputRenderer how to display a
- * structured output type as visual cards/tree/sections/etc.
- */
-export interface RenderDescriptor {
-  layout: 'cards' | 'list' | 'sections' | 'timeline' | 'table' | 'tree';
-  itemSchema: { fields: FieldDescriptor[] } | null;
-  options: Record<string, unknown>;
-}
-
-/**
- * Metadata for each output type — maps to v1 OutputTypeMeta (camelCase wire).
- */
-export interface OutputMeta {
-  type: OutputType;
-  displayText: string;
-  description: string;
-  tone: StudioTone;
-  prompt: string;
-  isTool: boolean;
-  /**
-   * Render descriptor for frontend GenericOutputRenderer.
-   * When provided, the frontend renders output content as structured visual
-   * elements instead of raw JSON.
-   */
-  renderDescriptor: RenderDescriptor | null;
-}
+export type { OutputMeta, RenderDescriptor };
 
 // ---------------------------------------------------------------------------
 // Render descriptors — tell frontend how to render each output type.

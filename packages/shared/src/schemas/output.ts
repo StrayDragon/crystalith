@@ -253,3 +253,72 @@ export const OutputTypeMetaSchema = z.object({
   isTool: z.boolean(),
 });
 export type OutputTypeMeta = z.infer<typeof OutputTypeMetaSchema>;
+
+// ---------------------------------------------------------------------------
+// Render descriptors — drive GenericOutputRenderer on the web
+// ---------------------------------------------------------------------------
+
+export const RenderLayoutSchema = z.enum([
+  'list',
+  'cards',
+  'tree',
+  'timeline',
+  'sections',
+  'table',
+]);
+export type RenderLayout = z.infer<typeof RenderLayoutSchema>;
+
+export const RenderFieldTypeSchema = z.enum([
+  'text',
+  'heading',
+  'badge',
+  'list',
+  'tree',
+  'date',
+  'citation',
+  'code',
+]);
+export type RenderFieldType = z.infer<typeof RenderFieldTypeSchema>;
+
+export type FieldDescriptor = {
+  key: string;
+  type: RenderFieldType;
+  label: string | null;
+  children?: FieldDescriptor[];
+};
+
+export const FieldDescriptorSchema: z.ZodType<FieldDescriptor> = z.lazy(() =>
+  z.object({
+    key: z.string(),
+    type: RenderFieldTypeSchema,
+    label: z.string().nullable(),
+    children: z.array(FieldDescriptorSchema).optional(),
+  }),
+);
+
+export const ItemSchemaSchema = z.object({
+  fields: z.array(FieldDescriptorSchema),
+});
+export type ItemSchema = z.infer<typeof ItemSchemaSchema>;
+
+export const RenderDescriptorSchema = z.object({
+  layout: RenderLayoutSchema,
+  itemSchema: ItemSchemaSchema.nullable(),
+  options: z.record(z.string(), z.unknown()),
+});
+export type RenderDescriptor = z.infer<typeof RenderDescriptorSchema>;
+
+export const FrontendBundleDescriptorSchema = z.object({
+  apiVersion: z.literal('v1'),
+  kind: z.literal('builtin'),
+  id: z.string(),
+  export: z.string(),
+  meta: z.record(z.string(), z.unknown()).default({}),
+});
+export type FrontendBundleDescriptor = z.infer<typeof FrontendBundleDescriptorSchema>;
+
+/** Full output-type meta including optional renderDescriptor (GET /outputs/types). */
+export const OutputMetaSchema = OutputTypeMetaSchema.extend({
+  renderDescriptor: RenderDescriptorSchema.nullable(),
+});
+export type OutputMeta = z.infer<typeof OutputMetaSchema>;

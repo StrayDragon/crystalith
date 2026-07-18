@@ -201,7 +201,7 @@ function renderFields(
                     key={keyForChildItem(item)}
                     className="rounded-lg border border-gray-200 p-2 dark:border-slate-700"
                   >
-                    {renderFields(item, field.children, { depth: depth + 1 })}
+                    {renderFields(item, field.children ?? [], { depth: depth + 1 })}
                   </div>
                 ))}
                 {fieldValue.length > 20 ? (
@@ -212,7 +212,7 @@ function renderFields(
               </div>
             );
           } else {
-            body = renderFields(fieldValue, field.children, { depth: depth + 1 });
+            body = renderFields(fieldValue, field.children ?? [], { depth: depth + 1 });
           }
         } else {
           switch (field.type) {

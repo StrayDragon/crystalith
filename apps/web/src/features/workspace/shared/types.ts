@@ -113,82 +113,21 @@ export type SlideStage = 'input' | 'outline' | 'markdown';
 export type SlideStatus = 'idle' | 'running' | 'error';
 export type ToolTone = 'slate' | 'blue' | 'green' | 'rose' | 'amber' | 'teal' | 'indigo';
 
-export type RenderLayout = 'list' | 'cards' | 'tree' | 'timeline' | 'sections' | 'table';
-export type RenderFieldType =
-  | 'text'
-  | 'heading'
-  | 'badge'
-  | 'list'
-  | 'tree'
-  | 'date'
-  | 'citation'
-  | 'code';
-
-export interface FieldDescriptor {
-  key: string;
-  type: RenderFieldType;
-  label: string | null;
-  children: FieldDescriptor[];
-}
-
-export interface ItemSchema {
-  fields: FieldDescriptor[];
-}
-
-export interface RenderDescriptor {
-  layout: RenderLayout;
-  itemSchema: ItemSchema | null;
-  options: Record<string, unknown>;
-}
-
-export interface ConfigOption {
-  id: string;
-  label: string;
-  isDefault?: boolean;
-}
-
-export interface ThemePresetOption {
-  id: string;
-  label: string;
-  template: Record<string, unknown>;
-}
+/** Wire/render types — SSOT in `@crystalith/shared`. */
+export type {
+  ConfigOption,
+  FieldDescriptor,
+  FrontendBundleDescriptor,
+  ItemSchema,
+  PreviewDescriptor,
+  RenderDescriptor,
+  RenderFieldType,
+  RenderLayout,
+  ThemePresetOption,
+  PluginConfig as PluginConfigSchema,
+} from '@crystalith/shared';
 
 export type PreviewKind = 'external_url';
-
-export interface PreviewDescriptor {
-  kind: PreviewKind;
-  service?: string | null;
-  url?: string | null;
-  openInNewTab?: boolean;
-  meta: Record<string, unknown>;
-}
-
-export interface PluginConfigSchema {
-  defaults?: SlideGenerationConfig | null;
-  quantityOptions: ConfigOption[];
-  difficultyOptions: ConfigOption[];
-  audienceOptions: ConfigOption[];
-  structureOptions: ConfigOption[];
-  toneOptions: ConfigOption[];
-  languageOptions: ConfigOption[];
-  densityOptions: ConfigOption[];
-  themePresetOptions: ThemePresetOption[];
-  topicPlaceholder: string;
-  supportsTopic: boolean;
-  engine?: string | null;
-  preview?: PreviewDescriptor | null;
-}
-
-export type FrontendBundleKind = 'builtin';
-export type FrontendBundleApiVersion = 'v1';
-
-export interface FrontendBundleDescriptor {
-  apiVersion: FrontendBundleApiVersion;
-  kind: FrontendBundleKind;
-  id: string;
-  export: string;
-  meta: Record<string, unknown>;
-}
 
 export interface Notebook {
   id: number;
@@ -257,9 +196,9 @@ export interface WorkspaceTool {
   prompt: string;
   badge?: string;
   enabled: boolean;
-  renderDescriptor?: RenderDescriptor | null;
-  configSchema?: PluginConfigSchema | null;
-  frontendBundle?: FrontendBundleDescriptor | null;
+  renderDescriptor?: import('@crystalith/shared').RenderDescriptor | null;
+  configSchema?: import('@crystalith/shared').PluginConfig | null;
+  frontendBundle?: import('@crystalith/shared').FrontendBundleDescriptor | null;
 }
 
 /** GET /v2/workspace/tools `diagnostics` — UI-only view of Eden payload (not a wire SSOT). */

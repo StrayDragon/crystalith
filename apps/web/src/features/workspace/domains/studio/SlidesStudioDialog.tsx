@@ -29,7 +29,6 @@ import {
   useGenerationPreference,
 } from '../../shared/hooks/useGenerationPreference';
 import type {
-  ConfigOption,
   GenerationPreferenceSetting,
   PreviewDescriptor,
   SlideDraft,
@@ -49,7 +48,10 @@ const STAGES: { id: SlideStage; label: string }[] = [
   { id: 'markdown', label: 'Markdown' },
 ];
 
-function resolveOptionId(value: string | null | undefined, options: ConfigOption[]): string {
+function resolveOptionId(
+  value: string | null | undefined,
+  options: Array<{ id: string; isDefault?: boolean }>,
+): string {
   if (value && options.some((option) => option.id === value)) return value;
   const fallback = options.find((option) => option.isDefault)?.id ?? options[0]?.id ?? '';
   return fallback;
