@@ -59,8 +59,7 @@ const STAGES: { id: SlideStage; label: string }[] = [
 
 function resolveOptionId(value: string | null | undefined, options: ConfigOption[]): string {
   if (value && options.some((option) => option.id === value)) return value;
-  const fallback =
-    options.find((option) => option.isDefault ?? option.is_default)?.id ?? options[0]?.id ?? '';
+  const fallback = options.find((option) => option.isDefault)?.id ?? options[0]?.id ?? '';
   return fallback;
 }
 

@@ -282,10 +282,7 @@ function inferResumeState(sessionId: number): {
     case 'search':
       return { status: 'analyzing', iteration: lastStep.iteration };
     case 'analyze': {
-      const needMore = Boolean(
-        (lastStep.outputData as Record<string, unknown> | null)?.need_more_search ??
-        (lastStep.outputData as Record<string, unknown> | null)?.needMore,
-      );
+      const needMore = Boolean((lastStep.outputData as Record<string, unknown> | null)?.needMore);
       if (needMore && lastStep.iteration < session.maxIterations) {
         return { status: 'planning', iteration: lastStep.iteration + 1 };
       }

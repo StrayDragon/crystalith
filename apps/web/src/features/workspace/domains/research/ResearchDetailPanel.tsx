@@ -28,12 +28,11 @@ import type { ResearchSessionDetail, SSEEvent } from './useResearch';
 type ResearchStepResponse = {
   type: string;
   outputData?: Record<string, unknown> | null;
-  output_data?: Record<string, unknown> | null;
   iteration: number;
 };
 
 function stepOutputData(step: ResearchStepResponse): Record<string, unknown> | null | undefined {
-  return step.outputData ?? step.output_data ?? null;
+  return step.outputData ?? null;
 }
 
 // Typewriter component for streaming text effect
@@ -292,7 +291,7 @@ function ResearchDetailPanel({
       const payload = latest.data.data;
       return {
         ...payload,
-        coverage: payload.coverage ?? payload.coverageEstimate ?? 0,
+        coverage: payload.coverageEstimate ?? 0,
       };
     }
     return null;
@@ -423,8 +422,8 @@ function ResearchDetailPanel({
             }
           } else if (step.type === 'search' && output) {
             // Search step
-            const resultCount = (output.resultCount ?? output.result_count) as number | undefined;
-            const newResults = (output.newResults ?? output.new_results) as number | undefined;
+            const resultCount = output.resultCount as number | undefined;
+            const newResults = output.newResults as number | undefined;
 
             timeline.push({
               type: 'search_complete',
@@ -438,7 +437,7 @@ function ResearchDetailPanel({
               (output.coverageEstimate as number | undefined) ??
               (output.coverage as number | undefined);
             const summary = output.summary as string | undefined;
-            const needMore = (output.needMore ?? output.need_more_search) as boolean | undefined;
+            const needMore = output.needMore as boolean | undefined;
 
             timeline.push({
               type: 'analysis_complete',
@@ -466,9 +465,7 @@ function ResearchDetailPanel({
             }
           } else if (step.type === 'summary' && output) {
             // Summary step
-            const reportLength = (output.reportLength ?? output.report_length) as
-              | number
-              | undefined;
+            const reportLength = output.reportLength as number | undefined;
 
             timeline.push({
               type: 'report_complete',
@@ -1160,11 +1157,11 @@ function ResearchDetailPanel({
                         <>
                           已获取{' '}
                           <span className="font-medium text-purple-600">
-                            {searchProgress.resultCount ?? searchProgress.result_count}
+                            {searchProgress.resultCount}
                           </span>{' '}
                           条结果，新增{' '}
                           <span className="font-medium text-purple-600">
-                            {searchProgress.newResults ?? searchProgress.new_results}
+                            {searchProgress.newResults}
                           </span>{' '}
                           条
                         </>

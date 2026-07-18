@@ -104,6 +104,7 @@ const RESEARCH_PROGRESS_CHANNEL: AsyncApiChannel = {
           totalResults: { type: 'integer' },
           hasReport: { type: 'boolean' },
         },
+        required: ['type', 'status', 'totalResults', 'hasReport'],
       },
     },
     {

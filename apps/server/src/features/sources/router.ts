@@ -181,11 +181,9 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     const q = query as {
       sortBy?: string;
       sortOrder?: string;
-      sort_by?: string;
-      sort_order?: string;
     };
-    const sortBy = q.sortBy ?? q.sort_by ?? 'date';
-    const sortOrder = q.sortOrder ?? q.sort_order ?? 'desc';
+    const sortBy = q.sortBy ?? 'date';
+    const sortOrder = q.sortOrder ?? 'desc';
 
     let rows = db().select().from(sources).where(eq(sources.notebookId, nid)).all();
 
@@ -954,10 +952,9 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     const raw = body as {
       mode?: string;
       enabledExtractors?: string[];
-      enabled_extractors?: string[];
     };
     const mode = raw.mode;
-    const enabledExtractorsBody = raw.enabledExtractors ?? raw.enabled_extractors;
+    const enabledExtractorsBody = raw.enabledExtractors;
     // c62: validate mode enum (v1 api_ingest.py:179-211)
     if (mode !== undefined && !['inherit_global', 'custom'].includes(mode)) {
       return sendError(

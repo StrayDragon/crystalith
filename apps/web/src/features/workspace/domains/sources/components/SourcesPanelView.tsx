@@ -1640,10 +1640,7 @@ function SourcesPanelView({
                         </h4>
                         <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
                           {session.maxIterations} 轮研究 ·{' '}
-                          {(session as { resultCount?: number; result_count?: number })
-                            .resultCount ??
-                            ((session as { result_count?: number }).result_count || 0)}{' '}
-                          条结果
+                          {(session as { resultCount?: number }).resultCount ?? 0} 条结果
                         </p>
                       </div>
                       <Chip

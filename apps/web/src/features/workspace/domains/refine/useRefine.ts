@@ -40,10 +40,7 @@ function normalizeRenderDescriptor(
 ): RenderDescriptor | null {
   if (!descriptor) return null;
   const d = descriptor as unknown as Record<string, unknown>;
-  const rawItemSchema = (d.itemSchema ?? d.item_schema) as
-    | Record<string, unknown>
-    | null
-    | undefined;
+  const rawItemSchema = d.itemSchema as Record<string, unknown> | null | undefined;
   return {
     layout: d.layout as RenderDescriptor['layout'],
     itemSchema: rawItemSchema
@@ -83,7 +80,7 @@ function normalizePreviewDescriptor(
     kind: (d.kind as PreviewDescriptor['kind']) ?? 'external_url',
     service: (d.service as string | null) ?? null,
     url: (d.url as string | null) ?? null,
-    openInNewTab: (d.openInNewTab as boolean) ?? (d.open_in_new_tab as boolean) ?? false,
+    openInNewTab: (d.openInNewTab as boolean) ?? false,
     meta: (d.meta as Record<string, unknown>) ?? {},
   };
 }

@@ -261,14 +261,10 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
     const connectorId = String(params.connectorId ?? '').trim();
     const connector = getConnectorOr404(connectorId);
 
-    const { connectionConfig, connection_config } = (body ?? {}) as {
+    const { connectionConfig } = (body ?? {}) as {
       connectionConfig?: Record<string, unknown>;
-      connection_config?: Record<string, unknown>;
     };
-    const config = normalizeConnectionConfig(
-      connectorId,
-      connectionConfig ?? connection_config ?? {},
-    );
+    const config = normalizeConnectionConfig(connectorId, connectionConfig ?? {});
 
     // c53: validate connection_config against the connector's JSON schema
     // (v1 api.py:77-98,199-200 Draft7Validator). Malformed → 400.
@@ -335,8 +331,8 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const bindingId = requirePositiveIntId(params.bindingId, 'binding id');
       const binding = getBindingOr404(nid, bindingId);
-      const payload = (body ?? {}) as { syncCheckId?: string; sync_check_id?: string };
-      const syncCheckId = payload.syncCheckId ?? payload.sync_check_id;
+      const payload = (body ?? {}) as { syncCheckId?: string };
+      const syncCheckId = payload.syncCheckId;
 
       if (!syncCheckId) {
         apiError(set, 400, {

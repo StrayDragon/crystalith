@@ -144,12 +144,10 @@ export const evalRouter = new Elysia({ prefix: '/v2' })
   .post('/eval/runs', async ({ body }) => {
     const payload = body as {
       datasetId?: number;
-      dataset_id?: number;
       strategyIds?: string[];
-      strategy_ids?: string[];
     };
-    const datasetId = payload.datasetId ?? payload.dataset_id;
-    const strategyIds = payload.strategyIds ?? payload.strategy_ids;
+    const datasetId = payload.datasetId;
+    const strategyIds = payload.strategyIds;
     const result = await runEval(datasetId!, strategyIds!);
     return result;
   });
