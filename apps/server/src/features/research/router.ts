@@ -604,7 +604,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     return { id, status: inferredStatus, resumed: true, iteration };
   })
 
-  // Export report → source or note (c37: adds export_type=note)
+  // Export report → source or note (c37: adds exportType=note)
   .post('/research/:id/export', async ({ params, body }) => {
     const id = requirePositiveIntId(params.id, 'research id');
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
@@ -614,10 +614,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       throw new NotFoundError('Research has no final report to export');
     }
 
-    const exportType =
-      (body as { exportType?: string; export_type?: string })?.exportType ??
-      (body as { export_type?: string })?.export_type ??
-      'source';
+    const exportType = (body as { exportType?: string })?.exportType ?? 'source';
 
     // Build markdown report content
     const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, '-');
