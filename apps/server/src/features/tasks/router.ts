@@ -10,6 +10,7 @@ import { db } from '../../db/index.ts';
 import { tasks as tasksTable } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { ErrorCode, sendError } from '../../shared/errors.ts';
+import { requirePositiveIntId } from '../../shared/ids.ts';
 import type { TaskQueue } from '../../shared/queue.ts';
 
 const apiDocs: OpenApiRoute[] = [
@@ -56,13 +57,13 @@ export function tasksRouter(taskQueue: TaskQueue) {
 
   return new Elysia({ prefix: '/v2' })
     .get('/tasks/:id', ({ params }) => {
-      const id = Number(params.id);
+      const id = requirePositiveIntId(params.id, 'task id');
       const task = db().select().from(tasksTable).where(eq(tasksTable.id, id)).get();
       if (!task) throw new NotFoundError(`Task ${id} not found`);
       return serializeTask(task);
     })
     .get('/notebooks/:nid/tasks', ({ params }) => {
-      const nid = Number(params.nid);
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
       const rows = db()
         .select()
         .from(tasksTable)
@@ -72,7 +73,7 @@ export function tasksRouter(taskQueue: TaskQueue) {
       return rows.map(serializeTask);
     })
     .post('/tasks/:id/cancel', ({ params, set }) => {
-      const id = Number(params.id);
+      const id = requirePositiveIntId(params.id, 'task id');
       const task = db().select().from(tasksTable).where(eq(tasksTable.id, id)).get();
       if (!task) throw new NotFoundError(`Task ${id} not found`);
 

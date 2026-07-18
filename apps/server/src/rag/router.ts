@@ -9,6 +9,7 @@ import { HybridStrategy } from '../rag/hybrid-strategy.ts';
 import { KeywordStrategy } from '../rag/keyword-strategy.ts';
 import { PageIndexStrategy } from '../rag/page-index-strategy.ts';
 import { ragRegistry } from '../rag/registry.ts';
+import { requirePositiveIntId } from '../shared/ids.ts';
 
 // Bootstrap: register default strategies
 ragRegistry.register(new EmbedStrategy());
@@ -54,7 +55,7 @@ export const strategiesRouter = new Elysia({ prefix: '/v2' })
 
   // Get strategies for a notebook
   .get('/notebooks/:nid/strategies', ({ params }) => {
-    const notebookId = Number(params.nid);
+    const notebookId = requirePositiveIntId(params.nid, 'notebook id');
     return {
       notebookId: notebookId,
       strategies: ragRegistry.getForNotebook(notebookId),
@@ -63,7 +64,7 @@ export const strategiesRouter = new Elysia({ prefix: '/v2' })
 
   // Set strategies for a notebook
   .post('/notebooks/:nid/strategies', ({ params, body }) => {
-    const notebookId = Number(params.nid);
+    const notebookId = requirePositiveIntId(params.nid, 'notebook id');
     const strategyIds = (body as { strategies: string[] }).strategies;
     ragRegistry.setForNotebook(notebookId, strategyIds);
     return {

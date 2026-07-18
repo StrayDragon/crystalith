@@ -7,6 +7,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { db } from '../../db/index.ts';
 import { notebooks, sourceConnectorBindings } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { requirePositiveIntId } from '../../shared/ids.ts';
 import { BUILTIN_CONNECTORS, getBuiltinConnector } from './connectors.ts';
 import { buildFilesystemSnapshot, getConnectorDiagnostics } from './scanner.ts';
 import {
@@ -236,7 +237,7 @@ async function runSyncCheck(
 
 export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
   .get('/notebooks/:nid/source-connectors', async ({ params }) => {
-    const nid = Number(params.nid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
     requireNotebook(nid);
 
     const connectors = await Promise.all(
@@ -250,7 +251,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
   })
 
   .post('/notebooks/:nid/source-connectors/:connectorId/bindings', ({ params, body, set }) => {
-    const nid = Number(params.nid);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
     requireNotebook(nid);
 
     const connectorId = String(params.connectorId ?? '').trim();
@@ -291,8 +292,8 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/source-connector-bindings/:bindingId/snapshot',
     async ({ params, set }) => {
-      const nid = Number(params.nid);
-      const bindingId = Number(params.bindingId);
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const bindingId = requirePositiveIntId(params.bindingId, 'binding id');
       const binding = getBindingOr404(nid, bindingId);
       getConnectorOr404(binding.connectorId);
 
@@ -314,8 +315,8 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
   )
 
   .post('/notebooks/:nid/source-connector-bindings/:bindingId/sync-check', async ({ params }) => {
-    const nid = Number(params.nid);
-    const bindingId = Number(params.bindingId);
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const bindingId = requirePositiveIntId(params.bindingId, 'binding id');
     const binding = getBindingOr404(nid, bindingId);
     return runSyncCheck(nid, binding);
   })
@@ -323,8 +324,8 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/source-connector-bindings/:bindingId/sync-check/apply',
     async ({ params, body, set }) => {
-      const nid = Number(params.nid);
-      const bindingId = Number(params.bindingId);
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const bindingId = requirePositiveIntId(params.bindingId, 'binding id');
       const binding = getBindingOr404(nid, bindingId);
       const { sync_check_id } = (body ?? {}) as { sync_check_id?: string };
 
@@ -360,8 +361,8 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/source-connector-bindings/:bindingId/import-scope',
     async ({ params, body, set }) => {
-      const nid = Number(params.nid);
-      const bindingId = Number(params.bindingId);
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const bindingId = requirePositiveIntId(params.bindingId, 'binding id');
       const binding = getBindingOr404(nid, bindingId);
       getConnectorOr404(binding.connectorId);
 
@@ -399,7 +400,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
   )
 
   .post('/source-connector-bindings/:id/sync', async ({ params }) => {
-    const bindingId = Number(params.id);
+    const bindingId = requirePositiveIntId(params.id, 'binding id');
     const binding = db()
       .select()
       .from(sourceConnectorBindings)
@@ -410,7 +411,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
   })
 
   .delete('/source-connector-bindings/:id', ({ params, set }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'binding id');
     const existing = db()
       .select()
       .from(sourceConnectorBindings)

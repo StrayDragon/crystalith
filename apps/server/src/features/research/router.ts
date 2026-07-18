@@ -28,6 +28,7 @@ import {
   sources,
 } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { requirePositiveIntId, requireOptionalPositiveIntId } from '../../shared/ids.ts';
 import {
   runResearch,
   runResearchFromState,
@@ -316,7 +317,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       ).trim() || '深度研究';
     const notebookId = raw.notebookId;
     const maxIterations = raw.maxIterations;
-    const nid = Number(notebookId);
+    const nid = requirePositiveIntId(notebookId, 'notebook id');
 
     const nb = db().select().from(notebooks).where(eq(notebooks.id, nid)).get();
     if (!nb) throw new NotFoundError(`Notebook ${nid} not found`);
@@ -339,7 +340,10 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
   // List research sessions
   .get('/research', ({ query }) => {
-    const notebookId = Number((query as { notebookId?: string }).notebookId);
+    const notebookId = requireOptionalPositiveIntId(
+      (query as { notebookId?: string }).notebookId,
+      'notebook id',
+    );
     let q = db().select().from(researchSessions).$dynamic();
     if (notebookId) {
       q = q.where(eq(researchSessions.notebookId, notebookId));
@@ -350,7 +354,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
   // Get single session
   .get('/research/:id', ({ params }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'research id');
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
     const steps = db()
@@ -364,7 +368,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
   // Delete a research session (c37 — v1 api.py:440-463)
   .delete('/research/:id', ({ params, set }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'research id');
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
 
@@ -382,7 +386,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
   // Approve search plan (c37: record step + ensure resume)
   .post('/research/:id/approve', ({ params }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'research id');
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
     if (row.status !== 'waiting_user') {
@@ -404,7 +408,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
   // Modify search plan (c37: record step + store plan in inputData)
   .post('/research/:id/modify', ({ params, body }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'research id');
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
     if (row.status !== 'waiting_user') {
@@ -432,7 +436,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
   // Skip iteration (c37: record step + advance iteration + set planning)
   .post('/research/:id/skip', ({ params }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'research id');
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
     // Status guard: only skip from waiting_user (v1 api.py:602-606)
@@ -472,7 +476,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   // awaiting inside the handler (which previously blocked until the LLM finished
   // and risked client timeouts on large reports).
   .post('/research/:id/finish', ({ params }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'research id');
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
     // Status guard: reject from terminal states (v1 api.py:659-663)
@@ -540,7 +544,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
   // Cancel (c37: record step + release lock)
   .post('/research/:id/cancel', ({ params }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'research id');
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
     // Status guard: idempotent on already-cancelled (v1 returns 200);
@@ -572,7 +576,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
   // Resume from inferred state (c37: uses _infer_resume_state instead of force-planning)
   .post('/research/:id/resume', async ({ params }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'research id');
 
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
@@ -605,7 +609,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
   // Export report → source or note (c37: adds export_type=note)
   .post('/research/:id/export', async ({ params, body }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'research id');
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
 
@@ -720,7 +724,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
   // SSE stream endpoint (c37: named events + heartbeat)
   .get('/research/:id/stream', ({ params, set }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'research id');
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
 

@@ -18,6 +18,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { db } from '../../db/index.ts';
 import { notebooks, studioSlides } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { requirePositiveIntId } from '../../shared/ids.ts';
 import {
   clearStaleRunning,
   createSseResponse,
@@ -143,8 +144,7 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
       sourceIds,
       generationConfig,
     } = body as Record<string, unknown>;
-    const notebookId = Number(nbId);
-    if (!notebookId) throw new Error('notebookId required');
+    const notebookId = requirePositiveIntId(nbId, 'notebook id');
 
     const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
     if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
@@ -179,8 +179,10 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
 
   // List slide drafts
   .get('/studio/slides', ({ query }) => {
-    const notebookId = Number((query as { notebookId?: string }).notebookId);
-    if (!notebookId) throw new NotFoundError('notebookId required');
+    const notebookId = requirePositiveIntId(
+      (query as { notebookId?: string }).notebookId,
+      'notebook id',
+    );
     return db()
       .select()
       .from(studioSlides)
@@ -190,12 +192,16 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Get slide draft
-  .get('/studio/slides/:id', ({ params }) => serializeSlide(getSlideOrThrow(Number(params.id))))
+  .get('/studio/slides/:id', ({ params }) =>
+    serializeSlide(getSlideOrThrow(requirePositiveIntId(params.id, 'slide id'))),
+  )
 
   // c43: Get latest draft (v1 api.py:232-247)
   .get('/studio/slides/latest', ({ query }) => {
-    const notebookId = Number((query as { notebookId?: string }).notebookId);
-    if (!notebookId) throw new NotFoundError('notebookId required');
+    const notebookId = requirePositiveIntId(
+      (query as { notebookId?: string }).notebookId,
+      'notebook id',
+    );
     const row = db()
       .select()
       .from(studioSlides)
@@ -208,7 +214,7 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
 
   // Update draft fields (c32: PATCH draft — v1 parity)
   .patch('/studio/slides/:id', ({ params, body }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'slide id');
     getSlideOrThrow(id);
     const { title, prompt, sourceIds, generationConfig } = body as Record<string, unknown>;
     const updateData: Record<string, unknown> = {};
@@ -227,7 +233,7 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
 
   // Stage 1: Generate outline via AI (POST — non-streaming)
   .post('/studio/slides/:id/outline', async ({ params }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'slide id');
     const slide = getSlideOrThrow(id);
     if (!clearStaleRunning(id)) return { event: 'busy', message: '演示正在生成中，请稍后重试。' };
 
@@ -257,7 +263,7 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
 
   // HITL: manually edit outline (c32: PUT outline — v1 parity)
   .put('/studio/slides/:id/outline', ({ params, body }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'slide id');
     getSlideOrThrow(id);
     const { outline } = body as { outline: Record<string, unknown> };
     db()
@@ -270,7 +276,7 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
 
   // Stage 2: Generate markdown from outline via AI (POST — non-streaming)
   .post('/studio/slides/:id/markdown', async ({ params }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'slide id');
     const slide = getSlideOrThrow(id);
     if (!slide.outline) throw new NotFoundError(`Slide ${id} has no outline — run /outline first`);
     if (!clearStaleRunning(id)) return { event: 'busy', message: '演示正在生成中，请稍后重试。' };
@@ -303,7 +309,7 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
 
   // HITL: manually edit markdown + Slidev persist + output sync (c32: PUT markdown — v1 parity)
   .put('/studio/slides/:id/markdown', ({ params, body }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'slide id');
     const slide = getSlideOrThrow(id);
     const { markdown } = body as { markdown: string };
     try {
@@ -322,7 +328,7 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
 
   // c43: SSE outline stream (v1 GET /drafts/:id/outline/stream)
   .get('/studio/slides/:id/outline/stream', ({ params }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'slide id');
     const slide = getSlideOrThrow(id);
 
     return createSseResponse(id, async (emit, ctx) => {
@@ -350,7 +356,7 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
 
   // c43: SSE markdown stream (v1 GET /drafts/:id/markdown/stream)
   .get('/studio/slides/:id/markdown/stream', ({ params }) => {
-    const id = Number(params.id);
+    const id = requirePositiveIntId(params.id, 'slide id');
     const slide = getSlideOrThrow(id);
     if (!slide.outline) throw new NotFoundError(`Slide ${id} has no outline`);
 

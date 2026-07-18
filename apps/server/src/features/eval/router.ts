@@ -7,6 +7,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { db } from '../../db/index.ts';
 import { evalRuns } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { requirePositiveIntId } from '../../shared/ids.ts';
 import {
   createDataset,
   listDatasets,
@@ -87,14 +88,16 @@ export const evalRouter = new Elysia({ prefix: '/v2' })
 
   // Get dataset
   .get('/eval/datasets/:id', ({ params }) => {
-    const ds = getDataset(Number(params.id));
+    const id = requirePositiveIntId(params.id, 'dataset id');
+    const ds = getDataset(id);
     if (!ds) throw new NotFoundError(`Dataset ${params.id} not found`);
     return ds;
   })
 
   // Delete dataset
   .delete('/eval/datasets/:id', ({ params, set }) => {
-    const ok = deleteDataset(Number(params.id));
+    const id = requirePositiveIntId(params.id, 'dataset id');
+    const ok = deleteDataset(id);
     if (!ok) throw new NotFoundError(`Dataset ${params.id} not found`);
     set.status = 204;
     return '';
@@ -113,7 +116,8 @@ export const evalRouter = new Elysia({ prefix: '/v2' })
 
   // Export dataset
   .get('/eval/datasets/:id/export', ({ params }) => {
-    const data = exportDataset(Number(params.id));
+    const id = requirePositiveIntId(params.id, 'dataset id');
+    const data = exportDataset(id);
     if (!data) throw new NotFoundError(`Dataset ${params.id} not found`);
     return data;
   })

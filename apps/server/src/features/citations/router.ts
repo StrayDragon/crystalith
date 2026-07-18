@@ -13,6 +13,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { db } from '../../db/index.ts';
 import { messages } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { requirePositiveIntId } from '../../shared/ids.ts';
 import { resolveChunkContext } from './context.ts';
 
 const apiDocs: OpenApiRoute[] = [
@@ -35,7 +36,7 @@ const apiDocs: OpenApiRoute[] = [
 export const citationsRouter = new Elysia({ prefix: '/v2' })
   // Echo stored citations (existing)
   .get('/citations/:messageId', ({ params }) => {
-    const messageId = Number(params.messageId);
+    const messageId = requirePositiveIntId(params.messageId, 'message id');
     const msg = db().select().from(messages).where(eq(messages.id, messageId)).get();
 
     if (!msg) throw new NotFoundError(`Message ${messageId} not found`);
@@ -51,8 +52,7 @@ export const citationsRouter = new Elysia({ prefix: '/v2' })
   // promised /v2/notebooks/:nid/citations/context). BREAKING: was flat
   // /v2/citations/context?notebook_id=. Defaults before/after = 1 (v1 api.py:61-62).
   .get('/notebooks/:nid/citations/context', async ({ params, query }) => {
-    const notebookId = Number(params.nid);
-    if (!notebookId) throw new NotFoundError('notebook_id path param required');
+    const notebookId = requirePositiveIntId(params.nid, 'notebook id');
 
     const q = query as {
       chunkId?: string;
@@ -92,9 +92,9 @@ export const citationsRouter = new Elysia({ prefix: '/v2' })
     let chunkIndex: number | undefined;
 
     if (hasChunkId) {
-      chunkId = Number(q.chunkId);
+      chunkId = requirePositiveIntId(q.chunkId, 'chunk id');
     } else {
-      sourceId = Number(q.sourceId);
+      sourceId = requirePositiveIntId(q.sourceId, 'source id');
       chunkIndex = Number(q.chunkIndex);
     }
 
