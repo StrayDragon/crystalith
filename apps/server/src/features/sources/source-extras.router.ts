@@ -133,11 +133,12 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
         });
         const { summary, keyPoints, topics } = parseSummaryResponse(text);
         return {
-          source_id: sid,
+          sourceId: sid,
           summary,
-          key_points: keyPoints,
+          keyPoints,
           topics,
-          word_count: wordCount,
+          wordCount,
+          generatedAt: new Date().toISOString(),
         };
       } catch {
         // fall through
@@ -145,11 +146,12 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
     }
 
     return {
-      source_id: sid,
+      sourceId: sid,
       summary: `这是关于「${source.filename}」的文档，包含 ${chunkRows.length} 个片段。`,
-      key_points: ['核心概念和定义', '主要方法论', '实践案例分析', '建议和最佳实践'],
+      keyPoints: ['核心概念和定义', '主要方法论', '实践案例分析', '建议和最佳实践'],
       topics: ['分析', '方法论', '实践'],
-      word_count: wordCount,
+      wordCount,
+      generatedAt: new Date().toISOString(),
     };
   })
 
@@ -211,8 +213,8 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
     });
 
     return {
-      source_id: sid,
-      source_name: source.filename,
+      sourceId: sid,
+      sourceName: source.filename,
       question: question.trim(),
       answer: text,
     };
@@ -316,9 +318,9 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
     }
 
     return {
-      source_id: newSource.id,
+      sourceId: newSource.id,
       filename,
-      chunk_count: chunkRows.length,
+      chunkCount: chunkRows.length,
     };
   });
 

@@ -45,12 +45,12 @@ export interface ExtractorMetadata {
   type: string;
   available: boolean;
   enabled: boolean;
-  display_name: string;
+  displayName: string;
   description: string;
   priority: number;
-  requires_api_key: boolean;
-  requires_service: boolean;
-  recovery_hint: string | null;
+  requiresApiKey: boolean;
+  requiresService: boolean;
+  recoveryHint: string | null;
 }
 
 const DISPLAY_NAMES: Record<string, string> = {
@@ -73,11 +73,7 @@ const RECOVERY_HINTS: Record<string, string> = {
 /**
  * List all extractors with availability + metadata (v1 ExtractorsListResponse).
  * Uses each extractor's isAvailable() against the real config object, not env vars.
- */
-/**
- * List all extractors with availability + metadata (v1 ExtractorsListResponse).
- * Uses each extractor's isAvailable() against the real config object, not env vars.
- * c62: adds type/enabled/description/requires_service fields + derives default.
+ * c62: adds type/enabled/description/requiresService fields + derives default.
  */
 export function listExtractorMetadata(config: unknown): ExtractorMetadata[] {
   return DEFAULT_ORDER.map((name, index) => {
@@ -89,18 +85,18 @@ export function listExtractorMetadata(config: unknown): ExtractorMetadata[] {
       available: ext ? ext.isAvailable(config) : false,
       // v2 has no per-extractor disable config (monolithic)
       enabled: true,
-      display_name: DISPLAY_NAMES[name] ?? name,
+      displayName: DISPLAY_NAMES[name] ?? name,
       description: DESCRIPTIONS[name] ?? '',
       priority: (index + 1) * 10,
-      requires_api_key: name !== 'readability',
+      requiresApiKey: name !== 'readability',
       // jina/firecrawl call external services
-      requires_service: name !== 'readability',
-      recovery_hint: RECOVERY_HINTS[name] ?? null,
+      requiresService: name !== 'readability',
+      recoveryHint: RECOVERY_HINTS[name] ?? null,
     };
   });
 }
 
-/** c62: derive default_extractor by availability (first available), v1 parity. */
+/** c62: derive defaultExtractor by availability (first available), v1 parity. */
 export function getDefaultExtractor(config: unknown): string {
   const meta = listExtractorMetadata(config);
   return meta.find((e) => e.available)?.name ?? 'readability';
