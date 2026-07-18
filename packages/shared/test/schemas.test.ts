@@ -90,13 +90,22 @@ describe('domain schemas', () => {
     expect(r.question).toBe('hi');
   });
 
-  it('research progress event union discriminates', () => {
+  it('research progress event union discriminates on type', () => {
     const ev = S.ResearchProgressEventSchema.parse({
-      event: 'plan_ready',
+      type: 'plan_ready',
       sessionId: 1,
       plan: { iteration: 1, queries: [], reasoning: '', estimatedResults: 5 },
     });
-    expect(ev.event).toBe('plan_ready');
+    expect(ev.type).toBe('plan_ready');
+
+    const done = S.ResearchProgressEventSchema.parse({
+      type: 'done',
+      status: 'completed',
+      totalResults: 3,
+      hasReport: true,
+    });
+    expect(done.type).toBe('done');
+    expect(done.totalResults).toBe(3);
   });
 
   it('eval metrics enforce 0..1 bounds', () => {

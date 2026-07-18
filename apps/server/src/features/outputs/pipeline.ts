@@ -348,11 +348,7 @@ export function ensureMinimumContentFields(
             const obj = m.objective as Record<string, unknown>;
             if (!Array.isArray(obj.citations)) obj.citations = [1];
           }
-          // Normalize legacy key_points → keyPoints, then backfill
-          if (!Array.isArray(m.keyPoints) && Array.isArray(m.key_points)) {
-            m.keyPoints = m.key_points;
-            delete m.key_points;
-          }
+          // backfill keyPoints with at least one entry
           if (!Array.isArray(m.keyPoints) || (m.keyPoints as unknown[]).length === 0) {
             m.keyPoints = [
               leaf(
