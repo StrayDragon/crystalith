@@ -19,6 +19,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useLayer } from '../../../../shared/layer';
+import { TestIds, tid } from '../../../../shared/testids';
 import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';
 import type { Citation, OutputItem, OutputTypeId, WorkspaceTool } from '../../shared/types';
 import StudioOutputsList from './StudioOutputsList';
@@ -112,6 +113,7 @@ function ToolsPopover({
         ref={triggerRef}
         type="button"
         onClick={onToggle}
+        {...tid(TestIds.studioGenerate)}
         className={`w-full flex items-center justify-center gap-1.5 rounded-full py-2 text-xs font-medium transition-all border ${
           open
             ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400'
@@ -138,6 +140,7 @@ function ToolsPopover({
             <div
               className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-xl p-3"
               style={{ ...popoverStyle, ...popoverLayerStyle }}
+              {...tid(TestIds.studioToolsPopover)}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider">
@@ -240,6 +243,7 @@ function StudioPanel({
   return (
     <div
       className={`flex flex-1 flex-col gap-3 p-3 sm:p-4 min-h-0 ${isFullscreen ? 'max-w-4xl mx-auto w-full' : ''}`}
+      {...tid(TestIds.studioPanel)}
     >
       {!hasSelectedSources ? (
         <div className="rounded-xl border border-dashed border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-400">
@@ -274,6 +278,7 @@ function StudioPanel({
           fullWidth
           size="sm"
           className="flex items-center justify-center gap-2 rounded-full py-2 bg-slate-900 text-xs normal-case"
+          {...tid(TestIds.studioAddNote)}
           onClick={handleOpenNoteEditor}
         >
           <AddIcon style={{ fontSize: 16 }} />
@@ -308,6 +313,7 @@ function StudioPanel({
         handler={handleCloseNoteEditor}
         size="sm"
         className="rounded-xl"
+        data-testid={TestIds.noteEditorDialog}
       >
         <DialogHeader className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
           <div className="flex items-center gap-2">

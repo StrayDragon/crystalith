@@ -1,0 +1,17 @@
+{
+  "name": "@crystalith/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:p0": "playwright test --grep @p0",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "install:browsers": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2",
+    "typescript": "^7.0.2"
+  }
+}

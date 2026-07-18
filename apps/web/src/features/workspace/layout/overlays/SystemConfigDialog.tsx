@@ -11,6 +11,7 @@ import { createPortal } from 'react-dom';
 import { copyToClipboard } from '../../../../shared/clipboard';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { useLayer } from '../../../../shared/layer';
+import { TestIds, tid } from '../../../../shared/testids';
 import { toast } from '../../../../shared/toast';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { usePromptPresets } from '../../shared/hooks/usePromptPresets';
@@ -197,6 +198,7 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
       role="dialog"
       aria-modal="true"
       aria-label="系统配置"
+      {...tid(TestIds.systemConfigDialog)}
     >
       <button
         type="button"

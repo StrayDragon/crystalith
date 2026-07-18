@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useLayer } from '../../../shared/layer';
+import { TestIds, tid } from '../../../shared/testids';
 import type { ShortcutCategory, WorkspaceShortcutDefinition } from '../shared/shortcuts';
 
 interface ShortcutHelpPanelProps {
@@ -54,6 +55,7 @@ export default function ShortcutHelpPanel({ open, shortcuts, onClose }: Shortcut
       aria-label="快捷键帮助"
       className="fixed inset-0 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm"
       style={modalStyle}
+      {...tid(TestIds.shortcutHelp)}
     >
       <button
         type="button"

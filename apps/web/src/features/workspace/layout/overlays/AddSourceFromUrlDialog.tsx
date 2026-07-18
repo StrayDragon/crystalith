@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useLayer } from '../../../../shared/layer';
+import { TestIds, tid } from '../../../../shared/testids';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 
 type SourceFromUrlMode = 'link' | 'fetch';
@@ -90,6 +91,7 @@ export default function AddSourceFromUrlDialog({
       role="dialog"
       aria-modal="true"
       aria-label="从 URL 导入来源"
+      {...tid(TestIds.urlImportDialog)}
     >
       <button
         type="button"
@@ -120,6 +122,7 @@ export default function AddSourceFromUrlDialog({
             <button
               type="button"
               onClick={() => setMode('link')}
+              {...tid(TestIds.urlImportModeLink)}
               className={`px-2.5 py-1 rounded-lg border text-xs flex items-center gap-1.5 ${
                 mode === 'link'
                   ? 'border-gray-900 bg-gray-900 text-white'
@@ -132,6 +135,7 @@ export default function AddSourceFromUrlDialog({
             <button
               type="button"
               onClick={() => setMode('fetch')}
+              {...tid(TestIds.urlImportModeFetch)}
               className={`px-2.5 py-1 rounded-lg border text-xs flex items-center gap-1.5 ${
                 mode === 'fetch'
                   ? 'border-gray-900 bg-gray-900 text-white'
@@ -150,6 +154,8 @@ export default function AddSourceFromUrlDialog({
               value={url}
               onChange={(event) => setUrl(event.target.value)}
               placeholder="https://example.com/article"
+              aria-label="URL"
+              {...tid(TestIds.urlImportInput)}
               className="mt-1 w-full h-9 px-3 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-gray-900 dark:text-slate-100 focus:outline-none focus:border-gray-500"
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
@@ -183,6 +189,7 @@ export default function AddSourceFromUrlDialog({
               onClick={handleClose}
               className="px-3 py-1.5 rounded-lg text-xs text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800"
               disabled={isAdding}
+              {...tid(TestIds.urlImportCancel)}
             >
               取消
             </button>
@@ -192,6 +199,7 @@ export default function AddSourceFromUrlDialog({
                 void handleSubmit();
               }}
               disabled={!canSubmit}
+              {...tid(TestIds.urlImportSubmit)}
               className={`px-3 py-1.5 rounded-lg text-xs ${
                 canSubmit
                   ? 'bg-gray-900 text-white hover:bg-gray-800'

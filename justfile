@@ -93,15 +93,33 @@ type-aware-lint:
 scripts-harness-check:
     @CRYSTALITH_SKIP_READY_INSTALL=1 bash ./scripts/ensure_frontend_web_ready.sh
 
-# Run all QA checks (SSOT): typecheck, lint, format-check, generated-config drift, tests, and scripts/ harness checks.
+# Run all QA checks (SSOT / ultimate gate): typecheck, lint, format-check,
+# generated-config drift, unit/integration tests, critical browser E2E (@p0),
+# and scripts/ harness checks.
 # Output minimized — only errors and warnings shown.
 # Note: `just type-aware-lint` is excluded — too many pre-existing errors in test files.
-qa: check check-env-examples check-app-schema test scripts-harness-check
+# Requires Chromium once: `just e2e-install`
+qa: check check-env-examples check-app-schema test scripts-harness-check e2e
     @echo "✅ QA passed"
 
 # Run backend tests — only show failures
 test:
     @bun test --only-failures apps/server/test/ packages/shared/test/
+
+# Critical browser E2E gate (Playwright @p0). Independent of unit tests.
+# Uses isolated ports 13000/18032 + temp DB under e2e/.tmp/
+# Default: system Google Chrome. For bundled Chromium: `just e2e-install` then
+# `CL_E2E_USE_SYSTEM_CHROME=0 just e2e`
+e2e:
+    cd e2e && bunx playwright test --grep @p0
+
+# Install Playwright Chromium (one-time / CI bootstrap)
+e2e-install:
+    cd e2e && bunx playwright install chromium
+
+# Full Playwright suite (currently same as @p0; room to grow non-gate specs)
+e2e-all:
+    cd e2e && bunx playwright test
 
 # --------------------------------------------------------------------------
 # Config

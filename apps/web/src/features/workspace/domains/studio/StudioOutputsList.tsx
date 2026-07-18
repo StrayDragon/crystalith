@@ -21,6 +21,7 @@ import { useCallback, useMemo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 
 import { copyToClipboard } from '../../../../shared/clipboard';
+import { TestIds, tid } from '../../../../shared/testids';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { SkeletonCard } from '../../shared/components/Skeleton';
@@ -388,7 +389,7 @@ export default function StudioOutputsList({
                 <button
                   type="button"
                   className="flex flex-1 items-center gap-2 p-2 text-left min-w-0"
-                  data-testid="studio-output-item"
+                  {...tid(TestIds.studioOutputItem)}
                   onClick={() => {
                     if (note.type === 'SLIDES' && note.slideId) {
                       onOpenSlides?.({ mode: 'preview', slideId: note.slideId });

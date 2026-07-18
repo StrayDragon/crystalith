@@ -18,6 +18,7 @@ import type { RefObject } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 
 import { copyToClipboard } from '../../../../shared/clipboard';
+import { TestIds, tid } from '../../../../shared/testids';
 import { LAYER_LEVELS, useLayer } from '../../../../shared/layer';
 import { toast } from '../../../../shared/toast';
 import CitationsControl from '../../shared/components/citations/CitationsControl';
@@ -249,7 +250,7 @@ function ChatPanel({
     return (
       <div
         className={`flex flex-col gap-2 pb-4 ${message.role === 'user' ? 'items-end' : 'items-start'}`}
-        data-testid="chat-message-item"
+        {...tid(TestIds.chatMessageItem)}
       >
         <div
           className={`text-sm leading-relaxed ${
@@ -432,7 +433,7 @@ function ChatPanel({
   }, [notice, onRetrySend]);
 
   return (
-    <div className="flex flex-1 flex-col min-h-0 p-0 gap-0">
+    <div className="flex flex-1 flex-col min-h-0 p-0 gap-0" {...tid(TestIds.chatPanel)}>
       <div
         className="flex-1 min-h-0 px-4 sm:px-5 lg:px-6 py-3 sm:py-4"
         role="log"
@@ -595,6 +596,7 @@ function ChatPanel({
             className="flex-1 bg-transparent text-sm text-gray-700 dark:text-slate-100 outline-none resize-none border-none focus:ring-0 min-h-[32px] sm:min-h-[44px]"
             name="chatPrompt"
             ref={inputRef}
+            {...tid(TestIds.chatInput)}
             value={draft}
             onChange={(event) => {
               const value = event.target.value;
@@ -668,6 +670,7 @@ function ChatPanel({
               type="button"
               className="px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700/50 text-xs font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
               aria-label="停止生成"
+              {...tid(TestIds.chatStop)}
               onClick={onStopStreaming}
             >
               停止生成
@@ -678,6 +681,7 @@ function ChatPanel({
               size="sm"
               className="rounded-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200 disabled:opacity-60 disabled:cursor-not-allowed"
               aria-label="发送"
+              {...tid(TestIds.chatSend)}
               disabled={draft.trim().length === 0 || isSending || isBlocked}
             >
               <IconSend className="w-4 h-4" />

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useLayer } from '../../../../shared/layer';
+import { TestIds, tid } from '../../../../shared/testids';
 
 export interface CommandItem {
   id: string;
@@ -41,6 +42,7 @@ export default function CommandPalette({ open, onClose, commands }: CommandPalet
       role="dialog"
       aria-modal="true"
       aria-label="命令面板"
+      {...tid(TestIds.commandPalette)}
     >
       <button
         type="button"
@@ -53,6 +55,7 @@ export default function CommandPalette({ open, onClose, commands }: CommandPalet
           ref={inputRef}
           type="text"
           value={query}
+          {...tid(TestIds.commandPaletteInput)}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 
 import { t } from '../../../../shared/i18n';
+import { TestIds, tid, type TestId } from '../../../../shared/testids';
 import type { WorkspaceReadiness } from '../hooks/useWorkspaceReadiness';
 
 const ONBOARDING_DISMISSED_KEY = 'crystalith_workspace_onboarding_dismissed_v1';
@@ -47,10 +48,12 @@ function ActionButton({
   children,
   onClick,
   variant = 'secondary',
+  testId,
 }: {
   children: ReactNode;
   onClick: () => void;
   variant?: 'primary' | 'secondary' | 'ghost';
+  testId?: TestId;
 }) {
   const className = useMemo(() => {
     if (variant === 'primary') {
@@ -63,7 +66,7 @@ function ActionButton({
   }, [variant]);
 
   return (
-    <button type="button" onClick={onClick} className={className}>
+    <button type="button" onClick={onClick} className={className} {...(testId ? tid(testId) : {})}>
       {children}
     </button>
   );
@@ -133,7 +136,7 @@ export default function WorkspaceOnboardingBanner({
           tone: readiness.connectionState === 'error' ? 'error' : 'info',
           actions: (
             <>
-              <ActionButton variant="primary" onClick={onRetryConnection}>
+              <ActionButton variant="primary" onClick={onRetryConnection} testId={TestIds.connectionRetry}>
                 {t('workspace.onboarding.retry_connection')}
               </ActionButton>
               <ActionButton variant="secondary" onClick={onOpenDiagnostics}>
@@ -177,7 +180,11 @@ export default function WorkspaceOnboardingBanner({
               <ActionButton variant="primary" onClick={onUploadSources}>
                 {t('workspace.onboarding.upload_sources')}
               </ActionButton>
-              <ActionButton variant="secondary" onClick={onAddSourceFromUrl}>
+              <ActionButton
+                variant="secondary"
+                onClick={onAddSourceFromUrl}
+                testId={TestIds.urlImportOpen}
+              >
                 {t('workspace.onboarding.add_source_from_url')}
               </ActionButton>
               <ActionButton variant="secondary" onClick={onFocusSourceSearch}>
@@ -268,6 +275,7 @@ export default function WorkspaceOnboardingBanner({
     <section
       aria-label={t('workspace.onboarding.banner_aria')}
       className={`mt-2 rounded-xl border ${borderTone} px-3 py-2 shadow-sm`}
+      {...tid(TestIds.onboardingBanner)}
     >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">

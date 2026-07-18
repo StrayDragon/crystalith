@@ -15,6 +15,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject }
 import { createPortal } from 'react-dom';
 
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
+import { TestIds, tid } from '../../../../shared/testids';
 import { useLayer } from '../../../../shared/layer';
 import type { AsyncStatus } from '../../../../shared/types';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
@@ -368,6 +369,7 @@ export default function NotebookSwitcher({
           ref={triggerRef}
           type="button"
           className="flex items-center gap-2 px-3 py-1 h-full hover:bg-gray-100 transition-colors text-left min-w-[120px] max-w-[240px]"
+          {...tid(TestIds.notebookSwitcherTrigger)}
           onClick={() => {
             if (isOpen) {
               closeSwitcher();
@@ -401,6 +403,7 @@ export default function NotebookSwitcher({
             size="sm"
             className="rounded-none h-full w-8 hover:bg-gray-100"
             disabled={!isConnected}
+            {...tid(TestIds.notebookCreateButton)}
             onClick={() => {
               if (createOpen) {
                 setCreateOpen(false);
@@ -424,7 +427,7 @@ export default function NotebookSwitcher({
               style={{ ...panelStyle, top: panelPos.top, left: panelPos.left }}
               role="dialog"
               aria-label="切换笔记本"
-              data-testid="notebook-switcher-overlay"
+              {...tid(TestIds.notebookSwitcherOverlay)}
             >
               <div className="p-3 border-b border-gray-200">
                 <div className="relative w-full">
@@ -453,7 +456,7 @@ export default function NotebookSwitcher({
 
               <div
                 className="max-h-[300px] overflow-y-auto p-2 flex flex-col gap-1"
-                data-testid="notebook-list"
+                {...tid(TestIds.notebookList)}
               >
                 {isLoading ? (
                   <div className="flex justify-center py-4">
@@ -522,7 +525,7 @@ export default function NotebookSwitcher({
                         <>
                           <button
                             className="w-full text-left p-2 pr-16"
-                            data-testid="notebook-option"
+                            {...tid(TestIds.notebookOption)}
                             onClick={() => {
                               onSelect(item.id);
                               closeSwitcher();
@@ -619,7 +622,7 @@ export default function NotebookSwitcher({
               style={{ ...panelStyle, top: createPos.top, left: createPos.left }}
               role="dialog"
               aria-label="新建笔记本"
-              data-testid="notebook-create-overlay"
+              {...tid(TestIds.notebookCreateOverlay)}
             >
               <Typography variant="small" className="font-semibold text-gray-600 text-[11px] mb-2">
                 新建笔记本

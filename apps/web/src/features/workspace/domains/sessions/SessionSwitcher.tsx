@@ -18,6 +18,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
+import { TestIds, tid } from '../../../../shared/testids';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import type { SessionSummary } from '../../shared/types';
 
@@ -133,7 +134,10 @@ export default function SessionSwitcher({
     <div className="flex items-center border border-gray-300 rounded-lg bg-white overflow-hidden h-8">
       <Popover open={isOpen} handler={handlePopoverHandler} placement="bottom-start" offset={4}>
         <PopoverHandler>
-          <button className="flex items-center gap-2 px-3 py-1 h-full hover:bg-gray-100 transition-colors text-left min-w-[120px] max-w-[200px]">
+          <button
+            className="flex items-center gap-2 px-3 py-1 h-full hover:bg-gray-100 transition-colors text-left min-w-[120px] max-w-[200px]"
+            {...tid(TestIds.sessionSwitcherTrigger)}
+          >
             <Typography variant="small" className="font-medium text-gray-600 text-[11px]">
               会话
             </Typography>
@@ -151,6 +155,7 @@ export default function SessionSwitcher({
         <PopoverContent
           className="w-[340px] max-h-[420px] p-0 overflow-hidden"
           style={{ zIndex: LAYER_LEVELS.popover }}
+          {...tid(TestIds.sessionSwitcherOverlay)}
         >
           <div className="p-3 border-b border-gray-200">
             <div className="relative w-full">

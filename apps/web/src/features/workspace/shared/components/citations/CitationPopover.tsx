@@ -3,6 +3,7 @@ import { useEffect, useRef, useCallback, useMemo, type MouseEvent as ReactMouseE
 import { createPortal } from 'react-dom';
 
 import { useLayer } from '../../../../../shared/layer';
+import { TestIds, tid } from '../../../../../shared/testids';
 import type { Citation } from '../../types';
 import { countUniqueCitationSources, formatCitationScopeLabel } from './citationLabels';
 
@@ -197,7 +198,7 @@ export default function CitationPopover({
         }}
         role="dialog"
         aria-label={`引用详情：${scopeLabel}`}
-        data-testid="citation-popover"
+        {...tid(TestIds.citationPopover)}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">

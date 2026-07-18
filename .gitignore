@@ -250,6 +250,9 @@ lib-cov
 # Playwright
 playwright-report/
 test-results/
+e2e/.tmp/
+e2e/playwright-report/
+e2e/test-results/
 # Build output
 
 # Crystalith-specific artifacts

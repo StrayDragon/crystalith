@@ -9,6 +9,7 @@ import useSWR from 'swr';
 
 import { api } from '../../../../../api/eden';
 import { useLayer } from '../../../../../shared/layer';
+import { TestIds, tid } from '../../../../../shared/testids';
 import { toast } from '../../../../../shared/toast';
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
 import type {
@@ -1069,6 +1070,7 @@ export default function SourceConnectorsDialog({
       aria-modal="true"
       aria-label="连接器"
       tabIndex={-1}
+      {...tid(TestIds.sourcesConnectorsDialog)}
       onClick={(event) => {
         if (event.target !== event.currentTarget) return;
         onClose();

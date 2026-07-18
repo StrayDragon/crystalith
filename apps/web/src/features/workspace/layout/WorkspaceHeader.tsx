@@ -12,6 +12,7 @@ import {
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import ConfirmPopover from '../../../shared/ConfirmPopover';
+import { TestIds, tid } from '../../../shared/testids';
 import type { AsyncStatus } from '../../../shared/types';
 import NotebookSwitcher, {
   type NotebookSwitcherRequest,
@@ -145,7 +146,10 @@ export default function WorkspaceHeader({
   }, []);
 
   return (
-    <header className="flex items-center justify-between gap-3 px-3 py-1.5 sm:px-4 sm:py-1.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-xl shadow-sm flex-wrap">
+    <header
+      className="flex items-center justify-between gap-3 px-3 py-1.5 sm:px-4 sm:py-1.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-xl shadow-sm flex-wrap"
+      {...tid(TestIds.workspaceHeader)}
+    >
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white dark:bg-slate-800 shadow-sm border border-gray-100 dark:border-slate-700 text-gray-900 dark:text-gray-100">
           <svg viewBox="0 0 24 24" width="18" height="18" focusable="false">
@@ -198,6 +202,7 @@ export default function WorkspaceHeader({
               type="button"
               onClick={onToggleLock}
               aria-label={locked ? '解锁布局' : '锁定布局'}
+              {...tid(TestIds.layoutLockToggle)}
               className={`flex items-center justify-center w-7 h-7 rounded-md transition-all ${
                 locked
                   ? 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800'
@@ -215,6 +220,7 @@ export default function WorkspaceHeader({
             <button
               type="button"
               className="p-0.5 border-2 border-gray-100 dark:border-slate-700 rounded-full cursor-pointer hover:border-gray-300 dark:hover:border-slate-500 transition-colors"
+              {...tid(TestIds.userMenuTrigger)}
             >
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
                 CL
@@ -250,6 +256,7 @@ export default function WorkspaceHeader({
               <MenuItem
                 onClick={onOpenCommandPalette}
                 className="flex items-center gap-2.5 py-2 px-3 text-xs rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
+                {...tid(TestIds.userMenuCommandPalette)}
               >
                 <span className="text-sm w-5 text-center">⌨️</span>
                 <span className="flex-1">命令面板</span>
@@ -262,6 +269,7 @@ export default function WorkspaceHeader({
               <MenuItem
                 onClick={onOpenSystemConfig}
                 className="flex items-center gap-2.5 py-2 px-3 text-xs rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
+                {...tid(TestIds.userMenuSystemConfig)}
               >
                 <SettingsIcon
                   style={{ fontSize: 16, marginLeft: 2 }}
@@ -274,6 +282,7 @@ export default function WorkspaceHeader({
               <MenuItem
                 onClick={onOpenShortcutHelp}
                 className="flex items-center gap-2.5 py-2 px-3 text-xs rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
+                {...tid(TestIds.userMenuShortcutHelp)}
               >
                 <span className="text-sm w-5 text-center">❔</span>
                 <span className="flex-1">快捷键帮助</span>
@@ -286,6 +295,7 @@ export default function WorkspaceHeader({
               <MenuItem
                 onClick={onOpenDiagnostics}
                 className="flex items-center gap-2.5 py-2 px-3 text-xs rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
+                {...tid(TestIds.userMenuDiagnostics)}
               >
                 <MonitorHeartIcon
                   style={{ fontSize: 16, marginLeft: 2 }}

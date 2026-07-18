@@ -76,6 +76,9 @@ From repo root:
 - `bun run dev:web` / `just dev-web` — Vite only (:3000)
 - `bun test` — run server tests
 - `bun typecheck` — typecheck everything
+- `just e2e` / `bun run e2e` — Playwright critical browser gate (`@p0`, testid-based)
+- `just e2e-install` — install Playwright Chromium (optional; local defaults to system Chrome)
+- `just qa` — **ultimate gate**: typecheck + lint + format + schema drift + unit tests + **e2e**
 
 Fast path:
 

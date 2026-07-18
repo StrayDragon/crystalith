@@ -13,6 +13,7 @@ import type {
 } from '../../../../../api/shared-types';
 import { copyToClipboard } from '../../../../../shared/clipboard';
 import { useLayer } from '../../../../../shared/layer';
+import { TestIds, tid } from '../../../../../shared/testids';
 import { toast } from '../../../../../shared/toast';
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
 
@@ -145,6 +146,7 @@ export default function ExtractorPolicyDialog({
       role="dialog"
       aria-modal="true"
       aria-label="提取器设置"
+      {...tid(TestIds.sourcesExtractorDialog)}
     >
       <button
         type="button"
