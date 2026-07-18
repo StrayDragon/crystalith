@@ -22,7 +22,7 @@ Review agent verdict: **APPROVE** (post Review #5 MUST fixes + residual dual-rea
 
 - `packages/shared/.../output.ts` `key_points`: **content-tree** semantic field (not API envelope); kept
 - Web vitest infra/mocks: **deferred to c66** (task 4.4 note)
-- Existing DBs: run `bun run scripts/migrate-c65-camelcase.ts` or wipe `data/`
+- Existing DBs: wipe `data/` (dev) — no JSON migration script required when wiping is acceptable
 - DB column names unchanged (non-goal)
 
 ## Wire contract

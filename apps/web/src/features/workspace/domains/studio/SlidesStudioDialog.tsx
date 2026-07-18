@@ -20,6 +20,7 @@ import SlideshowIcon from '@mui/icons-material/Slideshow';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '../../../../api/eden';
+import { edenFetchOptions } from '../../../../api/edenFetchOptions';
 import { t } from '../../../../shared/i18n';
 import { toast } from '../../../../shared/toast';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
@@ -754,10 +755,11 @@ export default function SlidesStudioDialog({
       try {
         setEvents((prev) => [...prev, { type: 'progress', message: '生成中...' }]);
         const slides = api.v2.studio.slides({ id: slideId });
+        const fetchOpts = edenFetchOptions(ac.signal);
         const { error: genErr } =
           stage === 'outline'
-            ? await slides.outline.post(undefined, { fetch: { signal: ac.signal } })
-            : await slides.markdown.post(undefined, { fetch: { signal: ac.signal } });
+            ? await slides.outline.post(undefined, fetchOpts)
+            : await slides.markdown.post(undefined, fetchOpts);
         if (genErr)
           throw new Error(
             typeof genErr === 'string' ? genErr : typeof genErr === 'string' ? genErr : '',

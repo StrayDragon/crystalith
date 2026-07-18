@@ -5,8 +5,8 @@ valid_scope[2]: src/,tests/
 requirements[39]{req_id,title,statement}:
   r56,API major version prefix is stable,对外 API MUST 使用 `/v1` 前缀；同一 major 内保持兼容。
   r114,"Optional API key authentication is supported for self-host","自托管部署 MUST 支持可选的 API key 鉴权基线：当配置了鉴权密钥时，所有 `/v1/**` 端点 MUST 要求 `Authorization: Bearer <token>`（或等价 API key 头）；未配置密钥时系统 MAY 允许匿名访问以保持本地开发低摩擦。"
-  r151,"Non-SSE errors use unified envelope","非 SSE 错误响应 MUST 使用统一结构：`error_code`, `message`, `details?`, `retry_after?`。"
-  r186,Rate limited responses use unified envelope and retry_after,系统 MUST 为 HTTP rate limiting 提供稳定的对外语义：返回 429，并在统一错误信封中暴露 `retry_after` 指引。
+  r151,"Non-SSE errors use unified envelope","非 SSE 错误响应 MUST 使用统一结构：`errorCode`, `message`, `details?`, `retryAfter?`。"
+  r186,Rate limited responses use unified envelope and retryAfter,系统 MUST 为 HTTP rate limiting 提供稳定的对外语义：返回 429，并在统一错误信封中暴露 `retryAfter` 指引。
   r218,Health endpoints remain exempt from HTTP guardrails,系统的健康检查端点 MUST 保持可用于运维探活与诊断，不应因 guardrails 被拒绝。
   r244,Notebook/session/message endpoints are stable,notebook、session、message 的范围归属与 404/400 语义 MUST 稳定。
   r262,"Assistant message content remains plain text while UI is transported out-of-band","系统 MUST 将 assistant 消息 `content: string` 保持为纯文本/markdown 回答；结构化 UI MUST 通过 session-scoped `shared_state.ui` 提供，而不是嵌入 `content`。"
@@ -37,8 +37,8 @@ requirements[39]{req_id,title,statement}:
   "research-finish-generates-report",Finish MUST trigger report generation,research finish 端点 MUST 在标记 COMPLETED 后触发最终报告生成并持久化
   "research-delete-endpoint",API MUST provide research delete endpoint,系统 MUST 提供 research 删除端点，在删除前取消运行中的研究
   "research-sse-named-events",Research SSE MUST emit named events,"research 流式端点 MUST 发送带 event: 字段的命名 SSE 事件"
-  "error-envelope-actually-emitted-by-routes","Server routes MUST emit the ErrorEnvelope shape not ad-hoc error objects","All non-SSE error responses MUST return the ErrorEnvelope shape defined in packages/shared (error_code plus message plus optional details plus optional retry_after). MUST NOT return ad-hoc shapes such as {error: string} or {error plus error_code} or {error plus max_bytes plus uploaded_bytes}. Current feature routers return at least 5 ad-hoc shapes using field name error instead of canonical message, violating existing r3."
-  "shared-error-envelope-helper","Server MUST provide a shared error-response helper consuming ErrorEnvelopeSchema","The system MUST provide a shared helper (sendError or setError) that consumes the ErrorEnvelopeSchema from packages/shared and centralizes the HTTP status to error_code mapping (400 maps to INVALID_REQUEST plus 404 maps to NOT_FOUND plus 409 maps to CONFLICT plus 422 maps to SCHEMA_VALIDATION_FAILED plus 429 maps to RATE_LIMITED plus 503 maps to MODEL_ERROR). Feature routers MUST return errors via this helper rather than constructing ad-hoc error bodies inline."
+  "error-envelope-actually-emitted-by-routes","Server routes MUST emit the ErrorEnvelope shape not ad-hoc error objects","All non-SSE error responses MUST return the ErrorEnvelope shape defined in packages/shared (errorCode plus message plus optional details plus optional retryAfter). MUST NOT return ad-hoc shapes such as {error: string}."
+  "shared-error-envelope-helper","Server MUST provide a shared error-response helper consuming ErrorEnvelopeSchema","The system MUST provide a shared helper (sendError) that consumes ErrorEnvelopeSchema and centralizes HTTP status to errorCode mapping. Feature routers MUST return errors via this helper."
   "slides-config-schema-options-must-be-complete",SLIDES tool config_schema MUST expose all config axes with options and defaults,当 SLIDES 工具在 `/v1/workspace/tools` 响应中可用时，其 `config_schema` MUST 返回完整的 options 列表（每个 option 含 id/label/is_default）与 defaults 对象，MUST NOT 省略任一配置轴（quantity/audience/structure/tone/language/density/theme_preset）。这强化 r20 的既有 MUST：当前 v2 workspace router 的 SLIDES tool 不返回 config_schema，前端无法驱动配置 UI。
   r284,CitationSchema SSOT is camelCase in packages/shared,packages/shared 的 CitationSchema MUST 以 camelCase 字段作为 Zod SSOT，并驱动 OpenAPI/eden 类型；服务端序列化与前端消费 MUST 直接使用该 schema 推断类型，不得并行维护一套 snake_case Citation 线类型。
   r285,"HTTP JSON wire fields MUST be camelCase end-to-end",除 URL path 与 SSE event 名称外，对外 HTTP/SSE JSON（请求体、查询参数键、响应体、流式 done/error data）的字段名 MUST 为 camelCase，并以 packages/shared Zod 为 SSOT；MUST NOT 再使用 notebook_id/source_ids/created_at/error_code 等 snake_case wire 别名。DB 列名不受本要求约束。
@@ -46,7 +46,7 @@ scenarios[49]{req_id,id,given,when,then,feature}:
   r56,"client-targets-stable-major-prefix","",客户端调用对外 API,端点 SHALL 使用 `/v1` 前缀且在同一 major 内保持兼容,true
   r114,"auth-enabled-requires-bearer-token-for-v1","",运维启用鉴权并配置了 API key,客户端请求任意 `/v1/**` 端点若未携带有效 token SHALL 返回 401,true
   r114,"health-endpoints-remain-accessible-without-auth","",运维启用鉴权并配置了 API key,`/health` 与 `/health/dependencies` SHALL 保持匿名可访问以支持探活与运维诊断,true
-  r151,"non-sse-error-envelope-is-consistent","",非 SSE 请求发生错误,系统 SHALL 返回统一错误结构并包含 `error_code` 与 `message`,true
+  r151,"non-sse-error-envelope-is-consistent","",非 SSE 请求发生错误,系统 SHALL 返回统一错误结构并包含 `errorCode` 与 `message`,true
   r186,"client-receives-429-with-retry-guidance","",客户端触发 rate limit,系统 SHALL 返回 429,true
   r218,"health-stays-accessible-while-guardrails-are-enabled","",运维启用 guardrails（非本地暴露或显式 enabled）,`/health` 与 `/health/dependencies` SHALL 仍可匿名访问,true
   r244,"stable-error-semantics-for-ownership-and-validation","",请求引用了不存在或不属于当前 notebook 的 session/message,系统 SHALL 以稳定的 404/400 语义响应,true
@@ -85,10 +85,10 @@ scenarios[49]{req_id,id,given,when,then,feature}:
   "research-finish-generates-report","finish-with-results",研究积累了多轮搜索结果,用户调 finish,系统 SHALL 生成最终报告并存入 finalReport 字段,true
   "research-delete-endpoint","delete-running",研究正在运行,用户调 delete,系统 SHALL 先取消运行中的研究再删除记录,true
   "research-sse-named-events","plan-ready-event",研究生成了搜索计划,SSE 流发出 plan_ready,"事件 SHALL 包含 event: plan_ready 行",true
-  "error-envelope-actually-emitted-by-routes","non-sse-error-shape",a feature router such as POST /v2/outputs hits a predictable error (source_id out of scope or SLIDES guard or schema validation failure),the system returns an error response,"the body MUST match ErrorEnvelopeSchema (with error_code and message) and MUST NOT be {error: string} or any other ad-hoc shape",true
+  "error-envelope-actually-emitted-by-routes","non-sse-error-shape",a feature router such as POST /v2/outputs hits a predictable error (sourceId out of scope or SLIDES guard or schema validation failure),the system returns an error response,"the body MUST match ErrorEnvelopeSchema (with errorCode and message) and MUST NOT be {error: string} or any other ad-hoc shape",true
   "error-envelope-actually-emitted-by-routes","field-name-is-message",the client triggers a 400 error such as a missing field,the system returns an error response,the message field MUST be named message (aligned with ErrorEnvelopeSchema) and MUST NOT be named error,true
-  "shared-error-envelope-helper","single-helper-source",a developer adds a new error branch in a feature router,returning the error via the shared helper,the helper output MUST be consistent with other routers and error_code MUST come from the centralized mapping table not a custom string,true
-  "slides-config-schema-options-must-be-complete","slides-config-options-all-present",the SLIDES tool is available (returned in /v1/workspace/tools),a client reads the SLIDES tool's config_schema,"the config_schema MUST contain non-empty quantity_options, audience_options, structure_options, tone_options, language_options, density_options, and theme_preset_options arrays, plus a defaults object; each option MUST have id, label, and is_default fields",true
+  "shared-error-envelope-helper","single-helper-source",a developer adds a new error branch in a feature router,returning the error via the shared helper,the helper output MUST be consistent with other routers and errorCode MUST come from the centralized mapping table not a custom string,true
+  "slides-config-schema-options-must-be-complete","slides-config-options-all-present",the SLIDES tool is available (returned in /v1/workspace/tools),a client reads the SLIDES tool's configSchema,"the configSchema MUST contain non-empty quantityOptions, audienceOptions, structureOptions, toneOptions, languageOptions, densityOptions, and themePresetOptions arrays, plus a defaults object; each option MUST have id, label, and isDefault fields",true
   r284,"shared-citation-schema-camelcase",CitationSchema 已更新为 camelCase,服务端构建 citations 或前端类型检查 Citation,两端 SHALL 共用同一 camelCase 字段集且类型检查通过,true
   r285,"qa-request-response-camelcase",客户端调用 QA 或 messages 等核心端点,检查请求与响应 JSON 键名,SHALL 仅出现 camelCase 键（如 notebookId/sourceIds/createdAt），且 MUST NOT 依赖 snake_case 键,true
   r285,"no-snake-compat-layer",服务端已切换为 camelCase wire,客户端仍发送 notebook_id 等 snake_case 字段,系统 SHALL 按校验失败或忽略未知键处理，MUST NOT 同时接受两套字段名作为正式合约,true

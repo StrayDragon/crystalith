@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 
 import { api } from '../../../../api/eden';
+import { edenFetchOptions } from '../../../../api/edenFetchOptions';
 import { useWorkspaceStore } from '../state/workspaceStore';
 import type {
   GenerationPreference,
@@ -24,24 +25,6 @@ type SlidesDraftSnapshot = {
 };
 
 const SLIDES_GENERATE_TIMEOUT_MS = 180000;
-
-/**
- * Attach AbortSignal to Eden treaty calls when the runtime accepts it.
- * jsdom's AbortSignal is a different realm from Node/undici `fetch` (Vitest+MSW),
- * so `new Request(..., { signal })` throws there — omit the signal and rely on
- * cooperative cancellation (`signal.aborted` / job status checks) instead.
- */
-function edenFetchOptions(signal?: AbortSignal): { fetch: { signal: AbortSignal } } | undefined {
-  if (!signal) return undefined;
-  try {
-    // Probe realm compatibility (jsdom AbortSignal fails here under Vitest+MSW).
-    const probe = new Request('http://local.invalid/', { signal });
-    void probe;
-    return { fetch: { signal } };
-  } catch {
-    return undefined;
-  }
-}
 
 export interface OutputQueueJob {
   id: string;
