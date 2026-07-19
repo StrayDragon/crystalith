@@ -1,3 +1,10 @@
+/**
+ * Workspace **UI-domain** types (view models, panel state, render descriptors).
+ *
+ * Wire/API shapes live in `@crystalith/shared` (Zod SSOT) and reach the client
+ * via Eden `treaty<App>`. Do not reintroduce `Api*` DTOs here — normalize in
+ * `utils.ts` from shared/Eden types into these UI shapes.
+ */
 export type PanelId = 'sources' | 'chat' | 'refine';
 export type ConnectionState = 'connecting' | 'error' | 'live';
 export type RefineMode = 'paragraph' | 'bullets' | 'structured';
@@ -104,7 +111,6 @@ export type UnknownOutputPayload = OutputContentBase & Record<string, unknown>;
 export type OutputPayload = KnownOutputPayload | UnknownOutputPayload;
 export type SlideStage = 'input' | 'outline' | 'markdown';
 export type SlideStatus = 'idle' | 'running' | 'error';
-export type SourceSearchStatus = 'ok' | 'not_implemented';
 export type ToolTone = 'slate' | 'blue' | 'green' | 'rose' | 'amber' | 'teal' | 'indigo';
 
 export type RenderLayout = 'list' | 'cards' | 'tree' | 'timeline' | 'sections' | 'table';
@@ -415,133 +421,4 @@ export interface LoadingState {
   messages: boolean;
   outputs: boolean;
   send: boolean;
-}
-
-export interface ApiNotebook {
-  id: number;
-  name?: string | null;
-  updatedAt?: string | null;
-}
-
-export interface ApiSession {
-  id: number;
-  notebookId: number;
-  title?: string | null;
-  createdAt?: string | null;
-  updatedAt?: string | null;
-}
-
-export interface ApiMessage {
-  id: number;
-  sessionId: number;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  citations?: ApiCitation[] | null;
-  createdAt?: string | null;
-  updatedAt?: string | null;
-}
-
-export interface ApiWorkspaceTool {
-  id: string;
-  label: string;
-  description: string;
-  tone: ToolTone;
-  outputType: OutputTypeId;
-  prompt: string;
-  renderDescriptor?: RenderDescriptor | null;
-  configSchema?: PluginConfigSchema | null;
-  badge?: string | null;
-  enabled?: boolean | null;
-}
-
-export interface ApiWorkspaceToolsResponse {
-  tools: ApiWorkspaceTool[];
-  diagnostics?: Record<string, unknown>;
-}
-
-interface ApiOutputBase {
-  id: number;
-  notebookId: number;
-  prompt?: string | null;
-  chunkIds?: number[] | null;
-  createdAt?: string | null;
-  updatedAt?: string | null;
-}
-
-export type ApiOutput = {
-  [K in OutputTypeId]: ApiOutputBase & {
-    type: K;
-    content: OutputContentByType[K] | Record<string, unknown>;
-  };
-}[OutputTypeId];
-
-export interface ApiSource {
-  id: number;
-  notebookId?: number | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  status?: string | null;
-  errorCode?: string | null;
-  errorMessage?: string | null;
-  recoveryHint?: string | null;
-  lastErrorAt?: string | null;
-  chunkCount?: number | null;
-  metadata?: Record<string, unknown> | null;
-  tags?: string[] | null;
-  createdAt?: string | null;
-  updatedAt?: string | null;
-}
-
-export interface ApiSourceDeleteResponse {
-  deletedIds: number[];
-  deletedCount: number;
-}
-
-export interface ApiSourceSearchResult {
-  title: string;
-  url: string;
-  snippet?: string | null;
-  source?: string | null;
-}
-
-export interface ApiSourceSearchResponse {
-  status: SourceSearchStatus;
-  query: string;
-  engine: string;
-  mode: string;
-  results: ApiSourceSearchResult[];
-  message?: string | null;
-  createdAt?: string | null;
-}
-
-/** Wire/API citation shape (camelCase; matches packages/shared CitationSchema). */
-export interface ApiCitation {
-  sourceId?: number | null;
-  sourceName?: string | null;
-  chunkId?: number | string | null;
-  chunkIndex?: number | null;
-  pageNumber?: number | null;
-  paragraphIndex?: number | null;
-  snippet?: string | null;
-  score?: number | null;
-}
-
-export interface ApiAnswer {
-  answer: string;
-  citations?: ApiCitation[];
-  evidence?: boolean;
-  confidence?: number;
-  createdAt?: string | null;
-}
-
-export interface ApiRefineOutput {
-  paragraph?: string | null;
-  bullets?: string[] | null;
-  structured?: RefineOutputStructured | null;
-}
-
-export interface ApiRefineBatchResponse {
-  outputs?: Partial<Record<RefineMode, ApiRefineOutput>>;
-  evidence?: boolean;
-  citations?: ApiCitation[];
 }

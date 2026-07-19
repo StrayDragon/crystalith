@@ -6,7 +6,7 @@
 > **批次纪律**：每个合理批次验收通过后 **commit**；有问题随时停并报告。
 
 **来源**：Wave A（架构 / 流程门禁 / Spec 漂移）只读体检。  
-**最后更新**：2026-07-19（澄清 Eden ≠ Zod）
+**最后更新**：2026-07-19（P1.5 workspace types 瘦身完成 → 暂停）
 
 ---
 
@@ -56,15 +56,15 @@ shared Zod（或路由挂载的 schema）
 
 ## 1. 总进度一览
 
-| Phase | 主题                                     | 状态                           |
-| ----- | ---------------------------------------- | ------------------------------ |
-| P0    | 门禁解阻塞（能跑 `just lint`）           | ✅                             |
-| P1    | Zod / Eden SSOT 收敛（核心）             | 🔄 P1.4 ✅；P1.2/1.3/1.5+ 待办 |
-| P2    | Zod 使用面写入 AGENTS.md + 文档对齐      | ✅                             |
-| P3    | 门禁真相（qa 组成、假绿项）              | ⬜                             |
-| P4    | Cleanup A（死代码 / 死配置，无行为变更） | ⬜                             |
-| P5    | Spec 卫生（手改 toon，**不开 SDD**）     | ⬜                             |
-| P6    | 可选：瘦 CI / SECURITY / 余债            | ⬜                             |
+| Phase | 主题                                     | 状态                               |
+| ----- | ---------------------------------------- | ---------------------------------- |
+| P0    | 门禁解阻塞（能跑 `just lint`）           | ✅                                 |
+| P1    | Zod / Eden SSOT 收敛（核心）             | 🔄 P1.4–1.5 ✅；P1.2/1.3/1.6+ 待办 |
+| P2    | Zod 使用面写入 AGENTS.md + 文档对齐      | ✅                                 |
+| P3    | 门禁真相（qa 组成、假绿项）              | ⬜                                 |
+| P4    | Cleanup A（死代码 / 死配置，无行为变更） | ⬜                                 |
+| P5    | Spec 卫生（手改 toon，**不开 SDD**）     | ⬜                                 |
+| P6    | 可选：瘦 CI / SECURITY / 余债            | ⬜                                 |
 
 ---
 
@@ -90,14 +90,16 @@ shared Zod（或路由挂载的 schema）
   - [ ] shared 补齐或统一 `RenderDescriptor` / output meta；server `generator` / web 去三份复制
 - [ ] **P1.3 Studio outline**（ARCH-10）
   - [ ] `studio/service.ts` 改用 shared `SlidesOutlineSchema`
-- [ ] **P1.4 Web：Eden 优先迁移**
+- [x] **P1.4 Web：Eden 优先迁移**
   - [x] 域：`refine`（`useRefine` 不再依赖 `shared-types`；wire → `unknown` normalize → UI types）
   - [x] 域：`sources`（tag/chunk/extractor/QA → `@crystalith/shared`）
   - [x] 域：`diagnostics`（`WorkspaceToolsDiagnostics` → `workspace/shared/types`；**删除** `shared-types.ts`）
   - [x] 域顺序：~~`refine`~~ → ~~`sources`~~ → ~~`diagnostics`~~ ✅
   - [x] 删除 `apps/web/src/api/shared-types.ts`
-- [ ] **P1.5 Web：`workspace/shared/types.ts` 瘦身**
-  - [ ] wire DTO 外迁到 shared 或改 Eden；UI-only 类型留下并标注
+- [x] **P1.5 Web：`workspace/shared/types.ts` 瘦身**
+  - [x] wire DTO 外迁到 shared 或改 Eden；UI-only 类型留下并标注
+  - [x] 删除全部 `Api*`；normalize 改用 `@crystalith/shared`；`SourceSearchResult` 补 type export
+  - [x] 文件头标注 UI-only；`just qa` 绿后本波 commit → **暂停**
 - [ ] **P1.6 路由 Zod 审计**
   - [ ] 每个 `features/*/router.ts`：body/query/response 均来自 shared；无平行合约
 - [ ] **P1.7 OpenAPI 抽检**
@@ -207,10 +209,12 @@ shared Zod（或路由挂载的 schema）
 
 **web 对 `@crystalith/shared` 仅 1 处**：`useChat.ts` 的 `Citation`。
 
-### 6.2 `workspace/shared/types.ts`（~520 LOC，~76 exports）
+### 6.2 `workspace/shared/types.ts`（UI-only；P1.5 已瘦身）
 
-- **可留（UI）**：`PanelId`、`ConnectionState`、slide stage、layout 等
-- **应外迁（wire/payload）**：`OutputTypeId`、各 `*OutputContent`、与 server output schema 重复的结构 → P1.2 / P1.5
+- **已删**：全部 `Api*` wire DTO（notebook/session/message/output/source/citation/refine/tools…）
+- **可留（UI）**：`PanelId`、`ConnectionState`、slide stage、layout、`Citation`（含 UI `id`）、`Notebook`/`SourceItem` 等 view model
+- **仍与 shared 重叠（下轮）**：`OutputTypeId`、各 `*OutputContent`、`RenderDescriptor` → **P1.2**
+- **normalize**：`utils.ts` 从 `@crystalith/shared`（`Wire*`）映射到 UI types
 
 ### 6.3 Server 本地 `z.object`（非测试）
 
@@ -232,6 +236,7 @@ shared Zod（或路由挂载的 schema）
 
 1. ~~P1.1 Research shared+agent+web~~ ✅
 2. P1.3 Studio outline（小批）
-3. P1.4 按域消 `shared-types`（refine → sources → diagnostics）
-4. P1.2 + P1.5 Output 描述符合并
-5. P1.6–P1.8 审计与回归
+3. ~~P1.4 按域消 `shared-types`~~ ✅
+4. ~~P1.5 workspace `Api*` 瘦身~~ ✅ → **暂停**
+5. P1.2 Output / RenderDescriptor
+6. P1.6–P1.8 审计与回归

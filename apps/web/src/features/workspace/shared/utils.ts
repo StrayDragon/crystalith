@@ -1,11 +1,14 @@
+import type {
+  Citation as WireCitation,
+  Message as WireMessage,
+  Notebook as WireNotebook,
+  Output as WireOutput,
+  Session as WireSession,
+  Source as WireSource,
+} from '@crystalith/shared';
+
 import { decodeOutputItem, normalizeOutputPayload, pickTextValue } from './outputPayload';
 import type {
-  ApiCitation,
-  ApiMessage,
-  ApiNotebook,
-  ApiOutput,
-  ApiSession,
-  ApiSource,
   Citation,
   CitationScopeMode,
   CitationScopeSnapshot,
@@ -18,6 +21,18 @@ import type {
   SessionSummary,
   SourceItem,
 } from './types';
+
+/** Loose citation fields accepted by normalize (partial / coerced wire). */
+type CitationInput = Partial<{
+  sourceId: number | null;
+  sourceName: string | null;
+  chunkId: number | string | null;
+  chunkIndex: number | null;
+  pageNumber: number | null;
+  paragraphIndex: number | null;
+  snippet: string | null;
+  score: number | null;
+}>;
 
 export function createId(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -252,7 +267,7 @@ export function formatStructuredOutputForCopy(output: OutputItem): string {
   }
 }
 
-export function normalizeNotebook(row: ApiNotebook): Notebook {
+export function normalizeNotebook(row: WireNotebook): Notebook {
   return {
     id: Number(row.id),
     title: row.name ?? '未命名笔记本',
@@ -278,7 +293,7 @@ export function pickDefaultNotebookId(
   return sorted[0]?.id ?? null;
 }
 
-export function normalizeSession(row: ApiSession): SessionSummary {
+export function normalizeSession(row: WireSession): SessionSummary {
   return {
     id: Number(row.id),
     title: row.title ?? '未命名会话',
@@ -287,7 +302,7 @@ export function normalizeSession(row: ApiSession): SessionSummary {
   };
 }
 
-export function normalizeMessage(row: ApiMessage): ChatMessage {
+export function normalizeMessage(row: WireMessage): ChatMessage {
   const citations = Array.isArray(row.citations) ? row.citations.map(normalizeCitation) : [];
   const role = row.role === 'assistant' ? 'assistant' : 'user';
   return {
@@ -300,7 +315,7 @@ export function normalizeMessage(row: ApiMessage): ChatMessage {
   };
 }
 
-export function normalizeOutput(row: ApiOutput): OutputItem {
+export function normalizeOutput(row: WireOutput): OutputItem {
   return {
     id: Number(row.id),
     type: row.type,
@@ -314,7 +329,7 @@ export function normalizeOutput(row: ApiOutput): OutputItem {
   };
 }
 
-export function formatSourceType(row: ApiSource): string {
+export function formatSourceType(row: Pick<WireSource, 'filename' | 'mimeType'>): string {
   const filename = row.filename ?? '';
   const extension = filename.split('.').pop()?.toLowerCase();
   if (extension === 'md' || extension === 'markdown') return 'Markdown';
@@ -324,7 +339,7 @@ export function formatSourceType(row: ApiSource): string {
   return row.mimeType || '未知';
 }
 
-export function normalizeSource(row: ApiSource): SourceItem {
+export function normalizeSource(row: WireSource): SourceItem {
   const statusKey = String(row.status ?? 'READY').toUpperCase();
   const metadata =
     row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
@@ -366,7 +381,7 @@ export function normalizeSource(row: ApiSource): SourceItem {
   };
 }
 
-export function normalizeCitation(row: ApiCitation): Citation {
+export function normalizeCitation(row: CitationInput | WireCitation): Citation {
   const chunkId = row.chunkId != null ? Number(row.chunkId) : null;
   return {
     id: `${row.chunkId ?? row.chunkIndex ?? ''}`,
@@ -396,7 +411,7 @@ export function collectOutputCitations(content: unknown): Citation[] {
     const record = raw as Record<string, unknown>;
     const chunkId = typeof record.chunkId === 'number' ? record.chunkId : null;
     if (!chunkId || seen.has(chunkId)) return;
-    const mapped: ApiCitation = {
+    const mapped: CitationInput = {
       sourceId: typeof record.sourceId === 'number' ? record.sourceId : null,
       sourceName: typeof record.sourceName === 'string' ? record.sourceName : null,
       chunkId,

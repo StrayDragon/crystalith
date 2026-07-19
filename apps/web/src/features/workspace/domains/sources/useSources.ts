@@ -5,6 +5,7 @@ import type {
   PatchNotebookExtractorPolicy,
   QAMessage,
   SourceFromUrlMode,
+  SourceSearchResult,
   SourceTag,
 } from '@crystalith/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -15,7 +16,6 @@ import { parseServerError } from '../../../../api/parseServerError';
 import { toast } from '../../../../shared/toast';
 import type { AsyncStatus } from '../../../../shared/types';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
-import type { ApiSourceSearchResult } from '../../shared/types';
 import { normalizeSource } from '../../shared/utils';
 
 type ExtractorType = ExtractorInfo['type'];
@@ -35,7 +35,7 @@ export interface SearchQueueItem {
   engine: string;
   mode: string;
   status: SearchQueueItemStatus;
-  results: ApiSourceSearchResult[];
+  results: SourceSearchResult[];
   notice: string;
   createdAt: number;
 }
