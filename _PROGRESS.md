@@ -179,7 +179,7 @@ shared Zod（或路由挂载的 schema）
 - [x] **A** `strategy_configs` → Drizzle（P6.3）
 - [x] **B** OutputContentByType / frontendBundle / templates+eval response Zod
 - [x] **C** shared `.openapi()` 基础（extend + notebook/session/template/workspace/command/error）
-- [x] **D** 产品 gap — D.1 低风险；D.2 qa-to-source/tags；**D.3** citations sanitize + quality repair（修 needsRepair FAQ/BULLETS + 回归测）
+- [x] **D** 产品 gap — D.1–D.3；**D.4** research SSE status/thinking（poll 先查后睡 + schema/status 消息 + 回归测；stats preset 仍余）
 - [ ] **E** 孤儿愿景 spec 归档
 - [ ] **F** 神文件拆分
 - [ ] **G** 提炼 skill
@@ -190,7 +190,7 @@ shared Zod（或路由挂载的 schema）
 
 ## 3. 当前焦点
 
-**正在做**：本阶段主线 **P0–P5 已收口**；c13 **明确不做**
+**正在做**：Wave D 余项（stats preset）→ E → F → G；c13 **明确不做**
 
 **已完成批次**：
 
@@ -198,8 +198,9 @@ shared Zod（或路由挂载的 schema）
 - **P1** 路由 Zod 主线（含 rem/connectors/response/eval）
 - **P3** 门禁真相整包 + **web Vitest 纳入 just qa**
 - **P5** Spec 卫生 + specs-compact（代码 SSOT；40 specs validate 绿）
+- **Wave A–D.4**（strategy_configs / Output Zod / openapi / 产品 gap 回归至 research SSE）
 
-**下一步（可选）**：push / **P6**（SECURITY、瘦 CI、余债）/ 产品 gap 另开；**不做 c13**
+**下一步**：D 余（stats preset）/ **E** 归档孤儿 / **F** 神文件 / **G** skill；**不做 c13**
 
 **明确不做**：c13 分发 / Tauri / 改挂 `v2-distribution`（P5.7 仅备注；P6.5 随 c13 一并搁置）
 
