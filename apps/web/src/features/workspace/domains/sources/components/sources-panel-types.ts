@@ -42,6 +42,8 @@ export interface SourcesPanelProps {
     mode: SourceFromUrlMode,
     options?: { title?: string; snippet?: string; extractor?: ExtractorType },
   ) => Promise<unknown>;
+  /** Open the durable「从 URL 导入」dialog (workspace overlay). */
+  onOpenUrlImport?: () => void;
   onRemoveSources: (sourceIds: number[]) => Promise<boolean>;
   onRemoveSource: (sourceId: number) => Promise<boolean>;
   onBatchReembedSources?: (sourceIds: number[]) => Promise<boolean>;

@@ -38,6 +38,7 @@ function SourcesPanelView({
   searchState,
   onSearch,
   onAddSourceFromUrl,
+  onOpenUrlImport,
   onRemoveSources,
   onRemoveSource,
   onBatchReembedSources,
@@ -230,6 +231,7 @@ function SourcesPanelView({
           onClearUploadQueue={onClearUploadQueue}
           fileInputRef={fileInputRef}
           onOpenConnectors={() => setConnectorsOpen(true)}
+          onOpenUrlImport={onOpenUrlImport}
         />
         <SourcesPanelSearchSection
           isDeepResearchMode={isDeepResearchMode}

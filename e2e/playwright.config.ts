@@ -6,8 +6,10 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Critical browser gate for Crystalith.
  *
- * - Isolated ports so `just e2e` can run beside `just dev`.
+ * - Isolated ports so `just e2e` can run beside `just dev` (8032/3000).
  * - Fresh SQLite via CL_DB_PATH under e2e/.tmp/
+ * - Live chat/embedding gateways are stubbed offline so shell `CL_*` from
+ *   `just dev` / ~/.bashrc cannot leak into P0 (no LLM required).
  * - Prefer data-testid (apps/web/src/shared/testids.ts) over visible text.
  */
 
@@ -23,6 +25,47 @@ const SERVER_URL = `http://127.0.0.1:${SERVER_PORT}`;
 const WEB_URL = `http://127.0.0.1:${WEB_PORT}`;
 
 const reuse = !process.env.CI && process.env.CL_E2E_REUSE === '1';
+
+/** Closed local port — connection fails fast; P0 never needs a live gateway. */
+const E2E_OFFLINE_GATEWAY = 'http://127.0.0.1:9/v1';
+
+/**
+ * Strip live model/gateway vars inherited from the parent shell, then pin
+ * offline stubs + isolated DB/ports. Keeps `just e2e` independent of `just dev`.
+ */
+function e2eServerEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+
+  const liveKeys = [
+    'CL_CHAT_API_BASE',
+    'CL_CHAT_API_KEY',
+    'CL_CHAT_MODEL',
+    'CL_CHAT_LIGHT_MODEL',
+    'CL_EMBEDDING_API_BASE',
+    'CL_EMBEDDING_API_KEY',
+    'CL_EMBEDDING_MODEL',
+    'CL_DEFAULT_CHAT_MODEL',
+    'CL_DEFAULT_EMBEDDING_MODEL',
+    'OPENAI_API_KEY',
+    'ANTHROPIC_API_KEY',
+    'GOOGLE_GENERATIVE_AI_API_KEY',
+  ] as const;
+
+  for (const key of liveKeys) {
+    delete env[key];
+  }
+
+  return {
+    ...env,
+    CL_DB_PATH: DB,
+    CL_SERVER_HOST: '127.0.0.1',
+    CL_SERVER_PORT: SERVER_PORT,
+    CL_CHAT_API_BASE: E2E_OFFLINE_GATEWAY,
+    CL_EMBEDDING_API_BASE: E2E_OFFLINE_GATEWAY,
+    CL_CHAT_API_KEY: 'e2e-offline',
+    CL_EMBEDDING_API_KEY: 'e2e-offline',
+  };
+}
 
 export default defineConfig({
   globalSetup: './global-setup.ts',
@@ -60,12 +103,7 @@ export default defineConfig({
       reuseExistingServer: reuse,
       timeout: 120_000,
       cwd: ROOT,
-      env: {
-        ...process.env,
-        CL_DB_PATH: DB,
-        CL_SERVER_HOST: '127.0.0.1',
-        CL_SERVER_PORT: SERVER_PORT,
-      },
+      env: e2eServerEnv(),
     },
     {
       command: `bunx vite --host 127.0.0.1 --port ${WEB_PORT} --strictPort`,

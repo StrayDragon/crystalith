@@ -1,5 +1,9 @@
 import { Button, Spinner, Tooltip, Typography } from '@material-tailwind/react';
-import { CloudUpload as CloudUploadIcon, Settings as SettingsIcon } from '@mui/icons-material';
+import {
+  CloudUpload as CloudUploadIcon,
+  Link as LinkIcon,
+  Settings as SettingsIcon,
+} from '@mui/icons-material';
 import type { Ref, RefObject } from 'react';
 
 import { t } from '../../../../../shared/i18n';
@@ -25,6 +29,7 @@ export interface SourcesPanelUploadSectionProps {
   onClearUploadQueue?: () => void;
   fileInputRef: RefObject<HTMLInputElement | null>;
   onOpenConnectors: () => void;
+  onOpenUrlImport?: () => void;
 }
 
 export default function SourcesPanelUploadSection({
@@ -42,6 +47,7 @@ export default function SourcesPanelUploadSection({
   onClearUploadQueue,
   fileInputRef,
   onOpenConnectors,
+  onOpenUrlImport,
 }: SourcesPanelUploadSectionProps) {
   return (
     <>
@@ -131,6 +137,23 @@ export default function SourcesPanelUploadSection({
           </Button>
         </div>
       </Tooltip>
+
+      {onOpenUrlImport ? (
+        <Tooltip content="从网页链接导入来源">
+          <Button
+            variant="outlined"
+            fullWidth
+            size="sm"
+            disabled={uploadDisabled}
+            className="flex items-center justify-center gap-2 py-2 rounded-full border-gray-300 normal-case font-normal text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 hover:border-gray-400"
+            {...tid(TestIds.urlImportOpen)}
+            onClick={onOpenUrlImport}
+          >
+            <LinkIcon style={{ fontSize: 18 }} />
+            从 URL 导入
+          </Button>
+        </Tooltip>
+      ) : null}
 
       <Tooltip content="通过连接器接入外部资料仓（如 Obsidian / 本地目录）">
         <Button

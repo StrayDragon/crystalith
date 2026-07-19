@@ -12,4 +12,12 @@ just e2e-all       # full suite (currently same as @p0)
 just qa            # primary PR gate (includes e2e @p0 + web Vitest)
 ```
 
-Isolated ports: web `13000`, API `18032`, DB `e2e/.tmp/crystalith.e2e.db`.
+## Isolation from `just dev`
+
+|                 | `just dev`                                 | `just e2e`                         |
+| --------------- | ------------------------------------------ | ---------------------------------- |
+| Ports           | web `:3000`, API `:8032`                   | web `:13000`, API `:18032`         |
+| DB              | `data/crystalith.db`                       | fresh `e2e/.tmp/crystalith.e2e.db` |
+| `CL_*` gateways | loaded via `scripts/load-cl-env.sh` (live) | stubbed to `127.0.0.1:9` (offline) |
+
+P0 does **not** require LLM/embedding. Source upload may land `failed`/`EMBEDDING_FAILED`; that is expected offline.
