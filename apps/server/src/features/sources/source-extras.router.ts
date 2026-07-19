@@ -2,6 +2,10 @@
 //
 // Mirrors v1 `features/sources/api_summary.py` + `features/sources/api_qa.py`.
 // Split from the main sources router to avoid Elysia chaining complexity.
+import {
+  ConvertSourceQAToSourceRequestSchema,
+  ConvertSourceQAToSourceResponseSchema,
+} from '@crystalith/shared';
 import { generateText } from 'ai';
 import { eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
@@ -35,7 +39,9 @@ const apiDocs: OpenApiRoute[] = [
     method: 'post',
     summary: 'Convert per-source QA into a new source',
     tags: ['sources'],
-    responses: { 201: { description: 'New source from QA' } },
+    responses: {
+      201: { description: 'New source from QA', body: ConvertSourceQAToSourceResponseSchema },
+    },
   },
 ];
 
@@ -221,107 +227,105 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Convert per-source QA to a source (v1 api_qa.py:204 parity)
-  .post('/notebooks/:nid/sources/:sid/qa-to-source', async ({ params, body }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const sid = requirePositiveIntId(params.sid, 'source id');
-    const source = db().select().from(sources).where(eq(sources.id, sid)).get();
-    if (!source) throw new NotFoundError(`Source ${sid} not found`);
-    // c44: verify notebook ownership (v1 api_qa.py:221)
-    if (source.notebookId !== nid) throw new NotFoundError(`Source ${sid} not found`);
+  .post(
+    '/notebooks/:nid/sources/:sid/qa-to-source',
+    async ({ params, body, set }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const sid = requirePositiveIntId(params.sid, 'source id');
+      const source = db().select().from(sources).where(eq(sources.id, sid)).get();
+      if (!source) throw new NotFoundError(`Source ${sid} not found`);
+      // c44: verify notebook ownership (v1 api_qa.py:221)
+      if (source.notebookId !== nid) throw new NotFoundError(`Source ${sid} not found`);
 
-    // c53: accept multi-turn messages list (v1 api_qa.py:186-209,204-209) OR
-    // the single-turn {question, answer} shortcut. Multi-turn formats a full
-    // transcript; single-turn wraps the one Q/A pair.
-    const { question, answer, messages } = body as {
-      question?: string;
-      answer?: string;
-      messages?: Array<{ role: 'user' | 'assistant'; content: string }>;
-    };
+      // Multi-turn messages list (v1) OR single-turn {question, answer} shortcut.
+      const { question, answer, messages } = body;
 
-    const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, '-');
-    const filename = `QA_${source.filename}_${timestamp}.md`;
+      const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, '-');
+      const filename = `QA_${source.filename}_${timestamp}.md`;
 
-    let text: string;
-    if (messages && messages.length > 0) {
-      // Multi-turn transcript (v1 api_qa.py:186-201 format)
-      const turns = messages
-        .map((m) => {
-          const label = m.role === 'assistant' ? '助手' : '用户';
-          return `**${label}**: ${m.content}`;
-        })
-        .join('\n\n');
-      text = `# Q&A\n\n${turns}\n\n*Based on source: ${source.filename}*`;
-    } else {
-      if (!question?.trim() || !answer?.trim()) {
-        throw new NotFoundError('question and answer are required (or provide messages)');
+      let text: string;
+      if (messages && messages.length > 0) {
+        const turns = messages
+          .map((m) => {
+            const label = m.role === 'assistant' ? '助手' : '用户';
+            return `**${label}**: ${m.content}`;
+          })
+          .join('\n\n');
+        text = `# Q&A\n\n${turns}\n\n*Based on source: ${source.filename}*`;
+      } else {
+        text = `# Q&A: ${question!.trim()}\n\n**Question**: ${question!.trim()}\n\n**Answer**: ${answer!.trim()}\n\n*Based on source: ${source.filename}*`;
       }
-      text = `# Q&A: ${question.trim()}\n\n**Question**: ${question.trim()}\n\n**Answer**: ${answer.trim()}\n\n*Based on source: ${source.filename}*`;
-    }
 
-    const newSource = db()
-      .insert(sources)
-      .values({
-        notebookId: source.notebookId,
-        filename,
-        status: 'processing',
-        metadata: { qa_from_source: sid, original_filename: source.filename },
-      })
-      .returning()
-      .get();
-
-    const { chunkText } = await import('../../rag/chunker.ts');
-    const reportChunks = chunkText(text);
-
-    const chunkRows: Array<{ id: number; text: string }> = [];
-    for (const chunk of reportChunks) {
-      const chunkRow = db()
-        .insert(chunks)
+      const newSource = db()
+        .insert(sources)
         .values({
-          sourceId: newSource.id,
-          chunkIndex: chunk.index,
-          text: chunk.text,
-          metadata: { source_type: 'qa_conversion' },
+          notebookId: source.notebookId,
+          filename,
+          status: 'processing',
+          metadata: { qa_from_source: sid, original_filename: source.filename },
         })
         .returning()
         .get();
-      chunkRows.push({ id: chunkRow.id, text: chunk.text });
-    }
 
-    if (chunkRows.length > 0) {
-      try {
-        const { embedBatch } = await import('../../rag/embedder.ts');
-        const { insertChunkVector } = await import('../../db/vectors.ts');
-        const vectors = await embedBatch(chunkRows.map((c) => c.text));
-        for (const [i, vec] of vectors.entries()) {
-          insertChunkVector(db(), chunkRows[i].id, source.notebookId, newSource.id, vec);
-        }
-        const { bumpVectorEpoch, bumpSourcesEpoch } = await import('../../rag/cache.ts');
-        bumpVectorEpoch(source.notebookId);
-        bumpSourcesEpoch(source.notebookId);
-        // Only set ready after successful embedding (c39: fix ready-before-vectors race)
-        db().update(sources).set({ status: 'ready' }).where(eq(sources.id, newSource.id)).run();
-      } catch (error) {
-        console.error('[source-extras] qa-to-source embedding failed:', error);
-        db()
-          .update(sources)
-          .set({
-            status: 'failed',
-            errorMessage: error instanceof Error ? error.message : 'Embedding failed',
+      const { chunkText } = await import('../../rag/chunker.ts');
+      const reportChunks = chunkText(text);
+
+      const chunkRows: Array<{ id: number; text: string }> = [];
+      for (const chunk of reportChunks) {
+        const chunkRow = db()
+          .insert(chunks)
+          .values({
+            sourceId: newSource.id,
+            chunkIndex: chunk.index,
+            text: chunk.text,
+            metadata: { source_type: 'qa_conversion' },
           })
-          .where(eq(sources.id, newSource.id))
-          .run();
-        throw new Error('Failed to embed QA source', { cause: error });
+          .returning()
+          .get();
+        chunkRows.push({ id: chunkRow.id, text: chunk.text });
       }
-    } else {
-      // No chunks — safe to mark ready
-      db().update(sources).set({ status: 'ready' }).where(eq(sources.id, newSource.id)).run();
-    }
 
-    return {
-      sourceId: newSource.id,
-      filename,
-      chunkCount: chunkRows.length,
-    };
-  });
+      if (chunkRows.length > 0) {
+        try {
+          const { embedBatch } = await import('../../rag/embedder.ts');
+          const { insertChunkVector } = await import('../../db/vectors.ts');
+          const vectors = await embedBatch(chunkRows.map((c) => c.text));
+          for (const [i, vec] of vectors.entries()) {
+            insertChunkVector(db(), chunkRows[i].id, source.notebookId, newSource.id, vec);
+          }
+          const { bumpVectorEpoch, bumpSourcesEpoch } = await import('../../rag/cache.ts');
+          bumpVectorEpoch(source.notebookId);
+          bumpSourcesEpoch(source.notebookId);
+          // Only set ready after successful embedding (c39: fix ready-before-vectors race)
+          db().update(sources).set({ status: 'ready' }).where(eq(sources.id, newSource.id)).run();
+        } catch (error) {
+          console.error('[source-extras] qa-to-source embedding failed:', error);
+          db()
+            .update(sources)
+            .set({
+              status: 'failed',
+              errorMessage: error instanceof Error ? error.message : 'Embedding failed',
+            })
+            .where(eq(sources.id, newSource.id))
+            .run();
+          throw new Error('Failed to embed QA source', { cause: error });
+        }
+      } else {
+        // No chunks — safe to mark ready
+        db().update(sources).set({ status: 'ready' }).where(eq(sources.id, newSource.id)).run();
+      }
+
+      set.status = 201;
+      return {
+        sourceId: newSource.id,
+        filename,
+        chunkCount: chunkRows.length,
+      };
+    },
+    {
+      body: ConvertSourceQAToSourceRequestSchema,
+      response: ConvertSourceQAToSourceResponseSchema,
+    },
+  );
 
 registerApiDoc(apiDocs);

@@ -400,15 +400,41 @@ export const SourceQAResponseSchema = z.object({
 
 export const QAMessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
-  content: z.string(),
+  content: z.string().min(1),
 });
 export type QAMessage = z.infer<typeof QAMessageSchema>;
 
-export const ConvertSourceQAToSourceRequestSchema = z.object({
-  messages: z.array(QAMessageSchema).min(1),
-});
+/** POST …/sources/:sid/qa-to-source — multi-turn messages OR single-turn Q/A. */
+export const ConvertSourceQAToSourceRequestSchema = z
+  .object({
+    messages: z.array(QAMessageSchema).min(1).optional(),
+    question: z.string().optional(),
+    answer: z.string().optional(),
+  })
+  .superRefine((v, ctx) => {
+    const hasMessages = (v.messages?.length ?? 0) > 0;
+    const hasPair = Boolean(v.question?.trim() && v.answer?.trim());
+    if (!hasMessages && !hasPair) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Provide messages[] or question+answer',
+      });
+    }
+  });
+export type ConvertSourceQAToSourceRequest = z.infer<typeof ConvertSourceQAToSourceRequestSchema>;
 
 export const ConvertSourceQAToSourceResponseSchema = z.object({
   sourceId: IdSchema,
   filename: z.string(),
+  chunkCount: z.number().int().nonnegative(),
 });
+
+export const SourceTagBindingResponseSchema = z.object({
+  tagId: IdSchema,
+  sourceIds: z.array(IdSchema),
+  applied: z.number().int().nonnegative().optional(),
+  removed: z.number().int().nonnegative().optional(),
+  skipped: z.number().int().nonnegative(),
+  results: z.array(SourceBatchItemResultSchema),
+});
+export type SourceTagBindingResponse = z.infer<typeof SourceTagBindingResponseSchema>;
