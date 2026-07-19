@@ -294,6 +294,7 @@ export default function WorkspaceLayout() {
       {
         id: 'open-command-palette',
         combo: 'Ctrl+K',
+        allowInInput: true,
         handler: () => {
           overlays.toggleCommandPalette();
         },
