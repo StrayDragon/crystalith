@@ -1,8 +1,7 @@
-import { Spinner, Typography } from '@material-tailwind/react';
+import { Spinner, Textarea, Typography } from '@material-tailwind/react';
 
 import type { SlidesStageContentProps } from '../types';
 import { SlidesInputStage } from './SlidesInputStage';
-import { SlidesMarkdownStage } from './SlidesMarkdownStage';
 import { SlidesOutlineStage } from './SlidesOutlineStage';
 import { SlidesPreviewModeContent } from './SlidesPreviewModeContent';
 
@@ -68,5 +67,19 @@ export function SlidesStageContent({
     return <SlidesOutlineStage {...outlineStageProps} />;
   }
 
-  return <SlidesMarkdownStage {...markdownStageProps} />;
+  const { markdown, onMarkdownChange, selectionLabel } = markdownStageProps;
+  return (
+    <div className="space-y-4">
+      <Textarea
+        label="Slides Markdown"
+        value={markdown}
+        onChange={(event) => onMarkdownChange(event.target.value)}
+        rows={16}
+        className="font-mono text-xs"
+      />
+      <Typography variant="small" className="text-gray-600 dark:text-slate-300">
+        {selectionLabel}
+      </Typography>
+    </div>
+  );
 }
