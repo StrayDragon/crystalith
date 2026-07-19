@@ -3,7 +3,6 @@ import {
   ArrowForward as ArrowForwardIcon,
   Psychology as PsychologyIcon,
   Search as SearchIcon,
-  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import type { Ref, RefObject } from 'react';
 
@@ -19,13 +18,6 @@ export interface SourcesPanelSearchSectionProps {
   onToggleSearchMode: () => void;
   onSearch: () => void;
   searchInputRef: RefObject<HTMLInputElement | null>;
-  extractorModeLabel: string;
-  extractorsLoading: boolean;
-  usableExtractorCount: number;
-  extractorsCount: number;
-  extractorFallbackEnabled: boolean | null;
-  isConnected: boolean;
-  onOpenExtractorPolicy: () => void;
 }
 
 export default function SourcesPanelSearchSection({
@@ -37,30 +29,23 @@ export default function SourcesPanelSearchSection({
   onToggleSearchMode,
   onSearch,
   searchInputRef,
-  extractorModeLabel,
-  extractorsLoading,
-  usableExtractorCount,
-  extractorsCount,
-  extractorFallbackEnabled,
-  isConnected,
-  onOpenExtractorPolicy,
 }: SourcesPanelSearchSectionProps) {
   return (
     <div
       className={
         isDeepResearchMode
-          ? 'rounded-lg p-[1px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 shadow-sm ux-animated-gradient focus-within:ring-2 focus-within:ring-indigo-500/25'
-          : 'rounded-lg border border-gray-300 bg-white dark:bg-slate-900 transition-colors duration-200 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-300'
+          ? 'rounded-xl p-[1px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 shadow-sm ux-animated-gradient focus-within:ring-2 focus-within:ring-indigo-500/25'
+          : 'rounded-xl border border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-900 transition-colors duration-200 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-300'
       }
     >
-      <div className="rounded-[7px] bg-white dark:bg-slate-900 overflow-hidden">
+      <div className="rounded-[11px] bg-white dark:bg-slate-900 overflow-hidden">
         <div className="p-2">
           <div className="flex w-full items-center gap-2">
             <div
               role="group"
               aria-label="搜索模式"
               {...tid(TestIds.sourcesModeToggle)}
-              className="flex h-9 items-center rounded-full bg-gray-100 p-0.5 dark:bg-slate-800"
+              className="flex h-9 items-center rounded-lg bg-gray-100 p-0.5 dark:bg-slate-800"
             >
               <Tooltip
                 content={
@@ -82,8 +67,8 @@ export default function SourcesPanelSearchSection({
                   }
                   className={
                     isDeepResearchMode
-                      ? 'flex h-8 w-8 items-center justify-center rounded-full text-gray-400 opacity-45 transition-all duration-200 hover:bg-white/70 hover:opacity-80 hover:text-gray-600 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-300'
-                      : 'flex h-8 w-8 items-center justify-center rounded-full bg-white text-blue-600 shadow-sm ring-1 ring-black/5 transition-all duration-200 dark:bg-slate-700 dark:text-blue-300 dark:ring-white/10'
+                      ? 'flex h-8 w-8 items-center justify-center rounded-md text-gray-400 opacity-50 transition-all duration-200 hover:bg-white/80 hover:opacity-90 hover:text-gray-600 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-300'
+                      : 'flex h-8 w-8 items-center justify-center rounded-md bg-white text-blue-600 shadow-sm ring-1 ring-black/5 transition-all duration-200 dark:bg-slate-700 dark:text-blue-300 dark:ring-white/10'
                   }
                 >
                   <SearchIcon style={{ fontSize: 18 }} />
@@ -105,8 +90,8 @@ export default function SourcesPanelSearchSection({
                   }
                   className={
                     !isDeepResearchMode
-                      ? 'flex h-8 w-8 items-center justify-center rounded-full text-gray-400 opacity-45 transition-all duration-200 hover:bg-white/70 hover:opacity-80 hover:text-gray-600 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-300'
-                      : 'flex h-8 w-8 items-center justify-center rounded-full bg-white text-indigo-600 shadow-sm ring-1 ring-black/5 transition-all duration-200 dark:bg-slate-700 dark:text-indigo-300 dark:ring-white/10'
+                      ? 'flex h-8 w-8 items-center justify-center rounded-md text-gray-400 opacity-50 transition-all duration-200 hover:bg-white/80 hover:opacity-90 hover:text-gray-600 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-300'
+                      : 'flex h-8 w-8 items-center justify-center rounded-md bg-white text-indigo-600 shadow-sm ring-1 ring-black/5 transition-all duration-200 dark:bg-slate-700 dark:text-indigo-300 dark:ring-white/10'
                   }
                 >
                   <PsychologyIcon style={{ fontSize: 18 }} />
@@ -143,7 +128,7 @@ export default function SourcesPanelSearchSection({
                   ? t('sources.search.action.deep')
                   : t('sources.search.action.fast')
               }
-              className="rounded-full w-9 h-9 transition-all duration-200 active:scale-[0.98] bg-blue-500 hover:bg-blue-600"
+              className="rounded-lg w-9 h-9 transition-all duration-200 active:scale-[0.98] bg-blue-500 hover:bg-blue-600"
               {...tid(TestIds.sourcesSearchSubmit)}
               onClick={() => {
                 void onSearch();
@@ -164,34 +149,6 @@ export default function SourcesPanelSearchSection({
             </Typography>
           </div>
         ) : null}
-
-        {/* L3: extractor settings — icon + tooltip status, not a primary status strip */}
-        <div
-          className={`flex items-center justify-end px-2 ${isDeepResearchMode ? 'pb-1.5' : 'pb-1.5 -mt-0.5'}`}
-        >
-          <Tooltip
-            content={[
-              `提取器：${extractorModeLabel}`,
-              extractorsLoading ? '加载中…' : `可用 ${usableExtractorCount}/${extractorsCount}`,
-              extractorFallbackEnabled == null
-                ? null
-                : `回退${extractorFallbackEnabled ? '开启' : '关闭'}`,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          >
-            <button
-              type="button"
-              onClick={onOpenExtractorPolicy}
-              disabled={!isConnected}
-              aria-label="提取器设置"
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-              {...tid(TestIds.sourcesExtractorSettings)}
-            >
-              <SettingsIcon style={{ fontSize: 16 }} />
-            </button>
-          </Tooltip>
-        </div>
       </div>
     </div>
   );

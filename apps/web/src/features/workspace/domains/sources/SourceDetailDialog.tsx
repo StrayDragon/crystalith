@@ -1,8 +1,5 @@
 import type { Chunk as ChunkRead } from '@crystalith/shared';
 import {
-  Dialog,
-  DialogHeader,
-  DialogBody,
   IconButton,
   Typography,
   Chip,
@@ -35,10 +32,12 @@ import {
   NoteAdd as NoteAddIcon,
 } from '@mui/icons-material';
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 import { api } from '../../../../api/eden';
 import { copyToClipboard } from '../../../../shared/clipboard';
 import { t } from '../../../../shared/i18n';
+import { useLayer } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
 import { toast } from '../../../../shared/toast';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
@@ -435,29 +434,42 @@ export default function SourceDetailDialog({
     }
   }, [source, messages, onSaveQAAsSource]);
 
+  const { style: modalStyle } = useLayer('modal');
+
   useFocusTrap({
-    active: open,
+    active: open && Boolean(source),
     containerRef: dialogRef,
     onEscape: onClose,
   });
 
-  if (!source) return null;
+  if (!open || !source) return null;
 
-  return (
-    <Dialog
-      open={open}
-      handler={onClose}
-      size={isFullscreen ? 'xxl' : 'xl'}
-      className={`rounded-xl overflow-hidden flex flex-col ${isFullscreen ? 'h-[95vh] max-h-[95vh]' : 'h-[80vh] max-h-[80vh]'} ux-modal-in`}
+  return createPortal(
+    <div
+      className="fixed inset-0 flex items-center justify-center p-3 sm:p-4"
+      style={modalStyle}
+      role="dialog"
+      aria-modal="true"
+      aria-label={source.title}
     >
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+        aria-label={t('sources.detail.close_aria')}
+        tabIndex={-1}
+      />
+
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className="flex flex-col flex-1 min-h-0"
+        className={`relative flex w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 ux-modal-in ${
+          isFullscreen ? 'h-[95vh] max-h-[95vh] max-w-[96rem]' : 'h-[80vh] max-h-[80vh] max-w-5xl'
+        }`}
         data-testid={TestIds.sourceDetailDialog}
       >
         {/* Header */}
-        <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-slate-700 p-4">
+        <div className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-slate-700 p-4 flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 flex-shrink-0">
               <DescriptionIcon fontSize="small" />
@@ -503,9 +515,9 @@ export default function SourceDetailDialog({
               <CloseIcon className="h-4 w-4" />
             </IconButton>
           </div>
-        </DialogHeader>
+        </div>
 
-        <DialogBody className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden">
           <Tabs value={activeTab} className="flex flex-col flex-1 min-h-0 overflow-hidden">
             {/* Tab Header */}
             <TabsHeader
@@ -942,8 +954,9 @@ export default function SourceDetailDialog({
               </TabPanel>
             </TabsBody>
           </Tabs>
-        </DialogBody>
+        </div>
       </div>
-    </Dialog>
+    </div>,
+    document.body,
   );
 }

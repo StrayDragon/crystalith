@@ -255,8 +255,8 @@ function ChatPanel({
         <div
           className={`text-sm leading-relaxed ${
             message.role === 'user'
-              ? 'rounded-2xl bg-gray-100 dark:bg-slate-800 px-4 py-2 text-gray-700 dark:text-slate-100'
-              : 'text-gray-800 dark:text-slate-100'
+              ? 'max-w-[min(100%,28rem)] rounded-2xl bg-gray-100 dark:bg-slate-800 px-4 py-2 text-gray-700 dark:text-slate-100'
+              : 'w-full text-gray-800 dark:text-slate-100'
           }`}
         >
           <div className="whitespace-pre-wrap">
@@ -412,6 +412,7 @@ function ChatPanel({
   };
 
   const messageListKey = sessionId ?? 'none';
+  const chatColumnClass = 'mx-auto h-full w-full max-w-2xl';
 
   const renderNotice = useMemo(() => {
     if (!notice) return null;
@@ -439,58 +440,60 @@ function ChatPanel({
         role="log"
         aria-label="对话内容"
       >
-        {!isConnected ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-6 text-xs text-gray-500 dark:text-slate-300">
-            未连接到后端服务，请检查服务状态后重试。
-          </div>
-        ) : isBlocked ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-6 text-xs text-gray-500 dark:text-slate-300">
-            请先创建笔记本，再开始对话。
-          </div>
-        ) : isLoadingMessages ? (
-          <SkeletonList items={3} className="py-1" />
-        ) : messagesError ? (
-          <div className="text-xs text-red-600 dark:text-red-300">
-            {messagesError}
-            <button
-              type="button"
-              className="ml-2 text-xs font-semibold text-gray-900 hover:underline cursor-pointer"
-              onClick={onRetryMessages}
-            >
-              重试
-            </button>
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-6 text-xs text-gray-500 dark:text-slate-300">
-            {hasSources
-              ? '选择来源后提问：输入问题即可基于文档生成回答。'
-              : '添加文档开始分析：上传来源后即可开始提问。'}
-          </div>
-        ) : null}
+        <div className={chatColumnClass}>
+          {!isConnected ? (
+            <div className="rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-6 text-xs text-gray-500 dark:text-slate-300">
+              未连接到后端服务，请检查服务状态后重试。
+            </div>
+          ) : isBlocked ? (
+            <div className="rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-6 text-xs text-gray-500 dark:text-slate-300">
+              请先创建笔记本，再开始对话。
+            </div>
+          ) : isLoadingMessages ? (
+            <SkeletonList items={3} className="py-1" />
+          ) : messagesError ? (
+            <div className="text-xs text-red-600 dark:text-red-300">
+              {messagesError}
+              <button
+                type="button"
+                className="ml-2 text-xs font-semibold text-gray-900 hover:underline cursor-pointer"
+                onClick={onRetryMessages}
+              >
+                重试
+              </button>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-6 text-xs text-gray-500 dark:text-slate-300">
+              {hasSources
+                ? '选择来源后提问：输入问题即可基于文档生成回答。'
+                : '添加文档开始分析：上传来源后即可开始提问。'}
+            </div>
+          ) : null}
 
-        {shouldRenderMessageList ? (
-          <Virtuoso
-            key={messageListKey}
-            className="h-full"
-            data={messages}
-            computeItemKey={(index, message) => message?.id ?? `chat-message-${index}`}
-            initialItemCount={20}
-            initialTopMostItemIndex={Math.max(0, messages.length - 1)}
-            followOutput={(isAtBottom) =>
-              // Only stick to bottom while generating — unrelated re-renders
-              // (e.g. citation locate) must not smooth-scroll the chat.
-              isAtBottom && (isSending || isStreaming) ? 'smooth' : false
-            }
-            itemContent={(_index, message) =>
-              message ? renderMessage(message) : <div className="pb-4" />
-            }
-            components={{
-              Footer: () => (renderNotice ? <div className="pt-1">{renderNotice}</div> : null),
-            }}
-          />
-        ) : renderNotice ? (
-          renderNotice
-        ) : null}
+          {shouldRenderMessageList ? (
+            <Virtuoso
+              key={messageListKey}
+              className="h-full"
+              data={messages}
+              computeItemKey={(index, message) => message?.id ?? `chat-message-${index}`}
+              initialItemCount={20}
+              initialTopMostItemIndex={Math.max(0, messages.length - 1)}
+              followOutput={(isAtBottom) =>
+                // Only stick to bottom while generating — unrelated re-renders
+                // (e.g. citation locate) must not smooth-scroll the chat.
+                isAtBottom && (isSending || isStreaming) ? 'smooth' : false
+              }
+              itemContent={(_index, message) =>
+                message ? renderMessage(message) : <div className="pb-4" />
+              }
+              components={{
+                Footer: () => (renderNotice ? <div className="pt-1">{renderNotice}</div> : null),
+              }}
+            />
+          ) : renderNotice ? (
+            renderNotice
+          ) : null}
+        </div>
       </div>
 
       <form
@@ -500,7 +503,7 @@ function ChatPanel({
           onSend();
         }}
       >
-        <div className="relative flex items-center gap-2 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 sm:px-4 py-2 shadow-sm transition-all duration-200 focus-within:border-gray-400 dark:focus-within:border-slate-500 focus-within:ring-2 focus-within:ring-gray-100 dark:focus-within:ring-slate-700">
+        <div className="relative mx-auto flex w-full max-w-2xl items-center gap-2 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 sm:px-4 py-2 shadow-sm transition-all duration-200 focus-within:border-gray-400 dark:focus-within:border-slate-500 focus-within:ring-2 focus-within:ring-gray-100 dark:focus-within:ring-slate-700">
           {isCommandMenuOpen && commandContext?.token.startsWith('/') ? (
             <div
               className="absolute bottom-full left-0 right-0 mb-2"
