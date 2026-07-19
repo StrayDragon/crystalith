@@ -204,11 +204,22 @@ async function finishPipeline(
 
   // c50: mark _postprocessed when sanitization or fallback occurred
   // (v1 output_postprocess.py:377 sets _postprocessed:true on all content).
-  const finalContent = markPostprocessed(
+  let finalContent = markPostprocessed(
     mappedContent,
     sanitized.changed || warnings.length > 0,
     allWarnings,
   );
+  if (
+    sanitized.changed &&
+    finalContent &&
+    typeof finalContent === 'object' &&
+    !Array.isArray(finalContent)
+  ) {
+    finalContent = {
+      ...(finalContent as Record<string, unknown>),
+      citations_sanitized: true,
+    };
+  }
 
   if (input.abortSignal?.aborted) {
     const err = new Error('Output generation aborted');
@@ -424,7 +435,7 @@ export function ensureMinimumContentFields(
  * Returns true when the content is structurally present but has blank/missing
  * required fields (e.g. empty question text, missing module title).
  */
-function needsRepair(type: string, content: unknown): boolean {
+export function needsRepair(type: string, content: unknown): boolean {
   if (!content || typeof content !== 'object' || Array.isArray(content)) return true;
   const c = content as Record<string, unknown>;
   // already a fallback — don't repair
@@ -433,16 +444,21 @@ function needsRepair(type: string, content: unknown): boolean {
   const items = c.items;
   switch (type) {
     case 'FAQ':
-    case 'BULLETS':
       if (!Array.isArray(items) || items.length === 0) return true;
       return items.some(
         (it) =>
           !it ||
           typeof it !== 'object' ||
           isBlank((it as Record<string, unknown>).question) ||
-          isBlank((it as Record<string, unknown>).answer) ||
-          isBlank((it as Record<string, unknown>).text),
+          isBlank((it as Record<string, unknown>).answer),
       );
+    case 'BULLETS':
+      if (!Array.isArray(items) || items.length === 0) return true;
+      return items.some((it) => {
+        if (typeof it === 'string') return isBlank(it);
+        if (!it || typeof it !== 'object') return true;
+        return isBlank((it as Record<string, unknown>).text);
+      });
     case 'TIMELINE':
       return !Array.isArray(c.events) || c.events.length === 0;
     case 'QUIZ':
@@ -723,7 +739,7 @@ interface SanitizeResult {
  * downstream mapping only sees valid indices. Returns whether anything changed
  * + warnings for the consumer.
  */
-function sanitizeCitationsIndices(
+export function sanitizeCitationsIndices(
   payload: unknown,
   citationsCount: number,
 ): SanitizeResult & { sanitized: unknown } {
@@ -799,7 +815,11 @@ function sanitizeCitationList(
  * (v1 output_postprocess.py:377 sets it on ALL content regardless of warnings).
  * `_warnings` carries the human-readable list (may be empty).
  */
-function markPostprocessed(content: unknown, _postprocessed: boolean, warnings: string[]): unknown {
+export function markPostprocessed(
+  content: unknown,
+  _postprocessed: boolean,
+  warnings: string[],
+): unknown {
   if (content && typeof content === 'object' && !Array.isArray(content)) {
     const result = { ...(content as Record<string, unknown>) };
     result._postprocessed = true;

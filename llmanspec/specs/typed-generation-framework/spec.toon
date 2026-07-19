@@ -10,8 +10,8 @@ requirements[9]{req_id,title,statement}:
   r216,生成结果必须回传生成类型、输出类型与完成语义元数据,系统 MUST 在结果对象中同时回传生成类型与输出类型，并回传完成语义相关元数据以支撑治理与后续工作流。
   r243,生成类型与输出类型必须保持边界分离,系统 MUST 保持生成类型与输出类型的边界清晰，避免一个概念吞掉另一个概念。
   r261,下游扩展只能使用扩展位，禁止反向改写公共词汇,系统 MUST 为下游能力提供明确扩展位，同时禁止下游能力反向改写公共词汇定义。
-  "outputs-citations-must-be-sanitized",Outputs pipeline MUST sanitize citation indices (range/dup/int) with warnings,"outputs pipeline MUST 实现 sanitize_citations_indices（对齐 v1 output_postprocess.py:293-346）：递归剥离越界、重复、非整数 citation 索引，设置 _warnings/citations_sanitized 标记与 _postprocessed:true。当前 v2 mapCitationsIntoContent（pipeline.ts:421-449）只做 .filter undefined 静默丢弃，不 dedupe、不发警告、不设 _postprocessed 标记；c38 proposal 第 3 项承诺的 sanitizeCitationsIndices 未兑现"
-  "outputs-quality-preference-must-trigger-llm-repair",Outputs pipeline with preference=quality MUST run LLM repair loop for salvageable output,"outputs pipeline 在 preference=quality 且 needs_repair 检测到空/缺字段时 MUST 运行 LLM repair loop（对齐 v1 output_graph.py:595-719 的 PostprocessOutput 节点 + output_postprocess.py:192-290 的 needs_repair），用第二次 LLM pass 修补可挽救的不完整输出，而非直接降级到 fallback 内容。当前 v2 pipeline.ts:185-199 无 repair loop、无 needs_repair，生成失败直接走 fallback，对 quality 请求降级更激进"
+  "outputs-citations-must-be-sanitized",Outputs pipeline MUST sanitize citation indices (range/dup/int) with warnings,"outputs pipeline MUST 递归剥离越界、重复、非整数 citation 索引，并设置 _warnings / citations_sanitized / _postprocessed。实现：sanitizeCitationsIndices + markPostprocessed（pipeline.ts）。"
+  "outputs-quality-preference-must-trigger-llm-repair",Outputs pipeline with preference=quality MUST run LLM repair loop for salvageable output,"outputs pipeline 在 preference=quality 且 needsRepair 为真时 MUST 再跑一次 generateObject 修补可挽救输出；失败则保留原对象并走后续 postprocess/fallback。实现：runOutputPipeline repair 分支（pipeline.ts）。"
 scenarios[11]{req_id,id,given,when,then,feature}:
   r54,系统启动时装载内置生成类型,"",系统启动,系统 SHALL 将内置生成类型注册到统一 registry,true
   r54,前端查询可用生成类型列表,"",前端需要渲染右侧生成入口,系统 SHALL 提供可用生成类型列表（至少包含 id、displayName、输入要求概览、可选输出类型概览、完成语义概览）,true
