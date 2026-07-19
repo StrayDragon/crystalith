@@ -5,8 +5,6 @@ import {
   LightMode as LightModeIcon,
   Lock as LockIcon,
   LockOpen as LockOpenIcon,
-  MonitorHeart as MonitorHeartIcon,
-  Settings as SettingsIcon,
   SettingsBrightness as SystemThemeIcon,
 } from '@mui/icons-material';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -239,7 +237,6 @@ export default function WorkspaceHeader({
                 onClick={onOpenCatalog}
                 className="flex items-center gap-2.5 py-2 px-3 text-xs rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
               >
-                <span className="text-sm w-5 text-center">⚙️</span>
                 <span>模块管理</span>
               </MenuItem>
             )}
@@ -258,7 +255,6 @@ export default function WorkspaceHeader({
                 className="flex items-center gap-2.5 py-2 px-3 text-xs rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
                 {...tid(TestIds.userMenuCommandPalette)}
               >
-                <span className="text-sm w-5 text-center">⌨️</span>
                 <span className="flex-1">命令面板</span>
                 <kbd className="ml-auto text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded text-gray-400 dark:text-slate-500 font-mono">
                   ⌘K
@@ -271,10 +267,6 @@ export default function WorkspaceHeader({
                 className="flex items-center gap-2.5 py-2 px-3 text-xs rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
                 {...tid(TestIds.userMenuSystemConfig)}
               >
-                <SettingsIcon
-                  style={{ fontSize: 16, marginLeft: 2 }}
-                  className="text-gray-500 dark:text-slate-400"
-                />
                 <span>系统配置</span>
               </MenuItem>
             )}
@@ -284,7 +276,6 @@ export default function WorkspaceHeader({
                 className="flex items-center gap-2.5 py-2 px-3 text-xs rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
                 {...tid(TestIds.userMenuShortcutHelp)}
               >
-                <span className="text-sm w-5 text-center">❔</span>
                 <span className="flex-1">快捷键帮助</span>
                 <kbd className="ml-auto text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded text-gray-400 dark:text-slate-500 font-mono">
                   Ctrl+?
@@ -297,10 +288,6 @@ export default function WorkspaceHeader({
                 className="flex items-center gap-2.5 py-2 px-3 text-xs rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
                 {...tid(TestIds.userMenuDiagnostics)}
               >
-                <MonitorHeartIcon
-                  style={{ fontSize: 16, marginLeft: 2 }}
-                  className="text-gray-500 dark:text-slate-400"
-                />
                 <span>健康 / 诊断</span>
               </MenuItem>
             )}
