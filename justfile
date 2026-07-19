@@ -56,7 +56,7 @@ dev-server:
 dev-web:
     cd apps/web && bun dev
 
-# Start only Slidev preview (apps/server/slides/preview/slides.md → :3030)
+# Start only Slidev preview (data/slides/preview/slides.md → :3030)
 dev-slidev:
     cd packages/crystalith-slidev && bun run dev
 

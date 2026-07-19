@@ -50,7 +50,7 @@ if (!fs.existsSync(bin)) {
 
 const child = spawn(
   process.execPath,
-  [bin, previewPath, '--port', String(port), '--open', 'false', '--theme', '@slidev/theme-default'],
+  [bin, previewPath, '--port', String(port), '--theme', '@slidev/theme-default'],
   {
     cwd: packageRoot,
     stdio: 'inherit',
