@@ -20,13 +20,14 @@ const FEATURES_DIR = join(import.meta.dirname, 'features');
 //
 // To enable a domain: remove it from the set below and re-run. The failures
 // that appear map directly to v2 router work needed for v1 parity.
+//
+// Deleted (c73 dead HTTP — feature files removed, do not re-add without routes):
+//   citations (/citations/context), refine (/v2/refine*), tasks (/v2/tasks*)
 const SKIP_FEATURE_DIRS = new Set([
-  'citations', // v2 router path diverges from v1 (/notebooks/:nid/citations/context)
   'commands', // depends on prompt-presets data
   'models', // depends on config models (empty in tests)
   'outputs', // LLM generation + missing step defs
   'qa', // LLM-backed
-  'refine', // LLM-backed
   'research', // LLM-backed
   'source_connectors', // missing step defs + connector plugin infra
   'sources', // v2 source delete/batch/dedup routes diverge
