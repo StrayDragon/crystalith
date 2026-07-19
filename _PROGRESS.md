@@ -79,10 +79,10 @@ shared Zod（或路由挂载的 schema）
 
 > 目标：删掉平行类型岛；server 路由与 AI 结构化输出对齐 shared；web 以 Eden 类型为主、shared 为辅。
 
-- [ ] **P1.0 盘点**（短文档可写在本文件附录）：列出仍存在的平行类型 / 本地 Zod 合约  
-  - [ ] `apps/web/src/api/shared-types.ts` 导出清单 vs Eden / shared  
-  - [ ] `apps/web/src/features/workspace/shared/types.ts` 中 wire 相关 vs UI-only  
-  - [ ] server 内本地 `z.object` 与 shared 重名或同域（research / studio / outputs / …）  
+- [x] **P1.0 盘点**（短文档可写在本文件附录）：列出仍存在的平行类型 / 本地 Zod 合约  
+  - [x] `apps/web/src/api/shared-types.ts` 导出清单 vs Eden / shared  
+  - [x] `apps/web/src/features/workspace/shared/types.ts` 中 wire 相关 vs UI-only  
+  - [x] server 内本地 `z.object` 与 shared 重名或同域（research / studio / outputs / …）  
 - [ ] **P1.1 Research 合约对齐**（ARCH-02 / ARCH-11）  
   - [ ] `agent.ts` 改用 / 对齐 `packages/shared` 的 research schemas（消掉 `coverage` vs `coverageEstimate` 等漂移）  
   - [ ] `ResearchStatus` 等 DTO 单一来源；web `useResearch` 去掉平行 union  
@@ -153,11 +153,13 @@ shared Zod（或路由挂载的 schema）
 
 ## 3. 当前焦点
 
-**正在做**：P1.0 盘点（平行类型 / 本地 Zod）  
+**正在做**：P1.1 Research 合约对齐（shared ← 对齐 live 字段名）  
 
-**已完成批次**：P0（lint 解阻塞 + Eden≠Zod 台账修订）  
+**已完成批次**：  
+- P0 — lint 解阻塞 + Eden≠Zod 台账  
+- P1.0 — 平行类型 / 本地 Zod 盘点（见附录 §6）  
 
-**下一步**：P1.0 → P1.1 Research 合约对齐 …
+**下一步**：P1.1 → P1.3 Studio outline（小）→ P1.4 web Eden 迁移 …
 
 ---
 
@@ -171,6 +173,7 @@ shared Zod（或路由挂载的 schema）
 | 2026-07-19 | **Eden ≠ Zod**：保留 server Zod；Eden 消 web 平行 DTO；不追求 API 零 Zod |
 | 2026-07-19 | 用 `_PROGRESS.md` 勾选；每批次验收后 commit |
 | 2026-07-19 | 配置 Zod 必留；API Zod 作校验+App/OpenAPI SSOT |
+| 2026-07-19 | P1.1：shared research 字段对齐 **live**（`coverageEstimate`/`needMore`），不反向改全仓 |
 
 ---
 
@@ -181,3 +184,51 @@ shared Zod（或路由挂载的 schema）
 - 漂移：DRIFT-01…15（[Spec-code drift](5c111d8b-1122-46ef-8a02-87c7578f1ab6)）  
 
 完整合并叙述见会话 Wave A 报告；执行以本文件勾选为准。
+
+---
+
+## 6. 附录 — P1.0 盘点（2026-07-19）
+
+### 6.1 `apps/web/src/api/shared-types.ts`（~212 LOC，8 个 importer）
+
+| 导出 | 处置建议 |
+| --- | --- |
+| `ResearchStatus` / session/step DTOs | → `@crystalith/shared`（P1.1）；注意 shared 无 `'error'`，live SSE `error` 是事件不是 session status |
+| `Citation` / `CitationContextResponse` | → shared `Citation` + Eden/citations 路由类型 |
+| `ChunkRead` / extractor / policy / tags | → Eden 或 shared source schemas（P1.4 sources） |
+| `TaskRead` / refine 相关 | → Eden / shared refine+task（P1.4 refine 优先） |
+| `RenderDescriptor` / `FrontendBundleDescriptor` / plugin schema | → shared output（P1.2） |
+| `WorkspaceToolsDiagnostics` | Eden diagnostics 或留 UI 宽松类型并标注 |
+| `QaMessage` / `OutputTypeInput` | → shared / Eden |
+
+**web 对 `@crystalith/shared` 仅 1 处**：`useChat.ts` 的 `Citation`。
+
+### 6.2 `workspace/shared/types.ts`（~520 LOC，~76 exports）
+
+- **可留（UI）**：`PanelId`、`ConnectionState`、slide stage、layout 等  
+- **应外迁（wire/payload）**：`OutputTypeId`、各 `*OutputContent`、与 server output schema 重复的结构 → P1.2 / P1.5  
+
+### 6.3 Server 本地 `z.object`（非测试）
+
+| 位置 | 性质 | 处置 |
+| --- | --- | --- |
+| `shared/config.ts` | **配置 Zod（必留）** | P1 不动；属合法席位 |
+| `research/agent.ts` `PlanSearchSchema` / `AnalysisSchema` | 与 shared **同域异形** | **P1.1**：以 live 字段为准改 shared，agent import shared |
+| `studio/service.ts` `SlideOutlineSchema` | 与 shared `SlidesOutlineSchema` 重复 | **P1.3** |
+| `ai/tools/*Args` | tool 入参，非 HTTP DTO | 可接受局部；后续若上 API 再提升 |
+| `eval/metrics.ts` `JudgeSchema` | 评测内部 | 可接受局部 |
+
+### 6.4 Research 字段真相（P1.1 关键）
+
+- **Live 全栈**（agent / router / web / tests）使用：`coverageEstimate`、`needMore`  
+- **shared 未使用**：`coverage`、`needMoreSearch`  
+- **对齐方向**：改 shared → live 命名（少改面），再让 agent/web 从 shared import  
+
+### 6.5 批次切分建议
+
+1. P1.1 Research shared+agent+web status（本批）  
+2. P1.3 Studio outline（小批）  
+3. P1.4 按域消 `shared-types`（refine → sources → diagnostics）  
+4. P1.2 + P1.5 Output 描述符合并  
+5. P1.6–P1.8 审计与回归  
+
