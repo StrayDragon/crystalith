@@ -14,17 +14,17 @@ import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
 
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
-import { SlidesDebugTimings } from './slides/components/SlidesDebugTimings';
-import { SlidesGenerationEvents } from './slides/components/SlidesGenerationEvents';
-import { SlidesPreviewPanel } from './slides/components/SlidesPreviewPanel';
-import { SlidesStageActions } from './slides/components/SlidesStageActions';
-import { SlidesStageContent } from './slides/components/SlidesStageContent';
-import { SlidesStatusBanners } from './slides/components/SlidesStatusBanners';
-import { STAGES } from './slides/constants';
-import type { SlidesStudioDialogProps } from './slides/types';
-import { useSlidesStudioDialog } from './slides/useSlidesStudioDialog';
+import { SlidesDebugTimings } from './slides-studio/components/SlidesDebugTimings';
+import { SlidesGenerationEvents } from './slides-studio/components/SlidesGenerationEvents';
+import { SlidesPreviewPanel } from './slides-studio/components/SlidesPreviewPanel';
+import { SlidesStageActions } from './slides-studio/components/SlidesStageActions';
+import { SlidesStageContent } from './slides-studio/components/SlidesStageContent';
+import { SlidesStatusBanners } from './slides-studio/components/SlidesStatusBanners';
+import { STAGES } from './slides-studio/constants';
+import type { SlidesStudioDialogProps } from './slides-studio/types';
+import { useSlidesStudioDialog } from './slides-studio/useSlidesStudioDialog';
 
-export type { SlidesStudioDialogProps } from './slides/types';
+export type { SlidesStudioDialogProps } from './slides-studio/types';
 
 export default function SlidesStudioDialog(props: SlidesStudioDialogProps) {
   const {

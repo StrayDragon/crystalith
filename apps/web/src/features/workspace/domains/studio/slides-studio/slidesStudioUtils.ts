@@ -1,0 +1,131 @@
+import { buildSlidevPreviewUrl } from '@crystalith-slidev';
+
+import { t } from '../../../../../shared/i18n';
+import type {
+  PreviewDescriptor,
+  SlideDraft,
+  SlideOutlineItem,
+  WorkspaceToolsDiagnostics,
+} from '../../../shared/types';
+import { normalizeGenerationConfig } from '../utils/slides';
+
+export function resolveOptionId(
+  value: string | null | undefined,
+  options: Array<{ id: string; isDefault?: boolean }>,
+): string {
+  if (value && options.some((option) => option.id === value)) return value;
+  const fallback = options.find((option) => option.isDefault)?.id ?? options[0]?.id ?? '';
+  return fallback;
+}
+
+export function normalizeDraft(raw: any): SlideDraft {
+  return {
+    id: Number(raw.id),
+    notebookId: Number(raw.notebookId ?? 0),
+    outputId: raw.outputId ?? null,
+    title: raw.title ?? null,
+    prompt: raw.prompt ?? null,
+    engine: typeof raw.engine === 'string' ? raw.engine : '',
+    chunkIds: raw.chunkIds ?? null,
+    sourceIds: raw.sourceIds ?? null,
+    outline: raw.outline ?? null,
+    markdown: raw.markdown ?? null,
+    generationConfig: normalizeGenerationConfig(raw.generationConfig),
+    stage: raw.stage ?? 'input',
+    status: raw.status ?? 'idle',
+    errorMessage: raw.errorMessage ?? null,
+    createdAt: raw.createdAt ?? '',
+    updatedAt: raw.updatedAt ?? '',
+  };
+}
+
+export function outlineTitleFromDraft(draft: SlideDraft | null) {
+  return draft?.outline?.title || draft?.title || '演示';
+}
+
+export function outlineItemsFromDraft(draft: SlideDraft | null): SlideOutlineItem[] {
+  return draft?.outline?.slides?.length ? draft.outline.slides : [];
+}
+
+export function resolveErrorStatus(error: any): number | undefined {
+  if (!error) return undefined;
+  if (typeof error.status === 'number') return error.status;
+  if (typeof error?.response?.status === 'number') return error.response.status;
+  return undefined;
+}
+
+export function appendRefreshToken(url: string, refreshKey: number): string {
+  try {
+    const resolved = new URL(
+      url,
+      typeof window !== 'undefined' ? window.location.origin : 'http://localhost',
+    );
+    resolved.searchParams.set('__refresh', String(refreshKey));
+    return resolved.toString();
+  } catch {
+    return url;
+  }
+}
+
+export function buildSlidesPreviewUrl(
+  preview: PreviewDescriptor | null | undefined,
+  refreshKey: number,
+): string {
+  if (!preview || preview.kind !== 'external_url') return '';
+  if (preview.url) {
+    return appendRefreshToken(preview.url, refreshKey);
+  }
+  if (preview.service === 'slidev') {
+    return buildSlidevPreviewUrl(refreshKey);
+  }
+  return '';
+}
+
+export function resolvePreviewProviderLabel(
+  preview: PreviewDescriptor | null | undefined,
+  engine: string | null | undefined,
+): string {
+  if (preview?.service?.trim()) return preview.service.trim();
+  if (engine?.trim()) return engine.trim();
+  return 'slides';
+}
+
+export function resolveSlidesRecoveryHint(
+  toolsDiagnostics: WorkspaceToolsDiagnostics | null | undefined,
+): string {
+  return (
+    toolsDiagnostics?.slides?.hint ??
+    toolsDiagnostics?.slides?.message ??
+    toolsDiagnostics?.official?.['slides-slidev']?.hint ??
+    ''
+  );
+}
+
+export interface StatusMessage {
+  tone: 'blue' | 'red' | 'gray';
+  message: string;
+}
+
+export function resolveStatusMessage(params: {
+  isGenerating: boolean;
+  queueStatus: 'queued' | 'running' | 'error' | 'done' | 'cancelled' | null;
+  draftStatus: string | undefined;
+}): StatusMessage | null {
+  const { isGenerating, queueStatus, draftStatus } = params;
+  if (isGenerating) {
+    return { tone: 'blue', message: '正在生成中，请稍候...' };
+  }
+  if (queueStatus === 'queued') {
+    return { tone: 'gray', message: t('studio.slides.queue.pending') };
+  }
+  if (queueStatus === 'running') {
+    return { tone: 'blue', message: '正在生成中，请稍候...' };
+  }
+  if (queueStatus === 'error') {
+    return { tone: 'red', message: '生成失败，请稍后重试。' };
+  }
+  if (draftStatus === 'running') {
+    return { tone: 'blue', message: '正在生成中，请稍候...' };
+  }
+  return null;
+}
