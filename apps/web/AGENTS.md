@@ -7,7 +7,7 @@
 - `src/features/workspace/` — main workspace feature
   - `domains/` — business domains (notebooks, sessions, messages, sources, outputs, refine, studio, research)
   - `layout/`, `shared/`, `app/` — workspace scaffolding
-- `src/api/` — API client：**Eden** `treaty<App>`（`eden.ts`）一等；`shared-types.ts` 仅为待迁移遗留岛（勿新增 wire DTO）
+- `src/api/` — API client：**Eden** `treaty<App>`（`eden.ts`）一等
 - `src/shared/` — shared utilities, Layer system, types
 
 ## Build, Test, and Development Commands
@@ -30,9 +30,9 @@ bun preview              # Preview production build
 ## API Client
 
 - **Primary**: Elysia Eden RPC via `src/api/eden.ts`（`treaty<App>`，零 codegen）
-- **Types**: 优先 Eden 推断；跨端标称类型用 `@crystalith/shared`。**不要**在 `shared-types.ts` 新增 wire DTO
-- **Legacy**: `api/generated/` 已删（c14）；`shared-types.ts` 按 `_PROGRESS.md` P1.4 逐域消减
+- **Types**: 优先 Eden 推断；跨端标称类型用 `@crystalith/shared`；UI-only 类型放 `features/workspace/shared/types.ts`
 - **OpenAPI**: 浏览器用 `/openapi`；其他语言 client 从 `/openapi.json` 衍生，不反向生成一等 TS client
+- **Removed**: `api/generated/`（c14）、`api/shared-types.ts`（P1.4）
 
 ## Coding Style & Naming Conventions
 

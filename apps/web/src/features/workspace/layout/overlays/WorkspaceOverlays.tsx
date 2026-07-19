@@ -1,11 +1,16 @@
 import { Suspense, lazy } from 'react';
 
-import type { WorkspaceToolsDiagnostics } from '../../../../api/shared-types';
 import type { ChatMessage as SourceDialogMessage } from '../../domains/sources/SourceDetailDialog';
 import { SkeletonCard } from '../../shared/components/Skeleton';
 import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';
 import { WORKSPACE_SHORTCUTS } from '../../shared/shortcuts';
-import type { Citation, OutputItem, SourceItem, WorkspaceTool } from '../../shared/types';
+import type {
+  Citation,
+  OutputItem,
+  SourceItem,
+  WorkspaceTool,
+  WorkspaceToolsDiagnostics,
+} from '../../shared/types';
 import {
   CommandPalette,
   type CommandItem,

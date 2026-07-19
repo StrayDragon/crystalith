@@ -93,8 +93,9 @@ shared Zod（或路由挂载的 schema）
 - [ ] **P1.4 Web：Eden 优先迁移**
   - [x] 域：`refine`（`useRefine` 不再依赖 `shared-types`；wire → `unknown` normalize → UI types）
   - [x] 域：`sources`（tag/chunk/extractor/QA → `@crystalith/shared`）
-  - [ ] 域顺序建议：~~`refine`~~ → ~~`sources`~~ → `diagnostics/workspace` → 其余
-  - [ ] 删空或大幅缩减 `shared-types.ts`（仅留 diagnostics 占位）
+  - [x] 域：`diagnostics`（`WorkspaceToolsDiagnostics` → `workspace/shared/types`；**删除** `shared-types.ts`）
+  - [x] 域顺序：~~`refine`~~ → ~~`sources`~~ → ~~`diagnostics`~~ ✅
+  - [x] 删除 `apps/web/src/api/shared-types.ts`
 - [ ] **P1.5 Web：`workspace/shared/types.ts` 瘦身**
   - [ ] wire DTO 外迁到 shared 或改 Eden；UI-only 类型留下并标注
 - [ ] **P1.6 路由 Zod 审计**
@@ -155,14 +156,14 @@ shared Zod（或路由挂载的 schema）
 
 ## 3. 当前焦点
 
-**正在做**：_(下一批：P1.4 diagnostics)_
+**正在做**：_(P1.4 完成 — 下一批建议 P1.3 Studio outline 或 P1.2 Output)_
 
 **已完成批次**：
 
-- P0 / P1.0 / P1.1 / P2 / just qa 基线 / P1.4 refine
-- **P1.4 sources** → `@crystalith/shared`（`just qa` 绿）
+- P0 / P1.0 / P1.1 / P2 / just qa 基线 / P1.4 refine / P1.4 sources
+- **P1.4 diagnostics** — 删除 `shared-types.ts`（验收 `just qa`）
 
-**下一步**：P1.4 diagnostics → 清空 `shared-types` …
+**下一步**：P1.3 Studio outline / P1.2 Output meta / P1.5 workspace types 瘦身 …
 
 ---
 

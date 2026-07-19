@@ -256,6 +256,33 @@ export interface WorkspaceTool {
   frontendBundle?: FrontendBundleDescriptor | null;
 }
 
+/** GET /v2/workspace/tools `diagnostics` — UI-only view of Eden payload (not a wire SSOT). */
+export type WorkspaceToolsDiagnostics = {
+  plugins?: {
+    loaded?: string[];
+    skipped?: Record<string, unknown>;
+  };
+  official?: Record<
+    string,
+    {
+      hint?: string | null;
+      status?: string;
+      message?: string | null;
+      errorCode?: string | null;
+      [key: string]: unknown;
+    }
+  >;
+  slides?: {
+    available?: boolean;
+    message?: string | null;
+    hint?: string | null;
+    activePluginId?: string | null;
+    engine?: string | null;
+    errorCode?: string | null;
+    [key: string]: unknown;
+  } | null;
+} | null;
+
 export interface SlideOutlineItem {
   title: string;
   bullets: string[];
