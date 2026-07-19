@@ -16,6 +16,8 @@ src/
 ```
 
 Types/schemas: import from `@crystalith/shared` — do not redefine Zod models here.
+Config yaml/env: Zod in `shared/config.ts`（合法席位；见根 `AGENTS.md` Zod/Eden 表）.
+Web 一等 client 是 Eden（`treaty<App>`）；OpenAPI 是衍生面 — **Eden ≠ Zod**。
 
 ## Commands
 

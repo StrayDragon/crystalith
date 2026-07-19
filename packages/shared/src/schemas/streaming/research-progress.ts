@@ -9,9 +9,9 @@ import { z } from 'zod';
 
 import { IdSchema, JsonMetadataSchema } from '../common.js';
 import {
-  IterationAnalysisSchema,
+  IterationAnalysisLlmSchema,
+  ResearchPlanLlmSchema,
   ResearchSearchResultSchema,
-  SearchPlanSchema,
 } from '../research.js';
 
 export const ResearchProgressEventSchema = z.discriminatedUnion('type', [
@@ -19,7 +19,8 @@ export const ResearchProgressEventSchema = z.discriminatedUnion('type', [
     type: z.literal('plan_ready'),
     sessionId: IdSchema.optional(),
     iteration: z.number().int().optional(),
-    plan: SearchPlanSchema.optional(),
+    /** Prefer envelope `data` (step.outputData); `plan` optional mirror. */
+    plan: ResearchPlanLlmSchema.optional(),
     data: JsonMetadataSchema.optional(),
   }),
   z.object({
@@ -33,7 +34,8 @@ export const ResearchProgressEventSchema = z.discriminatedUnion('type', [
     type: z.literal('analysis'),
     sessionId: IdSchema.optional(),
     iteration: z.number().int().optional(),
-    analysis: IterationAnalysisSchema.nullable().optional(),
+    /** LLM analysis shape; iteration lives on the SSE envelope. */
+    analysis: IterationAnalysisLlmSchema.nullable().optional(),
     data: JsonMetadataSchema.optional(),
   }),
   z.object({
