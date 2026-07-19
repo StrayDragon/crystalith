@@ -215,7 +215,7 @@ function SourcesPanelView({
       className={`flex flex-1 flex-col min-h-0 ${isFullscreen ? 'max-w-4xl mx-auto w-full' : ''}`}
       {...tid(TestIds.sourcesPanel)}
     >
-      <div className="flex-shrink-0 px-3 sm:px-4 pt-3 sm:pt-4 pb-2 flex flex-col gap-3 border-b border-gray-100 dark:border-slate-700">
+      <div className="flex-shrink-0 px-3 sm:px-4 pt-3 sm:pt-4 pb-2 flex flex-col gap-2 border-b border-gray-100 dark:border-slate-700">
         <SourcesPanelUploadSection
           uploadDisabled={uploadDisabled}
           connectorDisabled={connectorDisabled}

@@ -51,6 +51,7 @@ export default function SourcesPanelUploadSection({
 }: SourcesPanelUploadSectionProps) {
   return (
     <>
+      {/* L1: primary add / upload */}
       <Tooltip content={t('sources.upload.tooltip')}>
         <div
           className={`rounded-full ${uploadDragActive ? 'ring-2 ring-blue-200' : ''}`}
@@ -138,41 +139,42 @@ export default function SourcesPanelUploadSection({
         </div>
       </Tooltip>
 
-      {onOpenUrlImport ? (
-        <Tooltip content="从网页链接导入来源">
-          <Button
-            variant="outlined"
-            fullWidth
-            size="sm"
-            disabled={uploadDisabled}
-            className="flex items-center justify-center gap-2 py-2 rounded-full border-gray-300 normal-case font-normal text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 hover:border-gray-400"
-            {...tid(TestIds.urlImportOpen)}
-            onClick={onOpenUrlImport}
+      {/* L2: secondary ingest actions — compact, not competing with L1 */}
+      <div className="flex items-center gap-1 px-0.5">
+        {onOpenUrlImport ? (
+          <Tooltip content="从网页链接导入来源">
+            <button
+              type="button"
+              disabled={uploadDisabled}
+              className="inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-[11px] text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 disabled:opacity-50"
+              {...tid(TestIds.urlImportOpen)}
+              onClick={onOpenUrlImport}
+            >
+              <LinkIcon style={{ fontSize: 14 }} />
+              从 URL 导入
+            </button>
+          </Tooltip>
+        ) : null}
+        <Tooltip content="通过连接器接入外部资料仓（如 Obsidian / 本地目录）">
+          <button
+            type="button"
+            disabled={connectorDisabled}
+            className="inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-[11px] text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 disabled:opacity-50"
+            {...tid(TestIds.sourcesConnectors)}
+            onClick={onOpenConnectors}
           >
-            <LinkIcon style={{ fontSize: 18 }} />
-            从 URL 导入
-          </Button>
+            <SettingsIcon style={{ fontSize: 14 }} />
+            连接器
+          </button>
         </Tooltip>
-      ) : null}
-
-      <Tooltip content="通过连接器接入外部资料仓（如 Obsidian / 本地目录）">
-        <Button
-          variant="outlined"
-          fullWidth
-          size="sm"
-          disabled={connectorDisabled}
-          className="flex items-center justify-center gap-2 py-2 rounded-full border-gray-300 normal-case font-normal text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 hover:border-gray-400"
-          {...tid(TestIds.sourcesConnectors)}
-          onClick={onOpenConnectors}
+        <span className="flex-1" />
+        <Typography
+          variant="small"
+          className="text-[10px] text-gray-400 dark:text-slate-500 truncate max-w-[45%]"
         >
-          <SettingsIcon style={{ fontSize: 18 }} />
-          连接器
-        </Button>
-      </Tooltip>
-
-      <Typography variant="small" className="text-[10px] text-gray-500 dark:text-slate-400 px-1">
-        {uploadDragActive ? '拖放文件到此处' : uploadHint}
-      </Typography>
+          {uploadDragActive ? '拖放文件到此处' : uploadHint}
+        </Typography>
+      </div>
 
       {uploadError ? (
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">

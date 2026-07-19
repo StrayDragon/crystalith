@@ -165,28 +165,32 @@ export default function SourcesPanelSearchSection({
           </div>
         ) : null}
 
-        <div className={`px-3 pb-2 ${isDeepResearchMode ? '' : '-mt-1'}`}>
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-[11px] text-gray-600 dark:text-slate-400">
-              提取器：{extractorModeLabel}
-              {extractorsLoading
-                ? ' · 加载中…'
-                : ` · 可用 ${usableExtractorCount}/${extractorsCount}`}
-              {extractorFallbackEnabled == null
-                ? ''
-                : ` · 回退 ${extractorFallbackEnabled ? '开启' : '关闭'}`}
-            </div>
+        {/* L3: extractor settings — icon + tooltip status, not a primary status strip */}
+        <div
+          className={`flex items-center justify-end px-2 ${isDeepResearchMode ? 'pb-1.5' : 'pb-1.5 -mt-0.5'}`}
+        >
+          <Tooltip
+            content={[
+              `提取器：${extractorModeLabel}`,
+              extractorsLoading ? '加载中…' : `可用 ${usableExtractorCount}/${extractorsCount}`,
+              extractorFallbackEnabled == null
+                ? null
+                : `回退${extractorFallbackEnabled ? '开启' : '关闭'}`,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          >
             <button
               type="button"
               onClick={onOpenExtractorPolicy}
               disabled={!isConnected}
-              className="text-[11px] text-blue-600 hover:text-blue-700 disabled:opacity-60 flex items-center gap-1 flex-shrink-0 whitespace-nowrap"
+              aria-label="提取器设置"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
               {...tid(TestIds.sourcesExtractorSettings)}
             >
-              <SettingsIcon style={{ fontSize: 14 }} />
-              提取器设置
+              <SettingsIcon style={{ fontSize: 16 }} />
             </button>
-          </div>
+          </Tooltip>
         </div>
       </div>
     </div>
