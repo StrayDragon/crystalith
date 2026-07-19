@@ -220,6 +220,7 @@ function SourceListRow({
                 className="h-4 w-4 rounded border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"
                 iconProps={{ className: 'text-white' }}
                 disabled
+                {...tid(TestIds.sourceRowCheckbox)}
               />
             </span>
           </Tooltip>
@@ -230,6 +231,7 @@ function SourceListRow({
             containerProps={{ className: 'p-1' }}
             className="h-4 w-4 rounded border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"
             iconProps={{ className: 'text-white' }}
+            {...tid(TestIds.sourceRowCheckbox)}
           />
         )}
       </div>

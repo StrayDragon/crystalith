@@ -170,6 +170,12 @@ test.describe('@p0 workspace smoke', () => {
     await expect(page.getByTestId(TestIds.sourceDetailDialog)).toHaveCount(0);
   });
 
+  test('S09: source row exposes selectable checkbox', async ({ page }) => {
+    await expect(page.getByTestId(TestIds.sourceRowCheckbox).first()).toBeAttached({
+      timeout: 20_000,
+    });
+  });
+
   test('C01: chat input and send controls exist', async ({ page }) => {
     await expect(page.getByTestId(TestIds.chatInput)).toBeVisible();
     await expect(page.getByTestId(TestIds.chatSend)).toBeVisible();
