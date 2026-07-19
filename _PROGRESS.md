@@ -179,7 +179,7 @@ shared Zod（或路由挂载的 schema）
 - [x] **A** `strategy_configs` → Drizzle（P6.3）
 - [x] **B** OutputContentByType / frontendBundle / templates+eval response Zod
 - [x] **C** shared `.openapi()` 基础（extend + notebook/session/template/workspace/command/error）
-- [x] **D** 产品 gap — **D.1** 低风险锁回归；**D.2** qa-to-source 多轮 + tag per-item（Zod 挂载 + 测试）
+- [x] **D** 产品 gap — D.1 低风险；D.2 qa-to-source/tags；**D.3** citations sanitize + quality repair（修 needsRepair FAQ/BULLETS + 回归测）
 - [ ] **E** 孤儿愿景 spec 归档
 - [ ] **F** 神文件拆分
 - [ ] **G** 提炼 skill
