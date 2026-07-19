@@ -52,7 +52,7 @@ dev-connect process='server':
 
 # Gracefully stop Overmind (same as Ctrl-C on the start session)
 dev-quit:
-    overmind quit
+    overmind stop -f Procfile
 
 # --------------------------------------------------------------------------
 # Build
