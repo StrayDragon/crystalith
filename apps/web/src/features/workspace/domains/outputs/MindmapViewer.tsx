@@ -28,6 +28,7 @@ import {
 import { useCallback, useMemo, useState, memo, useEffect } from 'react';
 import '@xyflow/react/dist/style.css';
 
+import { LAYER_LEVELS } from '../../../../shared/layer';
 import { useTheme } from '../../shared/hooks/useTheme';
 
 // ============================================================================
@@ -443,7 +444,7 @@ const toolbarStyle: React.CSSProperties = {
   position: 'absolute',
   top: 8,
   left: 8,
-  zIndex: 10,
+  zIndex: LAYER_LEVELS.base + 10,
   display: 'flex',
   gap: 4,
 };

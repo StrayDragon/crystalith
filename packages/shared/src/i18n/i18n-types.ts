@@ -30,9 +30,6 @@ export type Translation = {
   'ssrf.allowlist_cidrs': string;
   'ssrf.max_redirects': string;
   'app.http_guardrails.upload_max_bytes': string;
-  'optional_services.chroma.enabled': string;
-  'optional_services.chroma.endpoint': string;
-  'optional_services.chroma.timeout_s': string;
   'optional_services.searxng.enabled': string;
   'optional_services.searxng.endpoint': string;
   'optional_services.searxng.timeout_s': string;

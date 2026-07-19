@@ -22,7 +22,6 @@ beforeEach(() => {
 
 test('toOptionalServiceDiagnostics orders and normalizes optional services', () => {
   const diagnostics = toOptionalServiceDiagnostics({
-    storageChroma: { service: 'chroma', enabled: false, status: 'disabled', healthy: null },
     cacheRedis: {
       service: 'redis',
       enabled: true,
@@ -39,9 +38,9 @@ test('toOptionalServiceDiagnostics orders and normalizes optional services', () 
     },
   });
 
-  expect(diagnostics.map((d) => d.key)).toEqual(['storageChroma', 'cacheRedis', 'searchSearxng']);
-  expect(diagnostics[1]?.error).toBe('boom');
-  expect(diagnostics[2]?.endpoint).toBe('http://searx');
+  expect(diagnostics.map((d) => d.key)).toEqual(['cacheRedis', 'searchSearxng']);
+  expect(diagnostics[0]?.error).toBe('boom');
+  expect(diagnostics[1]?.endpoint).toBe('http://searx');
 });
 
 test('useDependencyHealth fetches data and refresh updates from force endpoint', async () => {
@@ -59,7 +58,6 @@ test('useDependencyHealth fetches data and refresh updates from force endpoint',
           backend: { service: 'api', healthy: true },
         },
         optional: {
-          storageChroma: { service: 'chroma', enabled: false, status: 'disabled', healthy: null },
           cacheRedis: {
             service: 'redis',
             enabled: true,

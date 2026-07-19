@@ -42,15 +42,14 @@ repos:
         stages: [pre-commit]
 
   # Standard hygiene hooks
-  # Exclude backend/py (v1 reference SSOT — frozen, do not modify) and
-  # .agents/skills (vendored third-party skill docs) from all fixing hooks.
+  # Exclude .agents/skills (vendored third-party skill docs) from fixing hooks.
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
-        exclude: '^(backend/py/|\.agents/skills/)'
+        exclude: '^\.agents/skills/'
       - id: end-of-file-fixer
-        exclude: '^(backend/py/|\.agents/skills/)'
+        exclude: '^\.agents/skills/'
       - id: check-yaml
       - id: check-added-large-files
         args: ['--maxkb=1000']

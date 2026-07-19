@@ -160,13 +160,6 @@ export function createApp() {
           },
         },
         optional: {
-          storageChroma: {
-            service: 'Chroma (Vector Store)',
-            enabled: opt.chroma.enabled,
-            endpoint: opt.chroma.enabled ? opt.chroma.endpoint : null,
-            status: opt.chroma.enabled ? 'unknown' : 'disabled',
-            healthy: null,
-          },
           cacheRedis: {
             service: 'Redis (Cache)',
             enabled: false,

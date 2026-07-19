@@ -6,6 +6,8 @@
  * WidgetShell so that empty GridStack DOM nodes are invisible until React
  * portals mount.
  */
+import { LAYER_LEVELS } from '../../../../shared/layer';
+
 export const GRIDSTACK_STYLES = `
 /* GridStack container — transparent background so page bg shows through */
 .grid-stack {
@@ -55,9 +57,9 @@ export const GRIDSTACK_STYLES = `
   background: transparent !important;
 }
 
-/* Keep dragged widgets below the fixed header bar (z-10 = 10) */
+/* Keep dragged widgets below the fixed header bar (within base layer) */
 .grid-stack-item.ui-draggable-dragging,
 .grid-stack-item.ui-resizable-resizing {
-  z-index: 5 !important;
+  z-index: ${LAYER_LEVELS.base + 5} !important;
 }
 `;

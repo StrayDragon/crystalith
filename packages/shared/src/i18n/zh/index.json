@@ -20,9 +20,6 @@
   "ssrf.allowlist_cidrs": "白名单 CIDR 网段列表",
   "ssrf.max_redirects": "URL 获取时最大重定向次数",
   "app.http_guardrails.upload_max_bytes": "上传文件大小上限（字节）",
-  "optional_services.chroma.enabled": "是否启用 Chroma 向量数据库",
-  "optional_services.chroma.endpoint": "Chroma 服务端点地址",
-  "optional_services.chroma.timeout_s": "Chroma 请求超时（秒）",
   "optional_services.searxng.enabled": "是否启用 SearXNG 搜索引擎",
   "optional_services.searxng.endpoint": "SearXNG 服务端点地址",
   "optional_services.searxng.timeout_s": "SearXNG 请求超时（秒）",
@@ -151,14 +148,8 @@
   "proxy_settings.https_url": "HTTPS 代理 URL",
   "proxy_settings.socks5_url": "SOCKS5 代理 URL",
   "proxy_settings.no_proxy": "不走代理的地址列表",
-  "vector_storage.provider": "向量存储提供者（v1 兼容）",
-  "vector_storage.chroma.path": "Chroma 数据目录路径",
-  "vector_storage.chroma.host": "Chroma 服务主机，空=嵌入式",
-  "vector_storage.chroma.port": "Chroma 服务端口",
-  "vector_storage.chroma": "Chroma 配置",
   "root.cache": "缓存设置：provider、TTL、最大条目数",
   "root.database": "数据库设置（v1 兼容）",
   "root.plugins": "插件发现与加载配置",
-  "root.proxy_settings": "出站代理设置",
-  "root.vector_storage": "向量存储设置（v1 兼容）"
+  "root.proxy_settings": "出站代理设置"
 }
