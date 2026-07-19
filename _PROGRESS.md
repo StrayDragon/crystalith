@@ -146,7 +146,7 @@ shared Zod（或路由挂载的 schema）
 - [x] **P4.3** `normalizeMindmapNode` 单点化（ARCH-14）
 - [x] **P4.4** Layer：去掉硬编码 z-index 逃逸（ARCH-13）
 - [x] **P4.5** `.oxlintrc` 等陈旧 ignore（`backend/py/`、`api/generated/`）
-- [ ] **P4.6**（可选）神文件拆分 — **靠后**，仅在 SSOT 稳定后按痛点拆（ARCH-05）
+- [ ] **P4.6**（可选）神文件拆分 — **Wave F 已拆 2 个**（ResearchDetailPanel、outputs/pipeline）；其余按痛点再拆（ARCH-05）
 
 ### P5 — Spec 卫生（手改，不开 SDD）
 
@@ -159,8 +159,8 @@ shared Zod（或路由挂载的 schema）
 - [x] **P5.3** `workspace-api-contract` + 相关 UI/studio/commands：`/v1`→`/v2`（保留 `ui.v1.event`）（DRIFT-03）
 - [x] **P5.4** 清除已落地「缺…」假缺口；**保留**真实产品 gap（repair loop / stats preset / citations 路径等）（DRIFT-04）
 - [x] **P5.5** `openapi-and-client-generation` + `frontend-eden-migration`：Eden 完成态；**不合并**两 cap（互补）（DRIFT-07）
-- [x] **P5.6** 孤儿能力 purpose 标 DEFERRED：`multi-notebook-collections` / `quality-gates-for-generation` / `publishable-artifacts` / `generation-variants-and-comparison`；`evidence-review-workflow` 部分 DEFERRED（DRIFT-10）
-- [x] **P5.7** c13 碰撞备注（DRIFT-11）：live `publishable-artifacts` = 站内 artifact 愿景；active `c13` delta **误挂同名**写分发/Tauri。**本阶段不处理 c13**（不改结构、不改挂）。
+- [x] **P5.6** ~~孤儿 DEFERRED~~ → **Wave E 已直接删除**愿景：`multi-notebook-collections` / `quality-gates-for-generation` / `publishable-artifacts` / `generation-variants-and-comparison`；`evidence-review-workflow` 仅保留已落地 citations/context
+- [x] **P5.7** c13 碰撞备注（DRIFT-11）：原 live `publishable-artifacts` 愿景已删；active `c13` delta 仍误挂同名写分发/Tauri。**本阶段不处理 c13**
 - [x] **附加** `bdd-test-harness`、`architecture-plugin-and-agent` purpose、`public-repo-hygiene` SECURITY DEFERRED 对齐
 
 ### P6 — 可选 / 以后
@@ -170,7 +170,7 @@ shared Zod（或路由挂载的 schema）
 - [x] **P6.3** `strategy_configs` 并入 Drizzle schema SSOT（ARCH-06）— Wave A
 - [x] **P6.4** OpenAPI `.openapi()` 注解补全（ARCH-12）— Wave C：shared 启用 extend + 高频 schema；其余可增量
 - [ ] **P6.5** ~~c13 / Eden→server 包耦合（ARCH-15）~~ — **本阶段不做**（随分发另议）
-- [ ] **P6.6** 本阶段结束后：从本文件提炼 skill（**有结果后再做**）
+- [x] **P6.6** 从本文件提炼 skill → `.agents/skills/crystalith-ssot-qa-batches/SKILL.md`（Wave G）
 
 ### Wave A–G（P5 后余债，2026-07-19 启动）
 
@@ -181,8 +181,8 @@ shared Zod（或路由挂载的 schema）
 - [x] **C** shared `.openapi()` 基础（extend + notebook/session/template/workspace/command/error）
 - [x] **D** 产品 gap — D.1–D.5
 - [x] **E** 孤儿愿景 spec **直接删除** + evidence-review 精简（36 specs validate）
-- [ ] **F** 神文件拆分（ResearchDetailPanel + outputs/pipeline）
-- [ ] **G** 提炼 skill
+- [x] **F** 神文件拆分：`ResearchDetailPanel`→components；`outputs/pipeline`→postprocess+citations
+- [x] **G** 提炼 skill：`.agents/skills/crystalith-ssot-qa-batches/SKILL.md`
 
 **波次纪律（2026-07-19）**：每波结束后必须 `just qa` 绿再 commit。
 
@@ -190,7 +190,7 @@ shared Zod（或路由挂载的 schema）
 
 ## 3. 当前焦点
 
-**正在做**：Wave F → G；c13 **明确不做**
+**正在做**：本阶段 A–G **已收口**；c13 **明确不做**
 
 **已完成批次**：
 
@@ -198,9 +198,9 @@ shared Zod（或路由挂载的 schema）
 - **P1** 路由 Zod 主线（含 rem/connectors/response/eval）
 - **P3** 门禁真相整包 + **web Vitest 纳入 just qa**
 - **P5** Spec 卫生 + specs-compact
-- **Wave A–E**（至孤儿愿景 spec 删除）
+- **Wave A–G**（含 skill 提炼）
 
-**下一步**：**F** 神文件 / **G** skill；**不做 c13**
+**下一步（可选）**：push / 删或归档 `_PROGRESS.md` / P6.1–6.2；**不做 c13**
 
 **明确不做**：c13 分发 / Tauri / 改挂 `v2-distribution`（P5.7 仅备注；P6.5 随 c13 一并搁置）
 
