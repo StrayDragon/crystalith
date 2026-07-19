@@ -107,6 +107,18 @@ function ToolsPopover({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [open, onClose]);
+
   return (
     <>
       <button
@@ -205,6 +217,10 @@ function StudioPanel({
     setToolsPopoverOpen((prev) => !prev);
   }, []);
 
+  const handleCloseToolsPopover = useCallback(() => {
+    setToolsPopoverOpen(false);
+  }, []);
+
   const typeLabelMap = useMemo(() => {
     const map = new Map<OutputTypeId, string>();
     tools.forEach((tool) => {
@@ -289,17 +305,17 @@ function StudioPanel({
         <ToolsPopover
           open={toolsPopoverOpen}
           onToggle={handleToggleToolsPopover}
-          onClose={() => setToolsPopoverOpen(false)}
+          onClose={handleCloseToolsPopover}
           tools={tools}
           toolsLoading={toolsLoading}
           toolsError={toolsError}
           onGenerateOutput={(type, modelId) => {
             onGenerateOutput(type, modelId);
-            setToolsPopoverOpen(false);
+            handleCloseToolsPopover();
           }}
           onOpenSlides={(options) => {
             onOpenSlides?.(options);
-            setToolsPopoverOpen(false);
+            handleCloseToolsPopover();
           }}
           isConnected={isConnected}
           isFullscreen={isFullscreen}

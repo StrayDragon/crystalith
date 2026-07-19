@@ -24,6 +24,7 @@ export const WORKSPACE_SHORTCUTS: WorkspaceShortcutDefinition[] = [
     combo: 'Ctrl+K',
     description: '打开命令面板',
     category: '导航',
+    allowInInput: true,
   },
   {
     id: 'create-notebook',

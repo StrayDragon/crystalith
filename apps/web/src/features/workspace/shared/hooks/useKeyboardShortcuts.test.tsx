@@ -97,6 +97,37 @@ test('ignores global shortcut when activeElement is input even if event targets 
   expect(event.defaultPrevented).toBe(false);
 });
 
+test('supports allowInInput for Ctrl+K command palette from textarea', () => {
+  const onPalette = vi.fn();
+
+  renderHook(() =>
+    useKeyboardShortcuts([
+      {
+        id: 'open-command-palette',
+        combo: 'Ctrl+K',
+        allowInInput: true,
+        handler: onPalette,
+      },
+    ]),
+  );
+
+  const textarea = document.createElement('textarea');
+  document.body.append(textarea);
+  textarea.focus();
+
+  const event = new KeyboardEvent('keydown', {
+    key: 'k',
+    ctrlKey: true,
+    bubbles: true,
+    cancelable: true,
+  });
+
+  textarea.dispatchEvent(event);
+
+  expect(onPalette).toHaveBeenCalledTimes(1);
+  expect(event.defaultPrevented).toBe(true);
+});
+
 test('supports allowInInput shortcuts like Ctrl+Enter', () => {
   const onSend = vi.fn();
 

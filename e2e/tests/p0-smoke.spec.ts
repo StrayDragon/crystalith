@@ -191,6 +191,7 @@ test.describe('@p0 workspace smoke', () => {
     await page.getByTestId(TestIds.studioGenerate).click();
     await expect(page.getByTestId(TestIds.studioToolsPopover)).toBeVisible();
     await page.keyboard.press('Escape');
+    await expect(page.getByTestId(TestIds.studioToolsPopover)).toHaveCount(0);
   });
 
   test('O02: add note dialog opens', async ({ page }) => {
@@ -203,6 +204,13 @@ test.describe('@p0 workspace smoke', () => {
     await page.keyboard.press('Control+K');
     await expect(page.getByTestId(TestIds.commandPalette)).toBeVisible();
     await expect(page.getByTestId(TestIds.commandPaletteInput)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId(TestIds.commandPalette)).toHaveCount(0);
+
+    // Command palette should also open while chat input is focused.
+    await page.getByTestId(TestIds.chatInput).click();
+    await page.keyboard.press('Control+K');
+    await expect(page.getByTestId(TestIds.commandPalette)).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId(TestIds.commandPalette)).toHaveCount(0);
   });
