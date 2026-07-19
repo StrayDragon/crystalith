@@ -3,9 +3,9 @@ import { describe, expect, it } from 'bun:test';
 
 import {
   markPostprocessed,
-  needsRepair,
   sanitizeCitationsIndices,
-} from '../../src/features/outputs/pipeline.ts';
+} from '../../src/features/outputs/citations.ts';
+import { needsRepair } from '../../src/features/outputs/postprocess.ts';
 
 describe('sanitizeCitationsIndices', () => {
   it('strips out-of-range, duplicate, and non-integer indices with warnings', () => {
