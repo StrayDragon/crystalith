@@ -6,13 +6,13 @@ import {
 import { useCallback, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
-import type { WorkspaceToolsDiagnostics } from '../../../../api/shared-types';
 import { copyToClipboard } from '../../../../shared/clipboard';
 import { t } from '../../../../shared/i18n';
 import { useLayer } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
 import { toast } from '../../../../shared/toast';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
+import type { WorkspaceToolsDiagnostics } from '../../shared/types';
 import {
   toOptionalServiceDiagnostics,
   type DependencyHealthResponse,
