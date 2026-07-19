@@ -42,6 +42,7 @@ bun preview              # Preview production build
 - Tests: `*.test.tsx` (colocated with source)
 - CSS/Tailwind: global styles in `src/app/index.css`; feature styles alongside components
 - Formatter: `oxfmt` — keep reformatting scoped
+- **拆分准则**：见根 `AGENTS.md`「Component / module split」。默认不拆单处使用的小 JSX；优先 hook + 少数大步组件 / 可复用模块。
 
 ## Layer System (z-index Management)
 

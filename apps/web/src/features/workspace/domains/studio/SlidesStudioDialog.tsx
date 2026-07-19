@@ -14,12 +14,9 @@ import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
 
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
-import { SlidesDebugTimings } from './slides-studio/components/SlidesDebugTimings';
-import { SlidesGenerationEvents } from './slides-studio/components/SlidesGenerationEvents';
 import { SlidesPreviewPanel } from './slides-studio/components/SlidesPreviewPanel';
 import { SlidesStageActions } from './slides-studio/components/SlidesStageActions';
 import { SlidesStageContent } from './slides-studio/components/SlidesStageContent';
-import { SlidesStatusBanners } from './slides-studio/components/SlidesStatusBanners';
 import { STAGES } from './slides-studio/constants';
 import type { SlidesStudioDialogProps } from './slides-studio/types';
 import { useSlidesStudioDialog } from './slides-studio/useSlidesStudioDialog';
@@ -169,13 +166,78 @@ export default function SlidesStudioDialog(props: SlidesStudioDialogProps) {
               <div
                 className={`flex flex-col gap-3 min-h-0 ${isPreviewMode ? 'order-2 lg:order-1' : ''}`}
               >
-                <SlidesStatusBanners error={error} statusMessage={statusMessage} />
-                {events.length > 0 && !isConfigOnly && !isPreviewMode && (
-                  <SlidesGenerationEvents events={events} />
-                )}
-                {import.meta.env.DEV && debugTimings && !isConfigOnly && !isPreviewMode && (
-                  <SlidesDebugTimings debugTimings={debugTimings} />
-                )}
+                {error ? (
+                  <div
+                    role="alert"
+                    aria-live="polite"
+                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+                  >
+                    {error}
+                  </div>
+                ) : null}
+                {statusMessage && !error ? (
+                  <div
+                    className={`rounded-lg border px-3 py-2 text-sm ${
+                      statusMessage.tone === 'red'
+                        ? 'border-red-200 bg-red-50 text-red-700'
+                        : statusMessage.tone === 'blue'
+                          ? 'border-blue-100 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-200'
+                    }`}
+                  >
+                    {statusMessage.message}
+                  </div>
+                ) : null}
+                {events.length > 0 && !isConfigOnly && !isPreviewMode
+                  ? (() => {
+                      const keyCounts = new Map<string, number>();
+                      return (
+                        <div className="space-y-2">
+                          {events.map((event) => {
+                            const baseKey = `${event.type}:${event.message}`;
+                            const ordinal = keyCounts.get(baseKey) ?? 0;
+                            keyCounts.set(baseKey, ordinal + 1);
+                            return (
+                              <div
+                                key={`${baseKey}:${ordinal}`}
+                                className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-3 py-2 text-xs text-gray-700 dark:text-slate-200 flex items-start gap-2"
+                              >
+                                <span
+                                  className={`mt-1 h-1.5 w-1.5 rounded-full ${
+                                    event.type === 'toolcall' ? 'bg-purple-500' : 'bg-blue-500'
+                                  }`}
+                                />
+                                <span className="flex-1">{event.message}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()
+                  : null}
+                {import.meta.env.DEV && debugTimings && !isConfigOnly && !isPreviewMode ? (
+                  <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-3 py-2 text-xs text-gray-700 dark:text-slate-200 space-y-2">
+                    <Typography
+                      variant="small"
+                      className="text-gray-500 dark:text-slate-400 text-xs"
+                    >
+                      timings_ms
+                    </Typography>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(debugTimings)
+                        .toSorted(([a], [b]) => a.localeCompare(b))
+                        .map(([key, value]) => (
+                          <Chip
+                            key={key}
+                            value={`${key}: ${value}ms`}
+                            size="sm"
+                            variant="ghost"
+                            color="gray"
+                          />
+                        ))}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 flex-1 min-h-0 overflow-auto">
                   <SlidesStageContent {...stageContentProps} />
                 </div>

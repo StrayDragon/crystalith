@@ -97,6 +97,19 @@ Fast path:
 - **Layer System**: Use `apps/web/src/shared/layer/` — never hardcode z-index
 - Formatter: `oxfmt`; linter: `oxlint`
 
+### Component / module split（不要为拆而拆）
+
+拆分目标是**降低耦合与认知负担**，不是「文件越小越好」。单处使用、也不形成清晰领域边界的 UI 碎片，优先留在父组件。
+
+| 值得拆                                                | 不必拆                                   |
+| ----------------------------------------------------- | ---------------------------------------- |
+| 多处复用，或明确即将复用                              | 只用一次的一小段 JSX（尤其约 80 行以下） |
+| 纯函数 / utils（易单测）                              | 仅 props 转发、无独立语义的壳组件        |
+| 有独立状态边界的 hook（selection / wizard）           | 为 LOC 数字而切碎的展示块                |
+| 大块内聚模块（postprocess、SSE helpers、wizard step） | 强依赖父级十几个回调、拆开更难跟读       |
+
+**默认**：能复用或边界清晰再拆；否则内联。神文件可拆 **hook + 少数大步组件**，避免拆成一堆不可复用碎片。
+
 ## Architecture Decisions
 
 ### Zod SSOT + Eden + OpenAPI（职责分离）

@@ -85,10 +85,13 @@ shared 启用 zod-extend；高频 schema 补注解；其余可增量。
 
 ### F — 神文件拆分（行为不变）
 
-优先**清晰缝**：
+优先**清晰缝**，且优先可复用 / 有独立状态边界的模块：
 
-- 已内联的子组件 → `components/`
+- 已内联且**可复用**的子组件 → `components/`
 - 已有 section banner + 单测的纯函数块 → 旁路模块（如 `postprocess.ts` / `citations.ts`）
+- 独立状态边界 → hook（selection / wizard）
+
+**不要**为 LOC 把单处使用的小 JSX 切成一堆碎片。细则见根 `AGENTS.md`「Component / module split」。
 
 避免：prop hub 编排壳、高耦合 agent 循环、需先 redesign store 的面板。  
 拆完跑相关单测 + `just qa`。
