@@ -29,20 +29,30 @@ export function useFocusTrap({ active, containerRef, onEscape }: UseFocusTrapOpt
     const container = containerRef.current;
     if (!container) return;
 
-    previousFocusRef.current =
+    const previouslyFocused =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    previousFocusRef.current = previouslyFocused;
 
-    const focusables = getFocusableElements(container);
-    const initialFocus = focusables[0] ?? container;
+    // Blur trigger before any overlay marks ancestors aria-hidden (Chrome a11y warning).
+    if (previouslyFocused && !container.contains(previouslyFocused)) {
+      previouslyFocused.blur();
+    }
 
     if (!container.hasAttribute('tabindex')) {
       container.tabIndex = -1;
     }
 
-    queueMicrotask(() => {
-      if (active) {
-        initialFocus.focus();
-      }
+    const focusInitial = () => {
+      if (!active || !container.isConnected) return;
+      const focusables = getFocusableElements(container);
+      const initialFocus = focusables[0] ?? container;
+      initialFocus.focus({ preventScroll: true });
+    };
+
+    // Double rAF: wait until portal/dialog content is in the tree.
+    let raf2 = 0;
+    const raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(focusInitial);
     });
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -81,9 +91,14 @@ export function useFocusTrap({ active, containerRef, onEscape }: UseFocusTrapOpt
     container.addEventListener('keydown', handleKeyDown);
 
     return () => {
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
       container.removeEventListener('keydown', handleKeyDown);
-      previousFocusRef.current?.focus();
+      const restore = previousFocusRef.current;
       previousFocusRef.current = null;
+      if (restore?.isConnected) {
+        restore.focus({ preventScroll: true });
+      }
     };
   }, [active, containerRef, onEscape]);
 }

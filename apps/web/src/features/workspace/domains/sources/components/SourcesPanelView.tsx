@@ -232,6 +232,16 @@ function SourcesPanelView({
           fileInputRef={fileInputRef}
           onOpenConnectors={() => setConnectorsOpen(true)}
           onOpenUrlImport={onOpenUrlImport}
+          extractorTooltip={[
+            `提取器：${extractorModeLabel}`,
+            extractorsLoading ? '加载中…' : `可用 ${usableExtractorCount}/${extractors.length}`,
+            extractorFallbackEnabled == null
+              ? null
+              : `回退${extractorFallbackEnabled ? '开启' : '关闭'}`,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+          onOpenExtractorPolicy={() => setExtractorPolicyOpen(true)}
         />
         <SourcesPanelSearchSection
           isDeepResearchMode={isDeepResearchMode}
@@ -242,13 +252,6 @@ function SourcesPanelView({
           onToggleSearchMode={handleToggleSearchMode}
           onSearch={handleSearch}
           searchInputRef={searchInputRef}
-          extractorModeLabel={extractorModeLabel}
-          extractorsLoading={extractorsLoading}
-          usableExtractorCount={usableExtractorCount}
-          extractorsCount={extractors.length}
-          extractorFallbackEnabled={extractorFallbackEnabled}
-          isConnected={isConnected}
-          onOpenExtractorPolicy={() => setExtractorPolicyOpen(true)}
         />
       </div>
 
