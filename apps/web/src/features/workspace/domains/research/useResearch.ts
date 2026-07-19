@@ -1,8 +1,8 @@
+import type { ResearchStatus } from '@crystalith/shared';
 import { useCallback, useRef, useState, useEffect } from 'react';
 
 import { api } from '../../../../api/eden';
 import { streamRequest } from '../../../../api/stream';
-import type { ResearchStatus } from '@crystalith/shared';
 
 export type { ResearchStatus };
 

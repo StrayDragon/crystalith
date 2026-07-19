@@ -123,6 +123,13 @@
       }
     },
     {
+      "files": ["e2e/fixtures/**/*.ts"],
+      "rules": {
+        // Playwright fixture API requires `async ({}, use)` when a fixture has no deps.
+        "eslint/no-empty-pattern": "off"
+      }
+    },
+    {
       "files": [
         "**/*.test.ts",
         "**/*.test.tsx",

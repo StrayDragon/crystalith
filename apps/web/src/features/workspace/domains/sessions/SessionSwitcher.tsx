@@ -18,8 +18,8 @@ import {
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
-import { TestIds, tid } from '../../../../shared/testids';
 import { LAYER_LEVELS } from '../../../../shared/layer';
+import { TestIds, tid } from '../../../../shared/testids';
 import type { SessionSummary } from '../../shared/types';
 
 interface SessionSwitcherProps {

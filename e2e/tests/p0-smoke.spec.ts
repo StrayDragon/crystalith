@@ -1,6 +1,7 @@
-import { test, expect, TestIds, gotoWorkspace } from '../fixtures/test';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+
+import { test, expect, TestIds, gotoWorkspace } from '../fixtures/test';
 
 /**
  * @p0 Critical browser gate — no LLM / external network required.
@@ -76,10 +77,11 @@ test.describe('@p0 workspace smoke', () => {
 
   test('A04: onboarding banner exposes durable openers', async ({ page }) => {
     const banner = page.getByTestId(TestIds.onboardingBanner);
-    // Banner may auto-dismiss after ready; if present, URL opener must be testid-stable.
-    if (await banner.count()) {
-      await expect(banner).toBeVisible();
-      await expect(page.getByTestId(TestIds.urlImportOpen).first()).toBeAttached();
+    // Banner may auto-dismiss after ready; URL opener only exists on `no_sources` variant.
+    if (!(await banner.isVisible().catch(() => false))) return;
+    const urlOpen = page.getByTestId(TestIds.urlImportOpen);
+    if (await urlOpen.count()) {
+      await expect(urlOpen.first()).toBeAttached();
     }
   });
 

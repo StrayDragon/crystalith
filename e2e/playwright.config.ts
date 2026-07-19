@@ -1,6 +1,7 @@
-import { defineConfig, devices } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+
+import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Critical browser gate for Crystalith.

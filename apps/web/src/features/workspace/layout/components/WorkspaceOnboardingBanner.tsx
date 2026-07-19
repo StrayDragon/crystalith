@@ -136,7 +136,11 @@ export default function WorkspaceOnboardingBanner({
           tone: readiness.connectionState === 'error' ? 'error' : 'info',
           actions: (
             <>
-              <ActionButton variant="primary" onClick={onRetryConnection} testId={TestIds.connectionRetry}>
+              <ActionButton
+                variant="primary"
+                onClick={onRetryConnection}
+                testId={TestIds.connectionRetry}
+              >
                 {t('workspace.onboarding.retry_connection')}
               </ActionButton>
               <ActionButton variant="secondary" onClick={onOpenDiagnostics}>
