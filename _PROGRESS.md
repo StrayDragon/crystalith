@@ -6,7 +6,7 @@
 > **批次纪律**：每个合理批次验收通过后 **commit**；有问题随时停并报告。
 
 **来源**：Wave A（架构 / 流程门禁 / Spec 漂移）只读体检。  
-**最后更新**：2026-07-19（P1.5 workspace types 瘦身完成 → 暂停）
+**最后更新**：2026-07-19（P4 Cleanup A 进行中）
 
 ---
 
@@ -62,7 +62,7 @@ shared Zod（或路由挂载的 schema）
 | P1    | Zod / Eden SSOT 收敛（核心）             | 🔄 P1.4–1.5 ✅；P1.2/1.3/1.6+ 待办 |
 | P2    | Zod 使用面写入 AGENTS.md + 文档对齐      | ✅                                 |
 | P3    | 门禁真相（qa 组成、假绿项）              | ⬜                                 |
-| P4    | Cleanup A（死代码 / 死配置，无行为变更） | ⬜                                 |
+| P4    | Cleanup A（死代码 / 死配置，无行为变更） | ✅ P4.1–4.5（P4.6 可选延后）       |
 | P5    | Spec 卫生（手改 toon，**不开 SDD**）     | ⬜                                 |
 | P6    | 可选：瘦 CI / SECURITY / 余债            | ⬜                                 |
 
@@ -126,11 +126,11 @@ shared Zod（或路由挂载的 schema）
 
 ### P4 — Cleanup A（无用户可见行为变更）
 
-- [ ] **P4.1** 删除或隔离未使用的 frontend `domains/outputs/plugins/` 注册表死路径（ARCH-03）
-- [ ] **P4.2** 移除死 Chroma / `vector_storage` 配置面（ARCH-07）
-- [ ] **P4.3** `normalizeMindmapNode` 单点化（ARCH-14）
-- [ ] **P4.4** Layer：去掉硬编码 z-index 逃逸（ARCH-13）
-- [ ] **P4.5** `.oxlintrc` 等陈旧 ignore（`backend/py/`、`api/generated/`）
+- [x] **P4.1** 删除或隔离未使用的 frontend `domains/outputs/plugins/` 注册表死路径（ARCH-03）
+- [x] **P4.2** 移除死 Chroma / `vector_storage` 配置面（ARCH-07）
+- [x] **P4.3** `normalizeMindmapNode` 单点化（ARCH-14）
+- [x] **P4.4** Layer：去掉硬编码 z-index 逃逸（ARCH-13）
+- [x] **P4.5** `.oxlintrc` 等陈旧 ignore（`backend/py/`、`api/generated/`）
 - [ ] **P4.6**（可选）神文件拆分 — **靠后**，仅在 SSOT 稳定后按痛点拆（ARCH-05）
 
 ### P5 — Spec 卫生（手改，不开 SDD）
@@ -158,14 +158,14 @@ shared Zod（或路由挂载的 schema）
 
 ## 3. 当前焦点
 
-**正在做**：_(P1.4 完成 — 下一批建议 P1.3 Studio outline 或 P1.2 Output)_
+**正在做**：P4 Cleanup A → 随后 P1.2 Output/RenderDescriptor → P1.3 Studio outline
 
 **已完成批次**：
 
-- P0 / P1.0 / P1.1 / P2 / just qa 基线 / P1.4 refine / P1.4 sources
-- **P1.4 diagnostics** — 删除 `shared-types.ts`（验收 `just qa`）
+- P0 / P1.0 / P1.1 / P2 / just qa 基线 / P1.4 / P1.5
+- **P4.1–P4.5** — 死 plugins 注册表、Chroma/`vector_storage`、mindmap SSOT、Layer z-index、陈旧 ignore
 
-**下一步**：P1.3 Studio outline / P1.2 Output meta / P1.5 workspace types 瘦身 …
+**下一步**：P1.2 → P1.3 → …
 
 ---
 

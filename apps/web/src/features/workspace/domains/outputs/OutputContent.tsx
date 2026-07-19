@@ -22,29 +22,12 @@ import { EXPORT_FORMAT_LABELS } from './exporters';
 import FlashcardViewer from './FlashcardViewer';
 import GenericOutputRenderer from './GenericOutputRenderer';
 import GuideChecklist from './GuideChecklist';
-import { MindmapViewer, type MindmapNode } from './MindmapViewer';
+import { normalizeMindmapNode } from './mindmapNormalize';
+import { MindmapViewer } from './MindmapViewer';
 import QuizRunner from './QuizRunner';
 import ReportViewer from './ReportViewer';
 import TimelineViewer from './TimelineViewer';
 import { useExport } from './useExport';
-
-/** Normalize raw content to MindmapViewer-compatible nodes. */
-function normalizeMindmapNode(node: unknown): MindmapNode {
-  if (!node || typeof node !== 'object') return { label: typeof node === 'string' ? node : '' };
-  const record = node as Record<string, unknown>;
-  const label =
-    typeof record.label === 'string'
-      ? record.label
-      : typeof record.label === 'string'
-        ? record.label
-        : typeof record.label === 'string'
-          ? record.label
-          : '';
-  const children = Array.isArray(record.children)
-    ? record.children.map((child) => normalizeMindmapNode(child))
-    : undefined;
-  return { label, children };
-}
 
 interface OutputContentProps {
   output: OutputItem;

@@ -196,14 +196,12 @@
     "coverage/",
     "node_modules/",
     "vendor/",
-    "backend/py/",
     ".git/",
     "bun.lock",
     "data/",
     "*.generated.ts",
     "*.gen.ts",
     "openapi.gen.json",
-    "apps/web/src/api/generated/",
     ".agents/skills/"
   ]
 }

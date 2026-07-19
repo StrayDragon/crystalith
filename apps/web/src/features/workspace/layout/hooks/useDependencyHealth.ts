@@ -2,7 +2,7 @@ import useSWR from 'swr';
 
 export type OptionalServiceStatus = 'unknown' | 'disabled' | 'healthy' | 'degraded';
 
-export type OptionalServiceKey = 'storageChroma' | 'cacheRedis' | 'searchSearxng';
+export type OptionalServiceKey = 'cacheRedis' | 'searchSearxng';
 
 export interface DependencyServiceStatus {
   service: string;
@@ -53,7 +53,6 @@ export interface DependencyDiagnosticItem {
 }
 
 const OPTIONAL_SERVICE_LABELS: Record<OptionalServiceKey, string> = {
-  storageChroma: 'Chroma (Vector Store)',
   cacheRedis: 'Redis (Cache)',
   searchSearxng: 'SearXNG (Search)',
 };
@@ -62,7 +61,7 @@ export function toOptionalServiceDiagnostics(
   optional: DependencyHealthResponse['optional'] | null | undefined,
 ): DependencyDiagnosticItem[] {
   if (!optional) return [];
-  const keys: OptionalServiceKey[] = ['storageChroma', 'cacheRedis', 'searchSearxng'];
+  const keys: OptionalServiceKey[] = ['cacheRedis', 'searchSearxng'];
   return keys.map((key) => {
     const entry = optional[key];
     return {

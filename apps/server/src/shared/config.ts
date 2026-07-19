@@ -540,7 +540,6 @@ export interface OptionalServiceEntry {
 }
 
 export interface OptionalServicesConfig {
-  chroma: OptionalServiceEntry;
   cache_redis?: OptionalServiceEntry;
   searxng: OptionalServiceEntry;
 }
@@ -564,13 +563,7 @@ const OptionalServiceEntrySchema = z.object({
 });
 
 /** Optional services schema — maps from `optional_services.*`. */
-/** Optional services schema — maps from `optional_services.*`. */
 export const OptionalServicesSchema = z.object({
-  chroma: OptionalServiceEntrySchema.default({
-    enabled: false,
-    endpoint: 'http://localhost:8000',
-    timeout_s: 3,
-  } as z.infer<typeof OptionalServiceEntrySchema>),
   searxng: OptionalServiceEntrySchema.default({
     enabled: false,
     endpoint: 'http://127.0.0.1:50201',
@@ -584,11 +577,6 @@ export type OptionalServicesSettings = z.infer<typeof OptionalServicesSchema>;
 export function getOptionalServices(): OptionalServicesConfig {
   const parsed = parseSection(OptionalServicesSchema, config().raw.optional_services);
   return {
-    chroma: {
-      enabled: parsed.chroma.enabled,
-      endpoint: parsed.chroma.endpoint ?? 'http://localhost:8000',
-      timeout_s: parsed.chroma.timeout_s ?? 3,
-    },
     searxng: {
       enabled: parsed.searxng.enabled,
       endpoint: parsed.searxng.endpoint ?? 'http://127.0.0.1:50201',
@@ -680,37 +668,6 @@ export const ProxySettingsSchema = z.object({
 });
 export type ProxySettings = z.infer<typeof ProxySettingsSchema>;
 
-/** Vector storage settings — v1 Chroma config; v2 uses sqlite-vec. */
-export const VectorStorageSettingsSchema = z.object({
-  provider: z
-    .string()
-    .default('chroma')
-    .describe(desc('vector_storage.provider', '向量存储提供者（v1 兼容）')),
-  chroma: z
-    .object({
-      path: z
-        .string()
-        .default('./data/chroma')
-        .optional()
-        .describe(desc('vector_storage.chroma.path', 'Chroma 数据目录路径')),
-      telemetry: z.boolean().default(false).optional(),
-      host: z
-        .string()
-        .default('')
-        .optional()
-        .describe(desc('vector_storage.chroma.host', 'Chroma 服务主机，空=嵌入式')),
-      port: z
-        .number()
-        .int()
-        .default(8000)
-        .optional()
-        .describe(desc('vector_storage.chroma.port', 'Chroma 服务端口')),
-    })
-    .default({})
-    .describe(desc('vector_storage.chroma', 'Chroma 配置')),
-});
-export type VectorStorageSettings = z.infer<typeof VectorStorageSettingsSchema>;
-
 // ===========================================================================
 // Root config schema — single combined schema for app.yaml generation
 // (gen-app-schema.ts consumes this instead of a manual section mapping).
@@ -738,7 +695,7 @@ export const RootConfigSchema = z.object({
     desc('root.search', '搜索引擎设置：SearXNG 实例地址、超时、最大结果数'),
   ),
   optional_services: OptionalServicesSchema.describe(
-    desc('root.optional_services', '可选服务配置：Chroma、SearXNG、Redis 的启用状态与接入点'),
+    desc('root.optional_services', '可选服务配置：SearXNG、Redis 的启用状态与接入点'),
   ),
   storage: StorageSettingsSchema.describe(desc('root.storage', '存储设置：数据根目录路径')),
   source_ingestion: z
@@ -838,8 +795,5 @@ export const RootConfigSchema = z.object({
   database: DatabaseSettingsSchema.describe(desc('root.database', '数据库设置（v1 兼容）')),
   plugins: PluginsSettingsSchema.describe(desc('root.plugins', '插件发现与加载配置')),
   proxy_settings: ProxySettingsSchema.describe(desc('root.proxy_settings', '出站代理设置')),
-  vector_storage: VectorStorageSettingsSchema.describe(
-    desc('root.vector_storage', '向量存储设置（v1 兼容）'),
-  ),
 });
 export type RootConfig = z.infer<typeof RootConfigSchema>;

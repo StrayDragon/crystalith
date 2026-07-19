@@ -229,32 +229,9 @@
       }
     },
     "optional_services": {
-      "description": "可选服务配置：Chroma、SearXNG、Redis 的启用状态与接入点",
+      "description": "可选服务配置：SearXNG、Redis 的启用状态与接入点",
       "type": "object",
       "properties": {
-        "chroma": {
-          "default": {
-            "enabled": false,
-            "endpoint": "http://localhost:8000",
-            "timeout_s": 3
-          },
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "description": "是否启用该服务",
-              "default": false,
-              "type": "boolean"
-            },
-            "endpoint": {
-              "description": "服务端点地址",
-              "type": "string"
-            },
-            "timeout_s": {
-              "description": "请求超时（秒）",
-              "type": "number"
-            }
-          }
-        },
         "searxng": {
           "default": {
             "enabled": false,
@@ -797,39 +774,6 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
-        }
-      }
-    },
-    "vector_storage": {
-      "description": "向量存储设置（v1 兼容）",
-      "type": "object",
-      "properties": {
-        "provider": {
-          "description": "向量存储提供者（v1 兼容）",
-          "default": "chroma",
-          "type": "string"
-        },
-        "chroma": {
-          "description": "Chroma 配置",
-          "default": {},
-          "type": "object",
-          "properties": {
-            "path": {
-              "description": "Chroma 数据目录路径",
-              "type": "string"
-            },
-            "telemetry": {
-              "type": "boolean"
-            },
-            "host": {
-              "description": "Chroma 服务主机，空=嵌入式",
-              "type": "string"
-            },
-            "port": {
-              "description": "Chroma 服务端口",
-              "type": "number"
-            }
           }
         }
       }

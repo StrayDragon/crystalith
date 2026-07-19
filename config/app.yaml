@@ -220,17 +220,6 @@ concurrency:
 storage:
   data_root: "./data"
 
-# v1 legacy (Python backend) — kept for reference, not consumed by v2 server.
-vector_storage:
-  provider: "chroma"
-  chroma:
-    path: "./data/chroma"
-    telemetry: false
-    # Empty host => embedded Chroma (no separate Chroma server required).
-    host: ""
-    port: 8000
-    # (endpoint_candidates removed — always uses embedded Chroma)
-
 database:
   url: "sqlite+aiosqlite:///./data/app.db"
   # Optional: auto-select a reachable external DB when available.
@@ -273,12 +262,7 @@ search:
 # Optional service contracts (core remains available when these are unavailable)
 # ----------------------------------------------------------------------------
 optional_services:
-  # Legacy optional service contracts (simplified — probes removed).
-  chroma:
-    enabled: false
-    endpoint: "http://localhost:8000"
-    timeout_s: 3
-
+  # Optional service contracts (simplified — probes removed).
   searxng:
     enabled: true
     endpoint: "http://gateway.lan:50201"
