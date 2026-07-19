@@ -175,8 +175,12 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
       // gate and confidence incomparable with v1.
       multiQuery: false,
     });
-  } catch {
-    // Embedding/search failure
+  } catch (error) {
+    // Embedding/search failure — log underlying cause for diagnostics.
+    console.error(
+      '[qa] retrieve failed (embedding_empty):',
+      error instanceof Error ? error.message : error,
+    );
     return noEvidence('embedding_empty', emptyStats);
   }
 

@@ -18,26 +18,43 @@ install:
 # - `-N` keeps app-owned ports (8032 / 3000 / 3030) — prevents Overmind from injecting $PORT
 # - `-c slidev` allows preview to exit without tearing down core processes.
 #
+# Loads `export CL_*` lines from ~/.bashrc so chat/embedding gateways work even when
+# started from a non-interactive shell (bashrc normally returns early for those).
+#
 # Use `just dev-attach` for foreground (interactive tmux) mode.
 dev:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ -f "${HOME}/.bashrc" ]]; then
+      eval "$(rg -N '^export CL_' "${HOME}/.bashrc" || true)"
+    fi
     overmind start -D -N -c slidev -f Procfile
-    @echo "✅ Overmind daemonized — services running in background"
-    @echo ""
-    @echo "📋 Available processes: server  web  slidev"
-    @echo "   Attach to a process:  overmind connect server"
-    @echo "   View aggregated logs: overmind echo"
-    @echo "   Check status:         overmind status"
-    @echo "   Gracefully stop:      just dev-quit"
+    echo "✅ Overmind daemonized — services running in background"
+    echo ""
+    echo "📋 Available processes: server  web  slidev"
+    echo "   Attach to a process:  overmind connect server"
+    echo "   View aggregated logs: overmind echo"
+    echo "   Check status:         overmind status"
+    echo "   Gracefully stop:      just dev-quit"
 
 # Start development environment in foreground (interactive tmux session)
 dev-attach:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ -f "${HOME}/.bashrc" ]]; then
+      eval "$(rg -N '^export CL_' "${HOME}/.bashrc" || true)"
+    fi
     overmind start -N -c slidev -f Procfile
 
 # Start only the Elysia server
 # Starts from repo root so config/* paths resolve correctly.
 dev-server:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ -f "${HOME}/.bashrc" ]]; then
+      eval "$(rg -N '^export CL_' "${HOME}/.bashrc" || true)"
+    fi
     bun --watch apps/server/src/server.ts
-
 # Start only the frontend
 dev-web:
     cd apps/web && bun dev
