@@ -75,11 +75,13 @@ From repo root:
 - `bun dev` / `just dev` — Overmind (`Procfile`: server + web + slidev)
 - `bun run dev:server` / `just dev-server` — server only (:8032)
 - `bun run dev:web` / `just dev-web` — Vite only (:3000)
-- `bun test` — run server tests
+- `just test` — server (`apps/server/test/`) + shared unit/integration tests
 - `bun typecheck` — typecheck everything
 - `just e2e` / `bun run e2e` — Playwright critical browser gate (`@p0`, testid-based)
 - `just e2e-install` — install Playwright Chromium (optional; local defaults to system Chrome)
-- `just qa` — **ultimate gate**: typecheck + lint + format + schema drift + unit tests + **e2e**
+- `just qa` — **primary PR gate**: typecheck + lint + format + schema drift + **server/shared unit** + **e2e @p0**
+  - **Not in `just qa`**: `cd apps/web && bun run test:ci` · `just test-bdd` · `just type-aware-lint`
+- Env setup: prefer `cp .env.example .env` and `cp config/secret.env.example config/secret.env` (`CL_*` SSOT via `just gen-env-examples`). `just upsert-env-configs` is **legacy**.
 
 Fast path:
 
@@ -178,15 +180,26 @@ Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `ope
 
 ## just qa Tolerance Levels
 
-`just qa`（typecheck + lint + format-check + test）必须全员通过才算一次成功的 PR。不同范围的代码有不同的严格度：
+`just qa`（typecheck + lint + format-check + env/schema drift + **server/shared** tests + **e2e @p0**）必须全员通过才算一次成功的 PR。
+
+**门禁组成（与 `justfile` 一致）**：
+`check` → `check-env-examples` → `check-app-schema` → `test`（仅 `apps/server/test/` + `packages/shared/test/`）→ `e2e`。
+
+**门外（相关 PR 请另跑）**：
+
+- `cd apps/web && bun run test:ci` — 前端 Vitest
+- `just test-bdd` — server BDD（CRUD 子集；见 `apps/server/tests/bdd/`）
+- `just type-aware-lint` — **advisory** type-aware oxlint（未入 qa；测试文件仍有历史债）
+
+不同范围的代码有不同的严格度：
 
 ### Tier 0 — 零容忍，必须修复
 
 **业务代码**（`apps/server/src/`、`apps/web/src/features/`、`packages/shared/src/`）中出现以下情况必须直面修复，不得通过 disable 注释、override 或 exclude 绕过：
 
-- **lint error** — 立即修复
+- **lint error** — 立即修复（指 `just qa` 内的非 type-aware `oxlint`）
 - **lint warning** — 具体分析，优先重构代码消除 warning；仅在极少数工具误报（如 oxlint 的 `no-unexpected-multiline` vs Eden Treaty 链式调用）时允许 inline disable
-- **tests failure** — 必须修复；可能是代码回归或测试本身过时，需同步更新
+- **tests failure** — 必须修复 **门禁内** 的失败（server/shared unit + e2e @p0）；web Vitest / BDD 不在 `just qa` 内但仍应在相关 PR 自行跑绿
 
 ### Tier 1 — 可忽略（谨慎使用）
 
@@ -196,6 +209,7 @@ Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `ope
 - **临时脚本**（`scripts/`、`apps/web/scripts/`、`packages/*/scripts/`）— lint 问题可忽略
 - **配置文件 / 构建产物** — 不参与 lint 检查
 - **测试 mock / stub** — 存在重复类、宽松类型可接受
+- **`just type-aware-lint`** — 允许失败直至债清；不阻塞 `just qa`
 
 ### 例外处理原则
 

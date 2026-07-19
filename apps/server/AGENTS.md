@@ -23,14 +23,19 @@ Web 一等 client 是 Eden（`treaty<App>`）；OpenAPI 是衍生面 — **Eden 
 
 ```bash
 bun dev              # --watch on :8032
-bun test             # Bun test (unit + feature)
+bun test             # Bun test under this package (unit + may pick up tests/)
 bun run typecheck    # tsc --noEmit
 bun run db:generate  # drizzle-kit generate
 bun run db:migrate   # drizzle-kit migrate
 bun run build        # bun build --compile → crystalith-server
 ```
 
-From repo root: `just dev-server`, `bun test apps/server/…`.
+From repo root:
+
+- `just test` — gate unit/integration: `apps/server/test/` + `packages/shared/test/`
+- `just test-bdd` — Gherkin CRUD subset in `tests/bdd/` (**not** in `just qa`; many domains skipped via `SKIP_FEATURE_DIRS`)
+- `just qa` — primary PR gate (see root `AGENTS.md`)
+- `just dev-server` — watch server on :8032
 
 ## Conventions
 
