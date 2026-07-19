@@ -126,16 +126,14 @@ export type ResearchSearchResult = z.infer<typeof ResearchSearchResultSchema>;
 export const IterationAnalysisSchema = z.object({
   iteration: z.number().int().positive(),
   resultCount: z.number().int().nonnegative(),
-  /** Live agent + UI field name (was unused `coverage` in early shared draft). */
   coverageEstimate: z.number().min(0).max(1),
   summary: z.string(),
-  /** Live agent + UI field name (was unused `needMoreSearch`). */
   needMore: z.boolean(),
   suggestedQueries: z.array(z.string()).default([]),
 });
 export type IterationAnalysis = z.infer<typeof IterationAnalysisSchema>;
 
-/** LLM `generateObject` analysis shape — omit step envelope fields. */
+/** LLM `generateObject` + step.outputData / SSE `data` analysis payload. */
 export const IterationAnalysisLlmSchema = IterationAnalysisSchema.pick({
   summary: true,
   coverageEstimate: true,

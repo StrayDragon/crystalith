@@ -288,11 +288,7 @@ function ResearchDetailPanel({
     if (analysisEvents.length === 0) return null;
     const latest = analysisEvents.at(-1);
     if (latest?.type === 'analysis') {
-      const payload = latest.data.data;
-      return {
-        ...payload,
-        coverage: payload.coverageEstimate ?? 0,
-      };
+      return latest.data.data ?? null;
     }
     return null;
   }, [sseEvents]);
@@ -433,9 +429,7 @@ function ResearchDetailPanel({
             });
           } else if (step.type === 'analyze' && output) {
             // Analyze step
-            const coverage =
-              (output.coverageEstimate as number | undefined) ??
-              (output.coverage as number | undefined);
+            const coverage = output.coverageEstimate as number | undefined;
             const summary = output.summary as string | undefined;
             const needMore = output.needMore as boolean | undefined;
 
@@ -1169,7 +1163,7 @@ function ResearchDetailPanel({
                         <>
                           覆盖度{' '}
                           <span className="font-medium text-purple-600">
-                            {Math.round(analysisProgress.coverage * 100)}%
+                            {Math.round((analysisProgress.coverageEstimate ?? 0) * 100)}%
                           </span>
                         </>
                       ) : (

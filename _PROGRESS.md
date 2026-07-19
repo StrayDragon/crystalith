@@ -59,8 +59,8 @@ shared Zod（或路由挂载的 schema）
 | Phase | 主题 | 状态 |
 | --- | --- | --- |
 | P0 | 门禁解阻塞（能跑 `just lint`） | ✅ |
-| P1 | Zod / Eden SSOT 收敛（核心） | 🔄 P1.1 ✅；其余进行中 |
-| P2 | Zod 使用面写入 AGENTS.md + 文档对齐 | ⬜ |
+| P1 | Zod / Eden SSOT 收敛（核心） | 🔄 P1.0–P1.1 ✅；P1.2+ 待办 |
+| P2 | Zod 使用面写入 AGENTS.md + 文档对齐 | ✅ |
 | P3 | 门禁真相（qa 组成、假绿项） | ⬜ |
 | P4 | Cleanup A（死代码 / 死配置，无行为变更） | ⬜ |
 | P5 | Spec 卫生（手改 toon，**不开 SDD**） | ⬜ |
@@ -105,9 +105,10 @@ shared Zod（或路由挂载的 schema）
 
 ### P2 — 固化约定到 AGENTS.md
 
-- [ ] **P2.1** 在根 `AGENTS.md`「Zod SSOT」节补充：**使用面表**（上节定稿版）+ **Eden 一等 / OpenAPI 衍生** 两段  
-- [ ] **P2.2** 更新 `apps/web/AGENTS.md`：删除「types in shared-types.ts」作为常态描述；改为 Eden + shared  
-- [ ] **P2.3** 更新项目结构注释中 `api/` 一行（与现实一致）
+- [x] **P2.1** 在根 `AGENTS.md`「Zod SSOT」节补充：**使用面表**（上节定稿版）+ **Eden 一等 / OpenAPI 衍生** 两段  
+- [x] **P2.2** 更新 `apps/web/AGENTS.md`：删除「types in shared-types.ts」作为常态描述；改为 Eden + shared  
+- [x] **P2.3** 更新项目结构注释中 `api/` 一行（与现实一致）  
+- [x] **P2.4**（追加）`apps/server/AGENTS.md` 点明配置 Zod 席位 + Eden≠Zod 
 
 ### P3 — 门禁真相（工程可信度）
 
@@ -158,7 +159,8 @@ shared Zod（或路由挂载的 schema）
 **已完成批次**：  
 - P0 — lint 解阻塞 + Eden≠Zod 台账  
 - P1.0 — 平行类型 / 本地 Zod 盘点  
-- P1.1 — Research shared←live + agent/web 引用 shared  
+- P1.1 — Research shared←live + agent/web；**遗留清扫**（死 DTO / UI alias / streaming schema）  
+- P2 — Zod/Eden 使用面固化进 AGENTS.md（根 + web + server）  
 
 **下一步**：P1.3 → P1.4 web Eden 迁移 …
 
@@ -219,15 +221,15 @@ shared Zod（或路由挂载的 schema）
 | `ai/tools/*Args` | tool 入参，非 HTTP DTO | 可接受局部；后续若上 API 再提升 |
 | `eval/metrics.ts` `JudgeSchema` | 评测内部 | 可接受局部 |
 
-### 6.4 Research 字段真相（P1.1 关键）
+### 6.4 Research 字段真相（P1.1 — 已完成清扫）
 
-- **Live 全栈**（agent / router / web / tests）使用：`coverageEstimate`、`needMore`  
-- **shared 未使用**：`coverage`、`needMoreSearch`  
-- **对齐方向**：改 shared → live 命名（少改面），再让 agent/web 从 shared import  
+- shared + agent + web + tests + SSE streaming schema：**统一** `coverageEstimate` / `needMore`  
+- 已删：`shared-types` 内未使用的 Research* DTO；UI `coverage` 别名；streaming 上错误的 `SearchPlanSchema`/`IterationAnalysisSchema` 嵌套（改为 `ResearchPlanLlmSchema` / `IterationAnalysisLlmSchema`）  
+- `ResearchStatus` 仅 `@crystalith/shared` → `useResearch` re-export；SSE `error` 是事件不是 status  
 
 ### 6.5 批次切分建议
 
-1. P1.1 Research shared+agent+web status（本批）  
+1. ~~P1.1 Research shared+agent+web~~ ✅  
 2. P1.3 Studio outline（小批）  
 3. P1.4 按域消 `shared-types`（refine → sources → diagnostics）  
 4. P1.2 + P1.5 Output 描述符合并  

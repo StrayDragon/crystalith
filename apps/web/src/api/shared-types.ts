@@ -3,46 +3,8 @@
  *
  * Prefer Eden `treaty<App>` inferred types, then `@crystalith/shared`.
  * This file is a shrinking island of types not yet migrated (see `_PROGRESS.md` P1.4).
+ * Research session types live in `@crystalith/shared` / Eden — do not re-add here.
  */
-
-import type { ResearchStatus } from '@crystalith/shared';
-
-export type { ResearchStatus };
-
-export interface ResearchSessionListItem {
-  id: number;
-  notebookId: number;
-  topic: string;
-  status: ResearchStatus;
-  currentIteration: number;
-  maxIterations: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ResearchStepResponse {
-  id: number;
-  type: string;
-  iteration: number;
-  inputData: Record<string, unknown> | null;
-  outputData: Record<string, unknown> | null;
-  status: string;
-  createdAt: string;
-}
-
-export interface ResearchSessionResponse {
-  id: number;
-  notebookId: number;
-  topic: string;
-  status: ResearchStatus;
-  currentIteration: number;
-  maxIterations: number;
-  aggregatedResults: Array<Record<string, unknown>> | null;
-  finalReport: string | null;
-  createdAt: string;
-  updatedAt: string;
-  steps?: ResearchStepResponse[];
-}
 
 // biome-ignore lint/suspicious/noExplicitAny: dynamic v2 response shapes
 export type WorkspaceToolsDiagnostics = Record<string, any>;

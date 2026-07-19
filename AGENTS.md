@@ -32,7 +32,7 @@ crystalith/
 │   └── web/               # Vite + React + TypeScript SPA
 │       └── src/
 │           ├── features/workspace/ # Main workspace UI
-│           ├── api/                # eden RPC; types in shared-types.ts
+│           ├── api/                # eden RPC（一等）；shared-types 为待消减遗留岛
 │           └── shared/             # Shared UI utilities, Layer system
 ├── packages/
 │   ├── shared/            # Zod schemas + types SSOT
@@ -49,9 +49,9 @@ crystalith/
 
 - ✅ All c00–c62 completed (63 changes); v1 parity confirmed through E2E
 - ✅ Frontend: all output renderers aligned with v1 interactive components
-- ✅ c14: `backend/py/` + `api/generated/` deleted, types migrated to `shared-types.ts`
+- ✅ c14: `backend/py/` + `api/generated/` deleted；wire 类型应走向 Eden + `@crystalith/shared`（`shared-types.ts` 遗留岛消减中）
 - ⏸️ **c13** distribution (Tauri / single-binary) — blocked on human auth
-
+- 📋 阶段性收敛台账：`_PROGRESS.md`（临时；无 llman SDD）
 ## v2 Stack
 
 | Role                 | Technology                                              |
@@ -95,18 +95,34 @@ Fast path:
 
 ## Architecture Decisions
 
-### Zod SSOT
+### Zod SSOT + Eden + OpenAPI（职责分离）
 
-All types: `packages/shared/src/schemas/`. Elysia 1.4+ consumes Zod v4 natively.
-**No** `@elysiajs/swagger`, **no** Elysia `t.*`. OpenAPI via `@asteasolutions/zod-to-openapi`, Scalar UI at `/openapi`.
+**Eden 与 Zod 不等价，不要二选一。**
+
+```text
+packages/shared Zod（路由挂载）
+    → Elysia 运行时校验 + 推断 App 类型
+    → Eden treaty<App>（web 一等 client，编译期类型，不做 resp 再校验）
+    → /openapi.json（衍生面：人类文档 + 未来其他语言 client）
+```
+
+| 层 | 做什么 | 不做什么 |
+| --- | --- | --- |
+| `packages/shared/src/schemas/` | HTTP / 跨端合约 SSOT；AI `generateObject` 与 API 同形时也放这里 | 纯 UI 状态；与 shared **同域异形** 的第二份 schema |
+| `apps/server` 路由 | `body`/`query`/`params`/`response` 挂载 shared Zod → **运行时校验** + 喂给 `App` | 平行 `z.object` 复制合约；Elysia `t.*`；`@elysiajs/swagger` |
+| `apps/server` 配置 yaml/env | **必留** Root/config Zod（`shared/config.ts` + `app.schema.gen.json` 门禁） | 把 HTTP 合约塞进 config |
+| `apps/server` 内部 AI/tool | 与对外合约一致 → shared；否则局部 schema，**禁止同名异形** | shared 一份、agent 又一份字段不同 |
+| `apps/web` | **Eden 推断类型**；标称类型从 `@crystalith/shared` | `shared-types.ts` / `workspace/shared/types.ts` 再造 wire DTO |
+| OpenAPI | 由同一份 Zod **实时**导出（Scalar `/openapi`） | hey-api / `api/generated` 作为一等 TS client |
 
 ```
-packages/shared/src/schemas/   ← SSOT
-    ├──→ server routes (body: z.*)
-    ├──→ eden treaty (treaty<App>)
-    └──→ /openapi.json → Scalar UI
+packages/shared/src/schemas/   ← Zod 合约 SSOT
+    ├──→ server routes (body: z.*)     ← 运行时校验
+    ├──→ typeof App → eden treaty      ← web 一等 client
+    └──→ /openapi.json → Scalar        ← 衍生 client / 文档
 ```
 
+Elysia 1.4+ 原生消费 Zod v4。**禁止**用「只有 TS interface、无路由 schema」冒充合约（无校验、OpenAPI/Eden 质量下降）。
 ### Schema Descriptions & i18n
 
 - **All** Zod schema `.describe()` / `.openapi({ description })` calls MUST use the
