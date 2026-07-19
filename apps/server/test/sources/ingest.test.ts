@@ -179,9 +179,9 @@ describe('SSRF guard on URL ingest', () => {
       }),
     );
     expect(res.status).toBe(422);
-    // c54: message field is now `message` (ErrorEnvelope), not `error`.
-    const body = (await res.json()) as { message: string };
-    expect(body.message).toBe('SSRF blocked');
+    // Shared SourceFromUrlRequestSchema rejects non-http(s) before SSRF probe.
+    const body = await res.json();
+    expect(JSON.stringify(body)).toMatch(/http:\/\/|https:\/\/|validation/i);
   });
 
   it('blocks the metadata-IP literal 169.254.169.254 with 422', async () => {

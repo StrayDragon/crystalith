@@ -15,8 +15,10 @@
 //   GET    /v2/research/:id/stream         — SSE progress relay (c37: named events)
 //
 // c37: control endpoints now record steps + transition correctly (v1 parity).
+import { ResearchSessionCreateSchema, SearchPlanSchema } from '@crystalith/shared';
 import { and, desc, eq, gt } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
+import { z } from 'zod';
 
 import { db } from '../../db/index.ts';
 import {
@@ -302,38 +304,33 @@ function inferResumeState(sessionId: number): {
 
 export const researchRouter = new Elysia({ prefix: '/v2' })
   // Start a new research session
-  .post('/research', async ({ body, set }) => {
-    const raw = body as Record<string, unknown>;
-    // Accept both 'topic' (canonical) and 'goal' (some clients' convention)
-    const topic =
-      (typeof raw.topic === 'string'
-        ? raw.topic
-        : typeof raw.goal === 'string'
-          ? raw.goal
-          : ''
-      ).trim() || '深度研究';
-    const notebookId = raw.notebookId;
-    const maxIterations = raw.maxIterations;
-    const nid = requirePositiveIntId(notebookId, 'notebook id');
+  .post(
+    '/research',
+    async ({ body, set }) => {
+      // Accept both 'topic' (canonical) and 'goal' (some clients' convention)
+      const topic = (body.topic ?? body.goal ?? '').trim() || '深度研究';
+      const nid = body.notebookId;
 
-    const nb = db().select().from(notebooks).where(eq(notebooks.id, nid)).get();
-    if (!nb) throw new NotFoundError(`Notebook ${nid} not found`);
+      const nb = db().select().from(notebooks).where(eq(notebooks.id, nid)).get();
+      if (!nb) throw new NotFoundError(`Notebook ${nid} not found`);
 
-    const session = db()
-      .insert(researchSessions)
-      .values({
-        notebookId: nid,
-        topic,
-        status: 'planning',
-        maxIterations: Number(maxIterations ?? 4),
-      })
-      .returning()
-      .get();
+      const session = db()
+        .insert(researchSessions)
+        .values({
+          notebookId: nid,
+          topic,
+          status: 'planning',
+          maxIterations: Number(body.maxIterations ?? 4),
+        })
+        .returning()
+        .get();
 
-    spawnResearch(session.id, runResearch);
-    set.status = 201;
-    return serializeSession(session);
-  })
+      spawnResearch(session.id, runResearch);
+      set.status = 201;
+      return serializeSession(session);
+    },
+    { body: ResearchSessionCreateSchema },
+  )
 
   // List research sessions
   .get('/research', ({ query }) => {
@@ -404,32 +401,33 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Modify search plan (c37: record step + store plan in inputData)
-  .post('/research/:id/modify', ({ params, body }) => {
-    const id = requirePositiveIntId(params.id, 'research id');
-    const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
-    if (!row) throw new NotFoundError(`Research session ${id} not found`);
-    if (row.status !== 'waiting_user') {
-      throw new NotFoundError(`Session ${id} is not waiting for approval (status: ${row.status})`);
-    }
+  .post(
+    '/research/:id/modify',
+    ({ params, body }) => {
+      const id = requirePositiveIntId(params.id, 'research id');
+      const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
+      if (!row) throw new NotFoundError(`Research session ${id} not found`);
+      if (row.status !== 'waiting_user') {
+        throw new NotFoundError(
+          `Session ${id} is not waiting for approval (status: ${row.status})`,
+        );
+      }
 
-    const { plan } = body as {
-      plan: {
-        queries: Array<{ query: string; engine: string; priority: number; reason: string }>;
-        reasoning: string;
-      };
-    };
+      const { plan } = body;
 
-    // Record modify step with the new plan (v1 api.py:537-577)
-    recordUserStep(id, row.currentIteration, 'modify', { plan });
+      // Record modify step with the new plan (v1 api.py:537-577)
+      recordUserStep(id, row.currentIteration, 'modify', { plan });
 
-    db()
-      .update(researchSessions)
-      .set({ status: 'searching' })
-      .where(eq(researchSessions.id, id))
-      .run();
+      db()
+        .update(researchSessions)
+        .set({ status: 'searching' })
+        .where(eq(researchSessions.id, id))
+        .run();
 
-    return { id, status: 'searching', modified: true };
-  })
+      return { id, status: 'searching', modified: true };
+    },
+    { body: z.object({ plan: SearchPlanSchema }) },
+  )
 
   // Skip iteration (c37: record step + advance iteration + set planning)
   .post('/research/:id/skip', ({ params }) => {

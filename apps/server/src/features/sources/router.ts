@@ -1,4 +1,13 @@
-import { SourceSchema } from '@crystalith/shared';
+import {
+  PatchNotebookExtractorPolicySchema,
+  SourceBatchDeleteRequestSchema,
+  SourceBatchReembedRequestSchema,
+  SourceFromUrlRequestSchema,
+  SourceSchema,
+  SourceSearchRequestSchema,
+  SourceTagBindingRequestSchema,
+  SourceTagCreateSchema,
+} from '@crystalith/shared';
 // Sources CRUD + upload router — /v2/sources, /v2/notebooks/:nid/sources
 //
 // Mirrors v1 `features/sources/api.py` + `features/sources/api_ingest.py`.
@@ -381,80 +390,88 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       }));
   })
 
-  .post('/notebooks/:nid/sources/tags', ({ params, body, set }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const rawName = (body as { name: string }).name?.trim().slice(0, 64);
-    if (!rawName) {
-      set.status = 400;
-      return sendError(set, ErrorCode.INVALID_REQUEST, 'Tag name is required');
-    }
-    // Uniqueness check (case-insensitive, v1 api_tags.py:56-63)
-    const existing = db()
-      .select()
-      .from(sourceTags)
-      .where(eq(sourceTags.notebookId, nid))
-      .all()
-      .find((t) => t.name.toLowerCase() === rawName.toLowerCase());
-    if (existing) {
-      return sendError(set, ErrorCode.CONFLICT, 'Tag name already exists', {
-        existingTagId: existing.id,
-      });
-    }
-    const row = db()
-      .insert(sourceTags)
-      .values({ notebookId: nid, name: rawName })
-      .returning()
-      .get();
-    // c57: invalidate sources cache (list-sources cache key includes tag filter)
-    bumpSourcesEpoch(nid);
-    return {
-      id: row.id,
-      notebookId: row.notebookId,
-      name: row.name,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
-    };
-  })
+  .post(
+    '/notebooks/:nid/sources/tags',
+    ({ params, body, set }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const rawName = body.name.trim().slice(0, 64);
+      if (!rawName) {
+        set.status = 400;
+        return sendError(set, ErrorCode.INVALID_REQUEST, 'Tag name is required');
+      }
+      // Uniqueness check (case-insensitive, v1 api_tags.py:56-63)
+      const existing = db()
+        .select()
+        .from(sourceTags)
+        .where(eq(sourceTags.notebookId, nid))
+        .all()
+        .find((t) => t.name.toLowerCase() === rawName.toLowerCase());
+      if (existing) {
+        return sendError(set, ErrorCode.CONFLICT, 'Tag name already exists', {
+          existingTagId: existing.id,
+        });
+      }
+      const row = db()
+        .insert(sourceTags)
+        .values({ notebookId: nid, name: rawName })
+        .returning()
+        .get();
+      // c57: invalidate sources cache (list-sources cache key includes tag filter)
+      bumpSourcesEpoch(nid);
+      return {
+        id: row.id,
+        notebookId: row.notebookId,
+        name: row.name,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+      };
+    },
+    { body: SourceTagCreateSchema },
+  )
 
-  .patch('/notebooks/:nid/sources/tags/:tid', ({ params, body, set }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const tid = requirePositiveIntId(params.tid, 'tag id');
-    const rawName = (body as { name: string }).name?.trim().slice(0, 64);
-    if (!rawName) {
-      set.status = 400;
-      return sendError(set, ErrorCode.INVALID_REQUEST, 'Tag name is required');
-    }
-    // Ownership check (v1 api_tags.py:81)
-    const existing = db()
-      .select()
-      .from(sourceTags)
-      .where(and(eq(sourceTags.id, tid), eq(sourceTags.notebookId, nid)))
-      .get();
-    if (!existing) throw new NotFoundError(`Tag ${tid} not found in notebook ${nid}`);
-    // Uniqueness check (exclude self)
-    const conflict = db()
-      .select()
-      .from(sourceTags)
-      .where(eq(sourceTags.notebookId, nid))
-      .all()
-      .find((t) => t.id !== tid && t.name.toLowerCase() === rawName.toLowerCase());
-    if (conflict) {
-      return sendError(set, ErrorCode.CONFLICT, 'Tag name already exists', {
-        existingTagId: conflict.id,
-      });
-    }
-    db().update(sourceTags).set({ name: rawName }).where(eq(sourceTags.id, tid)).run();
-    // c57: invalidate sources cache
-    bumpSourcesEpoch(nid);
-    const updated = db().select().from(sourceTags).where(eq(sourceTags.id, tid)).get();
-    return {
-      id: updated!.id,
-      notebookId: updated!.notebookId,
-      name: updated!.name,
-      createdAt: updated!.createdAt.toISOString(),
-      updatedAt: updated!.updatedAt.toISOString(),
-    };
-  })
+  .patch(
+    '/notebooks/:nid/sources/tags/:tid',
+    ({ params, body, set }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const tid = requirePositiveIntId(params.tid, 'tag id');
+      const rawName = body.name.trim().slice(0, 64);
+      if (!rawName) {
+        set.status = 400;
+        return sendError(set, ErrorCode.INVALID_REQUEST, 'Tag name is required');
+      }
+      // Ownership check (v1 api_tags.py:81)
+      const existing = db()
+        .select()
+        .from(sourceTags)
+        .where(and(eq(sourceTags.id, tid), eq(sourceTags.notebookId, nid)))
+        .get();
+      if (!existing) throw new NotFoundError(`Tag ${tid} not found in notebook ${nid}`);
+      // Uniqueness check (exclude self)
+      const conflict = db()
+        .select()
+        .from(sourceTags)
+        .where(eq(sourceTags.notebookId, nid))
+        .all()
+        .find((t) => t.id !== tid && t.name.toLowerCase() === rawName.toLowerCase());
+      if (conflict) {
+        return sendError(set, ErrorCode.CONFLICT, 'Tag name already exists', {
+          existingTagId: conflict.id,
+        });
+      }
+      db().update(sourceTags).set({ name: rawName }).where(eq(sourceTags.id, tid)).run();
+      // c57: invalidate sources cache
+      bumpSourcesEpoch(nid);
+      const updated = db().select().from(sourceTags).where(eq(sourceTags.id, tid)).get();
+      return {
+        id: updated!.id,
+        notebookId: updated!.notebookId,
+        name: updated!.name,
+        createdAt: updated!.createdAt.toISOString(),
+        updatedAt: updated!.updatedAt.toISOString(),
+      };
+    },
+    { body: SourceTagCreateSchema },
+  )
 
   .delete('/notebooks/:nid/sources/tags/:tid', ({ params, set }) => {
     const nid = requirePositiveIntId(params.nid, 'notebook id');
@@ -473,84 +490,92 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     return '';
   })
 
-  .post('/notebooks/:nid/sources/tags/:tid/sources', ({ params, body }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const tid = requirePositiveIntId(params.tid, 'tag id');
-    const { sourceIds } = body as { sourceIds: number[] };
-    // c53: per-item diagnostics (v1 api_tags.py:142-185 SourceBatchItemResult).
-    // Was: silent continue on missing source + only counts returned.
-    const results: Array<{
-      sourceId: number;
-      ok: boolean;
-      message?: string;
-      errorCode?: string;
-    }> = [];
-    let applied = 0;
-    let skipped = 0;
-    for (const sid of sourceIds) {
-      const src = db()
-        .select({ id: sources.id })
-        .from(sources)
-        .where(and(eq(sources.id, sid), eq(sources.notebookId, nid)))
-        .get();
-      if (!src) {
-        results.push({ sourceId: sid, ok: false, errorCode: 'SOURCE_NOT_FOUND' });
-        continue;
+  .post(
+    '/notebooks/:nid/sources/tags/:tid/sources',
+    ({ params, body }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const tid = requirePositiveIntId(params.tid, 'tag id');
+      const { sourceIds } = body;
+      // c53: per-item diagnostics (v1 api_tags.py:142-185 SourceBatchItemResult).
+      // Was: silent continue on missing source + only counts returned.
+      const results: Array<{
+        sourceId: number;
+        ok: boolean;
+        message?: string;
+        errorCode?: string;
+      }> = [];
+      let applied = 0;
+      let skipped = 0;
+      for (const sid of sourceIds) {
+        const src = db()
+          .select({ id: sources.id })
+          .from(sources)
+          .where(and(eq(sources.id, sid), eq(sources.notebookId, nid)))
+          .get();
+        if (!src) {
+          results.push({ sourceId: sid, ok: false, errorCode: 'SOURCE_NOT_FOUND' });
+          continue;
+        }
+        const existing = db()
+          .select()
+          .from(sourceTagMap)
+          .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
+          .get();
+        if (existing) {
+          skipped++;
+          results.push({ sourceId: sid, ok: true, message: 'already assigned' });
+          continue;
+        }
+        db().insert(sourceTagMap).values({ sourceId: sid, tagId: tid }).run();
+        applied++;
+        results.push({ sourceId: sid, ok: true });
       }
-      const existing = db()
-        .select()
-        .from(sourceTagMap)
-        .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
-        .get();
-      if (existing) {
-        skipped++;
-        results.push({ sourceId: sid, ok: true, message: 'already assigned' });
-        continue;
-      }
-      db().insert(sourceTagMap).values({ sourceId: sid, tagId: tid }).run();
-      applied++;
-      results.push({ sourceId: sid, ok: true });
-    }
-    // c57: invalidate sources cache (tag binding changed)
-    if (applied > 0) bumpSourcesEpoch(nid);
-    return { tagId: tid, sourceIds, applied, skipped, results };
-  })
+      // c57: invalidate sources cache (tag binding changed)
+      if (applied > 0) bumpSourcesEpoch(nid);
+      return { tagId: tid, sourceIds, applied, skipped, results };
+    },
+    { body: SourceTagBindingRequestSchema },
+  )
 
-  .delete('/notebooks/:nid/sources/tags/:tid/sources', ({ params, body }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const tid = requirePositiveIntId(params.tid, 'tag id');
-    const { sourceIds } = body as { sourceIds: number[] };
-    // c53: per-item diagnostics (v1 api_tags.py:142-185)
-    const results: Array<{
-      sourceId: number;
-      ok: boolean;
-      message?: string;
-      errorCode?: string;
-    }> = [];
-    let removed = 0;
-    let skipped = 0;
-    for (const sid of sourceIds) {
-      const existing = db()
-        .select()
-        .from(sourceTagMap)
-        .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
-        .get();
-      if (!existing) {
-        skipped++;
-        results.push({ sourceId: sid, ok: true, message: 'not assigned' });
-        continue;
+  .delete(
+    '/notebooks/:nid/sources/tags/:tid/sources',
+    ({ params, body }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const tid = requirePositiveIntId(params.tid, 'tag id');
+      const { sourceIds } = body;
+      // c53: per-item diagnostics (v1 api_tags.py:142-185)
+      const results: Array<{
+        sourceId: number;
+        ok: boolean;
+        message?: string;
+        errorCode?: string;
+      }> = [];
+      let removed = 0;
+      let skipped = 0;
+      for (const sid of sourceIds) {
+        const existing = db()
+          .select()
+          .from(sourceTagMap)
+          .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
+          .get();
+        if (!existing) {
+          skipped++;
+          results.push({ sourceId: sid, ok: true, message: 'not assigned' });
+          continue;
+        }
+        db()
+          .delete(sourceTagMap)
+          .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
+          .run();
+        removed++;
+        results.push({ sourceId: sid, ok: true });
       }
-      db()
-        .delete(sourceTagMap)
-        .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
-        .run();
-      removed++;
-      results.push({ sourceId: sid, ok: true });
-    }
-    // c57: invalidate sources cache (tag unbinding changed)
-    if (removed > 0) bumpSourcesEpoch(nid);
-    return { tagId: tid, sourceIds, removed, skipped, results };
-  })
+      // c57: invalidate sources cache (tag unbinding changed)
+      if (removed > 0) bumpSourcesEpoch(nid);
+      return { tagId: tid, sourceIds, removed, skipped, results };
+    },
+    { body: SourceTagBindingRequestSchema },
+  )
 
   // Get source chunks
   // c57: notebook ownership check via ?notebookId= query
@@ -629,297 +654,291 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   // c44: Search sources via real web search (v1 run_search_graph + SearXNG)
-  .post('/notebooks/:nid/sources/search', async ({ body }) => {
-    const { query, engine } = body as { query: string; engine?: string };
-    const results: Array<{
-      title: string;
-      url: string;
-      snippet: string;
-      source_id?: number;
-    }> = [];
+  .post(
+    '/notebooks/:nid/sources/search',
+    async ({ body }) => {
+      const { query, engine, mode } = body;
+      const results: Array<{
+        title: string;
+        url: string;
+        snippet: string;
+        source_id?: number;
+      }> = [];
 
-    try {
-      // Use the existing SearXNG web-search tool (same as research agent)
-      const { searchWeb } = await import('../../ai/tools/web-search.ts');
-      const webResults = await searchWeb(query, { maxResults: 10 });
-      for (const r of webResults) {
-        results.push({
-          title: r.title,
-          url: r.url,
-          snippet: r.snippet ?? '',
-        });
+      try {
+        // Use the existing SearXNG web-search tool (same as research agent)
+        const { searchWeb } = await import('../../ai/tools/web-search.ts');
+        const webResults = await searchWeb(query, { maxResults: 10 });
+        for (const r of webResults) {
+          results.push({
+            title: r.title,
+            url: r.url,
+            snippet: r.snippet ?? '',
+          });
+        }
+      } catch (error) {
+        // SearXNG unavailable — return error info, not a crash
+        console.error('[sources/search] web search failed:', error);
       }
-    } catch (error) {
-      // SearXNG unavailable — return error info, not a crash
-      console.error('[sources/search] web search failed:', error);
-    }
 
-    return {
-      status: results.length > 0 ? 'ok' : 'no_results',
-      query,
-      engine: engine ?? 'searxng',
-      createdAt: new Date().toISOString(),
-      results,
-    };
-  })
+      return {
+        status: results.length > 0 ? 'ok' : 'no_results',
+        query,
+        engine: engine ?? 'searxng',
+        mode,
+        createdAt: new Date().toISOString(),
+        results,
+      };
+    },
+    { body: SourceSearchRequestSchema },
+  )
 
   // Batch delete sources
   // c57: per-item results array (v1 api_schemas.py:111-114 SourceBatchDeleteResponse)
-  .post('/notebooks/:nid/sources/batch/delete', ({ params, body }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const { sourceIds } = body as { sourceIds: number[] };
-    const deletedIds: number[] = [];
-    const results: Array<{
-      sourceId: number;
-      ok: boolean;
-      errorCode?: string;
-      message?: string;
-    }> = [];
-    for (const sid of sourceIds) {
-      const row = db().select().from(sources).where(eq(sources.id, sid)).get();
-      if (row && row.notebookId === nid) {
-        deleteSourceVectors(db(), sid);
-        db().delete(sources).where(eq(sources.id, sid)).run();
-        deletedIds.push(sid);
-        results.push({ sourceId: sid, ok: true });
-      } else {
-        results.push({
-          sourceId: sid,
-          ok: false,
-          errorCode: 'SOURCE_NOT_FOUND',
-          message: row ? 'Source not in this notebook' : 'Source not found',
-        });
+  .post(
+    '/notebooks/:nid/sources/batch/delete',
+    ({ params, body }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const { sourceIds } = body;
+      const deletedIds: number[] = [];
+      const results: Array<{
+        sourceId: number;
+        ok: boolean;
+        errorCode?: string;
+        message?: string;
+      }> = [];
+      for (const sid of sourceIds) {
+        const row = db().select().from(sources).where(eq(sources.id, sid)).get();
+        if (row && row.notebookId === nid) {
+          deleteSourceVectors(db(), sid);
+          db().delete(sources).where(eq(sources.id, sid)).run();
+          deletedIds.push(sid);
+          results.push({ sourceId: sid, ok: true });
+        } else {
+          results.push({
+            sourceId: sid,
+            ok: false,
+            errorCode: 'SOURCE_NOT_FOUND',
+            message: row ? 'Source not in this notebook' : 'Source not found',
+          });
+        }
       }
-    }
-    if (deletedIds.length) bumpSourcesEpoch(nid);
-    return { results, deletedIds, deletedCount: deletedIds.length };
-  })
+      if (deletedIds.length) bumpSourcesEpoch(nid);
+      return { results, deletedIds, deletedCount: deletedIds.length };
+    },
+    { body: SourceBatchDeleteRequestSchema },
+  )
 
   // Batch re-embed sources
   // c57: per-item results array + clear all error fields
-  .post('/notebooks/:nid/sources/batch/re-embed', async ({ params, body }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const { sourceIds } = body as { sourceIds: number[] };
-    const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
-    const strategy = new EmbedStrategy();
-    const reembedded: number[] = [];
-    const failed: number[] = [];
-    const results: Array<{
-      sourceId: number;
-      ok: boolean;
-      errorCode?: string;
-      message?: string;
-    }> = [];
-    for (const sid of sourceIds) {
-      const row = db().select().from(sources).where(eq(sources.id, sid)).get();
-      if (!row || row.notebookId !== nid) {
-        failed.push(sid);
-        results.push({
-          sourceId: sid,
-          ok: false,
-          errorCode: 'SOURCE_NOT_FOUND',
-          message: 'Source not found in this notebook',
-        });
-        continue;
-      }
-      // c57: clear ALL error fields (v1 api_common.py:261-263)
-      db()
-        .update(sources)
-        .set({
-          status: 'processing',
-          errorCode: null,
-          errorMessage: null,
-          recoveryHint: null,
-          lastErrorAt: null,
-        })
-        .where(eq(sources.id, sid))
-        .run();
-      try {
-        deleteSourceVectors(db(), sid);
-        await strategy.indexSource(sid, nid);
-        db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sid)).run();
-        reembedded.push(sid);
-        results.push({ sourceId: sid, ok: true });
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
+  .post(
+    '/notebooks/:nid/sources/batch/re-embed',
+    async ({ params, body }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const { sourceIds } = body;
+      const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
+      const strategy = new EmbedStrategy();
+      const reembedded: number[] = [];
+      const failed: number[] = [];
+      const results: Array<{
+        sourceId: number;
+        ok: boolean;
+        errorCode?: string;
+        message?: string;
+      }> = [];
+      for (const sid of sourceIds) {
+        const row = db().select().from(sources).where(eq(sources.id, sid)).get();
+        if (!row || row.notebookId !== nid) {
+          failed.push(sid);
+          results.push({
+            sourceId: sid,
+            ok: false,
+            errorCode: 'SOURCE_NOT_FOUND',
+            message: 'Source not found in this notebook',
+          });
+          continue;
+        }
+        // c57: clear ALL error fields (v1 api_common.py:261-263)
         db()
           .update(sources)
           .set({
-            status: 'failed',
-            errorCode: 'EMBEDDING_FAILED',
-            errorMessage: msg,
+            status: 'processing',
+            errorCode: null,
+            errorMessage: null,
+            recoveryHint: null,
+            lastErrorAt: null,
           })
           .where(eq(sources.id, sid))
           .run();
-        failed.push(sid);
-        results.push({ sourceId: sid, ok: false, errorCode: 'EMBEDDING_FAILED', message: msg });
+        try {
+          deleteSourceVectors(db(), sid);
+          await strategy.indexSource(sid, nid);
+          db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sid)).run();
+          reembedded.push(sid);
+          results.push({ sourceId: sid, ok: true });
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          db()
+            .update(sources)
+            .set({
+              status: 'failed',
+              errorCode: 'EMBEDDING_FAILED',
+              errorMessage: msg,
+            })
+            .where(eq(sources.id, sid))
+            .run();
+          failed.push(sid);
+          results.push({ sourceId: sid, ok: false, errorCode: 'EMBEDDING_FAILED', message: msg });
+        }
       }
-    }
-    if (reembedded.length || failed.length) bumpSourcesEpoch(nid);
-    return {
-      results,
-      reembeddedIds: reembedded,
-      failedIds: failed,
-      reembeddedCount: reembedded.length,
-      failedCount: failed.length,
-    };
-  })
+      if (reembedded.length || failed.length) bumpSourcesEpoch(nid);
+      return {
+        results,
+        reembeddedIds: reembedded,
+        failedIds: failed,
+        reembeddedCount: reembedded.length,
+        failedCount: failed.length,
+      };
+    },
+    { body: SourceBatchReembedRequestSchema },
+  )
 
   // Ingest from URL (c39: dedup default prompt + link mode + SSRF fallback fix)
-  .post('/notebooks/:nid/sources/from-url', async ({ params, body, query, set }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const { url, mode, title, extractor, snippet } = body as {
-      url: string;
-      mode?: string;
-      title?: string;
-      extractor?: string;
-      snippet?: string;
-    };
-    // c62: validate mode enum (v1 api_schemas.py:166-173: fetch|link, default link)
-    const normalizedMode = mode ?? 'link';
-    if (!['fetch', 'link'].includes(normalizedMode)) {
-      return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, 'Invalid mode', {
-        reason: `mode must be 'fetch' or 'link', got '${mode}'`,
-      });
-    }
-    // c62: validate extractor param if provided (v1 api_schemas.py:233-256)
-    if (extractor !== undefined) {
-      const validExtractors = Object.keys(extractors);
-      if (!validExtractors.includes(extractor)) {
-        return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, 'Invalid extractor', {
-          reason: `extractor must be one of: ${validExtractors.join(', ')}`,
+  .post(
+    '/notebooks/:nid/sources/from-url',
+    async ({ params, body, query, set }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const { url, mode, title, extractor, snippet } = body;
+      const normalizedMode = mode;
+      const dedupAction = ((query as Record<string, string> | undefined)?.dedupAction ??
+        'prompt') as 'prompt' | 'reuse' | 'create_new';
+
+      // SSRF guard: validate URL before fetch.
+      try {
+        await validateUrlForFetch(url, getSecurityPolicy());
+      } catch (error) {
+        return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, 'SSRF blocked', {
+          reason: (error as Error).message,
         });
       }
-    }
-    const dedupAction = ((query as Record<string, string> | undefined)?.dedupAction ?? 'prompt') as
-      | 'prompt'
-      | 'reuse'
-      | 'create_new';
 
-    // SSRF guard: validate URL before fetch.
-    try {
-      await validateUrlForFetch(url, getSecurityPolicy());
-    } catch (error) {
-      return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, 'SSRF blocked', {
-        reason: (error as Error).message,
-      });
-    }
-
-    // c44: Dedup check — gated by config (v1 source_ingestion.dedup.enabled)
-    const dedupKey = getDedupEnabled() ? urlDedupKey(url) : undefined;
-    if (dedupKey && dedupAction !== 'create_new') {
-      const hit = db()
-        .select({ id: sources.id })
-        .from(sources)
-        .where(and(eq(sources.notebookId, nid), eq(sources.dedupKey, dedupKey)))
-        .get();
-      if (hit) {
-        if (dedupAction === 'prompt') {
-          return sendError(set, ErrorCode.CONFLICT, 'Source dedup hit', {
-            existingSourceId: hit.id,
-          });
-        }
-        if (dedupAction === 'reuse') {
-          const existing = db().select().from(sources).where(eq(sources.id, hit.id)).get();
-          return { reused: true, source: existing };
+      // c44: Dedup check — gated by config (v1 source_ingestion.dedup.enabled)
+      const dedupKey = getDedupEnabled() ? urlDedupKey(url) : undefined;
+      if (dedupKey && dedupAction !== 'create_new') {
+        const hit = db()
+          .select({ id: sources.id })
+          .from(sources)
+          .where(and(eq(sources.notebookId, nid), eq(sources.dedupKey, dedupKey)))
+          .get();
+        if (hit) {
+          if (dedupAction === 'prompt') {
+            return sendError(set, ErrorCode.CONFLICT, 'Source dedup hit', {
+              existingSourceId: hit.id,
+            });
+          }
+          if (dedupAction === 'reuse') {
+            const existing = db().select().from(sources).where(eq(sources.id, hit.id)).get();
+            return { reused: true, source: existing };
+          }
         }
       }
-    }
 
-    // Link mode: create a lightweight source, then embed so it is searchable (v1 still embeds)
-    if (normalizedMode === 'link') {
-      const linkTitle = title ?? url;
-      // c62: use snippet from body if provided (v1 api_ingest.py:381-390)
-      const content = snippet
-        ? `# ${linkTitle}\n\n${snippet}\n\n来源: ${url}`
-        : `# ${linkTitle}\n\n${url}\n\n来源链接（未抓取正文）`;
-      const sourceRow = db()
-        .insert(sources)
-        .values({
-          notebookId: nid,
-          filename: linkTitle,
-          mimeType: 'text/plain',
-          parserType: 'link',
-          status: 'processing',
-          dedupKey,
-          metadata: { url, mode: 'link' },
-        })
-        .returning()
-        .get();
-      db()
-        .insert(chunks)
-        .values({
-          sourceId: sourceRow.id,
-          chunkIndex: 0,
-          text: content,
-          metadata: { url, type: 'link' },
-        })
-        .run();
-
-      try {
-        const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
-        const strategy = new EmbedStrategy();
-        await strategy.indexSource(sourceRow.id, nid);
-        db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)).run();
-      } catch (error) {
-        db()
-          .update(sources)
-          .set({
-            status: 'failed',
-            errorMessage: error instanceof Error ? error.message : String(error),
+      // Link mode: create a lightweight source, then embed so it is searchable (v1 still embeds)
+      if (normalizedMode === 'link') {
+        const linkTitle = title ?? url;
+        // c62: use snippet from body if provided (v1 api_ingest.py:381-390)
+        const content = snippet
+          ? `# ${linkTitle}\n\n${snippet}\n\n来源: ${url}`
+          : `# ${linkTitle}\n\n${url}\n\n来源链接（未抓取正文）`;
+        const sourceRow = db()
+          .insert(sources)
+          .values({
+            notebookId: nid,
+            filename: linkTitle,
+            mimeType: 'text/plain',
+            parserType: 'link',
+            status: 'processing',
+            dedupKey,
+            metadata: { url, mode: 'link' },
           })
-          .where(eq(sources.id, sourceRow.id))
+          .returning()
+          .get();
+        db()
+          .insert(chunks)
+          .values({
+            sourceId: sourceRow.id,
+            chunkIndex: 0,
+            text: content,
+            metadata: { url, type: 'link' },
+          })
           .run();
-      }
-      bumpSourcesEpoch(nid);
-      set.status = 201;
-      return { sourceId: sourceRow.id, filename: linkTitle, mode: 'link' };
-    }
 
-    // Default mode: fetch and extract URL content
-    try {
-      // c62: pass extractor order if specified (v1 preferred-extractor)
-      const order = extractor ? [extractor] : undefined;
-      const extracted = await extractUrl(url, {}, order);
-      const buffer = new TextEncoder().encode(extracted.content);
-      const result = await ingestSource({
-        buffer,
-        filename: extracted.title || title || url.split('/').pop() || 'webpage.html',
-        notebookId: nid,
-        mimeType: 'text/html',
-        dedupKey,
-      });
-      return { ...result, extractedBy: extracted.extractorUsed, title: extracted.title };
-    } catch {
-      // Fallback to raw fetch if extractors all fail.
-      // P0-3: use fetchWithRedirectGuard so the initial URL AND every redirect
-      // hop are validated against the SSRF policy (replaces the c39 single
-      // pre-check + bare fetch that followed redirects unsafely).
-      let response: Response;
-      try {
-        response = await fetchWithRedirectGuard(url, getSecurityPolicy());
-      } catch (error) {
-        return sendError(
-          set,
-          ErrorCode.SCHEMA_VALIDATION_FAILED,
-          error instanceof SsrfBlockedError
-            ? 'SSRF blocked on fallback'
-            : 'fetch failed on fallback',
-          { reason: (error as Error).message },
-        );
+        try {
+          const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
+          const strategy = new EmbedStrategy();
+          await strategy.indexSource(sourceRow.id, nid);
+          db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)).run();
+        } catch (error) {
+          db()
+            .update(sources)
+            .set({
+              status: 'failed',
+              errorMessage: error instanceof Error ? error.message : String(error),
+            })
+            .where(eq(sources.id, sourceRow.id))
+            .run();
+        }
+        bumpSourcesEpoch(nid);
+        set.status = 201;
+        return { sourceId: sourceRow.id, filename: linkTitle, mode: 'link' };
       }
-      const html = await response.text();
-      const buffer = new TextEncoder().encode(html);
-      const result = await ingestSource({
-        buffer,
-        filename: title || url.split('/').pop() || 'webpage.html',
-        notebookId: nid,
-        mimeType: 'text/html',
-        dedupKey,
-      });
-      return result;
-    }
-  })
+
+      // Default mode: fetch and extract URL content
+      try {
+        // c62: pass extractor order if specified (v1 preferred-extractor)
+        const order = extractor ? [extractor] : undefined;
+        const extracted = await extractUrl(url, {}, order);
+        const buffer = new TextEncoder().encode(extracted.content);
+        const result = await ingestSource({
+          buffer,
+          filename: extracted.title || title || url.split('/').pop() || 'webpage.html',
+          notebookId: nid,
+          mimeType: 'text/html',
+          dedupKey,
+        });
+        return { ...result, extractedBy: extracted.extractorUsed, title: extracted.title };
+      } catch {
+        // Fallback to raw fetch if extractors all fail.
+        // P0-3: use fetchWithRedirectGuard so the initial URL AND every redirect
+        // hop are validated against the SSRF policy (replaces the c39 single
+        // pre-check + bare fetch that followed redirects unsafely).
+        let response: Response;
+        try {
+          response = await fetchWithRedirectGuard(url, getSecurityPolicy());
+        } catch (error) {
+          return sendError(
+            set,
+            ErrorCode.SCHEMA_VALIDATION_FAILED,
+            error instanceof SsrfBlockedError
+              ? 'SSRF blocked on fallback'
+              : 'fetch failed on fallback',
+            { reason: (error as Error).message },
+          );
+        }
+        const html = await response.text();
+        const buffer = new TextEncoder().encode(html);
+        const result = await ingestSource({
+          buffer,
+          filename: title || url.split('/').pop() || 'webpage.html',
+          notebookId: nid,
+          mimeType: 'text/html',
+          dedupKey,
+        });
+        return result;
+      }
+    },
+    { body: SourceFromUrlRequestSchema },
+  )
 
   // c44: Extractor policy routes — GET returns full ExtractorsListResponse (v1 api_ingest.py:79-153)
   .get('/notebooks/:nid/extractors', ({ params }) => {
@@ -947,74 +966,67 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       fallbackEnabled: mode === 'inherit_global',
     };
   })
-  .patch('/notebooks/:nid/extractors', ({ params, body, set }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const raw = body as {
-      mode?: string;
-      enabledExtractors?: string[];
-    };
-    const mode = raw.mode;
-    const enabledExtractorsBody = raw.enabledExtractors;
-    // c62: validate mode enum (v1 api_ingest.py:179-211)
-    if (mode !== undefined && !['inherit_global', 'custom'].includes(mode)) {
-      return sendError(
-        set,
-        ErrorCode.INVALID_REQUEST,
-        `Invalid mode '${mode}'; must be 'inherit_global' or 'custom'`,
-      );
-    }
-    // c62: validate enabledExtractors entries against registered set
-    const validExtractors = Object.keys(extractors);
-    if (
-      enabledExtractorsBody !== undefined &&
-      !enabledExtractorsBody.every((e) => validExtractors.includes(e))
-    ) {
-      const invalid = enabledExtractorsBody.filter((e) => !validExtractors.includes(e));
-      return sendError(
-        set,
-        ErrorCode.INVALID_REQUEST,
-        `Unknown extractor(s): ${invalid.join(', ')}`,
-      );
-    }
-    const existing = db()
-      .select()
-      .from(notebookExtractorPolicies)
-      .where(eq(notebookExtractorPolicies.notebookId, nid))
-      .get();
-    if (existing) {
-      db()
-        .update(notebookExtractorPolicies)
-        .set({
-          mode: mode ?? existing.mode,
-          enabledExtractors: enabledExtractorsBody ?? existing.enabledExtractors,
-        })
+  .patch(
+    '/notebooks/:nid/extractors',
+    ({ params, body, set }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const mode = body.mode;
+      const enabledExtractorsBody = body.enabledExtractors ?? undefined;
+      // Business check: enabledExtractors entries against registered set
+      const validExtractors = Object.keys(extractors);
+      if (
+        enabledExtractorsBody !== undefined &&
+        enabledExtractorsBody !== null &&
+        !enabledExtractorsBody.every((e) => validExtractors.includes(e))
+      ) {
+        const invalid = enabledExtractorsBody.filter((e) => !validExtractors.includes(e));
+        return sendError(
+          set,
+          ErrorCode.INVALID_REQUEST,
+          `Unknown extractor(s): ${invalid.join(', ')}`,
+        );
+      }
+      const existing = db()
+        .select()
+        .from(notebookExtractorPolicies)
         .where(eq(notebookExtractorPolicies.notebookId, nid))
-        .run();
-    } else {
-      db()
-        .insert(notebookExtractorPolicies)
-        .values({
-          notebookId: nid,
-          mode: mode ?? 'inherit_global',
-          enabledExtractors: enabledExtractorsBody ?? null,
-        })
-        .run();
-    }
-    const updated = db()
-      .select()
-      .from(notebookExtractorPolicies)
-      .where(eq(notebookExtractorPolicies.notebookId, nid))
-      .get();
-    return {
-      notebookId: nid,
-      policy: {
-        mode: updated!.mode,
-        enabledExtractors: updated!.enabledExtractors,
-      },
-      extractors: listExtractorMetadata(config().raw),
-      defaultExtractor: getDefaultExtractor(config().raw),
-      fallbackEnabled: updated!.mode === 'inherit_global',
-    };
-  });
+        .get();
+      if (existing) {
+        db()
+          .update(notebookExtractorPolicies)
+          .set({
+            mode: mode ?? existing.mode,
+            enabledExtractors: enabledExtractorsBody ?? existing.enabledExtractors,
+          })
+          .where(eq(notebookExtractorPolicies.notebookId, nid))
+          .run();
+      } else {
+        db()
+          .insert(notebookExtractorPolicies)
+          .values({
+            notebookId: nid,
+            mode: mode ?? 'inherit_global',
+            enabledExtractors: enabledExtractorsBody ?? null,
+          })
+          .run();
+      }
+      const updated = db()
+        .select()
+        .from(notebookExtractorPolicies)
+        .where(eq(notebookExtractorPolicies.notebookId, nid))
+        .get();
+      return {
+        notebookId: nid,
+        policy: {
+          mode: updated!.mode,
+          enabledExtractors: updated!.enabledExtractors,
+        },
+        extractors: listExtractorMetadata(config().raw),
+        defaultExtractor: getDefaultExtractor(config().raw),
+        fallbackEnabled: updated!.mode === 'inherit_global',
+      };
+    },
+    { body: PatchNotebookExtractorPolicySchema },
+  );
 
 registerApiDoc(apiDocs);

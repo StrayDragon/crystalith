@@ -7,6 +7,11 @@
 //   GET  /v2/refine/modes   — list formats
 //
 // v1 reference: features/refine/api.py (321 lines).
+import {
+  RefineBatchRequestSchema,
+  RefineRequestSchema,
+  type RefineFormat as SharedRefineFormat,
+} from '@crystalith/shared';
 import { eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
@@ -17,7 +22,6 @@ import { notebooks, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { ErrorCode, sendError } from '../../shared/errors.ts';
-import { requirePositiveIntId } from '../../shared/ids.ts';
 import type { TaskQueue } from '../../shared/queue.ts';
 import { Semaphore } from '../../shared/semaphore.ts';
 import { createStageLimiters } from '../tasks/worker.ts';
@@ -27,7 +31,7 @@ import { buildRefineMessages, applyFormat } from './format.ts';
 // Modes
 // ---------------------------------------------------------------------------
 
-type RefineFormat = 'paragraph' | 'bullets' | 'structured';
+type RefineFormat = SharedRefineFormat;
 
 const ALL_FORMATS: RefineFormat[] = ['paragraph', 'bullets', 'structured'];
 
@@ -125,142 +129,148 @@ export function refineRouter(taskQueue: TaskQueue) {
       )
 
       // Single-format refine — via task queue (v1 POST "")
-      .post('/refine', async ({ body, set }) => {
-        const b = body as Record<string, unknown>;
-        const notebookId = requirePositiveIntId(b.notebookId, 'notebook id');
+      .post(
+        '/refine',
+        async ({ body, set }) => {
+          const notebookId = body.notebookId;
 
-        // ① notebook existence → 404
-        const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
-        if (!nb) throw new NotFoundError('Notebook not found');
+          // ① notebook existence → 404
+          const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
+          if (!nb) throw new NotFoundError('Notebook not found');
 
-        const prompt = String(b.prompt ?? '').trim();
-        if (!prompt) {
-          return sendError(set, ErrorCode.INVALID_REQUEST, 'Refine task requires a prompt');
-        }
-
-        // ② format + source_ids validation → 400
-        let format: RefineFormat;
-        let sourceIds: number[];
-        try {
-          format = validateFormat(b.format ?? 'paragraph');
-          sourceIds = b.sourceIds ? normalizeSourceIds(b.sourceIds) : [];
-          validateSourceIds(notebookId, sourceIds);
-        } catch (error) {
-          return sendError(set, ErrorCode.INVALID_REQUEST, (error as Error).message);
-        }
-
-        const topK = Number(b.topK ?? 5);
-        const minScore = Number(b.minScore ?? 0.2);
-
-        // ③ enqueue + waitForCompletion
-        const taskId = taskQueue.enqueue({
-          type: 'refine',
-          notebookId,
-          payload: {
-            refineInput: {
-              prompt,
-              format,
-              sourceIds: sourceIds.length ? sourceIds : undefined,
-              topK: topK,
-              minScore: minScore,
-              notebookId: notebookId,
-            },
-          },
-          priority: 1,
-        });
-
-        try {
-          return await taskQueue.waitForCompletion(taskId);
-        } catch (error) {
-          if (error instanceof Error && error.message === 'Task cancelled') {
-            return sendError(set, ErrorCode.CONFLICT, 'Task cancelled');
+          const prompt = body.prompt.trim();
+          if (!prompt) {
+            return sendError(set, ErrorCode.INVALID_REQUEST, 'Refine task requires a prompt');
           }
-          return sendError(
-            set,
-            ErrorCode.INTERNAL_ERROR,
-            error instanceof Error ? error.message : 'Task failed',
-          );
-        }
-      })
+
+          // ② format + source_ids validation → 400
+          let format: RefineFormat;
+          let sourceIds: number[];
+          try {
+            format = validateFormat(body.format ?? 'paragraph');
+            sourceIds = body.sourceIds ? normalizeSourceIds(body.sourceIds) : [];
+            validateSourceIds(notebookId, sourceIds);
+          } catch (error) {
+            return sendError(set, ErrorCode.INVALID_REQUEST, (error as Error).message);
+          }
+
+          const topK = body.topK;
+          const minScore = body.minScore;
+
+          // ③ enqueue + waitForCompletion
+          const taskId = taskQueue.enqueue({
+            type: 'refine',
+            notebookId,
+            payload: {
+              refineInput: {
+                prompt,
+                format,
+                sourceIds: sourceIds.length ? sourceIds : undefined,
+                topK: topK,
+                minScore: minScore,
+                notebookId: notebookId,
+              },
+            },
+            priority: 1,
+          });
+
+          try {
+            return await taskQueue.waitForCompletion(taskId);
+          } catch (error) {
+            if (error instanceof Error && error.message === 'Task cancelled') {
+              return sendError(set, ErrorCode.CONFLICT, 'Task cancelled');
+            }
+            return sendError(
+              set,
+              ErrorCode.INTERNAL_ERROR,
+              error instanceof Error ? error.message : 'Task failed',
+            );
+          }
+        },
+        { body: RefineRequestSchema },
+      )
 
       // Batch refine — direct concurrent (v1 POST /batch, NOT via queue)
-      .post('/refine/batch', async ({ body, set }) => {
-        const b = body as Record<string, unknown>;
-        const notebookId = requirePositiveIntId(b.notebookId, 'notebook id');
+      .post(
+        '/refine/batch',
+        async ({ body, set }) => {
+          const notebookId = body.notebookId;
 
-        const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
-        if (!nb) throw new NotFoundError('Notebook not found');
+          const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
+          if (!nb) throw new NotFoundError('Notebook not found');
 
-        // formats: null → all 3 (v1 _resolve_formats)
-        let requestedFormats: RefineFormat[];
-        let sourceIds: number[];
-        try {
-          requestedFormats =
-            Array.isArray(b.formats) && b.formats.length > 0
-              ? b.formats.map((f) => validateFormat(f))
-              : [...ALL_FORMATS];
-          sourceIds = b.sourceIds ? normalizeSourceIds(b.sourceIds) : [];
-          validateSourceIds(notebookId, sourceIds);
-        } catch (error) {
-          return sendError(set, ErrorCode.INVALID_REQUEST, (error as Error).message);
-        }
-
-        const topK = Number(b.topK ?? 5);
-        const minScore = Number(b.minScore ?? 0.2);
-        const prompt = String(b.prompt ?? '').trim();
-        if (!prompt) {
-          return sendError(set, ErrorCode.INVALID_REQUEST, 'Refine task requires a prompt');
-        }
-
-        // ① retrieve once — shared across all formats
-        const { retrieveForRefine } = await import('./retrieve.ts');
-        const limiters = createStageLimiters();
-        const { citations, context, evidence } = await retrieveForRefine(
-          notebookId,
-          prompt,
-          sourceIds,
-          topK,
-          minScore,
-          new AbortController().signal,
-          limiters,
-        );
-
-        // ② resolve model once
-        const modelConfig = getDefaultChatModel();
-        if (!modelConfig) throw new Error('No chat model configured');
-        const model = withRetry(await resolveModel(modelConfig));
-
-        // ③ generate each format concurrently (Semaphore(3), v1 api.py:305)
-        const sem = new Semaphore(3);
-        const { generateText } = await import('ai');
-
-        const generateFormat = async (format: RefineFormat) => {
-          const release = await sem.acquire();
+          // formats: null → all 3 (v1 _resolve_formats)
+          let requestedFormats: RefineFormat[];
+          let sourceIds: number[];
           try {
-            const messages = buildRefineMessages(format, prompt, context);
-            const result = await generateText({
-              model,
-              system: messages.system,
-              prompt: messages.user,
-            });
-            return [format, applyFormat(format, result.text, prompt, citations)] as const;
-          } finally {
-            release();
+            requestedFormats =
+              Array.isArray(body.formats) && body.formats.length > 0
+                ? body.formats.map((f) => validateFormat(f))
+                : [...ALL_FORMATS];
+            sourceIds = body.sourceIds ? normalizeSourceIds(body.sourceIds) : [];
+            validateSourceIds(notebookId, sourceIds);
+          } catch (error) {
+            return sendError(set, ErrorCode.INVALID_REQUEST, (error as Error).message);
           }
-        };
 
-        const generated = await Promise.all(requestedFormats.map(generateFormat));
-        const outputs: Record<string, ReturnType<typeof applyFormat>> = {};
-        for (const [format, output] of generated) {
-          outputs[format] = output;
-        }
+          const topK = body.topK;
+          const minScore = body.minScore;
+          const prompt = body.prompt.trim();
+          if (!prompt) {
+            return sendError(set, ErrorCode.INVALID_REQUEST, 'Refine task requires a prompt');
+          }
 
-        return {
-          outputs,
-          citations,
-          evidence,
-          createdAt: new Date().toISOString(),
-        };
-      })
+          // ① retrieve once — shared across all formats
+          const { retrieveForRefine } = await import('./retrieve.ts');
+          const limiters = createStageLimiters();
+          const { citations, context, evidence } = await retrieveForRefine(
+            notebookId,
+            prompt,
+            sourceIds,
+            topK,
+            minScore,
+            new AbortController().signal,
+            limiters,
+          );
+
+          // ② resolve model once
+          const modelConfig = getDefaultChatModel();
+          if (!modelConfig) throw new Error('No chat model configured');
+          const model = withRetry(await resolveModel(modelConfig));
+
+          // ③ generate each format concurrently (Semaphore(3), v1 api.py:305)
+          const sem = new Semaphore(3);
+          const { generateText } = await import('ai');
+
+          const generateFormat = async (format: RefineFormat) => {
+            const release = await sem.acquire();
+            try {
+              const messages = buildRefineMessages(format, prompt, context);
+              const result = await generateText({
+                model,
+                system: messages.system,
+                prompt: messages.user,
+              });
+              return [format, applyFormat(format, result.text, prompt, citations)] as const;
+            } finally {
+              release();
+            }
+          };
+
+          const generated = await Promise.all(requestedFormats.map(generateFormat));
+          const outputs: Record<string, ReturnType<typeof applyFormat>> = {};
+          for (const [format, output] of generated) {
+            outputs[format] = output;
+          }
+
+          return {
+            outputs,
+            citations,
+            evidence,
+            createdAt: new Date().toISOString(),
+          };
+        },
+        { body: RefineBatchRequestSchema },
+      )
   );
 }

@@ -98,16 +98,16 @@ describe('refine single-format via task queue (c29 v1-aligned)', () => {
     expect(last.status).toBe('completed');
   });
 
-  it('returns 400 for unsupported format', async () => {
+  it('returns 422 for unsupported format', async () => {
     const nb = makeNotebook('refine-badformat');
     const { status, body } = await postRefine({
       notebookId: nb,
       prompt: 'test',
       format: 'expand',
     });
-    expect(status).toBe(400);
-    // c54: errors now use the unified ErrorEnvelope (message field, not detail).
-    expect((body as { message: string }).message).toContain('Unsupported refine format');
+    // Shared RefineRequestSchema rejects unknown format before handler.
+    expect(status).toBe(422);
+    expect(JSON.stringify(body)).toMatch(/format|validation/i);
   });
 
   it('returns 404 when notebook does not exist', async () => {

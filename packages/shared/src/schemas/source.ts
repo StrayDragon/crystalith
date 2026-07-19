@@ -239,7 +239,7 @@ export const SourceSearchResultSchema = z.object({
 });
 export type SourceSearchResult = z.infer<typeof SourceSearchResultSchema>;
 
-export const SourceSearchStatusSchema = z.enum(['ok', 'not_implemented']);
+export const SourceSearchStatusSchema = z.enum(['ok', 'not_implemented', 'no_results']);
 export type SourceSearchStatus = z.infer<typeof SourceSearchStatusSchema>;
 
 export const SourceSearchResponseSchema = z.object({
