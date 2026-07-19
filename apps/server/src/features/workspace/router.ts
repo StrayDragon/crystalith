@@ -12,7 +12,7 @@ import {
 import { Elysia, NotFoundError } from 'elysia';
 
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
-import { OUTPUT_META } from '../outputs/generator.ts';
+import { OUTPUT_META, FRONTEND_BUNDLES } from '../outputs/generator.ts';
 import { buildSlidesConfigSchema } from '../studio/config.ts';
 
 const apiDocs: OpenApiRoute[] = [
@@ -57,6 +57,7 @@ export const workspaceRouter = new Elysia({ prefix: '/v2' })
         // renderDescriptor tells frontend GenericOutputRenderer how to display
         // structured output content (FAQ→cards, GUIDE→sections, MINDMAP→tree, etc.)
         renderDescriptor: meta.renderDescriptor,
+        frontendBundle: FRONTEND_BUNDLES[type as keyof typeof FRONTEND_BUNDLES] ?? null,
       }));
 
       return {

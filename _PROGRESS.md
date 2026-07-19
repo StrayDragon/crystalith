@@ -89,7 +89,7 @@ shared Zod（或路由挂载的 schema）
 - [x] **P1.2 Output / RenderDescriptor 收敛**（ARCH-04 相关）
   - [x] shared 补齐 `RenderDescriptor` / `FieldDescriptor` / `FrontendBundle` / `OutputMeta`；`PluginConfig` 对齐 slides config
   - [x] server `generator` + web `types` 去平行接口；`OUTPUT_META` 数据仍留 server
-  - [ ]（延后）`OutputContentByType` → shared content schemas；`frontendBundle` 发射；路由 Zod 挂载
+  - [x]（延后→Wave B）`OutputContentByType` → shared content schemas；`frontendBundle` 发射；路由 Zod 挂载
 - [x] **P1.3 Studio outline**（ARCH-10）
   - [x] `studio/service.ts` 改用 shared `SlidesOutlineSchema`
 - [x] **P1.4 Web：Eden 优先迁移**
@@ -109,7 +109,7 @@ shared Zod（或路由挂载的 schema）
   - [x] 余量挂载：qa（request/export/answer）、studio（create/list/patch/outline/markdown）、sessions convert、sources upload query、citations context
   - [x] source-connectors：shared 完整合约 + create/apply/import-scope 挂载；server/web 平行 types 改 re-export
   - [x] response/低成本 + eval：tasks/models/workspace/commands/rag response；eval datasets/runs 写路径；rag strategies POST body
-  - [ ]（可选）templates list response 等更细 OpenAPI 装饰；eval get/export 完整 response
+  - [x]（可选→Wave B）templates list response 等更细 OpenAPI 装饰；eval get/export 完整 response
 - [x] **P1.7 OpenAPI 抽检**
   - [x] shared 关键 schema 字段均为 camelCase；notebooks OpenAPI resp 为 `createdAt`/`updatedAt`
 - [x] **P1.8 回归**
@@ -168,9 +168,21 @@ shared Zod（或路由挂载的 schema）
 - [ ] **P6.1** 瘦 GitHub Actions（FLOW-02 / DRIFT-09）
 - [ ] **P6.2** `SECURITY.md`（DRIFT-08）
 - [x] **P6.3** `strategy_configs` 并入 Drizzle schema SSOT（ARCH-06）— Wave A
-- [ ] **P6.4** OpenAPI `.openapi()` 注解补全（ARCH-12）
+- [x] **P6.4** OpenAPI `.openapi()` 注解补全（ARCH-12）— **部分**：Wave B 挂 response Zod；全量 `.openapi()` 仍属 Wave C
 - [ ] **P6.5** ~~c13 / Eden→server 包耦合（ARCH-15）~~ — **本阶段不做**（随分发另议）
 - [ ] **P6.6** 本阶段结束后：从本文件提炼 skill（**有结果后再做**）
+
+### Wave A–G（P5 后余债，2026-07-19 启动）
+
+> 默认：D=开 SDD；E=归档愿景 spec（不实现）；不做 c13；G 最后。
+
+- [x] **A** `strategy_configs` → Drizzle（P6.3）
+- [x] **B** OutputContentByType / frontendBundle / templates+eval response Zod
+- [ ] **C** shared `.openapi()` 批量
+- [ ] **D** 产品 gap（SDD）
+- [ ] **E** 孤儿愿景 spec 归档
+- [ ] **F** 神文件拆分
+- [ ] **G** 提炼 skill
 
 ---
 

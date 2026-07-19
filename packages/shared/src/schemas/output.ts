@@ -214,6 +214,33 @@ export const OutputContentSchemaByType = {
   STRUCTURED: StructuredContentSchema,
 } as const;
 
+/** Type-level map: output type → content shape (web/server UI + guards). */
+export type OutputContentByType = {
+  FAQ: FaqContent;
+  GUIDE: GuideContent;
+  TIMELINE: TimelineContent;
+  MINDMAP: MindmapContent;
+  QUIZ: QuizContent;
+  BRIEFING: BriefingContent;
+  SLIDES: SlidesContent;
+  PARAGRAPH: ParagraphContent;
+  BULLETS: BulletsContent;
+  STRUCTURED: StructuredContent;
+};
+
+/** Web-facing aliases (historical `*OutputContent` names). */
+export type FAQOutputContent = FaqContent;
+export type GuideOutputContent = GuideContent;
+export type TimelineOutputContent = TimelineContent;
+export type MindmapOutputContent = MindmapContent;
+export type QuizOutputContent = QuizContent;
+export type BriefingOutputContent = BriefingContent;
+export type SlidesOutputContent = SlidesContent;
+export type ParagraphOutputContent = ParagraphContent;
+export type BulletsOutputContent = BulletsContent;
+export type StructuredOutputContent = StructuredContent;
+export type OutputContentBase = z.infer<typeof OutputContentBaseSchema>;
+
 /** Loose content payload stored on the outputs row (type-erased JSON). */
 export const OutputContentSchema = JsonMetadataSchema;
 export type OutputContent = z.infer<typeof OutputContentSchema>;

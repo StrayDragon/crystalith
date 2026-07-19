@@ -23,88 +23,24 @@ export type OutputTypeId =
   | 'BULLETS'
   | 'STRUCTURED';
 
-export interface OutputContentBase {
-  title?: string | null;
-  _fallback?: boolean;
-  _warnings?: string[];
-}
+/** Content shapes — SSOT in `@crystalith/shared` (Zod + inferred types). */
+export type {
+  OutputContentBase,
+  OutputContentByType,
+  FAQOutputContent,
+  GuideOutputContent,
+  TimelineOutputContent,
+  MindmapOutputNode,
+  MindmapOutputContent,
+  QuizOutputContent,
+  BriefingOutputContent,
+  SlidesOutputContent,
+  ParagraphOutputContent,
+  BulletsOutputContent,
+  StructuredOutputContent,
+} from '@crystalith/shared';
 
-export interface FAQOutputContent extends OutputContentBase {
-  items: Array<{ question?: string | null; answer?: string | null }>;
-}
-
-export interface GuideOutputContent extends OutputContentBase {
-  modules: Array<{
-    title?: string | null;
-    objective?: { text?: string | null } | null;
-    keyPoints?: Array<{ text?: string | null }> | null;
-  }>;
-}
-
-export interface TimelineOutputContent extends OutputContentBase {
-  events: Array<{ date?: string | null; event?: string | null; description?: string | null }>;
-}
-
-export interface MindmapOutputNode {
-  label?: string | null;
-  children?: MindmapOutputNode[] | null;
-}
-
-export interface MindmapOutputContent extends OutputContentBase {
-  root: MindmapOutputNode;
-}
-
-export interface QuizOutputContent extends OutputContentBase {
-  questions: Array<{
-    question?: string | null;
-    options?: string[] | null;
-    answer?: string | string[] | null;
-    explanation?: string | null;
-  }>;
-}
-
-export interface BriefingOutputContent extends OutputContentBase {
-  sections: Array<{
-    heading?: string | null;
-    points?: Array<{ text?: string | null }> | null;
-  }>;
-}
-
-export interface SlidesOutputContent extends OutputContentBase {
-  slideId?: number | null;
-  engine?: string | null;
-  outline?: {
-    title?: string | null;
-    slides?: Array<{ title?: string | null; bullets?: string[] | null }> | null;
-  } | null;
-  markdown?: string | null;
-}
-
-export interface ParagraphOutputContent extends OutputContentBase {
-  text: string;
-}
-
-export interface BulletsOutputContent extends OutputContentBase {
-  items: Array<string | { text?: string | null }>;
-}
-
-export interface StructuredOutputContent extends OutputContentBase {
-  bullets?: Array<string | { text?: string | null }> | null;
-  terms?: string[] | null;
-}
-
-export type OutputContentByType = {
-  FAQ: FAQOutputContent;
-  GUIDE: GuideOutputContent;
-  TIMELINE: TimelineOutputContent;
-  MINDMAP: MindmapOutputContent;
-  QUIZ: QuizOutputContent;
-  BRIEFING: BriefingOutputContent;
-  SLIDES: SlidesOutputContent;
-  PARAGRAPH: ParagraphOutputContent;
-  BULLETS: BulletsOutputContent;
-  STRUCTURED: StructuredOutputContent;
-};
+import type { OutputContentBase, OutputContentByType } from '@crystalith/shared';
 
 export type KnownOutputPayload = OutputContentByType[OutputTypeId];
 export type UnknownOutputPayload = OutputContentBase & Record<string, unknown>;

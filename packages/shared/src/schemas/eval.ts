@@ -120,6 +120,40 @@ export const EvalDatasetSummarySchema = z.object({
 });
 export type EvalDatasetSummary = z.infer<typeof EvalDatasetSummarySchema>;
 
+/** GET /v2/eval/datasets/:id — items omit datasetId/createdAt vs EvalItemSchema. */
+export const EvalDatasetDetailItemSchema = z.object({
+  id: IdSchema,
+  question: z.string(),
+  expectedAnswer: z.string(),
+  expectedSources: z.array(IdSchema).nullable().optional(),
+  notebookId: IdSchema,
+});
+export const EvalDatasetDetailSchema = z.object({
+  id: IdSchema,
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  notebookId: IdSchema.nullable().optional(),
+  createdAt: IsoTimestampSchema,
+  updatedAt: IsoTimestampSchema,
+  items: z.array(EvalDatasetDetailItemSchema),
+});
+export type EvalDatasetDetail = z.infer<typeof EvalDatasetDetailSchema>;
+
+/** GET /v2/eval/datasets/:id/export — portable JSON without row ids. */
+export const EvalDatasetExportSchema = z.object({
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  items: z.array(
+    z.object({
+      question: z.string(),
+      expectedAnswer: z.string(),
+      expectedSources: z.array(IdSchema).nullable().optional(),
+      notebookId: IdSchema,
+    }),
+  ),
+});
+export type EvalDatasetExport = z.infer<typeof EvalDatasetExportSchema>;
+
 /** Immediate result from POST /v2/eval/runs (in-process runner). */
 export const EvalRunResultSchema = z.object({
   runId: IdSchema,

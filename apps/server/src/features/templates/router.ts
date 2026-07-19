@@ -1,4 +1,4 @@
-import { TemplateCreateSchema } from '@crystalith/shared';
+import { TemplateArraySchema, TemplateCreateSchema, TemplateSchema } from '@crystalith/shared';
 // Templates router — CRUD for generation templates.
 //
 // Templates store config_json (Nunjucks-compatible config) for reusable
@@ -17,28 +17,28 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'List all templates',
     tags: ['templates'],
-    responses: { 200: { description: 'Template list' } },
+    responses: { 200: { description: 'Template list', body: TemplateArraySchema } },
   },
   {
     path: '/v2/templates',
     method: 'post',
     summary: 'Create a template',
     tags: ['templates'],
-    responses: { 201: { description: 'Created template' } },
+    responses: { 201: { description: 'Created template', body: TemplateSchema } },
   },
   {
     path: '/v2/templates/:id',
     method: 'get',
     summary: 'Get a template',
     tags: ['templates'],
-    responses: { 200: { description: 'Template details' } },
+    responses: { 200: { description: 'Template details', body: TemplateSchema } },
   },
   {
     path: '/v2/templates/:id',
     method: 'patch',
     summary: 'Update a template',
     tags: ['templates'],
-    responses: { 200: { description: 'Updated template' } },
+    responses: { 200: { description: 'Updated template', body: TemplateSchema } },
   },
   {
     path: '/v2/templates/:id',
@@ -61,13 +61,17 @@ function serializeTemplate(row: typeof templates.$inferSelect) {
 }
 
 export const templatesRouter = new Elysia({ prefix: '/v2' })
-  .get('/templates', () => {
-    const rows = db().select().from(templates).orderBy(desc(templates.createdAt)).all();
-    return rows.map(serializeTemplate);
-  })
+  .get(
+    '/templates',
+    () => {
+      const rows = db().select().from(templates).orderBy(desc(templates.createdAt)).all();
+      return rows.map(serializeTemplate);
+    },
+    { response: TemplateArraySchema },
+  )
   .post(
     '/templates',
-    ({ body }) => {
+    ({ body, set }) => {
       const row = db()
         .insert(templates)
         .values({
@@ -77,16 +81,21 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
         })
         .returning()
         .get();
+      set.status = 201;
       return serializeTemplate(row);
     },
-    { body: TemplateCreateSchema },
+    { body: TemplateCreateSchema, response: TemplateSchema },
   )
-  .get('/templates/:id', ({ params }) => {
-    const id = requirePositiveIntId(params.id, 'template id');
-    const row = db().select().from(templates).where(eq(templates.id, id)).get();
-    if (!row) throw new NotFoundError(`Template ${id} not found`);
-    return serializeTemplate(row);
-  })
+  .get(
+    '/templates/:id',
+    ({ params }) => {
+      const id = requirePositiveIntId(params.id, 'template id');
+      const row = db().select().from(templates).where(eq(templates.id, id)).get();
+      if (!row) throw new NotFoundError(`Template ${id} not found`);
+      return serializeTemplate(row);
+    },
+    { response: TemplateSchema },
+  )
   .patch(
     '/templates/:id',
     ({ params, body, set }) => {

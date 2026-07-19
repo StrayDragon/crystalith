@@ -4,6 +4,8 @@
 // can call these endpoints or use the same functions directly.
 import {
   EvalDatasetCreatedResponseSchema,
+  EvalDatasetDetailSchema,
+  EvalDatasetExportSchema,
   EvalDatasetSummarySchema,
   EvalDatasetUpsertRequestSchema,
   EvalRunRequestSchema,
@@ -50,7 +52,7 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'Get dataset with items',
     tags: ['eval'],
-    responses: { 200: { description: 'Dataset details' } },
+    responses: { 200: { description: 'Dataset details', body: EvalDatasetDetailSchema } },
   },
   {
     path: '/v2/eval/datasets/:id',
@@ -58,6 +60,20 @@ const apiDocs: OpenApiRoute[] = [
     summary: 'Delete a dataset',
     tags: ['eval'],
     responses: { 204: { description: 'Deleted' } },
+  },
+  {
+    path: '/v2/eval/datasets/import',
+    method: 'post',
+    summary: 'Import a dataset from JSON',
+    tags: ['eval'],
+    responses: { 200: { description: 'Imported dataset', body: EvalDatasetCreatedResponseSchema } },
+  },
+  {
+    path: '/v2/eval/datasets/:id/export',
+    method: 'get',
+    summary: 'Export a dataset as portable JSON',
+    tags: ['eval'],
+    responses: { 200: { description: 'Exported dataset', body: EvalDatasetExportSchema } },
   },
   {
     path: '/v2/eval/runs',
@@ -103,12 +119,16 @@ export const evalRouter = new Elysia({ prefix: '/v2' })
   )
 
   // Get dataset
-  .get('/eval/datasets/:id', ({ params }) => {
-    const id = requirePositiveIntId(params.id, 'dataset id');
-    const ds = getDataset(id);
-    if (!ds) throw new NotFoundError(`Dataset ${params.id} not found`);
-    return ds;
-  })
+  .get(
+    '/eval/datasets/:id',
+    ({ params }) => {
+      const id = requirePositiveIntId(params.id, 'dataset id');
+      const ds = getDataset(id);
+      if (!ds) throw new NotFoundError(`Dataset ${params.id} not found`);
+      return ds;
+    },
+    { response: EvalDatasetDetailSchema },
+  )
 
   // Delete dataset
   .delete('/eval/datasets/:id', ({ params, set }) => {
@@ -136,12 +156,16 @@ export const evalRouter = new Elysia({ prefix: '/v2' })
   )
 
   // Export dataset
-  .get('/eval/datasets/:id/export', ({ params }) => {
-    const id = requirePositiveIntId(params.id, 'dataset id');
-    const data = exportDataset(id);
-    if (!data) throw new NotFoundError(`Dataset ${params.id} not found`);
-    return data;
-  })
+  .get(
+    '/eval/datasets/:id/export',
+    ({ params }) => {
+      const id = requirePositiveIntId(params.id, 'dataset id');
+      const data = exportDataset(id);
+      if (!data) throw new NotFoundError(`Dataset ${params.id} not found`);
+      return data;
+    },
+    { response: EvalDatasetExportSchema },
+  )
 
   // List runs
   .get(

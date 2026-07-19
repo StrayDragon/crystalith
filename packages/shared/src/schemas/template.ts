@@ -26,6 +26,10 @@ export const TemplateListSchema = z.object({
   templates: z.array(TemplateSchema),
 });
 
+/** Wire shape for GET /v2/templates (bare array, not wrapped). */
+export const TemplateArraySchema = z.array(TemplateSchema);
+export type TemplateArray = z.infer<typeof TemplateArraySchema>;
+
 // ---------------------------------------------------------------------------
 // Prompt presets (chat `/prompt:<trigger> <query>` directives)
 // ---------------------------------------------------------------------------
