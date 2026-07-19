@@ -185,9 +185,8 @@ Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `ope
 ## v2 Workflow
 
 1. Run `llman sdd list` for active change status
-2. See `_E2E.md` for E2E test patterns and known issues
-3. Implement in `apps/server/` / `apps/web` / `packages/shared/`
-4. See package docs: `apps/server/AGENTS.md`, `apps/web/AGENTS.md`, `config/AGENTS.md`
+2. Implement in `apps/server/` / `apps/web` / `packages/shared/`
+3. See package docs: `apps/server/AGENTS.md`, `apps/web/AGENTS.md`, `config/AGENTS.md`
 
 ## Commit Guidelines
 

@@ -137,7 +137,7 @@ shared Zod（或路由挂载的 schema）
 - [x] **P3.2A** `scripts-harness-check` 移出 qa → 可选 `just check-bun`
 - [x] **P3.3B** `init_config` / `upsert-env-configs` 标 legacy；推荐 `.env.example` + `CL_*`
 - [x] **P3.4** `AGENTS.md` qa 组成 + Tier + 门外列表
-- [x] **P3.5A** `_E2E.md` 对齐 26 `@p0`（A/N/S/C/O/L）
+- [x] **P3.5A** `_E2E.md` 对齐 26 `@p0`（A/N/S/C/O/L）— 文件已移除
 - [x] **P3.6A** type-aware 正式标 advisory（不入 qa）
 - [x] **P3.7A** `just test-bdd` + server/PR 文档
 
