@@ -1,7 +1,12 @@
 // Workspace tools API — GET /v2/workspace/tools(+/:id/config).
 import { z } from 'zod';
 
-import { OutputTypeSchema, RenderDescriptorSchema, StudioToneSchema } from './output.js';
+import {
+  FrontendBundleDescriptorSchema,
+  OutputTypeSchema,
+  RenderDescriptorSchema,
+  StudioToneSchema,
+} from './output.js';
 import { PluginConfigSchema } from './studio.js';
 
 export const WorkspaceToolSchema = z.object({
@@ -16,6 +21,7 @@ export const WorkspaceToolSchema = z.object({
   enabled: z.boolean(),
   configSchema: PluginConfigSchema.nullable(),
   renderDescriptor: RenderDescriptorSchema.nullable(),
+  frontendBundle: FrontendBundleDescriptorSchema.nullable().optional(),
 });
 export type WorkspaceTool = z.infer<typeof WorkspaceToolSchema>;
 

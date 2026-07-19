@@ -83,7 +83,10 @@ export function getDataset(id: number) {
   const items = db().select().from(evalItems).where(eq(evalItems.datasetId, id)).all();
 
   return {
-    ...ds,
+    id: ds.id,
+    name: ds.name,
+    description: ds.description,
+    notebookId: ds.notebookId,
     createdAt: ds.createdAt.toISOString(),
     updatedAt: ds.updatedAt.toISOString(),
     items: items.map((i) => ({
@@ -110,13 +113,13 @@ export function importDataset(name: string, items: DatasetItem[], description?: 
 }
 
 /** Export dataset to portable JSON. */
-export function exportDataset(id: number): object | null {
+export function exportDataset(id: number) {
   const ds = getDataset(id);
   if (!ds) return null;
   return {
     name: ds.name,
     description: ds.description,
-    items: (ds as any).items.map((i: any) => ({
+    items: ds.items.map((i) => ({
       question: i.question,
       expectedAnswer: i.expectedAnswer,
       expectedSources: i.expectedSources,

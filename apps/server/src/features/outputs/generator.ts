@@ -5,6 +5,7 @@
 import type { LanguageModelV4 } from '@ai-sdk/provider';
 import {
   OutputContentSchemaByType,
+  type FrontendBundleDescriptor,
   type OutputMeta,
   type OutputType,
   type RenderDescriptor,
@@ -196,6 +197,35 @@ export type { OutputType };
 
 /** Alias for backward compatibility — consumers import ToolOutputType. */
 export type ToolOutputType = OutputType;
+
+/** Builtin frontend bundles for interactive output renderers (GET /workspace/tools). */
+export const FRONTEND_BUNDLES: Partial<Record<OutputType, FrontendBundleDescriptor>> = {
+  FAQ: { apiVersion: 'v1', kind: 'builtin', id: 'output-faq', export: 'default', meta: {} },
+  GUIDE: { apiVersion: 'v1', kind: 'builtin', id: 'output-guide', export: 'default', meta: {} },
+  TIMELINE: {
+    apiVersion: 'v1',
+    kind: 'builtin',
+    id: 'output-timeline',
+    export: 'default',
+    meta: {},
+  },
+  MINDMAP: {
+    apiVersion: 'v1',
+    kind: 'builtin',
+    id: 'output-mindmap',
+    export: 'default',
+    meta: {},
+  },
+  QUIZ: { apiVersion: 'v1', kind: 'builtin', id: 'output-quiz', export: 'default', meta: {} },
+  BRIEFING: {
+    apiVersion: 'v1',
+    kind: 'builtin',
+    id: 'output-briefing',
+    export: 'default',
+    meta: {},
+  },
+  SLIDES: { apiVersion: 'v1', kind: 'builtin', id: 'output-slides', export: 'default', meta: {} },
+};
 
 /**
  * Generate a structured output object of a specific type.
