@@ -370,14 +370,14 @@ export function useOutputQueue({
           }
         } else if (job.notebookId) {
           const preference = job.preference;
-          const body: Record<string, unknown> = {
+          const body = {
             notebookId: job.notebookId,
             type: job.type,
             prompt: job.prompt || undefined,
             sourceIds: job.sourceIds.length ? job.sourceIds : undefined,
             modelId: job.modelId || undefined,
+            ...(preference ? { preference } : {}),
           };
-          if (preference) Object.assign(body, { preference });
           const { data: response, error: createErr } = await api.v2.outputs.post(
             body,
             edenFetchOptions(abortController.signal),

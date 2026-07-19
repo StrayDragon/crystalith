@@ -16,6 +16,7 @@ export const RefineFormatSchema = z.enum(['paragraph', 'bullets', 'structured'])
 export type RefineFormat = z.infer<typeof RefineFormatSchema>;
 
 export const RefineRequestSchema = z.object({
+  notebookId: IdSchema,
   prompt: z.string().min(1),
   format: RefineFormatSchema.default('paragraph'),
   sourceIds: z.array(IdSchema).optional(),
@@ -25,6 +26,7 @@ export const RefineRequestSchema = z.object({
 export type RefineRequest = z.infer<typeof RefineRequestSchema>;
 
 export const RefineBatchRequestSchema = z.object({
+  notebookId: IdSchema,
   prompt: z.string().min(1),
   formats: z.array(RefineFormatSchema).optional(),
   sourceIds: z.array(IdSchema).optional(),

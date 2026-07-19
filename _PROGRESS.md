@@ -6,7 +6,7 @@
 > **批次纪律**：每个合理批次验收通过后 **commit**；有问题随时停并报告。
 
 **来源**：Wave A（架构 / 流程门禁 / Spec 漂移）只读体检。  
-**最后更新**：2026-07-19（P1.3 Studio outline ✅）
+**最后更新**：2026-07-19（P1.6–1.8 路由 Zod 挂载波次）
 
 ---
 
@@ -56,15 +56,15 @@ shared Zod（或路由挂载的 schema）
 
 ## 1. 总进度一览
 
-| Phase | 主题                                     | 状态                         |
-| ----- | ---------------------------------------- | ---------------------------- |
-| P0    | 门禁解阻塞（能跑 `just lint`）           | ✅                           |
-| P1    | Zod / Eden SSOT 收敛（核心）             | 🔄 P1.2–1.5 ✅；P1.6+ 待办   |
-| P2    | Zod 使用面写入 AGENTS.md + 文档对齐      | ✅                           |
-| P3    | 门禁真相（qa 组成、假绿项）              | ⬜                           |
-| P4    | Cleanup A（死代码 / 死配置，无行为变更） | ✅ P4.1–4.5（P4.6 可选延后） |
-| P5    | Spec 卫生（手改 toon，**不开 SDD**）     | ⬜                           |
-| P6    | 可选：瘦 CI / SECURITY / 余债            | ⬜                           |
+| Phase | 主题                                     | 状态                              |
+| ----- | ---------------------------------------- | --------------------------------- |
+| P0    | 门禁解阻塞（能跑 `just lint`）           | ✅                                |
+| P1    | Zod / Eden SSOT 收敛（核心）             | 🔄 P1.2–1.8 主体 ✅；路由余量待办 |
+| P2    | Zod 使用面写入 AGENTS.md + 文档对齐      | ✅                                |
+| P3    | 门禁真相（qa 组成、假绿项）              | ⬜                                |
+| P4    | Cleanup A（死代码 / 死配置，无行为变更） | ✅ P4.1–4.5（P4.6 可选延后）      |
+| P5    | Spec 卫生（手改 toon，**不开 SDD**）     | ⬜                                |
+| P6    | 可选：瘦 CI / SECURITY / 余债            | ⬜                                |
 
 ---
 
@@ -102,12 +102,15 @@ shared Zod（或路由挂载的 schema）
   - [x] wire DTO 外迁到 shared 或改 Eden；UI-only 类型留下并标注
   - [x] 删除全部 `Api*`；normalize 改用 `@crystalith/shared`；`SourceSearchResult` 补 type export
   - [x] 文件头标注 UI-only；`just qa` 绿后本波 commit → **暂停**
-- [ ] **P1.6 路由 Zod 审计**
-  - [ ] 每个 `features/*/router.ts`：body/query/response 均来自 shared；无平行合约
-- [ ] **P1.7 OpenAPI 抽检**
-  - [ ] 确认关键路径在 `/openapi.json` 仍反映 camelCase shared schema（实时，非 codegen client）
-- [ ] **P1.8 回归**
-  - [ ] `bun typecheck` + 相关 server/web 测试；必要时 `@p0` 冒烟
+- [x] **P1.6 路由 Zod 审计**
+  - [x] 盘点：多数路由未挂载；无本地 `z.object` 平行定义
+  - [x] Tier1 挂载：notebooks PATCH、refine、research create/modify、outputs generate/types、sources（tags/batch/search/from-url/extractors）
+  - [x] shared 扩展：`notebookId`（refine/research）、`OutputGenerateRequestSchema`、`SourceSearchStatus` + `no_results`
+  - [ ]（余量）qa/studio/sessions convert/upload multipart/connectors — 下波
+- [x] **P1.7 OpenAPI 抽检**
+  - [x] shared 关键 schema 字段均为 camelCase；notebooks OpenAPI resp 为 `createdAt`/`updatedAt`
+- [x] **P1.8 回归**
+  - [x] `bun typecheck` + `just qa`（本波 commit 前）
 
 ### P2 — 固化约定到 AGENTS.md
 
@@ -160,16 +163,15 @@ shared Zod（或路由挂载的 schema）
 
 ## 3. 当前焦点
 
-**正在做**：_(P4 → P1.2 → P1.3 本轮序列已完成)_
+**正在做**：_(P1.6–1.8 Tier1 挂载完成)_
 
 **已完成批次**：
 
-- P0 / P1.0 / P1.1 / P2 / just qa 基线 / P1.4 / P1.5
-- **P4.1–P4.5** Cleanup A
-- **P1.2** RenderDescriptor / OutputMeta / PluginConfig → shared
-- **P1.3** Studio `SlidesOutlineSchema` → shared
+- P0 / P1.0–P1.5 / P2 / P4.1–4.5
+- **P1.2** RenderDescriptor SSOT / **P1.3** SlidesOutline
+- **P1.6–1.8** 关键写路径挂 shared Zod + OpenAPI camelCase 抽检 + qa
 
-**下一步**：P1.6–1.8 / P3 门禁真相 / P5 specs …
+**下一步**：P1.6 余量（qa/studio/…）或 P3 门禁真相 / P5 specs
 
 ---
 

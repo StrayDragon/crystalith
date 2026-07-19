@@ -1,4 +1,4 @@
-import type { Citation } from '@crystalith/shared';
+import { OutputGenerateRequestSchema, OutputMetaSchema, type Citation } from '@crystalith/shared';
 import { NoSuchModelError, TypeValidationError, APICallError, NoObjectGeneratedError } from 'ai';
 // Outputs router — /v2/outputs CRUD + generation.
 //
@@ -132,116 +132,110 @@ export function collectCitedCitations(content: Record<string, unknown> | null): 
 
 export const outputsRouter = new Elysia({ prefix: '/v2' })
   // List output types
-  .get('/outputs/types', () => listOutputTypes())
+  .get('/outputs/types', () => listOutputTypes(), {
+    response: OutputMetaSchema.array(),
+  })
 
   // Generate an output
-  .post('/outputs', async ({ body, set, request }) => {
-    const {
-      notebookId: nbIdRaw,
-      type,
-      chunkIds,
-      sourceIds,
-      prompt: promptRaw,
-      preference,
-      topK,
-      minScore,
-      modelId,
-    } = body as Record<string, unknown>;
-
-    // Normalize output type to uppercase (API accepts both 'faq' and 'FAQ')
-    const normalizedType = (typeof type === 'string' ? type : '').toUpperCase();
-
-    const notebookId = requirePositiveIntId(nbIdRaw, 'notebook id');
-
-    // Verify notebook
-    const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
-    if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
-
-    // c50: reject SLIDES — v1 api.py:205-206 returns 400 "Use slides endpoints
-    // for SLIDES output". SLIDES has its own studio pipeline; the generic
-    // outputs pipeline has no SLIDES postprocess/isContentEmpty case.
-    if (normalizedType === 'SLIDES') {
-      return sendError(set, ErrorCode.INVALID_REQUEST, 'Use slides endpoints for SLIDES output');
-    }
-
-    // c38 gap fix: sourceIds is required when chunkIds is not provided (v1 api.py:292-293)
-    const resolvedSourceIds = sourceIds ? (sourceIds as number[]).map(Number) : undefined;
-    const resolvedChunkIds = chunkIds ? (chunkIds as number[]).map(Number) : undefined;
-    if (!resolvedChunkIds?.length && !resolvedSourceIds?.length) {
-      return sendError(
-        set,
-        ErrorCode.INVALID_REQUEST,
-        'sourceIds must not be empty (or provide chunkIds)',
-      );
-    }
-
-    // Resolve model (config default or explicit modelId override)
-    const modelConfig = modelId
-      ? getModelById(
-          typeof modelId === 'string' ? modelId : typeof modelId === 'string' ? modelId : '',
-        )
-      : getDefaultChatModel();
-    // c42: granular error mapping (v1 api.py:309-361) — typed exceptions, not string matching
-    if (!modelConfig) {
-      return sendError(set, ErrorCode.MODEL_UNAVAILABLE, 'No chat model configured');
-    }
-
-    let model;
-    try {
-      model = withRetry(await resolveModel(modelConfig));
-    } catch (error) {
-      // Model resolution failure → 503 (v1 ModelConfigurationError)
-      if (error instanceof NoSuchModelError) {
-        return sendError(set, ErrorCode.MODEL_UNAVAILABLE, 'Model not available');
-      }
-      throw error;
-    }
-
-    let result;
-    try {
-      result = await runOutputPipeline({
-        model,
+  .post(
+    '/outputs',
+    async ({ body, set, request }) => {
+      const {
         notebookId,
-        type: normalizedType as ToolOutputType,
-        chunkIds: resolvedChunkIds,
-        sourceIds: resolvedSourceIds,
-        prompt: promptRaw ? (typeof promptRaw === 'string' ? promptRaw : '') : undefined,
-        preference: preference === 'speed' ? 'speed' : 'quality',
-        topK: topK ? Number(topK) : undefined,
-        minScore: minScore ? Number(minScore) : undefined,
-        modelId: modelId
-          ? typeof modelId === 'string'
-            ? modelId
-            : typeof modelId === 'string'
-              ? modelId
-              : ''
-          : undefined,
-        abortSignal: request.signal,
-      });
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        set.status = 499;
-        return { detail: 'Client cancelled' };
-      }
-      const msg = error instanceof Error ? error.message : String(error);
-      // Typed error mapping (v1 api.py:309-361)
-      if (error instanceof TypeValidationError || error instanceof NoObjectGeneratedError) {
-        return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, msg);
-      }
-      if (error instanceof NoSuchModelError || error instanceof APICallError) {
-        return sendError(set, ErrorCode.MODEL_ERROR, msg);
-      }
-      if (msg.includes('retrieval')) {
-        return sendError(set, ErrorCode.INVALID_REQUEST, msg);
-      }
-      return sendError(set, ErrorCode.INTERNAL_ERROR, msg);
-    }
+        type,
+        chunkIds,
+        sourceIds,
+        prompt: promptRaw,
+        preference,
+        topK,
+        minScore,
+        modelId,
+      } = body;
 
-    // c42: return v1 OutputRead contract (snake_case) instead of PipelineResult
-    const row = db().select().from(outputs).where(eq(outputs.id, result.outputId)).get();
-    set.status = 201;
-    return serializeOutput(row!);
-  })
+      // Normalize output type to uppercase (API accepts both 'faq' and 'FAQ')
+      const normalizedType = type.toUpperCase();
+
+      // Verify notebook
+      const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
+      if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
+
+      // c50: reject SLIDES — v1 api.py:205-206 returns 400 "Use slides endpoints
+      // for SLIDES output". SLIDES has its own studio pipeline; the generic
+      // outputs pipeline has no SLIDES postprocess/isContentEmpty case.
+      if (normalizedType === 'SLIDES') {
+        return sendError(set, ErrorCode.INVALID_REQUEST, 'Use slides endpoints for SLIDES output');
+      }
+
+      // c38 gap fix: sourceIds is required when chunkIds is not provided (v1 api.py:292-293)
+      const resolvedSourceIds = sourceIds?.length ? sourceIds : undefined;
+      const resolvedChunkIds = chunkIds?.length ? chunkIds : undefined;
+      if (!resolvedChunkIds?.length && !resolvedSourceIds?.length) {
+        return sendError(
+          set,
+          ErrorCode.INVALID_REQUEST,
+          'sourceIds must not be empty (or provide chunkIds)',
+        );
+      }
+
+      // Resolve model (config default or explicit modelId override)
+      const modelConfig = modelId ? getModelById(modelId) : getDefaultChatModel();
+      // c42: granular error mapping (v1 api.py:309-361) — typed exceptions, not string matching
+      if (!modelConfig) {
+        return sendError(set, ErrorCode.MODEL_UNAVAILABLE, 'No chat model configured');
+      }
+
+      let model;
+      try {
+        model = withRetry(await resolveModel(modelConfig));
+      } catch (error) {
+        // Model resolution failure → 503 (v1 ModelConfigurationError)
+        if (error instanceof NoSuchModelError) {
+          return sendError(set, ErrorCode.MODEL_UNAVAILABLE, 'Model not available');
+        }
+        throw error;
+      }
+
+      let result;
+      try {
+        result = await runOutputPipeline({
+          model,
+          notebookId,
+          type: normalizedType as ToolOutputType,
+          chunkIds: resolvedChunkIds,
+          sourceIds: resolvedSourceIds,
+          prompt: promptRaw ?? undefined,
+          preference: preference === 'speed' ? 'speed' : 'quality',
+          topK: topK ?? undefined,
+          minScore: minScore ?? undefined,
+          modelId: modelId ?? undefined,
+          abortSignal: request.signal,
+        });
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          set.status = 499;
+          return { detail: 'Client cancelled' };
+        }
+        const msg = error instanceof Error ? error.message : String(error);
+        // Typed error mapping (v1 api.py:309-361)
+        if (error instanceof TypeValidationError || error instanceof NoObjectGeneratedError) {
+          return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, msg);
+        }
+        if (error instanceof NoSuchModelError || error instanceof APICallError) {
+          return sendError(set, ErrorCode.MODEL_ERROR, msg);
+        }
+        if (msg.includes('retrieval')) {
+          return sendError(set, ErrorCode.INVALID_REQUEST, msg);
+        }
+        return sendError(set, ErrorCode.INTERNAL_ERROR, msg);
+      }
+
+      // c42: return v1 OutputRead contract (snake_case) instead of PipelineResult
+      const row = db().select().from(outputs).where(eq(outputs.id, result.outputId)).get();
+      set.status = 201;
+      return serializeOutput(row!);
+    },
+    { body: OutputGenerateRequestSchema },
+  )
 
   // List outputs for a notebook
   .get('/outputs', ({ query }) => {

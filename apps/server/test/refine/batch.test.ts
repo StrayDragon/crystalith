@@ -109,13 +109,13 @@ describe('refine batch (c29 v1-aligned)', () => {
     expect(result.citations).toEqual([]);
   });
 
-  it('returns 400 for unsupported format in batch', async () => {
+  it('returns 422 for unsupported format in batch', async () => {
     const nb = makeNotebook('batch-badformat');
     const { status } = await postBatch({
       notebookId: nb,
       prompt: 'test',
       formats: ['expand'],
     });
-    expect(status).toBe(400);
+    expect(status).toBe(422);
   });
 });

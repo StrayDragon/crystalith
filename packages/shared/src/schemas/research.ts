@@ -52,7 +52,10 @@ export const ResearchSessionSchema = z.object({
 export type ResearchSession = z.infer<typeof ResearchSessionSchema>;
 
 export const ResearchSessionCreateSchema = z.object({
-  topic: z.string().min(1),
+  notebookId: IdSchema,
+  /** Canonical topic; some clients send `goal` instead. */
+  topic: z.string().min(1).optional(),
+  goal: z.string().min(1).optional(),
   maxIterations: z.number().int().positive().max(10).optional(),
 });
 export type ResearchSessionCreate = z.infer<typeof ResearchSessionCreateSchema>;

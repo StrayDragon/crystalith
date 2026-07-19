@@ -1,5 +1,6 @@
 import {
   NotebookCreateSchema,
+  NotebookUpdateSchema,
   NotebookSchema,
   IdSchema,
   desc as i18nDesc,
@@ -89,7 +90,7 @@ const apiDocs: OpenApiRoute[] = [
     tags: ['notebooks'],
     request: {
       params: { nid: IdSchema.describe(i18nDesc('notebook.id')) },
-      body: NotebookCreateSchema,
+      body: NotebookUpdateSchema,
     },
     responses: { 200: { description: 'Updated notebook', body: NotebookSchema } },
   },
@@ -190,7 +191,7 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
         .get();
       return serializeNotebook(updated);
     },
-    { body: NotebookCreateSchema },
+    { body: NotebookUpdateSchema },
   )
 
   // Delete a notebook

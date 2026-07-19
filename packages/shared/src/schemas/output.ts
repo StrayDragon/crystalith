@@ -235,8 +235,17 @@ export const OutputSchema = z.object({
 export type Output = z.infer<typeof OutputSchema>;
 
 export const OutputGenerateRequestSchema = z.object({
+  notebookId: IdSchema,
+  /** Output type id; accepts lower/upper case (normalized server-side). */
+  type: z.string().min(1),
   prompt: z.string().nullable().optional(),
   content: OutputContentSchema.nullable().optional(),
+  sourceIds: z.array(IdSchema).optional(),
+  chunkIds: z.array(IdSchema).optional(),
+  preference: z.enum(['quality', 'speed']).nullable().optional(),
+  topK: z.number().int().positive().max(50).optional(),
+  minScore: z.number().min(0).max(1).optional(),
+  modelId: z.string().optional(),
 });
 export type OutputGenerateRequest = z.infer<typeof OutputGenerateRequestSchema>;
 
