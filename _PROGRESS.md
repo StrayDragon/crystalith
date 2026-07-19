@@ -2,33 +2,55 @@
 
 > **性质**：临时工作台账，完成后可删除或归档。  
 > **约束**：**全程不触发任何 llman SDD**（不 propose / apply / verify / archive）。合约漂移先靠代码与文档收敛；specs 卫生若做，也只是手改文件，不开 SDD change。  
-> **北极星**：最少代码 · 一致校验 · Zod/Eden SSOT · 降低理解成本 · 用对的模式做对的事。
+> **北极星**：最少代码 · 一致校验 · Zod/Eden 各司其职 · 降低理解成本 · 用对的模式做对的事。  
+> **批次纪律**：每个合理批次验收通过后 **commit**；有问题随时停并报告。
 
 **来源**：Wave A（架构 / 流程门禁 / Spec 漂移）只读体检。  
-**最后更新**：2026-07-19
+**最后更新**：2026-07-19（澄清 Eden ≠ Zod）
 
 ---
 
 ## 0. 协作原则（已锁定）
 
+### 0.1 Eden 与 Zod **不等价**（关键认知）
+
+```text
+shared Zod（或路由挂载的 schema）
+    → Elysia 运行时校验 + 推断 handler / App 类型
+    → export type App = typeof app
+    → Eden treaty<App>：编译期把类型带到 web（不做 resp 的 Zod 再解析）
+    → OpenAPI：由同一份 Zod 衍生（其他语言 client）
+```
+
+| 误解 | 正解 |
+| --- | --- |
+| 「web↔server 用 Eden 就可以去掉 Zod」 | **否**。Eden 无运行时校验；去掉路由 schema 会失去 422 校验与可信 OpenAPI。 |
+| 「Eden 的 req/resp 类型能替代 Zod 校验」 | **否**。Eden = 类型管道；Zod = 运行时契约（+ OpenAPI / AI / config 原料）。 |
+| 「Zod 和 Eden 二选一」 | **否**。冗余来自**平行 DTO**，不是 Zod+Eden 并存。 |
+
+**本轮目标**：保留 server 侧 Zod SSOT；用 Eden 消灭 web 平行 wire 类型；对齐同域异形 schema。  
+**不追求**：API 零 Zod。
+
+### 0.2 原则表
+
 | 原则 | 含义 |
 | --- | --- |
-| **Eden 一等公民** | 一等客户端 = `treaty<App>`（`apps/web/src/api/eden.ts`）。请求/响应形状优先从 Elysia 路由 + Zod 推断，不维护平行 DTO 目录。 |
-| **Zod 有明确使用面** | 见下方「Zod 使用面」；范围固化进 `AGENTS.md`（本进度完成后写入）。 |
-| **OpenAPI 是衍生面** | 实时 `/openapi` / `/openapi.json`（zod-to-openapi）服务人类与**未来其他 client**；不反向生成一等 TS client。 |
-| **无 SDD 本轮** | 不走 llman pipeline；大改用小步提交 + `just check` / 相关测试。 |
-| **先 SSOT，再清理** | 类型/校验收敛优先于大删神文件；死代码在 SSOT 稳定后 Cleanup。 |
+| **Eden 一等公民（web）** | 一等客户端 = `treaty<App>`。不维护平行 wire DTO 目录。 |
+| **Zod 一等公民（server 校验 + 配置 + AI）** | 路由 body/query/params/response、yaml/env、`generateObject` 的合约原料。 |
+| **OpenAPI 是衍生面** | `/openapi.json` 服务人类与**未来其他 client**；不反向生成一等 TS client。 |
+| **无 SDD 本轮** | 不走 llman pipeline；小步提交 + 验收。 |
+| **先 SSOT，再清理** | 类型/校验收敛优先于大删神文件。 |
 
-### Zod 使用面（拟定 → 将写入 AGENTS.md）
+### 0.3 Zod 使用面（拟定 → P2 写入 AGENTS.md）
 
 | 层 | Zod 做什么 | 不做什么 |
 | --- | --- | --- |
-| `packages/shared/src/schemas/` | **HTTP / 跨端合约 SSOT**：body、query、response、共享领域类型；`.describe(desc(...))`；API 级宜 `.openapi(...)` | 不放纯 UI 状态、不放仅服务端内部临时 shape（除非即将上线到 API） |
-| `apps/server` 路由 | `body` / `query` / `params` / 响应约束 **只引用** `@crystalith/shared` | 禁止平行 `z.object` 复制合约；禁止 Elysia `t.*` |
-| `apps/server` 内部（AI agent / pipeline） | 仅当该结构**就是**（或即将是）对外合约时用 shared；否则可用局部 schema，但**不得**与 shared 同名异形 | 禁止「shared 有一份、agent 又有一份字段不同」 |
-| `apps/web` | **优先 Eden 推断类型**；需要标称类型时从 `@crystalith/shared` import | 禁止 `shared-types.ts` / `workspace/shared/types.ts` 再造 wire DTO |
-| 配置 | `config` 的 Root schema 可暂留 server（已有 `app.schema.gen.json` 门禁）；models 等切片已在 shared | 不把 HTTP 合约塞进 config schema |
-| OpenAPI | 由 shared Zod + 路由注册 **实时**导出 | 不恢复 hey-api / `api/generated` 作为一等 client |
+| `packages/shared/src/schemas/` | **HTTP / 跨端合约 SSOT**；`.describe(desc(...))`；API 级宜 `.openapi(...)` | 纯 UI 状态；未上线的一次性内部 shape（若与 shared 同名异形则禁止） |
+| `apps/server` 路由 | 挂载 shared Zod → **运行时校验** + 喂给 `App`/Eden | 平行 `z.object` 复制合约；Elysia `t.*` |
+| `apps/server` 内部 AI | 与对外合约一致则用 shared；否则局部 schema **不得**与 shared 同域异形 | shared 一份、agent 又一份字段不同 |
+| `apps/web` | **Eden 推断类型**；标称类型可从 `@crystalith/shared` | `shared-types` / `workspace/types` 再造 wire DTO |
+| **配置 yaml/env** | **必留席位**（Root schema + 门禁） | 把 HTTP 合约塞进 config |
+| OpenAPI | 由 **同一份** 路由/shared Zod 实时导出 | hey-api / `api/generated` 一等 client |
 
 ---
 
@@ -36,7 +58,7 @@
 
 | Phase | 主题 | 状态 |
 | --- | --- | --- |
-| P0 | 门禁解阻塞（能跑 `just lint`） | ⬜ |
+| P0 | 门禁解阻塞（能跑 `just lint`） | ✅ |
 | P1 | Zod / Eden SSOT 收敛（核心） | ⬜ |
 | P2 | Zod 使用面写入 AGENTS.md + 文档对齐 | ⬜ |
 | P3 | 门禁真相（qa 组成、假绿项） | ⬜ |
@@ -50,8 +72,8 @@
 
 ### P0 — 门禁解阻塞
 
-- [ ] **P0.1** 修复 `e2e/fixtures/test.ts` `no-empty-pattern`（FLOW-03），使 `bun lint` / `just check` 可通过  
-- [ ] **P0.2** 本地确认：`bun lint`、`bun typecheck` 绿（不必全跑 e2e，除非顺手）
+- [x] **P0.1** 修复 `e2e/fixtures/test.ts` `no-empty-pattern`（FLOW-03），使 `bun lint` / `just check` 可通过  
+- [x] **P0.2** 本地确认：`bun lint`、`bun typecheck` 绿（不必全跑 e2e，除非顺手）
 
 ### P1 — Zod + Eden SSOT（首要，按依赖顺序）
 
@@ -131,9 +153,11 @@
 
 ## 3. 当前焦点
 
-**正在做**：_(尚未开始 — 待确认从 P0.1 起手)_  
+**正在做**：P1.0 盘点（平行类型 / 本地 Zod）  
 
-**下一步建议**：`P0.1` → `P1.0` → `P1.1` …
+**已完成批次**：P0（lint 解阻塞 + Eden≠Zod 台账修订）  
+
+**下一步**：P1.0 → P1.1 Research 合约对齐 …
 
 ---
 
@@ -144,8 +168,9 @@
 | 2026-07-19 | 先 QA/优化出结果，再提炼 skill；不先写元 skill |
 | 2026-07-19 | Wave A 选轨 1/2/3/5；不做产品关键路径轨 4 |
 | 2026-07-19 | 本轮 **不触发 llman SDD** |
-| 2026-07-19 | 优先 Zod 非 SSOT + Eden；OpenAPI 为衍生面 |
-| 2026-07-19 | 用 `_PROGRESS.md` 勾选推进 |
+| 2026-07-19 | **Eden ≠ Zod**：保留 server Zod；Eden 消 web 平行 DTO；不追求 API 零 Zod |
+| 2026-07-19 | 用 `_PROGRESS.md` 勾选；每批次验收后 commit |
+| 2026-07-19 | 配置 Zod 必留；API Zod 作校验+App/OpenAPI SSOT |
 
 ---
 
