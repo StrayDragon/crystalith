@@ -3,6 +3,7 @@
 // Provides GET /v2/tasks/:id for progress polling on long-running
 // operations (research, refine, ingestion). Tasks are created by other
 // feature routers and tracked via the `tasks` DB table.
+import { TaskSchema } from '@crystalith/shared';
 import { desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
@@ -19,21 +20,21 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'Get task status + progress',
     tags: ['tasks'],
-    responses: { 200: { description: 'Task details' } },
+    responses: { 200: { description: 'Task details', body: TaskSchema } },
   },
   {
     path: '/v2/notebooks/:nid/tasks',
     method: 'get',
     summary: 'List tasks for a notebook',
     tags: ['tasks'],
-    responses: { 200: { description: 'Task list' } },
+    responses: { 200: { description: 'Task list', body: TaskSchema.array() } },
   },
   {
     path: '/v2/tasks/:id/cancel',
     method: 'post',
     summary: 'Cancel a task',
     tags: ['tasks'],
-    responses: { 200: { description: 'Cancelled task' } },
+    responses: { 200: { description: 'Cancelled task', body: TaskSchema } },
   },
 ];
 
@@ -43,8 +44,8 @@ function serializeTask(row: typeof tasksTable.$inferSelect) {
     notebookId: row.notebookId,
     type: row.type,
     status: row.status,
-    payload: row.payload,
-    result: row.result,
+    payload: row.payload as Record<string, unknown>,
+    result: (row.result as Record<string, unknown> | null) ?? null,
     error: row.error,
     progress: row.progress,
     createdAt: row.createdAt.toISOString(),
@@ -56,22 +57,30 @@ export function tasksRouter(taskQueue: TaskQueue) {
   registerApiDoc(apiDocs);
 
   return new Elysia({ prefix: '/v2' })
-    .get('/tasks/:id', ({ params }) => {
-      const id = requirePositiveIntId(params.id, 'task id');
-      const task = db().select().from(tasksTable).where(eq(tasksTable.id, id)).get();
-      if (!task) throw new NotFoundError(`Task ${id} not found`);
-      return serializeTask(task);
-    })
-    .get('/notebooks/:nid/tasks', ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rows = db()
-        .select()
-        .from(tasksTable)
-        .where(eq(tasksTable.notebookId, nid))
-        .orderBy(desc(tasksTable.createdAt))
-        .all();
-      return rows.map(serializeTask);
-    })
+    .get(
+      '/tasks/:id',
+      ({ params }) => {
+        const id = requirePositiveIntId(params.id, 'task id');
+        const task = db().select().from(tasksTable).where(eq(tasksTable.id, id)).get();
+        if (!task) throw new NotFoundError(`Task ${id} not found`);
+        return serializeTask(task);
+      },
+      { response: TaskSchema },
+    )
+    .get(
+      '/notebooks/:nid/tasks',
+      ({ params }) => {
+        const nid = requirePositiveIntId(params.nid, 'notebook id');
+        const rows = db()
+          .select()
+          .from(tasksTable)
+          .where(eq(tasksTable.notebookId, nid))
+          .orderBy(desc(tasksTable.createdAt))
+          .all();
+        return rows.map(serializeTask);
+      },
+      { response: TaskSchema.array() },
+    )
     .post('/tasks/:id/cancel', ({ params, set }) => {
       const id = requirePositiveIntId(params.id, 'task id');
       const task = db().select().from(tasksTable).where(eq(tasksTable.id, id)).get();

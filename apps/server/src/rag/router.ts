@@ -1,6 +1,11 @@
 // RAG Strategies API router — /v2/strategies, /v2/notebooks/:id/strategies
 //
 // Exposes strategy listing + per-notebook configuration.
+import {
+  NotebookStrategiesResponseSchema,
+  NotebookStrategiesSetRequestSchema,
+  RagStrategyInfoSchema,
+} from '@crystalith/shared';
 import { Elysia } from 'elysia';
 
 import { registerApiDoc, type OpenApiRoute } from '../openapi.ts';
@@ -27,21 +32,27 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'List available RAG strategies',
     tags: ['rag'],
-    responses: { 200: { description: 'Available strategies' } },
+    responses: {
+      200: { description: 'Available strategies', body: RagStrategyInfoSchema.array() },
+    },
   },
   {
     path: '/v2/notebooks/:id/strategies',
     method: 'get',
     summary: 'Get enabled strategies for a notebook',
     tags: ['rag'],
-    responses: { 200: { description: 'Enabled strategy IDs' } },
+    responses: {
+      200: { description: 'Enabled strategy IDs', body: NotebookStrategiesResponseSchema },
+    },
   },
   {
     path: '/v2/notebooks/:id/strategies',
     method: 'post',
     summary: 'Set strategies for a notebook',
     tags: ['rag'],
-    responses: { 200: { description: 'Updated strategy config' } },
+    responses: {
+      200: { description: 'Updated strategy config', body: NotebookStrategiesResponseSchema },
+    },
   },
 ];
 
@@ -51,26 +62,35 @@ const apiDocs: OpenApiRoute[] = [
 
 export const strategiesRouter = new Elysia({ prefix: '/v2' })
   // List available strategies
-  .get('/strategies', () => ragRegistry.listAll())
-
-  // Get strategies for a notebook
-  .get('/notebooks/:nid/strategies', ({ params }) => {
-    const notebookId = requirePositiveIntId(params.nid, 'notebook id');
-    return {
-      notebookId: notebookId,
-      strategies: ragRegistry.getForNotebook(notebookId),
-    };
+  .get('/strategies', () => ragRegistry.listAll(), {
+    response: RagStrategyInfoSchema.array(),
   })
 
+  // Get strategies for a notebook
+  .get(
+    '/notebooks/:nid/strategies',
+    ({ params }) => {
+      const notebookId = requirePositiveIntId(params.nid, 'notebook id');
+      return {
+        notebookId: notebookId,
+        strategies: ragRegistry.getForNotebook(notebookId),
+      };
+    },
+    { response: NotebookStrategiesResponseSchema },
+  )
+
   // Set strategies for a notebook
-  .post('/notebooks/:nid/strategies', ({ params, body }) => {
-    const notebookId = requirePositiveIntId(params.nid, 'notebook id');
-    const strategyIds = (body as { strategies: string[] }).strategies;
-    ragRegistry.setForNotebook(notebookId, strategyIds);
-    return {
-      notebookId: notebookId,
-      strategies: strategyIds,
-    };
-  });
+  .post(
+    '/notebooks/:nid/strategies',
+    ({ params, body }) => {
+      const notebookId = requirePositiveIntId(params.nid, 'notebook id');
+      ragRegistry.setForNotebook(notebookId, body.strategies);
+      return {
+        notebookId: notebookId,
+        strategies: body.strategies,
+      };
+    },
+    { body: NotebookStrategiesSetRequestSchema, response: NotebookStrategiesResponseSchema },
+  );
 
 registerApiDoc(apiDocs);

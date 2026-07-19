@@ -144,6 +144,20 @@ export const ModelListSchema = z.object({
   providers: z.array(z.string()).default([]),
   models: z.array(ModelInfoSchema),
 });
+export type ModelList = z.infer<typeof ModelListSchema>;
+
+/** Query for GET /v2/models — optional role filter. */
+export const ModelListQuerySchema = z.object({
+  role: ModelRoleSchema.optional(),
+  /** Legacy/unused client param — accepted and ignored. */
+  capability: z.string().optional(),
+});
+export type ModelListQuery = z.infer<typeof ModelListQuerySchema>;
+
+export const ModelProvidersResponseSchema = z.object({
+  providers: z.array(z.string()),
+});
+export type ModelProvidersResponse = z.infer<typeof ModelProvidersResponseSchema>;
 
 // ---------------------------------------------------------------------------
 // Provider registry whitelist (mirrors server-side KNOWN_PROVIDERS)

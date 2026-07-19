@@ -95,3 +95,56 @@ export const EvalRunRequestSchema = z.object({
   strategyIds: z.array(z.string()).min(1),
 });
 export type EvalRunRequest = z.infer<typeof EvalRunRequestSchema>;
+
+/** POST /v2/eval/datasets and /v2/eval/datasets/import */
+export const EvalDatasetUpsertRequestSchema = z.object({
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  items: z.array(EvalItemCreateSchema).default([]),
+});
+export type EvalDatasetUpsertRequest = z.infer<typeof EvalDatasetUpsertRequestSchema>;
+
+export const EvalDatasetCreatedResponseSchema = z.object({
+  id: IdSchema,
+  name: z.string(),
+});
+export type EvalDatasetCreatedResponse = z.infer<typeof EvalDatasetCreatedResponseSchema>;
+
+export const EvalDatasetSummarySchema = z.object({
+  id: IdSchema,
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  notebookId: IdSchema.nullable().optional(),
+  itemCount: z.number().int().nonnegative(),
+  createdAt: IsoTimestampSchema,
+});
+export type EvalDatasetSummary = z.infer<typeof EvalDatasetSummarySchema>;
+
+/** Immediate result from POST /v2/eval/runs (in-process runner). */
+export const EvalRunResultSchema = z.object({
+  runId: IdSchema,
+  datasetId: IdSchema,
+  strategyIds: z.array(z.string()),
+  status: z.string(),
+  items: z.array(
+    z.object({
+      itemId: IdSchema,
+      strategyId: z.string(),
+      question: z.string(),
+      answer: z.string(),
+      faithfulness: z.number(),
+      relevance: z.number(),
+      recall: z.number().optional(),
+      precision: z.number().optional(),
+      latencyMs: z.number().int().nonnegative(),
+    }),
+  ),
+  summary: z.object({
+    avgFaithfulness: z.number(),
+    avgRelevance: z.number(),
+    avgRecall: z.number(),
+    avgLatencyMs: z.number(),
+    totalItems: z.number().int().nonnegative(),
+  }),
+});
+export type EvalRunResult = z.infer<typeof EvalRunResultSchema>;
