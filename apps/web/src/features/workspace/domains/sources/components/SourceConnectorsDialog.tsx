@@ -14,10 +14,12 @@ import { toast } from '../../../../../shared/toast';
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
 import type {
   ConnectorBindingRead,
+  ImportResultItem,
   ImportScope,
   ImportScopeApplyResponse,
   JsonDictInput,
   Snapshot,
+  SnapshotEntry,
   SourceConnectorDescriptor,
   SourceConnectorsListResponse,
   SyncCheckResult,
@@ -28,13 +30,558 @@ import {
   safeArray,
   schemaProperties,
   schemaRequired,
+  titleForEntry,
   type ConnectorDialogStep,
 } from './source-connector-utils';
-import { SourceConnectorConfigStep } from './SourceConnectorConfigStep';
-import { SourceConnectorScopeStep } from './SourceConnectorScopeStep';
-import { SourceConnectorSelectStep } from './SourceConnectorSelectStep';
-import { SourceConnectorSnapshotStep } from './SourceConnectorSnapshotStep';
-import { SourceConnectorSyncStep } from './SourceConnectorSyncStep';
+
+function SourceConnectorImportResultList({
+  results,
+  title,
+}: {
+  results: ImportResultItem[];
+  title: string;
+}) {
+  if (!results.length) return null;
+
+  return (
+    <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
+      <div className="px-4 py-2 border-b border-gray-100 dark:border-slate-800 text-xs font-semibold text-gray-700 dark:text-slate-200">
+        {title}（{results.length}）
+      </div>
+      <div className="max-h-[30vh] overflow-y-auto">
+        {results.map((item: ImportResultItem) => (
+          <div
+            key={`${item.relativePath}-${item.status}-${item.sourceId ?? 'none'}`}
+            className="px-4 py-2 border-b border-gray-100 dark:border-slate-800 last:border-b-0"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs font-mono text-gray-900 dark:text-slate-100 truncate">
+                  {item.relativePath}
+                </div>
+                {item.diagnostic ? (
+                  <div className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300 truncate">
+                    [{item.diagnostic.errorCode}] {item.diagnostic.message}
+                    {item.diagnostic.hint ? ` · ${item.diagnostic.hint}` : ''}
+                  </div>
+                ) : null}
+              </div>
+              <div className="text-[10px] text-gray-500 dark:text-slate-400 whitespace-nowrap">
+                {item.status}
+                {item.sourceId ? ` #${item.sourceId}` : ''}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SourceConnectorSelectStep({
+  isConnected,
+  notebookId,
+  error,
+  isLoading,
+  connectors,
+  selectedConnectorId,
+  onSelectConnector,
+}: {
+  isConnected: boolean;
+  notebookId?: number;
+  error: unknown;
+  isLoading: boolean;
+  connectors: SourceConnectorDescriptor[];
+  selectedConnectorId: string;
+  onSelectConnector: (connectorId: string) => void;
+}) {
+  if (!isConnected) {
+    return (
+      <div className="rounded-xl border border-amber-200 dark:border-amber-900/30 bg-amber-50/60 dark:bg-amber-950/20 px-4 py-3">
+        <div className="text-sm font-semibold text-amber-800 dark:text-amber-200">未连接到后端</div>
+        <div className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+          暂无法获取连接器列表。
+        </div>
+      </div>
+    );
+  }
+
+  if (!notebookId) {
+    return (
+      <div className="rounded-xl border border-amber-200 dark:border-amber-900/30 bg-amber-50/60 dark:bg-amber-950/20 px-4 py-3">
+        <div className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+          未选择 notebook
+        </div>
+        <div className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+          请先创建或选择 notebook。
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-200 dark:border-red-900/30 bg-red-50/60 dark:bg-red-950/20 px-4 py-3">
+        <div className="text-sm font-semibold text-red-800 dark:text-red-200">加载失败</div>
+        <div className="mt-1 text-xs text-red-700 dark:text-red-300">
+          {error instanceof Error ? error.message : '无法获取连接器列表'}
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return <div className="text-sm text-gray-700 dark:text-slate-200">加载中…</div>;
+  }
+
+  if (!connectors.length) {
+    return (
+      <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3">
+        <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+          暂无可用连接器
+        </div>
+        <div className="mt-1 text-xs text-gray-600 dark:text-slate-400">
+          请安装并启用官方连接器插件（例如 Obsidian / Local Directory），或检查插件加载诊断。
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {connectors.map((connector) => {
+        const selected = connector.connectorId === selectedConnectorId;
+        const diags = safeArray(connector.diagnostics);
+        return (
+          <button
+            key={connector.connectorId}
+            type="button"
+            onClick={() => onSelectConnector(connector.connectorId)}
+            className={`w-full text-left rounded-xl border px-4 py-3 transition-colors ${
+              selected
+                ? 'border-gray-900 bg-gray-900 text-white'
+                : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 hover:bg-gray-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold truncate">{connector.displayName}</div>
+                <div className="mt-0.5 text-[11px] opacity-80 truncate">
+                  {connector.description || connector.connectorId}
+                </div>
+              </div>
+              <div className="text-[10px] opacity-80 whitespace-nowrap">
+                snapshot:{connector.capabilities?.supportsSnapshot ? '✓' : '×'} · sync:
+                {connector.capabilities?.supportsSyncCheck ? '✓' : '×'}
+              </div>
+            </div>
+            {diags.length ? (
+              <div
+                className={`mt-2 text-[11px] ${selected ? 'text-white/80' : 'text-amber-700 dark:text-amber-300'}`}
+              >
+                {diags.slice(0, 2).map((d) => (
+                  <div key={`${connector.connectorId}-${d.errorCode}`} className="truncate">
+                    [{d.errorCode}] {d.message}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function SourceConnectorConfigStep({
+  selectedConnector,
+  configProps,
+  configRequired,
+  connectionConfig,
+  onUpdateConfig,
+}: {
+  selectedConnector: SourceConnectorDescriptor | null;
+  configProps: Record<string, any>;
+  configRequired: Set<string>;
+  connectionConfig: JsonDictInput;
+  onUpdateConfig: (key: string, next: unknown, typeHint?: string) => void;
+}) {
+  if (!selectedConnector) {
+    return (
+      <div className="text-sm text-gray-700 dark:text-slate-200">未选择连接器，请返回上一页。</div>
+    );
+  }
+
+  const props = configProps;
+  const required = configRequired;
+  const keys = Object.keys(props).toSorted((a, b) => a.localeCompare(b));
+  if (!keys.length) {
+    return (
+      <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3">
+        <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">无需配置</div>
+        <div className="mt-1 text-xs text-gray-600 dark:text-slate-400">
+          此连接器没有可配置项，点击「创建绑定」继续。
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {keys.map((key) => {
+        const field = props[key] ?? {};
+        const typeHint = typeof field?.type === 'string' ? field.type : undefined;
+        const label =
+          typeof field?.title === 'string' && field.title.trim() ? field.title.trim() : key;
+        const description =
+          typeof field?.description === 'string' && field.description.trim()
+            ? field.description.trim()
+            : null;
+        const enumValues = Array.isArray(field?.enum) ? field.enum : null;
+        const isRequired = required.has(key);
+        const current = connectionConfig[key];
+
+        if (enumValues) {
+          return (
+            <label key={key} className="block">
+              <div className="text-xs font-semibold text-gray-700 dark:text-slate-200">
+                {label}
+                {isRequired ? <span className="text-rose-600"> *</span> : null}
+              </div>
+              {description ? (
+                <div className="mt-0.5 text-[11px] text-gray-600 dark:text-slate-400">
+                  {description}
+                </div>
+              ) : null}
+              <select
+                className="mt-1 w-full rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-gray-900 dark:text-slate-100"
+                value={typeof current === 'string' ? current : ''}
+                onChange={(e) => onUpdateConfig(key, e.target.value, typeHint)}
+              >
+                <option value="">请选择…</option>
+                {enumValues.map((v: unknown) => {
+                  const text = String(v);
+                  return (
+                    <option key={text} value={text}>
+                      {text}
+                    </option>
+                  );
+                })}
+              </select>
+            </label>
+          );
+        }
+
+        if (typeHint === 'boolean') {
+          return (
+            <label
+              key={key}
+              className="flex items-start gap-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3"
+            >
+              <input
+                type="checkbox"
+                checked={Boolean(current)}
+                onChange={(e) => onUpdateConfig(key, e.target.checked, typeHint)}
+                className="mt-0.5"
+              />
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                  {label}
+                  {isRequired ? <span className="text-rose-600"> *</span> : null}
+                </div>
+                {description ? (
+                  <div className="mt-0.5 text-[11px] text-gray-600 dark:text-slate-400">
+                    {description}
+                  </div>
+                ) : null}
+              </div>
+            </label>
+          );
+        }
+
+        const inputType = typeHint === 'integer' || typeHint === 'number' ? 'number' : 'text';
+        return (
+          <label key={key} className="block">
+            <div className="text-xs font-semibold text-gray-700 dark:text-slate-200">
+              {label}
+              {isRequired ? <span className="text-rose-600"> *</span> : null}
+            </div>
+            {description ? (
+              <div className="mt-0.5 text-[11px] text-gray-600 dark:text-slate-400">
+                {description}
+              </div>
+            ) : null}
+            <input
+              type={inputType}
+              className="mt-1 w-full rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-gray-900 dark:text-slate-100"
+              value={
+                // eslint-disable-next-line eqeqeq
+                current == null
+                  ? ''
+                  : typeof current === 'string'
+                    ? current
+                    : typeof current === 'string'
+                      ? current
+                      : ''
+              }
+              onChange={(e) => onUpdateConfig(key, e.target.value, typeHint)}
+              placeholder={key}
+            />
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+function SourceConnectorSnapshotStep({
+  binding,
+  snapshotEntries,
+  filteredEntries,
+  snapshotFilter,
+  busy,
+  onLoadSnapshot,
+  onSnapshotFilterChange,
+}: {
+  binding: ConnectorBindingRead | null;
+  snapshotEntries: SnapshotEntry[];
+  filteredEntries: SnapshotEntry[];
+  snapshotFilter: string;
+  busy: boolean;
+  onLoadSnapshot: () => void;
+  onSnapshotFilterChange: (value: string) => void;
+}) {
+  if (!binding) {
+    return <div className="text-sm text-gray-700 dark:text-slate-200">尚未创建 binding。</div>;
+  }
+  const count = snapshotEntries.length;
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-xs text-gray-600 dark:text-slate-400">共 {count} 项</div>
+        <button
+          type="button"
+          onClick={() => void onLoadSnapshot()}
+          disabled={busy}
+          className="px-3 py-1.5 rounded-lg text-xs border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-60"
+        >
+          刷新快照
+        </button>
+      </div>
+
+      <label className="block">
+        <div className="text-xs font-semibold text-gray-700 dark:text-slate-200">过滤</div>
+        <input
+          className="mt-1 w-full rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-gray-900 dark:text-slate-100"
+          value={snapshotFilter}
+          onChange={(e) => onSnapshotFilterChange(e.target.value)}
+          placeholder="按路径包含匹配"
+        />
+      </label>
+
+      <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
+        <div className="max-h-[45vh] overflow-y-auto">
+          {filteredEntries.map((entry) => {
+            const title = titleForEntry(entry);
+            return (
+              <div
+                key={entry.relativePath}
+                className="px-4 py-2 border-b border-gray-100 dark:border-slate-800 last:border-b-0"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs font-mono text-gray-900 dark:text-slate-100 truncate">
+                      {entry.relativePath}
+                    </div>
+                    {title ? (
+                      <div className="mt-0.5 text-[11px] text-gray-600 dark:text-slate-400 truncate">
+                        {title}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="text-[10px] text-gray-500 dark:text-slate-400 whitespace-nowrap">
+                    {Number.isFinite(entry.sizeBytes) ? `${entry.sizeBytes} B` : ''}
+                  </div>
+                </div>
+                <div className="mt-0.5 text-[10px] text-gray-500 dark:text-slate-500 truncate">
+                  {entry.modifiedAt}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SourceConnectorScopeStep({
+  snapshotEntries,
+  scopeDirectories,
+  scopeFiles,
+  directories,
+  selectedDirs,
+  selectedFiles,
+  importResults,
+  onSelectedDirsChange,
+  onSelectedFilesChange,
+}: {
+  snapshotEntries: SnapshotEntry[];
+  scopeDirectories: string[];
+  scopeFiles: string[];
+  directories: string[];
+  selectedDirs: Record<string, boolean>;
+  selectedFiles: Record<string, boolean>;
+  importResults: ImportResultItem[];
+  onSelectedDirsChange: (
+    updater: (prev: Record<string, boolean>) => Record<string, boolean>,
+  ) => void;
+  onSelectedFilesChange: (
+    updater: (prev: Record<string, boolean>) => Record<string, boolean>,
+  ) => void;
+}) {
+  if (!snapshotEntries.length) {
+    return (
+      <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm text-gray-700 dark:text-slate-200">
+        没有快照条目可选。请先在上一步加载快照。
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      <div className="text-[11px] text-gray-600 dark:text-slate-400">
+        已选：目录 {scopeDirectories.length} · 文件 {scopeFiles.length}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
+          <div className="px-4 py-2 border-b border-gray-100 dark:border-slate-800 text-xs font-semibold text-gray-700 dark:text-slate-200">
+            目录
+          </div>
+          <div className="max-h-[40vh] overflow-y-auto">
+            {directories.map((dir) => (
+              <label
+                key={dir}
+                className="flex items-center gap-2 px-4 py-2 border-b border-gray-100 dark:border-slate-800 last:border-b-0"
+              >
+                <input
+                  type="checkbox"
+                  checked={Boolean(selectedDirs[dir])}
+                  onChange={(e) =>
+                    onSelectedDirsChange((prev) => ({ ...prev, [dir]: e.target.checked }))
+                  }
+                />
+                <span className="text-xs font-mono text-gray-900 dark:text-slate-100 truncate">
+                  {dir}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
+          <div className="px-4 py-2 border-b border-gray-100 dark:border-slate-800 text-xs font-semibold text-gray-700 dark:text-slate-200">
+            文件
+          </div>
+          <div className="max-h-[40vh] overflow-y-auto">
+            {snapshotEntries.map((entry) => (
+              <label
+                key={entry.relativePath}
+                className="flex items-center gap-2 px-4 py-2 border-b border-gray-100 dark:border-slate-800 last:border-b-0"
+              >
+                <input
+                  type="checkbox"
+                  checked={Boolean(selectedFiles[entry.relativePath])}
+                  onChange={(e) =>
+                    onSelectedFilesChange((prev) => ({
+                      ...prev,
+                      [entry.relativePath]: e.target.checked,
+                    }))
+                  }
+                />
+                <span className="text-xs font-mono text-gray-900 dark:text-slate-100 truncate">
+                  {entry.relativePath}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <SourceConnectorImportResultList results={importResults} title="导入结果" />
+    </div>
+  );
+}
+
+function SourceConnectorSyncStep({
+  syncCheck,
+  applyResults,
+}: {
+  syncCheck: SyncCheckResult | null;
+  applyResults: ImportResultItem[];
+}) {
+  const candidates = syncCheck?.candidates;
+  const added = safeArray(candidates?.added);
+  const updated = safeArray(candidates?.updated);
+  const missing = safeArray(candidates?.missing);
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3">
+        <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">sync_check</div>
+        <div className="mt-1 text-xs text-gray-600 dark:text-slate-400">
+          added: {added.length} · updated: {updated.length} · missing: {missing.length}
+        </div>
+        {syncCheck ? (
+          <div className="mt-1 text-[11px] text-gray-500 dark:text-slate-500">
+            id: <span className="font-mono">{syncCheck.id}</span>
+          </div>
+        ) : (
+          <div className="mt-2 text-[11px] text-gray-600 dark:text-slate-400">
+            点击右下角「执行 sync_check」加载候选变更。
+          </div>
+        )}
+      </div>
+
+      {syncCheck ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {[
+            { label: '新增', items: added },
+            { label: '更新', items: updated },
+            { label: '缺失', items: missing },
+          ].map((group) => (
+            <div
+              key={group.label}
+              className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden"
+            >
+              <div className="px-4 py-2 border-b border-gray-100 dark:border-slate-800 text-xs font-semibold text-gray-700 dark:text-slate-200">
+                {group.label}（{group.items.length}）
+              </div>
+              <div className="max-h-[35vh] overflow-y-auto">
+                {group.items.map((item: any) => (
+                  <div
+                    key={`${group.label}-${item.relativePath}`}
+                    className="px-4 py-2 border-b border-gray-100 dark:border-slate-800 last:border-b-0"
+                  >
+                    <div className="text-xs font-mono text-gray-900 dark:text-slate-100 truncate">
+                      {item.relativePath}
+                    </div>
+                    {item.reason ? (
+                      <div className="mt-0.5 text-[11px] text-gray-600 dark:text-slate-400 truncate">
+                        {item.reason}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <SourceConnectorImportResultList results={applyResults} title="应用结果" />
+    </div>
+  );
+}
 
 interface SourceConnectorsDialogProps {
   open: boolean;

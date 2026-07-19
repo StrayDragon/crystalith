@@ -2,9 +2,7 @@ import {
   KeyboardArrowDown as KeyboardArrowDownIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
-import { type CSSProperties } from 'react';
-
-import { TypewriterText } from './TypewriterText';
+import { type CSSProperties, useEffect, useState } from 'react';
 
 interface ThinkingBlockProps {
   item: {
@@ -44,6 +42,47 @@ const typeStyles: Record<string, { bg: string; border: string }> = {
   completed: { bg: 'bg-green-50', border: 'border-green-200' },
   connection: { bg: 'bg-gray-50', border: 'border-gray-200' },
 };
+
+function TypewriterText({
+  text,
+  speed = 30,
+  onComplete,
+}: {
+  text: string;
+  speed?: number;
+  onComplete?: () => void;
+}) {
+  const [displayedText, setDisplayedText] = useState('');
+  const [isComplete, setIsComplete] = useState(false);
+
+  useEffect(() => {
+    if (!text) return;
+
+    setDisplayedText('');
+    setIsComplete(false);
+    let index = 0;
+
+    const interval = setInterval(() => {
+      if (index < text.length) {
+        setDisplayedText(text.slice(0, index + 1));
+        index++;
+      } else {
+        clearInterval(interval);
+        setIsComplete(true);
+        onComplete?.();
+      }
+    }, speed);
+
+    return () => clearInterval(interval);
+  }, [text, speed, onComplete]);
+
+  return (
+    <span>
+      {displayedText}
+      {!isComplete && <span className="animate-pulse">▊</span>}
+    </span>
+  );
+}
 
 export function ThinkingBlock({
   item,
