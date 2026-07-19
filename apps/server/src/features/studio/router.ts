@@ -13,6 +13,7 @@
 //
 // H5+H6: generation logic + SSE helper extracted to service.ts
 import {
+  NotebookIdQuerySchema,
   SlideDraftCreateRequestSchema,
   SlideDraftUpdateSchema,
   StudioMarkdownPutSchema,
@@ -135,6 +136,17 @@ function getSlideOrThrow(id: number): typeof studioSlides.$inferSelect {
   return row;
 }
 
+function getSlideInNotebookOrThrow(
+  id: number,
+  notebookId: number,
+): typeof studioSlides.$inferSelect {
+  const row = db().select().from(studioSlides).where(eq(studioSlides.id, id)).get();
+  if (!row || row.notebookId !== notebookId) {
+    throw new NotFoundError(`Slide ${id} not found`);
+  }
+  return row;
+}
+
 // ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
@@ -183,9 +195,14 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     { query: StudioSlidesListQuerySchema },
   )
 
-  // Get slide draft
-  .get('/studio/slides/:id', ({ params }) =>
-    serializeSlide(getSlideOrThrow(requirePositiveIntId(params.id, 'slide id'))),
+  // Get slide draft — c67: notebookId required
+  .get(
+    '/studio/slides/:id',
+    ({ params, query }) =>
+      serializeSlide(
+        getSlideInNotebookOrThrow(requirePositiveIntId(params.id, 'slide id'), query.notebookId),
+      ),
+    { query: NotebookIdQuerySchema },
   )
 
   // c43: Get latest draft (v1 api.py:232-247)
@@ -205,12 +222,12 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     { query: StudioSlidesListQuerySchema },
   )
 
-  // Update draft fields (c32: PATCH draft — v1 parity)
+  // Update draft fields (c32: PATCH draft — v1 parity; c67: notebookId required)
   .patch(
     '/studio/slides/:id',
-    ({ params, body }) => {
+    ({ params, query, body }) => {
       const id = requirePositiveIntId(params.id, 'slide id');
-      getSlideOrThrow(id);
+      getSlideInNotebookOrThrow(id, query.notebookId);
       const updateData: Record<string, unknown> = { errorMessage: null };
       if (body.title !== undefined) updateData.title = body.title;
       if (body.prompt !== undefined) updateData.prompt = body.prompt;
@@ -223,45 +240,49 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
       db().update(studioSlides).set(updateData).where(eq(studioSlides.id, id)).run();
       return serializeSlide(getSlideOrThrow(id));
     },
-    { body: SlideDraftUpdateSchema },
+    { query: NotebookIdQuerySchema, body: SlideDraftUpdateSchema },
   )
 
-  // Stage 1: Generate outline via AI (POST — non-streaming)
-  .post('/studio/slides/:id/outline', async ({ params }) => {
-    const id = requirePositiveIntId(params.id, 'slide id');
-    const slide = getSlideOrThrow(id);
-    if (!clearStaleRunning(id)) return { event: 'busy', message: '演示正在生成中，请稍后重试。' };
+  // Stage 1: Generate outline via AI (POST — non-streaming; c67: notebookId required)
+  .post(
+    '/studio/slides/:id/outline',
+    async ({ params, query }) => {
+      const id = requirePositiveIntId(params.id, 'slide id');
+      const slide = getSlideInNotebookOrThrow(id, query.notebookId);
+      if (!clearStaleRunning(id)) return { event: 'busy', message: '演示正在生成中，请稍后重试。' };
 
-    const context = await getContext(slide);
-    db()
-      .update(studioSlides)
-      .set({ status: 'running', stage: 'outline' })
-      .where(eq(studioSlides.id, id))
-      .run();
-    try {
-      const outline = await generateOutline(slide, context);
+      const context = await getContext(slide);
       db()
         .update(studioSlides)
-        .set({ outline: outline as Record<string, unknown>, stage: 'outline', status: 'idle' })
+        .set({ status: 'running', stage: 'outline' })
         .where(eq(studioSlides.id, id))
         .run();
-      return serializeSlide(getSlideOrThrow(id));
-    } catch (error) {
-      db()
-        .update(studioSlides)
-        .set({ status: 'error', errorMessage: String(error) })
-        .where(eq(studioSlides.id, id))
-        .run();
-      throw error;
-    }
-  })
+      try {
+        const outline = await generateOutline(slide, context);
+        db()
+          .update(studioSlides)
+          .set({ outline: outline as Record<string, unknown>, stage: 'outline', status: 'idle' })
+          .where(eq(studioSlides.id, id))
+          .run();
+        return serializeSlide(getSlideOrThrow(id));
+      } catch (error) {
+        db()
+          .update(studioSlides)
+          .set({ status: 'error', errorMessage: String(error) })
+          .where(eq(studioSlides.id, id))
+          .run();
+        throw error;
+      }
+    },
+    { query: NotebookIdQuerySchema },
+  )
 
-  // HITL: manually edit outline (c32: PUT outline — v1 parity)
+  // HITL: manually edit outline (c32: PUT outline — v1 parity; c67: notebookId required)
   .put(
     '/studio/slides/:id/outline',
-    ({ params, body }) => {
+    ({ params, query, body }) => {
       const id = requirePositiveIntId(params.id, 'slide id');
-      getSlideOrThrow(id);
+      getSlideInNotebookOrThrow(id, query.notebookId);
       db()
         .update(studioSlides)
         .set({
@@ -274,48 +295,53 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
         .run();
       return serializeSlide(getSlideOrThrow(id));
     },
-    { body: StudioOutlinePutSchema },
+    { query: NotebookIdQuerySchema, body: StudioOutlinePutSchema },
   )
 
-  // Stage 2: Generate markdown from outline via AI (POST — non-streaming)
-  .post('/studio/slides/:id/markdown', async ({ params }) => {
-    const id = requirePositiveIntId(params.id, 'slide id');
-    const slide = getSlideOrThrow(id);
-    if (!slide.outline) throw new NotFoundError(`Slide ${id} has no outline — run /outline first`);
-    if (!clearStaleRunning(id)) return { event: 'busy', message: '演示正在生成中，请稍后重试。' };
+  // Stage 2: Generate markdown from outline via AI (POST — non-streaming; c67: notebookId required)
+  .post(
+    '/studio/slides/:id/markdown',
+    async ({ params, query }) => {
+      const id = requirePositiveIntId(params.id, 'slide id');
+      const slide = getSlideInNotebookOrThrow(id, query.notebookId);
+      if (!slide.outline)
+        throw new NotFoundError(`Slide ${id} has no outline — run /outline first`);
+      if (!clearStaleRunning(id)) return { event: 'busy', message: '演示正在生成中，请稍后重试。' };
 
-    const context = await getContext(slide);
-    db()
-      .update(studioSlides)
-      .set({ status: 'running', stage: 'markdown' })
-      .where(eq(studioSlides.id, id))
-      .run();
-    try {
-      const markdown = await generateMarkdown(slide, context);
+      const context = await getContext(slide);
       db()
         .update(studioSlides)
-        .set({ markdown, stage: 'markdown', status: 'idle' })
+        .set({ status: 'running', stage: 'markdown' })
         .where(eq(studioSlides.id, id))
         .run();
-      writeSlideFile(slide.notebookId, id, markdown);
-      syncSlideOutput(slide, markdown);
-      return serializeSlide(getSlideOrThrow(id));
-    } catch (error) {
-      db()
-        .update(studioSlides)
-        .set({ status: 'error', errorMessage: String(error) })
-        .where(eq(studioSlides.id, id))
-        .run();
-      throw error;
-    }
-  })
+      try {
+        const markdown = await generateMarkdown(slide, context);
+        db()
+          .update(studioSlides)
+          .set({ markdown, stage: 'markdown', status: 'idle' })
+          .where(eq(studioSlides.id, id))
+          .run();
+        writeSlideFile(slide.notebookId, id, markdown);
+        syncSlideOutput(slide, markdown);
+        return serializeSlide(getSlideOrThrow(id));
+      } catch (error) {
+        db()
+          .update(studioSlides)
+          .set({ status: 'error', errorMessage: String(error) })
+          .where(eq(studioSlides.id, id))
+          .run();
+        throw error;
+      }
+    },
+    { query: NotebookIdQuerySchema },
+  )
 
-  // HITL: manually edit markdown + Slidev persist + output sync (c32: PUT markdown — v1 parity)
+  // HITL: manually edit markdown + Slidev persist + output sync (c32: PUT markdown — v1 parity; c67: notebookId required)
   .put(
     '/studio/slides/:id/markdown',
-    ({ params, body }) => {
+    ({ params, query, body }) => {
       const id = requirePositiveIntId(params.id, 'slide id');
-      const slide = getSlideOrThrow(id);
+      const slide = getSlideInNotebookOrThrow(id, query.notebookId);
       const { markdown } = body;
       try {
         writeSlideFile(slide.notebookId, id, markdown);
@@ -330,68 +356,76 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
         .run();
       return serializeSlide(getSlideOrThrow(id));
     },
-    { body: StudioMarkdownPutSchema },
+    { query: NotebookIdQuerySchema, body: StudioMarkdownPutSchema },
   )
 
-  // c43: SSE outline stream (v1 GET /drafts/:id/outline/stream)
-  .get('/studio/slides/:id/outline/stream', ({ params }) => {
-    const id = requirePositiveIntId(params.id, 'slide id');
-    const slide = getSlideOrThrow(id);
+  // c43: SSE outline stream (v1 GET /drafts/:id/outline/stream; c67: notebookId required)
+  .get(
+    '/studio/slides/:id/outline/stream',
+    ({ params, query }) => {
+      const id = requirePositiveIntId(params.id, 'slide id');
+      const slide = getSlideInNotebookOrThrow(id, query.notebookId);
 
-    return createSseResponse(id, async (emit, ctx) => {
-      emit('progress', { stage: 'outline', progress: 5, message: '开始生成大纲' });
-      const context = await getContext(slide);
-      db()
-        .update(studioSlides)
-        .set({ status: 'running', stage: 'outline' })
-        .where(eq(studioSlides.id, id))
-        .run();
+      return createSseResponse(id, async (emit, ctx) => {
+        emit('progress', { stage: 'outline', progress: 5, message: '开始生成大纲' });
+        const context = await getContext(slide);
+        db()
+          .update(studioSlides)
+          .set({ status: 'running', stage: 'outline' })
+          .where(eq(studioSlides.id, id))
+          .run();
 
-      // c51: emit toolcall before the generation stage (v1 api.py:401)
-      emit('toolcall', { tool: 'slides_generate_outline', slideId: id });
-      const outline = await generateOutline(slide, context);
-      emit('progress', { stage: 'outline', progress: 90, message: '大纲生成完成' });
-      db()
-        .update(studioSlides)
-        .set({ outline: outline as Record<string, unknown>, stage: 'outline', status: 'idle' })
-        .where(eq(studioSlides.id, id))
-        .run();
-      // c51: done payload = {traceId, slideId} (v1 api.py:428)
-      emit('done', { traceId: ctx.traceId, slideId: id });
-    });
-  })
-
-  // c43: SSE markdown stream (v1 GET /drafts/:id/markdown/stream)
-  .get('/studio/slides/:id/markdown/stream', ({ params }) => {
-    const id = requirePositiveIntId(params.id, 'slide id');
-    const slide = getSlideOrThrow(id);
-    if (!slide.outline) throw new NotFoundError(`Slide ${id} has no outline`);
-
-    return createSseResponse(id, async (emit, ctx) => {
-      emit('progress', { stage: 'markdown', progress: 5, message: '开始生成幻灯片' });
-      const context = await getContext(slide);
-      db()
-        .update(studioSlides)
-        .set({ status: 'running', stage: 'markdown' })
-        .where(eq(studioSlides.id, id))
-        .run();
-
-      // c51: emit toolcall before the generation stage (v1 api.py:506)
-      emit('toolcall', { tool: 'slides_generate_markdown', slideId: id });
-      const markdown = await generateMarkdown(slide, context, (delta) => {
-        emit('progress', { stage: 'markdown', delta });
+        // c51: emit toolcall before the generation stage (v1 api.py:401)
+        emit('toolcall', { tool: 'slides_generate_outline', slideId: id });
+        const outline = await generateOutline(slide, context);
+        emit('progress', { stage: 'outline', progress: 90, message: '大纲生成完成' });
+        db()
+          .update(studioSlides)
+          .set({ outline: outline as Record<string, unknown>, stage: 'outline', status: 'idle' })
+          .where(eq(studioSlides.id, id))
+          .run();
+        // c51: done payload = {traceId, slideId} (v1 api.py:428)
+        emit('done', { traceId: ctx.traceId, slideId: id });
       });
+    },
+    { query: NotebookIdQuerySchema },
+  )
 
-      db()
-        .update(studioSlides)
-        .set({ markdown, stage: 'markdown', status: 'idle' })
-        .where(eq(studioSlides.id, id))
-        .run();
-      writeSlideFile(slide.notebookId, id, markdown);
-      syncSlideOutput(slide, markdown);
-      // c51: done payload = {traceId, slideId} (v1 api.py:538)
-      emit('done', { traceId: ctx.traceId, slideId: id });
-    });
-  });
+  // c43: SSE markdown stream (v1 GET /drafts/:id/markdown/stream; c67: notebookId required)
+  .get(
+    '/studio/slides/:id/markdown/stream',
+    ({ params, query }) => {
+      const id = requirePositiveIntId(params.id, 'slide id');
+      const slide = getSlideInNotebookOrThrow(id, query.notebookId);
+      if (!slide.outline) throw new NotFoundError(`Slide ${id} has no outline`);
+
+      return createSseResponse(id, async (emit, ctx) => {
+        emit('progress', { stage: 'markdown', progress: 5, message: '开始生成幻灯片' });
+        const context = await getContext(slide);
+        db()
+          .update(studioSlides)
+          .set({ status: 'running', stage: 'markdown' })
+          .where(eq(studioSlides.id, id))
+          .run();
+
+        // c51: emit toolcall before the generation stage (v1 api.py:506)
+        emit('toolcall', { tool: 'slides_generate_markdown', slideId: id });
+        const markdown = await generateMarkdown(slide, context, (delta) => {
+          emit('progress', { stage: 'markdown', delta });
+        });
+
+        db()
+          .update(studioSlides)
+          .set({ markdown, stage: 'markdown', status: 'idle' })
+          .where(eq(studioSlides.id, id))
+          .run();
+        writeSlideFile(slide.notebookId, id, markdown);
+        syncSlideOutput(slide, markdown);
+        // c51: done payload = {traceId, slideId} (v1 api.py:538)
+        emit('done', { traceId: ctx.traceId, slideId: id });
+      });
+    },
+    { query: NotebookIdQuerySchema },
+  );
 
 registerApiDoc(apiDocs);

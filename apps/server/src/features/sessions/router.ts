@@ -14,6 +14,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { db } from '../../db/index.ts';
 import { sessions, messages, chunks, sources, outputs } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
 
 // ---------------------------------------------------------------------------
@@ -158,7 +159,10 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
       // Optimistic-concurrency check: only apply if revision matches
       if (body.sharedStateRevision !== undefined) {
         if (body.sharedStateRevision !== existing.sharedStateRevision) {
-          throw new NotFoundError('Session state has been modified by another client');
+          throw new AppHttpError(
+            ErrorCode.CONFLICT,
+            'Session state has been modified by another client',
+          );
         }
         if (body.sharedState !== undefined) {
           updateData.sharedState = body.sharedState;

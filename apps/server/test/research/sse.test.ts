@@ -76,9 +76,16 @@ afterAll(() => {
 // Helpers
 // ---------------------------------------------------------------------------
 
+function withNotebookScope(path: string): string {
+  // Create session: notebookId is in body, not query
+  if (path === '/v2/research' || path.startsWith('/v2/research?')) return path;
+  const sep = path.includes('?') ? '&' : '?';
+  return `${path}${sep}notebookId=${notebookId}`;
+}
+
 async function post(path: string, body?: unknown): Promise<{ status: number; body: any }> {
   const res = await app.handle(
-    new Request(`${BASE}${path}`, {
+    new Request(`${BASE}${withNotebookScope(path)}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -172,7 +179,9 @@ describe('research SSE stream', () => {
     const sessionId = startRes.id;
 
     // Connect to SSE before approval.
-    const sseRes = await app.handle(new Request(`${BASE}/v2/research/${sessionId}/stream`));
+    const sseRes = await app.handle(
+      new Request(`${BASE}/v2/research/${sessionId}/stream?notebookId=${notebookId}`),
+    );
     expect(sseRes.status).toBe(200);
     expect(sseRes.headers.get('content-type')).toContain('text/event-stream');
 
@@ -202,7 +211,9 @@ describe('research SSE stream', () => {
     });
     const sessionId = startRes.id;
 
-    const sseRes = await app.handle(new Request(`${BASE}/v2/research/${sessionId}/stream`));
+    const sseRes = await app.handle(
+      new Request(`${BASE}/v2/research/${sessionId}/stream?notebookId=${notebookId}`),
+    );
     expect(sseRes.status).toBe(200);
 
     const eventsPromise = readSseStream(sseRes.body!);
@@ -224,7 +235,9 @@ describe('research SSE stream', () => {
     });
     const sessionId = startRes.id;
 
-    const sseRes = await app.handle(new Request(`${BASE}/v2/research/${sessionId}/stream`));
+    const sseRes = await app.handle(
+      new Request(`${BASE}/v2/research/${sessionId}/stream?notebookId=${notebookId}`),
+    );
     const eventsPromise = readSseStream(sseRes.body!);
 
     await waitForStatus(sessionId, 'waiting_user');
@@ -251,7 +264,9 @@ describe('research SSE stream', () => {
     });
     const sessionId = startRes.id;
 
-    const sseRes = await app.handle(new Request(`${BASE}/v2/research/${sessionId}/stream`));
+    const sseRes = await app.handle(
+      new Request(`${BASE}/v2/research/${sessionId}/stream?notebookId=${notebookId}`),
+    );
     expect(sseRes.status).toBe(200);
     const eventsPromise = readSseStream(sseRes.body!);
 
@@ -284,7 +299,9 @@ describe('research SSE stream', () => {
   });
 
   it('returns 404 for nonexistent session', async () => {
-    const res = await app.handle(new Request(`${BASE}/v2/research/99999/stream`));
+    const res = await app.handle(
+      new Request(`${BASE}/v2/research/99999/stream?notebookId=${notebookId}`),
+    );
     expect(res.status).toBe(404);
   });
 });

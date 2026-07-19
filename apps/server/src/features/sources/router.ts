@@ -1,4 +1,5 @@
 import {
+  NotebookIdQuerySchema,
   PatchNotebookExtractorPolicySchema,
   SourceBatchDeleteRequestSchema,
   SourceBatchReembedRequestSchema,
@@ -33,14 +34,14 @@ import {
   getSecurityPolicy,
   getUploadMaxBytes,
 } from '../../shared/config.ts';
-import { ErrorCode, sendError } from '../../shared/errors.ts';
+import { AppHttpError, ErrorCode, sendError } from '../../shared/errors.ts';
 import {
   extractUrl,
   extractors,
   getDefaultExtractor,
   listExtractorMetadata,
 } from '../../shared/extraction/factory.ts';
-import { requirePositiveIntId, requireOptionalPositiveIntId } from '../../shared/ids.ts';
+import { requirePositiveIntId } from '../../shared/ids.ts';
 import { fetchWithRedirectGuard } from '../../shared/net/fetch-with-redirect-guard.ts';
 import { validateUrlForFetch, SsrfBlockedError } from '../../shared/net/url-safety.ts';
 import { uploadDedupKey, urlDedupKey } from './dedup.ts';
@@ -309,59 +310,58 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     { query: SourceUploadQuerySchema },
   )
 
-  // Get a source by ID
-  // c57: notebook ownership check — requires ?notebookId= query, returns 404
-  // if the source doesn't belong to that notebook (prevents cross-notebook access)
-  .get('/sources/:id', ({ params, query }) => {
-    const id = requirePositiveIntId(params.id, 'source id');
-    const nid = requireOptionalPositiveIntId(
-      (query as Record<string, string> | undefined)?.notebookId,
-      'notebook id',
-    );
-    const row = db().select().from(sources).where(eq(sources.id, id)).get();
-    if (!row || (nid && row.notebookId !== nid)) sourceNotFound(id);
+  // Get a source by ID — c67: notebookId required; cross-notebook → 404
+  .get(
+    '/sources/:id',
+    ({ params, query }) => {
+      const id = requirePositiveIntId(params.id, 'source id');
+      const nid = query.notebookId;
+      const row = db().select().from(sources).where(eq(sources.id, id)).get();
+      if (!row || row.notebookId !== nid) sourceNotFound(id);
 
-    const c = db()
-      .select({ c: sql<number>`COUNT(*)` })
-      .from(chunks)
-      .where(eq(chunks.sourceId, id))
-      .get();
-    const chunkCount = c?.c ?? 0;
+      const c = db()
+        .select({ c: sql<number>`COUNT(*)` })
+        .from(chunks)
+        .where(eq(chunks.sourceId, id))
+        .get();
+      const chunkCount = c?.c ?? 0;
 
-    const tagRows = db()
-      .select({ name: sourceTags.name })
-      .from(sourceTagMap)
-      .innerJoin(sourceTags, eq(sourceTagMap.tagId, sourceTags.id))
-      .where(eq(sourceTagMap.sourceId, id))
-      .all();
-    const tags = tagRows.map((t) => t.name);
+      const tagRows = db()
+        .select({ name: sourceTags.name })
+        .from(sourceTagMap)
+        .innerJoin(sourceTags, eq(sourceTagMap.tagId, sourceTags.id))
+        .where(eq(sourceTagMap.sourceId, id))
+        .all();
+      const tags = tagRows.map((t) => t.name);
 
-    return serializeSource({ ...row, chunkCount, tags });
-  })
+      return serializeSource({ ...row, chunkCount, tags });
+    },
+    { query: NotebookIdQuerySchema },
+  )
 
-  // Delete a source
-  // c57: notebook ownership check via ?notebookId= query
-  .delete('/sources/:id', ({ params, query, set }) => {
-    const id = requirePositiveIntId(params.id, 'source id');
-    const nid = requireOptionalPositiveIntId(
-      (query as Record<string, string> | undefined)?.notebookId,
-      'notebook id',
-    );
-    const row = db().select().from(sources).where(eq(sources.id, id)).get();
-    if (!row || (nid && row.notebookId !== nid)) sourceNotFound(id);
+  // Delete a source — c67: notebookId required
+  .delete(
+    '/sources/:id',
+    ({ params, query, set }) => {
+      const id = requirePositiveIntId(params.id, 'source id');
+      const nid = query.notebookId;
+      const row = db().select().from(sources).where(eq(sources.id, id)).get();
+      if (!row || row.notebookId !== nid) sourceNotFound(id);
 
-    // Delete vectors first
-    deleteSourceVectors(db(), id);
+      // Delete vectors first
+      deleteSourceVectors(db(), id);
 
-    // Delete source (cascades to chunks via FK)
-    db().delete(sources).where(eq(sources.id, id)).run();
+      // Delete source (cascades to chunks via FK)
+      db().delete(sources).where(eq(sources.id, id)).run();
 
-    // Invalidate cached retrievals for the source's notebook.
-    if (row.notebookId) bumpSourcesEpoch(row.notebookId);
+      // Invalidate cached retrievals for the source's notebook.
+      if (row.notebookId) bumpSourcesEpoch(row.notebookId);
 
-    set.status = 204;
-    return '';
-  })
+      set.status = 204;
+      return '';
+    },
+    { query: NotebookIdQuerySchema },
+  )
 
   // List available parsers
   .get('/sources/parsers', () => {
@@ -585,81 +585,85 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     { body: SourceTagBindingRequestSchema, response: SourceTagBindingResponseSchema },
   )
 
-  // Get source chunks
-  // c57: notebook ownership check via ?notebookId= query
-  .get('/sources/:id/chunks', ({ params, query }) => {
-    const id = requirePositiveIntId(params.id, 'source id');
-    const nid = requireOptionalPositiveIntId(
-      (query as Record<string, string> | undefined)?.notebookId,
-      'notebook id',
-    );
-    const row = db().select().from(sources).where(eq(sources.id, id)).get();
-    if (!row || (nid && row.notebookId !== nid)) sourceNotFound(id);
-    const rows = db()
-      .select()
-      .from(chunks)
-      .where(eq(chunks.sourceId, id))
-      .orderBy(chunks.chunkIndex)
-      .all();
-    return rows.map((c) => ({
-      id: c.id,
-      chunkIndex: c.chunkIndex,
-      text: c.text,
-      startOffset: c.startOffset,
-      endOffset: c.endOffset,
-      metadata: c.metadata,
-    }));
-  })
+  // Get source chunks — c67: notebookId required
+  .get(
+    '/sources/:id/chunks',
+    ({ params, query }) => {
+      const id = requirePositiveIntId(params.id, 'source id');
+      const nid = query.notebookId;
+      const row = db().select().from(sources).where(eq(sources.id, id)).get();
+      if (!row || row.notebookId !== nid) sourceNotFound(id);
+      const rows = db()
+        .select()
+        .from(chunks)
+        .where(eq(chunks.sourceId, id))
+        .orderBy(chunks.chunkIndex)
+        .all();
+      return rows.map((c) => ({
+        id: c.id,
+        chunkIndex: c.chunkIndex,
+        text: c.text,
+        startOffset: c.startOffset,
+        endOffset: c.endOffset,
+        metadata: c.metadata,
+      }));
+    },
+    { query: NotebookIdQuerySchema },
+  )
 
   // Re-embed a source (v1: requires FAILED status; processing → ready/failed)
-  // c57: notebook ownership check via ?notebookId= query
-  .post('/sources/:id/re-embed', async ({ params, query }) => {
-    const id = requirePositiveIntId(params.id, 'source id');
-    const nid = requireOptionalPositiveIntId(
-      (query as Record<string, string> | undefined)?.notebookId,
-      'notebook id',
-    );
-    const row = db().select().from(sources).where(eq(sources.id, id)).get();
-    if (!row || (nid && row.notebookId !== nid)) sourceNotFound(id);
-    // c44: v1 _reembed_existing_source rejects non-failed with 400
-    if (row.status !== 'failed') {
-      throw new Error(`Source ${id} is not in failed status (current: ${row.status})`);
-    }
+  // c67: notebookId required; illegal status → AppHttpError
+  .post(
+    '/sources/:id/re-embed',
+    async ({ params, query }) => {
+      const id = requirePositiveIntId(params.id, 'source id');
+      const nid = query.notebookId;
+      const row = db().select().from(sources).where(eq(sources.id, id)).get();
+      if (!row || row.notebookId !== nid) sourceNotFound(id);
+      // c44: v1 _reembed_existing_source rejects non-failed with 400
+      if (row.status !== 'failed') {
+        throw new AppHttpError(
+          ErrorCode.INVALID_REQUEST,
+          `Source ${id} is not in failed status (current: ${row.status})`,
+        );
+      }
 
-    // c57: clear ALL error fields (v1 api_common.py:261-263), not just errorMessage
-    db()
-      .update(sources)
-      .set({
-        status: 'processing',
-        errorCode: null,
-        errorMessage: null,
-        recoveryHint: null,
-        lastErrorAt: null,
-      })
-      .where(eq(sources.id, id))
-      .run();
-
-    try {
-      const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
-      const strategy = new EmbedStrategy();
-      deleteSourceVectors(db(), id);
-      await strategy.indexSource(id, row.notebookId);
-      db().update(sources).set({ status: 'ready' }).where(eq(sources.id, id)).run();
-      bumpSourcesEpoch(row.notebookId);
-      return { sourceId: id, reEmbedded: true };
-    } catch (error) {
+      // c57: clear ALL error fields (v1 api_common.py:261-263), not just errorMessage
       db()
         .update(sources)
         .set({
-          status: 'failed',
-          errorMessage: error instanceof Error ? error.message : String(error),
+          status: 'processing',
+          errorCode: null,
+          errorMessage: null,
+          recoveryHint: null,
+          lastErrorAt: null,
         })
         .where(eq(sources.id, id))
         .run();
-      bumpSourcesEpoch(row.notebookId);
-      throw error;
-    }
-  })
+
+      try {
+        const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
+        const strategy = new EmbedStrategy();
+        deleteSourceVectors(db(), id);
+        await strategy.indexSource(id, row.notebookId);
+        db().update(sources).set({ status: 'ready' }).where(eq(sources.id, id)).run();
+        bumpSourcesEpoch(row.notebookId);
+        return { sourceId: id, reEmbedded: true };
+      } catch (error) {
+        db()
+          .update(sources)
+          .set({
+            status: 'failed',
+            errorMessage: error instanceof Error ? error.message : String(error),
+          })
+          .where(eq(sources.id, id))
+          .run();
+        bumpSourcesEpoch(row.notebookId);
+        throw error;
+      }
+    },
+    { query: NotebookIdQuerySchema },
+  )
 
   // c44: Search sources via real web search (v1 run_search_graph + SearXNG)
   .post(

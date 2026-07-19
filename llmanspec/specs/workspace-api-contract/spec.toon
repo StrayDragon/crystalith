@@ -2,9 +2,9 @@ kind: llman.sdd.spec
 name: "workspace-api-contract"
 purpose: 定义前后端协作所依赖的稳定 API 契约：版本前缀、错误信封、核心端点稳定字段与 SSE 事件最小形状。
 valid_scope[2]: apps/,packages/
-requirements[39]{req_id,title,statement}:
+requirements[42]{req_id,title,statement}:
   r56,API major version prefix is stable,对外业务 API MUST 使用 `/v2` 前缀；同一 major 内保持兼容。健康检查等运维端点 MAY 位于根路径。
-  r114,"Optional API key authentication is supported for self-host","DEFERRED(c13)：当 `app.auth.enabled` 且配置鉴权密钥时，`/v2/**` 端点 MUST 要求 Bearer token；未启用时 MAY 匿名访问。当前 v2 运行时尚未强制鉴权。"
+  r114,"Optional API key authentication is supported for self-host",DEFERRED(c13)：当 `app.auth.enabled` 且配置鉴权密钥时，`/v2/**` 端点 MUST 要求 Bearer token；未启用时 MAY 匿名访问。当前 v2 运行时尚未强制鉴权。
   r151,"Non-SSE errors use unified envelope","非 SSE 错误响应 MUST 使用统一结构：`errorCode`, `message`, `details?`, `retryAfter?`。"
   r186,Rate limited responses use unified envelope and retryAfter,系统 MUST 为 HTTP rate limiting 提供稳定的对外语义：返回 429，并在统一错误信封中暴露 `retryAfter` 指引。
   r218,Health endpoints remain exempt from HTTP guardrails,系统的健康检查端点 MUST 保持可用于运维探活与诊断，不应因 guardrails 被拒绝。
@@ -24,11 +24,11 @@ requirements[39]{req_id,title,statement}:
   r19,Workspace tools can expose frontendBundle descriptor,`/v2/workspace/tools` 返回的 tool 对象 MUST 支持可选字段 `frontendBundle`，用于声明该输出类型的前端渲染 bundle。
   r20,Workspace tools expose a complete configSchema,`/v2/workspace/tools` 返回的工具对象 MUST 包含可直接驱动 UI 的 `configSchema`（如支持主题、数量/难度选项与默认值）。对于 `SLIDES`，该 `configSchema` MUST 覆盖 defaults、quantity / audience / structure / tone / language / density / theme / frontmatter，以及 active plugin 声明的 engine / preview 相关元数据；客户端 MUST NOT 依赖独立 slides config 端点。
   r21,Tool config endpoint stays consistent (if present),"若 `/v2/workspace/tools/{toolId}/config` 端点存在，其返回值 MUST 与 tools 列表中的 `configSchema` 语义一致。"
-  "models-list-must-return-providers-envelope",Models list MUST return providers field on the list envelope (not only separate endpoint),"models 列表端点 MUST 在响应 envelope 返回 providers 字段；MAY 另提供 /models/providers。"
-  "models-must-filter-by-provider-availability",Models endpoints MUST filter by provider availability like v1,"models GET list 与 GET single MUST 按 provider 可用性过滤：不可用 provider 的 model 不出现在 list；GET single SHALL 404。"
+  "models-list-must-return-providers-envelope",Models list MUST return providers field on the list envelope (not only separate endpoint),models 列表端点 MUST 在响应 envelope 返回 providers 字段；MAY 另提供 /models/providers。
+  "models-must-filter-by-provider-availability",Models endpoints MUST filter by provider availability like v1,models GET list 与 GET single MUST 按 provider 可用性过滤：不可用 provider 的 model 不出现在 list；GET single SHALL 404。
   "sessions-convert-must-honor-message-ids","Sessions convert-to-source and convert-to-output MUST honor messageIds filter","sessions 的 convert-to-source 与 convert-to-output MUST 接受可选 messageIds：仅转换指定消息；缺失 id 时 404。省略 messageIds 时 MAY 转换会话全部消息。"
   "sessions-convert-text-format-must-align-v1",Sessions convert text format MUST match v1 role labels and separators,"sessions convert-to-source MUST 使用中文角色标签与稳定分隔；convert-to-output MUST 使用 raw 文本（无角色前缀）。"
-  "models-response-default-shape-must-align-v1","Models response MUST put defaults on envelope (not inline per-model) for list endpoint","models 列表端点 MUST 在 envelope 顶层提供 `defaults`；列表项 MAY 额外携带 isDefaultChat/isDefaultEmbedding。GET single MUST NOT 要求默认标记字段。"
+  "models-response-default-shape-must-align-v1","Models response MUST put defaults on envelope (not inline per-model) for list endpoint",models 列表端点 MUST 在 envelope 顶层提供 `defaults`；列表项 MAY 额外携带 isDefaultChat/isDefaultEmbedding。GET single MUST NOT 要求默认标记字段。
   "qa-export-endpoint",API MUST provide QA export endpoint,系统 MUST 提供 QA 导出端点支持 markdown 和 json 两种格式
   "qa-sse-done-shape",QA done SSE event MUST include evidence and context fields,QA 流式 done 事件 MUST 包含 evidence 和 context 和 createdAt 字段
   "qa-response-confidence-field","QA non-streaming response MUST include confidence and evidence",QA 非流式响应 MUST 在 body 中包含 confidence 和 evidence 字段
@@ -38,11 +38,14 @@ requirements[39]{req_id,title,statement}:
   "research-delete-endpoint",API MUST provide research delete endpoint,系统 MUST 提供 research 删除端点，在删除前取消运行中的研究
   "research-sse-named-events",Research SSE MUST emit named events,"research 流式端点 MUST 发送带 event: 字段的命名 SSE 事件"
   "error-envelope-actually-emitted-by-routes","Server routes MUST emit the ErrorEnvelope shape not ad-hoc error objects","All non-SSE error responses MUST return the ErrorEnvelope shape defined in packages/shared (errorCode plus message plus optional details plus optional retryAfter). MUST NOT return ad-hoc shapes such as {error: string}."
-  "shared-error-envelope-helper","Server MUST provide a shared error-response helper consuming ErrorEnvelopeSchema","The system MUST provide a shared helper (sendError) that consumes ErrorEnvelopeSchema and centralizes HTTP status to errorCode mapping. Feature routers MUST return errors via this helper."
+  "shared-error-envelope-helper","Server MUST provide a shared error-response helper consuming ErrorEnvelopeSchema",The system MUST provide a shared helper (sendError) that consumes ErrorEnvelopeSchema and centralizes HTTP status to errorCode mapping. Feature routers MUST return errors via this helper.
   "slides-config-schema-options-must-be-complete",SLIDES tool configSchema MUST expose all config axes with options and defaults,当 SLIDES 工具在 `/v2/workspace/tools` 响应中可用时，其 `configSchema` MUST 返回完整的 options 列表（每个 option 含 id/label/isDefault）与 defaults 对象，MUST NOT 省略 quantity/audience/structure/tone/language/density/themePreset 等配置轴。
   r284,CitationSchema SSOT is camelCase in packages/shared,packages/shared 的 CitationSchema MUST 以 camelCase 字段作为 Zod SSOT，并驱动 OpenAPI/eden 类型；服务端序列化与前端消费 MUST 直接使用该 schema 推断类型，不得并行维护一套 snake_case Citation 线类型。
   r285,"HTTP JSON wire fields MUST be camelCase end-to-end",除 URL path 与 SSE event 名称外，对外 HTTP/SSE JSON（请求体、查询参数键、响应体、流式 done/error data）的字段名 MUST 为 camelCase，并以 packages/shared Zod 为 SSOT；MUST NOT 再使用 notebook_id/source_ids/created_at/error_code 等 snake_case wire 别名。DB 列名不受本要求约束。
-scenarios[49]{req_id,id,given,when,then,feature}:
+  "notebook-scoped-resource-access","Notebook-scoped resources require notebook boundary",对 source、output、research session、studio slide、task 及 citation 单资源的读取与变更，系统 MUST 能证明请求属于某一 notebook：notebookId（query 或 path）MUST 为必填；当资源存在但不属于该 notebook 时 MUST 返回 404 NOT_FOUND，且 MUST NOT 在缺少 notebook 范围时按全局 id 返回跨 notebook 数据。
+  "notebook-scoped-list-forbid-global","Notebook-scoped lists MUST NOT dump all notebooks",笔记本范围列表端点（至少包括 GET /v2/research）在缺少 notebook 过滤时 MUST 拒绝请求（400）；MUST NOT 返回全部 notebook 的聚合列表。
+  "domain-errors-use-envelope-and-status",Domain conflicts use AppHttpError envelope,业务状态机非法与乐观锁冲突 MUST 通过 AppHttpError 返回统一 ErrorEnvelope：乐观锁冲突 MUST 使用 409 CONFLICT；非法状态转换 MUST 使用 400 INVALID_REQUEST 或 409 CONFLICT；MUST NOT 用裸 Error 落入非结构化 500，也 MUST NOT 用 NotFoundError 伪装冲突。
+scenarios[53]{req_id,id,given,when,then,feature}:
   r56,"client-targets-stable-major-prefix","",客户端调用对外 API,端点 SHALL 使用 `/v2` 前缀且在同一 major 内保持兼容,true
   r114,"auth-enabled-requires-bearer-token-for-v2-deferred","",运维启用鉴权并配置了 API key,客户端请求任意 `/v2/**` 端点若未携带有效 token SHALL 返回 401,true
   r114,"health-endpoints-remain-accessible-without-auth","",运维启用鉴权并配置了 API key,`/health` 与 `/health/dependencies` SHALL 保持匿名可访问以支持探活与运维诊断,true
@@ -92,3 +95,7 @@ scenarios[49]{req_id,id,given,when,then,feature}:
   r284,"shared-citation-schema-camelcase",CitationSchema 已更新为 camelCase,服务端构建 citations 或前端类型检查 Citation,两端 SHALL 共用同一 camelCase 字段集且类型检查通过,true
   r285,"qa-request-response-camelcase",客户端调用 QA 或 messages 等核心端点,检查请求与响应 JSON 键名,SHALL 仅出现 camelCase 键（如 notebookId/sourceIds/createdAt），且 MUST NOT 依赖 snake_case 键,true
   r285,"no-snake-compat-layer",服务端已切换为 camelCase wire,客户端仍发送 notebook_id 等 snake_case 字段,系统 SHALL 按校验失败或忽略未知键处理，MUST NOT 同时接受两套字段名作为正式合约,true
+  "notebook-scoped-resource-access","cross-notebook-source-get-404",存在属于 notebook A 的 source,客户端用 notebook B 的 notebookId 请求该 source,系统 SHALL 返回 404 NOT_FOUND 且响应为 ErrorEnvelope,false
+  "notebook-scoped-resource-access","missing-notebook-id-rejected",客户端调用需归属校验的 source/output 单资源端点且省略 notebookId,发送请求,系统 SHALL 拒绝该请求（400 校验失败或等价）且 MUST NOT 返回跨本资源体,false
+  "notebook-scoped-list-forbid-global","research-list-requires-notebook",系统中存在多个 notebook 的 research session,客户端调用 GET /v2/research 且省略 notebookId,系统 SHALL 拒绝全表列举（400）且 MUST NOT 返回全部 session,false
+  "domain-errors-use-envelope-and-status","session-revision-conflict-409",客户端以过期 sharedStateRevision 更新 session,发生乐观锁冲突,系统 SHALL 返回 409 CONFLICT 与 ErrorEnvelope，且 MUST NOT 返回伪装的 404,false

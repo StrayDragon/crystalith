@@ -279,7 +279,9 @@ export function useSlidesStudioDialog({
     setError('');
     try {
       if (draftId) {
-        const { data, error: fetchErr } = await api.v2.studio.slides({ id: draftId }).get();
+        const { data, error: fetchErr } = await api.v2.studio.slides({ id: draftId }).get({
+          query: { notebookId },
+        });
         if (fetchErr)
           throw new Error(
             typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
@@ -315,7 +317,9 @@ export function useSlidesStudioDialog({
       if (!notebookId || !isConnected) return;
       const targetId = slideId ?? draft?.id;
       if (!targetId) return;
-      const { data, error: fetchErr } = await api.v2.studio.slides({ id: targetId }).get();
+      const { data, error: fetchErr } = await api.v2.studio.slides({ id: targetId }).get({
+        query: { notebookId },
+      });
       if (fetchErr)
         throw new Error(
           typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
@@ -500,7 +504,7 @@ export function useSlidesStudioDialog({
     }
     const { data: updated, error: updateErr } = await api.v2.studio
       .slides({ id: draft.id })
-      .patch(payload);
+      .patch(payload, { query: { notebookId } });
     if (updateErr)
       throw new Error(
         typeof updateErr === 'string' ? updateErr : typeof updateErr === 'string' ? updateErr : '',
@@ -586,7 +590,7 @@ export function useSlidesStudioDialog({
     };
     const { data: updated, error: updateErr } = await api.v2.studio
       .slides({ id: draft.id })
-      .outline.put({ outline });
+      .outline.put({ outline }, { query: { notebookId } });
     if (updateErr)
       throw new Error(
         typeof updateErr === 'string' ? updateErr : typeof updateErr === 'string' ? updateErr : '',
@@ -602,7 +606,7 @@ export function useSlidesStudioDialog({
     }
     const { data: updated, error: updateErr } = await api.v2.studio
       .slides({ id: draft.id })
-      .markdown.put({ markdown });
+      .markdown.put({ markdown }, { query: { notebookId } });
     if (updateErr)
       throw new Error(
         typeof updateErr === 'string' ? updateErr : typeof updateErr === 'string' ? updateErr : '',
@@ -629,10 +633,12 @@ export function useSlidesStudioDialog({
         setEvents((prev) => [...prev, { type: 'progress', message: '生成中...' }]);
         const slides = api.v2.studio.slides({ id: slideId });
         const fetchOpts = edenFetchOptions(ac.signal);
+        if (!notebookId) return;
+        const query = { notebookId };
         const { error: genErr } =
           stage === 'outline'
-            ? await slides.outline.post(undefined, fetchOpts)
-            : await slides.markdown.post(undefined, fetchOpts);
+            ? await slides.outline.post(undefined, { ...fetchOpts, query })
+            : await slides.markdown.post(undefined, { ...fetchOpts, query });
         if (genErr)
           throw new Error(
             typeof genErr === 'string' ? genErr : typeof genErr === 'string' ? genErr : '',
@@ -648,7 +654,7 @@ export function useSlidesStudioDialog({
         if (handlers.onError) await handlers.onError();
       }
     },
-    [closeGenerate],
+    [closeGenerate, notebookId],
   );
 
   const handleGenerateOutline = useCallback(async () => {

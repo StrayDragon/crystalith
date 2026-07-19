@@ -10,7 +10,7 @@
 
   场景: 获取任务状态
     假如 笔记本中有一个待处理任务
-    当 发送 GET 请求"/v2/tasks/{任务[id]}"
+    当 发送 GET 请求"/v2/tasks/{任务[id]}?notebookId={当前笔记本[id]}"
     那么 响应状态码为200
     并且 响应中"type"的值为"refine"
     并且 响应中"status"的值为"pending"
@@ -22,11 +22,11 @@
     并且 响应列表至少包含1条记录
 
   场景: 任务不存在时返回404
-    当 发送 GET 请求"/v2/tasks/99999"
+    当 发送 GET 请求"/v2/tasks/99999?notebookId={当前笔记本[id]}"
     那么 响应状态码为404
 
   场景: 取消不存在的任务返回404
-    当 发送 POST 请求"/v2/tasks/99999/cancel"，内容为：
+    当 发送 POST 请求"/v2/tasks/99999/cancel?notebookId={当前笔记本[id]}"，内容为：
       """json
       {}
       """

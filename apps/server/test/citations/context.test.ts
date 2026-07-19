@@ -197,10 +197,9 @@ describe('citation context — validation', () => {
 });
 
 describe('citation context — existing endpoint preserved', () => {
-  it('GET /v2/citations/:messageId still works', async () => {
-    // The :messageId echo route is separate from the notebook-nested /context.
-    // This test confirms the param route still works for integer message IDs.
-    const res = await app.handle(new Request(`${BASE}/v2/citations/999`));
+  it('GET /v2/citations/:messageId still works with notebookId', async () => {
+    // c67: notebookId required; missing message still 404 (not 422) when scoped.
+    const res = await app.handle(new Request(`${BASE}/v2/citations/999?notebookId=${notebookId}`));
     expect(res.status).toBe(404); // no such message, but route resolved correctly
   });
 });

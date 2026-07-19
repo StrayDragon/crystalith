@@ -95,9 +95,16 @@ afterAll(() => {
 // Helpers
 // ---------------------------------------------------------------------------
 
+function withNotebookScope(path: string): string {
+  // Create session: notebookId is in body, not query
+  if (path === '/v2/research' || path.startsWith('/v2/research?')) return path;
+  const sep = path.includes('?') ? '&' : '?';
+  return `${path}${sep}notebookId=${notebookId}`;
+}
+
 async function post(path: string, body?: unknown): Promise<{ status: number; body: any }> {
   const res = await app.handle(
-    new Request(`${BASE}${path}`, {
+    new Request(`${BASE}${withNotebookScope(path)}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
