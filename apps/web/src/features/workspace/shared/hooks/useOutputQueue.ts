@@ -1,8 +1,10 @@
+import type { Output as WireOutput } from '@crystalith/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 
 import { api } from '../../../../api/eden';
 import { edenFetchOptions } from '../../../../api/edenFetchOptions';
+import { parseServerError } from '../../../../api/parseServerError';
 import { consumeSlidesStageStream } from '../../domains/studio/slides-studio/consumeSlidesStageStream';
 import { useWorkspaceStore } from '../state/workspaceStore';
 import type {
@@ -14,6 +16,15 @@ import type {
 import { createId, formatTimestamp, mergeOutputListWithCache, normalizeOutput } from '../utils';
 import { readInitialGenerationPreferenceForApi } from './useGenerationPreference';
 
+function isWireOutput(value: unknown): value is WireOutput {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    typeof (value as { id?: unknown }).id === 'number' &&
+    typeof (value as { notebookId?: unknown }).notebookId === 'number' &&
+    typeof (value as { type?: unknown }).type === 'string'
+  );
+}
 type OutputQueueStatus = 'queued' | 'running' | 'done' | 'error' | 'cancelled';
 type SlidesStreamStage = 'outline' | 'markdown';
 
@@ -400,18 +411,11 @@ export function useOutputQueue({
             body,
             edenFetchOptions(abortController.signal),
           );
-          if (createErr)
-            throw new Error(
-              typeof createErr === 'string'
-                ? createErr
-                : typeof createErr === 'string'
-                  ? createErr
-                  : '',
-            );
+          if (createErr) throw new Error(parseServerError(createErr).message);
           // Server may have already persisted the row before the client abort
           // landed — delete it so a page refresh does not resurrect the job.
           if (isCancelled()) {
-            const createdId = (response as { id?: number } | null)?.id;
+            const createdId = isWireOutput(response) ? response.id : undefined;
             if (typeof createdId === 'number') {
               try {
                 await nbOutputs({ id: createdId }).delete();
@@ -423,7 +427,10 @@ export function useOutputQueue({
             abortError.name = 'AbortError';
             throw abortError;
           }
-          normalized = [normalizeOutput(response as any)];
+          if (!isWireOutput(response)) {
+            throw new Error('output create returned unexpected payload');
+          }
+          normalized = [normalizeOutput(response)];
           const s = store.getState();
           s.setOutputs([...normalized, ...s.outputs]);
           await mutateOutputs();

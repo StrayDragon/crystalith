@@ -22,6 +22,7 @@ export type ResearchStatus = z.infer<typeof ResearchStatusSchema>;
 export const ResearchStepTypeSchema = z.enum([
   'plan',
   'search',
+  'search_result',
   'analyze',
   'user_input',
   'summary',
@@ -83,9 +84,30 @@ export const ResearchStepSchema = z.object({
 });
 export type ResearchStep = z.infer<typeof ResearchStepSchema>;
 
+/** GET …/research/:id — session plus ordered steps. */
+export const ResearchSessionDetailSchema = ResearchSessionSchema.extend({
+  steps: z.array(ResearchStepSchema).default([]),
+});
+export type ResearchSessionDetail = z.infer<typeof ResearchSessionDetailSchema>;
+
 export const ResearchSessionListSchema = z.object({
   sessions: z.array(ResearchSessionSchema),
 });
+
+/** HITL / control endpoints (approve, modify, skip, finish, cancel, resume). */
+export const ResearchActionResultSchema = z.object({
+  id: IdSchema,
+  status: ResearchStatusSchema,
+  approved: z.boolean().optional(),
+  modified: z.boolean().optional(),
+  skipped: z.boolean().optional(),
+  nextIteration: z.number().int().positive().optional(),
+  reportGenerated: z.literal('pending').optional(),
+  message: z.string().optional(),
+  resumed: z.boolean().optional(),
+  iteration: z.number().int().positive().optional(),
+});
+export type ResearchActionResult = z.infer<typeof ResearchActionResultSchema>;
 
 // ---------------------------------------------------------------------------
 // Search plan + results (used in streaming events + step payloads)

@@ -2,6 +2,7 @@ import {
   PaginatedSchema,
   PaginationParamsSchema,
   SessionConvertToOutputRequestSchema,
+  SessionConvertToOutputResponseSchema,
   SessionConvertToSourceRequestSchema,
   SessionCreateSchema,
   SessionSchema,
@@ -445,7 +446,7 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
         messageCount: msgRows.length,
       };
     },
-    { body: SessionConvertToOutputRequestSchema },
+    { body: SessionConvertToOutputRequestSchema, response: SessionConvertToOutputResponseSchema },
   );
 
 registerApiDoc(apiDocs);

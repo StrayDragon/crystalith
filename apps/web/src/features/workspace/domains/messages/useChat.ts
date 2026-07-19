@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 
 import { api } from '../../../../api/eden';
+import { parseServerError } from '../../../../api/parseServerError';
 import { streamRequest } from '../../../../api/stream';
 import { t } from '../../../../shared/i18n';
 import { toast } from '../../../../shared/toast';
@@ -537,14 +538,13 @@ export function useChat({
           ['convert-to-output'].post({
             outputType: outputType as 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED',
           });
-        if (convErr)
-          throw new Error(
-            typeof convErr === 'string' ? convErr : typeof convErr === 'string' ? convErr : '',
-          );
+        if (convErr) throw new Error(parseServerError(convErr).message);
         if (refreshOutputs) {
           await refreshOutputs();
         }
-        toast.success(t('messages.convert.to_output.success', { title: (result as any).title }));
+        toast.success(
+          t('messages.convert.to_output.success', { title: result?.title ?? outputType }),
+        );
       } catch (error) {
         const message =
           error instanceof Error ? error.message : t('messages.convert.failure_default');

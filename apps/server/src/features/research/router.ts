@@ -19,10 +19,15 @@ import {
   NotebookIdQuerySchema,
   PaginatedSchema,
   PaginationParamsSchema,
+  ResearchActionResultSchema,
   ResearchSessionCreateNestedSchema,
   ResearchSessionCreateSchema,
+  ResearchSessionDetailSchema,
   ResearchSessionSchema,
   SearchPlanSchema,
+  type ResearchActionResult,
+  type ResearchStatus,
+  type ResearchStepType,
 } from '@crystalith/shared';
 import { and, count, desc, eq, gt } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
@@ -289,13 +294,26 @@ function serializeSession(row: typeof researchSessions.$inferSelect) {
     id: row.id,
     notebookId: row.notebookId,
     topic: row.topic,
-    status: row.status,
+    status: row.status as ResearchStatus,
     currentIteration: row.currentIteration,
     maxIterations: row.maxIterations,
     aggregatedResults: row.aggregatedResults as Array<Record<string, unknown>> | null,
     finalReport: row.finalReport,
     createdAt: row.createdAt?.toISOString?.() ?? String(row.createdAt),
     updatedAt: row.updatedAt?.toISOString?.() ?? String(row.updatedAt),
+  };
+}
+
+function serializeStep(row: typeof researchSteps.$inferSelect) {
+  return {
+    id: row.id,
+    sessionId: row.sessionId,
+    iteration: row.iteration,
+    type: row.type as ResearchStepType,
+    inputData: (row.inputData as Record<string, unknown> | null) ?? null,
+    outputData: (row.outputData as Record<string, unknown> | null) ?? null,
+    status: row.status as 'pending' | 'running' | 'completed' | 'skipped',
+    createdAt: row.createdAt?.toISOString?.() ?? String(row.createdAt),
   };
 }
 
@@ -502,7 +520,10 @@ function handleGetResearch(id: number, notebookId: number) {
     .where(eq(researchSteps.sessionId, id))
     .orderBy(researchSteps.id)
     .all();
-  return { ...serializeSession(row), steps };
+  return {
+    ...serializeSession(row),
+    steps: steps.map(serializeStep),
+  };
 }
 
 function handleDeleteResearch(id: number, notebookId: number, set: SetStatus) {
@@ -519,7 +540,7 @@ function handleDeleteResearch(id: number, notebookId: number, set: SetStatus) {
   return '';
 }
 
-function handleApproveResearch(id: number, notebookId: number) {
+function handleApproveResearch(id: number, notebookId: number): ResearchActionResult {
   const row = getResearchOrThrow(id, notebookId);
   if (row.status !== 'waiting_user') {
     throw new AppHttpError(
@@ -543,7 +564,7 @@ function handleModifyResearch(
   id: number,
   notebookId: number,
   plan: z.infer<typeof SearchPlanSchema>,
-) {
+): ResearchActionResult {
   const row = getResearchOrThrow(id, notebookId);
   if (row.status !== 'waiting_user') {
     throw new AppHttpError(
@@ -563,7 +584,7 @@ function handleModifyResearch(
   return { id, status: 'searching', modified: true };
 }
 
-function handleSkipResearch(id: number, notebookId: number) {
+function handleSkipResearch(id: number, notebookId: number): ResearchActionResult {
   const row = getResearchOrThrow(id, notebookId);
   if (row.status !== 'waiting_user') {
     throw new AppHttpError(
@@ -593,7 +614,7 @@ function handleSkipResearch(id: number, notebookId: number) {
   return { id, status: 'planning', skipped: true, nextIteration };
 }
 
-function handleFinishResearch(id: number, notebookId: number) {
+function handleFinishResearch(id: number, notebookId: number): ResearchActionResult {
   const row = getResearchOrThrow(id, notebookId);
   if (row.status === 'completed' || row.status === 'cancelled') {
     throw new AppHttpError(
@@ -643,10 +664,10 @@ function handleFinishResearch(id: number, notebookId: number) {
         .run();
     });
 
-  return { id, status: 'completed', reportGenerated: 'pending' as const };
+  return { id, status: 'completed', reportGenerated: 'pending' };
 }
 
-function handleCancelResearch(id: number, notebookId: number) {
+function handleCancelResearch(id: number, notebookId: number): ResearchActionResult {
   const row = getResearchOrThrow(id, notebookId);
   if (row.status === 'cancelled') {
     return { id, status: 'cancelled', message: 'Already cancelled' };
@@ -675,7 +696,7 @@ function handleCancelResearch(id: number, notebookId: number) {
   return { id, status: 'cancelled' };
 }
 
-async function handleResumeResearch(id: number, notebookId: number) {
+async function handleResumeResearch(id: number, notebookId: number): Promise<ResearchActionResult> {
   const row = getResearchOrThrow(id, notebookId);
   if (row.status !== 'cancelled' && row.lockExpiresAt && isLockHeld(row)) {
     throw new AppHttpError(
@@ -700,7 +721,7 @@ async function handleResumeResearch(id: number, notebookId: number) {
     .run();
 
   spawnResearch(id, runResearchFromState);
-  return { id, status: inferredStatus, resumed: true, iteration };
+  return { id, status: inferredStatus as ResearchStatus, resumed: true, iteration };
 }
 
 async function handleExportResearch(
@@ -939,7 +960,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const notebookId = resolveNestedNotebookId(nid, body.notebookId);
       return handleCreateResearch(notebookId, body, set);
     },
-    { body: ResearchSessionCreateNestedSchema },
+    { body: ResearchSessionCreateNestedSchema, response: ResearchSessionSchema },
   )
   .get(
     '/notebooks/:nid/research',
@@ -949,21 +970,29 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     },
     { query: PaginationParamsSchema, response: ResearchPageSchema },
   )
-  .get('/notebooks/:nid/research/:id', ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const id = requirePositiveIntId(params.id, 'research id');
-    return handleGetResearch(id, nid);
-  })
+  .get(
+    '/notebooks/:nid/research/:id',
+    ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'research id');
+      return handleGetResearch(id, nid);
+    },
+    { response: ResearchSessionDetailSchema },
+  )
   .delete('/notebooks/:nid/research/:id', ({ params, set }) => {
     const nid = requirePositiveIntId(params.nid, 'notebook id');
     const id = requirePositiveIntId(params.id, 'research id');
     return handleDeleteResearch(id, nid, set);
   })
-  .post('/notebooks/:nid/research/:id/approve', ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const id = requirePositiveIntId(params.id, 'research id');
-    return handleApproveResearch(id, nid);
-  })
+  .post(
+    '/notebooks/:nid/research/:id/approve',
+    ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'research id');
+      return handleApproveResearch(id, nid);
+    },
+    { response: ResearchActionResultSchema },
+  )
   .post(
     '/notebooks/:nid/research/:id/modify',
     ({ params, body }) => {
@@ -971,28 +1000,44 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'research id');
       return handleModifyResearch(id, nid, body.plan);
     },
-    { body: ResearchModifyBodySchema },
+    { body: ResearchModifyBodySchema, response: ResearchActionResultSchema },
   )
-  .post('/notebooks/:nid/research/:id/skip', ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const id = requirePositiveIntId(params.id, 'research id');
-    return handleSkipResearch(id, nid);
-  })
-  .post('/notebooks/:nid/research/:id/finish', ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const id = requirePositiveIntId(params.id, 'research id');
-    return handleFinishResearch(id, nid);
-  })
-  .post('/notebooks/:nid/research/:id/cancel', ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const id = requirePositiveIntId(params.id, 'research id');
-    return handleCancelResearch(id, nid);
-  })
-  .post('/notebooks/:nid/research/:id/resume', async ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const id = requirePositiveIntId(params.id, 'research id');
-    return handleResumeResearch(id, nid);
-  })
+  .post(
+    '/notebooks/:nid/research/:id/skip',
+    ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'research id');
+      return handleSkipResearch(id, nid);
+    },
+    { response: ResearchActionResultSchema },
+  )
+  .post(
+    '/notebooks/:nid/research/:id/finish',
+    ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'research id');
+      return handleFinishResearch(id, nid);
+    },
+    { response: ResearchActionResultSchema },
+  )
+  .post(
+    '/notebooks/:nid/research/:id/cancel',
+    ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'research id');
+      return handleCancelResearch(id, nid);
+    },
+    { response: ResearchActionResultSchema },
+  )
+  .post(
+    '/notebooks/:nid/research/:id/resume',
+    async ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'research id');
+      return handleResumeResearch(id, nid);
+    },
+    { response: ResearchActionResultSchema },
+  )
   .post('/notebooks/:nid/research/:id/export', async ({ params, body }) => {
     const nid = requirePositiveIntId(params.nid, 'notebook id');
     const id = requirePositiveIntId(params.id, 'research id');
@@ -1007,6 +1052,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   // ---- Flat aliases (deprecated; c67 notebookId still required) ----
   .post('/research', async ({ body, set }) => handleCreateResearch(body.notebookId, body, set), {
     body: ResearchSessionCreateSchema,
+    response: ResearchSessionSchema,
   })
   .get(
     '/research',
@@ -1019,7 +1065,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'research id');
       return handleGetResearch(id, query.notebookId);
     },
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: ResearchSessionDetailSchema },
   )
   .delete(
     '/research/:id',
@@ -1035,7 +1081,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'research id');
       return handleApproveResearch(id, query.notebookId);
     },
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: ResearchActionResultSchema },
   )
   .post(
     '/research/:id/modify',
@@ -1043,7 +1089,11 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'research id');
       return handleModifyResearch(id, query.notebookId, body.plan);
     },
-    { body: ResearchModifyBodySchema, query: NotebookIdQuerySchema },
+    {
+      body: ResearchModifyBodySchema,
+      query: NotebookIdQuerySchema,
+      response: ResearchActionResultSchema,
+    },
   )
   .post(
     '/research/:id/skip',
@@ -1051,7 +1101,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'research id');
       return handleSkipResearch(id, query.notebookId);
     },
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: ResearchActionResultSchema },
   )
   .post(
     '/research/:id/finish',
@@ -1059,7 +1109,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'research id');
       return handleFinishResearch(id, query.notebookId);
     },
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: ResearchActionResultSchema },
   )
   .post(
     '/research/:id/cancel',
@@ -1067,7 +1117,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'research id');
       return handleCancelResearch(id, query.notebookId);
     },
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: ResearchActionResultSchema },
   )
   .post(
     '/research/:id/resume',
@@ -1075,7 +1125,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'research id');
       return handleResumeResearch(id, query.notebookId);
     },
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: ResearchActionResultSchema },
   )
   .post(
     '/research/:id/export',
