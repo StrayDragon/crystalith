@@ -1,5 +1,6 @@
 import {
   NotebookIdQuerySchema,
+  OutputConvertToSourceResponseSchema,
   OutputExportFormatQuerySchema,
   OutputExportQuerySchema,
   OutputGenerateNestedRequestSchema,
@@ -32,7 +33,7 @@ import { outputs, notebooks, sources, chunks } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
-import { ErrorCode, sendError } from '../../shared/errors.ts';
+import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
 import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import { type ToolOutputType } from './generator.ts';
@@ -292,15 +293,14 @@ async function handleGenerateOutput(
   // for SLIDES output". SLIDES has its own studio pipeline; the generic
   // outputs pipeline has no SLIDES postprocess/isContentEmpty case.
   if (normalizedType === 'SLIDES') {
-    return sendError(set, ErrorCode.INVALID_REQUEST, 'Use slides endpoints for SLIDES output');
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Use slides endpoints for SLIDES output');
   }
 
   // c38 gap fix: sourceIds is required when chunkIds is not provided (v1 api.py:292-293)
   const resolvedSourceIds = sourceIds?.length ? sourceIds : undefined;
   const resolvedChunkIds = chunkIds?.length ? chunkIds : undefined;
   if (!resolvedChunkIds?.length && !resolvedSourceIds?.length) {
-    return sendError(
-      set,
+    throw new AppHttpError(
       ErrorCode.INVALID_REQUEST,
       'sourceIds must not be empty (or provide chunkIds)',
     );
@@ -310,7 +310,7 @@ async function handleGenerateOutput(
   const modelConfig = modelId ? getModelById(modelId) : getDefaultChatModel();
   // c42: granular error mapping (v1 api.py:309-361) — typed exceptions, not string matching
   if (!modelConfig) {
-    return sendError(set, ErrorCode.MODEL_UNAVAILABLE, 'No chat model configured');
+    throw new AppHttpError(ErrorCode.MODEL_UNAVAILABLE, 'No chat model configured');
   }
 
   let model;
@@ -319,7 +319,7 @@ async function handleGenerateOutput(
   } catch (error) {
     // Model resolution failure → 503 (v1 ModelConfigurationError)
     if (error instanceof NoSuchModelError) {
-      return sendError(set, ErrorCode.MODEL_UNAVAILABLE, 'Model not available');
+      throw new AppHttpError(ErrorCode.MODEL_UNAVAILABLE, 'Model not available');
     }
     throw error;
   }
@@ -341,21 +341,20 @@ async function handleGenerateOutput(
     });
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      set.status = 499;
-      return { detail: 'Client cancelled' };
+      throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Client cancelled');
     }
     const msg = error instanceof Error ? error.message : String(error);
     // Typed error mapping (v1 api.py:309-361)
     if (error instanceof TypeValidationError || error instanceof NoObjectGeneratedError) {
-      return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, msg);
+      throw new AppHttpError(ErrorCode.SCHEMA_VALIDATION_FAILED, msg);
     }
     if (error instanceof NoSuchModelError || error instanceof APICallError) {
-      return sendError(set, ErrorCode.MODEL_ERROR, msg);
+      throw new AppHttpError(ErrorCode.MODEL_ERROR, msg);
     }
     if (msg.includes('retrieval')) {
-      return sendError(set, ErrorCode.INVALID_REQUEST, msg);
+      throw new AppHttpError(ErrorCode.INVALID_REQUEST, msg);
     }
-    return sendError(set, ErrorCode.INTERNAL_ERROR, msg);
+    throw new AppHttpError(ErrorCode.INTERNAL_ERROR, msg);
   }
 
   // c42: return v1 OutputRead contract (snake_case) instead of PipelineResult
@@ -549,7 +548,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
       const notebookId = resolveNestedNotebookId(nid, body.notebookId);
       return handleGenerateOutput(notebookId, body, set, request);
     },
-    { body: OutputGenerateNestedRequestSchema },
+    { body: OutputGenerateNestedRequestSchema, response: OutputSchema },
   )
   .get(
     '/notebooks/:nid/outputs',
@@ -582,17 +581,21 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     },
     { query: OutputExportFormatQuerySchema },
   )
-  .post('/notebooks/:nid/outputs/:id/convert-to-source', async ({ params, set }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const id = requirePositiveIntId(params.id, 'output id');
-    return handleConvertOutputToSource(id, nid, set);
-  })
+  .post(
+    '/notebooks/:nid/outputs/:id/convert-to-source',
+    async ({ params, set }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'output id');
+      return handleConvertOutputToSource(id, nid, set);
+    },
+    { response: OutputConvertToSourceResponseSchema },
+  )
 
   // ---- Flat aliases (deprecated; c67 notebookId still required) ----
   .post(
     '/outputs',
     async ({ body, set, request }) => handleGenerateOutput(body.notebookId, body, set, request),
-    { body: OutputGenerateRequestSchema },
+    { body: OutputGenerateRequestSchema, response: OutputSchema },
   )
   .get(
     '/outputs',
@@ -629,7 +632,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'output id');
       return handleConvertOutputToSource(id, query.notebookId, set);
     },
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: OutputConvertToSourceResponseSchema },
   );
 
 registerApiDoc(apiDocs);

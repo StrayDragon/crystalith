@@ -323,6 +323,14 @@ export const OutputGenerateNestedRequestSchema = OutputGenerateBodySchema.extend
 });
 export type OutputGenerateNestedRequest = z.infer<typeof OutputGenerateNestedRequestSchema>;
 
+/** POST …/outputs/:id/convert-to-source */
+export const OutputConvertToSourceResponseSchema = z.object({
+  sourceId: IdSchema,
+  filename: z.string(),
+  chunkCount: z.number().int().nonnegative(),
+});
+export type OutputConvertToSourceResponse = z.infer<typeof OutputConvertToSourceResponseSchema>;
+
 export const OutputListSchema = z.object({
   outputs: z.array(OutputListItemSchema),
 });
