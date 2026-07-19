@@ -4,11 +4,11 @@
 // All API-facing timestamps are ISO 8601 UTC strings (the server serializes
 // Drizzle integer timestamps to ISO on the boundary).
 //
-// NOTE: .openapi() metadata is NOT available on shared schemas because
-// @asteasolutions/zod-to-openapi's extendZodWithOpenApi only patches Zod
-// instances created AFTER the call, and shared schemas are defined before
-// the server's openapi.ts is loaded. Examples are injected at the OpenAPI
-// registration level (openapi.ts → registerApiDoc).
+// OpenAPI: `zod-extend.ts` runs `extendZodWithOpenApi(z)` before schemas are
+// built so `.openapi({ description, example })` works here. Server `openapi.ts`
+// also extends (idempotent) and registers routes via `registerApiDoc`.
+import './zod-extend.js';
+
 import { z } from 'zod';
 
 /** ISO 8601 UTC datetime string, e.g. `2026-07-08T12:00:00.000Z`. */
@@ -24,12 +24,17 @@ export const TimestampsSchema = z.object({
 });
 
 /** Standard error envelope returned by all v2 endpoints on failure. */
-export const ErrorEnvelopeSchema = z.object({
-  errorCode: z.string(),
-  message: z.string(),
-  details: z.unknown().optional(),
-  retryAfter: z.number().int().nonnegative().optional(),
-});
+export const ErrorEnvelopeSchema = z
+  .object({
+    errorCode: z.string(),
+    message: z.string(),
+    details: z.unknown().optional(),
+    retryAfter: z.number().int().nonnegative().optional(),
+  })
+  .openapi({
+    description: '标准错误信封',
+    example: { errorCode: 'NOT_FOUND', message: 'Resource not found' },
+  });
 export type ErrorEnvelope = z.infer<typeof ErrorEnvelopeSchema>;
 
 /** Pagination query params (?offset=0&limit=20). */

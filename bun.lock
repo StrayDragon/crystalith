@@ -116,6 +116,9 @@
     "packages/shared": {
       "name": "@crystalith/shared",
       "version": "0.1.0",
+      "dependencies": {
+        "@asteasolutions/zod-to-openapi": "^8.5.0",
+      },
       "devDependencies": {
         "typesafe-i18n": "^5.27.1",
         "typescript": "^7.0.2",

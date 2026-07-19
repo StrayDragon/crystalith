@@ -168,7 +168,7 @@ shared Zod（或路由挂载的 schema）
 - [ ] **P6.1** 瘦 GitHub Actions（FLOW-02 / DRIFT-09）
 - [ ] **P6.2** `SECURITY.md`（DRIFT-08）
 - [x] **P6.3** `strategy_configs` 并入 Drizzle schema SSOT（ARCH-06）— Wave A
-- [x] **P6.4** OpenAPI `.openapi()` 注解补全（ARCH-12）— **部分**：Wave B 挂 response Zod；全量 `.openapi()` 仍属 Wave C
+- [x] **P6.4** OpenAPI `.openapi()` 注解补全（ARCH-12）— Wave C：shared 启用 extend + 高频 schema；其余可增量
 - [ ] **P6.5** ~~c13 / Eden→server 包耦合（ARCH-15）~~ — **本阶段不做**（随分发另议）
 - [ ] **P6.6** 本阶段结束后：从本文件提炼 skill（**有结果后再做**）
 
@@ -178,7 +178,7 @@ shared Zod（或路由挂载的 schema）
 
 - [x] **A** `strategy_configs` → Drizzle（P6.3）
 - [x] **B** OutputContentByType / frontendBundle / templates+eval response Zod
-- [ ] **C** shared `.openapi()` 批量
+- [x] **C** shared `.openapi()` 基础（extend + notebook/session/template/workspace/command/error）
 - [ ] **D** 产品 gap（SDD）
 - [ ] **E** 孤儿愿景 spec 归档
 - [ ] **F** 神文件拆分

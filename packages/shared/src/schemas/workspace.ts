@@ -1,6 +1,7 @@
 // Workspace tools API — GET /v2/workspace/tools(+/:id/config).
 import { z } from 'zod';
 
+import { desc } from './i18n.js';
 import {
   FrontendBundleDescriptorSchema,
   OutputTypeSchema,
@@ -9,20 +10,24 @@ import {
 } from './output.js';
 import { PluginConfigSchema } from './studio.js';
 
-export const WorkspaceToolSchema = z.object({
-  id: z.string().min(1),
-  kind: z.literal('outputType'),
-  label: z.string(),
-  description: z.string(),
-  tone: StudioToneSchema,
-  outputType: OutputTypeSchema,
-  prompt: z.string(),
-  isTool: z.boolean(),
-  enabled: z.boolean(),
-  configSchema: PluginConfigSchema.nullable(),
-  renderDescriptor: RenderDescriptorSchema.nullable(),
-  frontendBundle: FrontendBundleDescriptorSchema.nullable().optional(),
-});
+export const WorkspaceToolSchema = z
+  .object({
+    id: z.string().min(1),
+    kind: z.literal('outputType'),
+    label: z.string(),
+    description: z.string(),
+    tone: StudioToneSchema,
+    outputType: OutputTypeSchema,
+    prompt: z.string(),
+    isTool: z.boolean(),
+    enabled: z.boolean(),
+    configSchema: PluginConfigSchema.nullable(),
+    renderDescriptor: RenderDescriptorSchema.nullable(),
+    frontendBundle: FrontendBundleDescriptorSchema.nullable().optional(),
+  })
+  .openapi({
+    description: desc('workspace.tool', 'Workspace tool（output type as tool）'),
+  });
 export type WorkspaceTool = z.infer<typeof WorkspaceToolSchema>;
 
 export const WorkspaceToolsDiagnosticsSchema = z.object({

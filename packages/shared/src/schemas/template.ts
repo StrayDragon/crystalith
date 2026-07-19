@@ -5,14 +5,26 @@ import { z } from 'zod';
 import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from './common.js';
 import { desc } from './i18n.js';
 
-export const TemplateSchema = z.object({
-  id: IdSchema.describe(desc('template.id')),
-  name: z.string().min(1).max(255).describe(desc('template.name')),
-  description: z.string().nullable().optional(),
-  configJson: JsonMetadataSchema,
-  isBuiltin: z.boolean().default(false),
-  createdAt: IsoTimestampSchema,
-});
+export const TemplateSchema = z
+  .object({
+    id: IdSchema.describe(desc('template.id')),
+    name: z.string().min(1).max(255).describe(desc('template.name')),
+    description: z.string().nullable().optional(),
+    configJson: JsonMetadataSchema,
+    isBuiltin: z.boolean().default(false),
+    createdAt: IsoTimestampSchema,
+  })
+  .openapi({
+    description: desc('template.entity', 'Generation template 实体'),
+    example: {
+      id: 1,
+      name: 'Default',
+      description: null,
+      configJson: {},
+      isBuiltin: false,
+      createdAt: '2026-07-08T12:00:00.000Z',
+    },
+  });
 export type Template = z.infer<typeof TemplateSchema>;
 
 export const TemplateCreateSchema = z.object({
