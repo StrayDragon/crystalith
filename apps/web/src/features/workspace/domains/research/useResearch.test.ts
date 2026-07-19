@@ -163,6 +163,7 @@ test('SSE reconnect does not use stale session state after completion', async ()
     });
 
     expect(streamRequestMock).toHaveBeenCalledTimes(1);
+    expect(streamRequestMock.mock.calls[0][0]).toContain('notebookId=1');
 
     await act(async () => {
       await result.current.fetchSessions();

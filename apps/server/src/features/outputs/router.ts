@@ -1,4 +1,10 @@
-import { OutputGenerateRequestSchema, OutputMetaSchema, type Citation } from '@crystalith/shared';
+import {
+  NotebookIdQuerySchema,
+  OutputExportQuerySchema,
+  OutputGenerateRequestSchema,
+  OutputMetaSchema,
+  type Citation,
+} from '@crystalith/shared';
 import { NoSuchModelError, TypeValidationError, APICallError, NoObjectGeneratedError } from 'ai';
 // Outputs router — /v2/outputs CRUD + generation.
 //
@@ -22,17 +28,10 @@ import { listOutputTypes, type ToolOutputType } from './generator.ts';
 import { runOutputPipeline } from './pipeline.ts';
 import { renderOutputToMarkdown, splitTextToChunks } from './render.ts';
 
-function requireOutputInNotebook(
-  id: number,
-  notebookIdRaw: string | undefined,
-): typeof outputs.$inferSelect {
+function requireOutputInNotebook(id: number, notebookId: number): typeof outputs.$inferSelect {
   const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
-  if (!row) throw new NotFoundError(`Output ${id} not found`);
-  if (notebookIdRaw !== undefined && notebookIdRaw !== '') {
-    const notebookId = requirePositiveIntId(notebookIdRaw, 'notebook id');
-    if (row.notebookId !== notebookId) {
-      throw new NotFoundError(`Output ${id} not found`);
-    }
+  if (!row || row.notebookId !== notebookId) {
+    throw new NotFoundError(`Output ${id} not found`);
   }
   return row;
 }
@@ -238,181 +237,198 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
   )
 
   // List outputs for a notebook
-  .get('/outputs', ({ query }) => {
-    const notebookId = requirePositiveIntId(
-      (query as { notebookId?: string }).notebookId,
-      'notebook id',
-    );
+  .get(
+    '/outputs',
+    ({ query }) => {
+      const notebookId = query.notebookId;
 
-    const rows = db()
-      .select()
-      .from(outputs)
-      .where(eq(outputs.notebookId, notebookId))
-      .orderBy(desc(outputs.createdAt))
-      .all();
+      const rows = db()
+        .select()
+        .from(outputs)
+        .where(eq(outputs.notebookId, notebookId))
+        .orderBy(desc(outputs.createdAt))
+        .all();
 
-    return rows.map(serializeOutput);
-  })
+      return rows.map(serializeOutput);
+    },
+    { query: NotebookIdQuerySchema },
+  )
 
-  // Get a single output (ownership enforced when notebookId provided)
-  .get('/outputs/:id', ({ params, query }) => {
-    const id = requirePositiveIntId(params.id, 'output id');
-    const row = requireOutputInNotebook(id, (query as { notebookId?: string }).notebookId);
-    return serializeOutput(row);
-  })
+  // Get a single output — c67: notebookId required
+  .get(
+    '/outputs/:id',
+    ({ params, query }) => {
+      const id = requirePositiveIntId(params.id, 'output id');
+      const row = requireOutputInNotebook(id, query.notebookId);
+      return serializeOutput(row);
+    },
+    { query: NotebookIdQuerySchema },
+  )
 
-  // Delete output
-  .delete('/outputs/:id', ({ params, query, set }) => {
-    const id = requirePositiveIntId(params.id, 'output id');
-    requireOutputInNotebook(id, (query as { notebookId?: string }).notebookId);
-    db().delete(outputs).where(eq(outputs.id, id)).run();
-    set.status = 204;
-    return '';
-  })
+  // Delete output — c67: notebookId required
+  .delete(
+    '/outputs/:id',
+    ({ params, query, set }) => {
+      const id = requirePositiveIntId(params.id, 'output id');
+      requireOutputInNotebook(id, query.notebookId);
+      db().delete(outputs).where(eq(outputs.id, id)).run();
+      set.status = 204;
+      return '';
+    },
+    { query: NotebookIdQuerySchema },
+  )
 
-  // Export output as markdown or json
-  .get('/outputs/:id/export', ({ params, query }) => {
-    const id = requirePositiveIntId(params.id, 'output id');
-    const format = (query.format as 'markdown' | 'json') ?? 'markdown';
-    const row = requireOutputInNotebook(id, (query as { notebookId?: string }).notebookId);
+  // Export output as markdown or json — c67: notebookId required
+  .get(
+    '/outputs/:id/export',
+    ({ params, query }) => {
+      const id = requirePositiveIntId(params.id, 'output id');
+      const format = query.format;
+      const row = requireOutputInNotebook(id, query.notebookId);
 
-    const exportedAt = new Date().toISOString();
+      const exportedAt = new Date().toISOString();
 
-    // P1-6: collect only the citations actually referenced in the content tree
-    // (v1 _collect_output_citations, api.py:124-156). pipeline.mapCitationsIntoContent
-    // already resolved numeric indices into full Citation dicts embedded on
-    // leaf nodes, so we walk the tree and dedup by chunk_id (first-seen order).
-    // This replaces the prior `row.chunkIds` join which listed ALL retrieved
-    // chunks (the superset), not just the cited ones.
-    const citations = collectCitedCitations(row.content as Record<string, unknown> | null);
-    const sourceIds = [...new Set(citations.map((c) => c.sourceId))];
-    const sourceRows = sourceIds.length
-      ? db().select().from(sources).where(inArray(sources.id, sourceIds)).all()
-      : [];
+      // P1-6: collect only the citations actually referenced in the content tree
+      // (v1 _collect_output_citations, api.py:124-156). pipeline.mapCitationsIntoContent
+      // already resolved numeric indices into full Citation dicts embedded on
+      // leaf nodes, so we walk the tree and dedup by chunk_id (first-seen order).
+      // This replaces the prior `row.chunkIds` join which listed ALL retrieved
+      // chunks (the superset), not just the cited ones.
+      const citations = collectCitedCitations(row.content as Record<string, unknown> | null);
+      const sourceIds = [...new Set(citations.map((c) => c.sourceId))];
+      const sourceRows = sourceIds.length
+        ? db().select().from(sources).where(inArray(sources.id, sourceIds)).all()
+        : [];
 
-    if (format === 'json') {
-      // c42: full citation fields + correct source metadata (v1 OutputExportJson)
-      return {
-        notebookId: row.notebookId,
-        outputId: row.id,
-        outputType: row.type,
-        prompt: row.prompt,
-        content: row.content,
-        citations,
-        sources: sourceRows.map((s) => ({
-          sourceId: s.id,
-          sourceName: s.filename,
-          mimeType: s.mimeType,
-          parserType: s.parserType,
-        })),
-        exportedAt,
-      };
-    }
+      if (format === 'json') {
+        // c42: full citation fields + correct source metadata (v1 OutputExportJson)
+        return {
+          notebookId: row.notebookId,
+          outputId: row.id,
+          outputType: row.type,
+          prompt: row.prompt,
+          content: row.content,
+          citations,
+          sources: sourceRows.map((s) => ({
+            sourceId: s.id,
+            sourceName: s.filename,
+            mimeType: s.mimeType,
+            parserType: s.parserType,
+          })),
+          exportedAt,
+        };
+      }
 
-    // Markdown format — type-aware rendering (v1 _extract_text_from_output)
-    // + Citations and Sources sections (v1 api.py:441-476). Citation line
-    // format aligns with v1 api.py:452-461:
-    //   [N] source_name · chunk N[ · page N][ · para N]
-    //   > snippet
-    const bodyMarkdown = renderOutputToMarkdown(
-      row.type,
-      row.content as Record<string, unknown> | null,
-      row.prompt,
-    );
-    const citationLines = citations.map((c, i) => {
-      const parts = [`[${i + 1}] ${c.sourceName}`, `chunk ${c.chunkIndex}`];
-      if (c.pageNumber !== null && c.pageNumber !== undefined) parts.push(`page ${c.pageNumber}`);
-      if (c.paragraphIndex !== null && c.paragraphIndex !== undefined)
-        parts.push(`para ${c.paragraphIndex}`);
-      const line = parts.join(' · ');
-      const snippet = (c.snippet ?? '').trim();
-      return snippet ? `${line}\n> ${snippet}` : line;
-    });
-    const markdown = [
-      bodyMarkdown,
-      '',
-      '## Citations',
-      citationLines.length ? citationLines.join('\n\n') : '无引用',
-      '',
-      '## Sources',
-      sourceRows.map((s) => `- ${s.filename} (${s.status})`).join('\n') || '无来源',
-    ].join('\n');
+      // Markdown format — type-aware rendering (v1 _extract_text_from_output)
+      // + Citations and Sources sections (v1 api.py:441-476). Citation line
+      // format aligns with v1 api.py:452-461:
+      //   [N] source_name · chunk N[ · page N][ · para N]
+      //   > snippet
+      const bodyMarkdown = renderOutputToMarkdown(
+        row.type,
+        row.content as Record<string, unknown> | null,
+        row.prompt,
+      );
+      const citationLines = citations.map((c, i) => {
+        const parts = [`[${i + 1}] ${c.sourceName}`, `chunk ${c.chunkIndex}`];
+        if (c.pageNumber !== null && c.pageNumber !== undefined) parts.push(`page ${c.pageNumber}`);
+        if (c.paragraphIndex !== null && c.paragraphIndex !== undefined)
+          parts.push(`para ${c.paragraphIndex}`);
+        const line = parts.join(' · ');
+        const snippet = (c.snippet ?? '').trim();
+        return snippet ? `${line}\n> ${snippet}` : line;
+      });
+      const markdown = [
+        bodyMarkdown,
+        '',
+        '## Citations',
+        citationLines.length ? citationLines.join('\n\n') : '无引用',
+        '',
+        '## Sources',
+        sourceRows.map((s) => `- ${s.filename} (${s.status})`).join('\n') || '无来源',
+      ].join('\n');
 
-    return new Response(markdown, {
-      headers: {
-        'Content-Type': 'text/markdown; charset=utf-8',
-        'Content-Disposition': `attachment; filename="output-${row.id}-${row.type}.md"`,
-      },
-    });
-  })
+      return new Response(markdown, {
+        headers: {
+          'Content-Type': 'text/markdown; charset=utf-8',
+          'Content-Disposition': `attachment; filename="output-${row.id}-${row.type}.md"`,
+        },
+      });
+    },
+    { query: OutputExportQuerySchema },
+  )
 
   // Convert output to source — type-aware markdown rendering + chunking
   // (v1 api.py:515-739: _extract_text_from_output + _split_text_to_chunks)
-  .post('/outputs/:id/convert-to-source', async ({ params, set }) => {
-    const id = requirePositiveIntId(params.id, 'output id');
-    const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
-    if (!row) throw new NotFoundError(`Output ${id} not found`);
+  // c67: notebookId required
+  .post(
+    '/outputs/:id/convert-to-source',
+    async ({ params, query, set }) => {
+      const id = requirePositiveIntId(params.id, 'output id');
+      const row = requireOutputInNotebook(id, query.notebookId);
 
-    // Render output content to type-aware markdown (not raw JSON)
-    const markdown = renderOutputToMarkdown(
-      row.type,
-      row.content as Record<string, unknown> | null,
-      row.prompt,
-    );
+      // Render output content to type-aware markdown (not raw JSON)
+      const markdown = renderOutputToMarkdown(
+        row.type,
+        row.content as Record<string, unknown> | null,
+        row.prompt,
+      );
 
-    // Split into chunks for embedding (v1: 500/50 paragraph+sentence aware)
-    const chunkTexts = splitTextToChunks(markdown, 500, 50);
-    const filename = `output-${row.id}-${row.type}.md`;
+      // Split into chunks for embedding (v1: 500/50 paragraph+sentence aware)
+      const chunkTexts = splitTextToChunks(markdown, 500, 50);
+      const filename = `output-${row.id}-${row.type}.md`;
 
-    const sourceRow = db()
-      .insert(sources)
-      .values({
-        notebookId: row.notebookId,
-        filename,
-        mimeType: 'text/markdown',
-        parserType: 'text',
-        status: 'processing',
-        metadata: { type: row.type, source: 'output_conversion' },
-      })
-      .returning()
-      .get();
-
-    // Create chunks
-    let offset = 0;
-    for (let i = 0; i < chunkTexts.length; i++) {
-      const text = chunkTexts[i];
-      db()
-        .insert(chunks)
+      const sourceRow = db()
+        .insert(sources)
         .values({
-          sourceId: sourceRow.id,
-          chunkIndex: i,
-          text,
-          startOffset: offset,
-          endOffset: offset + text.length,
+          notebookId: row.notebookId,
+          filename,
+          mimeType: 'text/markdown',
+          parserType: 'text',
+          status: 'processing',
+          metadata: { type: row.type, source: 'output_conversion' },
         })
-        .run();
-      // +2 for paragraph separator
-      offset += text.length + 2;
-    }
+        .returning()
+        .get();
 
-    // Embed the chunks so they're discoverable via semantic search.
-    try {
-      const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
-      const strategy = new EmbedStrategy();
-      await strategy.indexSource(sourceRow.id, sourceRow.notebookId);
-      db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)).run();
-      bumpSourcesEpoch(sourceRow.notebookId);
-    } catch {
-      db().update(sources).set({ status: 'failed' }).where(eq(sources.id, sourceRow.id)).run();
-      bumpSourcesEpoch(sourceRow.notebookId);
-    }
+      // Create chunks
+      let offset = 0;
+      for (let i = 0; i < chunkTexts.length; i++) {
+        const text = chunkTexts[i];
+        db()
+          .insert(chunks)
+          .values({
+            sourceId: sourceRow.id,
+            chunkIndex: i,
+            text,
+            startOffset: offset,
+            endOffset: offset + text.length,
+          })
+          .run();
+        // +2 for paragraph separator
+        offset += text.length + 2;
+      }
 
-    set.status = 201;
-    return {
-      sourceId: sourceRow.id,
-      filename: sourceRow.filename,
-      chunkCount: chunkTexts.length,
-    };
-  });
+      // Embed the chunks so they're discoverable via semantic search.
+      try {
+        const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
+        const strategy = new EmbedStrategy();
+        await strategy.indexSource(sourceRow.id, sourceRow.notebookId);
+        db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)).run();
+        bumpSourcesEpoch(sourceRow.notebookId);
+      } catch {
+        db().update(sources).set({ status: 'failed' }).where(eq(sources.id, sourceRow.id)).run();
+        bumpSourcesEpoch(sourceRow.notebookId);
+      }
+
+      set.status = 201;
+      return {
+        sourceId: sourceRow.id,
+        filename: sourceRow.filename,
+        chunkCount: chunkTexts.length,
+      };
+    },
+    { query: NotebookIdQuerySchema },
+  );
 
 registerApiDoc(apiDocs);

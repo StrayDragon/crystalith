@@ -79,6 +79,7 @@ function hasSlidesStageCompleted(stage: SlidesStreamStage, draft: SlidesDraftSna
 async function runSlidesGenerate(
   slideId: number,
   stage: SlidesStreamStage,
+  notebookId: number,
   options?: { signal?: AbortSignal },
 ): Promise<void> {
   const signal = options?.signal;
@@ -93,10 +94,11 @@ async function runSlidesGenerate(
 
   const slides = api.v2.studio.slides({ id: slideId });
   const fetchOpts = edenFetchOptions(combined);
+  const query = { notebookId };
   const { error } =
     stage === 'outline'
-      ? await slides.outline.post(undefined, fetchOpts)
-      : await slides.markdown.post(undefined, fetchOpts);
+      ? await slides.outline.post(undefined, { ...fetchOpts, query })
+      : await slides.markdown.post(undefined, { ...fetchOpts, query });
 
   if (error) {
     const rawValue =
@@ -108,7 +110,9 @@ async function runSlidesGenerate(
   }
 
   // Confirm stage settled (server returns after completion, but re-check for safety)
-  const { data: draft, error: draftErr } = await api.v2.studio.slides({ id: slideId }).get();
+  const { data: draft, error: draftErr } = await api.v2.studio.slides({ id: slideId }).get({
+    query: { notebookId },
+  });
   if (draftErr)
     throw new Error(
       typeof draftErr === 'string' ? draftErr : typeof draftErr === 'string' ? draftErr : '',
@@ -150,7 +154,7 @@ export function useOutputQueue({
     activeNotebookId && isConnected ? ['workspace/outputs', activeNotebookId] : null,
     async () => {
       const { data, error: fetchErr } = await api.v2.outputs.get({
-        query: { notebookId: String(activeNotebookId ?? 0) },
+        query: { notebookId: activeNotebookId ?? 0 },
       });
       if (fetchErr)
         throw new Error(
@@ -356,10 +360,10 @@ export function useOutputQueue({
 
         if (job.type === 'SLIDES') {
           if (job.notebookId && job.draftId) {
-            await runSlidesGenerate(job.draftId, 'outline', {
+            await runSlidesGenerate(job.draftId, 'outline', job.notebookId, {
               signal: abortController.signal,
             });
-            await runSlidesGenerate(job.draftId, 'markdown', {
+            await runSlidesGenerate(job.draftId, 'markdown', job.notebookId, {
               signal: abortController.signal,
             });
             if (!isCancelled()) {
@@ -396,8 +400,8 @@ export function useOutputQueue({
             const createdId = (response as { id?: number } | null)?.id;
             if (typeof createdId === 'number') {
               try {
-                await api.v2.outputs({ id: createdId }).delete({
-                  query: { notebookId: String(job.notebookId) },
+                await api.v2.outputs({ id: createdId }).delete(null, {
+                  query: { notebookId: job.notebookId },
                 });
               } catch {
                 // Best-effort cleanup; UI already shows cancelled.
@@ -561,7 +565,9 @@ export function useOutputQueue({
       s.setOutputs(s.outputs.filter((item) => item.id !== outputId));
 
       try {
-        const { error: deleteErr } = await api.v2.outputs({ id: outputId }).delete();
+        const { error: deleteErr } = await api.v2.outputs({ id: outputId }).delete(null, {
+          query: { notebookId: s.activeNotebookId },
+        });
         if (deleteErr)
           throw new Error(
             typeof deleteErr === 'string'
@@ -587,7 +593,9 @@ export function useOutputQueue({
       const s = store.getState();
       if (!s.activeNotebookId || !isConnected) return null;
       try {
-        const { data: output, error: getErr } = await api.v2.outputs({ id: outputId }).get();
+        const { data: output, error: getErr } = await api.v2.outputs({ id: outputId }).get({
+          query: { notebookId: s.activeNotebookId },
+        });
         if (getErr)
           throw new Error(
             typeof getErr === 'string' ? getErr : typeof getErr === 'string' ? getErr : '',

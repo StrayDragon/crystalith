@@ -85,6 +85,7 @@ export async function exportQaJsonDownload(params: {
 export function exportOutputMarkdownDownload(params: { notebookId: number; outputId: number }) {
   const query = new URLSearchParams();
   query.set('format', 'markdown');
+  query.set('notebookId', String(params.notebookId));
   openDownloadUrl(`${BASE_URL}/v2/outputs/${params.outputId}/export?${query.toString()}`);
 }
 
@@ -92,7 +93,11 @@ export function exportOutputMarkdownDownload(params: { notebookId: number; outpu
  * Download Output export as JSON.
  */
 export async function exportOutputJsonDownload(params: { notebookId: number; outputId: number }) {
-  const url = `${BASE_URL}/v2/outputs/${params.outputId}/export?format=json`;
+  const query = new URLSearchParams({
+    format: 'json',
+    notebookId: String(params.notebookId),
+  });
+  const url = `${BASE_URL}/v2/outputs/${params.outputId}/export?${query.toString()}`;
   const response = await fetch(url);
   const data = await response.json();
   const { outputId, outputType } = data as { outputId: number; outputType: string };

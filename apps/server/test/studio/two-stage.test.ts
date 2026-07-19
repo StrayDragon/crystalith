@@ -81,9 +81,17 @@ afterAll(() => {
   teardownIntegrationEnv();
 });
 
+function withNotebookScope(path: string): string {
+  if (/^\/v2\/studio\/slides\/\d+/.test(path)) {
+    const sep = path.includes('?') ? '&' : '?';
+    return `${path}${sep}notebookId=${notebookId}`;
+  }
+  return path;
+}
+
 async function post(path: string, body?: unknown): Promise<{ status: number; body: unknown }> {
   const res = await app.handle(
-    new Request(`${BASE}${path}`, {
+    new Request(`${BASE}${withNotebookScope(path)}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),

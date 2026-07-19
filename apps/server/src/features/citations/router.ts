@@ -7,12 +7,12 @@
 // The /context endpoint mirrors v1 `features/citations/api.py:get_citation_context`:
 // resolves a target chunk by chunk_id or (source_id+chunk_index), fetches
 // surrounding chunks in the same source, and returns before/chunk/after window.
-import { CitationContextQuerySchema } from '@crystalith/shared';
+import { CitationContextQuerySchema, NotebookIdQuerySchema } from '@crystalith/shared';
 import { eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
-import { messages } from '../../db/schema.ts';
+import { messages, sessions } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
 import { resolveChunkContext } from './context.ts';
@@ -35,18 +35,26 @@ const apiDocs: OpenApiRoute[] = [
 ];
 
 export const citationsRouter = new Elysia({ prefix: '/v2' })
-  // Echo stored citations (existing)
-  .get('/citations/:messageId', ({ params }) => {
-    const messageId = requirePositiveIntId(params.messageId, 'message id');
-    const msg = db().select().from(messages).where(eq(messages.id, messageId)).get();
+  // Echo stored citations — c67: notebookId required via message → session
+  .get(
+    '/citations/:messageId',
+    ({ params, query }) => {
+      const messageId = requirePositiveIntId(params.messageId, 'message id');
+      const msg = db().select().from(messages).where(eq(messages.id, messageId)).get();
+      if (!msg) throw new NotFoundError(`Message ${messageId} not found`);
 
-    if (!msg) throw new NotFoundError(`Message ${messageId} not found`);
+      const session = db().select().from(sessions).where(eq(sessions.id, msg.sessionId)).get();
+      if (!session || session.notebookId !== query.notebookId) {
+        throw new NotFoundError(`Message ${messageId} not found`);
+      }
 
-    return {
-      messageId,
-      citations: msg.citations ?? [],
-    };
-  })
+      return {
+        messageId,
+        citations: msg.citations ?? [],
+      };
+    },
+    { query: NotebookIdQuerySchema },
+  )
 
   // c53: Neighborhood evidence review — path now nests under notebook
   // (v1 api.py:13 prefix /v1/notebooks/{notebook_id}/citations; c26 proposal

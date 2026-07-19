@@ -280,6 +280,13 @@ export const OutputListSchema = z.object({
   outputs: z.array(OutputSchema),
 });
 
+/** Query for GET /v2/outputs/:id/export — notebook scope + format (c67). */
+export const OutputExportQuerySchema = z.object({
+  notebookId: z.coerce.number().int().positive(),
+  format: z.enum(['markdown', 'json']).default('markdown'),
+});
+export type OutputExportQuery = z.infer<typeof OutputExportQuerySchema>;
+
 /** Metadata describing an output type for UI selectors (tone/prompt/isTool). */
 export const OutputTypeMetaSchema = z.object({
   type: OutputTypeSchema,

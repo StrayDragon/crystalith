@@ -3,7 +3,7 @@
 // Provides GET /v2/tasks/:id for progress polling on long-running
 // operations (research, refine, ingestion). Tasks are created by other
 // feature routers and tracked via the `tasks` DB table.
-import { TaskSchema } from '@crystalith/shared';
+import { NotebookIdQuerySchema, TaskSchema } from '@crystalith/shared';
 import { desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
@@ -59,13 +59,16 @@ export function tasksRouter(taskQueue: TaskQueue) {
   return new Elysia({ prefix: '/v2' })
     .get(
       '/tasks/:id',
-      ({ params }) => {
+      ({ params, query }) => {
         const id = requirePositiveIntId(params.id, 'task id');
         const task = db().select().from(tasksTable).where(eq(tasksTable.id, id)).get();
-        if (!task) throw new NotFoundError(`Task ${id} not found`);
+        // c67: missing or notebook mismatch (incl. null notebookId) → 404
+        if (!task || task.notebookId !== query.notebookId) {
+          throw new NotFoundError(`Task ${id} not found`);
+        }
         return serializeTask(task);
       },
-      { response: TaskSchema },
+      { query: NotebookIdQuerySchema, response: TaskSchema },
     )
     .get(
       '/notebooks/:nid/tasks',
@@ -81,24 +84,31 @@ export function tasksRouter(taskQueue: TaskQueue) {
       },
       { response: TaskSchema.array() },
     )
-    .post('/tasks/:id/cancel', ({ params, set }) => {
-      const id = requirePositiveIntId(params.id, 'task id');
-      const task = db().select().from(tasksTable).where(eq(tasksTable.id, id)).get();
-      if (!task) throw new NotFoundError(`Task ${id} not found`);
+    .post(
+      '/tasks/:id/cancel',
+      ({ params, query, set }) => {
+        const id = requirePositiveIntId(params.id, 'task id');
+        const task = db().select().from(tasksTable).where(eq(tasksTable.id, id)).get();
+        // c67: missing or notebook mismatch (incl. null notebookId) → 404
+        if (!task || task.notebookId !== query.notebookId) {
+          throw new NotFoundError(`Task ${id} not found`);
+        }
 
-      // c39 gap fix: return 409 for non-cancellable state (v1 api.py:71-76)
-      if (task.status !== 'pending' && task.status !== 'running') {
-        return sendError(
-          set,
-          ErrorCode.CONFLICT,
-          `Task ${id} cannot be cancelled from status '${task.status}'`,
-        );
-      }
+        // c39 gap fix: return 409 for non-cancellable state (v1 api.py:71-76)
+        if (task.status !== 'pending' && task.status !== 'running') {
+          return sendError(
+            set,
+            ErrorCode.CONFLICT,
+            `Task ${id} cannot be cancelled from status '${task.status}'`,
+          );
+        }
 
-      // Use TaskQueue.cancel for proper AbortSignal interruption
-      taskQueue.cancel(id);
+        // Use TaskQueue.cancel for proper AbortSignal interruption
+        taskQueue.cancel(id);
 
-      const updated = db().select().from(tasksTable).where(eq(tasksTable.id, id)).get();
-      return serializeTask(updated!);
-    });
+        const updated = db().select().from(tasksTable).where(eq(tasksTable.id, id)).get();
+        return serializeTask(updated!);
+      },
+      { query: NotebookIdQuerySchema },
+    );
 }

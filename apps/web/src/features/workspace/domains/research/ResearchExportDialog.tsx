@@ -45,7 +45,7 @@ function ResearchExportDialog({ session, onClose, onExportComplete }: ResearchEx
     try {
       const { data: result, error: exportErr } = await api.v2
         .research({ id: session.id })
-        .export.post({ exportType: exportTarget });
+        .export.post({ exportType: exportTarget }, { query: { notebookId: session.notebookId } });
       if (exportErr)
         throw new Error(
           typeof exportErr === 'string'

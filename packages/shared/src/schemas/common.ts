@@ -107,3 +107,20 @@ export type JsonMetadata = z.infer<typeof JsonMetadataSchema>;
 
 /** Helper: a nullable-optional ISO timestamp (e.g. last_error_at). */
 export const OptionalTimestampSchema = IsoTimestampSchema.nullable().optional();
+
+/**
+ * Required notebook scope for notebook-owned resource endpoints (c67).
+ * Used as `?notebookId=` on flat `/v2/.../:id` routes (sources, outputs,
+ * research, studio slides, tasks, citations). Missing → validation reject;
+ * mismatch → 404 NOT_FOUND (no cross-notebook leak).
+ */
+export const NotebookIdQuerySchema = z
+  .object({
+    notebookId: z.coerce
+      .number()
+      .int()
+      .positive()
+      .openapi({ description: '笔记本 ID（归属范围，必填）', example: 1 }),
+  })
+  .openapi({ description: '笔记本归属查询参数' });
+export type NotebookIdQuery = z.infer<typeof NotebookIdQuerySchema>;
