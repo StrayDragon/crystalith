@@ -66,8 +66,8 @@ beforeEach(() => {
   server.use(
     http.get('*/v2/notebooks/:notebookId/sources', () => HttpResponse.json([])),
     http.get('*/v2/notebooks/:notebookId/sources/tags', () => HttpResponse.json([])),
-    http.get('*/v2/notebooks/:notebookId/sources/extractors', () =>
-      HttpResponse.json({ extractors: [] }),
+    http.get('*/v2/notebooks/:notebookId/extractors', () =>
+      HttpResponse.json({ extractors: [], defaultExtractor: null, policy: null }),
     ),
   );
 });

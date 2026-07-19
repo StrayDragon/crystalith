@@ -2,6 +2,7 @@ import { Chip } from '@material-tailwind/react';
 import { Close as CloseIcon, History as HistoryIcon } from '@mui/icons-material';
 
 import { LAYER_LEVELS } from '../../../../../shared/layer';
+import { TestIds, tid } from '../../../../../shared/testids';
 import type { Research } from './sources-panel-types';
 
 export interface ResearchHistoryDialogProps {
@@ -32,6 +33,7 @@ export default function ResearchHistoryDialog({
       role="dialog"
       aria-modal="true"
       aria-label="研究历史"
+      {...tid(TestIds.researchHistoryDialog)}
     >
       <button
         type="button"

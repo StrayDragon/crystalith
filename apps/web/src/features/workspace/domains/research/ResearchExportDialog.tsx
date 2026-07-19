@@ -10,6 +10,7 @@ import { memo, useState, useCallback } from 'react';
 
 import { api } from '../../../../api/eden';
 import { useLayer } from '../../../../shared/layer';
+import { TestIds, tid } from '../../../../shared/testids';
 import { toast } from '../../../../shared/toast';
 import type { ResearchSessionDetail } from './useResearch';
 
@@ -76,6 +77,10 @@ function ResearchExportDialog({ session, onClose, onExportComplete }: ResearchEx
     <div
       className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4"
       style={modalStyle}
+      role="dialog"
+      aria-modal="true"
+      aria-label="导出研究成果"
+      {...tid(TestIds.researchExportDialog)}
     >
       <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-lg animate-in zoom-in-95 fade-in duration-200">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">

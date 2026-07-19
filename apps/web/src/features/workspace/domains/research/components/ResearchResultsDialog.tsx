@@ -4,6 +4,7 @@ import { type Dispatch, type SetStateAction } from 'react';
 
 import { copyToClipboard } from '../../../../../shared/clipboard';
 import { useLayer } from '../../../../../shared/layer';
+import { TestIds, tid } from '../../../../../shared/testids';
 import { toast } from '../../../../../shared/toast';
 import type { ResearchSessionDetail } from '../useResearch';
 
@@ -75,6 +76,7 @@ export function ResultsDialogContent({
       role="dialog"
       aria-modal="true"
       aria-label="搜索结果"
+      {...tid(TestIds.researchResultsDialog)}
     >
       <button
         type="button"

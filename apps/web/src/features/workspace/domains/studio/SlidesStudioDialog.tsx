@@ -13,6 +13,7 @@ import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
 
+import { TestIds, tid } from '../../../../shared/testids';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { SlidesPreviewPanel } from './slides-studio/components/SlidesPreviewPanel';
 import { SlidesStageActions } from './slides-studio/components/SlidesStageActions';
@@ -92,7 +93,12 @@ export default function SlidesStudioDialog(props: SlidesStudioDialogProps) {
           : 'absolute left-[5vw] top-[5vh] min-w-[90vw] min-h-[90vh] h-[90vh] max-h-[90vh] w-[90vw] max-w-[90vw]'
       }`}
     >
-      <div ref={dialogRef} tabIndex={-1} className="flex flex-col flex-1 min-h-0">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="flex flex-col flex-1 min-h-0"
+        {...tid(TestIds.slidesStudioDialog)}
+      >
         <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-slate-700 p-4">
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 flex-shrink-0">
@@ -134,6 +140,7 @@ export default function SlidesStudioDialog(props: SlidesStudioDialogProps) {
               onClick={onClose}
               className="rounded-full"
               aria-label="关闭演示配置"
+              {...tid(TestIds.slidesStudioClose)}
             >
               <CloseIcon className="h-4 w-4" />
             </IconButton>
