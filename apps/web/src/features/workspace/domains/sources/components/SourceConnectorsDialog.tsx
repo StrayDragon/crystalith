@@ -159,6 +159,7 @@ function SourceConnectorSelectStep({
             key={connector.connectorId}
             type="button"
             onClick={() => onSelectConnector(connector.connectorId)}
+            {...tid(`${TestIds.sourcesConnectorsOption}-${connector.connectorId}`)}
             className={`w-full text-left rounded-xl border px-4 py-3 transition-colors ${
               selected
                 ? 'border-gray-900 bg-gray-900 text-white'
@@ -328,6 +329,7 @@ function SourceConnectorConfigStep({
               }
               onChange={(e) => onUpdateConfig(key, e.target.value, typeHint)}
               placeholder={key}
+              {...tid(`${TestIds.sourcesConnectorsConfigField}-${key}`)}
             />
           </label>
         );
@@ -1003,6 +1005,7 @@ export default function SourceConnectorsDialog({
               type="button"
               onClick={handleBack}
               disabled={busy}
+              {...tid(TestIds.sourcesConnectorsBack)}
               className="px-3 py-1.5 rounded-lg text-xs border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-60 flex items-center gap-1"
             >
               <ArrowBackIcon sx={{ fontSize: 16 }} />
@@ -1014,6 +1017,7 @@ export default function SourceConnectorsDialog({
               type="button"
               onClick={() => void handleUnbind()}
               disabled={busy}
+              {...tid(TestIds.sourcesConnectorsUnbind)}
               className="px-3 py-1.5 rounded-lg text-xs border border-red-200 dark:border-red-900/50 bg-white dark:bg-slate-900 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 disabled:opacity-60 flex items-center gap-1"
             >
               <LinkOffIcon sx={{ fontSize: 16 }} />
@@ -1067,6 +1071,9 @@ export default function SourceConnectorsDialog({
             type="button"
             onClick={handleNext}
             disabled={nextDisabled}
+            {...(step === 'config'
+              ? tid(TestIds.sourcesConnectorsCreateBinding)
+              : tid(TestIds.sourcesConnectorsNext))}
             className="px-4 py-1.5 rounded-lg text-xs border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-60"
           >
             {nextLabel}

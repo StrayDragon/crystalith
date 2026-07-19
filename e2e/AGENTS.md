@@ -1,6 +1,6 @@
 # E2E (Playwright) — critical browser gate
 
-P0 suite lives in `tests/p0-smoke.spec.ts` (`@p0`, **26** cases). Selectors MUST use
+P0 suite lives in `tests/p0-smoke.spec.ts` (`@p0`, **28** cases). Selectors MUST use
 `data-testid` from `apps/web/src/shared/testids.ts` — do not lock tests to Chinese copy.
 
 Coverage taxonomy and history: see `e2e/` directory documentation.

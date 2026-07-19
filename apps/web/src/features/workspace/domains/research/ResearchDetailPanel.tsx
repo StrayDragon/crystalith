@@ -20,6 +20,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { copyToClipboard } from '../../../../shared/clipboard';
 import { useLayer } from '../../../../shared/layer';
+import { TestIds, tid } from '../../../../shared/testids';
 import { toast } from '../../../../shared/toast';
 import { ResultsDialogContent } from './components/ResearchResultsDialog';
 import { ThinkingBlock } from './components/ThinkingBlock';
@@ -1079,6 +1080,7 @@ function ResearchDetailPanel({
                             <label
                               key={queryKey}
                               htmlFor={checkboxId}
+                              {...tid(`${TestIds.researchQueryCheckbox}-${index}`)}
                               className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${
                                 selectedQueries.has(index) ? 'bg-blue-50/50' : ''
                               }`}
@@ -1119,6 +1121,7 @@ function ResearchDetailPanel({
                     }}
                     disabled={isProcessing || selectedQueries.size === 0}
                     className="flex items-center justify-center gap-2 py-2.5"
+                    {...tid(TestIds.researchApprovePlan)}
                   >
                     {isProcessing ? (
                       <Spinner className="h-4 w-4" />

@@ -39,6 +39,12 @@ export const TestIds = {
   sourcesUploadInput: 'sources-upload-input',
   sourcesConnectors: 'sources-connectors',
   sourcesConnectorsDialog: 'sources-connectors-dialog',
+  sourcesConnectorsOption: 'sources-connectors-option',
+  sourcesConnectorsNext: 'sources-connectors-next',
+  sourcesConnectorsBack: 'sources-connectors-back',
+  sourcesConnectorsCreateBinding: 'sources-connectors-create-binding',
+  sourcesConnectorsUnbind: 'sources-connectors-unbind',
+  sourcesConnectorsConfigField: 'sources-connectors-config-field',
   sourcesExtractorSettings: 'sources-extractor-settings',
   sourcesExtractorDialog: 'sources-extractor-dialog',
   sourcesSearchInput: 'sources-search-input',
@@ -88,6 +94,8 @@ export const TestIds = {
   researchHistoryDialog: 'research-history-dialog',
   researchResultsDialog: 'research-results-dialog',
   researchExportDialog: 'research-export-dialog',
+  researchApprovePlan: 'research-approve-plan',
+  researchQueryCheckbox: 'research-query-checkbox',
 
   // Search queue (existing)
   searchQueueList: 'search-queue-list',
