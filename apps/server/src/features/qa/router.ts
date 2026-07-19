@@ -13,7 +13,7 @@ import { messages, notebooks, sessions, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { streamQa, generateQaDirect } from './handler.ts';
-import { resolvePreset, listPresets } from './presets.ts';
+import { resolvePreset, listPresets, parsePromptDirective } from './presets.ts';
 
 // ---------------------------------------------------------------------------
 // OpenAPI docs
@@ -83,22 +83,6 @@ function maybeSetSessionTitle(sessionId: number, question: string): void {
   if (session.title && session.title.trim() && session.title !== 'New session') return;
   const cleaned = question.trim().replaceAll(/\s+/gu, ' ').slice(0, 80) || 'New session';
   db().update(sessions).set({ title: cleaned }).where(eq(sessions.id, sessionId)).run();
-}
-
-/**
- * c45: Parse /prompt:<preset> directive from question text (v1 presets.py:9-30).
- * Returns { preset, question } — preset extracted from leading /prompt:xxx.
- */
-function parsePromptDirective(
-  question: string,
-  bodyPreset?: string,
-): { preset: string; question: string } {
-  // v1 presets.py:9-12: [a-z0-9_-]{1,32}, case-insensitive, lowercased
-  const match = question.match(/^\/prompt:([a-z0-9_-]{1,32})\s+/iu);
-  if (match) {
-    return { preset: match[1]!.toLowerCase(), question: question.slice(match[0].length) };
-  }
-  return { preset: (bodyPreset ?? 'default').toLowerCase(), question };
 }
 
 /** Validate notebook exists + optional session/sourceIds ownership (v1 qa/api.py). */
