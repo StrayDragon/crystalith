@@ -10,7 +10,7 @@ description: >
 
 # Crystalith SSOT / QA Batch Playbook
 
-提炼自 2026-07 阶段性 QA 收敛（`_PROGRESS.md` Wave A–G）。**先出结果，再写 skill**；本文件是可复用的作业法，不是元流程说明书。
+提炼自 2026-07 阶段性 QA 收敛（已归档：`_archive/2026-07-19-ssot-qa-progress.md`）。**先出结果，再写 skill**；本文件是可复用的作业法，不是元流程说明书。
 
 ## When to use
 
@@ -32,19 +32,19 @@ shared Zod → Elysia 运行时校验 + App 类型
           → OpenAPI 由同一份 Zod 衍生
 ```
 
-| 误解 | 正解 |
-|------|------|
-| Eden 可替代 Zod | **否**。Eden 无运行时校验 |
+| 误解               | 正解                                       |
+| ------------------ | ------------------------------------------ |
+| Eden 可替代 Zod    | **否**。Eden 无运行时校验                  |
 | Zod 与 Eden 二选一 | **否**。冗余来自**平行 DTO**，不是并存本身 |
 
 **席位**：
 
-| 层 | 做 | 不做 |
-|----|----|------|
-| `packages/shared` Zod | HTTP/跨端 SSOT；`.describe(desc)`；宜 `.openapi()` | 纯 UI 状态 |
-| server 路由 | 挂 shared Zod | 平行 `z.object`；Elysia `t.*` |
-| web | Eden 推断；标称类型可从 shared | `shared-types` / workspace wire DTO 再造 |
-| config yaml/env | 必留 Zod | 把 HTTP 合约塞进 config |
+| 层                    | 做                                                 | 不做                                     |
+| --------------------- | -------------------------------------------------- | ---------------------------------------- |
+| `packages/shared` Zod | HTTP/跨端 SSOT；`.describe(desc)`；宜 `.openapi()` | 纯 UI 状态                               |
+| server 路由           | 挂 shared Zod                                      | 平行 `z.object`；Elysia `t.*`            |
+| web                   | Eden 推断；标称类型可从 shared                     | `shared-types` / workspace wire DTO 再造 |
+| config yaml/env       | 必留 Zod                                           | 把 HTTP 合约塞进 config                  |
 
 ## Batch discipline（硬）
 

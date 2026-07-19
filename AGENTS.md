@@ -51,7 +51,7 @@ crystalith/
 - ✅ Frontend: all output renderers aligned with v1 interactive components
 - ✅ c14: `backend/py/` + `api/generated/` deleted；wire 类型走 Eden + `@crystalith/shared`（`shared-types.ts` 已移除）
 - ⏸️ **c13** distribution (Tauri / single-binary) — blocked on human auth
-- 📋 阶段性收敛台账：`_PROGRESS.md`（临时；无 llman SDD）
+- 📦 阶段性收敛台账已归档：`_archive/2026-07-19-ssot-qa-progress.md`；作业法见 `.agents/skills/crystalith-ssot-qa-batches/`
 
 ## v2 Stack
 
