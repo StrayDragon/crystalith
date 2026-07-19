@@ -4,15 +4,28 @@ import { z } from 'zod';
 import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from './common.js';
 import { desc } from './i18n.js';
 
-export const SessionSchema = z.object({
-  id: IdSchema.describe(desc('session.id')),
-  notebookId: IdSchema.describe(desc('session.notebook_id')),
-  title: z.string().min(1).max(255).nullable().describe(desc('session.title')),
-  sharedState: JsonMetadataSchema,
-  sharedStateRevision: z.number().int().nonnegative(),
-  createdAt: IsoTimestampSchema.describe(desc('session.created_at')),
-  updatedAt: IsoTimestampSchema.describe(desc('session.updated_at')),
-});
+export const SessionSchema = z
+  .object({
+    id: IdSchema.describe(desc('session.id')),
+    notebookId: IdSchema.describe(desc('session.notebook_id')),
+    title: z.string().min(1).max(255).nullable().describe(desc('session.title')),
+    sharedState: JsonMetadataSchema,
+    sharedStateRevision: z.number().int().nonnegative(),
+    createdAt: IsoTimestampSchema.describe(desc('session.created_at')),
+    updatedAt: IsoTimestampSchema.describe(desc('session.updated_at')),
+  })
+  .openapi({
+    description: desc('session.entity', 'Chat session 实体'),
+    example: {
+      id: 1,
+      notebookId: 1,
+      title: 'Session',
+      sharedState: {},
+      sharedStateRevision: 0,
+      createdAt: '2026-07-08T12:00:00.000Z',
+      updatedAt: '2026-07-08T12:00:00.000Z',
+    },
+  });
 export type Session = z.infer<typeof SessionSchema>;
 
 export const SessionCreateSchema = z.object({

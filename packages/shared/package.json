@@ -18,6 +18,9 @@
     "test": "bun test",
     "typesafe-i18n": "typesafe-i18n"
   },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^8.5.0"
+  },
   "devDependencies": {
     "typesafe-i18n": "^5.27.1",
     "typescript": "^7.0.2",
