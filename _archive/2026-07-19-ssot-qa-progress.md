@@ -1,12 +1,14 @@
-# Crystalith 阶段性 QA / 收敛进度（临时）
+# Crystalith 阶段性 QA / 收敛进度（已归档）
 
-> **性质**：临时工作台账，完成后可删除或归档。  
+> **归档**：2026-07-19 → `_archive/2026-07-19-ssot-qa-progress.md`  
+> **作业法**：`.agents/skills/crystalith-ssot-qa-batches/SKILL.md`  
+> **性质**：临时工作台账，A–G 已收口。  
 > **约束**：**全程不触发任何 llman SDD**（不 propose / apply / verify / archive）。合约漂移先靠代码与文档收敛；specs 卫生若做，也只是手改文件，不开 SDD change。  
 > **北极星**：最少代码 · 一致校验 · Zod/Eden 各司其职 · 降低理解成本 · 用对的模式做对的事。  
 > **批次纪律**：每个合理批次验收通过后 **commit**；有问题随时停并报告。
 
 **来源**：Wave A（架构 / 流程门禁 / Spec 漂移）只读体检。  
-**最后更新**：2026-07-19（Wave A–G 余债启动；默认 E=归档愿景、D=SDD、不做 c13）
+**最后更新**：2026-07-19（Wave A–G 收口后归档）
 
 ---
 
