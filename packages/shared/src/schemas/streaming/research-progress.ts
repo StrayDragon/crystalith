@@ -8,86 +8,91 @@
 import { z } from 'zod';
 
 import { IdSchema, JsonMetadataSchema } from '../common.js';
+import { desc } from '../i18n.js';
 import {
   IterationAnalysisLlmSchema,
   ResearchPlanLlmSchema,
   ResearchSearchResultSchema,
 } from '../research.js';
 
-export const ResearchProgressEventSchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('plan_ready'),
-    sessionId: IdSchema.optional(),
-    iteration: z.number().int().optional(),
-    /** Prefer envelope `data` (step.outputData); `plan` optional mirror. */
-    plan: ResearchPlanLlmSchema.optional(),
-    data: JsonMetadataSchema.optional(),
-  }),
-  z.object({
-    type: z.literal('search_result'),
-    sessionId: IdSchema.optional(),
-    iteration: z.number().int().optional(),
-    result: ResearchSearchResultSchema.optional(),
-    data: JsonMetadataSchema.optional(),
-  }),
-  z.object({
-    type: z.literal('analysis'),
-    sessionId: IdSchema.optional(),
-    iteration: z.number().int().optional(),
-    /** LLM analysis shape; iteration lives on the SSE envelope. */
-    analysis: IterationAnalysisLlmSchema.nullable().optional(),
-    data: JsonMetadataSchema.optional(),
-  }),
-  z.object({
-    type: z.literal('thinking'),
-    sessionId: IdSchema.optional(),
-    iteration: z.number().int().optional(),
-    message: z.string().optional(),
-    stepType: z.string().optional(),
-    data: JsonMetadataSchema.optional(),
-  }),
-  /** Status transition (poll-derived; v1 api.py status events). */
-  z.object({
-    type: z.literal('status'),
-    status: z.string(),
-    previous: z.string().nullable().optional(),
-    iteration: z.number().int().optional(),
-    message: z.string().optional(),
-    sessionId: IdSchema.optional(),
-  }),
-  z.object({
-    type: z.literal('progress'),
-    sessionId: IdSchema.optional(),
-    data: JsonMetadataSchema.optional(),
-  }),
-  z.object({
-    type: z.literal('search_progress'),
-    iteration: z.number().int().optional(),
-    data: JsonMetadataSchema.optional(),
-  }),
-  z.object({
-    type: z.literal('approval_request'),
-    iteration: z.number().int().optional(),
-    data: JsonMetadataSchema.optional(),
-  }),
-  z.object({
-    type: z.literal('report'),
-    iteration: z.number().int().optional(),
-    data: JsonMetadataSchema.optional(),
-  }),
-  /** Matches runtime: emit('done', { type, status, totalResults, hasReport }) */
-  z.object({
-    type: z.literal('done'),
-    status: z.string(),
-    totalResults: z.number(),
-    hasReport: z.boolean(),
-  }),
-  z.object({
-    type: z.literal('error'),
-    message: z.string(),
-    sessionId: IdSchema.optional(),
-  }),
-]);
+export const ResearchProgressEventSchema = z
+  .discriminatedUnion('type', [
+    z.object({
+      type: z.literal('plan_ready'),
+      sessionId: IdSchema.optional(),
+      iteration: z.number().int().optional(),
+      /** Prefer envelope `data` (step.outputData); `plan` optional mirror. */
+      plan: ResearchPlanLlmSchema.optional(),
+      data: JsonMetadataSchema.optional(),
+    }),
+    z.object({
+      type: z.literal('search_result'),
+      sessionId: IdSchema.optional(),
+      iteration: z.number().int().optional(),
+      result: ResearchSearchResultSchema.optional(),
+      data: JsonMetadataSchema.optional(),
+    }),
+    z.object({
+      type: z.literal('analysis'),
+      sessionId: IdSchema.optional(),
+      iteration: z.number().int().optional(),
+      /** LLM analysis shape; iteration lives on the SSE envelope. */
+      analysis: IterationAnalysisLlmSchema.nullable().optional(),
+      data: JsonMetadataSchema.optional(),
+    }),
+    z.object({
+      type: z.literal('thinking'),
+      sessionId: IdSchema.optional(),
+      iteration: z.number().int().optional(),
+      message: z.string().optional(),
+      stepType: z.string().optional(),
+      data: JsonMetadataSchema.optional(),
+    }),
+    /** Status transition (poll-derived; v1 api.py status events). */
+    z.object({
+      type: z.literal('status'),
+      status: z.string(),
+      previous: z.string().nullable().optional(),
+      iteration: z.number().int().optional(),
+      message: z.string().optional(),
+      sessionId: IdSchema.optional(),
+    }),
+    z.object({
+      type: z.literal('progress'),
+      sessionId: IdSchema.optional(),
+      data: JsonMetadataSchema.optional(),
+    }),
+    z.object({
+      type: z.literal('search_progress'),
+      iteration: z.number().int().optional(),
+      data: JsonMetadataSchema.optional(),
+    }),
+    z.object({
+      type: z.literal('approval_request'),
+      iteration: z.number().int().optional(),
+      data: JsonMetadataSchema.optional(),
+    }),
+    z.object({
+      type: z.literal('report'),
+      iteration: z.number().int().optional(),
+      data: JsonMetadataSchema.optional(),
+    }),
+    /** Matches runtime: emit('done', { type, status, totalResults, hasReport }) */
+    z.object({
+      type: z.literal('done'),
+      status: z.string(),
+      totalResults: z.number(),
+      hasReport: z.boolean(),
+    }),
+    z.object({
+      type: z.literal('error'),
+      message: z.string(),
+      sessionId: IdSchema.optional(),
+    }),
+  ])
+  .openapi({
+    description: desc('research.progress_event', '研究进度 SSE data 载荷'),
+  });
 export type ResearchProgressEvent = z.infer<typeof ResearchProgressEventSchema>;
 
 /** SSE `event:` line names (not the JSON `type` field). */

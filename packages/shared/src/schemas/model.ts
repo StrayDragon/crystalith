@@ -6,6 +6,7 @@
 import { z } from 'zod';
 
 import { JsonMetadataSchema } from './common.js';
+import { desc } from './i18n.js';
 
 // ---------------------------------------------------------------------------
 // Provider config (OpenAI-compatible baseline; extra keys allowed for other SDKs)
@@ -18,7 +19,10 @@ export const ProviderConfigSchema = z
     organization: z.string().nullable().optional(),
     project: z.string().nullable().optional(),
   })
-  .catchall(z.unknown());
+  .catchall(z.unknown())
+  .openapi({
+    description: desc('model.provider_config', '模型 Provider 配置'),
+  });
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
 
 // ---------------------------------------------------------------------------
@@ -70,24 +74,28 @@ export type ModelCapability = z.infer<typeof ModelCapabilitySchema>;
 // Model configuration (a single entry in `models.available`)
 // ---------------------------------------------------------------------------
 
-export const ModelConfigSchema = z.object({
-  id: z.string().min(1),
-  /** Registry key: openai | anthropic | google | deepseek | openai-compatible | groq | together | bedrock | <custom> */
-  provider: z.string().min(1),
-  model: z.string().min(1),
-  displayName: z.string().min(1),
-  description: z.string().default(''),
-  roles: z.array(ModelRoleSchema).default(['chat']),
-  capabilities: z.array(ModelCapabilitySchema).default([]),
-  providerConfig: ProviderConfigSchema.nullable().optional(),
-  completionOptions: CompletionOptionsSchema.nullable().optional(),
-  requestOptions: RequestOptionsSchema.nullable().optional(),
-  /** Advanced escape hatch: override the SDK package + factory directly. */
-  sdk: z.string().optional(),
-  factory: z.string().optional(),
-  /** Extra passthrough for provider-specific knobs. */
-  providerOptions: JsonMetadataSchema.optional(),
-});
+export const ModelConfigSchema = z
+  .object({
+    id: z.string().min(1),
+    /** Registry key: openai | anthropic | google | deepseek | openai-compatible | groq | together | bedrock | <custom> */
+    provider: z.string().min(1),
+    model: z.string().min(1),
+    displayName: z.string().min(1),
+    description: z.string().default(''),
+    roles: z.array(ModelRoleSchema).default(['chat']),
+    capabilities: z.array(ModelCapabilitySchema).default([]),
+    providerConfig: ProviderConfigSchema.nullable().optional(),
+    completionOptions: CompletionOptionsSchema.nullable().optional(),
+    requestOptions: RequestOptionsSchema.nullable().optional(),
+    /** Advanced escape hatch: override the SDK package + factory directly. */
+    sdk: z.string().optional(),
+    factory: z.string().optional(),
+    /** Extra passthrough for provider-specific knobs. */
+    providerOptions: JsonMetadataSchema.optional(),
+  })
+  .openapi({
+    description: desc('model.config', 'models.available 单条配置'),
+  });
 export type ModelConfig = z.infer<typeof ModelConfigSchema>;
 
 // ---------------------------------------------------------------------------
@@ -126,35 +134,51 @@ export type ModelsSettings = z.infer<typeof ModelsSettingsSchema>;
 // Read-only model info exposed by GET /v2/models
 // ---------------------------------------------------------------------------
 
-export const ModelInfoSchema = z.object({
-  id: z.string(),
-  provider: z.string(),
-  model: z.string(),
-  displayName: z.string(),
-  description: z.string(),
-  roles: z.array(ModelRoleSchema),
-  capabilities: z.array(ModelCapabilitySchema),
-  isDefaultChat: z.boolean(),
-  isDefaultEmbedding: z.boolean(),
-});
+export const ModelInfoSchema = z
+  .object({
+    id: z.string(),
+    provider: z.string(),
+    model: z.string(),
+    displayName: z.string(),
+    description: z.string(),
+    roles: z.array(ModelRoleSchema),
+    capabilities: z.array(ModelCapabilitySchema),
+    isDefaultChat: z.boolean(),
+    isDefaultEmbedding: z.boolean(),
+  })
+  .openapi({
+    description: desc('model.info', 'GET /v2/models 只读模型信息'),
+  });
 export type ModelInfo = z.infer<typeof ModelInfoSchema>;
 
-export const ModelListSchema = z.object({
-  defaults: ModelDefaultsSchema,
-  providers: z.array(z.string()).default([]),
-  models: z.array(ModelInfoSchema),
-});
+export const ModelListSchema = z
+  .object({
+    defaults: ModelDefaultsSchema,
+    providers: z.array(z.string()).default([]),
+    models: z.array(ModelInfoSchema),
+  })
+  .openapi({
+    description: desc('model.list', '模型列表响应'),
+  });
 export type ModelList = z.infer<typeof ModelListSchema>;
 
 /** Query for GET /v2/models — optional role filter. */
-export const ModelListQuerySchema = z.object({
-  role: ModelRoleSchema.optional(),
-});
+export const ModelListQuerySchema = z
+  .object({
+    role: ModelRoleSchema.optional(),
+  })
+  .openapi({
+    description: desc('model.list_query', '模型列表查询参数'),
+  });
 export type ModelListQuery = z.infer<typeof ModelListQuerySchema>;
 
-export const ModelProvidersResponseSchema = z.object({
-  providers: z.array(z.string()),
-});
+export const ModelProvidersResponseSchema = z
+  .object({
+    providers: z.array(z.string()),
+  })
+  .openapi({
+    description: desc('model.providers', '已注册 Provider 列表'),
+  });
 export type ModelProvidersResponse = z.infer<typeof ModelProvidersResponseSchema>;
 
 // ---------------------------------------------------------------------------
