@@ -11,7 +11,7 @@
 just e2e-install   # 可选：安装 Playwright Chromium（本地默认可系统 Chrome）
 just e2e           # 门禁：playwright --grep @p0
 just e2e-all       # 当前与 @p0 同集；预留非门禁规格
-just qa            # 含 e2e @p0（见根 AGENTS.md：primary PR gate）
+just qa            # 含 e2e @p0 + web Vitest（见根 AGENTS.md：primary PR gate）
 ```
 
 选择器必须用 `apps/web/src/shared/testids.ts` 的 `data-testid`，不要锁中文文案。

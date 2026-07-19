@@ -95,21 +95,24 @@ type-aware-lint:
 check-bun:
     @command -v bun >/dev/null || (echo "bun not found on PATH" >&2; exit 1)
 
-# Primary PR gate (not "covers all tests"): typecheck, lint, format-check,
-# generated-config drift, server+shared unit/integration tests, Playwright @p0.
+# Primary PR gate: typecheck, lint, format-check, generated-config drift,
+# server+shared unit/integration, frontend Vitest (`test:ci`), Playwright @p0.
 # Output minimized — only errors and warnings shown.
 #
 # Out of gate (run separately when relevant):
-#   - `cd apps/web && bun run test:ci` — frontend Vitest
 #   - `just test-bdd` — server BDD CRUD subset
 #   - `just type-aware-lint` — advisory type-aware oxlint
 # Requires Chromium once: `just e2e-install` (or system Chrome; see e2e recipe)
-qa: check check-env-examples check-app-schema test e2e
+qa: check check-env-examples check-app-schema test test-web e2e
     @echo "✅ QA passed"
 
 # Server + shared unit/integration tests — only show failures
 test:
     @bun test --only-failures apps/server/test/ packages/shared/test/
+
+# Frontend Vitest CI suite (MSW on-unhandled=error). Part of `just qa`.
+test-web:
+    cd apps/web && bun run test:ci
 
 # Server BDD (Gherkin) — CRUD subset only; see apps/server/tests/bdd/run.test.ts
 # SKIP_FEATURE_DIRS. Not part of `just qa`.

@@ -9,7 +9,7 @@ Coverage taxonomy and history: repo-root `_E2E.md`.
 just e2e-install   # once (optional if using system Chrome)
 just e2e           # @p0 gate
 just e2e-all       # full suite (currently same as @p0)
-just qa            # primary PR gate (includes e2e @p0; not all tests)
+just qa            # primary PR gate (includes e2e @p0 + web Vitest)
 ```
 
 Isolated ports: web `13000`, API `18032`, DB `e2e/.tmp/crystalith.e2e.db`.
