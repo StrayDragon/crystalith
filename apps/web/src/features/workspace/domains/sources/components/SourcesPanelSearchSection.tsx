@@ -56,23 +56,63 @@ export default function SourcesPanelSearchSection({
       <div className="rounded-[7px] bg-white dark:bg-slate-900 overflow-hidden">
         <div className="p-2">
           <div className="flex w-full items-center gap-2">
-            <Tooltip content={searchModeToggleLabel}>
-              <button
-                type="button"
-                onClick={onToggleSearchMode}
-                aria-label={searchModeToggleLabel}
-                {...tid(TestIds.sourcesModeToggle)}
-                className="flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200 hover:shadow-sm active:scale-[0.98] bg-gray-50 text-gray-600 dark:bg-slate-800 dark:text-slate-300"
+            <div
+              role="group"
+              aria-label="搜索模式"
+              {...tid(TestIds.sourcesModeToggle)}
+              className="flex h-9 items-center rounded-full bg-gray-100 p-0.5 dark:bg-slate-800"
+            >
+              <Tooltip
+                content={
+                  isDeepResearchMode
+                    ? t('sources.search.toggle.to_fast')
+                    : t('sources.search.mode.fast')
+                }
               >
-                <span key={isDeepResearchMode ? 'deep' : 'fast'} className="ux-fade-in">
-                  {isDeepResearchMode ? (
-                    <PsychologyIcon style={{ fontSize: 20 }} />
-                  ) : (
-                    <SearchIcon style={{ fontSize: 20 }} />
-                  )}
-                </span>
-              </button>
-            </Tooltip>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isDeepResearchMode) onToggleSearchMode();
+                  }}
+                  aria-pressed={!isDeepResearchMode}
+                  aria-label={
+                    isDeepResearchMode
+                      ? t('sources.search.toggle.to_fast')
+                      : t('sources.search.mode.fast')
+                  }
+                  className={
+                    isDeepResearchMode
+                      ? 'flex h-8 w-8 items-center justify-center rounded-full text-gray-400 opacity-45 transition-all duration-200 hover:bg-white/70 hover:opacity-80 hover:text-gray-600 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-300'
+                      : 'flex h-8 w-8 items-center justify-center rounded-full bg-white text-blue-600 shadow-sm ring-1 ring-black/5 transition-all duration-200 dark:bg-slate-700 dark:text-blue-300 dark:ring-white/10'
+                  }
+                >
+                  <SearchIcon style={{ fontSize: 18 }} />
+                </button>
+              </Tooltip>
+              <Tooltip
+                content={
+                  !isDeepResearchMode ? searchModeToggleLabel : t('sources.search.mode.deep')
+                }
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isDeepResearchMode) onToggleSearchMode();
+                  }}
+                  aria-pressed={isDeepResearchMode}
+                  aria-label={
+                    !isDeepResearchMode ? searchModeToggleLabel : t('sources.search.mode.deep')
+                  }
+                  className={
+                    !isDeepResearchMode
+                      ? 'flex h-8 w-8 items-center justify-center rounded-full text-gray-400 opacity-45 transition-all duration-200 hover:bg-white/70 hover:opacity-80 hover:text-gray-600 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-300'
+                      : 'flex h-8 w-8 items-center justify-center rounded-full bg-white text-indigo-600 shadow-sm ring-1 ring-black/5 transition-all duration-200 dark:bg-slate-700 dark:text-indigo-300 dark:ring-white/10'
+                  }
+                >
+                  <PsychologyIcon style={{ fontSize: 18 }} />
+                </button>
+              </Tooltip>
+            </div>
 
             <input
               ref={searchInputRef as Ref<HTMLInputElement>}

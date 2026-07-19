@@ -313,17 +313,17 @@ export default function WorkspaceLayout() {
         },
       },
       {
-        id: 'focus-chat',
+        id: 'focus-studio',
         combo: 'Ctrl+2',
         handler: () => {
-          focusPanel('chat');
+          focusPanel('studio');
         },
       },
       {
-        id: 'focus-studio',
+        id: 'focus-chat',
         combo: 'Ctrl+3',
         handler: () => {
-          focusPanel('studio');
+          focusPanel('chat');
         },
       },
       {
