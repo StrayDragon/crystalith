@@ -28,8 +28,7 @@ import { useWorkspaceStore } from '../shared/state/workspaceStore';
 import type { ChatMessage, Citation, PanelId, SourceItem } from '../shared/types';
 import { SOURCE_UPLOAD_ACCEPT } from '../shared/uploadTypes';
 import MobilePanelShell from './components/MobilePanelShell';
-import WorkspaceOnboardingBanner from './components/WorkspaceOnboardingBanner';
-import { computeWorkspaceReadiness, useDependencyHealth, useWorkspaceOverlays } from './hooks';
+import { useDependencyHealth, useWorkspaceOverlays } from './hooks';
 import {
   ModularCanvas,
   type CommandItem,
@@ -385,46 +384,6 @@ export default function WorkspaceLayout() {
 
   const isConnected = notebooks.isConnected;
 
-  const readiness = useMemo(
-    () =>
-      computeWorkspaceReadiness({
-        connectionState: notebooks.connectionState,
-        connectionError: notebooks.notebooksError,
-        notebookId: notebooks.activeNotebookId,
-        sourcesLoading: sources.isLoading,
-        sourcesCount: sources.sources.length,
-        sessionsLoading: sessions.isLoading,
-        sessionId: sessions.activeSessionId,
-      }),
-    [
-      notebooks.activeNotebookId,
-      notebooks.connectionState,
-      notebooks.notebooksError,
-      sessions.activeSessionId,
-      sessions.isLoading,
-      sources.isLoading,
-      sources.sources.length,
-    ],
-  );
-
-  const showReadyGuide = useMemo(() => {
-    return readiness.kind === 'ready' && chat.messages.length === 0 && refine.outputs.length === 0;
-  }, [chat.messages.length, readiness.kind, refine.outputs.length]);
-
-  const handleOpenDeploymentDocs = useCallback(() => {
-    window.open(
-      'https://github.com/StrayDragon/crystalith/blob/main/deployments/README.md',
-      '_blank',
-      'noopener,noreferrer',
-    );
-  }, []);
-
-  const openDiagnostics = overlays.openDiagnostics;
-
-  const handleOpenDiagnostics = useCallback(() => {
-    openDiagnostics();
-  }, [openDiagnostics]);
-
   const handleOpenUpload = useCallback(() => {
     uploadFileInputRef.current?.click();
   }, []);
@@ -455,7 +414,7 @@ export default function WorkspaceLayout() {
 
   const createNotebookQuick = notebooks.createNotebookQuick;
 
-  const handleCreateNotebookFromOnboarding = useCallback(async () => {
+  const handleCreateNotebookCommand = useCallback(async () => {
     const ok = await createNotebookQuick('未命名笔记本');
     if (ok) {
       toast.success('已创建笔记本');
@@ -486,13 +445,13 @@ export default function WorkspaceLayout() {
   const cmdPaletteCommands = useMemo<CommandItem[]>(() => {
     const cmds: CommandItem[] = [];
 
-    // Core onboarding actions
+    // Core workspace actions
     cmds.push({
       id: 'create-notebook',
       label: '新建笔记本',
       icon: '📓',
       action: () => {
-        void handleCreateNotebookFromOnboarding();
+        void handleCreateNotebookCommand();
       },
     });
 
@@ -644,7 +603,7 @@ export default function WorkspaceLayout() {
     activeWidgetIds,
     activeNotebookId,
     activeSessionId,
-    handleCreateNotebookFromOnboarding,
+    handleCreateNotebookCommand,
     handleFocusSourceSearch,
     handleOpenAddSourceFromUrl,
     handleOpenUpload,
@@ -919,32 +878,6 @@ export default function WorkspaceLayout() {
           onToggleLock={showCanvasControls ? toggleLock : undefined}
           onOpenCatalog={showCanvasControls ? overlays.toggleCatalog : undefined}
           onOpenCommandPalette={overlays.openCommandPalette}
-        />
-
-        <WorkspaceOnboardingBanner
-          readiness={readiness}
-          showReadyGuide={showReadyGuide}
-          onRetryConnection={(...args) => {
-            void notebooks.retryNotebooks(...args);
-          }}
-          onOpenDiagnostics={handleOpenDiagnostics}
-          onOpenDeploymentDocs={handleOpenDeploymentDocs}
-          onCreateNotebook={(...args) => {
-            void handleCreateNotebookFromOnboarding(...args);
-          }}
-          onUploadSources={handleOpenUpload}
-          onAddSourceFromUrl={handleOpenAddSourceFromUrl}
-          onFocusSourceSearch={handleFocusSourceSearch}
-          onStartSession={(...args) => {
-            void handleStartSession(...args);
-          }}
-          onFocusChat={handleFocusChat}
-          onOpenSlidesStudio={() => overlays.openSlidesDialog('config')}
-          slidesAvailable={Boolean(slidesTool)}
-          slidesRecoveryHint={!slidesTool ? slidesRecoveryHint : null}
-          onRecoverSlides={handleOpenSlidesRecovery}
-          onOpenCommandPalette={overlays.openCommandPalette}
-          onOpenShortcutHelp={overlays.openShortcutHelp}
         />
       </div>
 

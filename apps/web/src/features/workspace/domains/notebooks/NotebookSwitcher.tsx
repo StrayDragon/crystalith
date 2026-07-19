@@ -364,7 +364,7 @@ export default function NotebookSwitcher({
         }}
       />
 
-      <div className="flex items-center min-w-0">
+      <div className="flex items-center min-w-0 h-8">
         <button
           ref={triggerRef}
           type="button"
@@ -401,7 +401,7 @@ export default function NotebookSwitcher({
           <IconButton
             variant="text"
             size="sm"
-            className="rounded-none h-full w-8 hover:bg-gray-100"
+            className="rounded-none h-8 w-8 hover:bg-gray-100"
             disabled={!isConnected}
             {...tid(TestIds.notebookCreateButton)}
             onClick={() => {

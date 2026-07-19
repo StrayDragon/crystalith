@@ -75,14 +75,8 @@ test.describe('@p0 workspace smoke', () => {
     }
   });
 
-  test('A04: onboarding banner exposes durable openers', async ({ page }) => {
-    const banner = page.getByTestId(TestIds.onboardingBanner);
-    // Banner may auto-dismiss after ready; URL opener only exists on `no_sources` variant.
-    if (!(await banner.isVisible().catch(() => false))) return;
-    const urlOpen = page.getByTestId(TestIds.urlImportOpen);
-    if (await urlOpen.count()) {
-      await expect(urlOpen.first()).toBeAttached();
-    }
+  test('A04: onboarding banner is not shown', async ({ page }) => {
+    await expect(page.getByTestId(TestIds.onboardingBanner)).toHaveCount(0);
   });
 
   test('N01: notebook switcher opens by testid', async ({ page }) => {
@@ -92,10 +86,11 @@ test.describe('@p0 workspace smoke', () => {
     await page.keyboard.press('Escape');
   });
 
-  test('N02: create notebook control is present', async ({ page }) => {
+  test('N02: create notebook control is present and visible', async ({ page }) => {
     const create = page.getByTestId(TestIds.notebookCreateButton);
-    await expect(create).toBeAttached();
+    await expect(create).toBeVisible();
     await expect(create).toHaveAttribute('aria-label', '新建笔记本');
+    await expect(create.locator('svg')).toBeVisible();
   });
 
   test('N03: create notebook via API appears in switcher', async ({ page }) => {
