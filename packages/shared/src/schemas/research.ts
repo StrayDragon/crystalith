@@ -93,6 +93,26 @@ export const SearchPlanSchema = z.object({
 });
 export type SearchPlan = z.infer<typeof SearchPlanSchema>;
 
+/**
+ * LLM `generateObject` plan shape (agent). Subset of step/wire plan:
+ * no iteration / estimatedResults — those live on the step or SSE envelope.
+ */
+export const ResearchPlanLlmSchema = z.object({
+  queries: z
+    .array(
+      z.object({
+        query: z.string(),
+        engine: z.string().default('Web'),
+        priority: z.number().min(1).max(3).default(1),
+        reason: z.string(),
+      }),
+    )
+    .min(1)
+    .max(5),
+  reasoning: z.string(),
+});
+export type ResearchPlanLlm = z.infer<typeof ResearchPlanLlmSchema>;
+
 export const ResearchSearchResultSchema = z.object({
   title: z.string(),
   url: z.string(),
@@ -106,12 +126,23 @@ export type ResearchSearchResult = z.infer<typeof ResearchSearchResultSchema>;
 export const IterationAnalysisSchema = z.object({
   iteration: z.number().int().positive(),
   resultCount: z.number().int().nonnegative(),
-  coverage: z.number().min(0).max(1),
+  /** Live agent + UI field name (was unused `coverage` in early shared draft). */
+  coverageEstimate: z.number().min(0).max(1),
   summary: z.string(),
-  needMoreSearch: z.boolean(),
+  /** Live agent + UI field name (was unused `needMoreSearch`). */
+  needMore: z.boolean(),
   suggestedQueries: z.array(z.string()).default([]),
 });
 export type IterationAnalysis = z.infer<typeof IterationAnalysisSchema>;
+
+/** LLM `generateObject` analysis shape — omit step envelope fields. */
+export const IterationAnalysisLlmSchema = IterationAnalysisSchema.pick({
+  summary: true,
+  coverageEstimate: true,
+  needMore: true,
+  suggestedQueries: true,
+});
+export type IterationAnalysisLlm = z.infer<typeof IterationAnalysisLlmSchema>;
 
 export const ResearchOutputTypeSchema = z.enum([
   'report',

@@ -1,19 +1,13 @@
 /**
  * Shared API types — camelCase wire (c65).
  *
- * Prefer importing from `@crystalith/shared` for server-contract types.
- * This file contains only types not yet re-exported from shared, or
- * frontend-specific UI transformations.
+ * Prefer Eden `treaty<App>` inferred types, then `@crystalith/shared`.
+ * This file is a shrinking island of types not yet migrated (see `_PROGRESS.md` P1.4).
  */
 
-export type ResearchStatus =
-  | 'planning'
-  | 'searching'
-  | 'analyzing'
-  | 'waiting_user'
-  | 'completed'
-  | 'cancelled'
-  | 'error';
+import type { ResearchStatus } from '@crystalith/shared';
+
+export type { ResearchStatus };
 
 export interface ResearchSessionListItem {
   id: number;

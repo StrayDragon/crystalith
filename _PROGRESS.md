@@ -59,7 +59,7 @@ shared Zod（或路由挂载的 schema）
 | Phase | 主题 | 状态 |
 | --- | --- | --- |
 | P0 | 门禁解阻塞（能跑 `just lint`） | ✅ |
-| P1 | Zod / Eden SSOT 收敛（核心） | ⬜ |
+| P1 | Zod / Eden SSOT 收敛（核心） | 🔄 P1.1 ✅；其余进行中 |
 | P2 | Zod 使用面写入 AGENTS.md + 文档对齐 | ⬜ |
 | P3 | 门禁真相（qa 组成、假绿项） | ⬜ |
 | P4 | Cleanup A（死代码 / 死配置，无行为变更） | ⬜ |
@@ -83,9 +83,9 @@ shared Zod（或路由挂载的 schema）
   - [x] `apps/web/src/api/shared-types.ts` 导出清单 vs Eden / shared  
   - [x] `apps/web/src/features/workspace/shared/types.ts` 中 wire 相关 vs UI-only  
   - [x] server 内本地 `z.object` 与 shared 重名或同域（research / studio / outputs / …）  
-- [ ] **P1.1 Research 合约对齐**（ARCH-02 / ARCH-11）  
-  - [ ] `agent.ts` 改用 / 对齐 `packages/shared` 的 research schemas（消掉 `coverage` vs `coverageEstimate` 等漂移）  
-  - [ ] `ResearchStatus` 等 DTO 单一来源；web `useResearch` 去掉平行 union  
+- [x] **P1.1 Research 合约对齐**（ARCH-02 / ARCH-11）  
+  - [x] `agent.ts` 改用 / 对齐 `packages/shared` 的 research schemas（消掉 `coverage` vs `coverageEstimate` 等漂移）  
+  - [x] `ResearchStatus` 等 DTO 单一来源；web `useResearch` 去掉平行 union  
 - [ ] **P1.2 Output / RenderDescriptor 收敛**（ARCH-04 相关）  
   - [ ] shared 补齐或统一 `RenderDescriptor` / output meta；server `generator` / web 去三份复制  
 - [ ] **P1.3 Studio outline**（ARCH-10）  
@@ -153,13 +153,14 @@ shared Zod（或路由挂载的 schema）
 
 ## 3. 当前焦点
 
-**正在做**：P1.1 Research 合约对齐（shared ← 对齐 live 字段名）  
+**正在做**：_(批次间隙 — 下一建议 P1.3 Studio outline)_  
 
 **已完成批次**：  
 - P0 — lint 解阻塞 + Eden≠Zod 台账  
-- P1.0 — 平行类型 / 本地 Zod 盘点（见附录 §6）  
+- P1.0 — 平行类型 / 本地 Zod 盘点  
+- P1.1 — Research shared←live + agent/web 引用 shared  
 
-**下一步**：P1.1 → P1.3 Studio outline（小）→ P1.4 web Eden 迁移 …
+**下一步**：P1.3 → P1.4 web Eden 迁移 …
 
 ---
 

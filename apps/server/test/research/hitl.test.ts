@@ -5,8 +5,8 @@
 import { afterAll, beforeAll, describe, expect, it, mock } from 'bun:test';
 
 // AI mock MUST be installed before importing server modules.
-// Returns an object compatible with both PlanSearchSchema (queries,reasoning)
-// and AnalysisSchema (summary,coverageEstimate,needMore,suggestedQueries).
+// Mock LLM returns for ResearchPlanLlmSchema + IterationAnalysisLlmSchema
+// (plan: queries+reasoning; analysis: summary,coverageEstimate,needMore,suggestedQueries).
 const MOCK_AI_OBJECT = {
   queries: [{ query: 'test query', engine: 'Web', priority: 1, reason: 'test' }],
   reasoning: 'test reasoning',
