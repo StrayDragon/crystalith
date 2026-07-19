@@ -1,8 +1,8 @@
 // Citations router — /v2/citations
 //
 // Endpoints:
-//   GET /v2/citations/:messageId          — Echo stored citations (existing)
-//   GET /v2/citations/context             — Neighborhood evidence review (c26)
+//   GET /v2/citations/:messageId                        — Echo stored citations
+//   GET /v2/notebooks/:nid/citations/context            — Neighborhood evidence review (c26/c53)
 //
 // The /context endpoint mirrors v1 `features/citations/api.py:get_citation_context`:
 // resolves a target chunk by chunk_id or (source_id+chunk_index), fetches
@@ -26,7 +26,7 @@ const apiDocs: OpenApiRoute[] = [
     responses: { 200: { description: 'Array of citation objects' } },
   },
   {
-    path: '/v2/citations/context',
+    path: '/v2/notebooks/:nid/citations/context',
     method: 'get',
     summary: 'Get neighborhood evidence for a citation chunk',
     tags: ['citations'],

@@ -1,4 +1,6 @@
 import {
+  PaginatedSchema,
+  PaginationParamsSchema,
   SessionConvertToOutputRequestSchema,
   SessionConvertToSourceRequestSchema,
   SessionCreateSchema,
@@ -8,7 +10,7 @@ import {
 // Sessions CRUD router — /v2/notebooks/:nid/sessions
 //
 // Mirrors v1 `features/sessions/api.py` on Elysia + Drizzle.
-import { desc, eq } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
@@ -21,13 +23,21 @@ import { requirePositiveIntId } from '../../shared/ids.ts';
 // OpenAPI doc registration
 // ---------------------------------------------------------------------------
 
+const SessionsPageSchema = PaginatedSchema(SessionSchema);
+
 const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/notebooks/:nid/sessions',
     method: 'get',
     summary: 'List sessions for a notebook',
     tags: ['sessions'],
-    responses: { 200: { description: 'List of sessions', body: SessionSchema.array() } },
+    request: {
+      query: {
+        offset: PaginationParamsSchema.shape.offset,
+        limit: PaginationParamsSchema.shape.limit,
+      },
+    },
+    responses: { 200: { description: 'Paginated session list', body: SessionsPageSchema } },
   },
   {
     path: '/v2/notebooks/:nid/sessions',
@@ -102,19 +112,32 @@ function notFound(id: number): never {
 
 export const sessionsRouter = new Elysia({ prefix: '/v2' })
   // List sessions for a notebook
-  .get('/notebooks/:nid/sessions', ({ params, query }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const offset = Number((query as { offset?: string }).offset ?? 0);
-    const limit = Math.min(200, Math.max(1, Number((query as { limit?: string }).limit ?? 50)));
-    const rows = db()
-      .select()
-      .from(sessions)
-      .where(eq(sessions.notebookId, nid))
-      .orderBy(desc(sessions.updatedAt))
-      .all()
-      .slice(offset, offset + limit);
-    return rows.map(serializeSession);
-  })
+  .get(
+    '/notebooks/:nid/sessions',
+    ({ params, query }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const offset = query.offset ?? 0;
+      const limit = query.limit ?? 20;
+      const total =
+        db().select({ n: count() }).from(sessions).where(eq(sessions.notebookId, nid)).get()?.n ??
+        0;
+      const rows = db()
+        .select()
+        .from(sessions)
+        .where(eq(sessions.notebookId, nid))
+        .orderBy(desc(sessions.updatedAt))
+        .limit(limit)
+        .offset(offset)
+        .all();
+      return {
+        items: rows.map(serializeSession),
+        total,
+        offset,
+        limit,
+      };
+    },
+    { query: PaginationParamsSchema, response: SessionsPageSchema },
+  )
 
   // Get a single session (c39: v1 api.py:200-209)
   .get('/notebooks/:nid/sessions/:sid', ({ params }) => {

@@ -66,8 +66,9 @@ const QA_STREAM_CHANNEL: AsyncApiChannel = {
 
 const RESEARCH_PROGRESS_CHANNEL: AsyncApiChannel = {
   name: 'researchProgress',
-  description: 'SSE stream of research agent progress events.',
-  address: '/v2/research/sessions/{id}/stream',
+  description:
+    'SSE stream of research agent progress events. Requires query notebookId (c67 notebook ownership).',
+  address: '/v2/research/{id}/stream',
   events: [
     {
       name: 'plan_ready',

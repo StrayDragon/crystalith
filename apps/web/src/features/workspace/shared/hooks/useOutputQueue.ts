@@ -154,13 +154,13 @@ export function useOutputQueue({
     activeNotebookId && isConnected ? ['workspace/outputs', activeNotebookId] : null,
     async () => {
       const { data, error: fetchErr } = await api.v2.outputs.get({
-        query: { notebookId: activeNotebookId ?? 0 },
+        query: { notebookId: activeNotebookId ?? 0, offset: 0, limit: 200 },
       });
       if (fetchErr)
         throw new Error(
           typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
         );
-      return data ?? [];
+      return data?.items ?? [];
     },
     { revalidateOnFocus: false },
   );

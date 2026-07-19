@@ -21,18 +21,23 @@ beforeEach(() => {
 test('fetchSessions stores list data', async () => {
   server.use(
     http.get('*/v2/research', () =>
-      HttpResponse.json([
-        {
-          id: 1,
-          notebookId: 1,
-          topic: 'Topic',
-          status: 'planning',
-          currentIteration: 1,
-          maxIterations: 3,
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-01T00:00:00Z',
-        },
-      ]),
+      HttpResponse.json({
+        items: [
+          {
+            id: 1,
+            notebookId: 1,
+            topic: 'Topic',
+            status: 'planning',
+            currentIteration: 1,
+            maxIterations: 3,
+            createdAt: '2024-01-01T00:00:00Z',
+            updatedAt: '2024-01-01T00:00:00Z',
+          },
+        ],
+        total: 1,
+        offset: 0,
+        limit: 200,
+      }),
     ),
   );
 
@@ -145,9 +150,14 @@ test('SSE reconnect does not use stale session state after completion', async ()
     http.get('*/v2/research', () => {
       listCount += 1;
       if (listCount === 1) {
-        return HttpResponse.json([baseSession]);
+        return HttpResponse.json({ items: [baseSession], total: 1, offset: 0, limit: 200 });
       }
-      return HttpResponse.json([{ ...baseSession, status: 'completed' }]);
+      return HttpResponse.json({
+        items: [{ ...baseSession, status: 'completed' }],
+        total: 1,
+        offset: 0,
+        limit: 200,
+      });
     }),
   );
 

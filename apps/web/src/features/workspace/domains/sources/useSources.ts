@@ -104,6 +104,8 @@ export function useSources() {
       sortBy,
       sortOrder,
       tag: tagFilter.trim() || undefined,
+      offset: 0,
+      limit: 200,
     }),
     [sortBy, sortOrder, tagFilter],
   );
@@ -125,7 +127,7 @@ export function useSources() {
         .then((r) => {
           // eslint-disable-next-line typescript/no-base-to-string
           if (r.error) throw new Error(String(r.error));
-          return r.data ?? [];
+          return r.data?.items ?? [];
         }),
     { revalidateOnFocus: false },
   );

@@ -113,6 +113,12 @@ export type Translation = {
   'common.iso_timestamp': string;
   'common.json_metadata': string;
   'common.citation': string;
+  'common.pagination_params': string;
+  'common.pagination_offset': string;
+  'common.pagination_limit': string;
+  'common.paginated_envelope': string;
+  'common.paginated_items': string;
+  'common.paginated_total': string;
   'streaming.qa_chunk': string;
   'streaming.qa_state_snapshot': string;
   'streaming.qa_done': string;

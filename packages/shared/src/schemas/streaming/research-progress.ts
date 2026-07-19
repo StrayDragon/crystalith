@@ -1,4 +1,4 @@
-// Research progress streaming events — SSE for /v2/research/sessions/:id/stream.
+// Research progress streaming events — SSE for /v2/research/:id/stream.
 //
 // Wire contract (scheme A):
 //   - SSE `event:` line = channel name (plan_ready, done, …) — see ResearchProgressEventNames

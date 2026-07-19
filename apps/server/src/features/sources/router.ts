@@ -1,5 +1,7 @@
 import {
   NotebookIdQuerySchema,
+  PaginatedSchema,
+  PaginationParamsSchema,
   PatchNotebookExtractorPolicySchema,
   SourceBatchDeleteRequestSchema,
   SourceBatchReembedRequestSchema,
@@ -10,12 +12,14 @@ import {
   SourceTagBindingResponseSchema,
   SourceTagCreateSchema,
   SourceUploadQuerySchema,
+  paginateItems,
 } from '@crystalith/shared';
 // Sources CRUD + upload router — /v2/sources, /v2/notebooks/:nid/sources
 //
 // Mirrors v1 `features/sources/api.py` + `features/sources/api_ingest.py`.
 import { and, eq, sql } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
+import { z } from 'zod';
 
 import { db } from '../../db/index.ts';
 import {
@@ -52,14 +56,30 @@ import { ingestSource } from './pipeline.ts';
 // OpenAPI doc registration
 // ---------------------------------------------------------------------------
 
+const SourceListQuerySchema = PaginationParamsSchema.extend({
+  tag: z.string().optional(),
+  sortBy: z.string().optional(),
+  sortOrder: z.string().optional(),
+});
+const SourcesPageSchema = PaginatedSchema(SourceSchema);
+
 const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/notebooks/:nid/sources',
     method: 'get',
     summary: 'List sources in a notebook',
     tags: ['sources'],
+    request: {
+      query: {
+        offset: PaginationParamsSchema.shape.offset,
+        limit: PaginationParamsSchema.shape.limit,
+        tag: SourceListQuerySchema.shape.tag,
+        sortBy: SourceListQuerySchema.shape.sortBy,
+        sortOrder: SourceListQuerySchema.shape.sortOrder,
+      },
+    },
     responses: {
-      200: { description: 'List of sources', body: SourceSchema.array() },
+      200: { description: 'Paginated source list', body: SourcesPageSchema },
     },
   },
   {
@@ -187,70 +207,72 @@ function enrichSources(
 
 export const sourcesRouter = new Elysia({ prefix: '/v2' })
   // List sources for a notebook (c39: tag filter + sortBy + N+1 fix)
-  .get('/notebooks/:nid/sources', ({ params, query }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const tagFilter = (query as { tag?: string }).tag;
-    const q = query as {
-      sortBy?: string;
-      sortOrder?: string;
-    };
-    const sortBy = q.sortBy ?? 'date';
-    const sortOrder = q.sortOrder ?? 'desc';
+  .get(
+    '/notebooks/:nid/sources',
+    ({ params, query }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const tagFilter = query.tag;
+      const sortBy = query.sortBy ?? 'date';
+      const sortOrder = query.sortOrder ?? 'desc';
+      const offset = query.offset ?? 0;
+      const limit = query.limit ?? 20;
 
-    let rows = db().select().from(sources).where(eq(sources.notebookId, nid)).all();
+      let rows = db().select().from(sources).where(eq(sources.notebookId, nid)).all();
 
-    // Tag filter
-    if (tagFilter) {
-      const tagRow = db()
-        .select({ id: sourceTags.id })
-        .from(sourceTags)
-        .where(and(eq(sourceTags.notebookId, nid), eq(sourceTags.name, tagFilter)))
-        .get();
-      if (tagRow) {
-        const taggedSourceIds = new Set(
-          db()
-            .select({ sourceId: sourceTagMap.sourceId })
-            .from(sourceTagMap)
-            .where(eq(sourceTagMap.tagId, tagRow.id))
-            .all()
-            .map((r) => r.sourceId),
-        );
-        rows = rows.filter((r) => taggedSourceIds.has(r.id));
-      }
-    }
-
-    // Sort
-    rows.sort((a, b) => {
-      let cmp = 0;
-      switch (sortBy) {
-        case 'name':
-          cmp = a.filename.localeCompare(b.filename);
-          break;
-        case 'size': {
-          const ca = db()
-            .select({ c: sql<number>`COUNT(*)` })
-            .from(chunks)
-            .where(eq(chunks.sourceId, a.id))
-            .get();
-          const cb = db()
-            .select({ c: sql<number>`COUNT(*)` })
-            .from(chunks)
-            .where(eq(chunks.sourceId, b.id))
-            .get();
-          cmp = (ca?.c ?? 0) - (cb?.c ?? 0);
-          break;
+      // Tag filter
+      if (tagFilter) {
+        const tagRow = db()
+          .select({ id: sourceTags.id })
+          .from(sourceTags)
+          .where(and(eq(sourceTags.notebookId, nid), eq(sourceTags.name, tagFilter)))
+          .get();
+        if (tagRow) {
+          const taggedSourceIds = new Set(
+            db()
+              .select({ sourceId: sourceTagMap.sourceId })
+              .from(sourceTagMap)
+              .where(eq(sourceTagMap.tagId, tagRow.id))
+              .all()
+              .map((r) => r.sourceId),
+          );
+          rows = rows.filter((r) => taggedSourceIds.has(r.id));
         }
-        case 'type':
-          cmp = (a.parserType ?? '').localeCompare(b.parserType ?? '');
-          break;
-        default:
-          cmp = a.updatedAt.getTime() - b.updatedAt.getTime();
       }
-      return sortOrder === 'asc' ? cmp : -cmp;
-    });
 
-    return enrichSources(rows);
-  })
+      // Sort
+      rows.sort((a, b) => {
+        let cmp = 0;
+        switch (sortBy) {
+          case 'name':
+            cmp = a.filename.localeCompare(b.filename);
+            break;
+          case 'size': {
+            const ca = db()
+              .select({ c: sql<number>`COUNT(*)` })
+              .from(chunks)
+              .where(eq(chunks.sourceId, a.id))
+              .get();
+            const cb = db()
+              .select({ c: sql<number>`COUNT(*)` })
+              .from(chunks)
+              .where(eq(chunks.sourceId, b.id))
+              .get();
+            cmp = (ca?.c ?? 0) - (cb?.c ?? 0);
+            break;
+          }
+          case 'type':
+            cmp = (a.parserType ?? '').localeCompare(b.parserType ?? '');
+            break;
+          default:
+            cmp = a.updatedAt.getTime() - b.updatedAt.getTime();
+        }
+        return sortOrder === 'asc' ? cmp : -cmp;
+      });
+
+      return paginateItems(enrichSources(rows), offset, limit);
+    },
+    { query: SourceListQuerySchema, response: SourcesPageSchema },
+  )
 
   // Upload + ingest a file
   .post(

@@ -98,7 +98,7 @@ beforeEach(() => {
 
   server.use(
     http.get('*/v2/notebooks/:notebookId/sessions/:sessionId/messages', () =>
-      HttpResponse.json([]),
+      HttpResponse.json({ items: [], total: 0, offset: 0, limit: 200 }),
     ),
   );
 });
@@ -256,10 +256,15 @@ test('sendMessage omits sourceIds when nothing is selected (ungrounded)', async 
 test('streaming path applies snapshot and delta with backend message id', async () => {
   server.use(
     http.get('*/v2/notebooks/:notebookId/sessions/:sessionId/messages', () =>
-      HttpResponse.json([
-        { id: 1, role: 'user', content: 'Hello streaming', citations: null },
-        { id: 9003, role: 'assistant', content: 'Answer', citations: [] },
-      ]),
+      HttpResponse.json({
+        items: [
+          { id: 1, role: 'user', content: 'Hello streaming', citations: null },
+          { id: 9003, role: 'assistant', content: 'Answer', citations: [] },
+        ],
+        total: 2,
+        offset: 0,
+        limit: 200,
+      }),
     ),
   );
 
@@ -341,7 +346,12 @@ test('streaming path applies snapshot and delta with backend message id', async 
 test('stopStreaming rolls back provisional assistant message before done', async () => {
   server.use(
     http.get('*/v2/notebooks/:notebookId/sessions/:sessionId/messages', () =>
-      HttpResponse.json([{ id: 1, role: 'user', content: 'Hello rollback', citations: null }]),
+      HttpResponse.json({
+        items: [{ id: 1, role: 'user', content: 'Hello rollback', citations: null }],
+        total: 1,
+        offset: 0,
+        limit: 200,
+      }),
     ),
   );
 

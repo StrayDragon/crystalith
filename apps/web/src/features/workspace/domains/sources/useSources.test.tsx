@@ -64,7 +64,9 @@ beforeEach(() => {
   });
 
   server.use(
-    http.get('*/v2/notebooks/:notebookId/sources', () => HttpResponse.json([])),
+    http.get('*/v2/notebooks/:notebookId/sources', () =>
+      HttpResponse.json({ items: [], total: 0, offset: 0, limit: 200 }),
+    ),
     http.get('*/v2/notebooks/:notebookId/sources/tags', () => HttpResponse.json([])),
     http.get('*/v2/notebooks/:notebookId/extractors', () =>
       HttpResponse.json({ extractors: [], defaultExtractor: null, policy: null }),
@@ -117,7 +119,7 @@ test('removeSources calls batch delete endpoint and refreshes list', async () =>
   server.use(
     http.get('*/v2/notebooks/:notebookId/sources', () => {
       sourceListHits += 1;
-      return HttpResponse.json([]);
+      return HttpResponse.json({ items: [], total: 0, offset: 0, limit: 200 });
     }),
     http.post('*/v2/notebooks/:notebookId/sources/batch/delete', async ({ request }) => {
       deleteCalls += 1;

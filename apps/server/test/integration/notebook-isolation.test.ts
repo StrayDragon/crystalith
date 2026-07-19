@@ -121,9 +121,9 @@ describe('c67 notebook isolation', () => {
   it('GET /v2/research?notebookId=A returns only A sessions', async () => {
     const { status, body } = await get(`/v2/research?notebookId=${notebookA}`);
     expect(status).toBe(200);
-    const list = body as Array<{ id: number; notebookId: number }>;
-    expect(list.some((r) => r.id === researchId)).toBe(true);
-    expect(list.every((r) => r.notebookId === notebookA)).toBe(true);
+    const page = body as { items: Array<{ id: number; notebookId: number }> };
+    expect(page.items.some((r) => r.id === researchId)).toBe(true);
+    expect(page.items.every((r) => r.notebookId === notebookA)).toBe(true);
   });
 
   it('session optimistic lock conflict → 409 CONFLICT', async () => {

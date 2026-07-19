@@ -21,12 +21,12 @@ export function useSessions() {
     async () => {
       const { data, error: fetchErr } = await api.v2
         .notebooks({ nid: activeNotebookId! })
-        .sessions.get();
+        .sessions.get({ query: { offset: 0, limit: 200 } });
       if (fetchErr)
         throw new Error(
           typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
         );
-      return data ?? [];
+      return data?.items ?? [];
     },
     { revalidateOnFocus: false },
   );
