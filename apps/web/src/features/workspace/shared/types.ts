@@ -5,6 +5,8 @@
  * via Eden `treaty<App>`. Do not reintroduce `Api*` DTOs here — normalize in
  * `utils.ts` from shared/Eden types into these UI shapes.
  */
+import type { OutputContentBase, OutputContentByType } from '@crystalith/shared';
+
 export type PanelId = 'sources' | 'chat' | 'refine';
 export type ConnectionState = 'connecting' | 'error' | 'live';
 export type RefineMode = 'paragraph' | 'bullets' | 'structured';
@@ -39,8 +41,6 @@ export type {
   BulletsOutputContent,
   StructuredOutputContent,
 } from '@crystalith/shared';
-
-import type { OutputContentBase, OutputContentByType } from '@crystalith/shared';
 
 export type KnownOutputPayload = OutputContentByType[OutputTypeId];
 export type UnknownOutputPayload = OutputContentBase & Record<string, unknown>;

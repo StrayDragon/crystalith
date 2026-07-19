@@ -50,26 +50,26 @@ just qa            # 含 e2e @p0 + web Vitest（见根 AGENTS.md：primary PR ga
 
 ## 已修复问题（K1–K18）
 
-| #   | 问题                                                  | 修复                                            |
-| --- | ----------------------------------------------------- | ----------------------------------------------- |
-| K1  | `@ai-sdk/openai v4` Responses API vs Chat Completions | `provider: openai-compatible`                   |
-| K2  | ~~`strategy_configs` 表不在 migration 中~~（已修：`0001` + schema SSOT） | — |
-| K3  | QA body 字段 `question` vs `content`                  | 兼容两者                                        |
-| K4  | Output type 枚举大小写                                | 自动 `.toUpperCase()`                           |
-| K5  | Citation 格式 `[Source: N]` vs `[N]`                  | prompt 改为 `[N]`                               |
-| K6  | `supportsStructuredOutputs` 默认 false                | config 设为 true                                |
-| K7  | Research `topic` 字段 `goal` 别名                     | 兼容 + fallback                                 |
-| K8  | 提取器模式字段路径不匹配                              | 嵌套在 policy 键下                              |
-| K9  | Slidev 超时                                           | AI provider 性能问题（未修复）                  |
-| K10 | Notes 面板输出渲染 JSON                               | 添加 `render_descriptor`                        |
-| K11 | Slides Studio 缺 preview 入口                         | `buildSlidesConfigSchema()` 返回 preview        |
-| K12 | GUIDE objective CitedText 渲染 JSON                   | `coerceText` + `renderTextWithCitations`        |
-| K13 | Notes 面板无法纵向滚动                                | `overflow: hidden → auto`                       |
-| K14 | StudioOutputViewer backdrop 拦截事件                  | 内容 div `position: relative`                   |
-| K15 | Slides iframe sandbox CORS + SLIDES JSON              | 加 `allow-same-origin` + SlidesMarkdownRenderer |
-| K16 | MINDMAP 线性树 → 交互图                               | `OutputContent` → MindmapViewer                 |
-| K17 | FAQ/QUIZ/GUIDE/TIMELINE/BRIEFING 回退静态             | 全部分发到交互组件                              |
-| K18 | QUIZ 选项前缀比较 bug                                 | `extractOptionLetter()` + 删条件4               |
+| #   | 问题                                                                     | 修复                                            |
+| --- | ------------------------------------------------------------------------ | ----------------------------------------------- |
+| K1  | `@ai-sdk/openai v4` Responses API vs Chat Completions                    | `provider: openai-compatible`                   |
+| K2  | ~~`strategy_configs` 表不在 migration 中~~（已修：`0001` + schema SSOT） | —                                               |
+| K3  | QA body 字段 `question` vs `content`                                     | 兼容两者                                        |
+| K4  | Output type 枚举大小写                                                   | 自动 `.toUpperCase()`                           |
+| K5  | Citation 格式 `[Source: N]` vs `[N]`                                     | prompt 改为 `[N]`                               |
+| K6  | `supportsStructuredOutputs` 默认 false                                   | config 设为 true                                |
+| K7  | Research `topic` 字段 `goal` 别名                                        | 兼容 + fallback                                 |
+| K8  | 提取器模式字段路径不匹配                                                 | 嵌套在 policy 键下                              |
+| K9  | Slidev 超时                                                              | AI provider 性能问题（未修复）                  |
+| K10 | Notes 面板输出渲染 JSON                                                  | 添加 `render_descriptor`                        |
+| K11 | Slides Studio 缺 preview 入口                                            | `buildSlidesConfigSchema()` 返回 preview        |
+| K12 | GUIDE objective CitedText 渲染 JSON                                      | `coerceText` + `renderTextWithCitations`        |
+| K13 | Notes 面板无法纵向滚动                                                   | `overflow: hidden → auto`                       |
+| K14 | StudioOutputViewer backdrop 拦截事件                                     | 内容 div `position: relative`                   |
+| K15 | Slides iframe sandbox CORS + SLIDES JSON                                 | 加 `allow-same-origin` + SlidesMarkdownRenderer |
+| K16 | MINDMAP 线性树 → 交互图                                                  | `OutputContent` → MindmapViewer                 |
+| K17 | FAQ/QUIZ/GUIDE/TIMELINE/BRIEFING 回退静态                                | 全部分发到交互组件                              |
+| K18 | QUIZ 选项前缀比较 bug                                                    | `extractOptionLetter()` + 删条件4               |
 
 ## 输出类型渲染对照
 

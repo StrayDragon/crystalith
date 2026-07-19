@@ -1,6 +1,5 @@
 // Command palette schemas — GET /v2/commands.
 import './zod-extend.js';
-
 import { z } from 'zod';
 
 export const CommandSourceSchema = z.enum(['builtin', 'custom']);

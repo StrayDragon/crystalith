@@ -181,6 +181,14 @@ describe('citation context — validation', () => {
     expect(status).toBe(404);
   });
 
+  it('defaults before/after to 1 when omitted', async () => {
+    const { status, body } = await get(ctxPath(`?chunkId=${chunkIds[2]}`));
+    expect(status).toBe(200);
+    const result = body as { before: unknown[]; after: unknown[] };
+    expect(result.before).toHaveLength(1);
+    expect(result.after).toHaveLength(1);
+  });
+
   it('clamps before/after to [0, 5] range', async () => {
     // before=99 should be clamped to 5
     const { status } = await get(ctxPath(`?chunkId=${chunkIds[2]}&before=99&after=-1`));
