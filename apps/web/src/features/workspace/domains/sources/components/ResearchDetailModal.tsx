@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react';
 import type { Ref, RefObject } from 'react';
 
 import { LAYER_LEVELS } from '../../../../../shared/layer';
+import { TestIds, tid } from '../../../../../shared/testids';
 import { SkeletonCard } from '../../../shared/components/Skeleton';
 import type { Research } from './sources-panel-types';
 
@@ -57,6 +58,7 @@ export default function ResearchDetailModal({
       role="dialog"
       aria-modal="true"
       tabIndex={-1}
+      {...tid(TestIds.researchDetailDialog)}
     >
       <div
         ref={researchModalRef as Ref<HTMLDivElement>}

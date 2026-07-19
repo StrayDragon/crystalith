@@ -80,6 +80,14 @@ export const TestIds = {
   studioToolsPopover: 'studio-tools-popover',
   studioOutputItem: 'studio-output-item',
   noteEditorDialog: 'note-editor-dialog',
+  slidesStudioDialog: 'slides-studio-dialog',
+  slidesStudioClose: 'slides-studio-close',
+
+  // Research
+  researchDetailDialog: 'research-detail-dialog',
+  researchHistoryDialog: 'research-history-dialog',
+  researchResultsDialog: 'research-results-dialog',
+  researchExportDialog: 'research-export-dialog',
 
   // Search queue (existing)
   searchQueueList: 'search-queue-list',

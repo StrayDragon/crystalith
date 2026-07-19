@@ -1,6 +1,7 @@
 import { Button, Typography } from '@material-tailwind/react';
 import {
   cloneElement,
+  forwardRef,
   type ReactElement,
   useCallback,
   useEffect,
@@ -119,15 +120,18 @@ function calculateBestPlacement(anchorRect: DOMRect, preferredPlacement: Placeme
   return 'bottom';
 }
 
-export default function ConfirmPopover({
-  message,
-  onConfirm,
-  children,
-  confirmText = '确认删除',
-  cancelText = '取消',
-  placement = 'top',
-  disabled = false,
-}: ConfirmPopoverProps) {
+const ConfirmPopover = forwardRef<HTMLElement, ConfirmPopoverProps>(function ConfirmPopover(
+  {
+    message,
+    onConfirm,
+    children,
+    confirmText = '确认删除',
+    cancelText = '取消',
+    placement = 'top',
+    disabled = false,
+  },
+  ref,
+) {
   const [open, setOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -273,6 +277,7 @@ export default function ConfirmPopover({
   return (
     <>
       {cloneElement(children, {
+        ref,
         onClick: handleTriggerClick,
       })}
       {open && anchor
@@ -327,4 +332,6 @@ export default function ConfirmPopover({
         : null}
     </>
   );
-}
+});
+
+export default ConfirmPopover;

@@ -7,15 +7,23 @@ import type { SourceItem } from '../../shared/types';
 import SourcesPanel from './SourcesPanel';
 
 // Mock reason: react-virtuoso depends on layout/observer behaviors that are unstable in jsdom.
-vi.mock('react-virtuoso', () => ({
-  Virtuoso: ({ data, itemContent }: any) => (
-    <div>
-      {data.map((item: any, index: number) => (
-        <div key={item.id}>{itemContent(index, item)}</div>
-      ))}
-    </div>
-  ),
-}));
+vi.mock('react-virtuoso', async () => {
+  const { forwardRef } = await import('react');
+  return {
+    Virtuoso: forwardRef(function VirtuosoMock(
+      { data, itemContent }: { data: any[]; itemContent: (index: number, item: any) => any },
+      _ref: unknown,
+    ) {
+      return (
+        <div>
+          {data.map((item: any, index: number) => (
+            <div key={item.id}>{itemContent(index, item)}</div>
+          ))}
+        </div>
+      );
+    }),
+  };
+});
 
 // Mock reason: keep this test focused on SourcesPanel interaction wiring, not research hook internals.
 vi.mock('../research/useResearch', () => ({
