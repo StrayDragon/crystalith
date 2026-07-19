@@ -2,6 +2,9 @@ import { useCallback, useRef, useState, useEffect } from 'react';
 
 import { api } from '../../../../api/eden';
 import { streamRequest } from '../../../../api/stream';
+import type { ResearchStatus } from '@crystalith/shared';
+
+export type { ResearchStatus };
 
 // SSE Event types
 interface SSEStatusEvent {
@@ -79,15 +82,7 @@ export type SSEEvent =
   | { type: 'connection'; data: SSEConnectionEvent }
   | { type: 'error'; data: { message: string } };
 
-// Eden response types (aligned with ResearchSessionListItem / Response)
-export type ResearchStatus =
-  | 'planning'
-  | 'searching'
-  | 'analyzing'
-  | 'waiting_user'
-  | 'completed'
-  | 'cancelled';
-
+// Session status = shared Zod SSOT (`ResearchStatusSchema`). SSE `error` is an event, not a status.
 export interface ResearchSessionItem {
   id: number;
   notebookId: number;

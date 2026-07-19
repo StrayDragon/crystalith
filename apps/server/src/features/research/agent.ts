@@ -13,9 +13,14 @@
 //   runResearch(sessionId, signal)        — fresh start (iteration 1)
 //   runResearchFromState(sessionId, sig)  — resume (reads iteration + results)
 //   runResearchCore(state, signal)        — shared core (used by both above)
+import {
+  IterationAnalysisLlmSchema,
+  ResearchPlanLlmSchema,
+  type IterationAnalysisLlm,
+  type ResearchPlanLlm,
+} from '@crystalith/shared';
 import { generateObject, streamText } from 'ai';
 import { eq } from 'drizzle-orm';
-import { z } from 'zod';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
@@ -26,8 +31,11 @@ import { Semaphore } from '../../shared/semaphore.ts';
 import { renewLock } from './lock.ts';
 
 // ---------------------------------------------------------------------------
-// Types
+// Types (LLM shapes = shared Zod SSOT)
 // ---------------------------------------------------------------------------
+
+export type SearchPlan = ResearchPlanLlm;
+export type AnalysisResult = IterationAnalysisLlm;
 
 export interface ResearchState {
   sessionId: number;
@@ -59,44 +67,6 @@ export interface ResearchResult {
   query: string;
 }
 
-export interface SearchPlan {
-  queries: Array<{ query: string; engine: string; priority: number; reason: string }>;
-  reasoning: string;
-}
-
-export interface AnalysisResult {
-  summary: string;
-  coverageEstimate: number;
-  needMore: boolean;
-  suggestedQueries: string[];
-}
-
-// ---------------------------------------------------------------------------
-// Schemas for structured output
-// ---------------------------------------------------------------------------
-
-const PlanSearchSchema = z.object({
-  queries: z
-    .array(
-      z.object({
-        query: z.string(),
-        engine: z.string().default('Web'),
-        priority: z.number().min(1).max(3).default(1),
-        reason: z.string(),
-      }),
-    )
-    .min(1)
-    .max(5),
-  reasoning: z.string(),
-});
-
-const AnalysisSchema = z.object({
-  summary: z.string(),
-  coverageEstimate: z.number().min(0).max(1),
-  needMore: z.boolean(),
-  suggestedQueries: z.array(z.string()),
-});
-
 // ---------------------------------------------------------------------------
 // Sub-function: Plan
 // ---------------------------------------------------------------------------
@@ -127,7 +97,7 @@ async function planSearches(state: ResearchState, signal: AbortSignal): Promise<
 
   const { object } = await generateObject({
     model,
-    schema: PlanSearchSchema,
+    schema: ResearchPlanLlmSchema,
     system: `You are a research assistant planning search queries. Generate 2-4 search queries covering different aspects of the topic.`,
     prompt: buildPlanPrompt(state),
     abortSignal: signal,
@@ -161,7 +131,7 @@ async function analyzeResults(state: ResearchState, signal: AbortSignal): Promis
 
   const { object } = await generateObject({
     model,
-    schema: AnalysisSchema,
+    schema: IterationAnalysisLlmSchema,
     system: `You analyze research results to determine coverage and whether more searches are needed.`,
     prompt: `Topic: ${state.topic}\n\nResults found (${state.results.length}):\n${context}\n\nEstimate coverage [0-1] and state if more searches are needed.`,
     abortSignal: signal,
