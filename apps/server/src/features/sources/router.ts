@@ -5,7 +5,9 @@ import {
   PatchNotebookExtractorPolicySchema,
   ChunkListSchema,
   SourceBatchDeleteRequestSchema,
+  SourceBatchDeleteResponseSchema,
   SourceBatchReembedRequestSchema,
+  SourceBatchReembedResponseSchema,
   SourceFromUrlRequestSchema,
   SourceSchema,
   SourceSearchRequestSchema,
@@ -15,6 +17,7 @@ import {
   SourceTagBindingRequestSchema,
   SourceTagBindingResponseSchema,
   SourceTagCreateSchema,
+  SourceTagSchema,
   SourceUploadNestedQuerySchema,
   SourceUploadQuerySchema,
   paginateItems,
@@ -505,11 +508,15 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   )
 
   // Get a source by ID (nested canonical)
-  .get('/notebooks/:nid/sources/:sid', ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const sid = requirePositiveIntId(params.sid, 'source id');
-    return handleGetSource(sid, nid);
-  })
+  .get(
+    '/notebooks/:nid/sources/:sid',
+    ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const sid = requirePositiveIntId(params.sid, 'source id');
+      return handleGetSource(sid, nid);
+    },
+    { response: SourceSchema },
+  )
 
   // Get a source by ID (flat alias — c67 notebookId required)
   .get(
@@ -518,7 +525,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'source id');
       return handleGetSource(id, query.notebookId);
     },
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: SourceSchema },
   )
 
   // Delete a source (nested canonical)
@@ -549,21 +556,25 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Tag CRUD (c39: uniqueness check + notebook ownership + idempotent assign/remove)
-  .get('/notebooks/:nid/sources/tags', ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    return db()
-      .select()
-      .from(sourceTags)
-      .where(eq(sourceTags.notebookId, nid))
-      .all()
-      .map((t) => ({
-        id: t.id,
-        notebookId: t.notebookId,
-        name: t.name,
-        createdAt: t.createdAt.toISOString(),
-        updatedAt: t.updatedAt.toISOString(),
-      }));
-  })
+  .get(
+    '/notebooks/:nid/sources/tags',
+    ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      return db()
+        .select()
+        .from(sourceTags)
+        .where(eq(sourceTags.notebookId, nid))
+        .all()
+        .map((t) => ({
+          id: t.id,
+          notebookId: t.notebookId,
+          name: t.name,
+          createdAt: t.createdAt.toISOString(),
+          updatedAt: t.updatedAt.toISOString(),
+        }));
+    },
+    { response: SourceTagSchema.array() },
+  )
 
   .post(
     '/notebooks/:nid/sources/tags',
@@ -571,8 +582,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const rawName = body.name.trim().slice(0, 64);
       if (!rawName) {
-        set.status = 400;
-        return sendError(set, ErrorCode.INVALID_REQUEST, 'Tag name is required');
+        throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Tag name is required');
       }
       // Uniqueness check (case-insensitive, v1 api_tags.py:56-63)
       const existing = db()
@@ -582,7 +592,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         .all()
         .find((t) => t.name.toLowerCase() === rawName.toLowerCase());
       if (existing) {
-        return sendError(set, ErrorCode.CONFLICT, 'Tag name already exists', {
+        throw new AppHttpError(ErrorCode.CONFLICT, 'Tag name already exists', {
           existingTagId: existing.id,
         });
       }
@@ -593,6 +603,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         .get();
       // c57: invalidate sources cache (list-sources cache key includes tag filter)
       bumpSourcesEpoch(nid);
+      set.status = 201;
       return {
         id: row.id,
         notebookId: row.notebookId,
@@ -601,18 +612,17 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         updatedAt: row.updatedAt.toISOString(),
       };
     },
-    { body: SourceTagCreateSchema },
+    { body: SourceTagCreateSchema, response: SourceTagSchema },
   )
 
   .patch(
     '/notebooks/:nid/sources/tags/:tid',
-    ({ params, body, set }) => {
+    ({ params, body }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const tid = requirePositiveIntId(params.tid, 'tag id');
       const rawName = body.name.trim().slice(0, 64);
       if (!rawName) {
-        set.status = 400;
-        return sendError(set, ErrorCode.INVALID_REQUEST, 'Tag name is required');
+        throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Tag name is required');
       }
       // Ownership check (v1 api_tags.py:81)
       const existing = db()
@@ -629,7 +639,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         .all()
         .find((t) => t.id !== tid && t.name.toLowerCase() === rawName.toLowerCase());
       if (conflict) {
-        return sendError(set, ErrorCode.CONFLICT, 'Tag name already exists', {
+        throw new AppHttpError(ErrorCode.CONFLICT, 'Tag name already exists', {
           existingTagId: conflict.id,
         });
       }
@@ -645,7 +655,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         updatedAt: updated!.updatedAt.toISOString(),
       };
     },
-    { body: SourceTagCreateSchema },
+    { body: SourceTagCreateSchema, response: SourceTagSchema },
   )
 
   .delete('/notebooks/:nid/sources/tags/:tid', ({ params, set }) => {
@@ -871,7 +881,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       if (deletedIds.length) bumpSourcesEpoch(nid);
       return { results, deletedIds, deletedCount: deletedIds.length };
     },
-    { body: SourceBatchDeleteRequestSchema },
+    { body: SourceBatchDeleteRequestSchema, response: SourceBatchDeleteResponseSchema },
   )
 
   // Batch re-embed sources
@@ -945,7 +955,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         failedCount: failed.length,
       };
     },
-    { body: SourceBatchReembedRequestSchema },
+    { body: SourceBatchReembedRequestSchema, response: SourceBatchReembedResponseSchema },
   )
 
   // Ingest from URL (c39: dedup default prompt + link mode + SSRF fallback fix)

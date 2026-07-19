@@ -49,16 +49,24 @@ export function buildDirectories(entries: SnapshotEntry[]): string[] {
   return dirs;
 }
 
-export function schemaProperties(schema: unknown): Record<string, any> {
-  if (!schema || typeof schema !== 'object') return {};
-  const props = (schema as any).properties;
-  if (!props || typeof props !== 'object') return {};
-  return props as Record<string, any>;
+type JsonSchemaObject = {
+  properties?: Record<string, unknown>;
+  required?: unknown[];
+};
+
+function asJsonSchemaObject(schema: unknown): JsonSchemaObject | null {
+  if (!schema || typeof schema !== 'object') return null;
+  return schema as JsonSchemaObject;
+}
+
+export function schemaProperties(schema: unknown): Record<string, unknown> {
+  const props = asJsonSchemaObject(schema)?.properties;
+  if (!props || typeof props !== 'object' || Array.isArray(props)) return {};
+  return props;
 }
 
 export function schemaRequired(schema: unknown): Set<string> {
-  if (!schema || typeof schema !== 'object') return new Set();
-  const req = (schema as any).required;
+  const req = asJsonSchemaObject(schema)?.required;
   if (!Array.isArray(req)) return new Set();
   return new Set(req.map(String));
 }

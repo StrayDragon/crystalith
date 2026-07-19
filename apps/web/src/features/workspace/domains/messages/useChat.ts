@@ -129,10 +129,8 @@ export function useChat({
     }
     if (!data) return;
     const normalized = data
-      .filter((item: Record<string, unknown>) => item.role !== 'system')
-      .map((item: Record<string, unknown>) =>
-        normalizeMessage(item as unknown as Parameters<typeof normalizeMessage>[0]),
-      );
+      .filter((item) => item.role !== 'system')
+      .map((item) => normalizeMessage(item));
     const scopeMap = new Map<string, (typeof messagesRef.current)[number]['citationScope']>();
     for (const message of messagesRef.current) {
       if (message.role !== 'assistant') continue;

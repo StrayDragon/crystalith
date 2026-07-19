@@ -204,7 +204,7 @@ function SourceConnectorConfigStep({
   onUpdateConfig,
 }: {
   selectedConnector: SourceConnectorDescriptor | null;
-  configProps: Record<string, any>;
+  configProps: Record<string, unknown>;
   configRequired: Set<string>;
   connectionConfig: JsonDictInput;
   onUpdateConfig: (key: string, next: unknown, typeHint?: string) => void;
@@ -232,15 +232,19 @@ function SourceConnectorConfigStep({
   return (
     <div className="space-y-3">
       {keys.map((key) => {
-        const field = props[key] ?? {};
-        const typeHint = typeof field?.type === 'string' ? field.type : undefined;
+        const rawField = props[key];
+        const field =
+          rawField && typeof rawField === 'object' && !Array.isArray(rawField)
+            ? (rawField as Record<string, unknown>)
+            : {};
+        const typeHint = typeof field.type === 'string' ? field.type : undefined;
         const label =
-          typeof field?.title === 'string' && field.title.trim() ? field.title.trim() : key;
+          typeof field.title === 'string' && field.title.trim() ? field.title.trim() : key;
         const description =
-          typeof field?.description === 'string' && field.description.trim()
+          typeof field.description === 'string' && field.description.trim()
             ? field.description.trim()
             : null;
-        const enumValues = Array.isArray(field?.enum) ? field.enum : null;
+        const enumValues = Array.isArray(field.enum) ? field.enum : null;
         const isRequired = required.has(key);
         const current = connectionConfig[key];
 
