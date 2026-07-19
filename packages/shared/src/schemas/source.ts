@@ -237,8 +237,10 @@ export const SourceSearchResultSchema = z.object({
   snippet: z.string().nullable().optional(),
   source: z.string().nullable().optional(),
 });
+export type SourceSearchResult = z.infer<typeof SourceSearchResultSchema>;
 
 export const SourceSearchStatusSchema = z.enum(['ok', 'not_implemented']);
+export type SourceSearchStatus = z.infer<typeof SourceSearchStatusSchema>;
 
 export const SourceSearchResponseSchema = z.object({
   status: SourceSearchStatusSchema,
@@ -249,6 +251,7 @@ export const SourceSearchResponseSchema = z.object({
   message: z.string().nullable().optional(),
   createdAt: IsoTimestampSchema,
 });
+export type SourceSearchResponse = z.infer<typeof SourceSearchResponseSchema>;
 
 // ---------------------------------------------------------------------------
 // Source summary + per-source QA
