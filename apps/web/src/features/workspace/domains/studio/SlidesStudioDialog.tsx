@@ -407,7 +407,7 @@ export default function SlidesStudioDialog({
         syncFromDraft(normalizeDraft(data));
       } else {
         const { data, error: fetchErr } = await api.v2.studio.slides.get({
-          query: { notebookId: String(notebookId) },
+          query: { notebookId },
         });
         if (fetchErr)
           throw new Error(

@@ -7,6 +7,7 @@ import {
   SourceSearchRequestSchema,
   SourceTagBindingRequestSchema,
   SourceTagCreateSchema,
+  SourceUploadQuerySchema,
 } from '@crystalith/shared';
 // Sources CRUD + upload router — /v2/sources, /v2/notebooks/:nid/sources
 //
@@ -250,64 +251,62 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Upload + ingest a file
-  .post('/sources/upload', async ({ body, query, set }) => {
-    if (query?.notebookId === undefined || query?.notebookId === '') {
-      return sendError(set, ErrorCode.INVALID_REQUEST, 'notebookId query param is required');
-    }
-    const notebookId = requirePositiveIntId(query.notebookId, 'notebook id');
-    const dedupAction = ((query as Record<string, string> | undefined)?.dedupAction ?? 'prompt') as
-      | 'prompt'
-      | 'reuse'
-      | 'create_new';
+  .post(
+    '/sources/upload',
+    async ({ body, query, set }) => {
+      const notebookId = query.notebookId;
+      const dedupAction = query.dedupAction;
 
-    // body is FormData; Elysia parses multipart into { filename, file }
-    const file = (body as { file?: File }).file;
-    if (!file) {
-      return sendError(set, ErrorCode.INVALID_REQUEST, 'No file provided');
-    }
+      // body is FormData; Elysia parses multipart into { filename, file }
+      const file = (body as { file?: File }).file;
+      if (!file) {
+        return sendError(set, ErrorCode.INVALID_REQUEST, 'No file provided');
+      }
 
-    // Upload size limit (configurable, default 50 MB).
-    const maxBytes = getUploadMaxBytes();
-    if (file.size > maxBytes) {
-      return sendError(set, ErrorCode.PAYLOAD_TOO_LARGE, 'Payload Too Large', {
-        maxBytes: maxBytes,
-        uploadedBytes: file.size,
-      });
-    }
+      // Upload size limit (configurable, default 50 MB).
+      const maxBytes = getUploadMaxBytes();
+      if (file.size > maxBytes) {
+        return sendError(set, ErrorCode.PAYLOAD_TOO_LARGE, 'Payload Too Large', {
+          maxBytes: maxBytes,
+          uploadedBytes: file.size,
+        });
+      }
 
-    const buffer = new Uint8Array(await file.arrayBuffer());
+      const buffer = new Uint8Array(await file.arrayBuffer());
 
-    // c44: Dedup check — gated by config (v1 source_ingestion.dedup.enabled)
-    const dedupKey = getDedupEnabled() ? uploadDedupKey(buffer) : undefined;
-    if (dedupKey && dedupAction !== 'create_new') {
-      const hit = db()
-        .select({ id: sources.id })
-        .from(sources)
-        .where(and(eq(sources.notebookId, notebookId), eq(sources.dedupKey, dedupKey)))
-        .get();
-      if (hit) {
-        if (dedupAction === 'prompt') {
-          return sendError(set, ErrorCode.CONFLICT, 'Source dedup hit', {
-            existingSourceId: hit.id,
-          });
-        }
-        if (dedupAction === 'reuse') {
-          const existing = db().select().from(sources).where(eq(sources.id, hit.id)).get();
-          return { reused: true, source: existing };
+      // c44: Dedup check — gated by config (v1 source_ingestion.dedup.enabled)
+      const dedupKey = getDedupEnabled() ? uploadDedupKey(buffer) : undefined;
+      if (dedupKey && dedupAction !== 'create_new') {
+        const hit = db()
+          .select({ id: sources.id })
+          .from(sources)
+          .where(and(eq(sources.notebookId, notebookId), eq(sources.dedupKey, dedupKey)))
+          .get();
+        if (hit) {
+          if (dedupAction === 'prompt') {
+            return sendError(set, ErrorCode.CONFLICT, 'Source dedup hit', {
+              existingSourceId: hit.id,
+            });
+          }
+          if (dedupAction === 'reuse') {
+            const existing = db().select().from(sources).where(eq(sources.id, hit.id)).get();
+            return { reused: true, source: existing };
+          }
         }
       }
-    }
 
-    const result = await ingestSource({
-      buffer,
-      filename: file.name,
-      notebookId,
-      mimeType: file.type,
-      dedupKey,
-    });
+      const result = await ingestSource({
+        buffer,
+        filename: file.name,
+        notebookId,
+        mimeType: file.type,
+        dedupKey,
+      });
 
-    return result;
-  })
+      return result;
+    },
+    { query: SourceUploadQuerySchema },
+  )
 
   // Get a source by ID
   // c57: notebook ownership check — requires ?notebookId= query, returns 404

@@ -12,6 +12,13 @@
 // Slidev (c32): write .md to data/slides/ for preview
 //
 // H5+H6: generation logic + SSE helper extracted to service.ts
+import {
+  SlideDraftCreateRequestSchema,
+  SlideDraftUpdateSchema,
+  StudioMarkdownPutSchema,
+  StudioOutlinePutSchema,
+  StudioSlidesListQuerySchema,
+} from '@crystalith/shared';
 import { desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
@@ -39,6 +46,7 @@ const apiDocs: OpenApiRoute[] = [
     method: 'post',
     summary: 'Create a slide draft',
     tags: ['studio'],
+    request: { body: SlideDraftCreateRequestSchema },
     responses: { 201: { description: 'Created slide draft' } },
   },
   {
@@ -60,6 +68,7 @@ const apiDocs: OpenApiRoute[] = [
     method: 'patch',
     summary: 'Update slide draft fields',
     tags: ['studio'],
+    request: { body: SlideDraftUpdateSchema },
     responses: { 200: { description: 'Draft updated' } },
   },
   {
@@ -74,6 +83,7 @@ const apiDocs: OpenApiRoute[] = [
     method: 'put',
     summary: 'Edit outline manually (HITL review)',
     tags: ['studio'],
+    request: { body: StudioOutlinePutSchema },
     responses: { 200: { description: 'Outline updated' } },
   },
   {
@@ -88,6 +98,7 @@ const apiDocs: OpenApiRoute[] = [
     method: 'put',
     summary: 'Edit markdown manually + Slidev persist + output sync (HITL)',
     tags: ['studio'],
+    request: { body: StudioMarkdownPutSchema },
     responses: { 200: { description: 'Markdown updated and persisted' } },
   },
 ];
@@ -124,72 +135,53 @@ function getSlideOrThrow(id: number): typeof studioSlides.$inferSelect {
   return row;
 }
 
-function requireSourceIds(raw: unknown): number[] {
-  const ids = Array.isArray(raw) ? (raw as number[]).map(Number).filter((n) => n > 0) : [];
-  if (ids.length === 0) throw new Error('source_ids required — select at least one source');
-  return ids;
-}
-
 // ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 
 export const studioRouter = new Elysia({ prefix: '/v2' })
   // Create slide draft
-  .post('/studio/slides', ({ body }) => {
-    const {
-      notebookId: nbId,
-      title,
-      prompt,
-      sourceIds,
-      generationConfig,
-    } = body as Record<string, unknown>;
-    const notebookId = requirePositiveIntId(nbId, 'notebook id');
+  .post(
+    '/studio/slides',
+    ({ body }) => {
+      const notebookId = body.notebookId;
 
-    const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
-    if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
+      const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
+      if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
 
-    const slide = db()
-      .insert(studioSlides)
-      .values({
-        notebookId,
-        title: title
-          ? typeof title === 'string'
-            ? title
-            : typeof title === 'string'
-              ? title
-              : ''
-          : null,
-        prompt: prompt
-          ? typeof prompt === 'string'
-            ? prompt
-            : typeof prompt === 'string'
-              ? prompt
-              : ''
-          : null,
-        sourceIds: requireSourceIds(sourceIds),
-        generationConfig: (generationConfig as Record<string, unknown>) ?? null,
-        stage: 'input',
-        status: 'idle',
-      })
-      .returning()
-      .get();
-    return serializeSlide(slide);
-  })
+      const slide = db()
+        .insert(studioSlides)
+        .values({
+          notebookId,
+          title: body.title ?? null,
+          prompt: body.prompt ?? null,
+          engine: body.engine ?? 'slidev',
+          sourceIds: body.sourceIds,
+          generationConfig: body.generationConfig ?? null,
+          stage: 'input',
+          status: 'idle',
+        })
+        .returning()
+        .get();
+      return serializeSlide(slide);
+    },
+    { body: SlideDraftCreateRequestSchema },
+  )
 
   // List slide drafts
-  .get('/studio/slides', ({ query }) => {
-    const notebookId = requirePositiveIntId(
-      (query as { notebookId?: string }).notebookId,
-      'notebook id',
-    );
-    return db()
-      .select()
-      .from(studioSlides)
-      .where(eq(studioSlides.notebookId, notebookId))
-      .all()
-      .map(serializeSlide);
-  })
+  .get(
+    '/studio/slides',
+    ({ query }) => {
+      const { notebookId } = query;
+      return db()
+        .select()
+        .from(studioSlides)
+        .where(eq(studioSlides.notebookId, notebookId))
+        .all()
+        .map(serializeSlide);
+    },
+    { query: StudioSlidesListQuerySchema },
+  )
 
   // Get slide draft
   .get('/studio/slides/:id', ({ params }) =>
@@ -197,39 +189,42 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
   )
 
   // c43: Get latest draft (v1 api.py:232-247)
-  .get('/studio/slides/latest', ({ query }) => {
-    const notebookId = requirePositiveIntId(
-      (query as { notebookId?: string }).notebookId,
-      'notebook id',
-    );
-    const row = db()
-      .select()
-      .from(studioSlides)
-      .where(eq(studioSlides.notebookId, notebookId))
-      .orderBy(desc(studioSlides.updatedAt))
-      .get();
-    if (!row) throw new NotFoundError('Slide draft not found');
-    return serializeSlide(row);
-  })
+  .get(
+    '/studio/slides/latest',
+    ({ query }) => {
+      const { notebookId } = query;
+      const row = db()
+        .select()
+        .from(studioSlides)
+        .where(eq(studioSlides.notebookId, notebookId))
+        .orderBy(desc(studioSlides.updatedAt))
+        .get();
+      if (!row) throw new NotFoundError('Slide draft not found');
+      return serializeSlide(row);
+    },
+    { query: StudioSlidesListQuerySchema },
+  )
 
   // Update draft fields (c32: PATCH draft — v1 parity)
-  .patch('/studio/slides/:id', ({ params, body }) => {
-    const id = requirePositiveIntId(params.id, 'slide id');
-    getSlideOrThrow(id);
-    const { title, prompt, sourceIds, generationConfig } = body as Record<string, unknown>;
-    const updateData: Record<string, unknown> = {};
-    if (title !== undefined)
-      updateData.title = typeof title === 'string' ? title : typeof title === 'string' ? title : '';
-    if (prompt !== undefined)
-      updateData.prompt =
-        typeof prompt === 'string' ? prompt : typeof prompt === 'string' ? prompt : '';
-    if (sourceIds !== undefined) updateData.sourceIds = requireSourceIds(sourceIds);
-    if (generationConfig !== undefined)
-      updateData.generationConfig = generationConfig as Record<string, unknown>;
-    updateData.errorMessage = null;
-    db().update(studioSlides).set(updateData).where(eq(studioSlides.id, id)).run();
-    return serializeSlide(getSlideOrThrow(id));
-  })
+  .patch(
+    '/studio/slides/:id',
+    ({ params, body }) => {
+      const id = requirePositiveIntId(params.id, 'slide id');
+      getSlideOrThrow(id);
+      const updateData: Record<string, unknown> = { errorMessage: null };
+      if (body.title !== undefined) updateData.title = body.title;
+      if (body.prompt !== undefined) updateData.prompt = body.prompt;
+      if (body.engine !== undefined) updateData.engine = body.engine;
+      if (body.sourceIds !== undefined) updateData.sourceIds = body.sourceIds;
+      if (body.generationConfig !== undefined) updateData.generationConfig = body.generationConfig;
+      if (body.outline !== undefined) updateData.outline = body.outline;
+      if (body.markdown !== undefined) updateData.markdown = body.markdown;
+      if (body.stage !== undefined) updateData.stage = body.stage;
+      db().update(studioSlides).set(updateData).where(eq(studioSlides.id, id)).run();
+      return serializeSlide(getSlideOrThrow(id));
+    },
+    { body: SlideDraftUpdateSchema },
+  )
 
   // Stage 1: Generate outline via AI (POST — non-streaming)
   .post('/studio/slides/:id/outline', async ({ params }) => {
@@ -262,17 +257,25 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
   })
 
   // HITL: manually edit outline (c32: PUT outline — v1 parity)
-  .put('/studio/slides/:id/outline', ({ params, body }) => {
-    const id = requirePositiveIntId(params.id, 'slide id');
-    getSlideOrThrow(id);
-    const { outline } = body as { outline: Record<string, unknown> };
-    db()
-      .update(studioSlides)
-      .set({ outline, stage: 'outline', status: 'idle', errorMessage: null })
-      .where(eq(studioSlides.id, id))
-      .run();
-    return serializeSlide(getSlideOrThrow(id));
-  })
+  .put(
+    '/studio/slides/:id/outline',
+    ({ params, body }) => {
+      const id = requirePositiveIntId(params.id, 'slide id');
+      getSlideOrThrow(id);
+      db()
+        .update(studioSlides)
+        .set({
+          outline: body.outline as Record<string, unknown>,
+          stage: 'outline',
+          status: 'idle',
+          errorMessage: null,
+        })
+        .where(eq(studioSlides.id, id))
+        .run();
+      return serializeSlide(getSlideOrThrow(id));
+    },
+    { body: StudioOutlinePutSchema },
+  )
 
   // Stage 2: Generate markdown from outline via AI (POST — non-streaming)
   .post('/studio/slides/:id/markdown', async ({ params }) => {
@@ -308,23 +311,27 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
   })
 
   // HITL: manually edit markdown + Slidev persist + output sync (c32: PUT markdown — v1 parity)
-  .put('/studio/slides/:id/markdown', ({ params, body }) => {
-    const id = requirePositiveIntId(params.id, 'slide id');
-    const slide = getSlideOrThrow(id);
-    const { markdown } = body as { markdown: string };
-    try {
-      writeSlideFile(slide.notebookId, id, markdown);
-    } catch (error) {
-      console.error('[studio] slidev file write failed:', error);
-    }
-    syncSlideOutput(slide, markdown);
-    db()
-      .update(studioSlides)
-      .set({ markdown, stage: 'markdown', status: 'idle', errorMessage: null })
-      .where(eq(studioSlides.id, id))
-      .run();
-    return serializeSlide(getSlideOrThrow(id));
-  })
+  .put(
+    '/studio/slides/:id/markdown',
+    ({ params, body }) => {
+      const id = requirePositiveIntId(params.id, 'slide id');
+      const slide = getSlideOrThrow(id);
+      const { markdown } = body;
+      try {
+        writeSlideFile(slide.notebookId, id, markdown);
+      } catch (error) {
+        console.error('[studio] slidev file write failed:', error);
+      }
+      syncSlideOutput(slide, markdown);
+      db()
+        .update(studioSlides)
+        .set({ markdown, stage: 'markdown', status: 'idle', errorMessage: null })
+        .where(eq(studioSlides.id, id))
+        .run();
+      return serializeSlide(getSlideOrThrow(id));
+    },
+    { body: StudioMarkdownPutSchema },
+  )
 
   // c43: SSE outline stream (v1 GET /drafts/:id/outline/stream)
   .get('/studio/slides/:id/outline/stream', ({ params }) => {

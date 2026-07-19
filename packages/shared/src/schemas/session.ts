@@ -31,3 +31,34 @@ export type SessionUpdate = z.infer<typeof SessionUpdateSchema>;
 export const SessionListSchema = z.object({
   sessions: z.array(SessionSchema),
 });
+
+/** POST …/sessions/:sid/convert-to-source */
+export const SessionConvertToSourceRequestSchema = z
+  .object({
+    messageIds: z.array(IdSchema).min(1).optional(),
+  })
+  .default({});
+export type SessionConvertToSourceRequest = z.infer<typeof SessionConvertToSourceRequestSchema>;
+
+export const SessionConvertToSourceResponseSchema = z.object({
+  sourceId: IdSchema,
+  filename: z.string(),
+  chunkCount: z.number().int().nonnegative(),
+  messageCount: z.number().int().nonnegative(),
+});
+export type SessionConvertToSourceResponse = z.infer<typeof SessionConvertToSourceResponseSchema>;
+
+/** POST …/sessions/:sid/convert-to-output */
+export const SessionConvertToOutputRequestSchema = z.object({
+  outputType: z.enum(['PARAGRAPH', 'BULLETS', 'STRUCTURED']),
+  messageIds: z.array(IdSchema).min(1).optional(),
+});
+export type SessionConvertToOutputRequest = z.infer<typeof SessionConvertToOutputRequestSchema>;
+
+export const SessionConvertToOutputResponseSchema = z.object({
+  outputId: IdSchema,
+  outputType: z.enum(['PARAGRAPH', 'BULLETS', 'STRUCTURED']),
+  title: z.string(),
+  messageCount: z.number().int().nonnegative(),
+});
+export type SessionConvertToOutputResponse = z.infer<typeof SessionConvertToOutputResponseSchema>;

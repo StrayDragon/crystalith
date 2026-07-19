@@ -535,7 +535,9 @@ export function useChat({
           .notebooks({ nid: s.activeNotebookId })
           .sessions({ sid: s.activeSessionId })
           // eslint-disable-next-line no-unexpected-multiline
-          ['convert-to-output'].post({ outputType: outputType });
+          ['convert-to-output'].post({
+            outputType: outputType as 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED',
+          });
         if (convErr)
           throw new Error(
             typeof convErr === 'string' ? convErr : typeof convErr === 'string' ? convErr : '',
