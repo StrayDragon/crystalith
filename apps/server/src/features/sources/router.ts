@@ -8,12 +8,16 @@ import {
   SourceFromUrlRequestSchema,
   SourceSchema,
   SourceSearchRequestSchema,
+  SourceSearchResponseSchema,
+  ExtractorsListSchema,
+  ExtractorPolicyModeSchema,
   SourceTagBindingRequestSchema,
   SourceTagBindingResponseSchema,
   SourceTagCreateSchema,
   SourceUploadNestedQuerySchema,
   SourceUploadQuerySchema,
   paginateItems,
+  type ExtractorPolicyMode,
 } from '@crystalith/shared';
 // Sources CRUD + upload router — /v2/notebooks/:nid/sources (canonical) + flat aliases
 //
@@ -826,7 +830,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         results,
       };
     },
-    { body: SourceSearchRequestSchema },
+    { body: SourceSearchRequestSchema, response: SourceSearchResponseSchema },
   )
 
   // Batch delete sources
@@ -1077,34 +1081,39 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   )
 
   // c44: Extractor policy routes — GET returns full ExtractorsListResponse (v1 api_ingest.py:79-153)
-  .get('/notebooks/:nid/extractors', ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const policy = db()
-      .select()
-      .from(notebookExtractorPolicies)
-      .where(eq(notebookExtractorPolicies.notebookId, nid))
-      .get();
-    const mode = policy?.mode ?? 'inherit_global';
-    const enabledExtractors = policy?.enabledExtractors ?? null;
+  .get(
+    '/notebooks/:nid/extractors',
+    ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const policy = db()
+        .select()
+        .from(notebookExtractorPolicies)
+        .where(eq(notebookExtractorPolicies.notebookId, nid))
+        .get();
+      const modeParsed = ExtractorPolicyModeSchema.safeParse(policy?.mode ?? 'inherit_global');
+      const mode: ExtractorPolicyMode = modeParsed.success ? modeParsed.data : 'inherit_global';
+      const enabledExtractors = policy?.enabledExtractors ?? null;
 
-    // Use factory's listExtractorMetadata — reads real config, not env vars (H2 fix)
-    const allExtractors = listExtractorMetadata(config().raw);
+      // Use factory's listExtractorMetadata — reads real config, not env vars (H2 fix)
+      const allExtractors = listExtractorMetadata(config().raw);
 
-    // Nest mode/enabledExtractors under policy to match ExtractorsListResponse.
-    return {
-      notebookId: nid,
-      policy: {
-        mode,
-        enabledExtractors: enabledExtractors,
-      },
-      extractors: allExtractors,
-      defaultExtractor: getDefaultExtractor(config().raw),
-      fallbackEnabled: mode === 'inherit_global',
-    };
-  })
+      // Nest mode/enabledExtractors under policy to match ExtractorsListResponse.
+      return {
+        notebookId: nid,
+        policy: {
+          mode,
+          enabledExtractors: enabledExtractors,
+        },
+        extractors: allExtractors,
+        defaultExtractor: getDefaultExtractor(config().raw),
+        fallbackEnabled: mode === 'inherit_global',
+      };
+    },
+    { response: ExtractorsListSchema },
+  )
   .patch(
     '/notebooks/:nid/extractors',
-    ({ params, body, set }) => {
+    ({ params, body }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const mode = body.mode;
       const enabledExtractorsBody = body.enabledExtractors ?? undefined;
@@ -1116,8 +1125,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         !enabledExtractorsBody.every((e) => validExtractors.includes(e))
       ) {
         const invalid = enabledExtractorsBody.filter((e) => !validExtractors.includes(e));
-        return sendError(
-          set,
+        throw new AppHttpError(
           ErrorCode.INVALID_REQUEST,
           `Unknown extractor(s): ${invalid.join(', ')}`,
         );
@@ -1151,18 +1159,22 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         .from(notebookExtractorPolicies)
         .where(eq(notebookExtractorPolicies.notebookId, nid))
         .get();
+      const modeParsed = ExtractorPolicyModeSchema.safeParse(updated!.mode);
+      const resolvedMode: ExtractorPolicyMode = modeParsed.success
+        ? modeParsed.data
+        : 'inherit_global';
       return {
         notebookId: nid,
         policy: {
-          mode: updated!.mode,
+          mode: resolvedMode,
           enabledExtractors: updated!.enabledExtractors,
         },
         extractors: listExtractorMetadata(config().raw),
         defaultExtractor: getDefaultExtractor(config().raw),
-        fallbackEnabled: updated!.mode === 'inherit_global',
+        fallbackEnabled: resolvedMode === 'inherit_global',
       };
     },
-    { body: PatchNotebookExtractorPolicySchema },
+    { body: PatchNotebookExtractorPolicySchema, response: ExtractorsListSchema },
   );
 
 registerApiDoc(apiDocs);

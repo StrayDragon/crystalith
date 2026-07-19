@@ -236,7 +236,7 @@ export function SlidesInputStage({
                 <ModelSelector
                   value={configModelId}
                   onChange={onConfigModelIdChange}
-                  capability="chat"
+                  role="chat"
                   label="选择生成模型"
                   size="md"
                 />

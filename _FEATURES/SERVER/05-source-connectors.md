@@ -93,7 +93,7 @@
 - **Domain:** source-connectors
 - **Route:** `DELETE /v2/source-connector-bindings/:id`
 - **说明:** 删除连接器绑定
-- **用户可见:** No（对话框有 bind/snapshot/sync，**无解绑按钮**）
-- **代码:** `apps/server/src/features/source-connectors/router.ts`
+- **用户可见:** Yes — `SourceConnectorsDialog`「解除绑定」→ DELETE
+- **代码:** `apps/server/src/features/source-connectors/router.ts`；FE `SourceConnectorsDialog.handleUnbind`
 
-> NOTE: 保留 API + 补 UI — 活功能缺口，不是死路由
+> NOTE: closed 2026-07-20 — unbind UI wired

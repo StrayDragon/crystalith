@@ -128,6 +128,16 @@ interface UseResearchResult {
   deleteSession: (researchId: number) => Promise<void>;
   startResearch: (researchId: number) => Promise<void>;
   approveSearchPlan: (researchId: number, feedback?: string) => Promise<void>;
+  /** HITL: submit a filtered/edited search plan (POST .../modify). */
+  modifySearchPlan: (
+    researchId: number,
+    plan: {
+      iteration: number;
+      queries: Array<{ query: string; engine: string; priority: number; reason: string }>;
+      reasoning?: string;
+      estimatedResults?: number;
+    },
+  ) => Promise<void>;
   skipIteration: (researchId: number) => Promise<void>;
   finishResearch: (researchId: number) => Promise<void>;
   cancelResearch: (researchId: number) => Promise<void>;
@@ -315,15 +325,47 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           .notebooks({ nid: notebookId })
           .research({ id: researchId })
           .approve.post();
-        if (postErr)
-          throw new Error(
-            typeof postErr === 'string' ? postErr : typeof postErr === 'string' ? postErr : '',
-          );
+        if (postErr) throw new Error(typeof postErr === 'string' ? postErr : '批准计划失败');
         setActiveSession((prev) =>
           prev ? { ...prev, status: (data as unknown as { status: string }).status } : prev,
         );
       } catch (error) {
         setError(error instanceof Error ? error.message : '批准计划失败');
+      }
+    },
+    [notebookId],
+  );
+
+  const modifySearchPlan = useCallback(
+    async (
+      researchId: number,
+      plan: {
+        iteration: number;
+        queries: Array<{ query: string; engine: string; priority: number; reason: string }>;
+        reasoning?: string;
+        estimatedResults?: number;
+      },
+    ) => {
+      if (!notebookId) return;
+      setError('');
+      try {
+        const { data, error: postErr } = await api.v2
+          .notebooks({ nid: notebookId })
+          .research({ id: researchId })
+          .modify.post({
+            plan: {
+              iteration: plan.iteration,
+              queries: plan.queries,
+              reasoning: plan.reasoning ?? '',
+              estimatedResults: plan.estimatedResults ?? 10,
+            },
+          });
+        if (postErr) throw new Error(typeof postErr === 'string' ? postErr : '修改计划失败');
+        setActiveSession((prev) =>
+          prev ? { ...prev, status: (data as unknown as { status: string }).status } : prev,
+        );
+      } catch (error) {
+        setError(error instanceof Error ? error.message : '修改计划失败');
       }
     },
     [notebookId],
@@ -643,6 +685,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     deleteSession,
     startResearch,
     approveSearchPlan,
+    modifySearchPlan,
     skipIteration,
     finishResearch,
     cancelResearch,

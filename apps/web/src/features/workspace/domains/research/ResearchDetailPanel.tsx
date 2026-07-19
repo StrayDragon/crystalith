@@ -36,11 +36,18 @@ function stepOutputData(step: ResearchStepResponse): Record<string, unknown> | n
   return step.outputData ?? null;
 }
 
+export type ResearchPlanConfirmPayload = {
+  queries: Array<{ query: string; engine: string; priority: number; reason: string }>;
+  reasoning: string;
+  allSelected: boolean;
+};
+
 interface ResearchDetailPanelProps {
   session: ResearchSessionDetail;
   sseEvents: SSEEvent[];
   onClose: () => void;
-  onApprove: (feedback?: string) => Promise<void>;
+  /** HITL: all selected → approve; subset → modify with filtered plan. */
+  onApprove: (payload: ResearchPlanConfirmPayload) => Promise<void>;
   onSkip: () => Promise<void>;
   onFinish: () => Promise<void>;
   onCancel: () => Promise<void>;
@@ -529,13 +536,19 @@ function ResearchDetailPanel({
   }, []);
 
   const handleApprove = useCallback(async () => {
+    const selected = queries.filter((_, i) => selectedQueries.has(i));
+    if (selected.length === 0) return;
     setIsProcessing(true);
     try {
-      await onApprove();
+      await onApprove({
+        queries: selected,
+        reasoning: typeof latestPlan?.reasoning === 'string' ? latestPlan.reasoning : '',
+        allSelected: selected.length === queries.length,
+      });
     } finally {
       setIsProcessing(false);
     }
-  }, [onApprove]);
+  }, [onApprove, queries, selectedQueries, latestPlan]);
 
   const handleSkip = useCallback(async () => {
     setIsProcessing(true);

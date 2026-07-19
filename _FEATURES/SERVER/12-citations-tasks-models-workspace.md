@@ -39,7 +39,7 @@ Studio 输出队列是 FE 本地 `useOutputQueue`，从未使用本 API。
 - **用户可见:** Yes（ModelSelector）
 - **代码:** `apps/server/src/features/models/router.ts`
 
-> NOTE: 待盘点 — ModelSelector 仍发 `capability` 而非 `role`（API-ALIGNMENT M4）
+> NOTE: M4 closed 2026-07-20 — ModelSelector 使用 `role`（`ModelRole`）过滤
 
 ---
 

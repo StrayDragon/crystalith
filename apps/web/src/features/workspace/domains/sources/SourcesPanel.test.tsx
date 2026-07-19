@@ -40,6 +40,7 @@ vi.mock('../research/useResearch', () => ({
     startResearch: vi.fn(),
     deleteSession: vi.fn(),
     approveSearchPlan: vi.fn(),
+    modifySearchPlan: vi.fn(),
     skipIteration: vi.fn(),
     finishResearch: vi.fn(),
     cancelResearch: vi.fn(),

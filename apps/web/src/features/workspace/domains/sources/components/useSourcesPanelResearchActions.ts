@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 
 import { t } from '../../../../../shared/i18n';
 import { toast } from '../../../../../shared/toast';
+import type { ResearchPlanConfirmPayload } from '../../research/ResearchDetailPanel';
 import type { Research } from './sources-panel-types';
 
 export function useSourcesPanelResearchActions({ research }: { research: Research }) {
@@ -38,11 +39,23 @@ export function useSourcesPanelResearchActions({ research }: { research: Researc
     [research],
   );
 
-  const handleResearchApprove = useCallback(async () => {
-    if (research.activeSession?.id) {
-      await research.approveSearchPlan(research.activeSession.id);
-    }
-  }, [research]);
+  const handleResearchApprove = useCallback(
+    async (payload: ResearchPlanConfirmPayload) => {
+      const session = research.activeSession;
+      if (!session?.id) return;
+      if (payload.allSelected) {
+        await research.approveSearchPlan(session.id);
+        return;
+      }
+      await research.modifySearchPlan(session.id, {
+        iteration: session.currentIteration,
+        queries: payload.queries,
+        reasoning: payload.reasoning,
+        estimatedResults: 10,
+      });
+    },
+    [research],
+  );
 
   const handleResearchSkip = useCallback(async () => {
     if (research.activeSession?.id) {

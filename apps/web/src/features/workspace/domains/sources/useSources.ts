@@ -123,7 +123,7 @@ export function useSources() {
     () =>
       api.v2
         .notebooks({ nid: activeNotebookId! })
-        .sources.get({ query: sourceListQuery as any } as any)
+        .sources.get({ query: sourceListQuery })
         .then((r) => {
           // eslint-disable-next-line typescript/no-base-to-string
           if (r.error) throw new Error(String(r.error));
@@ -141,7 +141,7 @@ export function useSources() {
         .then((r) => {
           // eslint-disable-next-line typescript/no-base-to-string
           if (r.error) throw new Error(String(r.error));
-          return (r.data ?? []) as any;
+          return r.data ?? [];
         }),
     { revalidateOnFocus: false },
   );
@@ -272,11 +272,11 @@ export function useSources() {
             // eslint-disable-next-line no-await-in-loop -- Upload queue + dedup confirmation requires serial execution.
             await api.v2
               .notebooks({ nid: activeNotebookId })
-              .sources.upload.post({ file } as any, {} as any)
+              // Eden treats Zod .default() query fields as required on the client.
+              .sources.upload.post({ file }, { query: { dedupAction: 'prompt' } })
               .then((r) => {
                 // eslint-disable-next-line typescript/no-base-to-string
                 if (r.error) throw new Error(String(r.error));
-                return r.data as any;
               });
             successCount += 1;
             setUploadQueue((prev) =>
@@ -300,11 +300,10 @@ export function useSources() {
                 // eslint-disable-next-line no-await-in-loop -- Keep per-file UI updates and dedup flow serial.
                 await api.v2
                   .notebooks({ nid: activeNotebookId })
-                  .sources.upload.post({ file } as any, { query: { dedupAction } } as any)
+                  .sources.upload.post({ file }, { query: { dedupAction } })
                   .then((r) => {
                     // eslint-disable-next-line typescript/no-base-to-string, eslint/preserve-caught-error
                     if (r.error) throw new Error(String(r.error));
-                    return r.data as any;
                   });
                 successCount += 1;
                 setUploadQueue((prev) =>
@@ -412,13 +411,13 @@ export function useSources() {
       setSearchState('loading');
 
       try {
-        const { data: response, error: srErr } = (await api.v2
+        const { data: response, error: srErr } = await api.v2
           .notebooks({ nid: activeNotebookId })
-          .sources.search.post({ query: trimmed, engine, mode } as any)) as any;
+          .sources.search.post({ query: trimmed, engine, mode });
         if (srErr) throw srErr;
-        const results = response.results ?? [];
+        const results = response?.results ?? [];
         let notice = '';
-        if (response.message) {
+        if (response?.message) {
           notice = response.message;
         } else if (results.length === 0) {
           notice = '没有找到匹配结果。';
@@ -476,9 +475,9 @@ export function useSources() {
       }
       setRemoveState('loading');
       try {
-        const { error: delBatchErr } = (await api.v2
+        const { error: delBatchErr } = await api.v2
           .notebooks({ nid: activeNotebookId })
-          .sources.batch.delete.post({ sourceIds: sourceIds } as any)) as any;
+          .sources.batch.delete.post({ sourceIds });
         if (delBatchErr) throw delBatchErr;
         await mutate();
         toast.success('来源删除成功');
@@ -505,12 +504,11 @@ export function useSources() {
       }
       setRemoveState('loading');
       try {
-        await (api.v2.notebooks({ nid: activeNotebookId }).sources({ sid: sourceId }) as any)
-          .delete()
-          .then((r: any) => {
-            if (r.error) throw r.error;
-            return r.data as any;
-          });
+        const { error: delErr } = await api.v2
+          .notebooks({ nid: activeNotebookId })
+          .sources({ sid: sourceId })
+          .delete();
+        if (delErr) throw delErr;
         await mutate();
         toast.success('来源删除成功');
         return true;
@@ -538,17 +536,17 @@ export function useSources() {
 
       setBatchReembedState('loading');
       try {
-        const { data: result, error: breErr } = await (
-          api.v2.notebooks({ nid: activeNotebookId }) as any
-        ).sources.batch['re-embed'].post({ sourceIds: sourceIds } as any);
+        const { data: result, error: breErr } = await api.v2
+          .notebooks({ nid: activeNotebookId })
+          .sources.batch['re-embed'].post({ sourceIds });
         if (breErr) throw breErr;
         await mutate();
-        if (result.failedCount > 0) {
-          toast.warning(`部分来源重新嵌入失败（${result.failedCount} 个）。`);
+        if ((result?.failedCount ?? 0) > 0) {
+          toast.warning(`部分来源重新嵌入失败（${result?.failedCount} 个）。`);
         } else {
-          toast.success(`已重新嵌入 ${result.reembeddedCount} 个来源`);
+          toast.success(`已重新嵌入 ${result?.reembeddedCount ?? 0} 个来源`);
         }
-        return result.failedCount === 0;
+        return (result?.failedCount ?? 0) === 0;
       } catch {
         toast.error('批量重新嵌入失败，请稍后重试。');
         return false;
@@ -564,10 +562,11 @@ export function useSources() {
       if (!isConnected || !activeNotebookId) return null;
       setTagMutationState('loading');
       try {
-        const { data: tag, error: ctErr } = (await api.v2
+        const { data: tag, error: ctErr } = await api.v2
           .notebooks({ nid: activeNotebookId })
-          .sources.tags.post({ name } as any)) as any;
+          .sources.tags.post({ name });
         if (ctErr) throw ctErr;
+        if (!tag || !('id' in tag)) throw new Error('创建标签失败');
         await mutateTags();
         await mutate();
         toast.success('标签创建成功');
@@ -587,11 +586,12 @@ export function useSources() {
       if (!isConnected || !activeNotebookId) return null;
       setTagMutationState('loading');
       try {
-        const { data: tag, error: utErr } = (await api.v2
+        const { data: tag, error: utErr } = await api.v2
           .notebooks({ nid: activeNotebookId })
           .sources.tags({ tid: tagId })
-          .patch({ name } as any)) as any;
+          .patch({ name });
         if (utErr) throw utErr;
+        if (!tag || !('id' in tag)) throw new Error('更新标签失败');
         await mutateTags();
         await mutate();
         toast.success('标签已更新');
@@ -611,10 +611,10 @@ export function useSources() {
       if (!isConnected || !activeNotebookId) return false;
       setTagMutationState('loading');
       try {
-        const { error: dtErr } = (await api.v2
+        const { error: dtErr } = await api.v2
           .notebooks({ nid: activeNotebookId })
           .sources.tags({ tid: tagId })
-          .delete()) as any;
+          .delete();
         if (dtErr) throw dtErr;
         await mutateTags();
         await mutate();
@@ -638,9 +638,10 @@ export function useSources() {
       if (!isConnected || !activeNotebookId || !sourceIds.length) return false;
       setTagMutationState('loading');
       try {
-        const { error: atErr } = await (
-          api.v2.notebooks({ nid: activeNotebookId }).sources.tags({ tid: tagId }) as any
-        ).sources.post({ sourceIds: sourceIds } as any);
+        const { error: atErr } = await api.v2
+          .notebooks({ nid: activeNotebookId })
+          .sources.tags({ tid: tagId })
+          .sources.post({ sourceIds });
         if (atErr) throw atErr;
         await mutateTags();
         await mutate();
@@ -661,9 +662,10 @@ export function useSources() {
       if (!isConnected || !activeNotebookId || !sourceIds.length) return false;
       setTagMutationState('loading');
       try {
-        const { error: rtErr } = await (api.v2.notebooks({ nid: activeNotebookId }) as any).sources
-          .tags({ tid: tagId })
-          .sources.delete({ sourceIds: sourceIds } as any);
+        const { error: rtErr } = await api.v2
+          .notebooks({ nid: activeNotebookId })
+          .sources.tags({ tid: tagId })
+          .sources.delete({ sourceIds });
         if (rtErr) throw rtErr;
         await mutateTags();
         await mutate();
@@ -687,15 +689,15 @@ export function useSources() {
         return;
       }
       try {
-        const { data: result, error: coErr } = (await api.v2
+        const { data: result, error: coErr } = await api.v2
           .outputs({ id: outputId })
           // eslint-disable-next-line no-unexpected-multiline
           ['convert-to-source'].post(undefined, {
             query: { notebookId: activeNotebookId },
-          })) as any;
+          });
         if (coErr) throw coErr;
         await mutate();
-        toast.success(`已转换为来源：${result.filename}（${result.chunkCount} 个分块）`);
+        toast.success(`已转换为来源：${result?.filename}（${result?.chunkCount} 个分块）`);
       } catch (error) {
         const message = error instanceof Error ? error.message : '转换失败';
         toast.error(`转换失败：${message}`);
@@ -717,20 +719,22 @@ export function useSources() {
         throw new Error('请先创建笔记本');
       }
       const call = async (dedupAction?: 'reuse' | 'create_new') => {
-        const q = dedupAction ? { dedupAction } : undefined;
+        // Zod transform makes `extractor` required on the Eden body type (output shape).
         const body = {
           url,
           mode,
           title: options?.title,
           snippet: options?.snippet,
-          extractor: options?.extractor,
+          extractor: options?.extractor ?? null,
         };
         const request = (async () => {
-          const r = (await (api.v2.notebooks({ nid: activeNotebookId }) as any).sources[
-            'from-url'
-          ].post(body as any, q ? ({ query: q } as any) : undefined)) as any;
+          const r = dedupAction
+            ? await api.v2
+                .notebooks({ nid: activeNotebookId })
+                .sources['from-url'].post(body, { query: { dedupAction } })
+            : await api.v2.notebooks({ nid: activeNotebookId }).sources['from-url'].post(body);
           if (r.error) throw r.error;
-          return r.data as any;
+          return r.data;
         })();
         if (mode === 'fetch') {
           return withTimeout(
@@ -783,7 +787,8 @@ export function useSources() {
         .then((r) => {
           // eslint-disable-next-line typescript/no-base-to-string
           if (r.error) throw new Error(String(r.error));
-          return r.data as any;
+          if (!r.data) throw new Error('加载提取器失败');
+          return r.data;
         }),
     { revalidateOnFocus: false },
   );
@@ -804,7 +809,7 @@ export function useSources() {
     const policy = extractorsData?.policy;
     if (!policy) return null;
     return {
-      mode: policy.mode as NotebookExtractorsPolicy['mode'],
+      mode: policy.mode,
       enabledExtractors: policy.enabledExtractors ?? undefined,
     };
   }, [extractorsData]);
@@ -822,9 +827,9 @@ export function useSources() {
       if (!activeNotebookId) {
         throw new Error('请先创建笔记本');
       }
-      const { error: peErr } = (await api.v2
+      const { error: peErr } = await api.v2
         .notebooks({ nid: activeNotebookId })
-        .extractors.patch(patch as any)) as any;
+        .extractors.patch(patch);
       if (peErr) throw peErr;
       await mutateExtractors();
     },
@@ -845,11 +850,11 @@ export function useSources() {
       if (!activeNotebookId) {
         throw new Error('请先创建笔记本');
       }
-      const { data: result, error: csErr } = (await api.v2
+      const { data: result, error: csErr } = await api.v2
         .notebooks({ nid: activeNotebookId })
         .sources({ sid: sourceId })
         // eslint-disable-next-line no-unexpected-multiline
-        ['qa-to-source'].post({ messages } as any)) as any;
+        ['qa-to-source'].post({ messages });
       if (csErr) throw csErr;
       await mutate();
       return result;
@@ -868,9 +873,11 @@ export function useSources() {
         return;
       }
       try {
-        const { error: reErr } = (await (
-          api.v2.notebooks({ nid: activeNotebookId }).sources({ sid: sourceId }) as any
-        )['re-embed'].post()) as any;
+        const { error: reErr } = await api.v2
+          .notebooks({ nid: activeNotebookId })
+          .sources({ sid: sourceId })
+          // eslint-disable-next-line no-unexpected-multiline
+          ['re-embed'].post();
         if (reErr) throw reErr;
         toast.success('已重新嵌入来源');
         await mutate();

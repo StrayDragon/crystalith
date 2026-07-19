@@ -345,11 +345,19 @@ export const ExtractorInfoSchema = z.object({
 });
 export type ExtractorInfo = z.infer<typeof ExtractorInfoSchema>;
 
+/** Nested policy on GET/PATCH extractors list (wire shape — not full DB policy row). */
+export const ExtractorsListPolicySchema = z.object({
+  mode: ExtractorPolicyModeSchema.default('inherit_global'),
+  enabledExtractors: z.array(z.string()).nullable().optional(),
+});
+export type ExtractorsListPolicy = z.infer<typeof ExtractorsListPolicySchema>;
+
 export const ExtractorsListSchema = z.object({
+  notebookId: IdSchema.optional(),
   extractors: z.array(ExtractorInfoSchema),
   defaultExtractor: z.string().nullable().optional(),
   fallbackEnabled: z.boolean().default(true),
-  policy: NotebookExtractorPolicySchema,
+  policy: ExtractorsListPolicySchema,
 });
 export type ExtractorsList = z.infer<typeof ExtractorsListSchema>;
 

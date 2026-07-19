@@ -772,19 +772,24 @@ type HitlDecision =
   | { action: 'cancel' };
 
 function loadLatestUserInput(sessionId: number): { action: string; plan?: SearchPlan } | null {
-  const step = db()
+  // Latest user_input wins (multi-iteration HITL); do not use Array.find on ASC order.
+  const steps = db()
     .select()
     .from(researchSteps)
     .where(eq(researchSteps.sessionId, sessionId))
     .orderBy(researchSteps.id)
-    .all()
-    .find((s) => s.type === 'user_input');
-  if (!step?.inputData || typeof step.inputData !== 'object') return null;
-  const data = step.inputData as Record<string, unknown>;
-  const action = typeof data.action === 'string' ? data.action : '';
-  if (!action) return null;
-  const plan = data.plan as SearchPlan | undefined;
-  return { action, plan };
+    .all();
+  for (let i = steps.length - 1; i >= 0; i--) {
+    const step = steps[i]!;
+    if (step.type !== 'user_input') continue;
+    if (!step.inputData || typeof step.inputData !== 'object') continue;
+    const data = step.inputData as Record<string, unknown>;
+    const action = typeof data.action === 'string' ? data.action : '';
+    if (!action) continue;
+    const plan = data.plan as SearchPlan | undefined;
+    return { action, plan };
+  }
+  return null;
 }
 
 /**
