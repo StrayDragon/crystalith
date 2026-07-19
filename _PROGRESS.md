@@ -6,7 +6,7 @@
 > **批次纪律**：每个合理批次验收通过后 **commit**；有问题随时停并报告。
 
 **来源**：Wave A（架构 / 流程门禁 / Spec 漂移）只读体检。  
-**最后更新**：2026-07-19（response 挂载 + eval 写路径）
+**最后更新**：2026-07-19（P3 门禁只读盘点完成，待决策）
 
 ---
 
@@ -125,13 +125,33 @@ shared Zod（或路由挂载的 schema）
 
 ### P3 — 门禁真相（工程可信度）
 
-- [ ] **P3.1** 决定并落实：`just qa` 是否纳入 `apps/web` `test:ci`（FLOW-01）— 纳入 **或** 降级「ultimate」措辞
-- [ ] **P3.2** 处理 `scripts-harness-check` 近 no-op（FLOW-08）：改名/删出 qa/或做真检查
-- [ ] **P3.3** 对齐 `scripts/init_config.sh` 环境键与 `CL_*` SSOT（FLOW-09）
-- [ ] **P3.4** 刷新 `AGENTS.md` 中 `just qa` 实际组成与 Tier 说明（FLOW-07）
-- [ ] **P3.5** 调和 `_E2E.md` 与 Playwright `@p0` 现实（FLOW-04）— 文档或扩测，二选一写清
-- [ ] **P3.6** type-aware-lint：调规则子集 **或** 正式 document accept（FLOW-05）
-- [ ] **P3.7** BDD：文档标明「CRUD 子集、不在 just qa」**或** 另开 `just test-bdd`（FLOW-06 / DRIFT-05）— **本轮默认接受子集 + 文档**，除非另有指示
+> **2026-07-19 只读盘点**：事实已对齐；下列「拟定」待你拍板后再改代码/文档。
+
+**实际 `just qa`**（`justfile:102`）：
+`check`（typecheck+lint+format）→ `check-env-examples` → `check-app-schema` → `test`（**仅** `apps/server/test/` + `packages/shared/test/`）→ `scripts-harness-check` → `e2e`（`@p0`）。
+**不在门禁内**：`apps/web` `test:ci`、BDD（`apps/server/tests/bdd/`）、`just type-aware-lint`。无 `.github/workflows`。
+
+- [ ] **P3.1** web Vitest（FLOW-01）
+  - 现实：`just test` 不含 web；`apps/web` 的 `test:ci` 是真 CI 脚本但孤儿；PR 模板当成分项
+  - 拟定：**待决** — A 纳入 `just qa` / B 降级「ultimate」措辞并保留分项
+- [ ] **P3.2** `scripts-harness-check`（FLOW-08）
+  - 现实：`CRYSTALITH_SKIP_READY_INSTALL=1` → 只确认 `bun` 在 PATH 后立即 exit 0
+  - 拟定：**待决** — A 移出 qa / 改名 `check-bun`；B 做真检查（去掉 skip 或跑 `test-mock-report-check`）
+- [ ] **P3.3** `init_config.sh` vs `CL_*`（FLOW-09）
+  - 现实：脚本自承「实用子集」；仍写 `CRYSTALITH_DEFAULT_*`；Jina/Firecrawl 进错文件组；缺推荐 `CL_CHAT_API_KEY` 等
+  - 拟定：**待决** — A 改写对齐 SSOT；B 弃用 shell init、只靠 `.env.example`
+- [ ] **P3.4** `AGENTS.md` qa/Tier 文案（FLOW-07）
+  - 现实：称 ultimate 但漏 schema drift/e2e 细节；Tier 节写「test」却未点明 web/BDD/type-aware 在门外
+  - 拟定：随 P3.1 决策后刷新（几乎必做文档）
+- [ ] **P3.5** `_E2E.md` vs `@p0`（FLOW-04）
+  - 现实：文档宣称 29 项 A–G（含研究/错误）；实际 `p0-smoke.spec.ts` **26** 项 A/N/S/C/O/L；`e2e/AGENTS.md` 更准
+  - 拟定：**待决** — A 改写文档对齐现状（默认）；B 扩测对齐旧文档
+- [ ] **P3.6** type-aware-lint（FLOW-05）
+  - 现实：`just type-aware-lint` 存在；qa 注释排除（测试文件债）；AGENTS 未正式 accept
+  - 拟定：**待决** — A 文档标明 advisory；B 收窄 tsconfig 修债后入 qa
+- [ ] **P3.7** BDD（FLOW-06）
+  - 现实：`tests/bdd`（复数）16 feature，多数 SKIP；活跃 ~notebooks/sessions/messages/tasks/workspace；不在 `just test`
+  - 拟定：**默认 A** — `just test-bdd` + 文档「CRUD 子集、不在 qa」（除非另指示）
 
 ### P4 — Cleanup A（无用户可见行为变更）
 
@@ -167,7 +187,7 @@ shared Zod（或路由挂载的 schema）
 
 ## 3. 当前焦点
 
-**正在做**：_(response + eval 挂载完成)_
+**正在做**：P3 门禁真相 — 只读盘点完成，**等决策后再改 justfile/文档**
 
 **已完成批次**：
 
@@ -176,23 +196,26 @@ shared Zod（或路由挂载的 schema）
 - **P1.6–1.8** 关键写路径挂 shared Zod + OpenAPI camelCase 抽检 + qa
 - **P1.6 rem** qa/studio/sessions convert + upload query + citations context + qa 绿
 - **connectors** shared 合约 + 写路径挂载 + 平行 types 消解
-- **response + eval** tasks/models/workspace/commands/rag + eval upsert/run
+- **response + eval** tasks/models/workspace/commands/rag + eval upsert/run（`34a3fe6`）
+- **P3 盘点** 事实写入本节（未改门禁）
 
-**下一步**：P3 门禁真相 / P5 specs / push
+**下一步**：你拍板 P3.1–3.7 后实施；或 push / P5
 
 ---
 
 ## 4. 决策记录（短）
 
-| 日期       | 决策                                                                     |
-| ---------- | ------------------------------------------------------------------------ |
-| 2026-07-19 | 先 QA/优化出结果，再提炼 skill；不先写元 skill                           |
-| 2026-07-19 | Wave A 选轨 1/2/3/5；不做产品关键路径轨 4                                |
-| 2026-07-19 | 本轮 **不触发 llman SDD**                                                |
-| 2026-07-19 | **Eden ≠ Zod**：保留 server Zod；Eden 消 web 平行 DTO；不追求 API 零 Zod |
-| 2026-07-19 | 用 `_PROGRESS.md` 勾选；每批次验收后 commit                              |
-| 2026-07-19 | 配置 Zod 必留；API Zod 作校验+App/OpenAPI SSOT                           |
-| 2026-07-19 | P1.1 遗留清扫 + P2 AGENTS 固化（同批提交）                               |
+| 日期       | 决策                                                                       |
+| ---------- | -------------------------------------------------------------------------- |
+| 2026-07-19 | 先 QA/优化出结果，再提炼 skill；不先写元 skill                             |
+| 2026-07-19 | Wave A 选轨 1/2/3/5；不做产品关键路径轨 4                                  |
+| 2026-07-19 | 本轮 **不触发 llman SDD**                                                  |
+| 2026-07-19 | **Eden ≠ Zod**：保留 server Zod；Eden 消 web 平行 DTO；不追求 API 零 Zod   |
+| 2026-07-19 | 用 `_PROGRESS.md` 勾选；每批次验收后 commit                                |
+| 2026-07-19 | 配置 Zod 必留；API Zod 作校验+App/OpenAPI SSOT                             |
+| 2026-07-19 | P1.1 遗留清扫 + P2 AGENTS 固化（同批提交）                                 |
+| 2026-07-19 | P1 路由 Zod 主线收完（含 rem/connectors/response/eval）；门禁波次先 commit |
+| 2026-07-19 | P3 先只读盘点再拍板；不默认扩 `just qa`                                    |
 
 ---
 
