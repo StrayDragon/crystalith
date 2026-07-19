@@ -29,7 +29,7 @@ afterAll(() => {
 });
 
 describe('db: schema migration', () => {
-  it('creates all 20 relational tables + vec_chunks', () => {
+  it('creates all relational tables incl. strategy_configs + vec_chunks', () => {
     const rows = orm.all<{ name: string }>(
       sql`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name`,
     );
@@ -39,12 +39,13 @@ describe('db: schema migration', () => {
       'chunks',
       'eval_datasets',
       'eval_run_items',
+      'strategy_configs',
       'vec_chunks',
     ]) {
       expect(names).toContain(expected);
     }
-    // 20 relational tables + vec_chunks + __drizzle_migrations
-    expect(names.length).toBeGreaterThanOrEqual(21);
+    // 21 relational tables + vec_chunks + __drizzle_migrations
+    expect(names.length).toBeGreaterThanOrEqual(22);
   });
 });
 

@@ -53,7 +53,7 @@ just qa            # 含 e2e @p0 + web Vitest（见根 AGENTS.md：primary PR ga
 | #   | 问题                                                  | 修复                                            |
 | --- | ----------------------------------------------------- | ----------------------------------------------- |
 | K1  | `@ai-sdk/openai v4` Responses API vs Chat Completions | `provider: openai-compatible`                   |
-| K2  | `strategy_configs` 表不在 migration 中                | `CREATE TABLE IF NOT EXISTS`                    |
+| K2  | ~~`strategy_configs` 表不在 migration 中~~（已修：`0001` + schema SSOT） | — |
 | K3  | QA body 字段 `question` vs `content`                  | 兼容两者                                        |
 | K4  | Output type 枚举大小写                                | 自动 `.toUpperCase()`                           |
 | K5  | Citation 格式 `[Source: N]` vs `[N]`                  | prompt 改为 `[N]`                               |

@@ -6,7 +6,7 @@
 > **批次纪律**：每个合理批次验收通过后 **commit**；有问题随时停并报告。
 
 **来源**：Wave A（架构 / 流程门禁 / Spec 漂移）只读体检。  
-**最后更新**：2026-07-19（P5 Spec 卫生 + specs-compact wave1）
+**最后更新**：2026-07-19（Wave A–G 余债启动；默认 E=归档愿景、D=SDD、不做 c13）
 
 ---
 
@@ -167,7 +167,7 @@ shared Zod（或路由挂载的 schema）
 
 - [ ] **P6.1** 瘦 GitHub Actions（FLOW-02 / DRIFT-09）
 - [ ] **P6.2** `SECURITY.md`（DRIFT-08）
-- [ ] **P6.3** `strategy_configs` 并入 Drizzle schema SSOT（ARCH-06）
+- [x] **P6.3** `strategy_configs` 并入 Drizzle schema SSOT（ARCH-06）— Wave A
 - [ ] **P6.4** OpenAPI `.openapi()` 注解补全（ARCH-12）
 - [ ] **P6.5** ~~c13 / Eden→server 包耦合（ARCH-15）~~ — **本阶段不做**（随分发另议）
 - [ ] **P6.6** 本阶段结束后：从本文件提炼 skill（**有结果后再做**）
