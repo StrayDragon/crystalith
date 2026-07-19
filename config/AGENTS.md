@@ -28,6 +28,10 @@
 - `env.*` — from environment variables (`.env` overrides)
 - `secret.*` — from `config/secret.env`
 
+Env file SSOT: `packages/shared/src/schemas/env.ts` → `just gen-env-examples`  
+(produces `.env.example` and `config/secret.env.example` with `CL_*` keys).  
+Prefer copying those examples. `just upsert-env-configs` / `scripts/init_config.sh` is **legacy** (subset + some old key names).
+
 Example:
 
 ```yaml

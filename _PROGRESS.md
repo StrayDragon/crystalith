@@ -6,7 +6,7 @@
 > **批次纪律**：每个合理批次验收通过后 **commit**；有问题随时停并报告。
 
 **来源**：Wave A（架构 / 流程门禁 / Spec 漂移）只读体检。  
-**最后更新**：2026-07-19（P3 门禁只读盘点完成，待决策）
+**最后更新**：2026-07-19（P3 整包推荐落地）
 
 ---
 
@@ -61,7 +61,7 @@ shared Zod（或路由挂载的 schema）
 | P0    | 门禁解阻塞（能跑 `just lint`）           | ✅                                             |
 | P1    | Zod / Eden SSOT 收敛（核心）             | ✅ P1.2–1.8 + rem + connectors + response/eval |
 | P2    | Zod 使用面写入 AGENTS.md + 文档对齐      | ✅                                             |
-| P3    | 门禁真相（qa 组成、假绿项）              | ⬜                                             |
+| P3    | 门禁真相（qa 组成、假绿项）              | ✅ 整包推荐（1B+3.2A+3.3B+文档）               |
 | P4    | Cleanup A（死代码 / 死配置，无行为变更） | ✅ P4.1–4.5（P4.6 可选延后）                   |
 | P5    | Spec 卫生（手改 toon，**不开 SDD**）     | ⬜                                             |
 | P6    | 可选：瘦 CI / SECURITY / 余债            | ⬜                                             |
@@ -125,33 +125,19 @@ shared Zod（或路由挂载的 schema）
 
 ### P3 — 门禁真相（工程可信度）
 
-> **2026-07-19 只读盘点**：事实已对齐；下列「拟定」待你拍板后再改代码/文档。
+> **2026-07-19**：整包推荐落地（P3.1B + 3.2A + 3.3B + 3.4 + 3.5A + 3.6A + 3.7A）。
 
-**实际 `just qa`**（`justfile:102`）：
-`check`（typecheck+lint+format）→ `check-env-examples` → `check-app-schema` → `test`（**仅** `apps/server/test/` + `packages/shared/test/`）→ `scripts-harness-check` → `e2e`（`@p0`）。
-**不在门禁内**：`apps/web` `test:ci`、BDD（`apps/server/tests/bdd/`）、`just type-aware-lint`。无 `.github/workflows`。
+**实际 `just qa`**：
+`check` → `check-env-examples` → `check-app-schema` → `test`（server+shared）→ `e2e`（`@p0`）。
+**门外**：web `test:ci`、`just test-bdd`、`just type-aware-lint`。`check-bun` 可选、不入 qa。
 
-- [ ] **P3.1** web Vitest（FLOW-01）
-  - 现实：`just test` 不含 web；`apps/web` 的 `test:ci` 是真 CI 脚本但孤儿；PR 模板当成分项
-  - 拟定：**待决** — A 纳入 `just qa` / B 降级「ultimate」措辞并保留分项
-- [ ] **P3.2** `scripts-harness-check`（FLOW-08）
-  - 现实：`CRYSTALITH_SKIP_READY_INSTALL=1` → 只确认 `bun` 在 PATH 后立即 exit 0
-  - 拟定：**待决** — A 移出 qa / 改名 `check-bun`；B 做真检查（去掉 skip 或跑 `test-mock-report-check`）
-- [ ] **P3.3** `init_config.sh` vs `CL_*`（FLOW-09）
-  - 现实：脚本自承「实用子集」；仍写 `CRYSTALITH_DEFAULT_*`；Jina/Firecrawl 进错文件组；缺推荐 `CL_CHAT_API_KEY` 等
-  - 拟定：**待决** — A 改写对齐 SSOT；B 弃用 shell init、只靠 `.env.example`
-- [ ] **P3.4** `AGENTS.md` qa/Tier 文案（FLOW-07）
-  - 现实：称 ultimate 但漏 schema drift/e2e 细节；Tier 节写「test」却未点明 web/BDD/type-aware 在门外
-  - 拟定：随 P3.1 决策后刷新（几乎必做文档）
-- [ ] **P3.5** `_E2E.md` vs `@p0`（FLOW-04）
-  - 现实：文档宣称 29 项 A–G（含研究/错误）；实际 `p0-smoke.spec.ts` **26** 项 A/N/S/C/O/L；`e2e/AGENTS.md` 更准
-  - 拟定：**待决** — A 改写文档对齐现状（默认）；B 扩测对齐旧文档
-- [ ] **P3.6** type-aware-lint（FLOW-05）
-  - 现实：`just type-aware-lint` 存在；qa 注释排除（测试文件债）；AGENTS 未正式 accept
-  - 拟定：**待决** — A 文档标明 advisory；B 收窄 tsconfig 修债后入 qa
-- [ ] **P3.7** BDD（FLOW-06）
-  - 现实：`tests/bdd`（复数）16 feature，多数 SKIP；活跃 ~notebooks/sessions/messages/tasks/workspace；不在 `just test`
-  - 拟定：**默认 A** — `just test-bdd` + 文档「CRUD 子集、不在 qa」（除非另指示）
+- [x] **P3.1B** 不纳入 web Vitest；降级「ultimate」→ **primary PR gate** 措辞
+- [x] **P3.2A** `scripts-harness-check` 移出 qa → 可选 `just check-bun`
+- [x] **P3.3B** `init_config` / `upsert-env-configs` 标 legacy；推荐 `.env.example` + `CL_*`
+- [x] **P3.4** `AGENTS.md` qa 组成 + Tier + 门外列表
+- [x] **P3.5A** `_E2E.md` 对齐 26 `@p0`（A/N/S/C/O/L）
+- [x] **P3.6A** type-aware 正式标 advisory（不入 qa）
+- [x] **P3.7A** `just test-bdd` + server/PR 文档
 
 ### P4 — Cleanup A（无用户可见行为变更）
 
@@ -187,19 +173,15 @@ shared Zod（或路由挂载的 schema）
 
 ## 3. 当前焦点
 
-**正在做**：P3 门禁真相 — 只读盘点完成，**等决策后再改 justfile/文档**
+**正在做**：_(P3 整包推荐已落地)_
 
 **已完成批次**：
 
 - P0 / P1.0–P1.5 / P2 / P4.1–4.5
-- **P1.2** RenderDescriptor SSOT / **P1.3** SlidesOutline
-- **P1.6–1.8** 关键写路径挂 shared Zod + OpenAPI camelCase 抽检 + qa
-- **P1.6 rem** qa/studio/sessions convert + upload query + citations context + qa 绿
-- **connectors** shared 合约 + 写路径挂载 + 平行 types 消解
-- **response + eval** tasks/models/workspace/commands/rag + eval upsert/run（`34a3fe6`）
-- **P3 盘点** 事实写入本节（未改门禁）
+- **P1** 路由 Zod 主线（含 rem/connectors/response/eval）
+- **P3** 门禁真相整包（措辞/假绿消除；未扩 web Vitest 入 qa）
 
-**下一步**：你拍板 P3.1–3.7 后实施；或 push / P5
+**下一步**：P5 Spec 卫生 / push / 或把 web `test:ci` 再议入 qa
 
 ---
 
@@ -216,6 +198,7 @@ shared Zod（或路由挂载的 schema）
 | 2026-07-19 | P1.1 遗留清扫 + P2 AGENTS 固化（同批提交）                                 |
 | 2026-07-19 | P1 路由 Zod 主线收完（含 rem/connectors/response/eval）；门禁波次先 commit |
 | 2026-07-19 | P3 先只读盘点再拍板；不默认扩 `just qa`                                    |
+| 2026-07-19 | P3 整包：1B+3.2A+3.3B+3.4+3.5A+3.6A+3.7A（消假绿，少动门禁内容）           |
 
 ---
 

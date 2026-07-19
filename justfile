@@ -85,26 +85,36 @@ typecheck:
 # Run all quality checks (output minimized — only errors/warnings)
 check: typecheck lint format-check
 
-# Type-aware linting (oxlint with tsconfig) — warnings to stdout, silent on success
+# Type-aware linting (oxlint with tsconfig) — advisory; NOT part of `just qa`
+# (pre-existing errors, especially in test files). Run manually before large PRs.
 type-aware-lint:
     @bun run lint:type-aware
 
-# Run scripts/ harness checks (bun availability only, skip install)
-scripts-harness-check:
-    @CRYSTALITH_SKIP_READY_INSTALL=1 bash ./scripts/ensure_frontend_web_ready.sh
+# Lightweight bun-on-PATH check (optional). Formerly `scripts-harness-check`.
+# Not part of `just qa` — that recipe was a near no-op under SKIP_READY_INSTALL.
+check-bun:
+    @command -v bun >/dev/null || (echo "bun not found on PATH" >&2; exit 1)
 
-# Run all QA checks (SSOT / ultimate gate): typecheck, lint, format-check,
-# generated-config drift, unit/integration tests, critical browser E2E (@p0),
-# and scripts/ harness checks.
+# Primary PR gate (not "covers all tests"): typecheck, lint, format-check,
+# generated-config drift, server+shared unit/integration tests, Playwright @p0.
 # Output minimized — only errors and warnings shown.
-# Note: `just type-aware-lint` is excluded — too many pre-existing errors in test files.
-# Requires Chromium once: `just e2e-install`
-qa: check check-env-examples check-app-schema test scripts-harness-check e2e
+#
+# Out of gate (run separately when relevant):
+#   - `cd apps/web && bun run test:ci` — frontend Vitest
+#   - `just test-bdd` — server BDD CRUD subset
+#   - `just type-aware-lint` — advisory type-aware oxlint
+# Requires Chromium once: `just e2e-install` (or system Chrome; see e2e recipe)
+qa: check check-env-examples check-app-schema test e2e
     @echo "✅ QA passed"
 
-# Run backend tests — only show failures
+# Server + shared unit/integration tests — only show failures
 test:
     @bun test --only-failures apps/server/test/ packages/shared/test/
+
+# Server BDD (Gherkin) — CRUD subset only; see apps/server/tests/bdd/run.test.ts
+# SKIP_FEATURE_DIRS. Not part of `just qa`.
+test-bdd:
+    @bun test apps/server/tests/bdd/run.test.ts
 
 # Critical browser E2E gate (Playwright @p0). Independent of unit tests.
 # Uses isolated ports 13000/18032 + temp DB under e2e/.tmp/
@@ -125,8 +135,10 @@ e2e-all:
 # Config
 # --------------------------------------------------------------------------
 
-# Initialize .env and config/secret.env from shell environment variables
+# Initialize .env and config/secret.env from shell environment variables.
+# LEGACY: prefer `cp .env.example .env` + SSOT (`just gen-env-examples`). See script header.
 upsert-env-configs:
+    @echo "⚠️  upsert-env-configs is legacy; prefer .env.example / secret.env.example (CL_* SSOT)"
     bash ./scripts/init_config.sh
 
 # Regenerate .env.example, config/secret.env.example, and app.schema.gen.json

@@ -16,8 +16,8 @@
   场景: 获取工具配置模式
     当 发送 GET 请求"/v2/workspace/tools/FAQ/config"
     那么 响应状态码为200
-    并且 响应中包含"tool_id"字段
-    并且 响应中包含"tool_label"字段
+    并且 响应中包含"toolId"字段
+    并且 响应中包含"toolLabel"字段
 
   场景: 不存在的工具返回404
     当 发送 GET 请求"/v2/workspace/tools/NONEXISTENT/config"

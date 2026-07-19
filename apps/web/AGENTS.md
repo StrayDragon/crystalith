@@ -16,7 +16,7 @@
 bun install              # Install dependencies
 bun dev                  # Vite dev server (HMR on :3000)
 bun test                 # Vitest (watch mode)
-bun run test:ci          # CI quality gate (stable suite)
+bun run test:ci          # Frontend Vitest CI suite (NOT in root `just qa` — run for web PRs)
 bun run test:core        # Minimal UI core regression suite
 bun run lint             # Incremental oxlint
 bun run lint:all         # Full oxlint

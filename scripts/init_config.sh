@@ -1,34 +1,32 @@
 #!/usr/bin/env bash
-# Initialize or update local config files from environment variables.
+# Initialize .env / secret.env from shell env (LEGACY convenience).
 #
-# NOTE: The authoritative list of env vars lives in
-# packages/shared/src/schemas/env.ts (Zod SSOT). The key lists below
-# are a practical subset for shell-based initial setup — always check
-# the SSOT when adding new vars.
+# Prefer: copy generated examples, then edit.
+#   cp .env.example .env
+#   cp config/secret.env.example config/secret.env
+# SSOT: packages/shared/src/schemas/env.ts → `just gen-env-examples`
 #
-# Writes well-known env vars from the user's shell into:
+# This script still exists for `just upsert-env-configs` but is NOT the
+# authoritative env contract. It writes a practical subset and may use
+# legacy names (e.g. CRYSTALITH_DEFAULT_*). Prefer CL_* keys from the examples.
+#
+# Writes (when set in the shell; never overwrites existing file values):
 #   .env              — build/run parameters
 #   config/secret.env — runtime secrets for config/app.yaml template rendering
 #
-# Existing values are preserved (env vars only fill in blanks).
 # Run via: just upsert-env-configs
 #
-# SSOT reference: packages/shared/src/schemas/env.ts
-#
-# Recognized env vars (all optional):
+# Recognized env vars (all optional; subset only):
 #   .env targets:
-#     OPENAI_BASE_URL                — OpenAI-compatible API base URL
-#     OPENAI_API_KEY                 — OpenAI API key
-#     ANTHROPIC_API_KEY              — Anthropic API key
-#     GOOGLE_GENERATIVE_AI_API_KEY   — Google AI API key
-#     CRYSTALITH_DEFAULT_CHAT_MODEL  — default chat model ID
-#     CRYSTALITH_DEFAULT_EMBEDDING_MODEL — default embedding model ID
+#     OPENAI_BASE_URL, OPENAI_API_KEY, ANTHROPIC_API_KEY,
+#     GOOGLE_GENERATIVE_AI_API_KEY,
+#     CRYSTALITH_DEFAULT_CHAT_MODEL, CRYSTALITH_DEFAULT_EMBEDDING_MODEL (legacy)
 #   config/secret.env targets:
-#     OPENAI_API_KEY                 — OpenAI API key
-#     ANTHROPIC_API_KEY              — Anthropic API key
-#     GOOGLE_GENERATIVE_AI_API_KEY   — Google AI API key
-#     JINA_API_KEY                   — Jina Reader API key
-#     FIRECRAWL_API_KEY              — Firecrawl API key
+#     OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY,
+#     JINA_API_KEY, FIRECRAWL_API_KEY
+#   Prefer instead (from .env.example / secret.env.example):
+#     CL_DEFAULT_CHAT_MODEL, CL_DEFAULT_EMBEDDING_MODEL,
+#     CL_CHAT_API_KEY, CL_EMBEDDING_API_KEY, …
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
