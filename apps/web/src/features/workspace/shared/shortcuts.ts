@@ -39,15 +39,15 @@ export const WORKSPACE_SHORTCUTS: WorkspaceShortcutDefinition[] = [
     category: '导航',
   },
   {
-    id: 'focus-chat',
+    id: 'focus-studio',
     combo: 'Ctrl+2',
-    description: '聚焦中间对话面板',
+    description: '聚焦中间笔记面板',
     category: '导航',
   },
   {
-    id: 'focus-studio',
+    id: 'focus-chat',
     combo: 'Ctrl+3',
-    description: '聚焦右侧 Studio 面板',
+    description: '聚焦右侧对话面板',
     category: '导航',
   },
   {
