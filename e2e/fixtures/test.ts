@@ -11,8 +11,8 @@ type Fixtures = {
  * Prefer `page.getByTestId(ids.xxx)` — never assert on Chinese copy for critical gates.
  */
 export const test = base.extend<Fixtures>({
-  // Playwright allows empty deps `{}`; oxlint no-empty-pattern forbids it — use unused arg.
-  ids: async (_fixtures, use) => {
+  // Playwright requires empty `{}` deps for fixtures with no dependencies.
+  ids: async ({}, use) => {
     await use(TestIds);
   },
 });

@@ -18,8 +18,8 @@ import type { RefObject } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 
 import { copyToClipboard } from '../../../../shared/clipboard';
-import { TestIds, tid } from '../../../../shared/testids';
 import { LAYER_LEVELS, useLayer } from '../../../../shared/layer';
+import { TestIds, tid } from '../../../../shared/testids';
 import { toast } from '../../../../shared/toast';
 import CitationsControl from '../../shared/components/citations/CitationsControl';
 import { IconCopy, IconSave, IconSend } from '../../shared/components/Icons';

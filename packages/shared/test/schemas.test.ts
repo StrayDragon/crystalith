@@ -94,7 +94,10 @@ describe('domain schemas', () => {
     const ev = S.ResearchProgressEventSchema.parse({
       type: 'plan_ready',
       sessionId: 1,
-      plan: { iteration: 1, queries: [], reasoning: '', estimatedResults: 5 },
+      plan: {
+        queries: [{ query: 'topic overview', engine: 'Web', priority: 1, reason: 'seed' }],
+        reasoning: 'initial plan',
+      },
     });
     expect(ev.type).toBe('plan_ready');
 

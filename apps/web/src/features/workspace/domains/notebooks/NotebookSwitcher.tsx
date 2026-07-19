@@ -15,8 +15,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject }
 import { createPortal } from 'react-dom';
 
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
-import { TestIds, tid } from '../../../../shared/testids';
 import { useLayer } from '../../../../shared/layer';
+import { TestIds, tid } from '../../../../shared/testids';
 import type { AsyncStatus } from '../../../../shared/types';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { Notebook } from '../../shared/types';

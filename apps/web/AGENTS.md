@@ -33,6 +33,7 @@ bun preview              # Preview production build
 - **Types**: 优先 Eden 推断；跨端标称类型用 `@crystalith/shared`。**不要**在 `shared-types.ts` 新增 wire DTO
 - **Legacy**: `api/generated/` 已删（c14）；`shared-types.ts` 按 `_PROGRESS.md` P1.4 逐域消减
 - **OpenAPI**: 浏览器用 `/openapi`；其他语言 client 从 `/openapi.json` 衍生，不反向生成一等 TS client
+
 ## Coding Style & Naming Conventions
 
 - TypeScript/React: 2-space indentation
