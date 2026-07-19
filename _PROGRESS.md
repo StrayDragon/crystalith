@@ -6,7 +6,7 @@
 > **批次纪律**：每个合理批次验收通过后 **commit**；有问题随时停并报告。
 
 **来源**：Wave A（架构 / 流程门禁 / Spec 漂移）只读体检。  
-**最后更新**：2026-07-19（P3 整包推荐落地）
+**最后更新**：2026-07-19（P3.1A：web Vitest 纳入 just qa）
 
 ---
 
@@ -61,7 +61,7 @@ shared Zod（或路由挂载的 schema）
 | P0    | 门禁解阻塞（能跑 `just lint`）           | ✅                                             |
 | P1    | Zod / Eden SSOT 收敛（核心）             | ✅ P1.2–1.8 + rem + connectors + response/eval |
 | P2    | Zod 使用面写入 AGENTS.md + 文档对齐      | ✅                                             |
-| P3    | 门禁真相（qa 组成、假绿项）              | ✅ 整包推荐（1B+3.2A+3.3B+文档）               |
+| P3    | 门禁真相（qa 组成、假绿项）              | ✅ + web Vitest 入 qa（P3.1A）                 |
 | P4    | Cleanup A（死代码 / 死配置，无行为变更） | ✅ P4.1–4.5（P4.6 可选延后）                   |
 | P5    | Spec 卫生（手改 toon，**不开 SDD**）     | ⬜                                             |
 | P6    | 可选：瘦 CI / SECURITY / 余债            | ⬜                                             |
@@ -125,13 +125,13 @@ shared Zod（或路由挂载的 schema）
 
 ### P3 — 门禁真相（工程可信度）
 
-> **2026-07-19**：整包推荐落地（P3.1B + 3.2A + 3.3B + 3.4 + 3.5A + 3.6A + 3.7A）。
+> **2026-07-19**：整包推荐落地后，追加 **P3.1A**（web Vitest 纳入 `just qa`）。
 
 **实际 `just qa`**：
-`check` → `check-env-examples` → `check-app-schema` → `test`（server+shared）→ `e2e`（`@p0`）。
-**门外**：web `test:ci`、`just test-bdd`、`just type-aware-lint`。`check-bun` 可选、不入 qa。
+`check` → `check-env-examples` → `check-app-schema` → `test`（server+shared）→ `test-web`（`apps/web` `test:ci`）→ `e2e`（`@p0`）。
+**门外**：`just test-bdd`、`just type-aware-lint`。`check-bun` 可选、不入 qa。
 
-- [x] **P3.1B** 不纳入 web Vitest；降级「ultimate」→ **primary PR gate** 措辞
+- [x] **P3.1B→A** 先降级措辞；后将 web Vitest 纳入 qa（`just test-web`）
 - [x] **P3.2A** `scripts-harness-check` 移出 qa → 可选 `just check-bun`
 - [x] **P3.3B** `init_config` / `upsert-env-configs` 标 legacy；推荐 `.env.example` + `CL_*`
 - [x] **P3.4** `AGENTS.md` qa 组成 + Tier + 门外列表
@@ -173,15 +173,15 @@ shared Zod（或路由挂载的 schema）
 
 ## 3. 当前焦点
 
-**正在做**：_(P3 整包推荐已落地)_
+**正在做**：_(P3.1A web Vitest 入 qa 完成)_
 
 **已完成批次**：
 
 - P0 / P1.0–P1.5 / P2 / P4.1–4.5
 - **P1** 路由 Zod 主线（含 rem/connectors/response/eval）
-- **P3** 门禁真相整包（措辞/假绿消除；未扩 web Vitest 入 qa）
+- **P3** 门禁真相整包 + **web Vitest 纳入 just qa**
 
-**下一步**：P5 Spec 卫生 / push / 或把 web `test:ci` 再议入 qa
+**下一步**：P5 Spec 卫生 / push
 
 ---
 
@@ -199,6 +199,7 @@ shared Zod（或路由挂载的 schema）
 | 2026-07-19 | P1 路由 Zod 主线收完（含 rem/connectors/response/eval）；门禁波次先 commit |
 | 2026-07-19 | P3 先只读盘点再拍板；不默认扩 `just qa`                                    |
 | 2026-07-19 | P3 整包：1B+3.2A+3.3B+3.4+3.5A+3.6A+3.7A（消假绿，少动门禁内容）           |
+| 2026-07-19 | P3.1A：`just test-web`（apps/web test:ci）纳入 `just qa`                   |
 
 ---
 
