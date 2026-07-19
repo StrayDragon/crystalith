@@ -1,3 +1,11 @@
+import type {
+  ExtractorInfo,
+  NotebookExtractorsPolicyView as NotebookExtractorsPolicy,
+  PatchNotebookExtractorPolicy as PatchNotebookExtractorsPolicyRequest,
+  QAMessage as QaMessage,
+  SourceFromUrlMode,
+  SourceTag as SourceTagRead,
+} from '@crystalith/shared';
 import {
   Button,
   IconButton,
@@ -31,14 +39,6 @@ import { Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState
 import { Virtuoso } from 'react-virtuoso';
 import type { VirtuosoHandle } from 'react-virtuoso';
 
-import type {
-  ExtractorInfoResponse as ExtractorInfo,
-  NotebookExtractorsPolicy,
-  PatchNotebookExtractorsPolicyRequest,
-  QaMessage,
-  SourceFromUrlMode,
-  SourceTagRead,
-} from '../../../../../api/shared-types';
 import { copyToClipboard } from '../../../../../shared/clipboard';
 import ConfirmPopover from '../../../../../shared/ConfirmPopover';
 import { t } from '../../../../../shared/i18n';

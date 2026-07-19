@@ -1,17 +1,17 @@
+import type {
+  ExtractorInfo,
+  ExtractorsList,
+  NotebookExtractorsPolicyView,
+  PatchNotebookExtractorPolicy,
+  QAMessage,
+  SourceFromUrlMode,
+  SourceTag,
+} from '@crystalith/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
 import { api } from '../../../../api/eden';
 import { parseServerError } from '../../../../api/parseServerError';
-import type {
-  ExtractorInfoResponse as ExtractorInfo,
-  ExtractorsListResponse,
-  NotebookExtractorsPolicy,
-  PatchNotebookExtractorsPolicyRequest,
-  QaMessage,
-  SourceFromUrlMode,
-  SourceTagRead,
-} from '../../../../api/shared-types';
 import { toast } from '../../../../shared/toast';
 import type { AsyncStatus } from '../../../../shared/types';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
@@ -19,6 +19,11 @@ import type { ApiSourceSearchResult } from '../../shared/types';
 import { normalizeSource } from '../../shared/utils';
 
 type ExtractorType = ExtractorInfo['type'];
+type NotebookExtractorsPolicy = NotebookExtractorsPolicyView;
+type PatchNotebookExtractorsPolicyRequest = PatchNotebookExtractorPolicy;
+type SourceTagRead = SourceTag;
+type QaMessage = QAMessage;
+type ExtractorsListResponse = ExtractorsList;
 
 /** 搜索队列项状态 */
 export type SearchQueueItemStatus = 'loading' | 'success' | 'error';

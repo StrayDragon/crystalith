@@ -92,8 +92,9 @@ shared Zod（或路由挂载的 schema）
   - [ ] `studio/service.ts` 改用 shared `SlidesOutlineSchema`
 - [ ] **P1.4 Web：Eden 优先迁移**
   - [x] 域：`refine`（`useRefine` 不再依赖 `shared-types`；wire → `unknown` normalize → UI types）
-  - [ ] 域顺序建议：~~`refine`~~ → `sources` → `diagnostics/workspace` → 其余
-  - [ ] 删空或大幅缩减 `shared-types.ts`（仅留确认无法从 Eden/shared 得到的 UI 变换类型，并注释原因）
+  - [x] 域：`sources`（tag/chunk/extractor/QA → `@crystalith/shared`）
+  - [ ] 域顺序建议：~~`refine`~~ → ~~`sources`~~ → `diagnostics/workspace` → 其余
+  - [ ] 删空或大幅缩减 `shared-types.ts`（仅留 diagnostics 占位）
 - [ ] **P1.5 Web：`workspace/shared/types.ts` 瘦身**
   - [ ] wire DTO 外迁到 shared 或改 Eden；UI-only 类型留下并标注
 - [ ] **P1.6 路由 Zod 审计**
@@ -154,15 +155,14 @@ shared Zod（或路由挂载的 schema）
 
 ## 3. 当前焦点
 
-**正在做**：_(下一批建议：P1.4 sources)_
+**正在做**：_(下一批：P1.4 diagnostics)_
 
 **已完成批次**：
 
-- P0 / P1.0 / P1.1（含清扫）/ P2
-- **just qa 基线绿** → `a2c0ec7`
-- **P1.4 refine** — `useRefine` 脱离 `shared-types`；删死 tool/descriptor DTO（`just qa` 绿）
+- P0 / P1.0 / P1.1 / P2 / just qa 基线 / P1.4 refine
+- **P1.4 sources** → `@crystalith/shared`（`just qa` 绿）
 
-**下一步**：P1.4 sources → diagnostics …
+**下一步**：P1.4 diagnostics → 清空 `shared-types` …
 
 ---
 
@@ -198,7 +198,7 @@ shared Zod（或路由挂载的 schema）
 | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `ResearchStatus` / session/step DTOs                            | → `@crystalith/shared`（P1.1）；注意 shared 无 `'error'`，live SSE `error` 是事件不是 session status |
 | `Citation` / `CitationContextResponse`                          | → shared `Citation` + Eden/citations 路由类型                                                        |
-| `ChunkRead` / extractor / policy / tags                         | → Eden 或 shared source schemas（P1.4 sources）                                                      |
+| `ChunkRead` / extractor / policy / tags                         | **已迁** `@crystalith/shared`（P1.4 sources）                                                        |
 | `TaskRead` / tool descriptors / refine 相关                     | **已删**（P1.4 refine）；tools wire 在 `useRefine` 内 `unknown` normalize                            |
 | `RenderDescriptor` / `FrontendBundleDescriptor` / plugin schema | → shared output（P1.2）                                                                              |
 | `WorkspaceToolsDiagnostics`                                     | Eden diagnostics 或留 UI 宽松类型并标注                                                              |
