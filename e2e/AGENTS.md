@@ -3,7 +3,7 @@
 P0 suite lives in `tests/p0-smoke.spec.ts` (`@p0`, **26** cases). Selectors MUST use
 `data-testid` from `apps/web/src/shared/testids.ts` — do not lock tests to Chinese copy.
 
-Coverage taxonomy and history: repo-root `_E2E.md`.
+Coverage taxonomy and history: see `e2e/` directory documentation.
 
 ```bash
 just e2e-install   # once (optional if using system Chrome)

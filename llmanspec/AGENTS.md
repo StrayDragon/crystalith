@@ -8,7 +8,6 @@ rules, context, or conventions that AI agents should follow.
 Project-wide tech stack, commands, conventions, testing, git rules, and doc governance: see the project body of the root `AGENTS.md` (sections below the managed block).
 
 **v2 Implementation Progress**: run `llman sdd list` for active change status.
-See `_E2E.md` for E2E test patterns and known-issues reference.
 
 Spec workflow paths:
 
