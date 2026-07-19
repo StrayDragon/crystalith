@@ -46,6 +46,15 @@ export const ResearchProgressEventSchema = z.discriminatedUnion('type', [
     stepType: z.string().optional(),
     data: JsonMetadataSchema.optional(),
   }),
+  /** Status transition (poll-derived; v1 api.py status events). */
+  z.object({
+    type: z.literal('status'),
+    status: z.string(),
+    previous: z.string().nullable().optional(),
+    iteration: z.number().int().optional(),
+    message: z.string().optional(),
+    sessionId: IdSchema.optional(),
+  }),
   z.object({
     type: z.literal('progress'),
     sessionId: IdSchema.optional(),

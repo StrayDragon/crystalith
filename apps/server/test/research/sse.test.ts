@@ -243,6 +243,46 @@ describe('research SSE stream', () => {
     expect(Array.isArray(data!.queries)).toBe(true);
   });
 
+  it('emits status events on transitions and rich thinking messages', async () => {
+    const { body: startRes } = await post('/v2/research', {
+      topic: 'SSE status+thinking',
+      notebookId: notebookId,
+      maxIterations: 1,
+    });
+    const sessionId = startRes.id;
+
+    const sseRes = await app.handle(new Request(`${BASE}/v2/research/${sessionId}/stream`));
+    expect(sseRes.status).toBe(200);
+    const eventsPromise = readSseStream(sseRes.body!);
+
+    await waitForStatus(sessionId, 'waiting_user');
+    // Hold at waiting_user long enough for the SSE poll (250ms) to observe it
+    // before approve races past searching → completed.
+    await Bun.sleep(400);
+    await post(`/v2/research/${sessionId}/approve`);
+    await waitForStatus(sessionId, 'completed');
+
+    const events = await eventsPromise;
+    const statusEvents = events.filter((e) => e.type === 'status');
+    expect(statusEvents.length).toBeGreaterThan(0);
+    const statuses = statusEvents.map((e) => e.status as string);
+    expect(statuses).toContain('waiting_user');
+    // searching/analyzing may be skipped if they complete within one poll tick;
+    // completed must always appear as the terminal transition before done.
+    expect(statuses).toContain('completed');
+    for (const ev of statusEvents) {
+      expect(typeof ev.message).toBe('string');
+      expect(String(ev.message).length).toBeGreaterThan(0);
+    }
+
+    const thinking = events.filter((e) => e.type === 'thinking');
+    // May be empty if all steps map to named events; when present must carry message.
+    for (const ev of thinking) {
+      expect(typeof ev.message).toBe('string');
+      expect(String(ev.message).length).toBeGreaterThan(0);
+    }
+  });
+
   it('returns 404 for nonexistent session', async () => {
     const res = await app.handle(new Request(`${BASE}/v2/research/99999/stream`));
     expect(res.status).toBe(404);

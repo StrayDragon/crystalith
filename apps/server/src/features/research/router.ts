@@ -757,8 +757,6 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
         const poll = async () => {
           while (!closed) {
-            await sleep(1000);
-
             const current = db()
               .select()
               .from(researchSessions)
@@ -769,6 +767,8 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
             // c49: emit `status` event on every status transition (v1 api.py:1037-1058).
             // Before c49 the poll only derived events from new step rows, so pure
             // status transitions (planning→waiting_user→searching) were invisible.
+            // D.4: check BEFORE sleeping so fast mock/dev transitions are not skipped
+            // by the initial 1s delay (previously first poll slept first).
             if (current.status !== lastStatus) {
               const prev = lastStatus;
               lastStatus = current.status;
@@ -806,6 +806,8 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
               controller.close();
               break;
             }
+
+            await sleep(250);
           }
         };
 
@@ -871,14 +873,30 @@ function deriveNamedEvent(step: typeof researchSteps.$inferSelect): {
 
 /**
  * c49: derive a human-readable thinking message from a step (v1 api.py:1102-1186
- * emits rich thinking per step). Pulls summary/reasoning from outputData when
- * present, falls back to a type-based label.
+ * emits rich thinking per step). Pulls summary/reasoning/insight/decision from
+ * outputData when present, falls back to a type-based label.
  */
 function thinkingMessageForStep(step: typeof researchSteps.$inferSelect): string {
   const out = step.outputData as Record<string, unknown> | null;
-  if (out && typeof out.summary === 'string') return out.summary;
-  if (out && typeof out.reasoning === 'string') return out.reasoning;
+  if (out) {
+    for (const key of ['summary', 'reasoning', 'insight', 'decision', 'message'] as const) {
+      const v = out[key];
+      if (typeof v === 'string' && v.trim()) return v.trim();
+    }
+  }
   return step.type || '思考中';
+}
+
+/** Exported for unit tests (Wave D.4). */
+export function __testThinkingMessageForStep(
+  step: Pick<typeof researchSteps.$inferSelect, 'type' | 'outputData'>,
+): string {
+  return thinkingMessageForStep(step as typeof researchSteps.$inferSelect);
+}
+
+/** Exported for unit tests (Wave D.4). */
+export function __testStatusMessage(status: string): string {
+  return statusMessage(status);
 }
 
 /**
