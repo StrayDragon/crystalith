@@ -49,6 +49,7 @@ export const TestIds = {
   sourcesCount: 'sources-count',
   sourcesEmpty: 'sources-empty',
   sourceRow: 'source-row',
+  sourceRowCheckbox: 'source-row-checkbox',
   sourceDetailDialog: 'source-detail-dialog',
   sourceDetailClose: 'source-detail-close',
   sourceDetailTabSummary: 'source-detail-tab-summary',
