@@ -11,10 +11,11 @@ import ResearchDetailModal from './ResearchDetailModal';
 import ResearchHistoryDialog from './ResearchHistoryDialog';
 import SourceConnectorsDialog from './SourceConnectorsDialog';
 import type { SourcesPanelViewProps } from './sources-panel-types';
-import SourcesPanelHeader from './SourcesPanelHeader';
 import SourcesPanelList from './SourcesPanelList';
 import SourcesPanelResearchQueue from './SourcesPanelResearchQueue';
+import SourcesPanelSearchSection from './SourcesPanelSearchSection';
 import SourcesPanelToolbar from './SourcesPanelToolbar';
+import SourcesPanelUploadSection from './SourcesPanelUploadSection';
 import { useSourcesPanelAddFromSearch } from './useSourcesPanelAddFromSearch';
 import { useSourcesPanelDetailDialog } from './useSourcesPanelDetailDialog';
 import { useSourcesPanelResearchActions } from './useSourcesPanelResearchActions';
@@ -213,37 +214,41 @@ function SourcesPanelView({
       className={`flex flex-1 flex-col min-h-0 ${isFullscreen ? 'max-w-4xl mx-auto w-full' : ''}`}
       {...tid(TestIds.sourcesPanel)}
     >
-      <SourcesPanelHeader
-        uploadDisabled={uploadDisabled}
-        connectorDisabled={connectorDisabled}
-        uploadDragActive={uploadDragActive}
-        onUploadDragActiveChange={setUploadDragActive}
-        uploadState={uploadState}
-        uploadHint={uploadHint}
-        onUploadHintChange={setUploadHint}
-        uploadError={uploadError}
-        uploadQueue={uploadQueue}
-        onUpload={onUpload}
-        onRetryUpload={onRetryUpload}
-        onClearUploadQueue={onClearUploadQueue}
-        fileInputRef={fileInputRef}
-        onOpenConnectors={() => setConnectorsOpen(true)}
-        isDeepResearchMode={isDeepResearchMode}
-        searchModeToggleLabel={searchModeToggleLabel}
-        searchPlaceholder={searchPlaceholder}
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
-        onToggleSearchMode={handleToggleSearchMode}
-        onSearch={handleSearch}
-        searchInputRef={searchInputRef}
-        extractorModeLabel={extractorModeLabel}
-        extractorsLoading={extractorsLoading}
-        usableExtractorCount={usableExtractorCount}
-        extractorsCount={extractors.length}
-        extractorFallbackEnabled={extractorFallbackEnabled}
-        isConnected={isConnected}
-        onOpenExtractorPolicy={() => setExtractorPolicyOpen(true)}
-      />
+      <div className="flex-shrink-0 px-3 sm:px-4 pt-3 sm:pt-4 pb-2 flex flex-col gap-3 border-b border-gray-100 dark:border-slate-700">
+        <SourcesPanelUploadSection
+          uploadDisabled={uploadDisabled}
+          connectorDisabled={connectorDisabled}
+          uploadDragActive={uploadDragActive}
+          onUploadDragActiveChange={setUploadDragActive}
+          uploadState={uploadState}
+          uploadHint={uploadHint}
+          onUploadHintChange={setUploadHint}
+          uploadError={uploadError}
+          uploadQueue={uploadQueue}
+          onUpload={onUpload}
+          onRetryUpload={onRetryUpload}
+          onClearUploadQueue={onClearUploadQueue}
+          fileInputRef={fileInputRef}
+          onOpenConnectors={() => setConnectorsOpen(true)}
+        />
+        <SourcesPanelSearchSection
+          isDeepResearchMode={isDeepResearchMode}
+          searchModeToggleLabel={searchModeToggleLabel}
+          searchPlaceholder={searchPlaceholder}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+          onToggleSearchMode={handleToggleSearchMode}
+          onSearch={handleSearch}
+          searchInputRef={searchInputRef}
+          extractorModeLabel={extractorModeLabel}
+          extractorsLoading={extractorsLoading}
+          usableExtractorCount={usableExtractorCount}
+          extractorsCount={extractors.length}
+          extractorFallbackEnabled={extractorFallbackEnabled}
+          isConnected={isConnected}
+          onOpenExtractorPolicy={() => setExtractorPolicyOpen(true)}
+        />
+      </div>
 
       <SourcesPanelResearchQueue
         isSearching={isSearching}

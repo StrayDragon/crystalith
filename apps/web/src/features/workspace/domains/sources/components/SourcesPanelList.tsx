@@ -1,12 +1,13 @@
+import { Typography } from '@material-tailwind/react';
 import type { Ref, RefObject } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import type { VirtuosoHandle } from 'react-virtuoso';
 
+import { TestIds, tid } from '../../../../../shared/testids';
 import type { AsyncStatus } from '../../../../../shared/types';
 import { SkeletonList } from '../../../shared/components/Skeleton';
 import type { SourceItem } from '../../../shared/types';
 import SourceListRow from './SourceListRow';
-import SourcesPanelEmptyState from './SourcesPanelEmptyState';
 
 export interface SourcesPanelListProps {
   isLoading: boolean;
@@ -45,7 +46,23 @@ export default function SourcesPanelList({
       {isLoading ? (
         <SkeletonList items={3} />
       ) : sources.length === 0 ? (
-        <SourcesPanelEmptyState />
+        <div
+          className="p-3 text-center border border-dashed border-gray-300 rounded-lg bg-gray-100 dark:bg-slate-800"
+          {...tid(TestIds.sourcesEmpty)}
+        >
+          <Typography
+            variant="small"
+            className="text-gray-700 dark:text-slate-200 text-[11px] font-semibold"
+          >
+            添加文档开始分析
+          </Typography>
+          <Typography
+            variant="small"
+            className="text-gray-500 dark:text-slate-400 text-[10px] mt-1"
+          >
+            上传文档后，可在中间面板提问并在右侧生成输出。
+          </Typography>
+        </div>
       ) : (
         <Virtuoso
           ref={sourceListRef as Ref<VirtuosoHandle>}
