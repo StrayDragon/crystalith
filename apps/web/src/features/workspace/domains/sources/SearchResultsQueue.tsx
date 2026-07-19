@@ -194,14 +194,14 @@ export default function SearchResultsQueue({
         {...tid(TestIds.searchQueueItem)}
         data-queue-query={queueItem.query}
       >
-        {/* Header */}
-        <button
-          type="button"
-          onClick={() => toggleQueueItemExpanded(queueItem.id)}
-          className="flex items-center justify-between w-full px-3 py-2 hover:bg-blue-100/50 transition-colors"
-          {...tid(TestIds.searchQueueToggle)}
-        >
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+        {/* Header — expand toggle and action buttons are siblings (no nested <button>) */}
+        <div className="flex items-center justify-between w-full px-3 py-2">
+          <button
+            type="button"
+            onClick={() => toggleQueueItemExpanded(queueItem.id)}
+            className="flex items-center gap-2 min-w-0 flex-1 text-left hover:opacity-90 transition-opacity"
+            {...tid(TestIds.searchQueueToggle)}
+          >
             <div
               className={`flex items-center justify-center w-5 h-5 rounded border flex-shrink-0 ${
                 isLoading
@@ -248,14 +248,19 @@ export default function SearchResultsQueue({
                 className="bg-gray-900 text-[10px] h-5 py-0 px-2 flex-shrink-0"
               />
             )}
-          </div>
+            {!isLoading &&
+              itemResults.length > 0 &&
+              (isItemExpanded ? (
+                <ExpandLessIcon style={{ fontSize: 18 }} className="text-blue-600 flex-shrink-0" />
+              ) : (
+                <ExpandMoreIcon style={{ fontSize: 18 }} className="text-blue-600 flex-shrink-0" />
+              ))}
+          </button>
           <div className="flex items-center gap-1 flex-shrink-0">
             {!isLoading && itemResults.length > 0 && (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsFullscreen(true);
-                }}
+                type="button"
+                onClick={() => setIsFullscreen(true)}
                 className="p-1 rounded-lg hover:bg-blue-200 transition-colors"
                 aria-label="全屏查看搜索结果"
                 title="全屏查看"
@@ -264,25 +269,16 @@ export default function SearchResultsQueue({
               </button>
             )}
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemoveQueueItem?.(queueItem.id);
-              }}
+              type="button"
+              onClick={() => onRemoveQueueItem?.(queueItem.id)}
               className="p-1 rounded-lg hover:bg-blue-200 transition-colors"
               aria-label="移除此搜索"
               title="移除此搜索"
             >
               <CloseIcon style={{ fontSize: 14 }} className="text-blue-600" />
             </button>
-            {!isLoading &&
-              itemResults.length > 0 &&
-              (isItemExpanded ? (
-                <ExpandLessIcon style={{ fontSize: 18 }} className="text-blue-600" />
-              ) : (
-                <ExpandMoreIcon style={{ fontSize: 18 }} className="text-blue-600" />
-              ))}
           </div>
-        </button>
+        </div>
 
         {/* Expandable Content */}
         {!isLoading && isItemExpanded && itemResults.length > 0 && (
@@ -408,100 +404,93 @@ export default function SearchResultsQueue({
         {searchQueue.map(renderQueueItem)}
       </div>
 
-      {/* Expanded Result Dialog */}
-      <Dialog
-        open={expandedResult !== null}
-        handler={() => setExpandedResult(null)}
-        size="md"
-        className="rounded-xl"
-      >
-        {expandedResult && (
-          <>
-            <DialogHeader className="flex items-start gap-3 pb-2">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 border border-blue-200 flex-shrink-0">
-                <SearchIcon className="text-blue-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <Typography variant="h6" className="text-gray-900 leading-snug">
-                  {expandedResult.title}
-                </Typography>
-                <Typography variant="small" className="text-gray-500 text-xs mt-0.5">
-                  {(() => {
-                    try {
-                      return new URL(expandedResult.url).hostname;
-                    } catch {
-                      return expandedResult.url;
-                    }
-                  })()}
-                  {expandedResult.source && ` · ${expandedResult.source}`}
-                </Typography>
-              </div>
-              <IconButton
+      {/* Expanded Result Dialog — mount only when open so Dialog always has children */}
+      {expandedResult ? (
+        <Dialog open handler={() => setExpandedResult(null)} size="md" className="rounded-xl">
+          <DialogHeader className="flex items-start gap-3 pb-2">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 border border-blue-200 flex-shrink-0">
+              <SearchIcon className="text-blue-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <Typography variant="h6" className="text-gray-900 leading-snug">
+                {expandedResult.title}
+              </Typography>
+              <Typography variant="small" className="text-gray-500 text-xs mt-0.5">
+                {(() => {
+                  try {
+                    return new URL(expandedResult.url).hostname;
+                  } catch {
+                    return expandedResult.url;
+                  }
+                })()}
+                {expandedResult.source && ` · ${expandedResult.source}`}
+              </Typography>
+            </div>
+            <IconButton
+              variant="text"
+              size="sm"
+              onClick={() => setExpandedResult(null)}
+              className="flex-shrink-0"
+            >
+              <CloseIcon />
+            </IconButton>
+          </DialogHeader>
+          <DialogBody className="pt-0">
+            {expandedResult.snippet && (
+              <Typography className="text-gray-700 text-sm leading-relaxed mb-4">
+                {expandedResult.snippet}
+              </Typography>
+            )}
+            <Typography variant="small" className="text-gray-500 text-xs mb-4">
+              链接：
+              <a
+                href={expandedResult.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-600 hover:underline ml-1"
+              >
+                {expandedResult.url}
+              </a>
+            </Typography>
+
+            <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
+              <Button
+                variant="outlined"
+                size="sm"
+                onClick={() => {
+                  handleAddSingleAsLink(expandedResult);
+                  setExpandedResult(null);
+                }}
+                disabled={isAdding}
+                className="flex items-center gap-1.5 normal-case"
+              >
+                <AddIcon style={{ fontSize: 16 }} />
+                作为链接导入
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  handleAddSingleWithFetch(expandedResult);
+                  setExpandedResult(null);
+                }}
+                disabled={isAdding}
+                className="flex items-center gap-1.5 normal-case bg-gray-900"
+              >
+                <AddIcon style={{ fontSize: 16 }} />
+                作为全文导入
+              </Button>
+              <Button
                 variant="text"
                 size="sm"
-                onClick={() => setExpandedResult(null)}
-                className="flex-shrink-0"
+                onClick={() => window.open(expandedResult.url, '_blank')}
+                className="ml-auto normal-case text-gray-700"
               >
-                <CloseIcon />
-              </IconButton>
-            </DialogHeader>
-            <DialogBody className="pt-0">
-              {expandedResult.snippet && (
-                <Typography className="text-gray-700 text-sm leading-relaxed mb-4">
-                  {expandedResult.snippet}
-                </Typography>
-              )}
-              <Typography variant="small" className="text-gray-500 text-xs mb-4">
-                链接：
-                <a
-                  href={expandedResult.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-blue-600 hover:underline ml-1"
-                >
-                  {expandedResult.url}
-                </a>
-              </Typography>
-
-              <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
-                <Button
-                  variant="outlined"
-                  size="sm"
-                  onClick={() => {
-                    handleAddSingleAsLink(expandedResult);
-                    setExpandedResult(null);
-                  }}
-                  disabled={isAdding}
-                  className="flex items-center gap-1.5 normal-case"
-                >
-                  <AddIcon style={{ fontSize: 16 }} />
-                  作为链接导入
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    handleAddSingleWithFetch(expandedResult);
-                    setExpandedResult(null);
-                  }}
-                  disabled={isAdding}
-                  className="flex items-center gap-1.5 normal-case bg-gray-900"
-                >
-                  <AddIcon style={{ fontSize: 16 }} />
-                  作为全文导入
-                </Button>
-                <Button
-                  variant="text"
-                  size="sm"
-                  onClick={() => window.open(expandedResult.url, '_blank')}
-                  className="ml-auto normal-case text-gray-700"
-                >
-                  打开原链接
-                </Button>
-              </div>
-            </DialogBody>
-          </>
-        )}
-      </Dialog>
+                打开原链接
+              </Button>
+            </div>
+          </DialogBody>
+        </Dialog>
+      ) : null}
 
       {/* Fullscreen Dialog - All Results */}
       <Dialog
