@@ -14,13 +14,16 @@
 // H5+H6: generation logic + SSE helper extracted to service.ts
 import {
   NotebookIdQuerySchema,
+  PaginatedSchema,
+  PaginationParamsSchema,
   SlideDraftCreateRequestSchema,
   SlideDraftUpdateSchema,
   StudioMarkdownPutSchema,
   StudioOutlinePutSchema,
+  StudioSlideSchema,
   StudioSlidesListQuerySchema,
 } from '@crystalith/shared';
-import { desc, eq } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
@@ -41,6 +44,8 @@ import {
 // OpenAPI
 // ---------------------------------------------------------------------------
 
+const SlidesPageSchema = PaginatedSchema(StudioSlideSchema);
+
 const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/studio/slides',
@@ -55,7 +60,14 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'List slide drafts for a notebook',
     tags: ['studio'],
-    responses: { 200: { description: 'Slide draft list' } },
+    request: {
+      query: {
+        notebookId: StudioSlidesListQuerySchema.shape.notebookId,
+        offset: PaginationParamsSchema.shape.offset,
+        limit: PaginationParamsSchema.shape.limit,
+      },
+    },
+    responses: { 200: { description: 'Paginated slide draft list', body: SlidesPageSchema } },
   },
   {
     path: '/v2/studio/slides/:id',
@@ -185,14 +197,25 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     '/studio/slides',
     ({ query }) => {
       const { notebookId } = query;
-      return db()
+      const offset = query.offset ?? 0;
+      const limit = query.limit ?? 20;
+      const total =
+        db()
+          .select({ n: count() })
+          .from(studioSlides)
+          .where(eq(studioSlides.notebookId, notebookId))
+          .get()?.n ?? 0;
+      const items = db()
         .select()
         .from(studioSlides)
         .where(eq(studioSlides.notebookId, notebookId))
+        .limit(limit)
+        .offset(offset)
         .all()
         .map(serializeSlide);
+      return { items, total, offset, limit };
     },
-    { query: StudioSlidesListQuerySchema },
+    { query: StudioSlidesListQuerySchema, response: SlidesPageSchema },
   )
 
   // Get slide draft — c67: notebookId required

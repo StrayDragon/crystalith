@@ -3,6 +3,9 @@ import {
   OutputExportQuerySchema,
   OutputGenerateRequestSchema,
   OutputMetaSchema,
+  OutputSchema,
+  PaginatedSchema,
+  PaginationParamsSchema,
   type Citation,
 } from '@crystalith/shared';
 import { NoSuchModelError, TypeValidationError, APICallError, NoObjectGeneratedError } from 'ai';
@@ -12,7 +15,7 @@ import { NoSuchModelError, TypeValidationError, APICallError, NoObjectGeneratedE
 //   GET    /v2/outputs            — List outputs for a notebook
 //   GET    /v2/outputs/:id        — Get a single output
 //   GET    /v2/outputs/types      — List available output types + meta
-import { desc, eq, inArray } from 'drizzle-orm';
+import { count, desc, eq, inArray } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { withRetry } from '../../ai/middleware.ts';
@@ -40,6 +43,9 @@ function requireOutputInNotebook(id: number, notebookId: number): typeof outputs
 // OpenAPI docs
 // ---------------------------------------------------------------------------
 
+const OutputsListQuerySchema = NotebookIdQuerySchema.merge(PaginationParamsSchema);
+const OutputsPageSchema = PaginatedSchema(OutputSchema);
+
 const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/outputs',
@@ -53,7 +59,14 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'List outputs for a notebook',
     tags: ['outputs'],
-    responses: { 200: { description: 'List of outputs' } },
+    request: {
+      query: {
+        notebookId: NotebookIdQuerySchema.shape.notebookId,
+        offset: PaginationParamsSchema.shape.offset,
+        limit: PaginationParamsSchema.shape.limit,
+      },
+    },
+    responses: { 200: { description: 'Paginated output list', body: OutputsPageSchema } },
   },
   {
     path: '/v2/outputs/:id',
@@ -241,17 +254,30 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     '/outputs',
     ({ query }) => {
       const notebookId = query.notebookId;
+      const offset = query.offset ?? 0;
+      const limit = query.limit ?? 20;
+
+      const total =
+        db().select({ n: count() }).from(outputs).where(eq(outputs.notebookId, notebookId)).get()
+          ?.n ?? 0;
 
       const rows = db()
         .select()
         .from(outputs)
         .where(eq(outputs.notebookId, notebookId))
         .orderBy(desc(outputs.createdAt))
+        .limit(limit)
+        .offset(offset)
         .all();
 
-      return rows.map(serializeOutput);
+      return {
+        items: rows.map(serializeOutput),
+        total,
+        offset,
+        limit,
+      };
     },
-    { query: NotebookIdQuerySchema },
+    { query: OutputsListQuerySchema, response: OutputsPageSchema },
   )
 
   // Get a single output — c67: notebookId required

@@ -10,6 +10,8 @@
 import './zod-extend.js';
 import { z } from 'zod';
 
+import { desc } from './i18n.js';
+
 /** ISO 8601 UTC datetime string, e.g. `2026-07-08T12:00:00.000Z`. */
 export const IsoTimestampSchema = z.string().datetime({ offset: true }).or(z.string().min(1));
 
@@ -37,20 +39,69 @@ export const ErrorEnvelopeSchema = z
 export type ErrorEnvelope = z.infer<typeof ErrorEnvelopeSchema>;
 
 /** Pagination query params (?offset=0&limit=20). */
-export const PaginationParamsSchema = z.object({
-  offset: z.coerce.number().int().nonnegative().default(0),
-  limit: z.coerce.number().int().positive().max(200).default(20),
-});
+export const PaginationParamsSchema = z
+  .object({
+    offset: z.coerce
+      .number()
+      .int()
+      .nonnegative()
+      .default(0)
+      .openapi({
+        description: desc('common.pagination_offset', '分页偏移量（从 0 开始）'),
+        example: 0,
+      }),
+    limit: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(200)
+      .default(20)
+      .openapi({
+        description: desc('common.pagination_limit', '每页条数（最大 200）'),
+        example: 20,
+      }),
+  })
+  .openapi({ description: desc('common.pagination_params', '分页查询参数') });
 export type PaginationParams = z.infer<typeof PaginationParamsSchema>;
 
-/** Generic paginated list wrapper. */
+/** Generic paginated list wrapper `{ items, total, offset, limit }`. */
 export function PaginatedSchema<T extends z.ZodTypeAny>(item: T) {
-  return z.object({
-    items: z.array(item),
-    total: z.number().int().nonnegative(),
-    offset: z.number().int().nonnegative(),
-    limit: z.number().int().positive(),
-  });
+  return z
+    .object({
+      items: z.array(item).openapi({ description: desc('common.paginated_items', '当前页条目') }),
+      total: z
+        .number()
+        .int()
+        .nonnegative()
+        .openapi({ description: desc('common.paginated_total', '符合条件的总条数') }),
+      offset: z
+        .number()
+        .int()
+        .nonnegative()
+        .openapi({
+          description: desc('common.pagination_offset', '分页偏移量（从 0 开始）'),
+        }),
+      limit: z
+        .number()
+        .int()
+        .positive()
+        .openapi({ description: desc('common.pagination_limit', '每页条数（最大 200）') }),
+    })
+    .openapi({ description: desc('common.paginated_envelope', '分页列表响应信封') });
+}
+
+/** Slice an in-memory list into a PaginatedSchema envelope. */
+export function paginateItems<T>(
+  items: T[],
+  offset: number,
+  limit: number,
+): { items: T[]; total: number; offset: number; limit: number } {
+  return {
+    items: items.slice(offset, offset + limit),
+    total: items.length,
+    offset,
+    limit,
+  };
 }
 
 /**

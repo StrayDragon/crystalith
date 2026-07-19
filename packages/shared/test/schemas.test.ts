@@ -24,6 +24,11 @@ describe('common schemas', () => {
     expect(out.items).toEqual([1, 2]);
   });
 
+  it('paginateItems slices and reports total', () => {
+    const page = S.paginateItems([1, 2, 3, 4, 5], 1, 2);
+    expect(page).toEqual({ items: [2, 3], total: 5, offset: 1, limit: 2 });
+  });
+
   it('parses a citation with optional fields', () => {
     const c = S.CitationSchema.parse({
       sourceId: 1,

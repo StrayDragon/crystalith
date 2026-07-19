@@ -17,10 +17,13 @@
 // c37: control endpoints now record steps + transition correctly (v1 parity).
 import {
   NotebookIdQuerySchema,
+  PaginatedSchema,
+  PaginationParamsSchema,
   ResearchSessionCreateSchema,
+  ResearchSessionSchema,
   SearchPlanSchema,
 } from '@crystalith/shared';
-import { and, desc, eq, gt } from 'drizzle-orm';
+import { and, count, desc, eq, gt } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 import { z } from 'zod';
 
@@ -53,6 +56,9 @@ export { cleanupExpiredLocks, isLockHeld, renewLock, acquireLock, releaseLock } 
 // OpenAPI docs
 // ---------------------------------------------------------------------------
 
+const ResearchListQuerySchema = NotebookIdQuerySchema.merge(PaginationParamsSchema);
+const ResearchPageSchema = PaginatedSchema(ResearchSessionSchema);
+
 const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/research',
@@ -66,7 +72,16 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'List research sessions',
     tags: ['research'],
-    responses: { 200: { description: 'List of research sessions' } },
+    request: {
+      query: {
+        notebookId: NotebookIdQuerySchema.shape.notebookId,
+        offset: PaginationParamsSchema.shape.offset,
+        limit: PaginationParamsSchema.shape.limit,
+      },
+    },
+    responses: {
+      200: { description: 'Paginated research session list', body: ResearchPageSchema },
+    },
   },
   {
     path: '/v2/research/:id',
@@ -350,15 +365,30 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/research',
     ({ query }) => {
+      const offset = query.offset ?? 0;
+      const limit = query.limit ?? 20;
+      const total =
+        db()
+          .select({ n: count() })
+          .from(researchSessions)
+          .where(eq(researchSessions.notebookId, query.notebookId))
+          .get()?.n ?? 0;
       const rows = db()
         .select()
         .from(researchSessions)
         .where(eq(researchSessions.notebookId, query.notebookId))
         .orderBy(desc(researchSessions.createdAt))
+        .limit(limit)
+        .offset(offset)
         .all();
-      return rows.map(serializeSession);
+      return {
+        items: rows.map(serializeSession),
+        total,
+        offset,
+        limit,
+      };
     },
-    { query: NotebookIdQuerySchema },
+    { query: ResearchListQuerySchema, response: ResearchPageSchema },
   )
 
   // Get single session — c67: notebookId required

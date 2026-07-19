@@ -1,9 +1,15 @@
-import { MessageCreateSchema, MessageSchema, PaginationParamsSchema } from '@crystalith/shared';
+import {
+  MessageCreateSchema,
+  MessageSchema,
+  PaginatedSchema,
+  PaginationParamsSchema,
+  type Message,
+} from '@crystalith/shared';
 // Messages router — /v2/notebooks/:nid/sessions/:sid/messages
 //
 // Supports paginated message listing and user message creation.
 // Mirrors v1 `features/messages/api.py`.
-import { eq } from 'drizzle-orm';
+import { count, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
@@ -14,6 +20,8 @@ import { requirePositiveIntId } from '../../shared/ids.ts';
 // ---------------------------------------------------------------------------
 // OpenAPI doc registration
 // ---------------------------------------------------------------------------
+
+const MessagesPageSchema = PaginatedSchema(MessageSchema);
 
 const apiDocs: OpenApiRoute[] = [
   {
@@ -28,7 +36,7 @@ const apiDocs: OpenApiRoute[] = [
       },
     },
     responses: {
-      200: { description: 'Paginated message list', body: MessageSchema.array() },
+      200: { description: 'Paginated message list', body: MessagesPageSchema },
     },
   },
   {
@@ -55,13 +63,13 @@ function serializeMessage(row: {
   citations: unknown[] | null;
   createdAt: Date;
   updatedAt: Date;
-}) {
+}): Message {
   return {
     id: row.id,
     sessionId: row.sessionId,
-    role: row.role as 'user' | 'assistant' | 'system',
+    role: row.role as Message['role'],
     content: row.content,
-    citations: row.citations,
+    citations: (row.citations as Message['citations']) ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -79,12 +87,15 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const sid = requirePositiveIntId(params.sid, 'session id');
       const offset = query.offset ?? 0;
-      const limit = query.limit ?? 200;
+      const limit = query.limit ?? 20;
 
       // Verify session exists AND belongs to notebook (c39 gap fix)
       const session = db().select().from(sessions).where(eq(sessions.id, sid)).get();
       if (!session || session.notebookId !== nid)
         throw new NotFoundError(`Session ${sid} not found`);
+
+      const total =
+        db().select({ n: count() }).from(messages).where(eq(messages.sessionId, sid)).get()?.n ?? 0;
 
       const rows = db()
         .select()
@@ -96,9 +107,14 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
         .offset(offset)
         .all();
 
-      return rows.map(serializeMessage);
+      return {
+        items: rows.map(serializeMessage),
+        total,
+        offset,
+        limit,
+      };
     },
-    { query: PaginationParamsSchema },
+    { query: PaginationParamsSchema, response: MessagesPageSchema },
   )
 
   // Create a user message

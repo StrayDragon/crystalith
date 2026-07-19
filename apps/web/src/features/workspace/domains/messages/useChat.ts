@@ -101,7 +101,7 @@ export function useChat({
         throw new Error(
           typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
         );
-      return result ?? [];
+      return result?.items ?? [];
     },
     { revalidateOnFocus: false },
   );

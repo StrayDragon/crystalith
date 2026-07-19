@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "workspace-api-contract"
 purpose: 定义前后端协作所依赖的稳定 API 契约：版本前缀、错误信封、核心端点稳定字段与 SSE 事件最小形状。
 valid_scope[2]: apps/,packages/
-requirements[42]{req_id,title,statement}:
+requirements[44]{req_id,title,statement}:
   r56,API major version prefix is stable,对外业务 API MUST 使用 `/v2` 前缀；同一 major 内保持兼容。健康检查等运维端点 MAY 位于根路径。
   r114,"Optional API key authentication is supported for self-host",DEFERRED(c13)：当 `app.auth.enabled` 且配置鉴权密钥时，`/v2/**` 端点 MUST 要求 Bearer token；未启用时 MAY 匿名访问。当前 v2 运行时尚未强制鉴权。
   r151,"Non-SSE errors use unified envelope","非 SSE 错误响应 MUST 使用统一结构：`errorCode`, `message`, `details?`, `retryAfter?`。"
@@ -45,7 +45,9 @@ requirements[42]{req_id,title,statement}:
   "notebook-scoped-resource-access","Notebook-scoped resources require notebook boundary",对 source、output、research session、studio slide、task 及 citation 单资源的读取与变更，系统 MUST 能证明请求属于某一 notebook：notebookId（query 或 path）MUST 为必填；当资源存在但不属于该 notebook 时 MUST 返回 404 NOT_FOUND，且 MUST NOT 在缺少 notebook 范围时按全局 id 返回跨 notebook 数据。
   "notebook-scoped-list-forbid-global","Notebook-scoped lists MUST NOT dump all notebooks",笔记本范围列表端点（至少包括 GET /v2/research）在缺少 notebook 过滤时 MUST 拒绝请求（400）；MUST NOT 返回全部 notebook 的聚合列表。
   "domain-errors-use-envelope-and-status",Domain conflicts use AppHttpError envelope,业务状态机非法与乐观锁冲突 MUST 通过 AppHttpError 返回统一 ErrorEnvelope：乐观锁冲突 MUST 使用 409 CONFLICT；非法状态转换 MUST 使用 400 INVALID_REQUEST 或 409 CONFLICT；MUST NOT 用裸 Error 落入非结构化 500，也 MUST NOT 用 NotFoundError 伪装冲突。
-scenarios[53]{req_id,id,given,when,then,feature}:
+  "list-endpoints-use-paginated-envelope",List endpoints MUST use PaginatedSchema envelope,"notebook-scoped 或可增长的列表端点（至少包括 messages、sessions、sources、outputs、research sessions、studio slides、notebook tasks）MUST 接受 PaginationParams（offset/limit）并 MUST 返回 PaginatedSchema 形状：items、total、offset、limit。MUST NOT 再对上述端点返回无 total 的裸数组作为成功响应。"
+  "openapi-docs-match-handler-paths",OpenAPI and AsyncAPI paths MUST match handlers,registerApiDoc 与 AsyncAPI 中登记的 path MUST 与 Elysia handler 实际 path 一致；已知漂移（citations context、research stream）MUST 修正。列表端点的 OpenAPI response 描述 MUST 反映 PaginatedSchema 而非裸数组。
+scenarios[56]{req_id,id,given,when,then,feature}:
   r56,"client-targets-stable-major-prefix","",客户端调用对外 API,端点 SHALL 使用 `/v2` 前缀且在同一 major 内保持兼容,true
   r114,"auth-enabled-requires-bearer-token-for-v2-deferred","",运维启用鉴权并配置了 API key,客户端请求任意 `/v2/**` 端点若未携带有效 token SHALL 返回 401,true
   r114,"health-endpoints-remain-accessible-without-auth","",运维启用鉴权并配置了 API key,`/health` 与 `/health/dependencies` SHALL 保持匿名可访问以支持探活与运维诊断,true
@@ -99,3 +101,6 @@ scenarios[53]{req_id,id,given,when,then,feature}:
   "notebook-scoped-resource-access","missing-notebook-id-rejected",客户端调用需归属校验的 source/output 单资源端点且省略 notebookId,发送请求,系统 SHALL 拒绝该请求（400 校验失败或等价）且 MUST NOT 返回跨本资源体,false
   "notebook-scoped-list-forbid-global","research-list-requires-notebook",系统中存在多个 notebook 的 research session,客户端调用 GET /v2/research 且省略 notebookId,系统 SHALL 拒绝全表列举（400）且 MUST NOT 返回全部 session,false
   "domain-errors-use-envelope-and-status","session-revision-conflict-409",客户端以过期 sharedStateRevision 更新 session,发生乐观锁冲突,系统 SHALL 返回 409 CONFLICT 与 ErrorEnvelope，且 MUST NOT 返回伪装的 404,false
+  "list-endpoints-use-paginated-envelope","messages-list-returns-paginated",会话中存在多条消息,客户端以 offset/limit 调用 GET messages,响应 SHALL 含 items 与 total 且 items 长度不超过 limit,false
+  "list-endpoints-use-paginated-envelope","research-list-paginated-with-notebook",notebook 下存在 research sessions,客户端携带 notebookId 与分页参数调用 GET /v2/research,响应 SHALL 为 PaginatedSchema 且不得返回其他 notebook 的 session,false
+  "openapi-docs-match-handler-paths","citations-context-doc-path","实现路径为 /v2/notebooks/:nid/citations/context",检查 registerApiDoc 登记,文档 path SHALL 与实现一致且 MUST NOT 再登记过时的 /v2/citations/context 为唯一真源,false

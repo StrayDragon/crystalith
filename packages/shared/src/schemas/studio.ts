@@ -7,6 +7,7 @@ import {
   IsoTimestampSchema,
   JsonMetadataSchema,
   OptionalTimestampSchema,
+  PaginationParamsSchema,
 } from './common.js';
 import { SlidesOutlineSchema } from './output.js';
 
@@ -73,7 +74,7 @@ export const StudioSlideListSchema = z.object({
   slides: z.array(StudioSlideSchema),
 });
 
-export const StudioSlidesListQuerySchema = z.object({
+export const StudioSlidesListQuerySchema = PaginationParamsSchema.extend({
   notebookId: z.coerce.number().int().positive(),
 });
 export type StudioSlidesListQuery = z.infer<typeof StudioSlidesListQuerySchema>;

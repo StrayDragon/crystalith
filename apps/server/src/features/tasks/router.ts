@@ -3,8 +3,13 @@
 // Provides GET /v2/tasks/:id for progress polling on long-running
 // operations (research, refine, ingestion). Tasks are created by other
 // feature routers and tracked via the `tasks` DB table.
-import { NotebookIdQuerySchema, TaskSchema } from '@crystalith/shared';
-import { desc, eq } from 'drizzle-orm';
+import {
+  NotebookIdQuerySchema,
+  PaginatedSchema,
+  PaginationParamsSchema,
+  TaskSchema,
+} from '@crystalith/shared';
+import { count, desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
@@ -13,6 +18,8 @@ import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { ErrorCode, sendError } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
 import type { TaskQueue } from '../../shared/queue.ts';
+
+const TasksPageSchema = PaginatedSchema(TaskSchema);
 
 const apiDocs: OpenApiRoute[] = [
   {
@@ -27,7 +34,13 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'List tasks for a notebook',
     tags: ['tasks'],
-    responses: { 200: { description: 'Task list', body: TaskSchema.array() } },
+    request: {
+      query: {
+        offset: PaginationParamsSchema.shape.offset,
+        limit: PaginationParamsSchema.shape.limit,
+      },
+    },
+    responses: { 200: { description: 'Paginated task list', body: TasksPageSchema } },
   },
   {
     path: '/v2/tasks/:id/cancel',
@@ -72,17 +85,29 @@ export function tasksRouter(taskQueue: TaskQueue) {
     )
     .get(
       '/notebooks/:nid/tasks',
-      ({ params }) => {
+      ({ params, query }) => {
         const nid = requirePositiveIntId(params.nid, 'notebook id');
+        const offset = query.offset ?? 0;
+        const limit = query.limit ?? 20;
+        const total =
+          db().select({ n: count() }).from(tasksTable).where(eq(tasksTable.notebookId, nid)).get()
+            ?.n ?? 0;
         const rows = db()
           .select()
           .from(tasksTable)
           .where(eq(tasksTable.notebookId, nid))
           .orderBy(desc(tasksTable.createdAt))
+          .limit(limit)
+          .offset(offset)
           .all();
-        return rows.map(serializeTask);
+        return {
+          items: rows.map(serializeTask),
+          total,
+          offset,
+          limit,
+        };
       },
-      { response: TaskSchema.array() },
+      { query: PaginationParamsSchema, response: TasksPageSchema },
     )
     .post(
       '/tasks/:id/cancel',

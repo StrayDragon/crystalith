@@ -173,13 +173,13 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     setError('');
     try {
       const { data, error: fetchErr } = await api.v2.research.get({
-        query: { notebookId },
+        query: { notebookId, offset: 0, limit: 200 },
       });
       if (fetchErr)
         throw new Error(
           typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
         );
-      setSessions(data as ResearchSessionItem[]);
+      setSessions((data?.items ?? []) as ResearchSessionItem[]);
     } catch (error) {
       setError(error instanceof Error ? error.message : '获取研究列表失败');
     } finally {

@@ -71,7 +71,11 @@ beforeEach(() => {
     },
   });
 
-  server.use(http.get('*/v2/outputs', () => HttpResponse.json([])));
+  server.use(
+    http.get('*/v2/outputs', () =>
+      HttpResponse.json({ items: [], total: 0, offset: 0, limit: 200 }),
+    ),
+  );
 
   onQueueReset.mockClear();
   onQueueTotal.mockClear();
@@ -384,23 +388,28 @@ test('enqueueSlidesJob settles when outline+markdown generation completes', asyn
     http.get('*/v2/outputs', () =>
       HttpResponse.json(
         draftStage === 'markdown'
-          ? [
-              {
-                id: 21,
-                notebookId: 1,
-                type: 'SLIDES',
-                prompt: 'Outline',
-                chunkIds: [1],
-                content: {
-                  title: 'Deck',
-                  slideId: 5,
-                  markdown: '# Deck',
+          ? {
+              items: [
+                {
+                  id: 21,
+                  notebookId: 1,
+                  type: 'SLIDES',
+                  prompt: 'Outline',
+                  chunkIds: [1],
+                  content: {
+                    title: 'Deck',
+                    slideId: 5,
+                    markdown: '# Deck',
+                  },
+                  createdAt: '2024-01-01T00:00:02Z',
+                  updatedAt: '2024-01-01T00:00:02Z',
                 },
-                createdAt: '2024-01-01T00:00:02Z',
-                updatedAt: '2024-01-01T00:00:02Z',
-              },
-            ]
-          : [],
+              ],
+              total: 1,
+              offset: 0,
+              limit: 200,
+            }
+          : { items: [], total: 0, offset: 0, limit: 200 },
       ),
     ),
   );
