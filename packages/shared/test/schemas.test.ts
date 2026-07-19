@@ -81,13 +81,18 @@ describe('domain schemas', () => {
     expect(S.SourceFromUrlRequestSchema.safeParse({ url: 'ftp://x' }).success).toBe(false);
   });
 
-  it('qa stream request has sensible defaults', () => {
-    const r = S.QaStreamRequestSchema.parse({
-      sessionId: 1,
+  it('qa request requires notebookId + question/content', () => {
+    const r = S.QaRequestSchema.parse({
+      notebookId: 1,
       question: 'hi',
+      sessionId: 2,
     });
-    expect(r.history).toEqual([]);
     expect(r.question).toBe('hi');
+    expect(r.notebookId).toBe(1);
+    expect(S.QaRequestSchema.safeParse({ notebookId: 1 }).success).toBe(false);
+    expect(
+      S.QaRequestSchema.safeParse({ notebookId: 1, content: 'via content alias' }).success,
+    ).toBe(true);
   });
 
   it('research progress event union discriminates on type', () => {

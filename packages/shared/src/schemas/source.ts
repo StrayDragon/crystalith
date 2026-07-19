@@ -196,6 +196,13 @@ export const SourceFromUrlRequestSchema = z
   }));
 export type SourceFromUrlRequest = z.infer<typeof SourceFromUrlRequestSchema>;
 
+/** Query params for POST /v2/sources/upload (multipart body is not Zod-validated). */
+export const SourceUploadQuerySchema = z.object({
+  notebookId: z.coerce.number().int().positive(),
+  dedupAction: z.enum(['prompt', 'reuse', 'create_new']).default('prompt'),
+});
+export type SourceUploadQuery = z.infer<typeof SourceUploadQuerySchema>;
+
 export const ExtractorInfoSchema = z.object({
   type: z.string(),
   pluginId: z.string().nullable().optional(),

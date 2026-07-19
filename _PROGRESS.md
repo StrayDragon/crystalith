@@ -6,7 +6,7 @@
 > **批次纪律**：每个合理批次验收通过后 **commit**；有问题随时停并报告。
 
 **来源**：Wave A（架构 / 流程门禁 / Spec 漂移）只读体检。  
-**最后更新**：2026-07-19（P1.6–1.8 路由 Zod 挂载波次）
+**最后更新**：2026-07-19（P1.6 余量：qa/studio/sessions/citations/upload）
 
 ---
 
@@ -59,7 +59,7 @@ shared Zod（或路由挂载的 schema）
 | Phase | 主题                                     | 状态                              |
 | ----- | ---------------------------------------- | --------------------------------- |
 | P0    | 门禁解阻塞（能跑 `just lint`）           | ✅                                |
-| P1    | Zod / Eden SSOT 收敛（核心）             | 🔄 P1.2–1.8 主体 ✅；路由余量待办 |
+| P1    | Zod / Eden SSOT 收敛（核心）             | 🔄 P1.2–1.8 ✅；connectors/tasks 等余量可选 |
 | P2    | Zod 使用面写入 AGENTS.md + 文档对齐      | ✅                                |
 | P3    | 门禁真相（qa 组成、假绿项）              | ⬜                                |
 | P4    | Cleanup A（死代码 / 死配置，无行为变更） | ✅ P4.1–4.5（P4.6 可选延后）      |
@@ -106,11 +106,13 @@ shared Zod（或路由挂载的 schema）
   - [x] 盘点：多数路由未挂载；无本地 `z.object` 平行定义
   - [x] Tier1 挂载：notebooks PATCH、refine、research create/modify、outputs generate/types、sources（tags/batch/search/from-url/extractors）
   - [x] shared 扩展：`notebookId`（refine/research）、`OutputGenerateRequestSchema`、`SourceSearchStatus` + `no_results`
-  - [ ]（余量）qa/studio/sessions convert/upload multipart/connectors — 下波
+  - [x] 余量挂载：qa（request/export/answer）、studio（create/list/patch/outline/markdown）、sessions convert、sources upload query、citations context
+  - [ ]（可选余量）source-connectors / tasks / models·templates responses / eval / workspace / commands / rag
 - [x] **P1.7 OpenAPI 抽检**
   - [x] shared 关键 schema 字段均为 camelCase；notebooks OpenAPI resp 为 `createdAt`/`updatedAt`
 - [x] **P1.8 回归**
   - [x] `bun typecheck` + `just qa`（本波 commit 前）
+  - [x] 余量波次再跑 `just qa` 绿
 
 ### P2 — 固化约定到 AGENTS.md
 
@@ -163,15 +165,16 @@ shared Zod（或路由挂载的 schema）
 
 ## 3. 当前焦点
 
-**正在做**：_(P1.6–1.8 Tier1 挂载完成)_
+**正在做**：_(P1.6 余量挂载完成)_
 
 **已完成批次**：
 
 - P0 / P1.0–P1.5 / P2 / P4.1–4.5
 - **P1.2** RenderDescriptor SSOT / **P1.3** SlidesOutline
 - **P1.6–1.8** 关键写路径挂 shared Zod + OpenAPI camelCase 抽检 + qa
+- **P1.6 rem** qa/studio/sessions convert + upload query + citations context + qa 绿
 
-**下一步**：P1.6 余量（qa/studio/…）或 P3 门禁真相 / P5 specs
+**下一步**：P3 门禁真相 / P5 specs / 或可选 connectors·tasks 余量
 
 ---
 

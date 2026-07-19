@@ -164,16 +164,16 @@ describe('citation context — neighborhood window', () => {
 });
 
 describe('citation context — validation', () => {
-  it('returns 400 when both chunk_id and source_id+chunk_index are provided', async () => {
+  it('returns 422 when both chunk_id and source_id+chunk_index are provided', async () => {
     const { status } = await get(
       ctxPath(`?chunkId=${chunkIds[0]}&sourceId=${sourceId}&chunkIndex=1`),
     );
-    expect(status).toBe(400);
+    expect(status).toBe(422);
   });
 
-  it('returns 400 when no resolution param is provided', async () => {
+  it('returns 422 when no resolution param is provided', async () => {
     const { status } = await get(ctxPath(''));
-    expect(status).toBe(400);
+    expect(status).toBe(422);
   });
 
   it('returns 404 for nonexistent chunk_id', async () => {

@@ -45,11 +45,23 @@ export const SlideDraftCreateSchema = z.object({
 });
 export type SlideDraftCreate = z.infer<typeof SlideDraftCreateSchema>;
 
+/** POST /v2/studio/slides — create draft (includes notebookId + required sources). */
+export const SlideDraftCreateRequestSchema = z.object({
+  notebookId: IdSchema,
+  title: z.string().nullable().optional(),
+  prompt: z.string().nullable().optional(),
+  /** Defaults to `slidev` in the studio router when omitted (kept optional for Eden clients). */
+  engine: z.string().optional(),
+  sourceIds: z.array(IdSchema).min(1),
+  generationConfig: JsonMetadataSchema.nullable().optional(),
+});
+export type SlideDraftCreateRequest = z.infer<typeof SlideDraftCreateRequestSchema>;
+
 export const SlideDraftUpdateSchema = z.object({
   title: z.string().nullable().optional(),
   prompt: z.string().nullable().optional(),
   engine: z.string().optional(),
-  sourceIds: z.array(IdSchema).nullable().optional(),
+  sourceIds: z.array(IdSchema).min(1).nullable().optional(),
   generationConfig: JsonMetadataSchema.nullable().optional(),
   outline: SlidesOutlineSchema.nullable().optional(),
   markdown: z.string().nullable().optional(),
@@ -60,6 +72,21 @@ export type SlideDraftUpdate = z.infer<typeof SlideDraftUpdateSchema>;
 export const StudioSlideListSchema = z.object({
   slides: z.array(StudioSlideSchema),
 });
+
+export const StudioSlidesListQuerySchema = z.object({
+  notebookId: z.coerce.number().int().positive(),
+});
+export type StudioSlidesListQuery = z.infer<typeof StudioSlidesListQuerySchema>;
+
+export const StudioOutlinePutSchema = z.object({
+  outline: SlidesOutlineSchema,
+});
+export type StudioOutlinePut = z.infer<typeof StudioOutlinePutSchema>;
+
+export const StudioMarkdownPutSchema = z.object({
+  markdown: z.string(),
+});
+export type StudioMarkdownPut = z.infer<typeof StudioMarkdownPutSchema>;
 
 // ---------------------------------------------------------------------------
 // c56: Slide generation config + config_schema (v1 PluginConfigSchema parity).

@@ -6,7 +6,7 @@
 // the existing frontend renderer works with minimal adaptation.
 import { z } from 'zod';
 
-import { CitationSchema, IdSchema, IsoTimestampSchema, JsonMetadataSchema } from '../common.js';
+import { CitationSchema, IdSchema, JsonMetadataSchema } from '../common.js';
 import { ChatTurnSchema } from '../message.js';
 
 export const QaStreamChunkEventSchema = z.object({
@@ -44,28 +44,52 @@ export const QaStreamErrorEventSchema = z.object({
   errorCode: z.string().optional(),
 });
 
-/** Request body for POST /v2/qa/stream. */
-export const QaStreamRequestSchema = z.object({
-  sessionId: IdSchema,
-  question: z.string().min(1),
-  /** Optional prior turns for multi-turn context (excludes the new question). */
-  history: z.array(ChatTurnSchema).default([]),
-  /** Override the default chat model id. */
-  modelId: z.string().optional(),
-  /** RAG strategy id (defaults to the notebook's active strategy). */
-  strategyId: z.string().optional(),
-  topK: z.number().int().positive().max(50).optional(),
-});
-export type QaStreamRequest = z.infer<typeof QaStreamRequestSchema>;
+/** Request body for POST /v2/qa and POST /v2/qa/stream. */
+export const QaDirectiveSchema = z.enum(['Sources_only', 'Knowledge_only', 'Mixed']);
+export type QaDirective = z.infer<typeof QaDirectiveSchema>;
 
-/** Non-streaming QA response (POST /v2/qa/ask). */
+export const QaRequestSchema = z
+  .object({
+    question: z.string().min(1).optional(),
+    /** Alias used by some clients for `question`. */
+    content: z.string().min(1).optional(),
+    notebookId: IdSchema,
+    sessionId: IdSchema.optional(),
+    preset: z.string().max(32).optional(),
+    directive: QaDirectiveSchema.optional(),
+    strategyId: z.string().optional(),
+    topK: z.number().int().positive().max(50).optional(),
+    minScore: z.number().min(0).max(1).optional(),
+    sourceIds: z.array(IdSchema).optional(),
+    /** Legacy stream-only fields (ignored by server if present). */
+    history: z.array(ChatTurnSchema).optional(),
+    modelId: z.string().optional(),
+  })
+  .refine((b) => !!(b.question ?? b.content), { message: 'question is required' });
+export type QaRequest = z.infer<typeof QaRequestSchema>;
+
+/** @deprecated Prefer QaRequestSchema — kept as alias for older imports. */
+export const QaStreamRequestSchema = QaRequestSchema;
+export type QaStreamRequest = QaRequest;
+
+/** Non-streaming QA response (POST /v2/qa). */
 export const QaAnswerSchema = z.object({
-  messageId: IdSchema,
   answer: z.string(),
   citations: z.array(CitationSchema).default([]),
-  createdAt: IsoTimestampSchema,
+  messageId: IdSchema.nullable().optional(),
+  sessionId: IdSchema.optional(),
+  confidence: z.number().min(0).max(1).optional(),
+  evidence: z.unknown().optional(),
+  noEvidenceReason: z.string().optional(),
 });
 export type QaAnswer = z.infer<typeof QaAnswerSchema>;
+
+export const QaExportQuerySchema = z.object({
+  sessionId: z.coerce.number().int().positive(),
+  messageId: z.coerce.number().int().positive().optional(),
+  format: z.enum(['markdown', 'json']).default('markdown'),
+});
+export type QaExportQuery = z.infer<typeof QaExportQuerySchema>;
 
 export const QaStreamEventNames = ['chunk', 'state_snapshot', 'done', 'error'] as const;
 export type QaStreamEventName = (typeof QaStreamEventNames)[number];
