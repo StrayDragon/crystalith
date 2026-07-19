@@ -84,6 +84,9 @@ function ChatPanel({
 }: ChatPanelProps) {
   const notebookId = useWorkspaceStore((s) => s.activeNotebookId);
   const sessionId = useWorkspaceStore((s) => s.activeSessionId);
+  const selectedSourceCount = useWorkspaceStore(
+    (s) => Object.values(s.selectedSourceIds).filter(Boolean).length,
+  );
 
   const citationIndexMap = useMemo(() => {
     const map = new Map<number, { citation: Citation; index: number }>();
@@ -503,7 +506,7 @@ function ChatPanel({
           onSend();
         }}
       >
-        <div className="relative mx-auto flex w-full max-w-2xl items-center gap-2 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 sm:px-4 py-2 shadow-sm transition-all duration-200 focus-within:border-gray-400 dark:focus-within:border-slate-500 focus-within:ring-2 focus-within:ring-gray-100 dark:focus-within:ring-slate-700">
+        <div className="relative mx-auto w-full max-w-2xl rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm transition-all duration-200 focus-within:border-gray-400 dark:focus-within:border-slate-500 focus-within:ring-2 focus-within:ring-gray-100 dark:focus-within:ring-slate-700">
           {isCommandMenuOpen && commandContext?.token.startsWith('/') ? (
             <div
               className="absolute bottom-full left-0 right-0 mb-2"
@@ -596,7 +599,7 @@ function ChatPanel({
           ) : null}
 
           <textarea
-            className="flex-1 bg-transparent text-sm text-gray-700 dark:text-slate-100 outline-none resize-none border-none focus:ring-0 min-h-[32px] sm:min-h-[44px]"
+            className="w-full bg-transparent text-sm text-gray-700 dark:text-slate-100 outline-none resize-none border-none focus:ring-0 min-h-[44px] py-3 leading-5 pl-4 pr-28 text-left placeholder:text-left"
             name="chatPrompt"
             ref={inputRef}
             {...tid(TestIds.chatInput)}
@@ -668,28 +671,38 @@ function ChatPanel({
             }}
             rows={1}
           />
-          {isStreaming ? (
-            <button
-              type="button"
-              className="px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700/50 text-xs font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-              aria-label="停止生成"
-              {...tid(TestIds.chatStop)}
-              onClick={onStopStreaming}
-            >
-              停止生成
-            </button>
-          ) : (
-            <IconButton
-              type="submit"
-              size="sm"
-              className="rounded-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200 disabled:opacity-60 disabled:cursor-not-allowed"
-              aria-label="发送"
-              {...tid(TestIds.chatSend)}
-              disabled={draft.trim().length === 0 || isSending || isBlocked}
-            >
-              <IconSend className="w-4 h-4" />
-            </IconButton>
-          )}
+
+          <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center gap-2">
+            {selectedSourceCount > 0 ? (
+              <span className="pointer-events-none text-[11px] text-gray-500 dark:text-slate-400 whitespace-nowrap">
+                {selectedSourceCount} 个来源
+              </span>
+            ) : null}
+            <div className="pointer-events-auto">
+              {isStreaming ? (
+                <button
+                  type="button"
+                  className="px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700/50 text-xs font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                  aria-label="停止生成"
+                  {...tid(TestIds.chatStop)}
+                  onClick={onStopStreaming}
+                >
+                  停止生成
+                </button>
+              ) : (
+                <IconButton
+                  type="submit"
+                  size="sm"
+                  className="rounded-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                  aria-label="发送"
+                  {...tid(TestIds.chatSend)}
+                  disabled={draft.trim().length === 0 || isSending || isBlocked}
+                >
+                  <IconSend className="w-4 h-4" />
+                </IconButton>
+              )}
+            </div>
+          </div>
         </div>
       </form>
     </div>
