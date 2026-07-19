@@ -18,6 +18,7 @@ export const SourceStatusSchema = z.enum(['processing', 'ready', 'failed']);
 export type SourceStatus = z.infer<typeof SourceStatusSchema>;
 
 export const ExtractorPolicyModeSchema = z.enum(['inherit_global', 'custom']);
+export type ExtractorPolicyMode = z.infer<typeof ExtractorPolicyModeSchema>;
 
 // ---------------------------------------------------------------------------
 // Chunk
@@ -155,12 +156,16 @@ export const PatchNotebookExtractorPolicySchema = z.object({
   mode: ExtractorPolicyModeSchema.optional(),
   enabledExtractors: z.array(z.string()).nullable().optional(),
 });
+export type PatchNotebookExtractorPolicy = z.infer<typeof PatchNotebookExtractorPolicySchema>;
+/** UI/local policy view — same fields as patch body (no notebookId/timestamps). */
+export type NotebookExtractorsPolicyView = PatchNotebookExtractorPolicy;
 
 // ---------------------------------------------------------------------------
 // URL ingestion + web extraction
 // ---------------------------------------------------------------------------
 
 export const SourceFromUrlModeSchema = z.enum(['fetch', 'link']);
+export type SourceFromUrlMode = z.infer<typeof SourceFromUrlModeSchema>;
 
 export const SourceFromUrlRequestSchema = z
   .object({
@@ -206,6 +211,7 @@ export const ExtractorInfoSchema = z.object({
   recoveryHint: z.string().nullable().optional(),
   details: JsonMetadataSchema.nullable().optional(),
 });
+export type ExtractorInfo = z.infer<typeof ExtractorInfoSchema>;
 
 export const ExtractorsListSchema = z.object({
   extractors: z.array(ExtractorInfoSchema),
@@ -213,6 +219,7 @@ export const ExtractorsListSchema = z.object({
   fallbackEnabled: z.boolean().default(true),
   policy: NotebookExtractorPolicySchema,
 });
+export type ExtractorsList = z.infer<typeof ExtractorsListSchema>;
 
 // ---------------------------------------------------------------------------
 // Source search (web)
@@ -270,6 +277,7 @@ export const QAMessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
   content: z.string(),
 });
+export type QAMessage = z.infer<typeof QAMessageSchema>;
 
 export const ConvertSourceQAToSourceRequestSchema = z.object({
   messages: z.array(QAMessageSchema).min(1),

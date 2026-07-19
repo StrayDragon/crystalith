@@ -1,3 +1,8 @@
+import type {
+  ExtractorInfo,
+  NotebookExtractorsPolicyView as NotebookExtractorsPolicy,
+  PatchNotebookExtractorPolicy as PatchNotebookExtractorsPolicyRequest,
+} from '@crystalith/shared';
 import {
   Close as CloseIcon,
   ContentCopy as ContentCopyIcon,
@@ -6,11 +11,6 @@ import {
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import type {
-  ExtractorInfoResponse as ExtractorInfo,
-  NotebookExtractorsPolicy,
-  PatchNotebookExtractorsPolicyRequest,
-} from '../../../../../api/shared-types';
 import { copyToClipboard } from '../../../../../shared/clipboard';
 import { useLayer } from '../../../../../shared/layer';
 import { TestIds, tid } from '../../../../../shared/testids';

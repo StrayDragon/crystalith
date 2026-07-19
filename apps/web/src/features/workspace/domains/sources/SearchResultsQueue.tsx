@@ -1,3 +1,4 @@
+import type { ExtractorInfo } from '@crystalith/shared';
 import {
   Button,
   Checkbox,
@@ -29,7 +30,6 @@ import {
 import { useState, useCallback, useMemo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 
-import type { ExtractorInfoResponse as ExtractorInfo } from '../../../../api/shared-types';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
 import SearchResultCard, { type SearchResultItem } from './SearchResultCard';
