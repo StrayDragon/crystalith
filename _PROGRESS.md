@@ -63,7 +63,7 @@ shared Zod（或路由挂载的 schema）
 | P2    | Zod 使用面写入 AGENTS.md + 文档对齐      | ✅                                             |
 | P3    | 门禁真相（qa 组成、假绿项）              | ✅ + web Vitest 入 qa（P3.1A）                 |
 | P4    | Cleanup A（死代码 / 死配置，无行为变更） | ✅ P4.1–4.5（P4.6 可选延后）                   |
-| P5    | Spec 卫生（手改 toon，**不开 SDD**）     | ✅ wave1（P5.1–5.7；产品 gap 条款仍保留）        |
+| P5    | Spec 卫生（手改 toon，**不开 SDD**）     | ✅ wave1（P5.1–5.7；产品 gap 条款仍保留）      |
 | P6    | 可选：瘦 CI / SECURITY / 余债            | ⬜                                             |
 
 ---
@@ -179,10 +179,12 @@ shared Zod（或路由挂载的 schema）
 - [x] **A** `strategy_configs` → Drizzle（P6.3）
 - [x] **B** OutputContentByType / frontendBundle / templates+eval response Zod
 - [x] **C** shared `.openapi()` 基础（extend + notebook/session/template/workspace/command/error）
-- [ ] **D** 产品 gap（SDD）
+- [x] **D** 产品 gap（SDD）— **D.1 低风险**：CSV escape / connector 校验 / citations defaults+path 已在代码；本波补回归测试 + 清假缺口 specs；后续大项另开
 - [ ] **E** 孤儿愿景 spec 归档
 - [ ] **F** 神文件拆分
 - [ ] **G** 提炼 skill
+
+**波次纪律（2026-07-19）**：每波结束后必须 `just qa` 绿再 commit。
 
 ---
 
@@ -218,8 +220,8 @@ shared Zod（或路由挂载的 schema）
 | 2026-07-19 | P3 先只读盘点再拍板；不默认扩 `just qa`                                    |
 | 2026-07-19 | P3 整包：1B+3.2A+3.3B+3.4+3.5A+3.6A+3.7A（消假绿，少动门禁内容）           |
 | 2026-07-19 | P3.1A：`just test-web`（apps/web test:ci）纳入 `just qa`                   |
-| 2026-07-19 | P5：手改 specs 对齐代码 SSOT + compact；不开 SDD；c13 碰撞仅备注            |
-| 2026-07-19 | 本阶段明确 **不处理 c13**；主线 P0–P5 收口后余项见 P4.6 / P6 / 产品 gap     |
+| 2026-07-19 | P5：手改 specs 对齐代码 SSOT + compact；不开 SDD；c13 碰撞仅备注           |
+| 2026-07-19 | 本阶段明确 **不处理 c13**；主线 P0–P5 收口后余项见 P4.6 / P6 / 产品 gap    |
 
 ---
 

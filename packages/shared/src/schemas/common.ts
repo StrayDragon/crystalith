@@ -8,7 +8,6 @@
 // built so `.openapi({ description, example })` works here. Server `openapi.ts`
 // also extends (idempotent) and registers routes via `registerApiDoc`.
 import './zod-extend.js';
-
 import { z } from 'zod';
 
 /** ISO 8601 UTC datetime string, e.g. `2026-07-08T12:00:00.000Z`. */
