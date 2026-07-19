@@ -109,6 +109,21 @@ export function listPresets(): { name: string; label: string }[] {
   return Object.values(PRESETS).map(({ name, label }) => ({ name, label }));
 }
 
+/**
+ * Parse `/prompt:<preset> <query>` from question text (v1 presets.py:9-30).
+ * Requires whitespace after the preset name so bare `/prompt:stats` does not match.
+ */
+export function parsePromptDirective(
+  question: string,
+  bodyPreset?: string,
+): { preset: string; question: string } {
+  const match = question.match(/^\/prompt:([a-z0-9_-]{1,32})\s+/iu);
+  if (match) {
+    return { preset: match[1]!.toLowerCase(), question: question.slice(match[0].length) };
+  }
+  return { preset: (bodyPreset ?? 'default').toLowerCase(), question };
+}
+
 // ---------------------------------------------------------------------------
 // c48: stats preset output (v1 presets.py:33-83, parse_stats_preset_output)
 // ---------------------------------------------------------------------------
