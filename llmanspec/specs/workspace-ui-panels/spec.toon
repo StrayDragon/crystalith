@@ -6,7 +6,7 @@ requirements[14]{req_id,title,statement}:
   r59,Panel composition is stable,Workspace MUST 以稳定的面板集合装配 Sources/Chat/Studio/Research 等能力，并保持各面板的基本区域划分与入口可发现。
   r117,Streaming UX supports send/chunk/done/error and cancel,涉及流式输出的面板（如 Chat/Research）MUST 显式呈现 send/chunk/done/error 状态，并 MUST 支持用户取消以停止继续追加内容。
   r154,"Chat input supports /prompt directives as user-facing commands","Workspace 的 Chat 面板 MUST 允许用户在输入框中使用 `/prompt:<preset> <query>` 指令来请求受控的预设生成模式。"
-  r189,Chat input provides command autocomplete for /prompt presets,"Workspace 的 Chat 输入框 MUST 使用 `GET /v1/commands` 获取命令列表，并在用户输入 `/` 或 `/prompt:` 前缀时提供自动补全 UI。"
+  r189,Chat input provides command autocomplete for /prompt presets,"Workspace 的 Chat 输入框 MUST 使用 `GET /v2/commands` 获取命令列表，并在用户输入 `/` 或 `/prompt:` 前缀时提供自动补全 UI。"
   r220,System config UI allows users to manage prompt presets,"Workspace UI MUST 提供“系统配置”入口，并允许用户对 custom `/prompt:*` presets 执行 CRUD（触发词、描述、system prompt、启用状态）。"
   r246,Chat panel renders plain assistant text plus Rivu mounts,Chat 面板 MUST 将 assistant `message.content` 作为纯文本/markdown 渲染，并 MUST 基于 session `sharedState.ui` 的 mounts 在消息气泡下方渲染结构化 UI。前端 MUST 不再解析 `message.content` 中的 legacy envelope。
   r264,"Streaming UX applies server-authoritative snapshots and deltas",当一次对话响应以流式方式生成时，Chat 面板 MUST 使用服务端发送的 `state_snapshot`/`state_delta` 驱动 UI，并以服务端稳定 `messageId` 关联消息与 mounts。
@@ -23,7 +23,7 @@ scenarios[20]{req_id,id,given,when,then,feature}:
   r154,"user-can-send-a-prompt-message","","用户在 Chat 输入框中输入以 `/prompt:` 开头的内容并发送（无论是否打开自动补全）",UI SHALL 将该文本作为一次消息发送（不应在前端预过滤为“非法输入”）,true
   r189,"tab-accepts-the-selected-suggestion","",用户打开补全菜单并选中某项命令,UI SHALL 将该命令的 `trigger` 插入到输入框中（替换当前 token）,true
   r189,"disabled-commands-are-not-selectable","",补全列表中某条命令 `enabled=false`,UI SHALL 将其展示为 disabled,true
-  r220,"preset-crud-updates-autocomplete","",用户在“系统配置”中创建/更新/删除 custom preset,UI SHALL 刷新 `GET /v1/commands` 的缓存并更新补全列表,true
+  r220,"preset-crud-updates-autocomplete","",用户在“系统配置”中创建/更新/删除 custom preset,UI SHALL 刷新 `GET /v2/commands` 的缓存并更新补全列表,true
   r246,"render-mounted-components-for-a-message","","`sharedState.ui` 中存在 `messageId` 指向某条 assistant message、且 `slot=\"inline\"` 的 mounts",Chat 面板 SHALL 在该消息正文下方渲染对应的 Rivu components,true
   r246,"unknown-component-falls-back-safely","",`sharedState.ui` 中出现未注册的 component type 或 props 校验失败,Chat 面板 SHALL 使用安全回退渲染,true
   r264,"streaming-restores-mounts-after-reload","",用户刷新页面后重新进入同一个 session,Chat 面板 SHALL 通过 `/ui/state` 恢复此前已持久化的 mounts,true

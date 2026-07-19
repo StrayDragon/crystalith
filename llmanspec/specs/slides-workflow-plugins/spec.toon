@@ -9,4 +9,4 @@ requirements[3]{req_id,title,statement}:
 scenarios[3]{req_id,id,given,when,then,feature}:
   r44,"host-loads-a-slides-workflow-plugin","",宿主发现并加载一个实现 slides workflow contract 的插件,系统 SHALL 将其注册为 slides workflow 候选,true
   r102,"multiple-slides-plugins-require-explicit-selection","",同时安装多个兼容的 slides workflow plugin 且未配置默认项,宿主 SHALL 不对外暴露 active `SLIDES` capability,true
-  r139,"official-reference-plugin-exposes-slides-capability","",运维安装并启用官方 reference slides plugin,`/v1/workspace/tools` SHALL 可通过 active plugin 暴露 `SLIDES` tool,true
+  r139,"official-reference-plugin-exposes-slides-capability","",运维安装并启用官方 reference slides plugin,`/v2/workspace/tools` SHALL 可通过 active plugin 暴露 `SLIDES` tool,true

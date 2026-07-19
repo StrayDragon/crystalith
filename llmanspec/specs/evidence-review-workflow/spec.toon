@@ -1,6 +1,6 @@
 kind: llman.sdd.spec
 name: "evidence-review-workflow"
-purpose: 把 citation/evidence 的核查做成正式工作流：结果级审阅状态机、citation/evidence 级核查项与 review notes 的可追溯记录，以及稳定入口与摘要字段，支撑“待审/已审/需修订”的可信闭环。
+purpose: "部分 DEFERRED：citations /context 等证据读取已落地；结果级审阅状态机、review notes、待审/已审/需修订 UI 闭环尚未实现。完整 purpose 仍描述目标工作流，未实现条款不得当作当前代码 SSOT。"
 valid_scope[2]: src/,tests/
 requirements[12]{req_id,title,statement}:
   r30,结果必须具备独立的 evidence review 状态,系统 MUST 为结果提供独立于生成成功状态的 evidence review 状态。

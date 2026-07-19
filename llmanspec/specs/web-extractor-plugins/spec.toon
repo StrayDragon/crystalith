@@ -15,6 +15,6 @@ scenarios[8]{req_id,id,given,when,then,feature}:
   r113,"no-extractors-available-produces-a-stable-failure","",系统在当前配置与插件集合下没有任何可用提取器,fetch 模式 SHALL 失败并返回稳定的错误码与恢复提示（例如“安装/启用官方 extractor 插件”）,true
   r150,"frontend-displays-extractor-diagnostics","",前端请求提取器清单端点,响应 SHALL 包含每个提取器的 enabled/available 状态,true
   r185,"user-disables-an-extractor-for-a-notebook","",用户在 UI 中对某 notebook 关闭某 extractor,后端 SHALL 持久化该覆盖并在 extractor 清单中反映 `enabled=false`,true
-  r185,"notebook-overrides-are-writable-via-api","","客户端通过 `PATCH /v1/notebooks/{notebookId}/sources/extractors` 更新某 notebook 的 extractor 策略（mode 与启用/禁用覆盖）",后端 SHALL 持久化该覆盖,true
+  r185,"notebook-overrides-are-writable-via-api","","客户端通过 `PATCH /v2/notebooks/{notebookId}/sources/extractors` 更新某 notebook 的 extractor 策略（mode 与启用/禁用覆盖）",后端 SHALL 持久化该覆盖,true
   r217,"retryable-extractor-errors-are-detected","",提取器因网络/服务不可用导致失败,系统 SHALL 能将该错误判定为可重试并按策略重试,true
   "extractors-full-response","client-lists-extractors",客户端请求 GET /extractors,构建响应,系统 SHALL 返回每提取器的 available/displayName/priority/requiresApiKey/recoveryHint 字段,true

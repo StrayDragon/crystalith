@@ -1,34 +1,34 @@
 {
-  "version": 1,
-  "description": "SSOT for Tier-0 core regression suite (backend just test-core / frontend pnpm run test:core). Edit this file to change the core path list without drifting backend/frontend.",
+  "version": 2,
+  "description": "SSOT for frontend test:core path list (apps/web). Backend core paths now live under apps/server/test/ and are covered by just test / just qa — not pytest.",
   "corePaths": [
     {
       "id": "health",
-      "backend": { "pytestPaths": ["tests/web/test_api_smoke.py"] },
+      "backend": { "bunTestGlobs": ["apps/server/test/**/*.test.ts"] },
       "frontend": {
         "vitestFiles": ["src/features/workspace/layout/hooks/useDependencyHealth.test.tsx"]
       }
     },
     {
       "id": "notebooks",
-      "backend": { "pytestPaths": ["tests/web/test_api_smoke.py"] },
+      "backend": { "bunTestGlobs": ["apps/server/test/**/*.test.ts"] },
       "frontend": {
         "vitestFiles": ["src/features/workspace/domains/notebooks/useNotebooks.test.tsx"]
       }
     },
     {
       "id": "sources",
-      "backend": { "pytestPaths": ["tests/web/test_api_smoke.py"] },
+      "backend": { "bunTestGlobs": ["apps/server/test/**/*.test.ts"] },
       "frontend": { "vitestFiles": ["src/features/workspace/domains/sources/useSources.test.tsx"] }
     },
     {
       "id": "chat",
-      "backend": { "pytestPaths": ["tests/features/messages/test_messages_api.py"] },
+      "backend": { "bunTestGlobs": ["apps/server/test/**/*.test.ts"] },
       "frontend": { "vitestFiles": ["src/features/workspace/domains/messages/useChat.test.tsx"] }
     },
     {
       "id": "outputs",
-      "backend": { "pytestPaths": ["tests/web/test_api_smoke.py"] },
+      "backend": { "bunTestGlobs": ["apps/server/test/**/*.test.ts"] },
       "frontend": { "vitestFiles": ["src/features/workspace/shared/hooks/useOutputQueue.test.tsx"] }
     }
   ],

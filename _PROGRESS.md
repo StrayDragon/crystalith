@@ -6,7 +6,7 @@
 > **批次纪律**：每个合理批次验收通过后 **commit**；有问题随时停并报告。
 
 **来源**：Wave A（架构 / 流程门禁 / Spec 漂移）只读体检。  
-**最后更新**：2026-07-19（P3.1A：web Vitest 纳入 just qa）
+**最后更新**：2026-07-19（P5 Spec 卫生 + specs-compact wave1）
 
 ---
 
@@ -63,7 +63,7 @@ shared Zod（或路由挂载的 schema）
 | P2    | Zod 使用面写入 AGENTS.md + 文档对齐      | ✅                                             |
 | P3    | 门禁真相（qa 组成、假绿项）              | ✅ + web Vitest 入 qa（P3.1A）                 |
 | P4    | Cleanup A（死代码 / 死配置，无行为变更） | ✅ P4.1–4.5（P4.6 可选延后）                   |
-| P5    | Spec 卫生（手改 toon，**不开 SDD**）     | ⬜                                             |
+| P5    | Spec 卫生（手改 toon，**不开 SDD**）     | ✅ wave1（P5.1–5.7；产品 gap 条款仍保留）        |
 | P6    | 可选：瘦 CI / SECURITY / 余债            | ⬜                                             |
 
 ---
@@ -150,15 +150,18 @@ shared Zod（或路由挂载的 schema）
 
 ### P5 — Spec 卫生（手改，不开 SDD）
 
-> 仅在 P1–P3 有余力时；目的是去掉 **假信心**，不是开 change。
+> 以 **当前 TypeScript 代码为 SSOT** 手改 live `llmanspec/specs/`；走 specs-compact 维护路径，**不开** propose/apply/verify/archive。  
+> Archive freeze：**跳过**（archived ~6，噪声低）。  
+> 验证：`llman sdd validate --specs --strict --no-interactive` → **40 passed**。
 
-- [ ] **P5.1** `quality-and-regression`：改写为 `just qa` / bun / Playwright 现实（DRIFT-01）
-- [ ] **P5.2** `architecture-core`：`router.ts` / `apps/server` 布局（DRIFT-02）
-- [ ] **P5.3** `workspace-api-contract`：`/v2`（DRIFT-03）
-- [ ] **P5.4** 清除已修复的「当前 v2 未实现」表述（DRIFT-04）
-- [ ] **P5.5** `openapi` / `frontend-eden` purpose TBD + 迁移期措辞（DRIFT-07）
-- [ ] **P5.6** 孤儿能力标注 deferred 注释块（DRIFT-10）— 不删文件除非明确要求
-- [ ] **P5.7** c13：能力名碰撞记录在案；**不在本轮改 c13 结构**（除非单开），仅在本文件备注（DRIFT-11）
+- [x] **P5.1** `quality-and-regression`：`just qa` / bun / oxlint / oxfmt / test-web / e2e @p0；BDD 可选（DRIFT-01）
+- [x] **P5.2** `architecture-core`：`features/*/router.ts` + `server.ts` 聚合（DRIFT-02）
+- [x] **P5.3** `workspace-api-contract` + 相关 UI/studio/commands：`/v1`→`/v2`（保留 `ui.v1.event`）（DRIFT-03）
+- [x] **P5.4** 清除已落地「缺…」假缺口；**保留**真实产品 gap（repair loop / stats preset / citations 路径等）（DRIFT-04）
+- [x] **P5.5** `openapi-and-client-generation` + `frontend-eden-migration`：Eden 完成态；**不合并**两 cap（互补）（DRIFT-07）
+- [x] **P5.6** 孤儿能力 purpose 标 DEFERRED：`multi-notebook-collections` / `quality-gates-for-generation` / `publishable-artifacts` / `generation-variants-and-comparison`；`evidence-review-workflow` 部分 DEFERRED（DRIFT-10）
+- [x] **P5.7** c13 碰撞备注（DRIFT-11）：live `publishable-artifacts` = 站内 artifact 愿景；active `c13` delta **误挂同名**写分发/Tauri。**本阶段不处理 c13**（不改结构、不改挂）。
+- [x] **附加** `bdd-test-harness`、`architecture-plugin-and-agent` purpose、`public-repo-hygiene` SECURITY DEFERRED 对齐
 
 ### P6 — 可选 / 以后
 
@@ -166,22 +169,25 @@ shared Zod（或路由挂载的 schema）
 - [ ] **P6.2** `SECURITY.md`（DRIFT-08）
 - [ ] **P6.3** `strategy_configs` 并入 Drizzle schema SSOT（ARCH-06）
 - [ ] **P6.4** OpenAPI `.openapi()` 注解补全（ARCH-12）
-- [ ] **P6.5** c13 / Eden→server 包耦合（ARCH-15）— 随分发再议
+- [ ] **P6.5** ~~c13 / Eden→server 包耦合（ARCH-15）~~ — **本阶段不做**（随分发另议）
 - [ ] **P6.6** 本阶段结束后：从本文件提炼 skill（**有结果后再做**）
 
 ---
 
 ## 3. 当前焦点
 
-**正在做**：_(P3.1A web Vitest 入 qa 完成)_
+**正在做**：本阶段主线 **P0–P5 已收口**；c13 **明确不做**
 
 **已完成批次**：
 
 - P0 / P1.0–P1.5 / P2 / P4.1–4.5
 - **P1** 路由 Zod 主线（含 rem/connectors/response/eval）
 - **P3** 门禁真相整包 + **web Vitest 纳入 just qa**
+- **P5** Spec 卫生 + specs-compact（代码 SSOT；40 specs validate 绿）
 
-**下一步**：P5 Spec 卫生 / push
+**下一步（可选）**：push / **P6**（SECURITY、瘦 CI、余债）/ 产品 gap 另开；**不做 c13**
+
+**明确不做**：c13 分发 / Tauri / 改挂 `v2-distribution`（P5.7 仅备注；P6.5 随 c13 一并搁置）
 
 ---
 
@@ -200,6 +206,8 @@ shared Zod（或路由挂载的 schema）
 | 2026-07-19 | P3 先只读盘点再拍板；不默认扩 `just qa`                                    |
 | 2026-07-19 | P3 整包：1B+3.2A+3.3B+3.4+3.5A+3.6A+3.7A（消假绿，少动门禁内容）           |
 | 2026-07-19 | P3.1A：`just test-web`（apps/web test:ci）纳入 `just qa`                   |
+| 2026-07-19 | P5：手改 specs 对齐代码 SSOT + compact；不开 SDD；c13 碰撞仅备注            |
+| 2026-07-19 | 本阶段明确 **不处理 c13**；主线 P0–P5 收口后余项见 P4.6 / P6 / 产品 gap     |
 
 ---
 

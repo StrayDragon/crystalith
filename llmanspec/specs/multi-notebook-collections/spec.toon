@@ -1,6 +1,6 @@
 kind: llman.sdd.spec
 name: "multi-notebook-collections"
-purpose: "在 notebook 之上提供聚合层 collection：通过绑定多个 notebooks 形成更大的工作上下文，并提供 collection-scoped 的检索与导航语义，同时保留 notebook 的身份与来源归属边界。"
+purpose: "DEFERRED（无 collection 域实现）：在 notebook 之上提供聚合层 collection：通过绑定多个 notebooks 形成更大的工作上下文，并提供 collection-scoped 的检索与导航语义，同时保留 notebook 的身份与来源归属边界。本能力当前仅规范愿景，不以代码为 SSOT 验收。"
 valid_scope[2]: src/,tests/
 requirements[4]{req_id,title,statement}:
   r36,collection 必须通过绑定 notebook 构成工作现场,系统 MUST 以 notebook 绑定关系来定义 collection，而不是让 collection 脱离 notebook 独立吞并内容。
