@@ -1,11 +1,11 @@
 import type { JsonMetadata } from '@crystalith/shared';
 // Drizzle ORM schema for Crystalith v2 — single SQLite database.
 //
-// Maps the 16 v1 business tables 1:1 and adds 4 new eval-harness tables
-// (eval_datasets / eval_items / eval_runs / eval_run_items) so the full
-// schema is provisioned in one migration. The sqlite-vec `vec_chunks` virtual
-// table is NOT managed by Drizzle (see `vectors.ts`) — only relational tables
-// live here.
+// Maps the business tables 1:1 (incl. strategy_configs for RAG) and adds 4
+// eval-harness tables (eval_datasets / eval_items / eval_runs / eval_run_items)
+// so the full schema is provisioned via Drizzle migrations. The sqlite-vec
+// `vec_chunks` virtual table is NOT managed by Drizzle (see `vectors.ts`) —
+// only relational tables live here.
 //
 // Conventions:
 // - timestamps are integer Unix-ms columns (`mode: 'timestamp'`) rendered to
@@ -75,6 +75,7 @@ export const notebookRelations = relations(notebooks, ({ many }) => ({
   extractorPolicy: many(notebookExtractorPolicies),
   studioSlides: many(studioSlides),
   researchSessions: many(researchSessions),
+  strategyConfigs: many(strategyConfigs),
 }));
 
 // ---------------------------------------------------------------------------
@@ -90,6 +91,28 @@ export const notebookExtractorPolicies = sqliteTable('notebook_extractor_policie
   createdAt: ts('created_at'),
   updatedAt: tsUpd('updated_at'),
 });
+
+// ---------------------------------------------------------------------------
+// RAG strategy configs (per-notebook enabled strategy IDs)
+// ---------------------------------------------------------------------------
+
+/** Persisted enabled RAG strategies per notebook (was ad-hoc in rag/registry). */
+export const strategyConfigs = sqliteTable(
+  'strategy_configs',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    notebookId: integer('notebook_id').notNull(),
+    strategyId: text('strategy_id').notNull(),
+  },
+  (t) => [index('ix_strategy_configs_notebook_id').on(t.notebookId)],
+);
+
+export const strategyConfigRelations = relations(strategyConfigs, ({ one }) => ({
+  notebook: one(notebooks, {
+    fields: [strategyConfigs.notebookId],
+    references: [notebooks.id],
+  }),
+}));
 
 // ---------------------------------------------------------------------------
 // Templates + Prompt presets
@@ -576,6 +599,7 @@ export const evalRunItemRelations = relations(evalRunItems, ({ one }) => ({
 export const schema = {
   notebooks,
   notebookExtractorPolicies,
+  strategyConfigs,
   templates,
   promptPresets,
   sessions,

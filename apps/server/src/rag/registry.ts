@@ -1,23 +1,12 @@
 // RAG Registry — pluggable strategy registration + per-notebook configuration.
 //
 // Strategies register themselves at module load. Each notebook can enable
-// multiple strategies; the active set is persisted in the `strategy_configs`
-// DB table.
+// multiple strategies; the active set is persisted in `strategy_configs`
+// (Drizzle SSOT: `db/schema.ts`).
 import { eq } from 'drizzle-orm';
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 
-import { db } from '../db/index.ts';
+import { db, strategyConfigs } from '../db/index.ts';
 import type { RAGStrategy, RetrieveOptions } from './types.ts';
-
-// ---------------------------------------------------------------------------
-// DB schema for strategy configuration (added during Drizzle migration)
-// ---------------------------------------------------------------------------
-
-export const strategyConfigs = sqliteTable('strategy_configs', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  notebookId: integer('notebook_id').notNull(),
-  strategyId: text('strategy_id').notNull(),
-});
 
 // ---------------------------------------------------------------------------
 // Registry
