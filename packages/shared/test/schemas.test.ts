@@ -142,4 +142,13 @@ describe('domain schemas', () => {
       }).includeDirectories,
     ).toEqual(['notes']);
   });
+
+  it('command/rag/eval write schemas accept minimal payloads', () => {
+    expect(S.CommandListSchema.parse([]).length).toBe(0);
+    expect(
+      S.NotebookStrategiesSetRequestSchema.parse({ strategies: ['embed'] }).strategies,
+    ).toEqual(['embed']);
+    expect(S.EvalRunRequestSchema.safeParse({ datasetId: 1, strategyIds: [] }).success).toBe(false);
+    expect(S.EvalDatasetUpsertRequestSchema.parse({ name: 'golden', items: [] }).items).toEqual([]);
+  });
 });

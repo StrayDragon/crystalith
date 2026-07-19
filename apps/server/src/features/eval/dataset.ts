@@ -63,17 +63,13 @@ export function createDataset(name: string, items: DatasetItem[], description?: 
 export function listDatasets(): Dataset[] {
   const rows = db().select().from(evalDatasets).all();
   return rows.map((r) => {
-    const count = db()
-      .select({ c: { count: evalItems.id } } as any)
-      .from(evalItems)
-      .where(eq(evalItems.datasetId, r.id))
-      .all();
+    const items = db().select().from(evalItems).where(eq(evalItems.datasetId, r.id)).all();
     return {
       id: r.id,
       name: r.name,
       description: r.description,
       notebookId: r.notebookId,
-      itemCount: (count[0] as any)?.c ?? 0,
+      itemCount: items.length,
       createdAt: r.createdAt.toISOString(),
     };
   });

@@ -2,6 +2,14 @@
 //
 // Exposes dataset management and eval execution. The CLI (bun run eval)
 // can call these endpoints or use the same functions directly.
+import {
+  EvalDatasetCreatedResponseSchema,
+  EvalDatasetSummarySchema,
+  EvalDatasetUpsertRequestSchema,
+  EvalRunRequestSchema,
+  EvalRunResultSchema,
+  EvalRunSchema,
+} from '@crystalith/shared';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
@@ -28,14 +36,14 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'List eval datasets',
     tags: ['eval'],
-    responses: { 200: { description: 'Dataset list' } },
+    responses: { 200: { description: 'Dataset list', body: EvalDatasetSummarySchema.array() } },
   },
   {
     path: '/v2/eval/datasets',
     method: 'post',
     summary: 'Create or import a dataset',
     tags: ['eval'],
-    responses: { 201: { description: 'Created dataset' } },
+    responses: { 201: { description: 'Created dataset', body: EvalDatasetCreatedResponseSchema } },
   },
   {
     path: '/v2/eval/datasets/:id',
@@ -56,14 +64,14 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'List eval runs',
     tags: ['eval'],
-    responses: { 200: { description: 'Run list' } },
+    responses: { 200: { description: 'Run list', body: EvalRunSchema.array() } },
   },
   {
     path: '/v2/eval/runs',
     method: 'post',
     summary: 'Run evaluation',
     tags: ['eval'],
-    responses: { 200: { description: 'Eval results' } },
+    responses: { 200: { description: 'Eval results', body: EvalRunResultSchema } },
   },
 ];
 
@@ -73,18 +81,26 @@ const apiDocs: OpenApiRoute[] = [
 
 export const evalRouter = new Elysia({ prefix: '/v2' })
   // List datasets
-  .get('/eval/datasets', () => listDatasets())
+  .get('/eval/datasets', () => listDatasets(), {
+    response: EvalDatasetSummarySchema.array(),
+  })
 
   // Create dataset
-  .post('/eval/datasets', ({ body }) => {
-    const { name, items, description } = body as {
-      name: string;
-      items: import('./dataset.ts').DatasetItem[];
-      description?: string;
-    };
-    const id = createDataset(name, items, description);
-    return { id, name };
-  })
+  .post(
+    '/eval/datasets',
+    ({ body, set }) => {
+      const items = body.items.map((item) => ({
+        question: item.question,
+        expectedAnswer: item.expectedAnswer,
+        expectedSources: item.expectedSources ?? undefined,
+        notebookId: item.notebookId,
+      }));
+      const id = createDataset(body.name, items, body.description);
+      set.status = 201;
+      return { id, name: body.name };
+    },
+    { body: EvalDatasetUpsertRequestSchema, response: EvalDatasetCreatedResponseSchema },
+  )
 
   // Get dataset
   .get('/eval/datasets/:id', ({ params }) => {
@@ -104,15 +120,20 @@ export const evalRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Import dataset (JSON body with items array)
-  .post('/eval/datasets/import', ({ body }) => {
-    const { name, items, description } = body as {
-      name: string;
-      items: import('./dataset.ts').DatasetItem[];
-      description?: string;
-    };
-    const id = importDataset(name, items, description);
-    return { id, name };
-  })
+  .post(
+    '/eval/datasets/import',
+    ({ body }) => {
+      const items = body.items.map((item) => ({
+        question: item.question,
+        expectedAnswer: item.expectedAnswer,
+        expectedSources: item.expectedSources ?? undefined,
+        notebookId: item.notebookId,
+      }));
+      const id = importDataset(body.name, items, body.description);
+      return { id, name: body.name };
+    },
+    { body: EvalDatasetUpsertRequestSchema, response: EvalDatasetCreatedResponseSchema },
+  )
 
   // Export dataset
   .get('/eval/datasets/:id/export', ({ params }) => {
@@ -123,33 +144,34 @@ export const evalRouter = new Elysia({ prefix: '/v2' })
   })
 
   // List runs
-  .get('/eval/runs', () => {
-    return db()
-      .select()
-      .from(evalRuns)
-      .orderBy(evalRuns.startedAt)
-      .all()
-      .map((r) => ({
-        id: r.id,
-        datasetId: r.datasetId,
-        strategyIds: r.strategyIds,
-        status: r.status,
-        startedAt: r.startedAt?.toISOString(),
-        finishedAt: r.finishedAt?.toISOString(),
-        summary: r.summary,
-      }));
-  })
+  .get(
+    '/eval/runs',
+    () => {
+      return db()
+        .select()
+        .from(evalRuns)
+        .orderBy(evalRuns.startedAt)
+        .all()
+        .map((r) => ({
+          id: r.id,
+          datasetId: r.datasetId,
+          strategyIds: r.strategyIds as string[],
+          status: r.status,
+          startedAt: r.startedAt.toISOString(),
+          finishedAt: r.finishedAt?.toISOString() ?? null,
+          summary: (r.summary as Record<string, unknown> | null) ?? null,
+        }));
+    },
+    { response: EvalRunSchema.array() },
+  )
 
   // Run evaluation
-  .post('/eval/runs', async ({ body }) => {
-    const payload = body as {
-      datasetId?: number;
-      strategyIds?: string[];
-    };
-    const datasetId = payload.datasetId;
-    const strategyIds = payload.strategyIds;
-    const result = await runEval(datasetId!, strategyIds!);
-    return result;
-  });
+  .post(
+    '/eval/runs',
+    async ({ body }) => {
+      return runEval(body.datasetId, body.strategyIds);
+    },
+    { body: EvalRunRequestSchema, response: EvalRunResultSchema },
+  );
 
 registerApiDoc(apiDocs);
