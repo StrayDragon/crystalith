@@ -671,6 +671,7 @@ export default function WorkspaceLayout() {
                 void sources.handleSearch(...args);
               }}
               onAddSourceFromUrl={sources.addSourceFromUrl}
+              onOpenUrlImport={handleOpenAddSourceFromUrl}
               onRemoveSources={sources.removeSources}
               onRemoveSource={sources.removeSource}
               onBatchReembedSources={sources.batchReembedSources}

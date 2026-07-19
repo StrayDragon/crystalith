@@ -17,17 +17,15 @@ install:
 # - `-D` daemonizes to background (agent-friendly, non-blocking)
 # - `-N` keeps app-owned ports (8032 / 3000 / 3030) — prevents Overmind from injecting $PORT
 # - `-c slidev` allows preview to exit without tearing down core processes.
-#
-# Loads `export CL_*` lines from ~/.bashrc so chat/embedding gateways work even when
-# started from a non-interactive shell (bashrc normally returns early for those).
+# - Loads CL_* via scripts/load-cl-env.sh (.env + ~/.bashrc exports) for live gateways.
+# - E2E uses separate ports/DB and stubs gateways — does not source this loader.
 #
 # Use `just dev-attach` for foreground (interactive tmux) mode.
 dev:
     #!/usr/bin/env bash
     set -euo pipefail
-    if [[ -f "${HOME}/.bashrc" ]]; then
-      eval "$(rg -N '^export CL_' "${HOME}/.bashrc" || true)"
-    fi
+    # shellcheck disable=SC1091
+    source ./scripts/load-cl-env.sh
     overmind start -D -N -c slidev -f Procfile
     echo "✅ Overmind daemonized — services running in background"
     echo ""
@@ -41,9 +39,8 @@ dev:
 dev-attach:
     #!/usr/bin/env bash
     set -euo pipefail
-    if [[ -f "${HOME}/.bashrc" ]]; then
-      eval "$(rg -N '^export CL_' "${HOME}/.bashrc" || true)"
-    fi
+    # shellcheck disable=SC1091
+    source ./scripts/load-cl-env.sh
     overmind start -N -c slidev -f Procfile
 
 # Start only the Elysia server
@@ -51,10 +48,10 @@ dev-attach:
 dev-server:
     #!/usr/bin/env bash
     set -euo pipefail
-    if [[ -f "${HOME}/.bashrc" ]]; then
-      eval "$(rg -N '^export CL_' "${HOME}/.bashrc" || true)"
-    fi
+    # shellcheck disable=SC1091
+    source ./scripts/load-cl-env.sh
     bun --watch apps/server/src/server.ts
+
 # Start only the frontend
 dev-web:
     cd apps/web && bun dev
@@ -69,7 +66,7 @@ dev-connect process='server':
 
 # Gracefully stop Overmind (same as Ctrl-C on the start session)
 dev-quit:
-    overmind stop -f Procfile
+    overmind quit 2>/dev/null || true
 
 # --------------------------------------------------------------------------
 # Build
@@ -138,6 +135,7 @@ test-bdd:
 
 # Critical browser E2E gate (Playwright @p0). Independent of unit tests.
 # Uses isolated ports 13000/18032 + temp DB under e2e/.tmp/
+# Stubs chat/embedding gateways offline (does not use live CL_* from justdev).
 # Default: system Google Chrome. For bundled Chromium: `just e2e-install` then
 # `CL_E2E_USE_SYSTEM_CHROME=0 just e2e`
 e2e:
