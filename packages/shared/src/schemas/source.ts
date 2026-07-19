@@ -123,21 +123,136 @@ export const SourceBatchReembedResponseSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
-// Source connector bindings
+// Source connector bindings (filesystem / vault connectors)
 // ---------------------------------------------------------------------------
+
+export const ConnectorDiagnosticSchema = z.object({
+  errorCode: z.string(),
+  message: z.string(),
+  hint: z.string().nullable().optional(),
+  details: z.unknown().optional(),
+});
+export type ConnectorDiagnostic = z.infer<typeof ConnectorDiagnosticSchema>;
+
+export const SourceConnectorCapabilitiesSchema = z.object({
+  supportsSnapshot: z.boolean(),
+  supportsSyncCheck: z.boolean(),
+});
+export type SourceConnectorCapabilities = z.infer<typeof SourceConnectorCapabilitiesSchema>;
+
+export const SourceConnectorDescriptorSchema = z.object({
+  connectorId: z.string().min(1),
+  displayName: z.string(),
+  description: z.string().nullable().optional(),
+  connectionConfigSchema: JsonMetadataSchema,
+  diagnostics: z.array(ConnectorDiagnosticSchema).nullable().optional(),
+  capabilities: SourceConnectorCapabilitiesSchema,
+});
+export type SourceConnectorDescriptor = z.infer<typeof SourceConnectorDescriptorSchema>;
+
+export const SourceConnectorsListResponseSchema = z.object({
+  connectors: z.array(SourceConnectorDescriptorSchema),
+});
+export type SourceConnectorsListResponse = z.infer<typeof SourceConnectorsListResponseSchema>;
+
+export const FrontmatterSummarySchema = z.object({
+  title: z.string().nullable().optional(),
+  tags: z.array(z.string()).nullable().optional(),
+  aliases: z.array(z.string()).nullable().optional(),
+  date: z.string().nullable().optional(),
+});
+export type FrontmatterSummary = z.infer<typeof FrontmatterSummarySchema>;
+
+export const SnapshotEntrySchema = z.object({
+  relativePath: z.string(),
+  sizeBytes: z.number().int().nonnegative(),
+  modifiedAt: IsoTimestampSchema,
+  contentHash: z.string().optional(),
+  frontmatterSummary: FrontmatterSummarySchema.optional(),
+});
+export type SnapshotEntry = z.infer<typeof SnapshotEntrySchema>;
+
+export const SnapshotSchema = z.object({
+  generatedAt: IsoTimestampSchema,
+  entries: z.array(SnapshotEntrySchema),
+});
+export type Snapshot = z.infer<typeof SnapshotSchema>;
+
+export const ImportScopeSchema = z.object({
+  includeDirectories: z.array(z.string()).nullable().optional(),
+  includeFiles: z.array(z.string()).nullable().optional(),
+});
+export type ImportScope = z.infer<typeof ImportScopeSchema>;
+
+export const SyncCandidateSchema = z.object({
+  relativePath: z.string(),
+  current: SnapshotEntrySchema.nullable().optional(),
+  base: SnapshotEntrySchema.nullable().optional(),
+  reason: z.string().nullable().optional(),
+});
+export type SyncCandidate = z.infer<typeof SyncCandidateSchema>;
+
+export const SyncCandidatesSchema = z.object({
+  added: z.array(SyncCandidateSchema),
+  updated: z.array(SyncCandidateSchema),
+  missing: z.array(SyncCandidateSchema),
+});
+export type SyncCandidates = z.infer<typeof SyncCandidatesSchema>;
+
+export const SyncCheckResultSchema = z.object({
+  id: z.string().min(1),
+  checkedAt: IsoTimestampSchema,
+  baseSnapshot: SnapshotSchema.nullable().optional(),
+  currentSnapshot: SnapshotSchema,
+  candidates: SyncCandidatesSchema,
+});
+export type SyncCheckResult = z.infer<typeof SyncCheckResultSchema>;
 
 export const SourceConnectorBindingSchema = z.object({
   id: IdSchema,
   notebookId: IdSchema,
   connectorId: z.string().min(1).max(128),
   connectionConfig: JsonMetadataSchema,
-  importScope: JsonMetadataSchema.nullable().optional(),
-  lastConfirmedSnapshot: JsonMetadataSchema.nullable().optional(),
-  lastSyncCheckResult: JsonMetadataSchema.nullable().optional(),
+  importScope: ImportScopeSchema.nullable().optional(),
+  lastConfirmedSnapshot: SnapshotSchema.nullable().optional(),
+  lastSyncCheckResult: SyncCheckResultSchema.nullable().optional(),
   createdAt: IsoTimestampSchema,
   updatedAt: IsoTimestampSchema,
 });
 export type SourceConnectorBinding = z.infer<typeof SourceConnectorBindingSchema>;
+
+/** POST …/source-connectors/:connectorId/bindings */
+export const SourceConnectorBindingCreateRequestSchema = z.object({
+  connectionConfig: JsonMetadataSchema.default({}),
+});
+export type SourceConnectorBindingCreateRequest = z.infer<
+  typeof SourceConnectorBindingCreateRequestSchema
+>;
+
+/** POST …/sync-check/apply */
+export const SyncCheckApplyRequestSchema = z.object({
+  syncCheckId: z.string().min(1),
+});
+export type SyncCheckApplyRequest = z.infer<typeof SyncCheckApplyRequestSchema>;
+
+export const ImportResultStatusSchema = z.enum(['imported', 'reused', 'skipped', 'failed']);
+export type ImportResultStatus = z.infer<typeof ImportResultStatusSchema>;
+
+export const ImportResultItemSchema = z.object({
+  relativePath: z.string(),
+  status: ImportResultStatusSchema,
+  sourceId: IdSchema.nullable().optional(),
+  diagnostic: ConnectorDiagnosticSchema.nullable().optional(),
+});
+export type ImportResultItem = z.infer<typeof ImportResultItemSchema>;
+
+export const ImportScopeApplyResponseSchema = z.object({
+  binding: SourceConnectorBindingSchema,
+  importedSourceIds: z.array(IdSchema),
+  reusedSourceIds: z.array(IdSchema),
+  results: z.array(ImportResultItemSchema),
+});
+export type ImportScopeApplyResponse = z.infer<typeof ImportScopeApplyResponseSchema>;
 
 // ---------------------------------------------------------------------------
 // Notebook extractor policy
