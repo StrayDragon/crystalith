@@ -1,6 +1,6 @@
 kind: llman.sdd.spec
 name: "quality-gates-for-generation"
-purpose: 为生成结果提供统一、可解释、可观测的质量门信号：通过/警告/阻断的最小状态、结构化原因与建议动作，并支持跨生成类型复用。
+purpose: "DEFERRED（无 QualityGate API/类型）：为生成结果提供统一、可解释、可观测的质量门信号：通过/警告/阻断的最小状态、结构化原因与建议动作，并支持跨生成类型复用。本能力当前仅规范愿景。"
 valid_scope[2]: src/,tests/
 requirements[6]{req_id,title,statement}:
   r42,生成结果必须具备质量门状态,系统 MUST 为生成结果提供可消费的质量门状态，而不是只暴露“是否生成成功”。

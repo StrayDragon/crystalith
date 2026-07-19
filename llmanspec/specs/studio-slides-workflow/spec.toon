@@ -10,7 +10,7 @@ requirements[16]{req_id,title,statement}:
   r215,Markdown generation requires existing outline,未有 outline 时 markdown stream MUST 返回可读错误并结束连接。
   r242,Successful generation persists draft before done,生成成功 MUST 先持久化 draft（含 chunkIds/stage/status），再发 `done`。
   r260,Preview always uses latest saved markdown,预览前端流程 MUST 先保存 markdown，再刷新当前 active slides workflow plugin 声明的预览目标；宿主与客户端 MUST NOT 硬编码 Slidev 作为唯一预览实现。
-  r272,Slides UI availability follows tools contract,Studio slides 相关 UI（工具卡片、dialog、入口动作）MUST 以 `/v1/workspace/tools` 返回的 `SLIDES` tool 作为可用性唯一来源，不得依赖硬编码假设 slides 默认存在。
+  r272,Slides UI availability follows tools contract,Studio slides 相关 UI（工具卡片、dialog、入口动作）MUST 以 `/v2/workspace/tools` 返回的 `SLIDES` tool 作为可用性唯一来源，不得依赖硬编码假设 slides 默认存在。
   "studio-sse-streaming",Outline and markdown generation MUST stream via SSE,"studio outline 和 markdown 生成 MUST 通过 SSE 端点流式返回 progress/toolcall/busy/done/error 事件，MUST NOT 返回同步 JSON（对齐 v1 /drafts/:id/outline/stream 与 /markdown/stream）"
   "studio-latest-draft",Studio MUST provide drafts/latest endpoint,studio MUST 提供 GET 端点返回 notebook 下按 updatedAt desc 的最新 draft，MUST NOT 缺失该端点
   "studio-stale-running-guard",Studio MUST clear stale RUNNING status and guard concurrent generation,studio MUST 清理超过阈值（10min）的 RUNNING 状态 draft，并发生成时 MUST 返回 busy 事件而非覆盖
@@ -29,7 +29,7 @@ scenarios[20]{req_id,id,given,when,then,feature}:
   r242,"draft-is-persisted-before-done","",生成成功并准备发送 `done`,系统 SHALL 先持久化 draft（含 chunkIds/stage/status）再发送 `done`,true
   r260,"preview-uses-latest-markdown","",用户触发预览刷新,系统 SHALL 先保存 markdown 再刷新当前 active plugin 声明的预览目标以确保一致性,true
   r260,"preview-uses-plugin-declared-renderer","",用户触发预览刷新且当前 active slides workflow plugin 已声明 preview contract,系统 SHALL 先保存 markdown,true
-  r272,"slides-dialog-is-gated-by-tools-availability","",`/v1/workspace/tools` 未返回 `SLIDES`,客户端 SHALL 不把 slides 视为可直接打开的可用能力,true
+  r272,"slides-dialog-is-gated-by-tools-availability","",`/v2/workspace/tools` 未返回 `SLIDES`,客户端 SHALL 不把 slides 视为可直接打开的可用能力,true
   "studio-sse-streaming","client-requests-stream",客户端请求 outline/markdown stream 端点,生成进行中,系统 SHALL 通过 SSE 逐个发送 progress/toolcall/done/error 事件,true
   "studio-latest-draft","notebook-has-drafts",notebook 下存在多个 draft,客户端请求 drafts/latest,系统 SHALL 返回 updatedAt 最新的 draft,true
   "studio-stale-running-guard","running-too-long",某 draft status=RUNNING 且超过 10min,下一次生成请求,系统 SHALL 清理 stale 状态后继续而非永久阻塞,true

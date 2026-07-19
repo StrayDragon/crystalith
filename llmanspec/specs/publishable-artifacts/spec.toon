@@ -1,6 +1,6 @@
 kind: llman.sdd.spec
 name: "publishable-artifacts"
-purpose: 让结果从一次性 output 升级为站内可沉淀的正式产物（artifact）：支持显式 promotion、独立生命周期、lineage 可追溯、可引用标识、继续编辑与归档语义，强调站内持续工作而非外部导出。
+purpose: "DEFERRED（无 artifact 域实现）：让结果从一次性 output 升级为站内可沉淀的正式产物（artifact）：支持显式 promotion、独立生命周期、lineage 可追溯、可引用标识、继续编辑与归档语义。本能力当前仅规范愿景（CSS artifact 类名不算实现）。"
 valid_scope[2]: src/,tests/
 requirements[6]{req_id,title,statement}:
   r40,结果必须能够被提升为正式产物,系统 MUST 允许符合条件的结果被提升为正式产物对象，而不是只能停留在一次性结果层。

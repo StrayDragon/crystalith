@@ -1,14 +1,14 @@
 kind: llman.sdd.spec
 name: "openapi-and-client-generation"
-purpose: "TBD - created by archiving change c03-add-v2-frontend-eden. Update purpose after archive."
-valid_scope[2]: src/,tests/
+purpose: "定义一等 TypeScript client（Eden）与 OpenAPI 衍生文档面：共享 camelCase Zod SSOT；禁止再引入 hey-api / api/generated 一等 client。"
+valid_scope[2]: apps/,packages/
 requirements[4]{req_id,title,statement}:
-  r37,"Eden RPC is the TypeScript client for first-party apps","Crystalith Web（及未来嵌入同一 HTTP 面的 Tauri webview）MUST 使用 Elysia eden treaty 调用 server API（import type App from server + treaty）。MUST NOT 使用 @hey-api/openapi-ts 生成新代码。OpenAPI/Scalar MUST 继续作为人类与外部消费者的文档面，与 Eden 并行存在。"
-  r95,Gradual migration from generated client,已有 generated client 调用 MUST 逐步迁移到 eden RPC。每个 domain 迁移时 MUST 删除对应 generated import 并验证类型正确。
-  r132,Shared Zod schemas are camelCase SSOT for request and response,前后端共享的 Zod schema MUST 放在 packages/shared/ 且 API 字段 MUST 为 camelCase。Elysia 端点 MUST 使用相同 schema 校验入参与约束响应形状；前端 MUST 复用同 schema 或 Eden 推断类型，MUST NOT 并行维护一套 snake_case Api 类型作为合约。
-  r168,Generated artifacts marked for removal,openapi.gen.json 和 src/api/generated/ MUST 在 Phase 5 删除。迁移期间 MAY 保留作为对照和 fallback。CI drift check 不再需要。
-scenarios[4]{req_id,id,given,when,then,feature}:
-  r37,"eden-and-openapi-coexist",c65 完成后,检查前端依赖与 /openapi,前端 SHALL 通过 eden 调用 API，且 OpenAPI/Scalar SHALL 仍可访问并反映 camelCase schema,true
-  r95,happy,"",迁移 notebooks domain 的 API 调用,删除 generated import，改为 eden treaty，类型检查无错误,true
-  r132,"openapi-reflects-camelcase",packages/shared schema 已改为 camelCase,生成或查看 OpenAPI/Scalar,文档中的 schema 属性名 SHALL 为 camelCase,true
-  r168,happy,"",Phase 5 清理,openapi.gen.json 和 src/api/generated/ 删除，前端仍正常编译,true
+  r37,"Eden RPC is the TypeScript client for first-party apps","Crystalith Web（及未来嵌入同一 HTTP 面的 Tauri webview）MUST 使用 Elysia eden treaty 调用 server API（`import type { App }` + `treaty`）。MUST NOT 使用 @hey-api/openapi-ts 生成新的一等 client。OpenAPI/Scalar（`/openapi`）MUST 继续作为人类与外部消费者的文档面，与 Eden 并行存在。"
+  r95,First-party apps use Eden only,"一等前端 MUST 仅通过 Eden（及 `@crystalith/shared` 类型）调用 HTTP API。MUST NOT 恢复 `api/generated/` 或平行 wire DTO 目录作为 SSOT。"
+  r132,Shared Zod schemas are camelCase SSOT for request and response,"前后端共享 Zod schema MUST 放在 `packages/shared/` 且 API 字段 MUST 为 camelCase。Elysia 路由 MUST 挂载相同 schema 做运行时校验；前端 MUST 复用 shared 或 Eden 推断类型。"
+  r168,Generated OpenAPI client artifacts stay deleted,"仓库 MUST NOT 再引入 `api/generated/` 或将 `openapi.gen.json` 作为一等 client 漂移门禁。OpenAPI 文档 MUST 由路由挂载的 Zod 在运行时导出。"
+scenarios[4]{req_id,id,given,when,then}:
+  r37,"eden-and-openapi-coexist","","检查前端依赖与 /openapi","前端 SHALL 通过 eden 调用 API，且 OpenAPI/Scalar SHALL 可访问并反映 camelCase schema"
+  r95,"no-generated-client","","搜索 apps/web 对 api/generated 的依赖","SHALL 无此类 import"
+  r132,"openapi-reflects-camelcase","","查看 /openapi.json 或 Scalar","文档中的 schema 属性名 SHALL 为 camelCase"
+  r168,"artifacts-stay-gone","","检查仓库树","SHALL 不存在作为一等 client 的 api/generated 目录"
