@@ -1,13 +1,13 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { SlidesOutlineSchema, type SlidesOutline } from '@crystalith/shared';
 // Studio service — shared generation logic + SSE helper.
 //
 // Extracted from router.ts (H5+H6 fix) to eliminate duplication between
 // POST and SSE stream endpoints for outline + markdown generation.
 import { generateObject, streamText } from 'ai';
 import { and, eq, inArray } from 'drizzle-orm';
-import { z } from 'zod';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
@@ -25,23 +25,6 @@ import {
   resolveToneHint,
 } from './config.ts';
 import { buildFrontmatter } from './theme-presets.ts';
-
-// ---------------------------------------------------------------------------
-// Schema
-// ---------------------------------------------------------------------------
-
-export const SlideOutlineSchema = z.object({
-  title: z.string().nullable().optional(),
-  slides: z
-    .array(
-      z.object({
-        title: z.string().nullable().optional(),
-        bullets: z.array(z.string()).nullable().optional(),
-      }),
-    )
-    .nullable()
-    .optional(),
-});
 
 // ---------------------------------------------------------------------------
 // Frontmatter helpers (v1 generator.py:150-170)
@@ -239,7 +222,7 @@ export function syncSlideOutput(slide: typeof studioSlides.$inferSelect, markdow
 export async function generateOutline(
   slide: typeof studioSlides.$inferSelect,
   context: string,
-): Promise<z.infer<typeof SlideOutlineSchema>> {
+): Promise<SlidesOutline> {
   const modelConfig = getDefaultChatModel();
   if (!modelConfig) throw new Error('No chat model configured');
   const model = withRetry(await resolveModel(modelConfig));
@@ -250,7 +233,7 @@ export async function generateOutline(
 
   const { object: outline } = await generateObject({
     model,
-    schema: SlideOutlineSchema,
+    schema: SlidesOutlineSchema,
     system:
       'You are a presentation designer. Create a slide outline with title and bullet points for each slide.' +
       hintLines,
