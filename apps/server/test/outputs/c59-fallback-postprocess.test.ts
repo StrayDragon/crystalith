@@ -4,7 +4,7 @@ import { describe, expect, it } from 'bun:test';
 import {
   ensureMinimumContentFields,
   generateFallbackContent,
-} from '../../src/features/outputs/pipeline.ts';
+} from '../../src/features/outputs/postprocess.ts';
 
 describe('c59: generateFallbackContent uses prompt as title', () => {
   it('FAQ fallback question contains the user prompt', () => {
