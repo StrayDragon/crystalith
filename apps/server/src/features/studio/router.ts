@@ -1,4 +1,7 @@
-// Studio slides router — /v2/studio/slides
+// Studio slides router — nested canonical + flat deprecated aliases (c69).
+//
+// Canonical: /v2/notebooks/:nid/studio/slides*
+// Flat aliases: /v2/studio/slides* (c67 ?notebookId=)
 //
 // Two-stage generation with HITL review/edit:
 //   1. POST /slides/:id/outline   → generateObject → stage=outline
@@ -16,12 +19,17 @@ import {
   NotebookIdQuerySchema,
   PaginatedSchema,
   PaginationParamsSchema,
+  SlideDraftCreateNestedRequestSchema,
   SlideDraftCreateRequestSchema,
   SlideDraftUpdateSchema,
   StudioMarkdownPutSchema,
   StudioOutlinePutSchema,
   StudioSlideSchema,
   StudioSlidesListQuerySchema,
+  type SlideDraftCreateBody,
+  type SlideDraftUpdate,
+  type StudioMarkdownPut,
+  type StudioOutlinePut,
 } from '@crystalith/shared';
 import { count, desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
@@ -30,6 +38,7 @@ import { db } from '../../db/index.ts';
 import { notebooks, studioSlides } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
+import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import {
   clearStaleRunning,
   createSseResponse,
@@ -47,11 +56,101 @@ import {
 const SlidesPageSchema = PaginatedSchema(StudioSlideSchema);
 
 const apiDocs: OpenApiRoute[] = [
+  // Nested canonical
+  {
+    path: '/v2/notebooks/:nid/studio/slides',
+    method: 'post',
+    summary: 'Create a slide draft',
+    tags: ['studio'],
+    request: { body: SlideDraftCreateNestedRequestSchema },
+    responses: { 201: { description: 'Created slide draft' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/studio/slides',
+    method: 'get',
+    summary: 'List slide drafts for a notebook',
+    tags: ['studio'],
+    request: {
+      query: {
+        offset: PaginationParamsSchema.shape.offset,
+        limit: PaginationParamsSchema.shape.limit,
+      },
+    },
+    responses: { 200: { description: 'Paginated slide draft list', body: SlidesPageSchema } },
+  },
+  {
+    path: '/v2/notebooks/:nid/studio/slides/latest',
+    method: 'get',
+    summary: 'Get latest slide draft for a notebook',
+    tags: ['studio'],
+    responses: { 200: { description: 'Latest slide draft' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/studio/slides/:id',
+    method: 'get',
+    summary: 'Get a slide draft',
+    tags: ['studio'],
+    responses: { 200: { description: 'Slide draft details' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/studio/slides/:id',
+    method: 'patch',
+    summary: 'Update slide draft fields',
+    tags: ['studio'],
+    request: { body: SlideDraftUpdateSchema },
+    responses: { 200: { description: 'Draft updated' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/studio/slides/:id/outline',
+    method: 'post',
+    summary: 'Generate outline via AI (stage 1)',
+    tags: ['studio'],
+    responses: { 200: { description: 'Outline generated' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/studio/slides/:id/outline',
+    method: 'put',
+    summary: 'Edit outline manually (HITL review)',
+    tags: ['studio'],
+    request: { body: StudioOutlinePutSchema },
+    responses: { 200: { description: 'Outline updated' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/studio/slides/:id/markdown',
+    method: 'post',
+    summary: 'Generate markdown from outline via AI (stage 2)',
+    tags: ['studio'],
+    responses: { 200: { description: 'Markdown generated' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/studio/slides/:id/markdown',
+    method: 'put',
+    summary: 'Edit markdown manually + Slidev persist + output sync (HITL)',
+    tags: ['studio'],
+    request: { body: StudioMarkdownPutSchema },
+    responses: { 200: { description: 'Markdown updated and persisted' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/studio/slides/:id/outline/stream',
+    method: 'get',
+    summary: 'SSE stream outline generation',
+    tags: ['studio'],
+    responses: { 200: { description: 'SSE event stream', contentType: 'text/event-stream' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/studio/slides/:id/markdown/stream',
+    method: 'get',
+    summary: 'SSE stream markdown generation',
+    tags: ['studio'],
+    responses: { 200: { description: 'SSE event stream', contentType: 'text/event-stream' } },
+  },
+  // Flat deprecated aliases
   {
     path: '/v2/studio/slides',
     method: 'post',
     summary: 'Create a slide draft',
     tags: ['studio'],
+    deprecated: true,
     request: { body: SlideDraftCreateRequestSchema },
     responses: { 201: { description: 'Created slide draft' } },
   },
@@ -60,6 +159,7 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'List slide drafts for a notebook',
     tags: ['studio'],
+    deprecated: true,
     request: {
       query: {
         notebookId: StudioSlidesListQuerySchema.shape.notebookId,
@@ -70,10 +170,19 @@ const apiDocs: OpenApiRoute[] = [
     responses: { 200: { description: 'Paginated slide draft list', body: SlidesPageSchema } },
   },
   {
+    path: '/v2/studio/slides/latest',
+    method: 'get',
+    summary: 'Get latest slide draft for a notebook',
+    tags: ['studio'],
+    deprecated: true,
+    responses: { 200: { description: 'Latest slide draft' } },
+  },
+  {
     path: '/v2/studio/slides/:id',
     method: 'get',
     summary: 'Get a slide draft',
     tags: ['studio'],
+    deprecated: true,
     responses: { 200: { description: 'Slide draft details' } },
   },
   {
@@ -81,6 +190,7 @@ const apiDocs: OpenApiRoute[] = [
     method: 'patch',
     summary: 'Update slide draft fields',
     tags: ['studio'],
+    deprecated: true,
     request: { body: SlideDraftUpdateSchema },
     responses: { 200: { description: 'Draft updated' } },
   },
@@ -89,6 +199,7 @@ const apiDocs: OpenApiRoute[] = [
     method: 'post',
     summary: 'Generate outline via AI (stage 1)',
     tags: ['studio'],
+    deprecated: true,
     responses: { 200: { description: 'Outline generated' } },
   },
   {
@@ -96,6 +207,7 @@ const apiDocs: OpenApiRoute[] = [
     method: 'put',
     summary: 'Edit outline manually (HITL review)',
     tags: ['studio'],
+    deprecated: true,
     request: { body: StudioOutlinePutSchema },
     responses: { 200: { description: 'Outline updated' } },
   },
@@ -104,6 +216,7 @@ const apiDocs: OpenApiRoute[] = [
     method: 'post',
     summary: 'Generate markdown from outline via AI (stage 2)',
     tags: ['studio'],
+    deprecated: true,
     responses: { 200: { description: 'Markdown generated' } },
   },
   {
@@ -111,8 +224,25 @@ const apiDocs: OpenApiRoute[] = [
     method: 'put',
     summary: 'Edit markdown manually + Slidev persist + output sync (HITL)',
     tags: ['studio'],
+    deprecated: true,
     request: { body: StudioMarkdownPutSchema },
     responses: { 200: { description: 'Markdown updated and persisted' } },
+  },
+  {
+    path: '/v2/studio/slides/:id/outline/stream',
+    method: 'get',
+    summary: 'SSE stream outline generation',
+    tags: ['studio'],
+    deprecated: true,
+    responses: { 200: { description: 'SSE event stream', contentType: 'text/event-stream' } },
+  },
+  {
+    path: '/v2/studio/slides/:id/markdown/stream',
+    method: 'get',
+    summary: 'SSE stream markdown generation',
+    tags: ['studio'],
+    deprecated: true,
+    responses: { 200: { description: 'SSE event stream', contentType: 'text/event-stream' } },
   },
 ];
 
@@ -160,294 +290,366 @@ function getSlideInNotebookOrThrow(
 }
 
 // ---------------------------------------------------------------------------
+// Handlers (shared by nested + flat)
+// ---------------------------------------------------------------------------
+
+function handleCreateSlide(notebookId: number, body: SlideDraftCreateBody) {
+  const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
+  if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
+
+  const slide = db()
+    .insert(studioSlides)
+    .values({
+      notebookId,
+      title: body.title ?? null,
+      prompt: body.prompt ?? null,
+      engine: body.engine ?? 'slidev',
+      sourceIds: body.sourceIds,
+      generationConfig: body.generationConfig ?? null,
+      stage: 'input',
+      status: 'idle',
+    })
+    .returning()
+    .get();
+  return serializeSlide(slide);
+}
+
+function handleListSlides(notebookId: number, offset: number, limit: number) {
+  const total =
+    db()
+      .select({ n: count() })
+      .from(studioSlides)
+      .where(eq(studioSlides.notebookId, notebookId))
+      .get()?.n ?? 0;
+  const items = db()
+    .select()
+    .from(studioSlides)
+    .where(eq(studioSlides.notebookId, notebookId))
+    .limit(limit)
+    .offset(offset)
+    .all()
+    .map(serializeSlide);
+  return { items, total, offset, limit };
+}
+
+function handleLatestSlide(notebookId: number) {
+  const row = db()
+    .select()
+    .from(studioSlides)
+    .where(eq(studioSlides.notebookId, notebookId))
+    .orderBy(desc(studioSlides.updatedAt))
+    .get();
+  if (!row) throw new NotFoundError('Slide draft not found');
+  return serializeSlide(row);
+}
+
+function handleGetSlide(id: number, notebookId: number) {
+  return serializeSlide(getSlideInNotebookOrThrow(id, notebookId));
+}
+
+function handlePatchSlide(id: number, notebookId: number, body: SlideDraftUpdate) {
+  getSlideInNotebookOrThrow(id, notebookId);
+  const updateData: Record<string, unknown> = { errorMessage: null };
+  if (body.title !== undefined) updateData.title = body.title;
+  if (body.prompt !== undefined) updateData.prompt = body.prompt;
+  if (body.engine !== undefined) updateData.engine = body.engine;
+  if (body.sourceIds !== undefined) updateData.sourceIds = body.sourceIds;
+  if (body.generationConfig !== undefined) updateData.generationConfig = body.generationConfig;
+  if (body.outline !== undefined) updateData.outline = body.outline;
+  if (body.markdown !== undefined) updateData.markdown = body.markdown;
+  if (body.stage !== undefined) updateData.stage = body.stage;
+  db().update(studioSlides).set(updateData).where(eq(studioSlides.id, id)).run();
+  return serializeSlide(getSlideOrThrow(id));
+}
+
+async function handleGenerateOutline(id: number, notebookId: number) {
+  const slide = getSlideInNotebookOrThrow(id, notebookId);
+  if (!clearStaleRunning(id)) return { event: 'busy', message: '演示正在生成中，请稍后重试。' };
+
+  const context = await getContext(slide);
+  db()
+    .update(studioSlides)
+    .set({ status: 'running', stage: 'outline' })
+    .where(eq(studioSlides.id, id))
+    .run();
+  try {
+    const outline = await generateOutline(slide, context);
+    db()
+      .update(studioSlides)
+      .set({ outline: outline as Record<string, unknown>, stage: 'outline', status: 'idle' })
+      .where(eq(studioSlides.id, id))
+      .run();
+    return serializeSlide(getSlideOrThrow(id));
+  } catch (error) {
+    db()
+      .update(studioSlides)
+      .set({ status: 'error', errorMessage: String(error) })
+      .where(eq(studioSlides.id, id))
+      .run();
+    throw error;
+  }
+}
+
+function handlePutOutline(id: number, notebookId: number, body: StudioOutlinePut) {
+  getSlideInNotebookOrThrow(id, notebookId);
+  db()
+    .update(studioSlides)
+    .set({
+      outline: body.outline as Record<string, unknown>,
+      stage: 'outline',
+      status: 'idle',
+      errorMessage: null,
+    })
+    .where(eq(studioSlides.id, id))
+    .run();
+  return serializeSlide(getSlideOrThrow(id));
+}
+
+async function handleGenerateMarkdown(id: number, notebookId: number) {
+  const slide = getSlideInNotebookOrThrow(id, notebookId);
+  if (!slide.outline) throw new NotFoundError(`Slide ${id} has no outline — run /outline first`);
+  if (!clearStaleRunning(id)) return { event: 'busy', message: '演示正在生成中，请稍后重试。' };
+
+  const context = await getContext(slide);
+  db()
+    .update(studioSlides)
+    .set({ status: 'running', stage: 'markdown' })
+    .where(eq(studioSlides.id, id))
+    .run();
+  try {
+    const markdown = await generateMarkdown(slide, context);
+    db()
+      .update(studioSlides)
+      .set({ markdown, stage: 'markdown', status: 'idle' })
+      .where(eq(studioSlides.id, id))
+      .run();
+    writeSlideFile(slide.notebookId, id, markdown);
+    syncSlideOutput(slide, markdown);
+    return serializeSlide(getSlideOrThrow(id));
+  } catch (error) {
+    db()
+      .update(studioSlides)
+      .set({ status: 'error', errorMessage: String(error) })
+      .where(eq(studioSlides.id, id))
+      .run();
+    throw error;
+  }
+}
+
+function handlePutMarkdown(id: number, notebookId: number, body: StudioMarkdownPut) {
+  const slide = getSlideInNotebookOrThrow(id, notebookId);
+  const { markdown } = body;
+  try {
+    writeSlideFile(slide.notebookId, id, markdown);
+  } catch (error) {
+    console.error('[studio] slidev file write failed:', error);
+  }
+  syncSlideOutput(slide, markdown);
+  db()
+    .update(studioSlides)
+    .set({ markdown, stage: 'markdown', status: 'idle', errorMessage: null })
+    .where(eq(studioSlides.id, id))
+    .run();
+  return serializeSlide(getSlideOrThrow(id));
+}
+
+function handleOutlineStream(id: number, notebookId: number) {
+  const slide = getSlideInNotebookOrThrow(id, notebookId);
+
+  return createSseResponse(id, async (emit, ctx) => {
+    emit('progress', { stage: 'outline', progress: 5, message: '开始生成大纲' });
+    const context = await getContext(slide);
+    db()
+      .update(studioSlides)
+      .set({ status: 'running', stage: 'outline' })
+      .where(eq(studioSlides.id, id))
+      .run();
+
+    // c51: emit toolcall before the generation stage (v1 api.py:401)
+    emit('toolcall', { tool: 'slides_generate_outline', slideId: id });
+    const outline = await generateOutline(slide, context);
+    emit('progress', { stage: 'outline', progress: 90, message: '大纲生成完成' });
+    db()
+      .update(studioSlides)
+      .set({ outline: outline as Record<string, unknown>, stage: 'outline', status: 'idle' })
+      .where(eq(studioSlides.id, id))
+      .run();
+    // c51: done payload = {traceId, slideId} (v1 api.py:428)
+    emit('done', { traceId: ctx.traceId, slideId: id });
+  });
+}
+
+function handleMarkdownStream(id: number, notebookId: number) {
+  const slide = getSlideInNotebookOrThrow(id, notebookId);
+  if (!slide.outline) throw new NotFoundError(`Slide ${id} has no outline`);
+
+  return createSseResponse(id, async (emit, ctx) => {
+    emit('progress', { stage: 'markdown', progress: 5, message: '开始生成幻灯片' });
+    const context = await getContext(slide);
+    db()
+      .update(studioSlides)
+      .set({ status: 'running', stage: 'markdown' })
+      .where(eq(studioSlides.id, id))
+      .run();
+
+    // c51: emit toolcall before the generation stage (v1 api.py:506)
+    emit('toolcall', { tool: 'slides_generate_markdown', slideId: id });
+    const markdown = await generateMarkdown(slide, context, (delta) => {
+      emit('progress', { stage: 'markdown', delta });
+    });
+
+    db()
+      .update(studioSlides)
+      .set({ markdown, stage: 'markdown', status: 'idle' })
+      .where(eq(studioSlides.id, id))
+      .run();
+    writeSlideFile(slide.notebookId, id, markdown);
+    syncSlideOutput(slide, markdown);
+    // c51: done payload = {traceId, slideId} (v1 api.py:538)
+    emit('done', { traceId: ctx.traceId, slideId: id });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 
 export const studioRouter = new Elysia({ prefix: '/v2' })
-  // Create slide draft
+  // ---- Nested canonical ----
   .post(
-    '/studio/slides',
-    ({ body }) => {
-      const notebookId = body.notebookId;
-
-      const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
-      if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
-
-      const slide = db()
-        .insert(studioSlides)
-        .values({
-          notebookId,
-          title: body.title ?? null,
-          prompt: body.prompt ?? null,
-          engine: body.engine ?? 'slidev',
-          sourceIds: body.sourceIds,
-          generationConfig: body.generationConfig ?? null,
-          stage: 'input',
-          status: 'idle',
-        })
-        .returning()
-        .get();
-      return serializeSlide(slide);
+    '/notebooks/:nid/studio/slides',
+    ({ params, body }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const notebookId = resolveNestedNotebookId(nid, body.notebookId);
+      return handleCreateSlide(notebookId, body);
     },
-    { body: SlideDraftCreateRequestSchema },
+    { body: SlideDraftCreateNestedRequestSchema },
   )
+  .get(
+    '/notebooks/:nid/studio/slides',
+    ({ params, query }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      return handleListSlides(nid, query.offset ?? 0, query.limit ?? 20);
+    },
+    { query: PaginationParamsSchema, response: SlidesPageSchema },
+  )
+  // Static /latest before /:id
+  .get('/notebooks/:nid/studio/slides/latest', ({ params }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    return handleLatestSlide(nid);
+  })
+  .get('/notebooks/:nid/studio/slides/:id', ({ params }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'slide id');
+    return handleGetSlide(id, nid);
+  })
+  .patch(
+    '/notebooks/:nid/studio/slides/:id',
+    ({ params, body }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'slide id');
+      return handlePatchSlide(id, nid, body);
+    },
+    { body: SlideDraftUpdateSchema },
+  )
+  .post('/notebooks/:nid/studio/slides/:id/outline', async ({ params }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'slide id');
+    return handleGenerateOutline(id, nid);
+  })
+  .put(
+    '/notebooks/:nid/studio/slides/:id/outline',
+    ({ params, body }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'slide id');
+      return handlePutOutline(id, nid, body);
+    },
+    { body: StudioOutlinePutSchema },
+  )
+  .post('/notebooks/:nid/studio/slides/:id/markdown', async ({ params }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'slide id');
+    return handleGenerateMarkdown(id, nid);
+  })
+  .put(
+    '/notebooks/:nid/studio/slides/:id/markdown',
+    ({ params, body }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'slide id');
+      return handlePutMarkdown(id, nid, body);
+    },
+    { body: StudioMarkdownPutSchema },
+  )
+  .get('/notebooks/:nid/studio/slides/:id/outline/stream', ({ params }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'slide id');
+    return handleOutlineStream(id, nid);
+  })
+  .get('/notebooks/:nid/studio/slides/:id/markdown/stream', ({ params }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'slide id');
+    return handleMarkdownStream(id, nid);
+  })
 
-  // List slide drafts
+  // ---- Flat deprecated aliases (c67 notebookId required on query/body) ----
+  .post('/studio/slides', ({ body }) => handleCreateSlide(body.notebookId, body), {
+    body: SlideDraftCreateRequestSchema,
+  })
   .get(
     '/studio/slides',
-    ({ query }) => {
-      const { notebookId } = query;
-      const offset = query.offset ?? 0;
-      const limit = query.limit ?? 20;
-      const total =
-        db()
-          .select({ n: count() })
-          .from(studioSlides)
-          .where(eq(studioSlides.notebookId, notebookId))
-          .get()?.n ?? 0;
-      const items = db()
-        .select()
-        .from(studioSlides)
-        .where(eq(studioSlides.notebookId, notebookId))
-        .limit(limit)
-        .offset(offset)
-        .all()
-        .map(serializeSlide);
-      return { items, total, offset, limit };
-    },
+    ({ query }) => handleListSlides(query.notebookId, query.offset ?? 0, query.limit ?? 20),
     { query: StudioSlidesListQuerySchema, response: SlidesPageSchema },
   )
-
-  // Get slide draft — c67: notebookId required
+  // Static /latest before /:id
+  .get('/studio/slides/latest', ({ query }) => handleLatestSlide(query.notebookId), {
+    query: StudioSlidesListQuerySchema,
+  })
   .get(
     '/studio/slides/:id',
     ({ params, query }) =>
-      serializeSlide(
-        getSlideInNotebookOrThrow(requirePositiveIntId(params.id, 'slide id'), query.notebookId),
-      ),
+      handleGetSlide(requirePositiveIntId(params.id, 'slide id'), query.notebookId),
     { query: NotebookIdQuerySchema },
   )
-
-  // c43: Get latest draft (v1 api.py:232-247)
-  .get(
-    '/studio/slides/latest',
-    ({ query }) => {
-      const { notebookId } = query;
-      const row = db()
-        .select()
-        .from(studioSlides)
-        .where(eq(studioSlides.notebookId, notebookId))
-        .orderBy(desc(studioSlides.updatedAt))
-        .get();
-      if (!row) throw new NotFoundError('Slide draft not found');
-      return serializeSlide(row);
-    },
-    { query: StudioSlidesListQuerySchema },
-  )
-
-  // Update draft fields (c32: PATCH draft — v1 parity; c67: notebookId required)
   .patch(
     '/studio/slides/:id',
-    ({ params, query, body }) => {
-      const id = requirePositiveIntId(params.id, 'slide id');
-      getSlideInNotebookOrThrow(id, query.notebookId);
-      const updateData: Record<string, unknown> = { errorMessage: null };
-      if (body.title !== undefined) updateData.title = body.title;
-      if (body.prompt !== undefined) updateData.prompt = body.prompt;
-      if (body.engine !== undefined) updateData.engine = body.engine;
-      if (body.sourceIds !== undefined) updateData.sourceIds = body.sourceIds;
-      if (body.generationConfig !== undefined) updateData.generationConfig = body.generationConfig;
-      if (body.outline !== undefined) updateData.outline = body.outline;
-      if (body.markdown !== undefined) updateData.markdown = body.markdown;
-      if (body.stage !== undefined) updateData.stage = body.stage;
-      db().update(studioSlides).set(updateData).where(eq(studioSlides.id, id)).run();
-      return serializeSlide(getSlideOrThrow(id));
-    },
+    ({ params, query, body }) =>
+      handlePatchSlide(requirePositiveIntId(params.id, 'slide id'), query.notebookId, body),
     { query: NotebookIdQuerySchema, body: SlideDraftUpdateSchema },
   )
-
-  // Stage 1: Generate outline via AI (POST — non-streaming; c67: notebookId required)
   .post(
     '/studio/slides/:id/outline',
-    async ({ params, query }) => {
-      const id = requirePositiveIntId(params.id, 'slide id');
-      const slide = getSlideInNotebookOrThrow(id, query.notebookId);
-      if (!clearStaleRunning(id)) return { event: 'busy', message: '演示正在生成中，请稍后重试。' };
-
-      const context = await getContext(slide);
-      db()
-        .update(studioSlides)
-        .set({ status: 'running', stage: 'outline' })
-        .where(eq(studioSlides.id, id))
-        .run();
-      try {
-        const outline = await generateOutline(slide, context);
-        db()
-          .update(studioSlides)
-          .set({ outline: outline as Record<string, unknown>, stage: 'outline', status: 'idle' })
-          .where(eq(studioSlides.id, id))
-          .run();
-        return serializeSlide(getSlideOrThrow(id));
-      } catch (error) {
-        db()
-          .update(studioSlides)
-          .set({ status: 'error', errorMessage: String(error) })
-          .where(eq(studioSlides.id, id))
-          .run();
-        throw error;
-      }
-    },
+    async ({ params, query }) =>
+      handleGenerateOutline(requirePositiveIntId(params.id, 'slide id'), query.notebookId),
     { query: NotebookIdQuerySchema },
   )
-
-  // HITL: manually edit outline (c32: PUT outline — v1 parity; c67: notebookId required)
   .put(
     '/studio/slides/:id/outline',
-    ({ params, query, body }) => {
-      const id = requirePositiveIntId(params.id, 'slide id');
-      getSlideInNotebookOrThrow(id, query.notebookId);
-      db()
-        .update(studioSlides)
-        .set({
-          outline: body.outline as Record<string, unknown>,
-          stage: 'outline',
-          status: 'idle',
-          errorMessage: null,
-        })
-        .where(eq(studioSlides.id, id))
-        .run();
-      return serializeSlide(getSlideOrThrow(id));
-    },
+    ({ params, query, body }) =>
+      handlePutOutline(requirePositiveIntId(params.id, 'slide id'), query.notebookId, body),
     { query: NotebookIdQuerySchema, body: StudioOutlinePutSchema },
   )
-
-  // Stage 2: Generate markdown from outline via AI (POST — non-streaming; c67: notebookId required)
   .post(
     '/studio/slides/:id/markdown',
-    async ({ params, query }) => {
-      const id = requirePositiveIntId(params.id, 'slide id');
-      const slide = getSlideInNotebookOrThrow(id, query.notebookId);
-      if (!slide.outline)
-        throw new NotFoundError(`Slide ${id} has no outline — run /outline first`);
-      if (!clearStaleRunning(id)) return { event: 'busy', message: '演示正在生成中，请稍后重试。' };
-
-      const context = await getContext(slide);
-      db()
-        .update(studioSlides)
-        .set({ status: 'running', stage: 'markdown' })
-        .where(eq(studioSlides.id, id))
-        .run();
-      try {
-        const markdown = await generateMarkdown(slide, context);
-        db()
-          .update(studioSlides)
-          .set({ markdown, stage: 'markdown', status: 'idle' })
-          .where(eq(studioSlides.id, id))
-          .run();
-        writeSlideFile(slide.notebookId, id, markdown);
-        syncSlideOutput(slide, markdown);
-        return serializeSlide(getSlideOrThrow(id));
-      } catch (error) {
-        db()
-          .update(studioSlides)
-          .set({ status: 'error', errorMessage: String(error) })
-          .where(eq(studioSlides.id, id))
-          .run();
-        throw error;
-      }
-    },
+    async ({ params, query }) =>
+      handleGenerateMarkdown(requirePositiveIntId(params.id, 'slide id'), query.notebookId),
     { query: NotebookIdQuerySchema },
   )
-
-  // HITL: manually edit markdown + Slidev persist + output sync (c32: PUT markdown — v1 parity; c67: notebookId required)
   .put(
     '/studio/slides/:id/markdown',
-    ({ params, query, body }) => {
-      const id = requirePositiveIntId(params.id, 'slide id');
-      const slide = getSlideInNotebookOrThrow(id, query.notebookId);
-      const { markdown } = body;
-      try {
-        writeSlideFile(slide.notebookId, id, markdown);
-      } catch (error) {
-        console.error('[studio] slidev file write failed:', error);
-      }
-      syncSlideOutput(slide, markdown);
-      db()
-        .update(studioSlides)
-        .set({ markdown, stage: 'markdown', status: 'idle', errorMessage: null })
-        .where(eq(studioSlides.id, id))
-        .run();
-      return serializeSlide(getSlideOrThrow(id));
-    },
+    ({ params, query, body }) =>
+      handlePutMarkdown(requirePositiveIntId(params.id, 'slide id'), query.notebookId, body),
     { query: NotebookIdQuerySchema, body: StudioMarkdownPutSchema },
   )
-
-  // c43: SSE outline stream (v1 GET /drafts/:id/outline/stream; c67: notebookId required)
   .get(
     '/studio/slides/:id/outline/stream',
-    ({ params, query }) => {
-      const id = requirePositiveIntId(params.id, 'slide id');
-      const slide = getSlideInNotebookOrThrow(id, query.notebookId);
-
-      return createSseResponse(id, async (emit, ctx) => {
-        emit('progress', { stage: 'outline', progress: 5, message: '开始生成大纲' });
-        const context = await getContext(slide);
-        db()
-          .update(studioSlides)
-          .set({ status: 'running', stage: 'outline' })
-          .where(eq(studioSlides.id, id))
-          .run();
-
-        // c51: emit toolcall before the generation stage (v1 api.py:401)
-        emit('toolcall', { tool: 'slides_generate_outline', slideId: id });
-        const outline = await generateOutline(slide, context);
-        emit('progress', { stage: 'outline', progress: 90, message: '大纲生成完成' });
-        db()
-          .update(studioSlides)
-          .set({ outline: outline as Record<string, unknown>, stage: 'outline', status: 'idle' })
-          .where(eq(studioSlides.id, id))
-          .run();
-        // c51: done payload = {traceId, slideId} (v1 api.py:428)
-        emit('done', { traceId: ctx.traceId, slideId: id });
-      });
-    },
+    ({ params, query }) =>
+      handleOutlineStream(requirePositiveIntId(params.id, 'slide id'), query.notebookId),
     { query: NotebookIdQuerySchema },
   )
-
-  // c43: SSE markdown stream (v1 GET /drafts/:id/markdown/stream; c67: notebookId required)
   .get(
     '/studio/slides/:id/markdown/stream',
-    ({ params, query }) => {
-      const id = requirePositiveIntId(params.id, 'slide id');
-      const slide = getSlideInNotebookOrThrow(id, query.notebookId);
-      if (!slide.outline) throw new NotFoundError(`Slide ${id} has no outline`);
-
-      return createSseResponse(id, async (emit, ctx) => {
-        emit('progress', { stage: 'markdown', progress: 5, message: '开始生成幻灯片' });
-        const context = await getContext(slide);
-        db()
-          .update(studioSlides)
-          .set({ status: 'running', stage: 'markdown' })
-          .where(eq(studioSlides.id, id))
-          .run();
-
-        // c51: emit toolcall before the generation stage (v1 api.py:506)
-        emit('toolcall', { tool: 'slides_generate_markdown', slideId: id });
-        const markdown = await generateMarkdown(slide, context, (delta) => {
-          emit('progress', { stage: 'markdown', delta });
-        });
-
-        db()
-          .update(studioSlides)
-          .set({ markdown, stage: 'markdown', status: 'idle' })
-          .where(eq(studioSlides.id, id))
-          .run();
-        writeSlideFile(slide.notebookId, id, markdown);
-        syncSlideOutput(slide, markdown);
-        // c51: done payload = {traceId, slideId} (v1 api.py:538)
-        emit('done', { traceId: ctx.traceId, slideId: id });
-      });
-    },
+    ({ params, query }) =>
+      handleMarkdownStream(requirePositiveIntId(params.id, 'slide id'), query.notebookId),
     { query: NotebookIdQuerySchema },
   );
 

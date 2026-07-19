@@ -11,10 +11,11 @@ import {
   SourceTagBindingRequestSchema,
   SourceTagBindingResponseSchema,
   SourceTagCreateSchema,
+  SourceUploadNestedQuerySchema,
   SourceUploadQuerySchema,
   paginateItems,
 } from '@crystalith/shared';
-// Sources CRUD + upload router — /v2/sources, /v2/notebooks/:nid/sources
+// Sources CRUD + upload router — /v2/notebooks/:nid/sources (canonical) + flat aliases
 //
 // Mirrors v1 `features/sources/api.py` + `features/sources/api_ingest.py`.
 import { and, eq, sql } from 'drizzle-orm';
@@ -48,6 +49,7 @@ import {
 import { requirePositiveIntId } from '../../shared/ids.ts';
 import { fetchWithRedirectGuard } from '../../shared/net/fetch-with-redirect-guard.ts';
 import { validateUrlForFetch, SsrfBlockedError } from '../../shared/net/url-safety.ts';
+import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import { uploadDedupKey, urlDedupKey } from './dedup.ts';
 import { listParsers } from './parser-registry.ts';
 import { ingestSource } from './pipeline.ts';
@@ -83,27 +85,79 @@ const apiDocs: OpenApiRoute[] = [
     },
   },
   {
-    path: '/v2/sources/upload',
+    path: '/v2/notebooks/:nid/sources/upload',
     method: 'post',
     summary: 'Upload a file and ingest it',
     tags: ['sources'],
-    responses: {
-      201: { description: 'Ingestion result' },
-    },
+    responses: { 201: { description: 'Ingestion result' } },
   },
   {
-    path: '/v2/sources/:id',
+    path: '/v2/sources/upload',
+    method: 'post',
+    summary: 'Upload a file and ingest it (flat alias)',
+    tags: ['sources'],
+    deprecated: true,
+    responses: { 201: { description: 'Ingestion result' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/sources/:sid',
     method: 'get',
-    summary: 'Get a source by ID with chunks',
+    summary: 'Get a source by ID',
     tags: ['sources'],
     responses: { 200: { description: 'Source details', body: SourceSchema } },
   },
   {
     path: '/v2/sources/:id',
+    method: 'get',
+    summary: 'Get a source by ID (flat alias)',
+    tags: ['sources'],
+    deprecated: true,
+    responses: { 200: { description: 'Source details', body: SourceSchema } },
+  },
+  {
+    path: '/v2/notebooks/:nid/sources/:sid',
     method: 'delete',
     summary: 'Delete a source and its chunks/vectors',
     tags: ['sources'],
     responses: { 204: { description: 'Deleted' } },
+  },
+  {
+    path: '/v2/sources/:id',
+    method: 'delete',
+    summary: 'Delete a source and its chunks/vectors (flat alias)',
+    tags: ['sources'],
+    deprecated: true,
+    responses: { 204: { description: 'Deleted' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/sources/:sid/chunks',
+    method: 'get',
+    summary: 'List chunks for a source',
+    tags: ['sources'],
+    responses: { 200: { description: 'Chunk list' } },
+  },
+  {
+    path: '/v2/sources/:id/chunks',
+    method: 'get',
+    summary: 'List chunks for a source (flat alias)',
+    tags: ['sources'],
+    deprecated: true,
+    responses: { 200: { description: 'Chunk list' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/sources/:sid/re-embed',
+    method: 'post',
+    summary: 'Re-embed a failed source',
+    tags: ['sources'],
+    responses: { 200: { description: 'Re-embed result' } },
+  },
+  {
+    path: '/v2/sources/:id/re-embed',
+    method: 'post',
+    summary: 'Re-embed a failed source (flat alias)',
+    tags: ['sources'],
+    deprecated: true,
+    responses: { 200: { description: 'Re-embed result' } },
   },
   {
     path: '/v2/sources/parsers',
@@ -113,7 +167,6 @@ const apiDocs: OpenApiRoute[] = [
     responses: { 200: { description: 'Parser list' } },
   },
 ];
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -158,6 +211,158 @@ function serializeSource(row: {
 
 function sourceNotFound(id: number): never {
   throw new NotFoundError(`Source ${id} not found`);
+}
+
+type UploadSet = { status?: number | string };
+
+async function handleSourceUpload(
+  notebookId: number,
+  body: unknown,
+  dedupAction: 'prompt' | 'reuse' | 'create_new' | undefined,
+  set: UploadSet,
+) {
+  // body is FormData; Elysia parses multipart into { filename, file }
+  const file = (body as { file?: File }).file;
+  if (!file) {
+    return sendError(set, ErrorCode.INVALID_REQUEST, 'No file provided');
+  }
+
+  // Upload size limit (configurable, default 50 MB).
+  const maxBytes = getUploadMaxBytes();
+  if (file.size > maxBytes) {
+    return sendError(set, ErrorCode.PAYLOAD_TOO_LARGE, 'Payload Too Large', {
+      maxBytes: maxBytes,
+      uploadedBytes: file.size,
+    });
+  }
+
+  const buffer = new Uint8Array(await file.arrayBuffer());
+
+  // c44: Dedup check — gated by config (v1 source_ingestion.dedup.enabled)
+  const dedupKey = getDedupEnabled() ? uploadDedupKey(buffer) : undefined;
+  if (dedupKey && dedupAction !== 'create_new') {
+    const hit = db()
+      .select({ id: sources.id })
+      .from(sources)
+      .where(and(eq(sources.notebookId, notebookId), eq(sources.dedupKey, dedupKey)))
+      .get();
+    if (hit) {
+      if (dedupAction === 'prompt') {
+        return sendError(set, ErrorCode.CONFLICT, 'Source dedup hit', {
+          existingSourceId: hit.id,
+        });
+      }
+      if (dedupAction === 'reuse') {
+        const existing = db().select().from(sources).where(eq(sources.id, hit.id)).get();
+        return { reused: true, source: existing };
+      }
+    }
+  }
+
+  return await ingestSource({
+    buffer,
+    filename: file.name,
+    notebookId,
+    mimeType: file.type,
+    dedupKey,
+  });
+}
+
+function handleGetSource(id: number, notebookId: number) {
+  const row = db().select().from(sources).where(eq(sources.id, id)).get();
+  if (!row || row.notebookId !== notebookId) sourceNotFound(id);
+
+  const c = db()
+    .select({ c: sql<number>`COUNT(*)` })
+    .from(chunks)
+    .where(eq(chunks.sourceId, id))
+    .get();
+  const chunkCount = c?.c ?? 0;
+
+  const tagRows = db()
+    .select({ name: sourceTags.name })
+    .from(sourceTagMap)
+    .innerJoin(sourceTags, eq(sourceTagMap.tagId, sourceTags.id))
+    .where(eq(sourceTagMap.sourceId, id))
+    .all();
+  const tags = tagRows.map((t) => t.name);
+
+  return serializeSource({ ...row, chunkCount, tags });
+}
+
+function handleDeleteSource(id: number, notebookId: number, set: UploadSet) {
+  const row = db().select().from(sources).where(eq(sources.id, id)).get();
+  if (!row || row.notebookId !== notebookId) sourceNotFound(id);
+
+  deleteSourceVectors(db(), id);
+  db().delete(sources).where(eq(sources.id, id)).run();
+  if (row.notebookId) bumpSourcesEpoch(row.notebookId);
+
+  set.status = 204;
+  return '';
+}
+
+function handleGetSourceChunks(id: number, notebookId: number) {
+  const row = db().select().from(sources).where(eq(sources.id, id)).get();
+  if (!row || row.notebookId !== notebookId) sourceNotFound(id);
+  const rows = db()
+    .select()
+    .from(chunks)
+    .where(eq(chunks.sourceId, id))
+    .orderBy(chunks.chunkIndex)
+    .all();
+  return rows.map((c) => ({
+    id: c.id,
+    chunkIndex: c.chunkIndex,
+    text: c.text,
+    startOffset: c.startOffset,
+    endOffset: c.endOffset,
+    metadata: c.metadata,
+  }));
+}
+
+async function handleReEmbedSource(id: number, notebookId: number) {
+  const row = db().select().from(sources).where(eq(sources.id, id)).get();
+  if (!row || row.notebookId !== notebookId) sourceNotFound(id);
+  if (row.status !== 'failed') {
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      `Source ${id} is not in failed status (current: ${row.status})`,
+    );
+  }
+
+  db()
+    .update(sources)
+    .set({
+      status: 'processing',
+      errorCode: null,
+      errorMessage: null,
+      recoveryHint: null,
+      lastErrorAt: null,
+    })
+    .where(eq(sources.id, id))
+    .run();
+
+  try {
+    const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
+    const strategy = new EmbedStrategy();
+    deleteSourceVectors(db(), id);
+    await strategy.indexSource(id, row.notebookId);
+    db().update(sources).set({ status: 'ready' }).where(eq(sources.id, id)).run();
+    bumpSourcesEpoch(row.notebookId);
+    return { sourceId: id, reEmbedded: true };
+  } catch (error) {
+    db()
+      .update(sources)
+      .set({
+        status: 'failed',
+        errorMessage: error instanceof Error ? error.message : String(error),
+      })
+      .where(eq(sources.id, id))
+      .run();
+    bumpSourcesEpoch(row.notebookId);
+    throw error;
+  }
 }
 
 /** Enrich source rows with chunk counts and tags. */
@@ -274,118 +479,61 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     { query: SourceListQuerySchema, response: SourcesPageSchema },
   )
 
-  // Upload + ingest a file
+  // Upload + ingest a file (nested canonical)
+  .post(
+    '/notebooks/:nid/sources/upload',
+    async ({ params, body, query, set }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const notebookId = resolveNestedNotebookId(nid, query.notebookId);
+      return handleSourceUpload(notebookId, body, query.dedupAction, set);
+    },
+    { query: SourceUploadNestedQuerySchema },
+  )
+
+  // Upload + ingest a file (flat alias — c67 notebookId required)
   .post(
     '/sources/upload',
     async ({ body, query, set }) => {
-      const notebookId = query.notebookId;
-      const dedupAction = query.dedupAction;
-
-      // body is FormData; Elysia parses multipart into { filename, file }
-      const file = (body as { file?: File }).file;
-      if (!file) {
-        return sendError(set, ErrorCode.INVALID_REQUEST, 'No file provided');
-      }
-
-      // Upload size limit (configurable, default 50 MB).
-      const maxBytes = getUploadMaxBytes();
-      if (file.size > maxBytes) {
-        return sendError(set, ErrorCode.PAYLOAD_TOO_LARGE, 'Payload Too Large', {
-          maxBytes: maxBytes,
-          uploadedBytes: file.size,
-        });
-      }
-
-      const buffer = new Uint8Array(await file.arrayBuffer());
-
-      // c44: Dedup check — gated by config (v1 source_ingestion.dedup.enabled)
-      const dedupKey = getDedupEnabled() ? uploadDedupKey(buffer) : undefined;
-      if (dedupKey && dedupAction !== 'create_new') {
-        const hit = db()
-          .select({ id: sources.id })
-          .from(sources)
-          .where(and(eq(sources.notebookId, notebookId), eq(sources.dedupKey, dedupKey)))
-          .get();
-        if (hit) {
-          if (dedupAction === 'prompt') {
-            return sendError(set, ErrorCode.CONFLICT, 'Source dedup hit', {
-              existingSourceId: hit.id,
-            });
-          }
-          if (dedupAction === 'reuse') {
-            const existing = db().select().from(sources).where(eq(sources.id, hit.id)).get();
-            return { reused: true, source: existing };
-          }
-        }
-      }
-
-      const result = await ingestSource({
-        buffer,
-        filename: file.name,
-        notebookId,
-        mimeType: file.type,
-        dedupKey,
-      });
-
-      return result;
+      return handleSourceUpload(query.notebookId, body, query.dedupAction, set);
     },
     { query: SourceUploadQuerySchema },
   )
 
-  // Get a source by ID — c67: notebookId required; cross-notebook → 404
+  // Get a source by ID (nested canonical)
+  .get('/notebooks/:nid/sources/:sid', ({ params }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const sid = requirePositiveIntId(params.sid, 'source id');
+    return handleGetSource(sid, nid);
+  })
+
+  // Get a source by ID (flat alias — c67 notebookId required)
   .get(
     '/sources/:id',
     ({ params, query }) => {
       const id = requirePositiveIntId(params.id, 'source id');
-      const nid = query.notebookId;
-      const row = db().select().from(sources).where(eq(sources.id, id)).get();
-      if (!row || row.notebookId !== nid) sourceNotFound(id);
-
-      const c = db()
-        .select({ c: sql<number>`COUNT(*)` })
-        .from(chunks)
-        .where(eq(chunks.sourceId, id))
-        .get();
-      const chunkCount = c?.c ?? 0;
-
-      const tagRows = db()
-        .select({ name: sourceTags.name })
-        .from(sourceTagMap)
-        .innerJoin(sourceTags, eq(sourceTagMap.tagId, sourceTags.id))
-        .where(eq(sourceTagMap.sourceId, id))
-        .all();
-      const tags = tagRows.map((t) => t.name);
-
-      return serializeSource({ ...row, chunkCount, tags });
+      return handleGetSource(id, query.notebookId);
     },
     { query: NotebookIdQuerySchema },
   )
 
-  // Delete a source — c67: notebookId required
+  // Delete a source (nested canonical)
+  .delete('/notebooks/:nid/sources/:sid', ({ params, set }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const sid = requirePositiveIntId(params.sid, 'source id');
+    return handleDeleteSource(sid, nid, set);
+  })
+
+  // Delete a source (flat alias — c67 notebookId required)
   .delete(
     '/sources/:id',
     ({ params, query, set }) => {
       const id = requirePositiveIntId(params.id, 'source id');
-      const nid = query.notebookId;
-      const row = db().select().from(sources).where(eq(sources.id, id)).get();
-      if (!row || row.notebookId !== nid) sourceNotFound(id);
-
-      // Delete vectors first
-      deleteSourceVectors(db(), id);
-
-      // Delete source (cascades to chunks via FK)
-      db().delete(sources).where(eq(sources.id, id)).run();
-
-      // Invalidate cached retrievals for the source's notebook.
-      if (row.notebookId) bumpSourcesEpoch(row.notebookId);
-
-      set.status = 204;
-      return '';
+      return handleDeleteSource(id, query.notebookId, set);
     },
     { query: NotebookIdQuerySchema },
   )
 
-  // List available parsers
+  // List available parsers (global flat — do not nest)
   .get('/sources/parsers', () => {
     return listParsers().map((p) => ({
       id: p.id,
@@ -607,82 +755,36 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     { body: SourceTagBindingRequestSchema, response: SourceTagBindingResponseSchema },
   )
 
-  // Get source chunks — c67: notebookId required
+  // Get source chunks (nested canonical)
+  .get('/notebooks/:nid/sources/:sid/chunks', ({ params }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const sid = requirePositiveIntId(params.sid, 'source id');
+    return handleGetSourceChunks(sid, nid);
+  })
+
+  // Get source chunks (flat alias — c67 notebookId required)
   .get(
     '/sources/:id/chunks',
     ({ params, query }) => {
       const id = requirePositiveIntId(params.id, 'source id');
-      const nid = query.notebookId;
-      const row = db().select().from(sources).where(eq(sources.id, id)).get();
-      if (!row || row.notebookId !== nid) sourceNotFound(id);
-      const rows = db()
-        .select()
-        .from(chunks)
-        .where(eq(chunks.sourceId, id))
-        .orderBy(chunks.chunkIndex)
-        .all();
-      return rows.map((c) => ({
-        id: c.id,
-        chunkIndex: c.chunkIndex,
-        text: c.text,
-        startOffset: c.startOffset,
-        endOffset: c.endOffset,
-        metadata: c.metadata,
-      }));
+      return handleGetSourceChunks(id, query.notebookId);
     },
     { query: NotebookIdQuerySchema },
   )
 
-  // Re-embed a source (v1: requires FAILED status; processing → ready/failed)
-  // c67: notebookId required; illegal status → AppHttpError
+  // Re-embed a source (nested canonical)
+  .post('/notebooks/:nid/sources/:sid/re-embed', async ({ params }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const sid = requirePositiveIntId(params.sid, 'source id');
+    return handleReEmbedSource(sid, nid);
+  })
+
+  // Re-embed a source (flat alias — c67 notebookId required)
   .post(
     '/sources/:id/re-embed',
     async ({ params, query }) => {
       const id = requirePositiveIntId(params.id, 'source id');
-      const nid = query.notebookId;
-      const row = db().select().from(sources).where(eq(sources.id, id)).get();
-      if (!row || row.notebookId !== nid) sourceNotFound(id);
-      // c44: v1 _reembed_existing_source rejects non-failed with 400
-      if (row.status !== 'failed') {
-        throw new AppHttpError(
-          ErrorCode.INVALID_REQUEST,
-          `Source ${id} is not in failed status (current: ${row.status})`,
-        );
-      }
-
-      // c57: clear ALL error fields (v1 api_common.py:261-263), not just errorMessage
-      db()
-        .update(sources)
-        .set({
-          status: 'processing',
-          errorCode: null,
-          errorMessage: null,
-          recoveryHint: null,
-          lastErrorAt: null,
-        })
-        .where(eq(sources.id, id))
-        .run();
-
-      try {
-        const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
-        const strategy = new EmbedStrategy();
-        deleteSourceVectors(db(), id);
-        await strategy.indexSource(id, row.notebookId);
-        db().update(sources).set({ status: 'ready' }).where(eq(sources.id, id)).run();
-        bumpSourcesEpoch(row.notebookId);
-        return { sourceId: id, reEmbedded: true };
-      } catch (error) {
-        db()
-          .update(sources)
-          .set({
-            status: 'failed',
-            errorMessage: error instanceof Error ? error.message : String(error),
-          })
-          .where(eq(sources.id, id))
-          .run();
-        bumpSourcesEpoch(row.notebookId);
-        throw error;
-      }
+      return handleReEmbedSource(id, query.notebookId);
     },
     { query: NotebookIdQuerySchema },
   )

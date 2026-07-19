@@ -1,20 +1,28 @@
 import {
   NotebookIdQuerySchema,
+  OutputExportFormatQuerySchema,
   OutputExportQuerySchema,
+  OutputGenerateNestedRequestSchema,
   OutputGenerateRequestSchema,
   OutputMetaSchema,
   OutputSchema,
   PaginatedSchema,
   PaginationParamsSchema,
   type Citation,
+  type OutputGenerateBody,
 } from '@crystalith/shared';
 import { NoSuchModelError, TypeValidationError, APICallError, NoObjectGeneratedError } from 'ai';
-// Outputs router — /v2/outputs CRUD + generation.
+// Outputs router — nested canonical + flat deprecated aliases (c69).
 //
-//   POST   /v2/outputs           — Generate a new output
-//   GET    /v2/outputs            — List outputs for a notebook
-//   GET    /v2/outputs/:id        — Get a single output
-//   GET    /v2/outputs/types      — List available output types + meta
+// Canonical:
+//   POST   /v2/notebooks/:nid/outputs
+//   GET    /v2/notebooks/:nid/outputs
+//   GET    /v2/notebooks/:nid/outputs/:id
+//   DELETE /v2/notebooks/:nid/outputs/:id
+//   GET    /v2/notebooks/:nid/outputs/:id/export
+//   POST   /v2/notebooks/:nid/outputs/:id/convert-to-source
+// Flat aliases (deprecated): /v2/outputs{,/:id,/export,/convert-to-source}
+// Global flat: GET /v2/outputs/types
 import { count, desc, eq, inArray } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
@@ -27,6 +35,7 @@ import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
 import { ErrorCode, sendError } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
+import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import { listOutputTypes, type ToolOutputType } from './generator.ts';
 import { runOutputPipeline } from './pipeline.ts';
 import { renderOutputToMarkdown, splitTextToChunks } from './render.ts';
@@ -48,10 +57,61 @@ const OutputsPageSchema = PaginatedSchema(OutputSchema);
 
 const apiDocs: OpenApiRoute[] = [
   {
+    path: '/v2/notebooks/:nid/outputs',
+    method: 'post',
+    summary: 'Generate a new output',
+    tags: ['outputs'],
+    request: { body: OutputGenerateNestedRequestSchema },
+    responses: { 201: { description: 'Generated output' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/outputs',
+    method: 'get',
+    summary: 'List outputs for a notebook',
+    tags: ['outputs'],
+    request: {
+      query: {
+        offset: PaginationParamsSchema.shape.offset,
+        limit: PaginationParamsSchema.shape.limit,
+      },
+    },
+    responses: { 200: { description: 'Paginated output list', body: OutputsPageSchema } },
+  },
+  {
+    path: '/v2/notebooks/:nid/outputs/:id',
+    method: 'get',
+    summary: 'Get a single output',
+    tags: ['outputs'],
+    responses: { 200: { description: 'Output details' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/outputs/:id',
+    method: 'delete',
+    summary: 'Delete an output',
+    tags: ['outputs'],
+    responses: { 204: { description: 'Deleted' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/outputs/:id/export',
+    method: 'get',
+    summary: 'Export an output (markdown or json)',
+    tags: ['outputs'],
+    responses: { 200: { description: 'Exported output' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/outputs/:id/convert-to-source',
+    method: 'post',
+    summary: 'Convert an output to a source',
+    tags: ['outputs'],
+    responses: { 201: { description: 'Created source' } },
+  },
+  {
     path: '/v2/outputs',
     method: 'post',
     summary: 'Generate a new output',
     tags: ['outputs'],
+    deprecated: true,
+    request: { body: OutputGenerateRequestSchema },
     responses: { 201: { description: 'Generated output' } },
   },
   {
@@ -59,6 +119,7 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'List outputs for a notebook',
     tags: ['outputs'],
+    deprecated: true,
     request: {
       query: {
         notebookId: NotebookIdQuerySchema.shape.notebookId,
@@ -73,7 +134,32 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'Get a single output',
     tags: ['outputs'],
+    deprecated: true,
     responses: { 200: { description: 'Output details' } },
+  },
+  {
+    path: '/v2/outputs/:id',
+    method: 'delete',
+    summary: 'Delete an output',
+    tags: ['outputs'],
+    deprecated: true,
+    responses: { 204: { description: 'Deleted' } },
+  },
+  {
+    path: '/v2/outputs/:id/export',
+    method: 'get',
+    summary: 'Export an output (markdown or json)',
+    tags: ['outputs'],
+    deprecated: true,
+    responses: { 200: { description: 'Exported output' } },
+  },
+  {
+    path: '/v2/outputs/:id/convert-to-source',
+    method: 'post',
+    summary: 'Convert an output to a source',
+    tags: ['outputs'],
+    deprecated: true,
+    responses: { 201: { description: 'Created source' } },
   },
   {
     path: '/v2/outputs/types',
@@ -87,6 +173,8 @@ const apiDocs: OpenApiRoute[] = [
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+type SetStatus = { status?: number | string; headers: Record<string, string | number> };
 
 function serializeOutput(row: typeof outputs.$inferSelect) {
   return {
@@ -138,321 +226,371 @@ export function collectCitedCitations(content: Record<string, unknown> | null): 
   return out;
 }
 
+async function handleGenerateOutput(
+  notebookId: number,
+  body: OutputGenerateBody,
+  set: SetStatus,
+  request: Request,
+) {
+  const {
+    type,
+    chunkIds,
+    sourceIds,
+    prompt: promptRaw,
+    preference,
+    topK,
+    minScore,
+    modelId,
+  } = body;
+
+  // Normalize output type to uppercase (API accepts both 'faq' and 'FAQ')
+  const normalizedType = type.toUpperCase();
+
+  // Verify notebook
+  const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
+  if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
+
+  // c50: reject SLIDES — v1 api.py:205-206 returns 400 "Use slides endpoints
+  // for SLIDES output". SLIDES has its own studio pipeline; the generic
+  // outputs pipeline has no SLIDES postprocess/isContentEmpty case.
+  if (normalizedType === 'SLIDES') {
+    return sendError(set, ErrorCode.INVALID_REQUEST, 'Use slides endpoints for SLIDES output');
+  }
+
+  // c38 gap fix: sourceIds is required when chunkIds is not provided (v1 api.py:292-293)
+  const resolvedSourceIds = sourceIds?.length ? sourceIds : undefined;
+  const resolvedChunkIds = chunkIds?.length ? chunkIds : undefined;
+  if (!resolvedChunkIds?.length && !resolvedSourceIds?.length) {
+    return sendError(
+      set,
+      ErrorCode.INVALID_REQUEST,
+      'sourceIds must not be empty (or provide chunkIds)',
+    );
+  }
+
+  // Resolve model (config default or explicit modelId override)
+  const modelConfig = modelId ? getModelById(modelId) : getDefaultChatModel();
+  // c42: granular error mapping (v1 api.py:309-361) — typed exceptions, not string matching
+  if (!modelConfig) {
+    return sendError(set, ErrorCode.MODEL_UNAVAILABLE, 'No chat model configured');
+  }
+
+  let model;
+  try {
+    model = withRetry(await resolveModel(modelConfig));
+  } catch (error) {
+    // Model resolution failure → 503 (v1 ModelConfigurationError)
+    if (error instanceof NoSuchModelError) {
+      return sendError(set, ErrorCode.MODEL_UNAVAILABLE, 'Model not available');
+    }
+    throw error;
+  }
+
+  let result;
+  try {
+    result = await runOutputPipeline({
+      model,
+      notebookId,
+      type: normalizedType as ToolOutputType,
+      chunkIds: resolvedChunkIds,
+      sourceIds: resolvedSourceIds,
+      prompt: promptRaw ?? undefined,
+      preference: preference === 'speed' ? 'speed' : 'quality',
+      topK: topK ?? undefined,
+      minScore: minScore ?? undefined,
+      modelId: modelId ?? undefined,
+      abortSignal: request.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      set.status = 499;
+      return { detail: 'Client cancelled' };
+    }
+    const msg = error instanceof Error ? error.message : String(error);
+    // Typed error mapping (v1 api.py:309-361)
+    if (error instanceof TypeValidationError || error instanceof NoObjectGeneratedError) {
+      return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, msg);
+    }
+    if (error instanceof NoSuchModelError || error instanceof APICallError) {
+      return sendError(set, ErrorCode.MODEL_ERROR, msg);
+    }
+    if (msg.includes('retrieval')) {
+      return sendError(set, ErrorCode.INVALID_REQUEST, msg);
+    }
+    return sendError(set, ErrorCode.INTERNAL_ERROR, msg);
+  }
+
+  // c42: return v1 OutputRead contract (snake_case) instead of PipelineResult
+  const row = db().select().from(outputs).where(eq(outputs.id, result.outputId)).get();
+  set.status = 201;
+  return serializeOutput(row!);
+}
+
+function handleListOutputs(notebookId: number, offset: number, limit: number) {
+  const total =
+    db().select({ n: count() }).from(outputs).where(eq(outputs.notebookId, notebookId)).get()?.n ??
+    0;
+
+  const rows = db()
+    .select()
+    .from(outputs)
+    .where(eq(outputs.notebookId, notebookId))
+    .orderBy(desc(outputs.createdAt))
+    .limit(limit)
+    .offset(offset)
+    .all();
+
+  return {
+    items: rows.map(serializeOutput),
+    total,
+    offset,
+    limit,
+  };
+}
+
+function handleGetOutput(id: number, notebookId: number) {
+  const row = requireOutputInNotebook(id, notebookId);
+  return serializeOutput(row);
+}
+
+function handleDeleteOutput(id: number, notebookId: number, set: SetStatus) {
+  requireOutputInNotebook(id, notebookId);
+  db().delete(outputs).where(eq(outputs.id, id)).run();
+  set.status = 204;
+  return '';
+}
+
+function handleExportOutput(id: number, notebookId: number, format: 'markdown' | 'json') {
+  const row = requireOutputInNotebook(id, notebookId);
+
+  const exportedAt = new Date().toISOString();
+
+  // P1-6: collect only the citations actually referenced in the content tree
+  // (v1 _collect_output_citations, api.py:124-156). pipeline.mapCitationsIntoContent
+  // already resolved numeric indices into full Citation dicts embedded on
+  // leaf nodes, so we walk the tree and dedup by chunk_id (first-seen order).
+  // This replaces the prior `row.chunkIds` join which listed ALL retrieved
+  // chunks (the superset), not just the cited ones.
+  const citations = collectCitedCitations(row.content as Record<string, unknown> | null);
+  const sourceIds = [...new Set(citations.map((c) => c.sourceId))];
+  const sourceRows = sourceIds.length
+    ? db().select().from(sources).where(inArray(sources.id, sourceIds)).all()
+    : [];
+
+  if (format === 'json') {
+    // c42: full citation fields + correct source metadata (v1 OutputExportJson)
+    return {
+      notebookId: row.notebookId,
+      outputId: row.id,
+      outputType: row.type,
+      prompt: row.prompt,
+      content: row.content,
+      citations,
+      sources: sourceRows.map((s) => ({
+        sourceId: s.id,
+        sourceName: s.filename,
+        mimeType: s.mimeType,
+        parserType: s.parserType,
+      })),
+      exportedAt,
+    };
+  }
+
+  // Markdown format — type-aware rendering (v1 _extract_text_from_output)
+  // + Citations and Sources sections (v1 api.py:441-476). Citation line
+  // format aligns with v1 api.py:452-461:
+  //   [N] source_name · chunk N[ · page N][ · para N]
+  //   > snippet
+  const bodyMarkdown = renderOutputToMarkdown(
+    row.type,
+    row.content as Record<string, unknown> | null,
+    row.prompt,
+  );
+  const citationLines = citations.map((c, i) => {
+    const parts = [`[${i + 1}] ${c.sourceName}`, `chunk ${c.chunkIndex}`];
+    if (c.pageNumber !== null && c.pageNumber !== undefined) parts.push(`page ${c.pageNumber}`);
+    if (c.paragraphIndex !== null && c.paragraphIndex !== undefined)
+      parts.push(`para ${c.paragraphIndex}`);
+    const line = parts.join(' · ');
+    const snippet = (c.snippet ?? '').trim();
+    return snippet ? `${line}\n> ${snippet}` : line;
+  });
+  const markdown = [
+    bodyMarkdown,
+    '',
+    '## Citations',
+    citationLines.length ? citationLines.join('\n\n') : '无引用',
+    '',
+    '## Sources',
+    sourceRows.map((s) => `- ${s.filename} (${s.status})`).join('\n') || '无来源',
+  ].join('\n');
+
+  return new Response(markdown, {
+    headers: {
+      'Content-Type': 'text/markdown; charset=utf-8',
+      'Content-Disposition': `attachment; filename="output-${row.id}-${row.type}.md"`,
+    },
+  });
+}
+
+async function handleConvertOutputToSource(id: number, notebookId: number, set: SetStatus) {
+  const row = requireOutputInNotebook(id, notebookId);
+
+  // Render output content to type-aware markdown (not raw JSON)
+  const markdown = renderOutputToMarkdown(
+    row.type,
+    row.content as Record<string, unknown> | null,
+    row.prompt,
+  );
+
+  // Split into chunks for embedding (v1: 500/50 paragraph+sentence aware)
+  const chunkTexts = splitTextToChunks(markdown, 500, 50);
+  const filename = `output-${row.id}-${row.type}.md`;
+
+  const sourceRow = db()
+    .insert(sources)
+    .values({
+      notebookId: row.notebookId,
+      filename,
+      mimeType: 'text/markdown',
+      parserType: 'text',
+      status: 'processing',
+      metadata: { type: row.type, source: 'output_conversion' },
+    })
+    .returning()
+    .get();
+
+  // Create chunks
+  let offset = 0;
+  for (let i = 0; i < chunkTexts.length; i++) {
+    const text = chunkTexts[i];
+    db()
+      .insert(chunks)
+      .values({
+        sourceId: sourceRow.id,
+        chunkIndex: i,
+        text,
+        startOffset: offset,
+        endOffset: offset + text.length,
+      })
+      .run();
+    // +2 for paragraph separator
+    offset += text.length + 2;
+  }
+
+  // Embed the chunks so they're discoverable via semantic search.
+  try {
+    const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
+    const strategy = new EmbedStrategy();
+    await strategy.indexSource(sourceRow.id, sourceRow.notebookId);
+    db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)).run();
+    bumpSourcesEpoch(sourceRow.notebookId);
+  } catch {
+    db().update(sources).set({ status: 'failed' }).where(eq(sources.id, sourceRow.id)).run();
+    bumpSourcesEpoch(sourceRow.notebookId);
+  }
+
+  set.status = 201;
+  return {
+    sourceId: sourceRow.id,
+    filename: sourceRow.filename,
+    chunkCount: chunkTexts.length,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 
 export const outputsRouter = new Elysia({ prefix: '/v2' })
-  // List output types
+  // List output types — global flat only (c69)
   .get('/outputs/types', () => listOutputTypes(), {
     response: OutputMetaSchema.array(),
   })
 
-  // Generate an output
+  // ---- Nested canonical ----
+  .post(
+    '/notebooks/:nid/outputs',
+    async ({ params, body, set, request }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const notebookId = resolveNestedNotebookId(nid, body.notebookId);
+      return handleGenerateOutput(notebookId, body, set, request);
+    },
+    { body: OutputGenerateNestedRequestSchema },
+  )
+  .get(
+    '/notebooks/:nid/outputs',
+    ({ params, query }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      return handleListOutputs(nid, query.offset ?? 0, query.limit ?? 20);
+    },
+    { query: PaginationParamsSchema, response: OutputsPageSchema },
+  )
+  .get('/notebooks/:nid/outputs/:id', ({ params }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'output id');
+    return handleGetOutput(id, nid);
+  })
+  .delete('/notebooks/:nid/outputs/:id', ({ params, set }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'output id');
+    return handleDeleteOutput(id, nid, set);
+  })
+  .get(
+    '/notebooks/:nid/outputs/:id/export',
+    ({ params, query }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'output id');
+      return handleExportOutput(id, nid, query.format);
+    },
+    { query: OutputExportFormatQuerySchema },
+  )
+  .post('/notebooks/:nid/outputs/:id/convert-to-source', async ({ params, set }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'output id');
+    return handleConvertOutputToSource(id, nid, set);
+  })
+
+  // ---- Flat aliases (deprecated; c67 notebookId still required) ----
   .post(
     '/outputs',
-    async ({ body, set, request }) => {
-      const {
-        notebookId,
-        type,
-        chunkIds,
-        sourceIds,
-        prompt: promptRaw,
-        preference,
-        topK,
-        minScore,
-        modelId,
-      } = body;
-
-      // Normalize output type to uppercase (API accepts both 'faq' and 'FAQ')
-      const normalizedType = type.toUpperCase();
-
-      // Verify notebook
-      const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
-      if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
-
-      // c50: reject SLIDES — v1 api.py:205-206 returns 400 "Use slides endpoints
-      // for SLIDES output". SLIDES has its own studio pipeline; the generic
-      // outputs pipeline has no SLIDES postprocess/isContentEmpty case.
-      if (normalizedType === 'SLIDES') {
-        return sendError(set, ErrorCode.INVALID_REQUEST, 'Use slides endpoints for SLIDES output');
-      }
-
-      // c38 gap fix: sourceIds is required when chunkIds is not provided (v1 api.py:292-293)
-      const resolvedSourceIds = sourceIds?.length ? sourceIds : undefined;
-      const resolvedChunkIds = chunkIds?.length ? chunkIds : undefined;
-      if (!resolvedChunkIds?.length && !resolvedSourceIds?.length) {
-        return sendError(
-          set,
-          ErrorCode.INVALID_REQUEST,
-          'sourceIds must not be empty (or provide chunkIds)',
-        );
-      }
-
-      // Resolve model (config default or explicit modelId override)
-      const modelConfig = modelId ? getModelById(modelId) : getDefaultChatModel();
-      // c42: granular error mapping (v1 api.py:309-361) — typed exceptions, not string matching
-      if (!modelConfig) {
-        return sendError(set, ErrorCode.MODEL_UNAVAILABLE, 'No chat model configured');
-      }
-
-      let model;
-      try {
-        model = withRetry(await resolveModel(modelConfig));
-      } catch (error) {
-        // Model resolution failure → 503 (v1 ModelConfigurationError)
-        if (error instanceof NoSuchModelError) {
-          return sendError(set, ErrorCode.MODEL_UNAVAILABLE, 'Model not available');
-        }
-        throw error;
-      }
-
-      let result;
-      try {
-        result = await runOutputPipeline({
-          model,
-          notebookId,
-          type: normalizedType as ToolOutputType,
-          chunkIds: resolvedChunkIds,
-          sourceIds: resolvedSourceIds,
-          prompt: promptRaw ?? undefined,
-          preference: preference === 'speed' ? 'speed' : 'quality',
-          topK: topK ?? undefined,
-          minScore: minScore ?? undefined,
-          modelId: modelId ?? undefined,
-          abortSignal: request.signal,
-        });
-      } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          set.status = 499;
-          return { detail: 'Client cancelled' };
-        }
-        const msg = error instanceof Error ? error.message : String(error);
-        // Typed error mapping (v1 api.py:309-361)
-        if (error instanceof TypeValidationError || error instanceof NoObjectGeneratedError) {
-          return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, msg);
-        }
-        if (error instanceof NoSuchModelError || error instanceof APICallError) {
-          return sendError(set, ErrorCode.MODEL_ERROR, msg);
-        }
-        if (msg.includes('retrieval')) {
-          return sendError(set, ErrorCode.INVALID_REQUEST, msg);
-        }
-        return sendError(set, ErrorCode.INTERNAL_ERROR, msg);
-      }
-
-      // c42: return v1 OutputRead contract (snake_case) instead of PipelineResult
-      const row = db().select().from(outputs).where(eq(outputs.id, result.outputId)).get();
-      set.status = 201;
-      return serializeOutput(row!);
-    },
+    async ({ body, set, request }) => handleGenerateOutput(body.notebookId, body, set, request),
     { body: OutputGenerateRequestSchema },
   )
-
-  // List outputs for a notebook
   .get(
     '/outputs',
-    ({ query }) => {
-      const notebookId = query.notebookId;
-      const offset = query.offset ?? 0;
-      const limit = query.limit ?? 20;
-
-      const total =
-        db().select({ n: count() }).from(outputs).where(eq(outputs.notebookId, notebookId)).get()
-          ?.n ?? 0;
-
-      const rows = db()
-        .select()
-        .from(outputs)
-        .where(eq(outputs.notebookId, notebookId))
-        .orderBy(desc(outputs.createdAt))
-        .limit(limit)
-        .offset(offset)
-        .all();
-
-      return {
-        items: rows.map(serializeOutput),
-        total,
-        offset,
-        limit,
-      };
-    },
+    ({ query }) => handleListOutputs(query.notebookId, query.offset ?? 0, query.limit ?? 20),
     { query: OutputsListQuerySchema, response: OutputsPageSchema },
   )
-
-  // Get a single output — c67: notebookId required
   .get(
     '/outputs/:id',
     ({ params, query }) => {
       const id = requirePositiveIntId(params.id, 'output id');
-      const row = requireOutputInNotebook(id, query.notebookId);
-      return serializeOutput(row);
+      return handleGetOutput(id, query.notebookId);
     },
     { query: NotebookIdQuerySchema },
   )
-
-  // Delete output — c67: notebookId required
   .delete(
     '/outputs/:id',
     ({ params, query, set }) => {
       const id = requirePositiveIntId(params.id, 'output id');
-      requireOutputInNotebook(id, query.notebookId);
-      db().delete(outputs).where(eq(outputs.id, id)).run();
-      set.status = 204;
-      return '';
+      return handleDeleteOutput(id, query.notebookId, set);
     },
     { query: NotebookIdQuerySchema },
   )
-
-  // Export output as markdown or json — c67: notebookId required
   .get(
     '/outputs/:id/export',
     ({ params, query }) => {
       const id = requirePositiveIntId(params.id, 'output id');
-      const format = query.format;
-      const row = requireOutputInNotebook(id, query.notebookId);
-
-      const exportedAt = new Date().toISOString();
-
-      // P1-6: collect only the citations actually referenced in the content tree
-      // (v1 _collect_output_citations, api.py:124-156). pipeline.mapCitationsIntoContent
-      // already resolved numeric indices into full Citation dicts embedded on
-      // leaf nodes, so we walk the tree and dedup by chunk_id (first-seen order).
-      // This replaces the prior `row.chunkIds` join which listed ALL retrieved
-      // chunks (the superset), not just the cited ones.
-      const citations = collectCitedCitations(row.content as Record<string, unknown> | null);
-      const sourceIds = [...new Set(citations.map((c) => c.sourceId))];
-      const sourceRows = sourceIds.length
-        ? db().select().from(sources).where(inArray(sources.id, sourceIds)).all()
-        : [];
-
-      if (format === 'json') {
-        // c42: full citation fields + correct source metadata (v1 OutputExportJson)
-        return {
-          notebookId: row.notebookId,
-          outputId: row.id,
-          outputType: row.type,
-          prompt: row.prompt,
-          content: row.content,
-          citations,
-          sources: sourceRows.map((s) => ({
-            sourceId: s.id,
-            sourceName: s.filename,
-            mimeType: s.mimeType,
-            parserType: s.parserType,
-          })),
-          exportedAt,
-        };
-      }
-
-      // Markdown format — type-aware rendering (v1 _extract_text_from_output)
-      // + Citations and Sources sections (v1 api.py:441-476). Citation line
-      // format aligns with v1 api.py:452-461:
-      //   [N] source_name · chunk N[ · page N][ · para N]
-      //   > snippet
-      const bodyMarkdown = renderOutputToMarkdown(
-        row.type,
-        row.content as Record<string, unknown> | null,
-        row.prompt,
-      );
-      const citationLines = citations.map((c, i) => {
-        const parts = [`[${i + 1}] ${c.sourceName}`, `chunk ${c.chunkIndex}`];
-        if (c.pageNumber !== null && c.pageNumber !== undefined) parts.push(`page ${c.pageNumber}`);
-        if (c.paragraphIndex !== null && c.paragraphIndex !== undefined)
-          parts.push(`para ${c.paragraphIndex}`);
-        const line = parts.join(' · ');
-        const snippet = (c.snippet ?? '').trim();
-        return snippet ? `${line}\n> ${snippet}` : line;
-      });
-      const markdown = [
-        bodyMarkdown,
-        '',
-        '## Citations',
-        citationLines.length ? citationLines.join('\n\n') : '无引用',
-        '',
-        '## Sources',
-        sourceRows.map((s) => `- ${s.filename} (${s.status})`).join('\n') || '无来源',
-      ].join('\n');
-
-      return new Response(markdown, {
-        headers: {
-          'Content-Type': 'text/markdown; charset=utf-8',
-          'Content-Disposition': `attachment; filename="output-${row.id}-${row.type}.md"`,
-        },
-      });
+      return handleExportOutput(id, query.notebookId, query.format);
     },
     { query: OutputExportQuerySchema },
   )
-
-  // Convert output to source — type-aware markdown rendering + chunking
-  // (v1 api.py:515-739: _extract_text_from_output + _split_text_to_chunks)
-  // c67: notebookId required
   .post(
     '/outputs/:id/convert-to-source',
     async ({ params, query, set }) => {
       const id = requirePositiveIntId(params.id, 'output id');
-      const row = requireOutputInNotebook(id, query.notebookId);
-
-      // Render output content to type-aware markdown (not raw JSON)
-      const markdown = renderOutputToMarkdown(
-        row.type,
-        row.content as Record<string, unknown> | null,
-        row.prompt,
-      );
-
-      // Split into chunks for embedding (v1: 500/50 paragraph+sentence aware)
-      const chunkTexts = splitTextToChunks(markdown, 500, 50);
-      const filename = `output-${row.id}-${row.type}.md`;
-
-      const sourceRow = db()
-        .insert(sources)
-        .values({
-          notebookId: row.notebookId,
-          filename,
-          mimeType: 'text/markdown',
-          parserType: 'text',
-          status: 'processing',
-          metadata: { type: row.type, source: 'output_conversion' },
-        })
-        .returning()
-        .get();
-
-      // Create chunks
-      let offset = 0;
-      for (let i = 0; i < chunkTexts.length; i++) {
-        const text = chunkTexts[i];
-        db()
-          .insert(chunks)
-          .values({
-            sourceId: sourceRow.id,
-            chunkIndex: i,
-            text,
-            startOffset: offset,
-            endOffset: offset + text.length,
-          })
-          .run();
-        // +2 for paragraph separator
-        offset += text.length + 2;
-      }
-
-      // Embed the chunks so they're discoverable via semantic search.
-      try {
-        const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
-        const strategy = new EmbedStrategy();
-        await strategy.indexSource(sourceRow.id, sourceRow.notebookId);
-        db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)).run();
-        bumpSourcesEpoch(sourceRow.notebookId);
-      } catch {
-        db().update(sources).set({ status: 'failed' }).where(eq(sources.id, sourceRow.id)).run();
-        bumpSourcesEpoch(sourceRow.notebookId);
-      }
-
-      set.status = 201;
-      return {
-        sourceId: sourceRow.id,
-        filename: sourceRow.filename,
-        chunkCount: chunkTexts.length,
-      };
+      return handleConvertOutputToSource(id, query.notebookId, set);
     },
     { query: NotebookIdQuerySchema },
   );

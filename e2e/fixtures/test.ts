@@ -1,6 +1,6 @@
 import { test as base, expect } from '@playwright/test';
 
-import { TestIds } from '../../apps/web/src/shared/testids';
+import { TestIds } from './testids';
 
 type Fixtures = {
   ids: typeof TestIds;

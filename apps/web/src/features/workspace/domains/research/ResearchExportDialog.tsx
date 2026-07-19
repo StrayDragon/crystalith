@@ -24,7 +24,7 @@ type ExportTarget = 'source' | 'note';
 
 /**
  * Export research final report to a notebook source or Studio note.
- * Server contract (`POST /v2/research/:id/export`) accepts `exportType`
+ * Server contract (`POST /v2/notebooks/:nid/research/:id/export`) accepts `exportType`
  * and always exports the full `finalReport` — UI matches that (no fake filters).
  */
 function ResearchExportDialog({ session, onClose, onExportComplete }: ResearchExportDialogProps) {
@@ -44,8 +44,9 @@ function ResearchExportDialog({ session, onClose, onExportComplete }: ResearchEx
     setIsExporting(true);
     try {
       const { data: result, error: exportErr } = await api.v2
+        .notebooks({ nid: session.notebookId })
         .research({ id: session.id })
-        .export.post({ exportType: exportTarget }, { query: { notebookId: session.notebookId } });
+        .export.post({ exportType: exportTarget });
       if (exportErr)
         throw new Error(
           typeof exportErr === 'string'
@@ -71,7 +72,7 @@ function ResearchExportDialog({ session, onClose, onExportComplete }: ResearchEx
     } finally {
       setIsExporting(false);
     }
-  }, [exportTarget, hasReport, session.id, onExportComplete, onClose]);
+  }, [exportTarget, hasReport, session.id, session.notebookId, onExportComplete, onClose]);
 
   return (
     <div

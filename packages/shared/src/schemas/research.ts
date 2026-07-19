@@ -51,14 +51,25 @@ export const ResearchSessionSchema = z.object({
 });
 export type ResearchSession = z.infer<typeof ResearchSessionSchema>;
 
-export const ResearchSessionCreateSchema = z.object({
-  notebookId: IdSchema,
+export const ResearchSessionCreateBodySchema = z.object({
   /** Canonical topic; some clients send `goal` instead. */
   topic: z.string().min(1).optional(),
   goal: z.string().min(1).optional(),
   maxIterations: z.number().int().positive().max(10).optional(),
 });
+export type ResearchSessionCreateBody = z.infer<typeof ResearchSessionCreateBodySchema>;
+
+/** Flat alias POST /v2/research — notebookId required. */
+export const ResearchSessionCreateSchema = ResearchSessionCreateBodySchema.extend({
+  notebookId: IdSchema,
+});
 export type ResearchSessionCreate = z.infer<typeof ResearchSessionCreateSchema>;
+
+/** Nested POST /v2/notebooks/:nid/research — optional body notebookId must match path. */
+export const ResearchSessionCreateNestedSchema = ResearchSessionCreateBodySchema.extend({
+  notebookId: IdSchema.optional(),
+});
+export type ResearchSessionCreateNested = z.infer<typeof ResearchSessionCreateNestedSchema>;
 
 export const ResearchStepSchema = z.object({
   id: IdSchema,

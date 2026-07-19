@@ -164,6 +164,9 @@ export const OptionalTimestampSchema = IsoTimestampSchema.nullable().optional();
  * Used as `?notebookId=` on flat `/v2/.../:id` routes (sources, outputs,
  * research, studio slides, tasks, citations). Missing → validation reject;
  * mismatch → 404 NOT_FOUND (no cross-notebook leak).
+ *
+ * Nested canonical routes (c69) use path `:nid` instead; see
+ * `OptionalNotebookIdBodySchema` for optional body carry-over.
  */
 export const NotebookIdQuerySchema = z
   .object({
@@ -175,3 +178,12 @@ export const NotebookIdQuerySchema = z
   })
   .openapi({ description: '笔记本归属查询参数' });
 export type NotebookIdQuery = z.infer<typeof NotebookIdQuerySchema>;
+
+/**
+ * Optional body `notebookId` on nested `/v2/notebooks/:nid/...` routes (c69).
+ * Path `:nid` is SSOT; if body carries notebookId it MUST equal `:nid` (else 400).
+ */
+export const OptionalNotebookIdBodySchema = z.object({
+  notebookId: IdSchema.optional(),
+});
+export type OptionalNotebookIdBody = z.infer<typeof OptionalNotebookIdBodySchema>;

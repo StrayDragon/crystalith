@@ -135,14 +135,20 @@ describe('c68 paginated list envelope', () => {
     expect(page.items).toHaveLength(2);
   });
 
-  it('GET outputs returns PaginatedSchema', async () => {
+  it('GET nested outputs returns PaginatedSchema', async () => {
+    const { status, body } = await get(`/v2/notebooks/${notebookId}/outputs?offset=0&limit=2`);
+    expect(status).toBe(200);
+    expectPage(body, { maxItems: 2, minTotal: 5, offset: 0, limit: 2 });
+  });
+
+  it('GET flat outputs alias still returns PaginatedSchema (c69 deprecated)', async () => {
     const { status, body } = await get(`/v2/outputs?notebookId=${notebookId}&offset=0&limit=2`);
     expect(status).toBe(200);
     expectPage(body, { maxItems: 2, minTotal: 5, offset: 0, limit: 2 });
   });
 
-  it('GET research returns PaginatedSchema scoped to notebook', async () => {
-    const { status, body } = await get(`/v2/research?notebookId=${notebookId}&offset=0&limit=2`);
+  it('GET nested research returns PaginatedSchema scoped to notebook', async () => {
+    const { status, body } = await get(`/v2/notebooks/${notebookId}/research?offset=0&limit=2`);
     expect(status).toBe(200);
     const page = expectPage(body, { maxItems: 2, minTotal: 5, offset: 0, limit: 2 });
     expect(
@@ -150,9 +156,9 @@ describe('c68 paginated list envelope', () => {
     ).toBe(true);
   });
 
-  it('GET studio slides returns PaginatedSchema', async () => {
+  it('GET nested studio slides returns PaginatedSchema', async () => {
     const { status, body } = await get(
-      `/v2/studio/slides?notebookId=${notebookId}&offset=0&limit=2`,
+      `/v2/notebooks/${notebookId}/studio/slides?offset=0&limit=2`,
     );
     expect(status).toBe(200);
     expectPage(body, { maxItems: 2, minTotal: 5, offset: 0, limit: 2 });

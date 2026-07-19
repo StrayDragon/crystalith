@@ -15,25 +15,43 @@ import { CitationSchema, IdSchema, IsoTimestampSchema } from './common.js';
 export const RefineFormatSchema = z.enum(['paragraph', 'bullets', 'structured']);
 export type RefineFormat = z.infer<typeof RefineFormatSchema>;
 
-export const RefineRequestSchema = z.object({
-  notebookId: IdSchema,
+export const RefineBodySchema = z.object({
   prompt: z.string().min(1),
   format: RefineFormatSchema.default('paragraph'),
   sourceIds: z.array(IdSchema).optional(),
   topK: z.number().int().min(1).max(20).default(5),
   minScore: z.number().min(0).max(1).default(0.2),
 });
+export type RefineBody = z.infer<typeof RefineBodySchema>;
+
+export const RefineRequestSchema = RefineBodySchema.extend({
+  notebookId: IdSchema,
+});
 export type RefineRequest = z.infer<typeof RefineRequestSchema>;
 
-export const RefineBatchRequestSchema = z.object({
-  notebookId: IdSchema,
+export const RefineNestedRequestSchema = RefineBodySchema.extend({
+  notebookId: IdSchema.optional(),
+});
+export type RefineNestedRequest = z.infer<typeof RefineNestedRequestSchema>;
+
+export const RefineBatchBodySchema = z.object({
   prompt: z.string().min(1),
   formats: z.array(RefineFormatSchema).optional(),
   sourceIds: z.array(IdSchema).optional(),
   topK: z.number().int().min(1).max(20).default(5),
   minScore: z.number().min(0).max(1).default(0.2),
 });
+export type RefineBatchBody = z.infer<typeof RefineBatchBodySchema>;
+
+export const RefineBatchRequestSchema = RefineBatchBodySchema.extend({
+  notebookId: IdSchema,
+});
 export type RefineBatchRequest = z.infer<typeof RefineBatchRequestSchema>;
+
+export const RefineBatchNestedRequestSchema = RefineBatchBodySchema.extend({
+  notebookId: IdSchema.optional(),
+});
+export type RefineBatchNestedRequest = z.infer<typeof RefineBatchNestedRequestSchema>;
 
 // ---------------------------------------------------------------------------
 // Response shapes (v1 RefineResponse / StructuredRefine / RefineBatchResponse)

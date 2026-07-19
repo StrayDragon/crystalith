@@ -37,7 +37,7 @@ function openDownloadUrl(url: string) {
 
 /**
  * Download QA export as Markdown.
- * v2 equivalent: GET /v2/qa/export?sessionId=...&messageId=...&format=markdown
+ * GET /v2/notebooks/:nid/qa/export?sessionId=...&messageId=...&format=markdown
  */
 export function exportQaMarkdownDownload(params: {
   notebookId: number;
@@ -50,8 +50,7 @@ export function exportQaMarkdownDownload(params: {
     query.set('messageId', String(params.messageId));
   }
   query.set('format', 'markdown');
-  // Note: v2 server doesn't have /qa/export yet — fallback to raw download
-  openDownloadUrl(`${BASE_URL}/v2/qa/export?${query.toString()}`);
+  openDownloadUrl(`${BASE_URL}/v2/notebooks/${params.notebookId}/qa/export?${query.toString()}`);
 }
 
 /**
@@ -69,7 +68,7 @@ export async function exportQaJsonDownload(params: {
   if (params.messageId) {
     query.set('messageId', String(params.messageId));
   }
-  const url = `${BASE_URL}/v2/qa/export?${query.toString()}`;
+  const url = `${BASE_URL}/v2/notebooks/${params.notebookId}/qa/export?${query.toString()}`;
   const response = await fetch(url);
   const data = await response.json();
   const { sessionId, messageId } = data as { sessionId: number; messageId: number };
@@ -80,13 +79,14 @@ export async function exportQaJsonDownload(params: {
 
 /**
  * Download Output export as Markdown.
- * v2 equivalent: GET /v2/outputs/:id/export?format=markdown
+ * GET /v2/notebooks/:nid/outputs/:id/export?format=markdown
  */
 export function exportOutputMarkdownDownload(params: { notebookId: number; outputId: number }) {
   const query = new URLSearchParams();
   query.set('format', 'markdown');
-  query.set('notebookId', String(params.notebookId));
-  openDownloadUrl(`${BASE_URL}/v2/outputs/${params.outputId}/export?${query.toString()}`);
+  openDownloadUrl(
+    `${BASE_URL}/v2/notebooks/${params.notebookId}/outputs/${params.outputId}/export?${query.toString()}`,
+  );
 }
 
 /**
@@ -95,9 +95,8 @@ export function exportOutputMarkdownDownload(params: { notebookId: number; outpu
 export async function exportOutputJsonDownload(params: { notebookId: number; outputId: number }) {
   const query = new URLSearchParams({
     format: 'json',
-    notebookId: String(params.notebookId),
   });
-  const url = `${BASE_URL}/v2/outputs/${params.outputId}/export?${query.toString()}`;
+  const url = `${BASE_URL}/v2/notebooks/${params.notebookId}/outputs/${params.outputId}/export?${query.toString()}`;
   const response = await fetch(url);
   const data = await response.json();
   const { outputId, outputType } = data as { outputId: number; outputType: string };

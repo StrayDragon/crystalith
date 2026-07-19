@@ -9,7 +9,9 @@ c67 用必填 `?notebookId=` 硬化了归属，但 outputs / research / qa / ref
 
 ## What Changes
 
-- **Canonical 嵌套路径**：notebook-scoped 资源统一为 `/v2/notebooks/:nid/<domain>/...`（outputs、research、qa、refine、studio/slides、sources/:sid 单资源、sources/upload 等）。
+- **Canonical 嵌套路径**：notebook-scoped 资源统一为 `/v2/notebooks/:nid/<domain>/...`（outputs、research、qa[+stream/export]、refine、studio/slides、sources/:sid 单资源、sources/upload 等）。
+- **Registry 保持扁平**：`/outputs/types`、`/qa/presets`、`/refine/modes`、`/sources/parsers` 不嵌套。
+- **归属 SSOT**：嵌套以 path `:nid` 为准；body `notebookId` 非必填，若携带必须等于 `:nid`（否则 400）。扁平 alias 仍强制 c67 query/body。
 - **Deprecation alias**：保留现有扁平路径 **1 个 release**（或明确窗口），响应/文档标注 Deprecation；新前端只走嵌套。
 - **Eden/web 迁移**：封装或直接改 `api.v2.notebooks({ nid }).…` 调用树。
 - **BREAKING**：alias 移除后扁平路径 410/404；本 change 内前端必须切完。

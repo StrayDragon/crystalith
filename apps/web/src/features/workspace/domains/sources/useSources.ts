@@ -270,8 +270,9 @@ export function useSources() {
           );
           try {
             // eslint-disable-next-line no-await-in-loop -- Upload queue + dedup confirmation requires serial execution.
-            await api.v2.sources.upload
-              .post({ file } as any, { query: { notebookId: activeNotebookId } } as any)
+            await api.v2
+              .notebooks({ nid: activeNotebookId })
+              .sources.upload.post({ file } as any, {} as any)
               .then((r) => {
                 // eslint-disable-next-line typescript/no-base-to-string
                 if (r.error) throw new Error(String(r.error));
@@ -297,11 +298,9 @@ export function useSources() {
               const dedupAction = reuse ? 'reuse' : 'create_new';
               try {
                 // eslint-disable-next-line no-await-in-loop -- Keep per-file UI updates and dedup flow serial.
-                await api.v2.sources.upload
-                  .post(
-                    { file } as any,
-                    { query: { notebookId: activeNotebookId, dedupAction } } as any,
-                  )
+                await api.v2
+                  .notebooks({ nid: activeNotebookId })
+                  .sources.upload.post({ file } as any, { query: { dedupAction } } as any)
                   .then((r) => {
                     // eslint-disable-next-line typescript/no-base-to-string, eslint/preserve-caught-error
                     if (r.error) throw new Error(String(r.error));
@@ -506,8 +505,8 @@ export function useSources() {
       }
       setRemoveState('loading');
       try {
-        await (api.v2.sources({ id: sourceId }) as any)
-          .delete(null, { query: { notebookId: activeNotebookId } })
+        await (api.v2.notebooks({ nid: activeNotebookId }).sources({ sid: sourceId }) as any)
+          .delete()
           .then((r: any) => {
             if (r.error) throw r.error;
             return r.data as any;
@@ -869,10 +868,9 @@ export function useSources() {
         return;
       }
       try {
-        const { error: reErr } = (await (api.v2.sources({ id: sourceId }) as any)['re-embed'].post(
-          null,
-          { query: { notebookId: activeNotebookId } },
-        )) as any;
+        const { error: reErr } = (await (
+          api.v2.notebooks({ nid: activeNotebookId }).sources({ sid: sourceId }) as any
+        )['re-embed'].post()) as any;
         if (reErr) throw reErr;
         toast.success('已重新嵌入来源');
         await mutate();

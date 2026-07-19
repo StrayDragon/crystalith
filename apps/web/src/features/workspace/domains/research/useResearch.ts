@@ -172,8 +172,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     setIsLoading(true);
     setError('');
     try {
-      const { data, error: fetchErr } = await api.v2.research.get({
-        query: { notebookId, offset: 0, limit: 200 },
+      const { data, error: fetchErr } = await api.v2.notebooks({ nid: notebookId }).research.get({
+        query: { offset: 0, limit: 200 },
       });
       if (fetchErr)
         throw new Error(
@@ -193,9 +193,10 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setIsLoading(true);
       setError('');
       try {
-        const { data, error: fetchErr } = await api.v2.research({ id: researchId }).get({
-          query: { notebookId },
-        });
+        const { data, error: fetchErr } = await api.v2
+          .notebooks({ nid: notebookId })
+          .research({ id: researchId })
+          .get();
         if (fetchErr)
           throw new Error(
             typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
@@ -218,9 +219,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setIsLoading(true);
       setError('');
       try {
-        const { data, error: postErr } = await api.v2.research.post({
+        const { data, error: postErr } = await api.v2.notebooks({ nid: notebookId }).research.post({
           topic,
-          notebookId: notebookId,
           maxIterations: maxIterations,
         });
         if (postErr)
@@ -259,9 +259,10 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setIsLoading(true);
       setError('');
       try {
-        const { error: deleteErr } = await api.v2.research({ id: researchId }).delete(null, {
-          query: { notebookId },
-        });
+        const { error: deleteErr } = await api.v2
+          .notebooks({ nid: notebookId })
+          .research({ id: researchId })
+          .delete();
         if (deleteErr)
           throw new Error(
             typeof deleteErr === 'string'
@@ -289,9 +290,10 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setError('');
       try {
         // startResearch in v2 is implicit with POST /research
-        const { data, error: fetchErr } = await api.v2.research({ id: researchId }).get({
-          query: { notebookId },
-        });
+        const { data, error: fetchErr } = await api.v2
+          .notebooks({ nid: notebookId })
+          .research({ id: researchId })
+          .get();
         if (fetchErr)
           throw new Error(
             typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
@@ -310,8 +312,9 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setError('');
       try {
         const { data, error: postErr } = await api.v2
+          .notebooks({ nid: notebookId })
           .research({ id: researchId })
-          .approve.post(undefined, { query: { notebookId } });
+          .approve.post();
         if (postErr)
           throw new Error(
             typeof postErr === 'string' ? postErr : typeof postErr === 'string' ? postErr : '',
@@ -332,8 +335,9 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setError('');
       try {
         const { data, error: postErr } = await api.v2
+          .notebooks({ nid: notebookId })
           .research({ id: researchId })
-          .skip.post(undefined, { query: { notebookId } });
+          .skip.post();
         if (postErr)
           throw new Error(
             typeof postErr === 'string' ? postErr : typeof postErr === 'string' ? postErr : '',
@@ -354,8 +358,9 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setError('');
       try {
         const { error: postErr } = await api.v2
+          .notebooks({ nid: notebookId })
           .research({ id: researchId })
-          .finish.post(undefined, { query: { notebookId } });
+          .finish.post();
         if (postErr)
           throw new Error(
             typeof postErr === 'string' ? postErr : typeof postErr === 'string' ? postErr : '',
@@ -374,8 +379,9 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setError('');
       try {
         const { data, error: postErr } = await api.v2
+          .notebooks({ nid: notebookId })
           .research({ id: researchId })
-          .cancel.post(undefined, { query: { notebookId } });
+          .cancel.post();
         if (postErr)
           throw new Error(
             typeof postErr === 'string' ? postErr : typeof postErr === 'string' ? postErr : '',
@@ -405,8 +411,9 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setError('');
       try {
         const { data, error: postErr } = await api.v2
+          .notebooks({ nid: notebookId })
           .research({ id: researchId })
-          .resume.post(undefined, { query: { notebookId } });
+          .resume.post();
         if (postErr)
           throw new Error(
             typeof postErr === 'string' ? postErr : typeof postErr === 'string' ? postErr : '',
@@ -527,7 +534,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       const processStream = async () => {
         try {
           const stream = streamRequest(
-            `/v2/research/${researchId}/stream?notebookId=${notebookId}`,
+            `/v2/notebooks/${notebookId}/research/${researchId}/stream`,
             {
               signal: abortController.signal,
             },

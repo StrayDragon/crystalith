@@ -155,9 +155,10 @@ test('handleUpload supports multiple files and exposes queue', async () => {
   let uploaded = 0;
   const notebookIds: string[] = [];
   server.use(
-    http.post('*/v2/sources/upload', async ({ request }) => {
+    http.post('*/v2/notebooks/:notebookId/sources/upload', async ({ request }) => {
       uploaded += 1;
-      notebookIds.push(new URL(request.url).searchParams.get('notebookId') ?? '');
+      const match = new URL(request.url).pathname.match(/\/notebooks\/(\d+)\/sources\/upload/);
+      notebookIds.push(match?.[1] ?? '');
       return HttpResponse.json({
         sourceId: uploaded,
         chunkCount: 1,

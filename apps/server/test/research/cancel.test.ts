@@ -36,6 +36,7 @@ import {
   getOrm,
   seedChatModel,
 } from '../helpers/integration.ts';
+import { nestResearchPath } from '../helpers/nest-research-path.ts';
 
 const BASE = 'http://test.local';
 let app: Elysia;
@@ -77,10 +78,7 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 function withNotebookScope(path: string): string {
-  // Create session: notebookId is in body, not query
-  if (path === '/v2/research' || path.startsWith('/v2/research?')) return path;
-  const sep = path.includes('?') ? '&' : '?';
-  return `${path}${sep}notebookId=${notebookId}`;
+  return nestResearchPath(path, notebookId);
 }
 
 async function post(path: string, body?: unknown): Promise<{ status: number; body: any }> {
