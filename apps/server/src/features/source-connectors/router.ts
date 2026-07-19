@@ -1,6 +1,14 @@
 // Source connectors router — /v2/notebooks/:nid/source-connectors, bindings, snapshot, sync.
 //
 // Mirrors v1 `features/source_connectors/api.py`.
+import {
+  ImportScopeSchema,
+  SourceConnectorBindingCreateRequestSchema,
+  SyncCheckApplyRequestSchema,
+  type ImportScope,
+  type Snapshot,
+  type SyncCheckResult,
+} from '@crystalith/shared';
 import { eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
@@ -22,7 +30,6 @@ import {
   normalizeImportScope,
   serializeBinding,
 } from './sync.ts';
-import type { ImportScope, Snapshot, SyncCheckResult } from './types.ts';
 
 // ---------------------------------------------------------------------------
 // OpenAPI
@@ -254,45 +261,45 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
     return { connectors };
   })
 
-  .post('/notebooks/:nid/source-connectors/:connectorId/bindings', ({ params, body, set }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    requireNotebook(nid);
+  .post(
+    '/notebooks/:nid/source-connectors/:connectorId/bindings',
+    ({ params, body, set }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      requireNotebook(nid);
 
-    const connectorId = String(params.connectorId ?? '').trim();
-    const connector = getConnectorOr404(connectorId);
+      const connectorId = String(params.connectorId ?? '').trim();
+      const connector = getConnectorOr404(connectorId);
 
-    const { connectionConfig } = (body ?? {}) as {
-      connectionConfig?: Record<string, unknown>;
-    };
-    const config = normalizeConnectionConfig(connectorId, connectionConfig ?? {});
+      const config = normalizeConnectionConfig(connectorId, body.connectionConfig);
 
-    // c53: validate connection_config against the connector's JSON schema
-    // (v1 api.py:77-98,199-200 Draft7Validator). Malformed → 400.
-    const validationError = validateConnectionConfig(config, connector.connectionConfigSchema);
-    if (validationError) {
-      return new Response(
-        JSON.stringify({ detail: validationError, errorCode: 'INVALID_CONFIG' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        },
-      );
-    }
+      // c53: validate connection_config against the connector's JSON schema
+      // (v1 api.py:77-98,199-200 Draft7Validator). Malformed → 400.
+      const validationError = validateConnectionConfig(config, connector.connectionConfigSchema);
+      if (validationError) {
+        return new Response(
+          JSON.stringify({ detail: validationError, errorCode: 'INVALID_CONFIG' }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      }
 
-    const binding = db()
-      .insert(sourceConnectorBindings)
-      .values({
-        notebookId: nid,
-        connectorId,
-        connectionConfig: config,
-      })
-      .returning()
-      .get();
+      const binding = db()
+        .insert(sourceConnectorBindings)
+        .values({
+          notebookId: nid,
+          connectorId,
+          connectionConfig: config,
+        })
+        .returning()
+        .get();
 
-    set.status = 201;
-    return serializeBinding(binding);
-  })
-
+      set.status = 201;
+      return serializeBinding(binding);
+    },
+    { body: SourceConnectorBindingCreateRequestSchema },
+  )
   .post(
     '/notebooks/:nid/source-connector-bindings/:bindingId/snapshot',
     async ({ params, set }) => {
@@ -331,15 +338,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const bindingId = requirePositiveIntId(params.bindingId, 'binding id');
       const binding = getBindingOr404(nid, bindingId);
-      const payload = (body ?? {}) as { syncCheckId?: string };
-      const syncCheckId = payload.syncCheckId;
-
-      if (!syncCheckId) {
-        apiError(set, 400, {
-          errorCode: 'SYNC_CHECK_ID_REQUIRED',
-          message: 'syncCheckId is required',
-        });
-      }
+      const syncCheckId = body.syncCheckId;
 
       try {
         return await applySyncCheckToBinding(nid, binding, syncCheckId);
@@ -361,6 +360,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
         throw error;
       }
     },
+    { body: SyncCheckApplyRequestSchema },
   )
 
   .post(
@@ -371,7 +371,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       const binding = getBindingOr404(nid, bindingId);
       getConnectorOr404(binding.connectorId);
 
-      const scope = (body ?? {}) as ImportScope;
+      const scope = body;
 
       try {
         normalizeImportScope(scope);
@@ -402,8 +402,8 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
 
       return applyImportScopeToBinding(nid, binding, scope, currentSnapshot);
     },
+    { body: ImportScopeSchema },
   )
-
   .post('/source-connector-bindings/:id/sync', async ({ params }) => {
     const bindingId = requirePositiveIntId(params.id, 'binding id');
     const binding = db()

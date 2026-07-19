@@ -125,4 +125,21 @@ describe('domain schemas', () => {
       }).success,
     ).toBe(false);
   });
+
+  it('source connector write requests validate shapes', () => {
+    expect(S.SourceConnectorBindingCreateRequestSchema.parse({}).connectionConfig).toEqual({});
+    expect(
+      S.SourceConnectorBindingCreateRequestSchema.parse({
+        connectionConfig: { vaultPath: '/tmp/vault' },
+      }).connectionConfig,
+    ).toEqual({ vaultPath: '/tmp/vault' });
+    expect(S.SyncCheckApplyRequestSchema.safeParse({}).success).toBe(false);
+    expect(S.SyncCheckApplyRequestSchema.parse({ syncCheckId: 'abc' }).syncCheckId).toBe('abc');
+    expect(
+      S.ImportScopeSchema.parse({
+        includeDirectories: ['notes'],
+        includeFiles: null,
+      }).includeDirectories,
+    ).toEqual(['notes']);
+  });
 });
