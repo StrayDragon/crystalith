@@ -138,6 +138,9 @@ Elysia 1.4+ 原生消费 Zod v4。**禁止**用「只有 TS interface、无路�
   backend (typesafe-i18n / i18next / Lingui) requires only modifying `i18n.ts`.
 - **Zod → JSON Schema**: `.describe(desc(...))` populates `config/app.schema.gen.json`.
 - **Zod → OpenAPI**: `.openapi({ description: desc(...) })` populates Scalar UI.
+  Shared schemas load `packages/shared/src/schemas/zod-extend.ts` first so
+  `.openapi()` is available at definition time (server `openapi.ts` also extends).
+  Route-level examples remain via `registerApiDoc`.
   Config-level schemas (config.ts) MAY use `.describe()` alone;
   API-level schemas (packages/shared/src/schemas/) SHOULD use
   `.openapi({ description: desc(...), example: ... })` for richer docs.
