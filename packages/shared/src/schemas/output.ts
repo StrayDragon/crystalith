@@ -154,6 +154,7 @@ export const SlidesOutlineSchema = z.object({
     .nullable()
     .optional(),
 });
+export type SlidesOutline = z.infer<typeof SlidesOutlineSchema>;
 
 export const SlidesContentSchema = OutputContentBaseSchema.extend({
   slideId: z.number().int().nullable().optional(),

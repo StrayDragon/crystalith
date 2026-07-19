@@ -6,7 +6,7 @@
 > **批次纪律**：每个合理批次验收通过后 **commit**；有问题随时停并报告。
 
 **来源**：Wave A（架构 / 流程门禁 / Spec 漂移）只读体检。  
-**最后更新**：2026-07-19（P1.2 RenderDescriptor SSOT → 下一波 P1.3）
+**最后更新**：2026-07-19（P1.3 Studio outline ✅）
 
 ---
 
@@ -56,15 +56,15 @@ shared Zod（或路由挂载的 schema）
 
 ## 1. 总进度一览
 
-| Phase | 主题                                     | 状态                               |
-| ----- | ---------------------------------------- | ---------------------------------- |
-| P0    | 门禁解阻塞（能跑 `just lint`）           | ✅                                 |
-| P1    | Zod / Eden SSOT 收敛（核心）             | 🔄 P1.2/1.4/1.5 ✅；P1.3/1.6+ 待办 |
-| P2    | Zod 使用面写入 AGENTS.md + 文档对齐      | ✅                                 |
-| P3    | 门禁真相（qa 组成、假绿项）              | ⬜                                 |
-| P4    | Cleanup A（死代码 / 死配置，无行为变更） | ✅ P4.1–4.5（P4.6 可选延后）       |
-| P5    | Spec 卫生（手改 toon，**不开 SDD**）     | ⬜                                 |
-| P6    | 可选：瘦 CI / SECURITY / 余债            | ⬜                                 |
+| Phase | 主题                                     | 状态                         |
+| ----- | ---------------------------------------- | ---------------------------- |
+| P0    | 门禁解阻塞（能跑 `just lint`）           | ✅                           |
+| P1    | Zod / Eden SSOT 收敛（核心）             | 🔄 P1.2–1.5 ✅；P1.6+ 待办   |
+| P2    | Zod 使用面写入 AGENTS.md + 文档对齐      | ✅                           |
+| P3    | 门禁真相（qa 组成、假绿项）              | ⬜                           |
+| P4    | Cleanup A（死代码 / 死配置，无行为变更） | ✅ P4.1–4.5（P4.6 可选延后） |
+| P5    | Spec 卫生（手改 toon，**不开 SDD**）     | ⬜                           |
+| P6    | 可选：瘦 CI / SECURITY / 余债            | ⬜                           |
 
 ---
 
@@ -90,8 +90,8 @@ shared Zod（或路由挂载的 schema）
   - [x] shared 补齐 `RenderDescriptor` / `FieldDescriptor` / `FrontendBundle` / `OutputMeta`；`PluginConfig` 对齐 slides config
   - [x] server `generator` + web `types` 去平行接口；`OUTPUT_META` 数据仍留 server
   - [ ]（延后）`OutputContentByType` → shared content schemas；`frontendBundle` 发射；路由 Zod 挂载
-- [ ] **P1.3 Studio outline**（ARCH-10）
-  - [ ] `studio/service.ts` 改用 shared `SlidesOutlineSchema`
+- [x] **P1.3 Studio outline**（ARCH-10）
+  - [x] `studio/service.ts` 改用 shared `SlidesOutlineSchema`
 - [x] **P1.4 Web：Eden 优先迁移**
   - [x] 域：`refine`（`useRefine` 不再依赖 `shared-types`；wire → `unknown` normalize → UI types）
   - [x] 域：`sources`（tag/chunk/extractor/QA → `@crystalith/shared`）
@@ -160,15 +160,16 @@ shared Zod（或路由挂载的 schema）
 
 ## 3. 当前焦点
 
-**正在做**：P1.3 Studio `SlidesOutlineSchema`
+**正在做**：_(P4 → P1.2 → P1.3 本轮序列已完成)_
 
 **已完成批次**：
 
 - P0 / P1.0 / P1.1 / P2 / just qa 基线 / P1.4 / P1.5
 - **P4.1–P4.5** Cleanup A
-- **P1.2** RenderDescriptor / OutputMeta / PluginConfig → `@crystalith/shared`
+- **P1.2** RenderDescriptor / OutputMeta / PluginConfig → shared
+- **P1.3** Studio `SlidesOutlineSchema` → shared
 
-**下一步**：P1.3 → P1.6–1.8 / P3 …
+**下一步**：P1.6–1.8 / P3 门禁真相 / P5 specs …
 
 ---
 
@@ -225,7 +226,7 @@ shared Zod（或路由挂载的 schema）
 | ---------------------------------------- | ------------------------------------------------------------------------ | ------------------------------- |
 | `shared/config.ts`                       | **配置 Zod（必留）**                                                     | P1 不动；属合法席位             |
 | `research/agent.ts`                      | **已对齐** shared `ResearchPlanLlmSchema` / `IterationAnalysisLlmSchema` | ✅ P1.1                         |
-| `studio/service.ts` `SlideOutlineSchema` | 与 shared `SlidesOutlineSchema` 重复                                     | **P1.3**                        |
+| `studio/service.ts` `SlideOutlineSchema` | **已对齐** shared `SlidesOutlineSchema`                                  | ✅ P1.3                         |
 | `ai/tools/*Args`                         | tool 入参，非 HTTP DTO                                                   | 可接受局部；后续若上 API 再提升 |
 | `eval/metrics.ts` `JudgeSchema`          | 评测内部                                                                 | 可接受局部                      |
 
