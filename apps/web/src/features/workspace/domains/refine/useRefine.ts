@@ -83,7 +83,7 @@ function normalizeConfigSchema(schema?: unknown | null): PluginConfigSchema | nu
   return {
     defaults: normalizeSlideGenerationDefaults(
       (s.defaults ?? null) as Record<string, unknown> | null,
-    ),
+    ) as PluginConfigSchema['defaults'],
     quantityOptions: (s.quantityOptions ?? []) as PluginConfigSchema['quantityOptions'],
     difficultyOptions: (s.difficultyOptions ?? []) as PluginConfigSchema['difficultyOptions'],
     audienceOptions: (s.audienceOptions ?? []) as PluginConfigSchema['audienceOptions'],

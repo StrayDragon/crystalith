@@ -97,33 +97,41 @@ export const ThemePresetOptionSchema = z.object({
 });
 export type ThemePresetOption = z.infer<typeof ThemePresetOptionSchema>;
 
+/** Preview descriptor for opening generated slides in an external service. */
+export const PreviewDescriptorSchema = z.object({
+  kind: z.string(),
+  service: z.string().nullable().optional(),
+  url: z.string().nullable().optional(),
+  openInNewTab: z.boolean().nullable().optional(),
+  meta: z.record(z.string(), z.unknown()).default({}),
+});
+export type PreviewDescriptor = z.infer<typeof PreviewDescriptorSchema>;
+
 /**
  * v1 render_types.py PluginConfigSchema — the shape returned by
  * /workspace/tools[].config_schema and /workspace/tools/:id/config for SLIDES.
  * Drives the frontend config UI directly (workspace-api-contract r20).
  */
 export const SlidesConfigSchemaSchema = z.object({
-  defaults: JsonMetadataSchema.default({}),
+  defaults: SlideGenerationConfigSchema.partial().default({}),
   quantityOptions: z.array(ConfigOptionSchema).default([]),
+  difficultyOptions: z.array(ConfigOptionSchema).default([]),
   audienceOptions: z.array(ConfigOptionSchema).default([]),
   structureOptions: z.array(ConfigOptionSchema).default([]),
   toneOptions: z.array(ConfigOptionSchema).default([]),
   languageOptions: z.array(ConfigOptionSchema).default([]),
   densityOptions: z.array(ConfigOptionSchema).default([]),
   themePresetOptions: z.array(ThemePresetOptionSchema).default([]),
+  topicPlaceholder: z.string().default(''),
+  supportsTopic: z.boolean().default(false),
   engine: z.string().nullable().optional(),
-  preview: z
-    .object({
-      kind: z.string(),
-      service: z.string().nullable().optional(),
-      url: z.string().nullable().optional(),
-      openInNewTab: z.boolean().nullable().optional(),
-      meta: z.record(z.string(), z.unknown()).default({}),
-    })
-    .nullable()
-    .optional(),
+  preview: PreviewDescriptorSchema.nullable().optional(),
 });
 export type SlidesConfigSchema = z.infer<typeof SlidesConfigSchemaSchema>;
+
+/** Wire alias — same shape as SlidesConfigSchema (workspace tools naming). */
+export const PluginConfigSchema = SlidesConfigSchemaSchema;
+export type PluginConfig = SlidesConfigSchema;
 
 /** Re-export so consumers can import slide outline shape from one place. */
 export { SlidesOutlineSchema };

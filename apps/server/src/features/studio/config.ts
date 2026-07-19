@@ -233,12 +233,15 @@ export function buildSlidesConfigSchema(): SlidesConfigSchema {
   return {
     defaults: { ...DEFAULT_CONFIG },
     quantityOptions: QUANTITY_OPTIONS,
+    difficultyOptions: [],
     audienceOptions: AUDIENCE_OPTIONS,
     structureOptions: STRUCTURE_OPTIONS,
     toneOptions: TONE_OPTIONS,
     languageOptions: LANGUAGE_OPTIONS,
     densityOptions: DENSITY_OPTIONS,
     themePresetOptions: THEME_PRESET_OPTIONS,
+    topicPlaceholder: '输入演示主题…',
+    supportsTopic: true,
     engine: 'slidev',
     // c56: preview descriptor tells frontend where to open slide preview
     // (v1 SlidevSlidesWorkflowPlugin.preview_descriptor)

@@ -6,7 +6,7 @@
 > **批次纪律**：每个合理批次验收通过后 **commit**；有问题随时停并报告。
 
 **来源**：Wave A（架构 / 流程门禁 / Spec 漂移）只读体检。  
-**最后更新**：2026-07-19（P4 Cleanup A 进行中）
+**最后更新**：2026-07-19（P1.2 RenderDescriptor SSOT → 下一波 P1.3）
 
 ---
 
@@ -59,7 +59,7 @@ shared Zod（或路由挂载的 schema）
 | Phase | 主题                                     | 状态                               |
 | ----- | ---------------------------------------- | ---------------------------------- |
 | P0    | 门禁解阻塞（能跑 `just lint`）           | ✅                                 |
-| P1    | Zod / Eden SSOT 收敛（核心）             | 🔄 P1.4–1.5 ✅；P1.2/1.3/1.6+ 待办 |
+| P1    | Zod / Eden SSOT 收敛（核心）             | 🔄 P1.2/1.4/1.5 ✅；P1.3/1.6+ 待办 |
 | P2    | Zod 使用面写入 AGENTS.md + 文档对齐      | ✅                                 |
 | P3    | 门禁真相（qa 组成、假绿项）              | ⬜                                 |
 | P4    | Cleanup A（死代码 / 死配置，无行为变更） | ✅ P4.1–4.5（P4.6 可选延后）       |
@@ -86,8 +86,10 @@ shared Zod（或路由挂载的 schema）
 - [x] **P1.1 Research 合约对齐**（ARCH-02 / ARCH-11）
   - [x] `agent.ts` 改用 / 对齐 `packages/shared` 的 research schemas（消掉 `coverage` vs `coverageEstimate` 等漂移）
   - [x] `ResearchStatus` 等 DTO 单一来源；web `useResearch` 去掉平行 union
-- [ ] **P1.2 Output / RenderDescriptor 收敛**（ARCH-04 相关）
-  - [ ] shared 补齐或统一 `RenderDescriptor` / output meta；server `generator` / web 去三份复制
+- [x] **P1.2 Output / RenderDescriptor 收敛**（ARCH-04 相关）
+  - [x] shared 补齐 `RenderDescriptor` / `FieldDescriptor` / `FrontendBundle` / `OutputMeta`；`PluginConfig` 对齐 slides config
+  - [x] server `generator` + web `types` 去平行接口；`OUTPUT_META` 数据仍留 server
+  - [ ]（延后）`OutputContentByType` → shared content schemas；`frontendBundle` 发射；路由 Zod 挂载
 - [ ] **P1.3 Studio outline**（ARCH-10）
   - [ ] `studio/service.ts` 改用 shared `SlidesOutlineSchema`
 - [x] **P1.4 Web：Eden 优先迁移**
@@ -158,14 +160,15 @@ shared Zod（或路由挂载的 schema）
 
 ## 3. 当前焦点
 
-**正在做**：P4 Cleanup A → 随后 P1.2 Output/RenderDescriptor → P1.3 Studio outline
+**正在做**：P1.3 Studio `SlidesOutlineSchema`
 
 **已完成批次**：
 
 - P0 / P1.0 / P1.1 / P2 / just qa 基线 / P1.4 / P1.5
-- **P4.1–P4.5** — 死 plugins 注册表、Chroma/`vector_storage`、mindmap SSOT、Layer z-index、陈旧 ignore
+- **P4.1–P4.5** Cleanup A
+- **P1.2** RenderDescriptor / OutputMeta / PluginConfig → `@crystalith/shared`
 
-**下一步**：P1.2 → P1.3 → …
+**下一步**：P1.3 → P1.6–1.8 / P3 …
 
 ---
 
