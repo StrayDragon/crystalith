@@ -236,7 +236,7 @@ test('supports sort/filter controls and multi-file upload', async () => {
   expect(tagFilterSpy).toHaveBeenCalledWith('论文');
 });
 
-test('toggles deep research mode placeholder and hint', async () => {
+test('sources panel no longer hosts primary web search', () => {
   const props = createProps();
 
   render(
@@ -245,21 +245,8 @@ test('toggles deep research mode placeholder and hint', async () => {
     </TestProviders>,
   );
 
-  expect(screen.getByPlaceholderText('在网络中搜索新来源')).toBeInTheDocument();
-
-  const toggleToDeep = screen.getByRole('button', { name: '切换到深度研究' });
-  fireEvent.click(toggleToDeep);
-
-  expect(
-    screen.getByPlaceholderText('描述你的研究需求（目标、范围、输出形式…）'),
-  ).toBeInTheDocument();
-  expect(
-    screen.getByText('深度研究会创建研究会话并生成报告；写清楚目标、范围和期望输出会更准确。'),
-  ).toBeInTheDocument();
-
-  const toggleToFast = screen.getByRole('button', { name: '切换到快速研究' });
-  fireEvent.click(toggleToFast);
-  expect(screen.getByPlaceholderText('在网络中搜索新来源')).toBeInTheDocument();
+  expect(screen.queryByPlaceholderText('在网络中搜索新来源')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '切换到深度研究' })).not.toBeInTheDocument();
 });
 
 test('filters unsupported upload files and shows warning', () => {

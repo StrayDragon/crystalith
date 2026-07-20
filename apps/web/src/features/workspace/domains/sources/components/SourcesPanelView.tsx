@@ -5,21 +5,13 @@ import { t } from '../../../../../shared/i18n';
 import { TestIds, tid } from '../../../../../shared/testids';
 import { SkeletonCard } from '../../../shared/components/Skeleton';
 import { useWorkspaceStore } from '../../../shared/state/workspaceStore';
-import AddSearchResultDialog from '../AddSearchResultDialog';
 import ExtractorPolicyDialog from './ExtractorPolicyDialog';
-import ResearchDetailModal from './ResearchDetailModal';
-import ResearchHistoryDialog from './ResearchHistoryDialog';
 import SourceConnectorsDialog from './SourceConnectorsDialog';
 import type { SourcesPanelViewProps } from './sources-panel-types';
 import SourcesPanelList from './SourcesPanelList';
-import SourcesPanelResearchQueue from './SourcesPanelResearchQueue';
-import SourcesPanelSearchSection from './SourcesPanelSearchSection';
 import SourcesPanelToolbar from './SourcesPanelToolbar';
 import SourcesPanelUploadSection from './SourcesPanelUploadSection';
-import { useSourcesPanelAddFromSearch } from './useSourcesPanelAddFromSearch';
 import { useSourcesPanelDetailDialog } from './useSourcesPanelDetailDialog';
-import { useSourcesPanelResearchActions } from './useSourcesPanelResearchActions';
-import { useSourcesPanelSearchMode } from './useSourcesPanelSearchMode';
 import { useSourcesPanelSelection } from './useSourcesPanelSelection';
 
 export type { SourcesPanelProps } from './sources-panel-types';
@@ -35,9 +27,6 @@ function SourcesPanelView({
   uploadQueue = [],
   onRetryUpload,
   onClearUploadQueue,
-  searchState,
-  onSearch,
-  onAddSourceFromUrl,
   onOpenUrlImport,
   onRemoveSources,
   onRemoveSource,
@@ -57,12 +46,7 @@ function SourcesPanelView({
   isLoading,
   removeState,
   isFullscreen = false,
-  searchQueue = [],
-  onRemoveSearchQueueItem,
-  onRemoveResultsFromQueue,
-  availableExtractors = [],
   extractors = [],
-  defaultExtractor = null,
   extractorsPolicy = null,
   extractorFallbackEnabled = null,
   extractorsLoading = false,
@@ -70,14 +54,12 @@ function SourcesPanelView({
   onRefreshExtractors,
   onConvertSourceQAToSource,
   onReembedSource,
-  research,
   notebookId,
   onSelectedSourceIdsChange,
 }: SourcesPanelViewProps) {
   const jumpToSource = useWorkspaceStore((s) => s.jumpToSourceTarget);
   const uploadDisabled = !isConnected || uploadState === 'loading';
   const connectorDisabled = !isConnected || !notebookId;
-  const isSearching = searchState === 'loading';
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sourceListRef = useRef<VirtuosoHandle | null>(null);
@@ -86,22 +68,6 @@ function SourcesPanelView({
   const [uploadHint, setUploadHint] = useState(t('sources.upload.hint.default'));
   const [connectorsOpen, setConnectorsOpen] = useState(false);
   const [extractorPolicyOpen, setExtractorPolicyOpen] = useState(false);
-
-  const {
-    searchQuery,
-    setSearchQuery,
-    isDeepResearchMode,
-    searchPlaceholder,
-    searchModeToggleLabel,
-    searchInputRef,
-    handleSearch,
-    handleToggleSearchMode,
-  } = useSourcesPanelSearchMode({
-    isConnected,
-    notebookId,
-    research,
-    onSearch,
-  });
 
   const {
     selectedSourceIds,
@@ -139,39 +105,6 @@ function SourcesPanelView({
     isFullscreen,
     onConvertSourceQAToSource,
   });
-
-  const {
-    addDialogOpen,
-    resultsToAdd,
-    addMode,
-    isAddingFromUrl,
-    handleAddToSources,
-    handleAddSource,
-    handleAddComplete,
-    handleCloseAddDialog,
-  } = useSourcesPanelAddFromSearch({
-    onAddSourceFromUrl,
-    onRemoveResultsFromQueue,
-  });
-
-  const {
-    researchModalRef,
-    researchDetailOpen,
-    researchFullscreen,
-    showResearchHistory,
-    setShowResearchHistory,
-    setResearchFullscreen,
-    handleResearchClick,
-    handleResearchStart,
-    handleResearchDelete,
-    handleResearchApprove,
-    handleResearchSkip,
-    handleResearchFinish,
-    handleResearchCancel,
-    handleResearchResume,
-    handleResearchRetry,
-    handleCloseResearchDetail,
-  } = useSourcesPanelResearchActions({ research });
 
   const extractorModeLabel = useMemo(() => {
     const policyMode = extractorsPolicy?.mode ?? 'inherit_global';
@@ -243,34 +176,7 @@ function SourcesPanelView({
             .join(' · ')}
           onOpenExtractorPolicy={() => setExtractorPolicyOpen(true)}
         />
-        <SourcesPanelSearchSection
-          isDeepResearchMode={isDeepResearchMode}
-          searchModeToggleLabel={searchModeToggleLabel}
-          searchPlaceholder={searchPlaceholder}
-          searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
-          onToggleSearchMode={handleToggleSearchMode}
-          onSearch={() => {
-            void handleSearch();
-          }}
-          searchInputRef={searchInputRef}
-        />
       </div>
-
-      <SourcesPanelResearchQueue
-        isSearching={isSearching}
-        research={research}
-        searchQueue={searchQueue}
-        onResearchClick={handleResearchClick}
-        onResearchStart={handleResearchStart}
-        onResearchDelete={handleResearchDelete}
-        onShowResearchHistory={() => setShowResearchHistory(true)}
-        onAddToSources={handleAddToSources}
-        isAddingFromUrl={isAddingFromUrl}
-        onRemoveSearchQueueItem={onRemoveSearchQueueItem}
-        availableExtractors={availableExtractors}
-        defaultExtractor={defaultExtractor}
-      />
 
       <SourcesPanelToolbar
         allSelected={allSelected}
@@ -333,15 +239,6 @@ function SourcesPanelView({
         </Suspense>
       )}
 
-      <AddSearchResultDialog
-        open={addDialogOpen}
-        onClose={handleCloseAddDialog}
-        results={resultsToAdd}
-        mode={addMode}
-        onAddSource={handleAddSource}
-        onComplete={handleAddComplete}
-      />
-
       <ExtractorPolicyDialog
         open={extractorPolicyOpen}
         onClose={() => setExtractorPolicyOpen(false)}
@@ -360,32 +257,6 @@ function SourcesPanelView({
         notebookId={notebookId}
         isConnected={isConnected}
         onSourcesChanged={onRefreshSources}
-      />
-
-      <ResearchDetailModal
-        open={researchDetailOpen}
-        research={research}
-        researchModalRef={researchModalRef}
-        researchFullscreen={researchFullscreen}
-        onClose={handleCloseResearchDetail}
-        onApprove={handleResearchApprove}
-        onSkip={handleResearchSkip}
-        onFinish={handleResearchFinish}
-        onCancel={handleResearchCancel}
-        onResume={handleResearchResume}
-        onRetry={handleResearchRetry}
-        onStart={handleResearchStart}
-        onToggleFullscreen={() => setResearchFullscreen(!researchFullscreen)}
-        onAddSourceFromUrl={async (url) => {
-          await onAddSourceFromUrl(url, 'link');
-        }}
-      />
-
-      <ResearchHistoryDialog
-        open={showResearchHistory}
-        research={research}
-        onClose={() => setShowResearchHistory(false)}
-        onSelectSession={handleResearchClick}
       />
     </div>
   );
