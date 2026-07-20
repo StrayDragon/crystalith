@@ -335,13 +335,19 @@ test('enqueueSlidesJob settles when outline+markdown generation completes', asyn
         updatedAt: '2024-01-01T00:00:00Z',
       });
     }),
-    http.post('*/v2/notebooks/*/studio/slides/:id/outline', () => {
+    http.get('*/v2/notebooks/*/studio/slides/:id/outline/stream', () => {
       draftStage = 'outline';
-      return HttpResponse.json({ ok: true });
+      return new HttpResponse(
+        'event: progress\ndata: {"message":"outline"}\n\nevent: done\ndata: {"slideId":5}\n\n',
+        { headers: { 'Content-Type': 'text/event-stream' } },
+      );
     }),
-    http.post('*/v2/notebooks/*/studio/slides/:id/markdown', () => {
+    http.get('*/v2/notebooks/*/studio/slides/:id/markdown/stream', () => {
       draftStage = 'markdown';
-      return HttpResponse.json({ ok: true });
+      return new HttpResponse(
+        'event: progress\ndata: {"message":"markdown"}\n\nevent: done\ndata: {"slideId":5}\n\n',
+        { headers: { 'Content-Type': 'text/event-stream' } },
+      );
     }),
     http.get('*/v2/notebooks/*/studio/slides/:id', () => {
       if (draftStage === 'outline') {

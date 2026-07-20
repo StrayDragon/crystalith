@@ -3,6 +3,7 @@ import useSWR from 'swr';
 
 import { api } from '../../../../api/eden';
 import { edenFetchOptions } from '../../../../api/edenFetchOptions';
+import { consumeSlidesStageStream } from '../../domains/studio/slides-studio/consumeSlidesStageStream';
 import { useWorkspaceStore } from '../state/workspaceStore';
 import type {
   GenerationPreference,
@@ -22,9 +23,11 @@ type SlidesDraftSnapshot = {
   outputId?: number | null;
   errorMessage?: string | null;
   markdown?: string | null;
+  outline?: { slides?: unknown[] } | null;
 };
 
-const SLIDES_GENERATE_TIMEOUT_MS = 180000;
+const SLIDES_GENERATE_TIMEOUT_MS = 600_000;
+// 10 min per stage — LLM outline often exceeds the old 3 min cap.
 
 export interface OutputQueueJob {
   id: string;
@@ -75,7 +78,7 @@ function hasSlidesStageCompleted(stage: SlidesStreamStage, draft: SlidesDraftSna
   return draft.stage === 'markdown' && (draft.outputId != null || Boolean(draft.markdown?.trim()));
 }
 
-/** Generate outline/markdown via v2 POST (non-SSE). Replaces v1 EventSource streams. */
+/** Generate outline/markdown via GET SSE streams (c70). */
 async function runSlidesGenerate(
   slideId: number,
   stage: SlidesStreamStage,
@@ -92,23 +95,9 @@ async function runSlidesGenerate(
   const timeout = AbortSignal.timeout(SLIDES_GENERATE_TIMEOUT_MS);
   const combined = signal != null ? AbortSignal.any([signal, timeout]) : timeout;
 
-  const slides = api.v2.notebooks({ nid: notebookId }).studio.slides({ id: slideId });
-  const fetchOpts = edenFetchOptions(combined);
-  const { error } =
-    stage === 'outline'
-      ? await slides.outline.post(undefined, fetchOpts)
-      : await slides.markdown.post(undefined, fetchOpts);
+  await consumeSlidesStageStream(notebookId, slideId, stage, { signal: combined });
 
-  if (error) {
-    const rawValue =
-      typeof error === 'object' && error !== null && 'value' in error
-        ? (error as { value?: unknown }).value
-        : undefined;
-    const message = typeof rawValue === 'string' ? rawValue : '生成失败，请稍后重试。';
-    throw new Error(message);
-  }
-
-  // Confirm stage settled (server returns after completion, but re-check for safety)
+  // Confirm stage settled after SSE done.
   const { data: draft, error: draftErr } = await api.v2
     .notebooks({ nid: notebookId })
     .studio.slides({ id: slideId })
@@ -363,9 +352,31 @@ export function useOutputQueue({
 
         if (job.type === 'SLIDES') {
           if (job.notebookId && job.draftId) {
-            await runSlidesGenerate(job.draftId, 'outline', job.notebookId, {
-              signal: abortController.signal,
-            });
+            try {
+              await runSlidesGenerate(job.draftId, 'outline', job.notebookId, {
+                signal: abortController.signal,
+              });
+            } catch (error) {
+              // User cancel → rethrow as abort. Otherwise, if the server already
+              // finished outline after a client timeout/disconnect, continue.
+              if (isCancelled()) throw error;
+              const { data: draftAfterOutline } = await api.v2
+                .notebooks({ nid: job.notebookId })
+                .studio.slides({ id: job.draftId })
+                .get();
+              const snap = draftAfterOutline as SlidesDraftSnapshot | null;
+              const outlineReady =
+                snap != null &&
+                (snap.stage === 'outline' ||
+                  snap.stage === 'markdown' ||
+                  (Array.isArray(snap.outline?.slides) && snap.outline.slides.length > 0));
+              if (!outlineReady) throw error;
+            }
+            if (isCancelled()) {
+              const abortError = new Error('aborted');
+              abortError.name = 'AbortError';
+              throw abortError;
+            }
             await runSlidesGenerate(job.draftId, 'markdown', job.notebookId, {
               signal: abortController.signal,
             });
@@ -445,7 +456,9 @@ export function useOutputQueue({
           onQueueDone();
         }
       } catch (error) {
-        const cancelled = isCancelled() || (error instanceof Error && error.name === 'AbortError');
+        // Only user cancel (explicit abort / cancelled status) → cancelled.
+        // AbortSignal.timeout() also surfaces as AbortError — treat as error, not cancel.
+        const cancelled = isCancelled();
         if (cancelled) {
           updateOutputQueueJobs((prev) =>
             prev.map((item) => (item.id === job.id ? { ...item, status: 'cancelled' } : item)),
@@ -462,7 +475,9 @@ export function useOutputQueue({
         if (error instanceof Error) {
           const statusError = error as Error & { status?: number };
 
-          if (statusError.status === 503) {
+          if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+            userFacingError = '幻灯片生成超时或连接中断，请重试。';
+          } else if (statusError.status === 503) {
             userFacingError = 'AI 服务配置错误，请联系管理员。';
           } else if (statusError.status === 404) {
             userFacingError = '笔记本已失效，请刷新页面。';
