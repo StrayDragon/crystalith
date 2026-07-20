@@ -2,8 +2,15 @@
 /**
  * Ensure Slidev has a markdown entry + resolvable node_modules next to it.
  *
- * v2 studio writes preview markdown to apps/server/slides/preview/slides.md
- * (see writeSlideFile in apps/server/src/features/studio/service.ts).
+ * Studio writes the single shared preview to `{data_root}/slides/preview/slides.md`
+ * (see writeSlideFile in apps/server/src/features/studio/service.ts). Only one
+ * preview is open at a time, so Slidev always serves that same path.
+ *
+ * Resolution order:
+ *   1. SLIDEV_PREVIEW_PATH (absolute, or relative to repo root)
+ *   2. CL_DATA_ROOT/slides/preview/slides.md (relative → repo root)
+ *   3. {repoRoot}/data/slides/preview/slides.md
+ *
  * Slidev resolves themes relative to the markdown file's directory, so we
  * symlink this package's node_modules into that preview dir.
  */
@@ -11,17 +18,24 @@ import fs from 'node:fs';
 import { mkdir, writeFile, lstat, unlink, rm } from 'node:fs/promises';
 import path from 'node:path';
 
-const __filename = import.meta.filename;
 const __dirname = import.meta.dirname;
 const packageRoot = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(packageRoot, '..', '..');
 
-const defaultPreviewPath = path.join(repoRoot, 'apps', 'server', 'slides', 'preview', 'slides.md');
+function resolveAgainstRepo(p) {
+  return path.isAbsolute(p) ? p : path.resolve(repoRoot, p);
+}
+
+function defaultPreviewPath() {
+  const dataRoot = process.env.CL_DATA_ROOT
+    ? resolveAgainstRepo(process.env.CL_DATA_ROOT)
+    : path.join(repoRoot, 'data');
+  return path.join(dataRoot, 'slides', 'preview', 'slides.md');
+}
+
 const previewPath = process.env.SLIDEV_PREVIEW_PATH
-  ? path.isAbsolute(process.env.SLIDEV_PREVIEW_PATH)
-    ? process.env.SLIDEV_PREVIEW_PATH
-    : path.resolve(repoRoot, process.env.SLIDEV_PREVIEW_PATH)
-  : defaultPreviewPath;
+  ? resolveAgainstRepo(process.env.SLIDEV_PREVIEW_PATH)
+  : defaultPreviewPath();
 
 const previewDir = path.dirname(previewPath);
 const placeholder = `---
