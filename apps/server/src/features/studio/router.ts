@@ -37,6 +37,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { db } from '../../db/index.ts';
 import { notebooks, studioSlides } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
 import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import {
@@ -364,7 +365,9 @@ function handlePatchSlide(id: number, notebookId: number, body: SlideDraftUpdate
 
 async function handleGenerateOutline(id: number, notebookId: number) {
   const slide = getSlideInNotebookOrThrow(id, notebookId);
-  if (!clearStaleRunning(id)) return { event: 'busy', message: '演示正在生成中，请稍后重试。' };
+  if (!clearStaleRunning(id)) {
+    throw new AppHttpError(ErrorCode.CONFLICT, '演示正在生成中，请稍后重试。');
+  }
 
   const context = await getContext(slide);
   db()
@@ -408,7 +411,9 @@ function handlePutOutline(id: number, notebookId: number, body: StudioOutlinePut
 async function handleGenerateMarkdown(id: number, notebookId: number) {
   const slide = getSlideInNotebookOrThrow(id, notebookId);
   if (!slide.outline) throw new NotFoundError(`Slide ${id} has no outline — run /outline first`);
-  if (!clearStaleRunning(id)) return { event: 'busy', message: '演示正在生成中，请稍后重试。' };
+  if (!clearStaleRunning(id)) {
+    throw new AppHttpError(ErrorCode.CONFLICT, '演示正在生成中，请稍后重试。');
+  }
 
   const context = await getContext(slide);
   db()
@@ -518,12 +523,13 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
   // ---- Nested canonical ----
   .post(
     '/notebooks/:nid/studio/slides',
-    ({ params, body }) => {
+    ({ params, body, set }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const notebookId = resolveNestedNotebookId(nid, body.notebookId);
+      set.status = 201;
       return handleCreateSlide(notebookId, body);
     },
-    { body: SlideDraftCreateNestedRequestSchema },
+    { body: SlideDraftCreateNestedRequestSchema, response: StudioSlideSchema },
   )
   .get(
     '/notebooks/:nid/studio/slides',
@@ -534,15 +540,23 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     { query: PaginationParamsSchema, response: SlidesPageSchema },
   )
   // Static /latest before /:id
-  .get('/notebooks/:nid/studio/slides/latest', ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    return handleLatestSlide(nid);
-  })
-  .get('/notebooks/:nid/studio/slides/:id', ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const id = requirePositiveIntId(params.id, 'slide id');
-    return handleGetSlide(id, nid);
-  })
+  .get(
+    '/notebooks/:nid/studio/slides/latest',
+    ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      return handleLatestSlide(nid);
+    },
+    { response: StudioSlideSchema },
+  )
+  .get(
+    '/notebooks/:nid/studio/slides/:id',
+    ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'slide id');
+      return handleGetSlide(id, nid);
+    },
+    { response: StudioSlideSchema },
+  )
   .patch(
     '/notebooks/:nid/studio/slides/:id',
     ({ params, body }) => {
@@ -550,13 +564,17 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'slide id');
       return handlePatchSlide(id, nid, body);
     },
-    { body: SlideDraftUpdateSchema },
+    { body: SlideDraftUpdateSchema, response: StudioSlideSchema },
   )
-  .post('/notebooks/:nid/studio/slides/:id/outline', async ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const id = requirePositiveIntId(params.id, 'slide id');
-    return handleGenerateOutline(id, nid);
-  })
+  .post(
+    '/notebooks/:nid/studio/slides/:id/outline',
+    async ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'slide id');
+      return handleGenerateOutline(id, nid);
+    },
+    { response: StudioSlideSchema },
+  )
   .put(
     '/notebooks/:nid/studio/slides/:id/outline',
     ({ params, body }) => {
@@ -564,13 +582,17 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'slide id');
       return handlePutOutline(id, nid, body);
     },
-    { body: StudioOutlinePutSchema },
+    { body: StudioOutlinePutSchema, response: StudioSlideSchema },
   )
-  .post('/notebooks/:nid/studio/slides/:id/markdown', async ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const id = requirePositiveIntId(params.id, 'slide id');
-    return handleGenerateMarkdown(id, nid);
-  })
+  .post(
+    '/notebooks/:nid/studio/slides/:id/markdown',
+    async ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'slide id');
+      return handleGenerateMarkdown(id, nid);
+    },
+    { response: StudioSlideSchema },
+  )
   .put(
     '/notebooks/:nid/studio/slides/:id/markdown',
     ({ params, body }) => {
@@ -578,7 +600,7 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'slide id');
       return handlePutMarkdown(id, nid, body);
     },
-    { body: StudioMarkdownPutSchema },
+    { body: StudioMarkdownPutSchema, response: StudioSlideSchema },
   )
   .get('/notebooks/:nid/studio/slides/:id/outline/stream', ({ params }) => {
     const nid = requirePositiveIntId(params.nid, 'notebook id');
@@ -592,9 +614,14 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
   })
 
   // ---- Flat deprecated aliases (c67 notebookId required on query/body) ----
-  .post('/studio/slides', ({ body }) => handleCreateSlide(body.notebookId, body), {
-    body: SlideDraftCreateRequestSchema,
-  })
+  .post(
+    '/studio/slides',
+    ({ body, set }) => {
+      set.status = 201;
+      return handleCreateSlide(body.notebookId, body);
+    },
+    { body: SlideDraftCreateRequestSchema, response: StudioSlideSchema },
+  )
   .get(
     '/studio/slides',
     ({ query }) => handleListSlides(query.notebookId, query.offset ?? 0, query.limit ?? 20),
@@ -603,42 +630,51 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
   // Static /latest before /:id
   .get('/studio/slides/latest', ({ query }) => handleLatestSlide(query.notebookId), {
     query: StudioSlidesListQuerySchema,
+    response: StudioSlideSchema,
   })
   .get(
     '/studio/slides/:id',
     ({ params, query }) =>
       handleGetSlide(requirePositiveIntId(params.id, 'slide id'), query.notebookId),
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: StudioSlideSchema },
   )
   .patch(
     '/studio/slides/:id',
     ({ params, query, body }) =>
       handlePatchSlide(requirePositiveIntId(params.id, 'slide id'), query.notebookId, body),
-    { query: NotebookIdQuerySchema, body: SlideDraftUpdateSchema },
+    { query: NotebookIdQuerySchema, body: SlideDraftUpdateSchema, response: StudioSlideSchema },
   )
   .post(
     '/studio/slides/:id/outline',
     async ({ params, query }) =>
       handleGenerateOutline(requirePositiveIntId(params.id, 'slide id'), query.notebookId),
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: StudioSlideSchema },
   )
   .put(
     '/studio/slides/:id/outline',
     ({ params, query, body }) =>
       handlePutOutline(requirePositiveIntId(params.id, 'slide id'), query.notebookId, body),
-    { query: NotebookIdQuerySchema, body: StudioOutlinePutSchema },
+    {
+      query: NotebookIdQuerySchema,
+      body: StudioOutlinePutSchema,
+      response: StudioSlideSchema,
+    },
   )
   .post(
     '/studio/slides/:id/markdown',
     async ({ params, query }) =>
       handleGenerateMarkdown(requirePositiveIntId(params.id, 'slide id'), query.notebookId),
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: StudioSlideSchema },
   )
   .put(
     '/studio/slides/:id/markdown',
     ({ params, query, body }) =>
       handlePutMarkdown(requirePositiveIntId(params.id, 'slide id'), query.notebookId, body),
-    { query: NotebookIdQuerySchema, body: StudioMarkdownPutSchema },
+    {
+      query: NotebookIdQuerySchema,
+      body: StudioMarkdownPutSchema,
+      response: StudioSlideSchema,
+    },
   )
   .get(
     '/studio/slides/:id/outline/stream',

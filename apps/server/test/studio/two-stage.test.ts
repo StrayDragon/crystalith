@@ -117,7 +117,7 @@ describe('studio two-stage generation', () => {
       prompt: 'Focus on clarity',
       sourceIds: [sourceId],
     });
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     const slide = body as { id: number; stage: string; status: string };
     expect(slide.stage).toBe('input');
     expect(slide.status).toBe('idle');
