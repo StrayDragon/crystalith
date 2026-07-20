@@ -1,4 +1,5 @@
 import {
+  Empty204Schema,
   NotebookCreateSchema,
   NotebookUpdateSchema,
   NotebookSchema,
@@ -203,14 +204,18 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
   )
 
   // Delete a notebook
-  .delete('/notebooks/:nid', ({ params, set }) => {
-    const id = requirePositiveIntId(params.nid, 'notebook id');
-    const existing = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
-    if (!existing) notFound(id);
-    db().delete(notebooks).where(eq(notebooks.id, id)).run();
-    set.status = 204;
-    return '';
-  });
+  .delete(
+    '/notebooks/:nid',
+    ({ params, set }) => {
+      const id = requirePositiveIntId(params.nid, 'notebook id');
+      const existing = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
+      if (!existing) notFound(id);
+      db().delete(notebooks).where(eq(notebooks.id, id)).run();
+      set.status = 204;
+      return;
+    },
+    { response: { 204: Empty204Schema } },
+  );
 
 // Register OpenAPI docs
 registerApiDoc(apiDocs);

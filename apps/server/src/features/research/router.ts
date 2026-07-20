@@ -16,6 +16,7 @@
 //
 // c37: control endpoints now record steps + transition correctly (v1 parity).
 import {
+  Empty204Schema,
   NotebookIdQuerySchema,
   PaginatedSchema,
   PaginationParamsSchema,
@@ -540,7 +541,7 @@ function handleDeleteResearch(id: number, notebookId: number, set: SetStatus) {
 
   db().delete(researchSessions).where(eq(researchSessions.id, id)).run();
   set.status = 204;
-  return '';
+  return;
 }
 
 function handleApproveResearch(id: number, notebookId: number): ResearchActionResult {
@@ -982,11 +983,15 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     },
     { response: ResearchSessionDetailSchema },
   )
-  .delete('/notebooks/:nid/research/:id', ({ params, set }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const id = requirePositiveIntId(params.id, 'research id');
-    return handleDeleteResearch(id, nid, set);
-  })
+  .delete(
+    '/notebooks/:nid/research/:id',
+    ({ params, set }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'research id');
+      return handleDeleteResearch(id, nid, set);
+    },
+    { response: { 204: Empty204Schema } },
+  )
   .post(
     '/notebooks/:nid/research/:id/approve',
     ({ params }) => {
@@ -1080,7 +1085,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'research id');
       return handleDeleteResearch(id, query.notebookId, set);
     },
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: { 204: Empty204Schema } },
   )
   .post(
     '/research/:id/approve',

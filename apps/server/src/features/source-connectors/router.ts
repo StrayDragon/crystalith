@@ -2,6 +2,7 @@
 //
 // Mirrors v1 `features/source_connectors/api.py`.
 import {
+  Empty204Schema,
   ImportScopeApplyResponseSchema,
   ImportScopeSchema,
   SnapshotSchema,
@@ -431,18 +432,22 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
     { response: SyncCheckResultSchema },
   )
 
-  .delete('/source-connector-bindings/:id', ({ params, set }) => {
-    const id = requirePositiveIntId(params.id, 'binding id');
-    const existing = db()
-      .select()
-      .from(sourceConnectorBindings)
-      .where(eq(sourceConnectorBindings.id, id))
-      .get();
-    if (!existing) throw new NotFoundError(`Connector binding ${id} not found`);
+  .delete(
+    '/source-connector-bindings/:id',
+    ({ params, set }) => {
+      const id = requirePositiveIntId(params.id, 'binding id');
+      const existing = db()
+        .select()
+        .from(sourceConnectorBindings)
+        .where(eq(sourceConnectorBindings.id, id))
+        .get();
+      if (!existing) throw new NotFoundError(`Connector binding ${id} not found`);
 
-    db().delete(sourceConnectorBindings).where(eq(sourceConnectorBindings.id, id)).run();
-    set.status = 204;
-    return '';
-  });
+      db().delete(sourceConnectorBindings).where(eq(sourceConnectorBindings.id, id)).run();
+      set.status = 204;
+      return;
+    },
+    { response: { 204: Empty204Schema } },
+  );
 
 registerApiDoc(apiDocs);

@@ -1,4 +1,9 @@
-import { TemplateArraySchema, TemplateCreateSchema, TemplateSchema } from '@crystalith/shared';
+import {
+  Empty204Schema,
+  TemplateArraySchema,
+  TemplateCreateSchema,
+  TemplateSchema,
+} from '@crystalith/shared';
 // Templates router — CRUD for generation templates.
 //
 // Templates store config_json (Nunjucks-compatible config) for reusable
@@ -123,17 +128,21 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
     },
     { body: TemplateCreateSchema.partial(), response: TemplateSchema },
   )
-  .delete('/templates/:id', ({ params, set }) => {
-    const id = requirePositiveIntId(params.id, 'template id');
-    const existing = db().select().from(templates).where(eq(templates.id, id)).get();
-    if (!existing) throw new NotFoundError(`Template ${id} not found`);
-    // c61: builtin templates cannot be deleted (v1 service.py:126-127)
-    if (existing.isBuiltin) {
-      throw new AppHttpError(ErrorCode.CONFLICT, 'Built-in templates cannot be deleted');
-    }
-    db().delete(templates).where(eq(templates.id, id)).run();
-    set.status = 204;
-    return '';
-  });
+  .delete(
+    '/templates/:id',
+    ({ params, set }) => {
+      const id = requirePositiveIntId(params.id, 'template id');
+      const existing = db().select().from(templates).where(eq(templates.id, id)).get();
+      if (!existing) throw new NotFoundError(`Template ${id} not found`);
+      // c61: builtin templates cannot be deleted (v1 service.py:126-127)
+      if (existing.isBuiltin) {
+        throw new AppHttpError(ErrorCode.CONFLICT, 'Built-in templates cannot be deleted');
+      }
+      db().delete(templates).where(eq(templates.id, id)).run();
+      set.status = 204;
+      return;
+    },
+    { response: { 204: Empty204Schema } },
+  );
 
 registerApiDoc(apiDocs);

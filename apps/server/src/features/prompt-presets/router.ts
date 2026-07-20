@@ -1,4 +1,4 @@
-import { PromptPresetCreateSchema, PromptPresetSchema } from '@crystalith/shared';
+import { Empty204Schema, PromptPresetCreateSchema, PromptPresetSchema } from '@crystalith/shared';
 // Prompt presets router — CRUD for chat prompt presets (/prompt:xxx pattern).
 //
 // Prompt presets are injected into the QA system prompt when the user
@@ -149,13 +149,17 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
     },
     { body: PromptPresetCreateSchema.partial(), response: PromptPresetSchema },
   )
-  .delete('/prompt-presets/:id', ({ params, set }) => {
-    const id = requirePositiveIntId(params.id, 'preset id');
-    const existing = db().select().from(promptPresets).where(eq(promptPresets.id, id)).get();
-    if (!existing) throw new NotFoundError(`Preset ${id} not found`);
-    db().delete(promptPresets).where(eq(promptPresets.id, id)).run();
-    set.status = 204;
-    return '';
-  });
+  .delete(
+    '/prompt-presets/:id',
+    ({ params, set }) => {
+      const id = requirePositiveIntId(params.id, 'preset id');
+      const existing = db().select().from(promptPresets).where(eq(promptPresets.id, id)).get();
+      if (!existing) throw new NotFoundError(`Preset ${id} not found`);
+      db().delete(promptPresets).where(eq(promptPresets.id, id)).run();
+      set.status = 204;
+      return;
+    },
+    { response: { 204: Empty204Schema } },
+  );
 
 registerApiDoc(apiDocs);

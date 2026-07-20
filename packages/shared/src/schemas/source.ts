@@ -353,6 +353,32 @@ export const SourceUploadResponseSchema = z.union([
 ]);
 export type SourceUploadResponse = z.infer<typeof SourceUploadResponseSchema>;
 
+/** Link-mode success from POST …/sources/from-url (HTTP 201). */
+export const SourceFromUrlLinkResultSchema = z.object({
+  sourceId: IdSchema,
+  filename: z.string(),
+  mode: z.literal('link'),
+});
+export type SourceFromUrlLinkResult = z.infer<typeof SourceFromUrlLinkResultSchema>;
+
+/** Fetch-mode ingest success (optionally annotated with extractor metadata). */
+export const SourceFromUrlFetchResultSchema = SourceIngestResultSchema.extend({
+  extractedBy: z.string().optional(),
+  title: z.string().nullable().optional(),
+});
+export type SourceFromUrlFetchResult = z.infer<typeof SourceFromUrlFetchResultSchema>;
+
+/**
+ * Success body for POST …/sources/from-url.
+ * Dedup reuse shares upload reuse shape; errors use AppHttpError / ErrorEnvelope.
+ */
+export const SourceFromUrlResponseSchema = z.union([
+  SourceUploadReuseResultSchema,
+  SourceFromUrlLinkResultSchema,
+  SourceFromUrlFetchResultSchema,
+]);
+export type SourceFromUrlResponse = z.infer<typeof SourceFromUrlResponseSchema>;
+
 export const SourceParserSchema = z.object({
   id: z.string(),
   name: z.string(),
