@@ -161,27 +161,6 @@ bdd.given('会话中有一条用户消息"{内容}"', async (ctx, 内容) => {
   expect(res.status).toBeLessThan(300);
 });
 
-bdd.given(
-  '笔记本中有一个待处理任务',
-  async (ctx) => {
-    const { db } = await import('../../../src/db/index.ts');
-    const { tasks } = await import('../../../src/db/schema.ts');
-    const nid = ctx.fixtures['当前笔记本']['id'] as number;
-    const t = db()
-      .insert(tasks)
-      .values({
-        notebookId: nid,
-        type: 'refine',
-        status: 'pending',
-        payload: { format: 'summary' },
-      })
-      .returning()
-      .get();
-    return { id: t.id } as Record<string, unknown>;
-  },
-  '任务',
-);
-
 // ══════════════════════════════════════════════════════════════════════════════
 // When — 泛型 HTTP 请求（带 docstring + 路径模板）
 // ══════════════════════════════════════════════════════════════════════════════
@@ -414,37 +393,6 @@ bdd.when('请求不存在的模型"{模型id}"', async (ctx, 模型id) => {
 
 bdd.when('请求命令列表', async (ctx) => {
   ctx.response = await ctx.client.get('/v2/commands');
-});
-
-// ══════════════════════════════════════════════════════════════════════════════
-// When — 引用管理
-// ══════════════════════════════════════════════════════════════════════════════
-
-bdd.when('通过分块标识请求引用上下文', async (ctx) => {
-  const nid = ctx.fixtures['当前笔记本']['id'];
-  const cid = ctx.fixtures['当前来源']['chunk_id'];
-  ctx.response = await ctx.client.get(`/v2/notebooks/${nid}/citations/context?chunk_id=${cid}`);
-});
-
-bdd.when('通过来源标识和分块序号请求引用上下文', async (ctx) => {
-  const nid = ctx.fixtures['当前笔记本']['id'];
-  const sid = ctx.fixtures['当前来源']['id'];
-  ctx.response = await ctx.client.get(
-    `/v2/notebooks/${nid}/citations/context?source_id=${sid}&chunk_index=1`,
-  );
-});
-
-bdd.when('同时提供分块标识和来源标识请求引用上下文', async (ctx) => {
-  const nid = ctx.fixtures['当前笔记本']['id'];
-  const o = ctx.fixtures['当前来源'];
-  ctx.response = await ctx.client.get(
-    `/v2/notebooks/${nid}/citations/context?chunk_id=${o['chunk_id']}&source_id=${o['id']}&chunk_index=1`,
-  );
-});
-
-bdd.when('不提供定位器请求引用上下文', async (ctx) => {
-  const nid = ctx.fixtures['当前笔记本']['id'];
-  ctx.response = await ctx.client.get(`/v2/notebooks/${nid}/citations/context`);
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
