@@ -155,3 +155,47 @@ export const OptionalNotebookIdBodySchema = z.object({
   notebookId: IdSchema.optional(),
 });
 export type OptionalNotebookIdBody = z.infer<typeof OptionalNotebookIdBodySchema>;
+
+// ---------------------------------------------------------------------------
+// Health / API root (server scaffold)
+// ---------------------------------------------------------------------------
+
+export const HealthResponseSchema = z.object({
+  status: z.string(),
+  version: z.string().optional(),
+});
+export type HealthResponse = z.infer<typeof HealthResponseSchema>;
+
+export const ApiRootSchema = z.object({
+  message: z.string(),
+});
+export type ApiRoot = z.infer<typeof ApiRootSchema>;
+
+const HealthServiceProbeSchema = z.object({
+  service: z.string(),
+  healthy: z.boolean().nullable(),
+  note: z.string().optional(),
+});
+
+const HealthOptionalProbeSchema = z.object({
+  service: z.string(),
+  enabled: z.boolean(),
+  endpoint: z.string().nullable(),
+  status: z.string(),
+  healthy: z.boolean().nullable(),
+});
+
+export const HealthDependenciesSchema = z.object({
+  status: z.string(),
+  generatedAt: IsoTimestampSchema,
+  lastProbe: IsoTimestampSchema,
+  core: z.object({
+    backend: HealthServiceProbeSchema,
+    frontend: HealthServiceProbeSchema,
+  }),
+  optional: z.object({
+    cacheRedis: HealthOptionalProbeSchema,
+    searchSearxng: HealthOptionalProbeSchema,
+  }),
+});
+export type HealthDependencies = z.infer<typeof HealthDependenciesSchema>;

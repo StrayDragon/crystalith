@@ -9,9 +9,12 @@ import {
   SourceBatchReembedRequestSchema,
   SourceBatchReembedResponseSchema,
   SourceFromUrlRequestSchema,
+  SourceParserListSchema,
+  SourceReembedResponseSchema,
   SourceSchema,
   SourceSearchRequestSchema,
   SourceSearchResponseSchema,
+  SourceUploadResponseSchema,
   ExtractorsListSchema,
   ExtractorPolicyModeSchema,
   SourceTagBindingRequestSchema,
@@ -227,18 +230,17 @@ async function handleSourceUpload(
   notebookId: number,
   body: unknown,
   dedupAction: 'prompt' | 'reuse' | 'create_new' | undefined,
-  set: UploadSet,
 ) {
   // body is FormData; Elysia parses multipart into { filename, file }
   const file = (body as { file?: File }).file;
   if (!file) {
-    return sendError(set, ErrorCode.INVALID_REQUEST, 'No file provided');
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'No file provided');
   }
 
   // Upload size limit (configurable, default 50 MB).
   const maxBytes = getUploadMaxBytes();
   if (file.size > maxBytes) {
-    return sendError(set, ErrorCode.PAYLOAD_TOO_LARGE, 'Payload Too Large', {
+    throw new AppHttpError(ErrorCode.PAYLOAD_TOO_LARGE, 'Payload Too Large', {
       maxBytes: maxBytes,
       uploadedBytes: file.size,
     });
@@ -256,13 +258,12 @@ async function handleSourceUpload(
       .get();
     if (hit) {
       if (dedupAction === 'prompt') {
-        return sendError(set, ErrorCode.CONFLICT, 'Source dedup hit', {
+        throw new AppHttpError(ErrorCode.CONFLICT, 'Source dedup hit', {
           existingSourceId: hit.id,
         });
       }
       if (dedupAction === 'reuse') {
-        const existing = db().select().from(sources).where(eq(sources.id, hit.id)).get();
-        return { reused: true, source: existing };
+        return { reused: true as const, source: handleGetSource(hit.id, notebookId) };
       }
     }
   }
@@ -358,7 +359,7 @@ async function handleReEmbedSource(id: number, notebookId: number) {
     await strategy.indexSource(id, row.notebookId);
     db().update(sources).set({ status: 'ready' }).where(eq(sources.id, id)).run();
     bumpSourcesEpoch(row.notebookId);
-    return { sourceId: id, reEmbedded: true };
+    return { sourceId: id, reEmbedded: true as const };
   } catch (error) {
     db()
       .update(sources)
@@ -490,21 +491,21 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   // Upload + ingest a file (nested canonical)
   .post(
     '/notebooks/:nid/sources/upload',
-    async ({ params, body, query, set }) => {
+    async ({ params, body, query }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const notebookId = resolveNestedNotebookId(nid, query.notebookId);
-      return handleSourceUpload(notebookId, body, query.dedupAction, set);
+      return handleSourceUpload(notebookId, body, query.dedupAction);
     },
-    { query: SourceUploadNestedQuerySchema },
+    { query: SourceUploadNestedQuerySchema, response: SourceUploadResponseSchema },
   )
 
   // Upload + ingest a file (flat alias — c67 notebookId required)
   .post(
     '/sources/upload',
-    async ({ body, query, set }) => {
-      return handleSourceUpload(query.notebookId, body, query.dedupAction, set);
+    async ({ body, query }) => {
+      return handleSourceUpload(query.notebookId, body, query.dedupAction);
     },
-    { query: SourceUploadQuerySchema },
+    { query: SourceUploadQuerySchema, response: SourceUploadResponseSchema },
   )
 
   // Get a source by ID (nested canonical)
@@ -546,14 +547,18 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   )
 
   // List available parsers (global flat — do not nest)
-  .get('/sources/parsers', () => {
-    return listParsers().map((p) => ({
-      id: p.id,
-      name: p.name,
-      mimeTypes: p.mimeTypes,
-      extensions: p.extensions,
-    }));
-  })
+  .get(
+    '/sources/parsers',
+    () => {
+      return listParsers().map((p) => ({
+        id: p.id,
+        name: p.name,
+        mimeTypes: p.mimeTypes,
+        extensions: p.extensions,
+      }));
+    },
+    { response: SourceParserListSchema },
+  )
 
   // Tag CRUD (c39: uniqueness check + notebook ownership + idempotent assign/remove)
   .get(
@@ -792,11 +797,15 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   )
 
   // Re-embed a source (nested canonical)
-  .post('/notebooks/:nid/sources/:sid/re-embed', async ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const sid = requirePositiveIntId(params.sid, 'source id');
-    return handleReEmbedSource(sid, nid);
-  })
+  .post(
+    '/notebooks/:nid/sources/:sid/re-embed',
+    async ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const sid = requirePositiveIntId(params.sid, 'source id');
+      return handleReEmbedSource(sid, nid);
+    },
+    { response: SourceReembedResponseSchema },
+  )
 
   // Re-embed a source (flat alias — c67 notebookId required)
   .post(
@@ -805,7 +814,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'source id');
       return handleReEmbedSource(id, query.notebookId);
     },
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: SourceReembedResponseSchema },
   )
 
   // c44: Search sources via real web search (v1 run_search_graph + SearXNG)

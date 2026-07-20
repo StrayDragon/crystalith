@@ -20,12 +20,15 @@ import {
   PaginatedSchema,
   PaginationParamsSchema,
   ResearchActionResultSchema,
+  ResearchExportBodySchema,
+  ResearchExportResponseSchema,
   ResearchSessionCreateNestedSchema,
   ResearchSessionCreateSchema,
   ResearchSessionDetailSchema,
   ResearchSessionSchema,
   SearchPlanSchema,
   type ResearchActionResult,
+  type ResearchExportBody,
   type ResearchStatus,
   type ResearchStepType,
 } from '@crystalith/shared';
@@ -727,7 +730,7 @@ async function handleResumeResearch(id: number, notebookId: number): Promise<Res
 async function handleExportResearch(
   id: number,
   notebookId: number,
-  body: { exportType?: string } | undefined,
+  body: ResearchExportBody | undefined,
 ) {
   const row = getResearchOrThrow(id, notebookId);
 
@@ -768,7 +771,7 @@ async function handleExportResearch(
       })
       .returning()
       .get();
-    return { success: true, exportType: 'note', outputId: output.id };
+    return { success: true as const, exportType: 'note' as const, outputId: output.id };
   }
 
   const filename = `研究报告_${row.topic.slice(0, 20)}_${timestamp}.md`;
@@ -825,8 +828,8 @@ async function handleExportResearch(
   bumpSourcesEpoch(row.notebookId);
 
   return {
-    success: true,
-    exportType: 'source',
+    success: true as const,
+    exportType: 'source' as const,
     message: `报告已导出为来源：${filename}`,
     sourceId: source.id,
   };
@@ -1038,11 +1041,15 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     },
     { response: ResearchActionResultSchema },
   )
-  .post('/notebooks/:nid/research/:id/export', async ({ params, body }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const id = requirePositiveIntId(params.id, 'research id');
-    return handleExportResearch(id, nid, body as { exportType?: string } | undefined);
-  })
+  .post(
+    '/notebooks/:nid/research/:id/export',
+    async ({ params, body }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'research id');
+      return handleExportResearch(id, nid, body);
+    },
+    { body: ResearchExportBodySchema, response: ResearchExportResponseSchema },
+  )
   .get('/notebooks/:nid/research/:id/stream', ({ params, set }) => {
     const nid = requirePositiveIntId(params.nid, 'notebook id');
     const id = requirePositiveIntId(params.id, 'research id');
@@ -1131,13 +1138,13 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     '/research/:id/export',
     async ({ params, query, body }) => {
       const id = requirePositiveIntId(params.id, 'research id');
-      return handleExportResearch(
-        id,
-        query.notebookId,
-        body as { exportType?: string } | undefined,
-      );
+      return handleExportResearch(id, query.notebookId, body);
     },
-    { query: NotebookIdQuerySchema },
+    {
+      query: NotebookIdQuerySchema,
+      body: ResearchExportBodySchema,
+      response: ResearchExportResponseSchema,
+    },
   )
   .get(
     '/research/:id/stream',
