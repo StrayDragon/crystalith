@@ -4,6 +4,7 @@ import {
   SessionConvertToOutputRequestSchema,
   SessionConvertToOutputResponseSchema,
   SessionConvertToSourceRequestSchema,
+  SessionConvertToSourceResponseSchema,
   SessionCreateSchema,
   SessionSchema,
   SessionUpdateSchema,
@@ -68,7 +69,12 @@ const apiDocs: OpenApiRoute[] = [
     method: 'post',
     summary: 'Convert session messages to a source with chunking + embedding',
     tags: ['sessions'],
-    responses: { 201: { description: 'Created source from session' } },
+    responses: {
+      201: {
+        description: 'Created source from session',
+        body: SessionConvertToSourceResponseSchema,
+      },
+    },
   },
   {
     path: '/v2/notebooks/:nid/sessions/:sid/convert-to-output',
@@ -141,13 +147,17 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
   )
 
   // Get a single session (c39: v1 api.py:200-209)
-  .get('/notebooks/:nid/sessions/:sid', ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const sid = requirePositiveIntId(params.sid, 'session id');
-    const row = db().select().from(sessions).where(eq(sessions.id, sid)).get();
-    if (!row || row.notebookId !== nid) notFound(sid);
-    return serializeSession(row);
-  })
+  .get(
+    '/notebooks/:nid/sessions/:sid',
+    ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const sid = requirePositiveIntId(params.sid, 'session id');
+      const row = db().select().from(sessions).where(eq(sessions.id, sid)).get();
+      if (!row || row.notebookId !== nid) notFound(sid);
+      return serializeSession(row);
+    },
+    { response: SessionSchema },
+  )
 
   // Create a session
   .post(
@@ -165,7 +175,7 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
       set.status = 201;
       return serializeSession(row);
     },
-    { body: SessionCreateSchema },
+    { body: SessionCreateSchema, response: SessionSchema },
   )
 
   // Update a session (c39: notebook ownership check)
@@ -202,7 +212,7 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
         .get();
       return serializeSession(updated);
     },
-    { body: SessionUpdateSchema },
+    { body: SessionUpdateSchema, response: SessionSchema },
   )
 
   // Delete a session (c39: notebook ownership check)
@@ -338,7 +348,7 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
         messageCount: msgRows.length,
       };
     },
-    { body: SessionConvertToSourceRequestSchema },
+    { body: SessionConvertToSourceRequestSchema, response: SessionConvertToSourceResponseSchema },
   )
 
   // Convert session to output (c34: v1 parity; c39: ownership + 201 + chunk_ids)

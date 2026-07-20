@@ -127,10 +127,14 @@ function notFound(id: number): never {
 
 export const notebooksRouter = new Elysia({ prefix: '/v2' })
   // List all notebooks
-  .get('/notebooks', () => {
-    const rows = db().select().from(notebooks).orderBy(desc(notebooks.updatedAt)).all();
-    return rows.map(serializeNotebook);
-  })
+  .get(
+    '/notebooks',
+    () => {
+      const rows = db().select().from(notebooks).orderBy(desc(notebooks.updatedAt)).all();
+      return rows.map(serializeNotebook);
+    },
+    { response: NotebookSchema.array() },
+  )
 
   // Create a notebook (c39 gap fix: templateId apply-on-create — v1 service.py:19-50)
   .post(
@@ -165,16 +169,20 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
       set.status = 201;
       return serializeNotebook(row);
     },
-    { body: NotebookCreateSchema },
+    { body: NotebookCreateSchema, response: NotebookSchema },
   )
 
   // Get a single notebook
-  .get('/notebooks/:nid', ({ params }) => {
-    const id = requirePositiveIntId(params.nid, 'notebook id');
-    const row = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
-    if (!row) notFound(id);
-    return serializeNotebook(row);
-  })
+  .get(
+    '/notebooks/:nid',
+    ({ params }) => {
+      const id = requirePositiveIntId(params.nid, 'notebook id');
+      const row = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
+      if (!row) notFound(id);
+      return serializeNotebook(row);
+    },
+    { response: NotebookSchema },
+  )
 
   // Update a notebook
   .patch(
@@ -191,7 +199,7 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
         .get();
       return serializeNotebook(updated);
     },
-    { body: NotebookUpdateSchema },
+    { body: NotebookUpdateSchema, response: NotebookSchema },
   )
 
   // Delete a notebook

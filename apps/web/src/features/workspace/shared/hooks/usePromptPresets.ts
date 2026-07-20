@@ -1,3 +1,4 @@
+import type { PromptPreset } from '@crystalith/shared';
 import { useCallback } from 'react';
 import useSWR from 'swr';
 
@@ -23,15 +24,7 @@ export interface PromptPresetItem {
   updatedAt: string | null;
 }
 
-function normalizePreset(raw: {
-  id: number;
-  trigger: string;
-  description: string | null;
-  systemPrompt: string;
-  enabled: boolean;
-  createdAt: string;
-  updatedAt: string;
-}): PromptPresetItem {
+function normalizePreset(raw: PromptPreset): PromptPresetItem {
   return {
     presetId: raw.id,
     trigger: raw.trigger,

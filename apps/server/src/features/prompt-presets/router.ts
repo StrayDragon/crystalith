@@ -1,4 +1,4 @@
-import { PromptPresetCreateSchema } from '@crystalith/shared';
+import { PromptPresetCreateSchema, PromptPresetSchema } from '@crystalith/shared';
 // Prompt presets router — CRUD for chat prompt presets (/prompt:xxx pattern).
 //
 // Prompt presets are injected into the QA system prompt when the user
@@ -10,6 +10,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { db } from '../../db/index.ts';
 import { promptPresets } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
 import { listPresets } from '../qa/presets.ts';
 
@@ -86,18 +87,21 @@ function serializePreset(row: typeof promptPresets.$inferSelect) {
 }
 
 export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
-  .get('/prompt-presets', () => {
-    const rows = db().select().from(promptPresets).orderBy(desc(promptPresets.createdAt)).all();
-    return rows.map(serializePreset);
-  })
+  .get(
+    '/prompt-presets',
+    () => {
+      const rows = db().select().from(promptPresets).orderBy(desc(promptPresets.createdAt)).all();
+      return rows.map(serializePreset);
+    },
+    { response: PromptPresetSchema.array() },
+  )
   .post(
     '/prompt-presets',
     ({ body, set }) => {
       // c61: trigger uniqueness + builtin conflict (v1 service.py:74-85)
       const conflict = checkTriggerConflict(body.trigger);
       if (conflict) {
-        set.status = 409;
-        return { error: conflict };
+        throw new AppHttpError(ErrorCode.CONFLICT, conflict);
       }
       const row = db()
         .insert(promptPresets)
@@ -109,13 +113,14 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
         })
         .returning()
         .get();
+      set.status = 201;
       return serializePreset(row);
     },
-    { body: PromptPresetCreateSchema },
+    { body: PromptPresetCreateSchema, response: PromptPresetSchema },
   )
   .patch(
     '/prompt-presets/:id',
-    ({ params, body, set }) => {
+    ({ params, body }) => {
       const id = requirePositiveIntId(params.id, 'preset id');
       const existing = db().select().from(promptPresets).where(eq(promptPresets.id, id)).get();
       if (!existing) throw new NotFoundError(`Preset ${id} not found`);
@@ -124,8 +129,7 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
       if (body.trigger !== undefined) {
         const conflict = checkTriggerConflict(body.trigger, id);
         if (conflict) {
-          set.status = 409;
-          return { error: conflict };
+          throw new AppHttpError(ErrorCode.CONFLICT, conflict);
         }
       }
 
@@ -143,7 +147,7 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
         .get();
       return serializePreset(updated);
     },
-    { body: PromptPresetCreateSchema.partial() },
+    { body: PromptPresetCreateSchema.partial(), response: PromptPresetSchema },
   )
   .delete('/prompt-presets/:id', ({ params, set }) => {
     const id = requirePositiveIntId(params.id, 'preset id');

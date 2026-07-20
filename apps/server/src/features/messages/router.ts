@@ -120,7 +120,7 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
   // Create a user message
   .post(
     '/notebooks/:nid/sessions/:sid/messages',
-    ({ params, body }) => {
+    ({ params, body, set }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const sid = requirePositiveIntId(params.sid, 'session id');
       const session = db().select().from(sessions).where(eq(sessions.id, sid)).get();
@@ -142,9 +142,10 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
       // (mirrors v1 features/messages/service.py:29-31).
       db().update(sessions).set({ updatedAt: new Date() }).where(eq(sessions.id, sid)).run();
 
+      set.status = 201;
       return serializeMessage(row);
     },
-    { body: MessageCreateSchema },
+    { body: MessageCreateSchema, response: MessageSchema },
   );
 
 registerApiDoc(apiDocs);
