@@ -2,7 +2,7 @@
 
 | 字段        | 值                                                      |
 | ----------- | ------------------------------------------------------- |
-| 状态        | Draft — grill 进行中（R1′ D1 已定）                     |
+| 状态        | Draft — grill 进行中（R1′ D1、R2a 已定）                |
 | 对应 change | `c76-deep-research-runtime`                             |
 | 父 PRD      | [`deep-research-prd.md`](./deep-research-prd.md) v0.2.3 |
 
@@ -28,9 +28,20 @@ B / B1 / **H1′（D1）** / I1 / K1 / L1 / M1 及顶栏 E1/F1/G1（见父 PRD �
 - `useNotebookSources === true` 且 `sourceIds` 为空/缺省 → 400（UI 应禁用开始并提示勾选）。
 - `useNotebookSources === false` 时忽略 `sourceIds`（或必须为空）。
 
+## 2. Run status（R2a）
+
+| status             | 含义              |
+| ------------------ | ----------------- |
+| `queued`           | 已创建、尚未开跑  |
+| `running`          | 执行中            |
+| `awaiting_confirm` | M1 硬停待用户确认 |
+| `completed`        | 有终稿            |
+| `failed`           | 不可恢复失败      |
+| `cancelled`        | 用户取消          |
+
 ## 待钉（grill 主题）
 
-1. Run 状态枚举与 stream 事件
+1. stream 事件形状（graph patch / status / confirm payload）
 2. Tool 输入/输出与 checkpoint 粒度
 3. Report JSON 形状与脚注 serializer
 4. convertToNote / convertToSource 请求体（artifactRef）

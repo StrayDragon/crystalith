@@ -31,7 +31,7 @@ POST .../research/:rid/convert-to-source  → ingest + embed
 GET  .../research/:rid/stream             → graph/status patches (GET SSE，对齐 c70)
 ```
 
-执行器：主控编排原子 tools；每步或每 N 节点写 checkpoint；状态机含 `running | awaiting_confirm | completed | failed | cancelled`。
+执行器：主控编排原子 tools；每步或每 N 节点写 checkpoint；状态机：`queued | running | awaiting_confirm | completed | failed | cancelled`（R2a）。
 
 **Report SSOT（K1）**：结构化 sections + 内联 citeId → 全局 `Citation[]` map；转笔记时 serializer → GFM `[^n]`。
 
