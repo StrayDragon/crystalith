@@ -34,6 +34,174 @@ function asResearchStatus(value: unknown): ResearchStatus | null {
   return null;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readNumber(value: unknown, fallback = 0): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function readPlanQueries(
+  value: unknown,
+): Array<{ query: string; engine: string; priority: number; reason: string }> {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (!isRecord(item)) return [];
+    if (typeof item.query !== 'string') return [];
+    return [
+      {
+        query: item.query,
+        engine: typeof item.engine === 'string' ? item.engine : '',
+        priority: readNumber(item.priority),
+        reason: typeof item.reason === 'string' ? item.reason : '',
+      },
+    ];
+  });
+}
+
+function toSSEEvent(eventName: string, raw: unknown): SSEEvent | null {
+  if (!isRecord(raw)) return null;
+
+  switch (eventName) {
+    case 'status': {
+      if (typeof raw.status !== 'string') return null;
+      const statusData: SSEStatusEvent = {
+        status: raw.status,
+        iteration: readNumber(raw.iteration),
+      };
+      if (typeof raw.topic === 'string') statusData.topic = raw.topic;
+      return {
+        type: 'status',
+        data: statusData,
+      };
+    }
+    case 'plan_ready': {
+      const nested = isRecord(raw.data) ? raw.data : {};
+      return {
+        type: 'plan_ready',
+        data: {
+          iteration: readNumber(raw.iteration),
+          data: {
+            queries: readPlanQueries(nested.queries),
+            reasoning: typeof nested.reasoning === 'string' ? nested.reasoning : '',
+          },
+        },
+      };
+    }
+    case 'search_progress': {
+      const nested = isRecord(raw.data) ? raw.data : {};
+      const progressData: SSESearchProgressEvent['data'] = {};
+      if (typeof nested.resultCount === 'number') progressData.resultCount = nested.resultCount;
+      if (typeof nested.newResults === 'number') progressData.newResults = nested.newResults;
+      if (typeof nested.queriesExecuted === 'number') {
+        progressData.queriesExecuted = nested.queriesExecuted;
+      }
+      return {
+        type: 'search_progress',
+        data: {
+          iteration: readNumber(raw.iteration),
+          data: progressData,
+        },
+      };
+    }
+    case 'analysis': {
+      const nested = isRecord(raw.data) ? raw.data : {};
+      const analysisData: SSEAnalysisEvent['data'] = {};
+      if (typeof nested.summary === 'string') analysisData.summary = nested.summary;
+      if (typeof nested.coverageEstimate === 'number') {
+        analysisData.coverageEstimate = nested.coverageEstimate;
+      }
+      if (typeof nested.needMore === 'boolean') analysisData.needMore = nested.needMore;
+      return {
+        type: 'analysis',
+        data: {
+          iteration: readNumber(raw.iteration),
+          data: analysisData,
+        },
+      };
+    }
+    case 'report': {
+      const nested = isRecord(raw.data) ? raw.data : {};
+      const reportData: SSEReportEvent['data'] = {};
+      if (typeof nested.reportLength === 'number') reportData.reportLength = nested.reportLength;
+      return {
+        type: 'report',
+        data: {
+          iteration: readNumber(raw.iteration),
+          data: reportData,
+        },
+      };
+    }
+    case 'done': {
+      if (typeof raw.status !== 'string') return null;
+      const doneData: SSEDoneEvent = { status: raw.status };
+      if (typeof raw.totalResults === 'number') doneData.totalResults = raw.totalResults;
+      if (typeof raw.hasReport === 'boolean') doneData.hasReport = raw.hasReport;
+      return {
+        type: 'done',
+        data: doneData,
+      };
+    }
+    case 'waiting': {
+      return {
+        type: 'waiting',
+        data: {
+          status: typeof raw.status === 'string' ? raw.status : 'waiting_user',
+          iteration: readNumber(raw.iteration),
+          message: typeof raw.message === 'string' ? raw.message : '',
+        },
+      };
+    }
+    case 'thinking': {
+      if (typeof raw.message !== 'string') return null;
+      const thinkingData: SSEThinkingEvent = {
+        type: typeof raw.type === 'string' ? raw.type : 'thinking',
+        message: raw.message,
+        iteration: readNumber(raw.iteration),
+      };
+      if (Array.isArray(raw.queries)) {
+        thinkingData.queries = raw.queries.filter(
+          (query): query is string => typeof query === 'string',
+        );
+      }
+      return {
+        type: 'thinking',
+        data: thinkingData,
+      };
+    }
+    case 'connection': {
+      if (
+        raw.status !== 'reconnecting' &&
+        raw.status !== 'reconnected' &&
+        raw.status !== 'failed'
+      ) {
+        return null;
+      }
+      if (typeof raw.message !== 'string') return null;
+      return {
+        type: 'connection',
+        data: { status: raw.status, message: raw.message },
+      };
+    }
+    case 'error': {
+      return {
+        type: 'error',
+        data: {
+          message: typeof raw.message === 'string' ? raw.message : '错误',
+        },
+      };
+    }
+    default:
+      return null;
+  }
+}
+
+function appendSseEvent(prev: SSEEvent[], event: SSEEvent, maxEvents: number): SSEEvent[] {
+  const next = [...prev, event];
+  return next.length > maxEvents ? next.slice(-maxEvents) : next;
+}
+
 function toSessionDetail(
   session: ResearchSession | ResearchSessionDetail | null | undefined,
 ): ResearchSessionDetail | null {
@@ -525,19 +693,14 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           reconnectAttemptRef.current += 1;
           const delay = baseReconnectDelay * Math.pow(2, reconnectAttemptRef.current - 1);
 
-          setSSEEvents((prev) => {
-            const next = [
-              ...prev,
-              {
-                type: 'connection',
-                data: {
-                  status: 'reconnecting',
-                  message: `${message}${Math.round(delay / 1000)}秒后重连...`,
-                },
-              },
-            ] as SSEEvent[];
-            return next.length > maxSseEvents ? next.slice(-maxSseEvents) : next;
-          });
+          const reconnectEvent: SSEEvent = {
+            type: 'connection',
+            data: {
+              status: 'reconnecting',
+              message: `${message}${Math.round(delay / 1000)}秒后重连...`,
+            },
+          };
+          setSSEEvents((prev) => appendSseEvent(prev, reconnectEvent, maxSseEvents));
 
           reconnectTimeoutRef.current = setTimeout(() => {
             if (isResearchSessionActive(currentResearchId)) {
@@ -545,16 +708,11 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
             }
           }, delay);
         } else {
-          setSSEEvents((prev) => {
-            const next = [
-              ...prev,
-              {
-                type: 'connection',
-                data: { status: 'failed', message: '连接失败，请刷新页面重试' },
-              },
-            ] as SSEEvent[];
-            return next.length > maxSseEvents ? next.slice(-maxSseEvents) : next;
-          });
+          const failedEvent: SSEEvent = {
+            type: 'connection',
+            data: { status: 'failed', message: '连接失败，请刷新页面重试' },
+          };
+          setSSEEvents((prev) => appendSseEvent(prev, failedEvent, maxSseEvents));
         }
       };
 
@@ -571,24 +729,20 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
             reconnectAttemptRef.current = 0;
             lastEventAtRef.current = Date.now();
 
-            const eventType = sseEvent.event as SSEEvent['type'];
-            const data = sseEvent.data as Record<string, unknown> | null;
+            const parsed = toSSEEvent(sseEvent.event, sseEvent.data);
+            if (!parsed) continue;
 
-            if (!data) continue;
+            setSSEEvents((prev) => appendSseEvent(prev, parsed, maxSseEvents));
 
-            setSSEEvents((prev) => {
-              const next = [...prev, { type: eventType, data } as SSEEvent];
-              return next.length > maxSseEvents ? next.slice(-maxSseEvents) : next;
-            });
-
-            if (eventType === 'status' && data.status) {
-              const nextStatus = asResearchStatus(data.status);
+            if (parsed.type === 'status') {
+              const nextStatus = asResearchStatus(parsed.data.status);
               if (!nextStatus) continue;
+              const nextIteration = parsed.data.iteration;
               setActiveSession((prev) =>
                 prev
                   ? {
                       ...prev,
-                      currentIteration: (data.iteration as number) ?? prev.currentIteration,
+                      currentIteration: nextIteration > 0 ? nextIteration : prev.currentIteration,
                       status: nextStatus,
                     }
                   : prev,
@@ -598,7 +752,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
                   s.id === researchId
                     ? {
                         ...s,
-                        currentIteration: (data.iteration as number) ?? s.currentIteration,
+                        currentIteration: nextIteration > 0 ? nextIteration : s.currentIteration,
                         status: nextStatus,
                       }
                     : s,
@@ -610,10 +764,10 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
               }
             }
 
-            if (eventType === 'done' || eventType === 'report') {
+            if (parsed.type === 'done' || parsed.type === 'report') {
               void fetchSession(researchId);
               void fetchSessions();
-              if (eventType === 'done') {
+              if (parsed.type === 'done') {
                 unsubscribeFromSSE();
               }
             }
