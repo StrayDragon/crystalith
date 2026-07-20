@@ -1,43 +1,14 @@
-# 精炼摘要（Refine）
+# 精炼摘要（Refine）— **已移除 (c73, 2026-07-20)**
 
-引用感知 RAG 摘要，三种格式（paragraph / bullets / structured）。经 `TaskQueue` enqueue + 同请求 `waitForCompletion`。
+整域 HTTP 与实现已删除。Studio 对 PARAGRAPH / BULLETS / STRUCTURED 使用 `POST /v2/notebooks/:nid/outputs`（FE：`useRefine` → `useOutputQueue`）。
 
-> **2026-07-17：** `RefinePanel` UI 已移除。生产 Studio 对 PARAGRAPH / BULLETS / STRUCTURED 使用 `POST /v2/outputs`（`useRefine` → `useOutputQueue`），**不**经本域。
->
-> **2026-07-20 决策（以代码为准）：** 无用户入口 → **dead-candidate / 可整域移除**（含依赖的 `/v2/tasks*` 与 `TaskQueue` 若无其他生产者）。
+| 曾有路由                                             | 状态    |
+| ---------------------------------------------------- | ------- |
+| `GET /v2/refine/modes`                               | removed |
+| `POST /v2/refine` / `POST /v2/notebooks/:nid/refine` | removed |
+| `POST /v2/refine/batch` / nested batch               | removed |
 
----
+已删代码：`apps/server/src/features/refine/**`、`packages/shared/src/schemas/refine.ts`。
+规格：`structural-refinement-for-generated-results` / `generation-core` 中 refine HTTP 条款已缩（愿景级局部改良 MUST 仍可能残留，另议）。
 
-### `refine-modes`
-
-- **Domain:** refine
-- **Route:** `GET /v2/refine/modes`
-- **说明:** 列出格式：paragraph / bullets / structured
-- **用户可见:** No
-- **代码:** `apps/server/src/features/refine/router.ts`
-
-> NOTE: 删除候选 — 整域 `/v2/refine*`；缩 `structural-refinement` / generation-core refine 条款
-
----
-
-### `refine-single`
-
-- **Domain:** refine
-- **Route:** `POST /v2/refine`（canonical: `/v2/notebooks/:nid/refine`）
-- **说明:** 单格式 Refine；经任务队列执行
-- **用户可见:** No
-- **代码:** `apps/server/src/features/refine/router.ts`、`refine/format.ts`、`refine/retrieve.ts`
-
-> NOTE: 删除候选 — 同上
-
----
-
-### `refine-batch`
-
-- **Domain:** refine
-- **Route:** `POST /v2/refine/batch`（canonical: `/v2/notebooks/:nid/refine/batch`）
-- **说明:** 多格式并发生成（共享检索，Semaphore 限流）
-- **用户可见:** No
-- **代码:** `apps/server/src/features/refine/router.ts`
-
-> NOTE: 删除候选 — 同上
+> NOTE: **已移除** — 勿再登记 OpenAPI / 勿再实现 parity

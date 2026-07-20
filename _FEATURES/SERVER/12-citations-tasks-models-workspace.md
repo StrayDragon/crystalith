@@ -2,75 +2,30 @@
 
 ---
 
-## 引用（Citations）
+## 引用（Citations HTTP）— **已移除 (c73)**
 
-### `citations-by-message`
+| 曾有路由                                   | 状态    |
+| ------------------------------------------ | ------- |
+| `GET /v2/citations/:messageId`             | removed |
+| `GET /v2/notebooks/:nid/citations/context` | removed |
 
-- **Domain:** citations
-- **Route:** `GET /v2/citations/:messageId`
-- **说明:** 获取消息关联的引用列表
-- **用户可见:** No（无 FE；消息 citations 随 QA/messages 载荷下发）
-- **代码:** `apps/server/src/features/citations/router.ts`、`citations/context.ts`
+已删：`apps/server/src/features/citations/**`。
+**仍活：** QA / messages 响应体中的 `citations` 字段；FE `CitationMark` / `CitationPopover` 消费嵌入数据，不调独立 citations HTTP。
 
-> NOTE: 2026-07-20 — 无 FE 调用；是否保留另议
-
----
-
-### `citations-context`
-
-- **Domain:** citations
-- **Route:** `GET /v2/notebooks/:nid/citations/context`
-- **说明:** 按 chunk/source 返回邻域 before/chunk/after（证据审阅）
-- **用户可见:** No（无 FE；CitationDrawer / 证据 UI 已移除）
-- **代码:** `apps/server/src/features/citations/router.ts`、`citations/context.ts`
-
-> NOTE: 2026-07-20 — 死产品面（仅测/BDD/spec）；移除候选。`GET /v2/citations/:messageId` 亦无 FE 调用方，另议。
+> NOTE: **已移除** HTTP；消息内引用 UI 仍 active
 
 ---
 
-## 任务队列（Tasks HTTP）
+## 任务队列（Tasks HTTP + TaskQueue）— **已移除 (c73)**
 
-后台 `TaskQueue` 的 **观测 / 取消** HTTP（**无**创建；**不是** Studio `useOutputQueue`）。
+| 曾有路由 / 组件                                                                  | 状态    |
+| -------------------------------------------------------------------------------- | ------- |
+| `GET /v2/tasks/:id`、`GET /v2/notebooks/:nid/tasks`、`POST /v2/tasks/:id/cancel` | removed |
+| `TaskQueue` / `shared/queue.ts` / `features/tasks/*` / DB `tasks`                | removed |
 
-- 创建：仅 `taskQueue.enqueue`（当前唯一生产者：`refine`）
-- DB/worker 类型：`refine` | `document_parse`（后者 **无 enqueue 调用方**）
-- refine：同请求 `waitForCompletion`，客户端不必轮询
+Studio 输出队列是 FE 本地 `useOutputQueue`，从未使用本 API。
 
-> **2026-07-20 决策：** 无 FE / 无独立产品价值 → **dead-candidate / 可移除**（与 refine 整域一并评估 `TaskQueue` 内部是否仍要留）。
-
-### `tasks-get`
-
-- **Domain:** tasks
-- **Route:** `GET /v2/tasks/:id?notebookId=`
-- **说明:** 获取单个后台任务状态
-- **用户可见:** No
-- **代码:** `apps/server/src/features/tasks/router.ts`
-
-> NOTE: 删除候选 — `/v2/tasks*` 整组；旧「Partial / useOutputQueue」为文档错误
-
----
-
-### `tasks-list-by-notebook`
-
-- **Domain:** tasks
-- **Route:** `GET /v2/notebooks/:nid/tasks`
-- **说明:** 列出笔记本下任务
-- **用户可见:** No
-- **代码:** `apps/server/src/features/tasks/router.ts`
-
-> NOTE: 删除候选 — 同上
-
----
-
-### `tasks-cancel`
-
-- **Domain:** tasks
-- **Route:** `POST /v2/tasks/:id/cancel?notebookId=`
-- **说明:** 取消排队/运行中任务（`TaskQueue.cancel`）
-- **用户可见:** No
-- **代码:** `apps/server/src/features/tasks/router.ts`
-
-> NOTE: 删除候选 — 同上
+> NOTE: **已移除**
 
 ---
 
@@ -84,7 +39,7 @@
 - **用户可见:** Yes（ModelSelector）
 - **代码:** `apps/server/src/features/models/router.ts`
 
-> NOTE: 待盘点
+> NOTE: 待盘点 — ModelSelector 仍发 `capability` 而非 `role`（API-ALIGNMENT M4）
 
 ---
 
@@ -122,7 +77,7 @@
 - **用户可见:** Yes
 - **代码:** `apps/server/src/features/workspace/router.ts`、`outputs/generator.ts`
 
-> NOTE: 待盘点
+> NOTE: 待盘点 — c73 后此为类型 registry 的一等 FE 入口（取代已删 `/outputs/types`）
 
 ---
 

@@ -10,8 +10,6 @@ import {
 //
 // Canonical: /v2/notebooks/:nid/qa{,/stream,/export}
 // Flat aliases: /v2/qa{,/stream,/export} (c67 body/query notebookId)
-// Global flat: GET /v2/qa/presets
-//
 // Mirrors v1 `features/qa/api.py` on Elysia + AI SDK streamText.
 // c36: deterministic retrieval (retrieveAndJudge) + evidence short-circuit.
 import { and, eq, inArray } from 'drizzle-orm';
@@ -26,7 +24,7 @@ import { getDefaultChatModel } from '../../shared/config.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
 import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import { streamQa, generateQaDirect } from './handler.ts';
-import { resolvePreset, listPresets, parsePromptDirective } from './presets.ts';
+import { resolvePreset, parsePromptDirective } from './presets.ts';
 
 // ---------------------------------------------------------------------------
 // OpenAPI docs
@@ -81,13 +79,6 @@ const apiDocs: OpenApiRoute[] = [
     tags: ['qa'],
     deprecated: true,
     responses: { 200: { description: 'Exported QA answer' } },
-  },
-  {
-    path: '/v2/qa/presets',
-    method: 'get',
-    summary: 'List available QA presets',
-    tags: ['qa'],
-    responses: { 200: { description: 'Preset list' } },
   },
 ];
 
@@ -488,8 +479,7 @@ function handleQaExport(query: QaExportQuery, pathNotebookId?: number) {
 // ---------------------------------------------------------------------------
 
 export const qaRouter = new Elysia({ prefix: '/v2' })
-  // List presets — global flat only (c69)
-  .get('/qa/presets', () => listPresets())
+  // Presets route removed (c73): FE uses /v2/workspace/tools instead
 
   // ---- Nested canonical ----
   .post(

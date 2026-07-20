@@ -34,18 +34,11 @@ describe('db: schema migration', () => {
       sql`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name`,
     );
     const names = rows.map((r) => r.name);
-    for (const expected of [
-      'notebooks',
-      'chunks',
-      'eval_datasets',
-      'eval_run_items',
-      'strategy_configs',
-      'vec_chunks',
-    ]) {
+    for (const expected of ['notebooks', 'chunks', 'strategy_configs', 'vec_chunks']) {
       expect(names).toContain(expected);
     }
-    // 21 relational tables + vec_chunks + __drizzle_migrations
-    expect(names.length).toBeGreaterThanOrEqual(22);
+    // 16 relational tables + vec_chunks + __drizzle_migrations
+    expect(names.length).toBeGreaterThanOrEqual(18);
   });
 });
 

@@ -4,7 +4,6 @@ import {
   OutputExportQuerySchema,
   OutputGenerateNestedRequestSchema,
   OutputGenerateRequestSchema,
-  OutputMetaSchema,
   OutputSchema,
   OutputsPageSchema,
   PaginationParamsSchema,
@@ -22,7 +21,7 @@ import { NoSuchModelError, TypeValidationError, APICallError, NoObjectGeneratedE
 //   GET    /v2/notebooks/:nid/outputs/:id/export
 //   POST   /v2/notebooks/:nid/outputs/:id/convert-to-source
 // Flat aliases (deprecated): /v2/outputs{,/:id,/export,/convert-to-source}
-// Global flat: GET /v2/outputs/types
+// (c73: GET /v2/outputs/types removed — FE uses GET /v2/workspace/tools)
 import { count, desc, eq, inArray } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
@@ -36,7 +35,7 @@ import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
 import { ErrorCode, sendError } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
 import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
-import { listOutputTypes, type ToolOutputType } from './generator.ts';
+import { type ToolOutputType } from './generator.ts';
 import { runOutputPipeline } from './pipeline.ts';
 import { renderOutputToMarkdown, splitTextToChunks } from './render.ts';
 
@@ -159,13 +158,6 @@ const apiDocs: OpenApiRoute[] = [
     tags: ['outputs'],
     deprecated: true,
     responses: { 201: { description: 'Created source' } },
-  },
-  {
-    path: '/v2/outputs/types',
-    method: 'get',
-    summary: 'List available output types',
-    tags: ['outputs'],
-    responses: { 200: { description: 'Output types with metadata' } },
   },
 ];
 
@@ -549,11 +541,6 @@ async function handleConvertOutputToSource(id: number, notebookId: number, set: 
 // ---------------------------------------------------------------------------
 
 export const outputsRouter = new Elysia({ prefix: '/v2' })
-  // List output types — global flat only (c69)
-  .get('/outputs/types', () => listOutputTypes(), {
-    response: OutputMetaSchema.array(),
-  })
-
   // ---- Nested canonical ----
   .post(
     '/notebooks/:nid/outputs',

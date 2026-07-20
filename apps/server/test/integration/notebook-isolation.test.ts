@@ -206,10 +206,4 @@ describe('c69 nested notebook paths', () => {
     const page = body as { items: Array<{ id: number }> };
     expect(page.items.some((o) => o.id === outputId)).toBe(true);
   });
-
-  it('GET /v2/outputs/types stays global flat', async () => {
-    const { status, body } = await get('/v2/outputs/types');
-    expect(status).toBe(200);
-    expect(Array.isArray(body)).toBe(true);
-  });
 });

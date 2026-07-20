@@ -19,7 +19,7 @@
 | `json-fallback-card-orphan` | `domains/messages/components/JsonFallbackCard.tsx` |
 | `use-tasks-hook-unused`     | `shared/hooks/useTasks.ts`                         |
 
-**仍保留（未删码）：** `useRefine.ts`（Studio 活动 hook，命名遗留，实际打 outputs）。Server `/v2/refine*` 已标 **dead-candidate**（见 MATRIX / SERVER/10），待 SDD 删码。
+**仍保留：** `useRefine.ts`（Studio hook，实际打 outputs）。Server `/v2/refine*` **已于 c73 移除**。
 
 ---
 

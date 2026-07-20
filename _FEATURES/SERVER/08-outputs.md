@@ -7,12 +7,12 @@ Output 生成、CRUD、导出与转来源。
 ### `outputs-types`
 
 - **Domain:** outputs
-- **Route:** `GET /v2/outputs/types`
-- **说明:** 列出 Output 类型元数据（FAQ/GUIDE/…）
-- **用户可见:** No（FE 用 `GET /v2/workspace/tools`）
-- **代码:** `apps/server/src/features/outputs/router.ts`、`outputs/generator.ts`
+- **Route:** ~~`GET /v2/outputs/types`~~ **removed (c73)**
+- **说明:** 曾列出 Output 类型元数据；FE 用 `GET /v2/workspace/tools`
+- **用户可见:** No
+- **代码（仍保留）:** `outputs/generator.ts`（`OUTPUT_META` / `FRONTEND_BUNDLES` 供 workspace tools）
 
-> NOTE: 删除候选 — 重复 registry；保留 `OUTPUT_META` / workspace tools
+> NOTE: **路由已移除**；元数据经 workspace/tools 暴露
 
 ---
 

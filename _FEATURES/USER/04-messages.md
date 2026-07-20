@@ -176,14 +176,14 @@
 ### `chat-citations`
 
 - **名称:** 对话引用（Citations）
-- **位置:** 消息内 `[N]` 标记、引用抽屉/弹出层
+- **位置:** 消息内 `[N]` 标记、引用弹出层
 - **入口:** 点击引用编号
-- **操作:** 展示引用来源片段、跳转来源高亮
-- **Server:** `GET /v2/citations/:messageId`、`GET /v2/notebooks/:nid/citations/context`
+- **操作:** 展示引用来源片段（来自消息/QA 载荷中的 citations）
+- **Server:** 无独立 citations HTTP（c73 已删）；数据随 `POST .../qa` / messages 下发
 - **代码:** `apps/web/src/features/workspace/shared/components/citations/`（`CitationMark.tsx`、`CitationPopover.tsx`）
 - **截图:** `screenshots/chat-citations.png`（待截图）
 
-> NOTE: 待盘点
+> NOTE: 2026-07-20 — 不以 `GET /v2/citations*` / context 为依赖；嵌入 citations 仍 active
 
 ---
 

@@ -120,38 +120,6 @@ export const CitationSchema = z.object({
 });
 export type Citation = z.infer<typeof CitationSchema>;
 
-/** Query for GET /v2/notebooks/:nid/citations/context — chunkId XOR sourceId+chunkIndex. */
-export const CitationContextQuerySchema = z
-  .object({
-    chunkId: z.coerce.number().int().positive().optional(),
-    sourceId: z.coerce.number().int().positive().optional(),
-    chunkIndex: z.coerce.number().int().nonnegative().optional(),
-    // c53 / v1 Query(ge=0, le=5): out-of-range values are clamped (parity with prior router).
-    before: z.coerce
-      .number()
-      .int()
-      .default(1)
-      .transform((n) => Math.max(0, Math.min(5, n))),
-    after: z.coerce
-      .number()
-      .int()
-      .default(1)
-      .transform((n) => Math.max(0, Math.min(5, n))),
-  })
-  .superRefine((q, ctx) => {
-    const hasChunkId = q.chunkId !== undefined;
-    const hasSourceLocator = q.sourceId !== undefined && q.chunkIndex !== undefined;
-    if (hasChunkId === hasSourceLocator) {
-      ctx.addIssue({
-        code: 'custom',
-        message: hasChunkId
-          ? 'Provide chunkId or sourceId+chunkIndex (not both)'
-          : 'Provide chunkId or sourceId+chunkIndex',
-      });
-    }
-  });
-export type CitationContextQuery = z.infer<typeof CitationContextQuerySchema>;
-
 /** Loose JSON object metadata column shape. */
 export const JsonMetadataSchema = z.record(z.string(), z.unknown());
 export type JsonMetadata = z.infer<typeof JsonMetadataSchema>;

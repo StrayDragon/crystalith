@@ -1,9 +1,7 @@
 import type { JsonMetadata } from '@crystalith/shared';
 // Drizzle ORM schema for Crystalith v2 — single SQLite database.
 //
-// Maps the business tables 1:1 (incl. strategy_configs for RAG) and adds 4
-// eval-harness tables (eval_datasets / eval_items / eval_runs / eval_run_items)
-// so the full schema is provisioned via Drizzle migrations. The sqlite-vec
+// Maps the business tables 1:1 (incl. strategy_configs for RAG). The sqlite-vec
 // `vec_chunks` virtual table is NOT managed by Drizzle (see `vectors.ts`) —
 // only relational tables live here.
 //
@@ -476,123 +474,6 @@ export const researchStepRelations = relations(researchSteps, ({ one }) => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Tasks (background job queue)
-// ---------------------------------------------------------------------------
-
-export const tasks = sqliteTable(
-  'tasks',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    notebookId: integer('notebook_id').references(() => notebooks.id, { onDelete: 'set null' }),
-    type: text('type', { enum: ['refine', 'document_parse'] }).notNull(),
-    status: text('status', {
-      enum: ['pending', 'running', 'completed', 'failed', 'cancelled'],
-    })
-      .notNull()
-      .default('pending'),
-    payload: jsonReq('payload'),
-    result: json('result'),
-    error: text('error'),
-    progress: integer('progress').notNull().default(0),
-    createdAt: ts('created_at'),
-    updatedAt: tsUpd('updated_at'),
-  },
-  (t) => [index('ix_tasks_notebook_id_status').on(t.notebookId, t.status)],
-);
-
-// ---------------------------------------------------------------------------
-// Eval harness (new in v2): datasets, items, runs, run_items
-// ---------------------------------------------------------------------------
-
-export const evalDatasets = sqliteTable('eval_datasets', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  name: text('name').notNull(),
-  description: text('description'),
-  notebookId: integer('notebook_id').references(() => notebooks.id, { onDelete: 'set null' }),
-  createdAt: ts('created_at'),
-  updatedAt: tsUpd('updated_at'),
-});
-
-export const evalDatasetRelations = relations(evalDatasets, ({ one, many }) => ({
-  notebook: one(notebooks, { fields: [evalDatasets.notebookId], references: [notebooks.id] }),
-  items: many(evalItems),
-  runs: many(evalRuns),
-}));
-
-export const evalItems = sqliteTable(
-  'eval_items',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    datasetId: integer('dataset_id')
-      .notNull()
-      .references(() => evalDatasets.id, { onDelete: 'cascade' }),
-    question: text('question').notNull(),
-    expectedAnswer: text('expected_answer').notNull(),
-    expectedSources: text('expected_sources', { mode: 'json' }).$type<number[] | null>(),
-    notebookId: integer('notebook_id')
-      .notNull()
-      .references(() => notebooks.id, { onDelete: 'cascade' }),
-    createdAt: ts('created_at'),
-  },
-  (t) => [index('ix_eval_items_dataset_id').on(t.datasetId)],
-);
-
-export const evalItemRelations = relations(evalItems, ({ one }) => ({
-  dataset: one(evalDatasets, { fields: [evalItems.datasetId], references: [evalDatasets.id] }),
-}));
-
-export const evalRuns = sqliteTable(
-  'eval_runs',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    datasetId: integer('dataset_id')
-      .notNull()
-      .references(() => evalDatasets.id, { onDelete: 'cascade' }),
-    strategyIds: text('strategy_ids', { mode: 'json' }).$type<string[]>().notNull(),
-    status: text('status', { enum: ['running', 'completed', 'failed', 'cancelled'] })
-      .notNull()
-      .default('running'),
-    startedAt: ts('started_at'),
-    finishedAt: tsNull('finished_at'),
-    summary: json('summary'),
-  },
-  (t) => [index('ix_eval_runs_dataset_id').on(t.datasetId)],
-);
-
-export const evalRunRelations = relations(evalRuns, ({ one, many }) => ({
-  dataset: one(evalDatasets, { fields: [evalRuns.datasetId], references: [evalDatasets.id] }),
-  items: many(evalRunItems),
-}));
-
-export const evalRunItems = sqliteTable(
-  'eval_run_items',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    runId: integer('run_id')
-      .notNull()
-      .references(() => evalRuns.id, { onDelete: 'cascade' }),
-    itemId: integer('item_id')
-      .notNull()
-      .references(() => evalItems.id, { onDelete: 'cascade' }),
-    strategyId: text('strategy_id').notNull(),
-    question: text('question').notNull(),
-    answer: text('answer').notNull(),
-    retrievedSourceIds: text('retrieved_source_ids', { mode: 'json' })
-      .$type<number[]>()
-      .notNull()
-      .default(sql`'[]'`),
-    metrics: jsonReq('metrics'),
-    createdAt: ts('created_at'),
-  },
-  (t) => [index('ix_eval_run_items_run_id_strategy_id').on(t.runId, t.strategyId)],
-);
-
-export const evalRunItemRelations = relations(evalRunItems, ({ one }) => ({
-  run: one(evalRuns, { fields: [evalRunItems.runId], references: [evalRuns.id] }),
-  item: one(evalItems, { fields: [evalRunItems.itemId], references: [evalItems.id] }),
-}));
-
-// ---------------------------------------------------------------------------
 // Barrel — table map passed to `drizzle({ schema })` for relational queries
 // ---------------------------------------------------------------------------
 
@@ -613,11 +494,6 @@ export const schema = {
   studioSlides,
   researchSessions,
   researchSteps,
-  tasks,
-  evalDatasets,
-  evalItems,
-  evalRuns,
-  evalRunItems,
 };
 
 export type Schema = typeof schema;

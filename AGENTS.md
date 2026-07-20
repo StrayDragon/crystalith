@@ -37,7 +37,7 @@ crystalith/
 ├── packages/
 │   ├── shared/            # Zod schemas + types SSOT
 │   │   └── src/schemas/   # notebook, session, message, source, qa, output,
-│   │                      # research, studio, refine, model, etc.
+│   │                      # research, studio, model, etc. (refine HTTP removed c73)
 │   └── crystalith-slidev/ # Slidev integration
 ├── config/                # Runtime config (app.yaml + secret.env)
 ├── llmanspec/             # Spec-driven development specs + changes
@@ -180,7 +180,7 @@ Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `ope
 
 - React 18.2.0 locked
 - Rivu dropped (message-embedded JSON components instead of server state machine)
-- Built-in Eval Benchmark Harness (Golden Dataset + LLM-as-Judge) — **present in code**; `_FEATURES` marks `/v2/eval/*` as **dead-candidate** (no UI/CI/CLI; pending removal + spec shrink)
+- Built-in Eval Benchmark Harness removed in c73 (no UI/CI/CLI consumer)
 
 ## v2 Workflow
 

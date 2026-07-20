@@ -4,7 +4,6 @@ import { describe, expect, it } from 'bun:test';
 import '../src/features/notebooks/router.ts';
 import '../src/features/qa/router.ts';
 import '../src/features/outputs/router.ts';
-import '../src/features/citations/router.ts';
 import { generateOpenApiDocument } from '../src/openapi.ts';
 
 describe('c71 OpenAPI generation (Zod v4)', () => {
@@ -19,8 +18,5 @@ describe('c71 OpenAPI generation (Zod v4)', () => {
     expect(paths.length).toBeGreaterThan(10);
 
     expect(doc.paths['/v2/notebooks']?.get).toBeDefined();
-    expect(doc.paths['/v2/qa/presets']?.get).toBeDefined();
-    expect(doc.paths['/v2/outputs/types']?.get).toBeDefined();
-    expect(doc.paths['/v2/notebooks/:nid/citations/context']?.get).toBeDefined();
   });
 });

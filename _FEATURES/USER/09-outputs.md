@@ -84,7 +84,7 @@ Output 查看、渲染、导出、删除、转换与任务队列。
 - **代码:** `apps/web/src/features/workspace/shared/hooks/useOutputQueue.ts`
 - **截图:** `screenshots/output-queue-jobs.png`（待截图）
 
-> NOTE: 2026-07-20 以代码为准 — 本功能是客户端本地队列，**不**调用 `/v2/tasks*`。后者已标 dead-candidate（见 SERVER/12、MATRIX）。
+> NOTE: 2026-07-20 以代码为准 — 客户端本地队列；`/v2/tasks*` 已于 c73 移除。
 
 ---
 
@@ -108,25 +108,25 @@ Output 查看、渲染、导出、删除、转换与任务队列。
 - **位置:** 无专用插件时的回退渲染
 - **入口:** `render_descriptor` 或未知类型
 - **操作:** JSON/文本/简单结构展示
-- **Server:** `GET /v2/outputs/types`
+- **Server:** `GET /v2/workspace/tools`（~~`/outputs/types`~~ c73 已删）
 - **代码:** `apps/web/src/features/workspace/domains/outputs/GenericOutputRenderer.tsx`
 - **截图:** `screenshots/generic-output-renderer.png`（待截图）
 
-> NOTE: 待盘点
+> NOTE: 2026-07-20 — 不以 `/outputs/types` 为依赖
 
 ---
 
 ### `output-note-type-paragraph`
 
 - **名称:** 笔记类型 — 段落（PARAGRAPH）
-- **位置:** Studio 手动笔记 / Refine 输出
+- **位置:** Studio 手动笔记 / 生成工具
 - **入口:** 创建 paragraph 类型 Output
 - **操作:** 富文本/段落编辑与展示
-- **Server:** `POST /v2/outputs`、`POST /v2/refine`（format=paragraph）
+- **Server:** `POST /v2/notebooks/:nid/outputs`（~~`/v2/refine`~~ c73 已删）
 - **代码:** `apps/web/src/features/workspace/domains/outputs/StudioPrimitives.tsx`
 - **截图:** `screenshots/output-note-type-paragraph.png`（待截图）
 
-> NOTE: 待盘点
+> NOTE: 2026-07-20 — 仅 outputs 路径
 
 ---
 
@@ -136,22 +136,22 @@ Output 查看、渲染、导出、删除、转换与任务队列。
 - **位置:** Studio / 会话转 Output
 - **入口:** bullets 格式生成
 - **操作:** 列表要点展示与编辑
-- **Server:** `POST /v2/outputs`、`POST /v2/refine`（format=bullets）
+- **Server:** `POST /v2/notebooks/:nid/outputs`（~~`/v2/refine`~~ c73 已删）
 - **代码:** `apps/web/src/features/workspace/domains/outputs/StudioPrimitives.tsx`
 - **截图:** `screenshots/output-note-type-bullets.png`（待截图）
 
-> NOTE: 待盘点
+> NOTE: 2026-07-20 — 仅 outputs 路径
 
 ---
 
 ### `output-note-type-structured`
 
 - **名称:** 笔记类型 — 结构化（STRUCTURED）
-- **位置:** Studio / Refine
+- **位置:** Studio
 - **入口:** structured 格式
 - **操作:** 结构化字段块展示
-- **Server:** `POST /v2/refine`（format=structured）
+- **Server:** `POST /v2/notebooks/:nid/outputs`（~~`/v2/refine`~~ c73 已删）
 - **代码:** `apps/web/src/features/workspace/domains/outputs/StudioPrimitives.tsx`
 - **截图:** `screenshots/output-note-type-structured.png`（待截图）
 
-> NOTE: 待盘点
+> NOTE: 2026-07-20 — 仅 outputs 路径
