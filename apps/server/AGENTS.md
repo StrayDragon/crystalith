@@ -32,7 +32,7 @@ bun run build        # bun build --compile → crystalith-server
 
 From repo root:
 
-- `just test` — gate unit/integration: `apps/server/test/` + `packages/shared/test/`
+- `just test` — gate unit/integration: `apps/server/tests/` + `packages/shared/test/`
 - `just test-bdd` — Gherkin CRUD subset in `tests/bdd/` (**not** in `just qa`; many domains skipped via `SKIP_FEATURE_DIRS`)
 - `just qa` — primary PR gate (see root `AGENTS.md`)
 - `just dev-server` — watch server on :8032

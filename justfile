@@ -122,7 +122,7 @@ qa: check check-env-examples check-app-schema test test-web e2e
 
 # Server + shared unit/integration tests — only show failures
 test:
-    @bun test --only-failures apps/server/test/ packages/shared/test/
+    @bun test --only-failures apps/server/tests/ packages/shared/test/
 
 # Frontend Vitest CI suite (MSW on-unhandled=error). Part of `just qa`.
 test-web:
