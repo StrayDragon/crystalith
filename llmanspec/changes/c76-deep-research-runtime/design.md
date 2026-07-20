@@ -28,7 +28,7 @@ GET  /v2/notebooks/:nid/research/:rid     → getRun (graph + report summary)
 POST .../research/:rid/confirm            → M1 continue | finish-report | approve-branch | skip-branch
 POST .../research/:rid/convert-to-note    → PARAGRAPH + K1 footnotes
 POST .../research/:rid/convert-to-source  → ingest + embed
-GET  .../research/:rid/stream             → graph/status patches (GET SSE，对齐 c70)
+GET  .../research/:rid/stream             → status / graph_patch / confirm / report_ready / log / error（R3b）
 ```
 
 执行器：主控编排原子 tools；每步或每 N 节点写 checkpoint；状态机：`queued | running | awaiting_confirm | completed | failed | cancelled`（R2a）。
