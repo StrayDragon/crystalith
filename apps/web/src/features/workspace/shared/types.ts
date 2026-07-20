@@ -259,7 +259,15 @@ export interface OutputItem {
   type: OutputTypeId;
   prompt: string;
   chunkIds: number[];
-  content: OutputPayload;
+  /** Full payload when loaded; null for list-only rows (c72). */
+  content: OutputPayload | null;
+  /** True after detail GET or generate response with body (c72). */
+  contentLoaded: boolean;
+  /** Server-derived list title (c72). */
+  title?: string | null;
+  preview?: string | null;
+  /** SLIDES draft id from list projection (c72). */
+  slideId?: number | null;
   createdAt: string;
   updatedAt: string;
   createdAtRaw?: string;

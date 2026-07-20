@@ -44,6 +44,7 @@ interface WorkspaceOverlaysProps {
   onDeleteOutput: (outputId: number) => Promise<void>;
   onOutputCitationJump: (citation: Citation, citations: Citation[]) => void;
   onLocateCitationSource: (citation: Citation) => void;
+  onEnsureOutputDetail?: (outputId: number) => void | Promise<unknown>;
   slidesDialogOpen: boolean;
   onCloseSlidesDialog: () => void;
   notebookId: number | null;
@@ -104,6 +105,7 @@ export function WorkspaceOverlays({
   onDeleteOutput,
   onOutputCitationJump,
   onLocateCitationSource,
+  onEnsureOutputDetail,
   slidesDialogOpen,
   onCloseSlidesDialog,
   notebookId,
@@ -165,6 +167,7 @@ export function WorkspaceOverlays({
           }}
           onJumpToCitation={onOutputCitationJump}
           onLocateSource={onLocateCitationSource}
+          onEnsureOutputDetail={onEnsureOutputDetail}
           elevated={viewerElevated}
         />
       </Suspense>

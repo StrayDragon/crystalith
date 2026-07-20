@@ -927,6 +927,7 @@ export default function WorkspaceLayout() {
         onDeleteOutput={refine.onDeleteOutput}
         onOutputCitationJump={handleOutputCitationJump}
         onLocateCitationSource={handleLocateCitationSource}
+        onEnsureOutputDetail={refine.ensureOutputDetail}
         slidesDialogOpen={overlays.isSlidesDialogOpen}
         onCloseSlidesDialog={overlays.closeSlidesDialog}
         notebookId={activeNotebookId}

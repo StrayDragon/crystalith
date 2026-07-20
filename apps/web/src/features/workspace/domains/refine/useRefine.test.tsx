@@ -24,6 +24,7 @@ vi.mock('../../shared/hooks/useOutputQueue', () => ({
     deleteOutput: vi.fn(),
     clearOutputs: vi.fn(),
     fetchOutput: vi.fn(),
+    ensureOutputDetail: vi.fn(),
   }),
 }));
 
