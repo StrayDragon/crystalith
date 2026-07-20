@@ -49,10 +49,7 @@ afterAll(() => {
 // any host; app.handle ignores networking
 const BASE = 'http://bdd.local';
 
-async function request(method: string, path: string, body?: unknown): Promise<BddResponse> {
-  const init: RequestInit = { method, headers: { 'content-type': 'application/json' } };
-  if (body !== undefined) init.body = JSON.stringify(body);
-  const res = await app.handle(new Request(BASE + path, init));
+async function parseResponse(res: Response): Promise<BddResponse> {
   const headers: Record<string, string> = {};
   res.headers.forEach((v, k) => {
     headers[k] = v;
@@ -69,12 +66,26 @@ async function request(method: string, path: string, body?: unknown): Promise<Bd
   return { status: res.status, body: parsed, headers, raw: res };
 }
 
+async function request(method: string, path: string, body?: unknown): Promise<BddResponse> {
+  const init: RequestInit = { method };
+  if (body !== undefined) {
+    init.headers = { 'content-type': 'application/json' };
+    init.body = JSON.stringify(body);
+  }
+  const res = await app.handle(new Request(BASE + path, init));
+  return parseResponse(res);
+}
+
 function makeClient(): TestClient {
   return {
     get: (path) => request('GET', path),
     post: (path, body) => request('POST', path, body),
     patch: (path, body) => request('PATCH', path, body),
-    delete: (path) => request('DELETE', path),
+    delete: (path, body) => request('DELETE', path, body),
+    postForm: async (path, form) => {
+      const res = await app.handle(new Request(BASE + path, { method: 'POST', body: form }));
+      return parseResponse(res);
+    },
     // Streaming endpoint: collect SSE lines into body for assertion.
     postStream: async (path, body) => {
       const res = await app.handle(

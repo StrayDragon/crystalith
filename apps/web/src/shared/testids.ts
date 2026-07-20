@@ -60,6 +60,13 @@ export const TestIds = {
   sourceDetailClose: 'source-detail-close',
   sourceDetailTabSummary: 'source-detail-tab-summary',
   sourceDetailTabRaw: 'source-detail-tab-raw',
+  sourcesSelectedMenu: 'sources-selected-menu',
+  sourcesBatchDelete: 'sources-batch-delete',
+  sourceRowMenu: 'source-row-menu',
+  sourceRowDelete: 'source-row-delete',
+
+  // Shared confirm popover
+  confirmPopoverConfirm: 'confirm-popover-confirm',
 
   // URL import
   urlImportOpen: 'url-import-open',

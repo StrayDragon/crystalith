@@ -288,6 +288,36 @@ bdd.when('删除当前来源', async (ctx) => {
   ctx.response = await ctx.client.delete(`/v2/notebooks/${nid}/sources/${sid}`);
 });
 
+bdd.when('批量删除当前笔记本的所有来源', async (ctx) => {
+  const nid = ctx.fixtures['当前笔记本']['id'];
+  const list = await ctx.client.get(`/v2/notebooks/${nid}/sources`);
+  const body = list.body as { items?: Array<{ id: number }> } | Array<{ id: number }>;
+  const items = Array.isArray(body) ? body : (body.items ?? []);
+  const sourceIds = items.map((s) => s.id);
+  ctx.response = await ctx.client.post(`/v2/notebooks/${nid}/sources/batch/delete`, { sourceIds });
+});
+
+bdd.when('再次上传同名文件"{文件名}"并选择提示策略', async (ctx, 文件名) => {
+  const nid = ctx.fixtures['当前笔记本']['id'];
+  // Dedup keys on content hash. DB-seeded Givens have no dedupKey, so establish
+  // one via upload first, then re-upload with prompt to force 409.
+  const content = `${文件名}\nbdd-dedup-payload\n`;
+  const formFirst = new FormData();
+  formFirst.append('file', new File([content], String(文件名), { type: 'text/plain' }));
+  const first = await ctx.client.postForm(
+    `/v2/notebooks/${nid}/sources/upload?dedupAction=create_new`,
+    formFirst,
+  );
+  expect(first.status).toBeLessThan(500);
+
+  const formSecond = new FormData();
+  formSecond.append('file', new File([content], String(文件名), { type: 'text/plain' }));
+  ctx.response = await ctx.client.postForm(
+    `/v2/notebooks/${nid}/sources/upload?dedupAction=prompt`,
+    formSecond,
+  );
+});
+
 // ══════════════════════════════════════════════════════════════════════════════
 // When — 来源标签
 // ══════════════════════════════════════════════════════════════════════════════
@@ -333,7 +363,7 @@ bdd.when('将该标签分配给当前来源', async (ctx) => {
   const tid = ctx.fixtures['当前标签']['id'];
   const sid = ctx.fixtures['当前来源']['id'];
   ctx.response = await ctx.client.post(`/v2/notebooks/${nid}/sources/tags/${tid}/sources`, {
-    source_ids: [sid],
+    sourceIds: [sid],
   });
 });
 
@@ -342,7 +372,7 @@ bdd.given('该标签已分配给当前来源', async (ctx) => {
   const tid = ctx.fixtures['当前标签']['id'];
   const sid = ctx.fixtures['当前来源']['id'];
   const res = await ctx.client.post(`/v2/notebooks/${nid}/sources/tags/${tid}/sources`, {
-    source_ids: [sid],
+    sourceIds: [sid],
   });
   expect(res.status).toBe(200);
 });
@@ -351,10 +381,9 @@ bdd.when('从当前来源移除该标签', async (ctx) => {
   const nid = ctx.fixtures['当前笔记本']['id'];
   const tid = ctx.fixtures['当前标签']['id'];
   const sid = ctx.fixtures['当前来源']['id'];
-  // v1 uses client.request("DELETE", ..., json=...). v2 client.delete has no
-  // body param, so we issue a raw DELETE via fetch-equivalent through the
-  // generic POST path workaround: use the dedicated untag endpoint.
-  ctx.response = await ctx.client.delete(`/v2/notebooks/${nid}/sources/tags/${tid}/sources/${sid}`);
+  ctx.response = await ctx.client.delete(`/v2/notebooks/${nid}/sources/tags/${tid}/sources`, {
+    sourceIds: [sid],
+  });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════

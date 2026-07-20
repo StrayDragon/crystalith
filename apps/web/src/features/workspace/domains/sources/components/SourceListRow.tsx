@@ -135,10 +135,12 @@ function SourceListRow({
             <IconButton
               size="sm"
               variant="text"
-              className="w-6 h-6 min-w-[24px] rounded-full text-gray-500 dark:text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-gray-200"
+              aria-label={`来源操作 ${source.title}`}
+              className="w-6 h-6 min-w-[24px] rounded-full text-gray-500 dark:text-slate-400 opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-gray-200"
               onClick={(e) => {
                 e.stopPropagation();
               }}
+              {...tid(TestIds.sourceRowMenu)}
             >
               <MoreHorizIcon style={{ fontSize: 16 }} />
             </IconButton>
@@ -188,6 +190,7 @@ function SourceListRow({
               <MenuItem
                 disabled={!isConnected || removeState === 'loading'}
                 className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
+                {...tid(TestIds.sourceRowDelete)}
               >
                 <DeleteIcon style={{ fontSize: 16 }} />
                 <span>{removeState === 'loading' ? '删除中…' : '删除来源'}</span>

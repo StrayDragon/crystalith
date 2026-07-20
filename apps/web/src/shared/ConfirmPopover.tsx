@@ -12,6 +12,7 @@ import {
 import { createPortal } from 'react-dom';
 
 import { useLayer } from './layer';
+import { TestIds, tid } from './testids';
 
 type Placement = 'top' | 'bottom' | 'left' | 'right';
 
@@ -329,6 +330,7 @@ const ConfirmPopover = forwardRef<HTMLElement, ConfirmPopoverProps>(function Con
                       size="sm"
                       className="px-2 py-1 text-xs bg-red-500 hover:bg-red-600"
                       onClick={handleConfirm}
+                      {...tid(TestIds.confirmPopoverConfirm)}
                     >
                       {confirmText}
                     </Button>
