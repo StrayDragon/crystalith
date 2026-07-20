@@ -11,6 +11,17 @@ export function titleForEntry(entry: SnapshotEntry): string | null {
   return typeof title === 'string' && title.trim() ? title.trim() : null;
 }
 
+/** Eden treaty may coerce ISO strings into Date; never render Date as a React child. */
+export function formatSnapshotTimestamp(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? '' : d.toISOString();
+  }
+  return '';
+}
+
 export function allParentDirs(path: string): string[] {
   const parts = String(path || '')
     .split('/')

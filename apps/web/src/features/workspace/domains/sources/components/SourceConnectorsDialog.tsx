@@ -27,6 +27,7 @@ import type {
 } from './source-connector-types';
 import {
   buildDirectories,
+  formatSnapshotTimestamp,
   normalizeConfigValue,
   safeArray,
   schemaProperties,
@@ -405,7 +406,7 @@ function SourceConnectorSnapshotStep({
                   </div>
                 </div>
                 <div className="mt-0.5 text-[10px] text-gray-500 dark:text-slate-500 truncate">
-                  {entry.modifiedAt}
+                  {formatSnapshotTimestamp(entry.modifiedAt)}
                 </div>
               </div>
             );

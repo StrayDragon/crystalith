@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
 
+import { formatSnapshotTimestamp } from './source-connector-utils';
 import { normalizeSearchMode, splitUploadFiles } from './sources-panel-utils';
 
 test('normalizeSearchMode returns Fast Research for null or invalid values', () => {
@@ -21,4 +22,12 @@ test('splitUploadFiles separates supported and unsupported files', () => {
 
   expect(supported).toEqual([supportedFile]);
   expect(unsupported).toEqual([unsupportedFile]);
+});
+
+test('formatSnapshotTimestamp accepts Eden Date coercion and strings', () => {
+  expect(formatSnapshotTimestamp('2024-01-01T00:00:00.000Z')).toBe('2024-01-01T00:00:00.000Z');
+  expect(formatSnapshotTimestamp(new Date('2024-01-01T00:00:00.000Z'))).toBe(
+    '2024-01-01T00:00:00.000Z',
+  );
+  expect(formatSnapshotTimestamp(null)).toBe('');
 });

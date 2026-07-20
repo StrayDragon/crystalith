@@ -54,7 +54,15 @@ test('unbind deletes binding and shows success toast', async () => {
     http.post('*/v2/notebooks/:notebookId/source-connector-bindings/:bindingId/snapshot', () =>
       HttpResponse.json({
         generatedAt: '2024-01-01T00:00:00Z',
-        entries: [],
+        entries: [
+          {
+            relativePath: 'note.md',
+            sizeBytes: 12,
+            // Eden may coerce this to Date; UI must not crash when rendering.
+            modifiedAt: '2024-01-01T00:00:00Z',
+            contentHash: 'abc',
+          },
+        ],
       }),
     ),
     http.delete('*/v2/source-connector-bindings/:id', ({ request }) => {
