@@ -35,6 +35,10 @@ type CitationInput = Partial<{
   score: number | null;
 }>;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export function createId(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -389,10 +393,7 @@ export function formatSourceType(row: Pick<WireSource, 'filename' | 'mimeType'>)
 
 export function normalizeSource(row: WireSource): SourceItem {
   const statusKey = String(row.status ?? 'READY').toUpperCase();
-  const metadata =
-    row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
-      ? (row.metadata as Record<string, unknown>)
-      : null;
+  const metadata = isRecord(row.metadata) ? row.metadata : null;
   const rawIndexProgress = metadata?.index_progress;
   const indexProgress =
     typeof rawIndexProgress === 'number' && Number.isFinite(rawIndexProgress)
@@ -455,19 +456,18 @@ export function collectChunkIds(citations: Citation[]): number[] {
 export function collectOutputCitations(content: unknown): Citation[] {
   const seen = new Map<number, Citation>();
   const pushCitation = (raw: unknown) => {
-    if (!raw || typeof raw !== 'object') return;
-    const record = raw as Record<string, unknown>;
-    const chunkId = typeof record.chunkId === 'number' ? record.chunkId : null;
+    if (!isRecord(raw)) return;
+    const chunkId = typeof raw.chunkId === 'number' ? raw.chunkId : null;
     if (!chunkId || seen.has(chunkId)) return;
     const mapped: CitationInput = {
-      sourceId: typeof record.sourceId === 'number' ? record.sourceId : null,
-      sourceName: typeof record.sourceName === 'string' ? record.sourceName : null,
+      sourceId: typeof raw.sourceId === 'number' ? raw.sourceId : null,
+      sourceName: typeof raw.sourceName === 'string' ? raw.sourceName : null,
       chunkId,
-      chunkIndex: typeof record.chunkIndex === 'number' ? record.chunkIndex : null,
-      pageNumber: typeof record.pageNumber === 'number' ? record.pageNumber : null,
-      paragraphIndex: typeof record.paragraphIndex === 'number' ? record.paragraphIndex : null,
-      snippet: typeof record.snippet === 'string' ? record.snippet : null,
-      score: typeof record.score === 'number' ? record.score : null,
+      chunkIndex: typeof raw.chunkIndex === 'number' ? raw.chunkIndex : null,
+      pageNumber: typeof raw.pageNumber === 'number' ? raw.pageNumber : null,
+      paragraphIndex: typeof raw.paragraphIndex === 'number' ? raw.paragraphIndex : null,
+      snippet: typeof raw.snippet === 'string' ? raw.snippet : null,
+      score: typeof raw.score === 'number' ? raw.score : null,
     };
     const normalized = normalizeCitation(mapped);
     seen.set(chunkId, normalized);
@@ -478,12 +478,11 @@ export function collectOutputCitations(content: unknown): Citation[] {
       value.forEach(walk);
       return;
     }
-    if (typeof value !== 'object') return;
-    const record = value as Record<string, unknown>;
-    if (Array.isArray(record.citations)) {
-      record.citations.forEach(pushCitation);
+    if (!isRecord(value)) return;
+    if (Array.isArray(value.citations)) {
+      value.citations.forEach(pushCitation);
     }
-    Object.values(record).forEach(walk);
+    Object.values(value).forEach(walk);
   };
   walk(content);
   return Array.from(seen.values());
