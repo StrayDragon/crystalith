@@ -10,7 +10,7 @@ import type {
   OutputTypeId,
   SlideGenerationConfig,
 } from '../types';
-import { createId, formatTimestamp, normalizeOutput } from '../utils';
+import { createId, formatTimestamp, mergeOutputListWithCache, normalizeOutput } from '../utils';
 import { readInitialGenerationPreferenceForApi } from './useGenerationPreference';
 
 type OutputQueueStatus = 'queued' | 'running' | 'done' | 'error' | 'cancelled';
@@ -178,7 +178,7 @@ export function useOutputQueue({
     }
     if (!outputsData) return;
     const s = store.getState();
-    s.setOutputs(outputsData.map((o: any) => normalizeOutput(o)));
+    s.setOutputs(mergeOutputListWithCache(outputsData as never[], s.outputs));
     s.setError('outputs', '');
   }, [outputsData, outputsError, store]);
 
@@ -594,6 +594,10 @@ export function useOutputQueue({
     async (outputId: number) => {
       const s = store.getState();
       if (!s.activeNotebookId || !isConnected) return null;
+      const cached = s.outputs.find((item) => item.id === outputId);
+      if (cached?.contentLoaded && cached.content != null) {
+        return cached;
+      }
       try {
         const { data: output, error: getErr } = await api.v2
           .notebooks({ nid: s.activeNotebookId })
@@ -603,7 +607,7 @@ export function useOutputQueue({
           throw new Error(
             typeof getErr === 'string' ? getErr : typeof getErr === 'string' ? getErr : '',
           );
-        const normalized = normalizeOutput(output as any);
+        const normalized = normalizeOutput(output as never);
         const s2 = store.getState();
         s2.setOutputs(s2.outputs.map((item) => (item.id === outputId ? normalized : item)));
         return normalized;
@@ -613,6 +617,14 @@ export function useOutputQueue({
       }
     },
     [isConnected, store],
+  );
+
+  /** Ensure detail is loaded before viewer / slides open (c72). */
+  const ensureOutputDetail = useCallback(
+    async (outputId: number) => {
+      return fetchOutput(outputId);
+    },
+    [fetchOutput],
   );
 
   return {
@@ -628,5 +640,6 @@ export function useOutputQueue({
     deleteOutput,
     clearOutputs,
     fetchOutput,
+    ensureOutputDetail,
   };
 }

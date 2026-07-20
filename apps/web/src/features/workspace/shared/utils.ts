@@ -3,6 +3,7 @@ import type {
   Message as WireMessage,
   Notebook as WireNotebook,
   Output as WireOutput,
+  OutputListItem as WireOutputListItem,
   Session as WireSession,
   Source as WireSource,
 } from '@crystalith/shared';
@@ -315,18 +316,46 @@ export function normalizeMessage(row: WireMessage): ChatMessage {
   };
 }
 
-export function normalizeOutput(row: WireOutput): OutputItem {
+export function normalizeOutput(row: WireOutput & Partial<WireOutputListItem>): OutputItem {
+  const hasContent = row.content !== undefined && row.content !== null;
   return {
     id: Number(row.id),
     type: row.type,
     prompt: row.prompt ?? '',
     chunkIds: row.chunkIds ?? [],
-    content: normalizeOutputPayload(row.type, row.content),
+    content: hasContent ? normalizeOutputPayload(row.type, row.content) : null,
+    contentLoaded: hasContent,
+    title: 'title' in row ? ((row as WireOutputListItem).title ?? null) : null,
+    preview: 'preview' in row ? ((row as WireOutputListItem).preview ?? null) : null,
+    slideId: 'slideId' in row ? ((row as WireOutputListItem).slideId ?? null) : null,
     createdAt: formatTimestamp(row.createdAt ?? undefined),
     updatedAt: formatTimestamp(row.updatedAt ?? undefined),
     createdAtRaw: row.createdAt ?? undefined,
     updatedAtRaw: row.updatedAt ?? undefined,
   };
+}
+
+/** Merge list refresh with cached detail bodies (c72). */
+export function mergeOutputListWithCache(
+  listRows: Array<WireOutputListItem | WireOutput>,
+  existing: OutputItem[],
+): OutputItem[] {
+  const byId = new Map(existing.map((item) => [item.id, item]));
+  return listRows.map((row) => {
+    const next = normalizeOutput(row as WireOutput & Partial<WireOutputListItem>);
+    const prev = byId.get(next.id);
+    if (prev?.contentLoaded && prev.content != null) {
+      return {
+        ...next,
+        content: prev.content,
+        contentLoaded: true,
+        // Prefer list title/slideId when present; keep prior slideId if list omitted
+        title: next.title ?? prev.title,
+        slideId: next.slideId ?? prev.slideId,
+      };
+    }
+    return next;
+  });
 }
 
 export function formatSourceType(row: Pick<WireSource, 'filename' | 'mimeType'>): string {

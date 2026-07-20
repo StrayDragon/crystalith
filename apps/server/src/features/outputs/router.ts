@@ -6,7 +6,7 @@ import {
   OutputGenerateRequestSchema,
   OutputMetaSchema,
   OutputSchema,
-  PaginatedSchema,
+  OutputsPageSchema,
   PaginationParamsSchema,
   type Citation,
   type OutputGenerateBody,
@@ -53,7 +53,6 @@ function requireOutputInNotebook(id: number, notebookId: number): typeof outputs
 // ---------------------------------------------------------------------------
 
 const OutputsListQuerySchema = NotebookIdQuerySchema.merge(PaginationParamsSchema);
-const OutputsPageSchema = PaginatedSchema(OutputSchema);
 
 const apiDocs: OpenApiRoute[] = [
   {
@@ -82,7 +81,7 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'Get a single output',
     tags: ['outputs'],
-    responses: { 200: { description: 'Output details' } },
+    responses: { 200: { description: 'Output details', body: OutputSchema } },
   },
   {
     path: '/v2/notebooks/:nid/outputs/:id',
@@ -135,7 +134,7 @@ const apiDocs: OpenApiRoute[] = [
     summary: 'Get a single output',
     tags: ['outputs'],
     deprecated: true,
-    responses: { 200: { description: 'Output details' } },
+    responses: { 200: { description: 'Output details', body: OutputSchema } },
   },
   {
     path: '/v2/outputs/:id',
@@ -184,6 +183,53 @@ function serializeOutput(row: typeof outputs.$inferSelect) {
     prompt: row.prompt,
     chunkIds: row.chunkIds,
     content: row.content,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+const PREVIEW_MAX = 160;
+
+/** Thin list projection — no full content (c72). */
+function serializeOutputListItem(row: typeof outputs.$inferSelect) {
+  const content =
+    row.content && typeof row.content === 'object' && !Array.isArray(row.content)
+      ? (row.content as Record<string, unknown>)
+      : null;
+
+  let title: string | null = null;
+  let preview: string | null = null;
+  let slideId: number | null = null;
+
+  if (content) {
+    if (typeof content.title === 'string' && content.title.trim()) {
+      title = content.title.trim();
+    }
+    if (typeof content.slideId === 'number' && Number.isFinite(content.slideId)) {
+      slideId = content.slideId;
+    }
+    const markdown = typeof content.markdown === 'string' ? content.markdown : null;
+    const summary = typeof content.summary === 'string' ? content.summary : null;
+    const rawPreview = (markdown ?? summary ?? '').trim();
+    if (rawPreview) {
+      preview =
+        rawPreview.length > PREVIEW_MAX ? `${rawPreview.slice(0, PREVIEW_MAX)}…` : rawPreview;
+    }
+  }
+
+  if (!title && row.prompt?.trim()) {
+    title = row.prompt.trim().slice(0, 120);
+  }
+
+  return {
+    id: row.id,
+    notebookId: row.notebookId,
+    type: row.type,
+    prompt: row.prompt,
+    title,
+    preview,
+    slideId,
+    chunkIds: row.chunkIds,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -341,7 +387,7 @@ function handleListOutputs(notebookId: number, offset: number, limit: number) {
     .all();
 
   return {
-    items: rows.map(serializeOutput),
+    items: rows.map(serializeOutputListItem),
     total,
     offset,
     limit,
@@ -526,11 +572,15 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     },
     { query: PaginationParamsSchema, response: OutputsPageSchema },
   )
-  .get('/notebooks/:nid/outputs/:id', ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const id = requirePositiveIntId(params.id, 'output id');
-    return handleGetOutput(id, nid);
-  })
+  .get(
+    '/notebooks/:nid/outputs/:id',
+    ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'output id');
+      return handleGetOutput(id, nid);
+    },
+    { response: OutputSchema },
+  )
   .delete('/notebooks/:nid/outputs/:id', ({ params, set }) => {
     const nid = requirePositiveIntId(params.nid, 'notebook id');
     const id = requirePositiveIntId(params.id, 'output id');
@@ -568,7 +618,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'output id');
       return handleGetOutput(id, query.notebookId);
     },
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: OutputSchema },
   )
   .delete(
     '/outputs/:id',

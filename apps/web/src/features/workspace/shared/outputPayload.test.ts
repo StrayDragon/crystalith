@@ -17,6 +17,7 @@ function createOutput(partial: Partial<OutputItem>): OutputItem {
     prompt: 'default prompt',
     chunkIds: [1],
     content: {},
+    contentLoaded: true,
     createdAt: '2026-01-01 10:00',
     updatedAt: '2026-01-01 10:00',
     ...partial,

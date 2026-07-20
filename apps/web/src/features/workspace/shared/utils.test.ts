@@ -146,5 +146,8 @@ test('normalizeOutput falls back for invalid payload shape', () => {
     updatedAt: '2026-01-01T10:00:00Z',
   });
 
-  expect(isFallbackOutputPayload(output.content)).toBe(true);
+  const content = output.content;
+  expect(content).not.toBeNull();
+  if (!content) throw new Error('expected content');
+  expect(isFallbackOutputPayload(content)).toBe(true);
 });

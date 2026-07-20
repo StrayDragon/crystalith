@@ -107,6 +107,10 @@ export default function StudioOutputsList({
       if (!note.outputId) return;
       const output = outputs.find((item) => item.id === note.outputId);
       if (!output) return;
+      if (!output.contentLoaded || !output.content) {
+        await copyToClipboard(output.prompt || note.title);
+        return;
+      }
       const formatted = formatStructuredOutputForCopy(output);
       const text = formatted || output.prompt || note.title;
       await copyToClipboard(text);
@@ -147,7 +151,8 @@ export default function StudioOutputsList({
         title: resolveOutputTitle(output),
         meta: resolveNoteMeta(output),
         type: output.type,
-        citations: collectOutputCitations(output.content),
+        citations:
+          output.contentLoaded && output.content ? collectOutputCitations(output.content) : [],
       })),
     [outputs],
   );

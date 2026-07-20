@@ -118,6 +118,7 @@ export function isOutputContentForType<K extends OutputTypeId>(
 }
 
 export function decodeOutputItem(output: OutputItem): TypedOutputItem | null {
+  if (!output.content) return null;
   const decoded = decodeOutputContent(output.type, output.content);
   if (!decoded) return null;
   return {
@@ -142,7 +143,13 @@ export function getOutputPayloadWarnings(content: OutputPayload): string[] {
   return content._warnings.filter((item): item is string => typeof item === 'string');
 }
 
-export function getOutputTitle(output: Pick<OutputItem, 'type' | 'content' | 'prompt'>): string {
+export function getOutputTitle(
+  output: Pick<OutputItem, 'type' | 'content' | 'prompt'> & { title?: string | null },
+): string {
+  if (typeof output.title === 'string') {
+    const listed = output.title.trim();
+    if (listed) return listed;
+  }
   if (isRecord(output.content) && typeof output.content.title === 'string') {
     const title = output.content.title.trim();
     if (title) return title;
@@ -154,6 +161,8 @@ export function getOutputTitle(output: Pick<OutputItem, 'type' | 'content' | 'pr
 
 export function getSlideIdFromOutput(output: OutputItem): number | null {
   if (output.type !== 'SLIDES') return null;
+  if (typeof output.slideId === 'number') return output.slideId;
+  if (!output.content) return null;
   const slides = decodeOutputContent('SLIDES', output.content);
   if (!slides) return null;
   const slideId = slides.slideId;

@@ -3,7 +3,7 @@
 // the v2 server can feed the existing renderers without translation.
 import { z } from 'zod';
 
-import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from './common.js';
+import { IdSchema, IsoTimestampSchema, JsonMetadataSchema, PaginatedSchema } from './common.js';
 import { desc } from './i18n.js';
 
 // ---------------------------------------------------------------------------
@@ -261,6 +261,38 @@ export const OutputSchema = z.object({
 });
 export type Output = z.infer<typeof OutputSchema>;
 
+/**
+ * List-row projection (c72): metadata + short preview only — MUST NOT include full content.
+ * Title/slideId are derived server-side from stored content then content is omitted.
+ */
+export const OutputListItemSchema = z.object({
+  id: IdSchema.describe(desc('output.id')),
+  notebookId: IdSchema,
+  type: OutputTypeSchema.describe(desc('output.type')),
+  prompt: z.string().nullable().optional(),
+  title: z
+    .string()
+    .nullable()
+    .optional()
+    .describe(desc('output.title', '列表展示标题（由正文/prompt 派生）')),
+  preview: z.string().nullable().optional().describe(desc('output.preview', '短预览文本（截断）')),
+  slideId: z
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .optional()
+    .describe(desc('output.slide_id', 'SLIDES 类型关联的草稿 ID（列表用）')),
+  chunkIds: z.array(IdSchema).nullable().optional(),
+  createdAt: IsoTimestampSchema.describe(desc('output.created_at')),
+  updatedAt: IsoTimestampSchema,
+});
+export type OutputListItem = z.infer<typeof OutputListItemSchema>;
+
+/** Paginated list envelope for GET outputs (c68 + c72 thin items). */
+export const OutputsPageSchema = PaginatedSchema(OutputListItemSchema);
+export type OutputsPage = z.infer<typeof OutputsPageSchema>;
+
 /** Body fields for generate (without notebook scope). */
 export const OutputGenerateBodySchema = z.object({
   /** Output type id; accepts lower/upper case (normalized server-side). */
@@ -292,7 +324,7 @@ export const OutputGenerateNestedRequestSchema = OutputGenerateBodySchema.extend
 export type OutputGenerateNestedRequest = z.infer<typeof OutputGenerateNestedRequestSchema>;
 
 export const OutputListSchema = z.object({
-  outputs: z.array(OutputSchema),
+  outputs: z.array(OutputListItemSchema),
 });
 
 /** Query for flat GET /v2/outputs/:id/export — notebook scope + format (c67). */

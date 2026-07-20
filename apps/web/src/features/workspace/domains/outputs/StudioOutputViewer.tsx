@@ -12,7 +12,7 @@ import {
   Delete as DeleteIcon,
   FileDownload as DownloadIcon,
 } from '@mui/icons-material';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { useLayer } from '../../../../shared/layer';
@@ -38,6 +38,8 @@ interface StudioOutputViewerProps {
   onDeleteOutput?: (outputId: number) => void;
   onJumpToCitation?: (citation: Citation, citations: Citation[]) => void;
   onLocateSource?: (citation: Citation) => void;
+  /** Lazy-load full body when opening a list-only row (c72). */
+  onEnsureOutputDetail?: (outputId: number) => void | Promise<unknown>;
   /** 是否提升 z-index（用于从其他 overlay 中打开时） */
   elevated?: boolean;
 }
@@ -66,6 +68,7 @@ export default function StudioOutputViewer({
   onDeleteOutput,
   onJumpToCitation,
   onLocateSource,
+  onEnsureOutputDetail,
   elevated = false,
 }: StudioOutputViewerProps) {
   const notebookId = useWorkspaceStore((s) => s.activeNotebookId);
@@ -76,8 +79,17 @@ export default function StudioOutputViewer({
     if (!selectedOutputId) return outputs[0] ?? null;
     return outputs.find((item) => item.id === selectedOutputId) ?? outputs[0] ?? null;
   }, [outputs, selectedOutputId]);
+
+  useEffect(() => {
+    if (!isOpen || !selectedOutput || selectedOutput.contentLoaded) return;
+    void onEnsureOutputDetail?.(selectedOutput.id);
+  }, [isOpen, selectedOutput, onEnsureOutputDetail]);
+
   const outputCitations = useMemo(
-    () => (selectedOutput ? collectOutputCitations(selectedOutput.content) : []),
+    () =>
+      selectedOutput?.contentLoaded && selectedOutput.content
+        ? collectOutputCitations(selectedOutput.content)
+        : [],
     [selectedOutput],
   );
 
@@ -294,7 +306,12 @@ export default function StudioOutputViewer({
             )}
           </aside>
           <section className="flex-1 min-h-0 overflow-y-auto p-6 bg-white dark:bg-slate-900">
-            {selectedOutput ? (
+            {selectedOutput && !selectedOutput.contentLoaded ? (
+              <Typography variant="small" className="text-sm text-gray-500 dark:text-slate-400">
+                正在加载内容…
+              </Typography>
+            ) : null}
+            {selectedOutput?.contentLoaded ? (
               <OutputContent
                 output={selectedOutput}
                 onDelete={onDeleteOutput ? (id) => handleDelete(id) : undefined}

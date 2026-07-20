@@ -291,6 +291,7 @@ export function useRefine() {
     deleteOutput,
     clearOutputs,
     fetchOutput,
+    ensureOutputDetail,
   } = useOutputQueue({
     isConnected,
     hasPendingRefineJobs,
@@ -455,5 +456,6 @@ export function useRefine() {
     cancelOutputJob,
     onClearOutputs: clearOutputs,
     fetchOutput,
+    ensureOutputDetail,
   };
 }

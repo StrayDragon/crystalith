@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "workspace-api-contract"
 purpose: 定义前后端协作所依赖的稳定 API 契约：版本前缀、错误信封、核心端点稳定字段与 SSE 事件最小形状。
 valid_scope[2]: apps/,packages/
-requirements[50]{req_id,title,statement}:
+requirements[52]{req_id,title,statement}:
   r56,API major version prefix is stable,对外业务 API MUST 使用 `/v2` 前缀；同一 major 内保持兼容。健康检查等运维端点 MAY 位于根路径。
   r114,"Optional API key authentication is supported for self-host",DEFERRED(c13)：当 `app.auth.enabled` 且配置鉴权密钥时，`/v2/**` 端点 MUST 要求 Bearer token；未启用时 MAY 匿名访问。当前 v2 运行时尚未强制鉴权。
   r151,"Non-SSE errors use unified envelope","非 SSE 错误响应 MUST 使用统一结构：`errorCode`, `message`, `details?`, `retryAfter?`。"
@@ -53,7 +53,9 @@ requirements[50]{req_id,title,statement}:
   "nested-path-nid-is-ownership-ssot","Nested path :nid is ownership SSOT","嵌套 canonical 路由上，path :nid MUST 为归属唯一真源；请求 body MUST NOT 再要求必填 notebookId。若 body 携带 notebookId：等于 :nid 时 MUST 忽略；不等于时 MUST 返回 400。响应实体 MAY/SHOULD 继续包含 notebookId 字段。扁平 alias 不受本条约束（仍走 c67 query/body）。"
   "qa-stream-remains-post-with-body",QA stream MUST remain POST with body,交互式 QA SSE（含 notebook 嵌套路径）MUST 使用 POST，并在 body 中携带问题与上下文（sourceIds/策略等）。MUST NOT 要求客户端把大 payload 塞进 query string。
   "progress-streams-use-get","Existing-resource progress streams MUST use GET",对已存在资源的进度/订阅类 SSE（至少 research session stream、studio slides outline/content stream）MUST 使用 GET .../stream。AsyncAPI/OpenAPI 登记的 method 与 path MUST 与实现一致。
-scenarios[64]{req_id,id,given,when,then,feature}:
+  "output-list-omits-full-content",Output list MUST omit full content,outputs（Studio 笔记）列表端点成功响应中的每个 item MUST NOT 包含完整 generation payload / 长 markdown 正文。item MUST 至少含标识与展示所需元数据（如 id、type、title、status、timestamps）；可选短 preview。完整正文 MUST 仅由单条详情端点返回。
+  "output-detail-returns-full-content",Output detail MUST return full content,"GET 单条 output（notebook-scoped）MUST 返回渲染所需的完整内容字段。客户端在用户选中/打开条目前 MUST NOT 依赖 list 内嵌全文。"
+scenarios[66]{req_id,id,given,when,then,feature}:
   r56,"client-targets-stable-major-prefix","",客户端调用对外 API,端点 SHALL 使用 `/v2` 前缀且在同一 major 内保持兼容,true
   r114,"auth-enabled-requires-bearer-token-for-v2-deferred","",运维启用鉴权并配置了 API key,客户端请求任意 `/v2/**` 端点若未携带有效 token SHALL 返回 401,true
   r114,"health-endpoints-remain-accessible-without-auth","",运维启用鉴权并配置了 API key,`/health` 与 `/health/dependencies` SHALL 保持匿名可访问以支持探活与运维诊断,true
@@ -118,3 +120,5 @@ scenarios[64]{req_id,id,given,when,then,feature}:
   "nested-path-nid-is-ownership-ssot","nested-post-mismatched-body-notebook-id",存在 notebook N,客户端 POST /v2/notebooks/N/outputs 且 body.notebookId=M（M≠N）,响应 SHALL 为 400,false
   "qa-stream-remains-post-with-body","qa-stream-post",notebook 与 sources 就绪,"客户端 POST /v2/notebooks/:nid/qa/stream（或等价 canonical）携带 body",服务端 SHALL 以 SSE 流式返回且 MUST NOT 要求 GET+query 传全文,false
   "progress-streams-use-get","research-stream-get",research session 已创建,"客户端 GET .../research/:id/stream",服务端 SHALL 以 SSE 推送进度且文档 method SHALL 为 GET,false
+  "output-list-omits-full-content","list-without-body",notebook 下存在含长正文的 output,客户端调用 list outputs,响应 items SHALL 不含完整正文大字段,false
+  "output-detail-returns-full-content","detail-has-body",同一 output 存在,客户端 GET 该 output 详情,响应 SHALL 含完整内容可供渲染,false
