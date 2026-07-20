@@ -1,4 +1,12 @@
-import type { Citation as WireCitation } from '@crystalith/shared';
+import type { QaNestedRequest } from '@crystalith/shared';
+import {
+  CitationSchema,
+  QaAnswerSchema,
+  QaStreamChunkEventSchema,
+  QaStreamDoneEventSchema,
+  QaStreamErrorEventSchema,
+  QaStreamStateSnapshotSchema,
+} from '@crystalith/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 
@@ -240,13 +248,11 @@ export function useChat({
       };
 
       try {
-        const body: Record<string, unknown> = {
+        const body: QaNestedRequest = {
           question: text,
           sessionId: sessionId,
+          ...(explicitSourceIds.length ? { sourceIds: explicitSourceIds } : {}),
         };
-        if (explicitSourceIds.length) {
-          (body as Record<string, unknown>).sourceIds = explicitSourceIds;
-        }
 
         const stream = streamRequest(`/v2/notebooks/${notebookId}/qa/stream`, {
           method: 'POST',
@@ -257,18 +263,10 @@ export function useChat({
         for await (const sseEvent of stream) {
           const { event: eventType, data: eventData } = sseEvent;
 
-          if (
-            eventType === 'chunk' &&
-            eventData &&
-            typeof eventData === 'object' &&
-            'text' in eventData
-          ) {
-            const chunkText =
-              typeof (eventData as { text?: unknown }).text === 'string'
-                ? ((eventData as { text?: unknown }).text as string)
-                : '';
-            if (!chunkText) continue;
-            streamingBufferRef.current += chunkText;
+          if (eventType === 'chunk') {
+            const chunk = QaStreamChunkEventSchema.safeParse(eventData);
+            if (!chunk.success || !chunk.data.text) continue;
+            streamingBufferRef.current += chunk.data.text;
             if (!streamingFlushTimerRef.current) {
               streamingFlushTimerRef.current = setTimeout(() => {
                 streamingFlushTimerRef.current = null;
@@ -278,12 +276,10 @@ export function useChat({
             continue;
           }
 
-          if (eventType === 'state_snapshot' && eventData && typeof eventData === 'object') {
-            const payload = eventData as {
-              messageId?: unknown;
-              shared_state?: unknown;
-            };
-            const nextMessageId = payload.messageId;
+          if (eventType === 'state_snapshot') {
+            const snapshot = QaStreamStateSnapshotSchema.safeParse(eventData);
+            if (!snapshot.success) continue;
+            const nextMessageId = snapshot.data.messageId;
             if (
               typeof nextMessageId === 'number' &&
               Number.isFinite(nextMessageId) &&
@@ -301,15 +297,25 @@ export function useChat({
 
           if (eventType === 'done' && eventData && typeof eventData === 'object') {
             receivedDone = true;
-            const doneData = eventData as {
-              citations?: WireCitation[];
-              messageId?: unknown;
-            };
+            const done = QaStreamDoneEventSchema.safeParse(eventData);
+            const doneMessageIdRaw = done.success
+              ? done.data.messageId
+              : 'messageId' in eventData && typeof eventData.messageId === 'number'
+                ? eventData.messageId
+                : undefined;
+            const doneCitations = done.success
+              ? done.data.citations
+              : 'citations' in eventData && Array.isArray(eventData.citations)
+                ? eventData.citations.flatMap((item) => {
+                    const parsed = CitationSchema.safeParse(item);
+                    return parsed.success ? [parsed.data] : [];
+                  })
+                : [];
             const doneMessageId =
-              typeof doneData.messageId === 'number' &&
-              Number.isFinite(doneData.messageId) &&
-              doneData.messageId > 0
-                ? String(doneData.messageId)
+              typeof doneMessageIdRaw === 'number' &&
+              Number.isFinite(doneMessageIdRaw) &&
+              doneMessageIdRaw > 0
+                ? String(doneMessageIdRaw)
                 : stableAssistantMessageId;
             if (doneMessageId) {
               stableAssistantMessageId = doneMessageId;
@@ -317,7 +323,7 @@ export function useChat({
               ensureAssistantMessage(doneMessageId, selectedScope ?? undefined);
             }
             flushBufferedContent();
-            const normalizedCitations = doneData.citations?.map(normalizeCitation) ?? [];
+            const normalizedCitations = doneCitations.map(normalizeCitation);
             if (stableAssistantMessageId) {
               store.getState().updateMessage(stableAssistantMessageId, {
                 citationChunkIds: collectChunkIds(normalizedCitations),
@@ -330,14 +336,12 @@ export function useChat({
           }
 
           if (eventType === 'error') {
-            terminalErrorMessage =
-              eventData && typeof eventData === 'object' && 'message' in eventData
-                ? typeof (eventData as { message?: unknown }).message === 'string'
-                  ? (eventData as { message: string }).message
-                  : '请求失败'
-                : typeof eventData === 'string'
-                  ? eventData
-                  : '请求失败';
+            const parsedError = QaStreamErrorEventSchema.safeParse(eventData);
+            terminalErrorMessage = parsedError.success
+              ? parsedError.data.message
+              : typeof eventData === 'string'
+                ? eventData
+                : '请求失败';
             store.getState().setError('send', terminalErrorMessage);
           }
         }
@@ -403,37 +407,31 @@ export function useChat({
 
     // Non-streaming path
     try {
-      const qaBody: {
-        question: string;
-        sessionId: number;
-        sourceIds?: number[];
-      } = {
+      const qaBody: QaNestedRequest = {
         question: text,
         sessionId: sessionId,
+        ...(explicitSourceIds.length ? { sourceIds: explicitSourceIds } : {}),
       };
-      if (explicitSourceIds.length) {
-        qaBody.sourceIds = explicitSourceIds;
-      }
       const { data: qaResult, error: qaErr } = await api.v2
         .notebooks({ nid: notebookId })
         .qa.post(qaBody);
       if (qaErr)
         throw new Error(typeof qaErr === 'string' ? qaErr : typeof qaErr === 'string' ? qaErr : '');
-      const result = qaResult! as Record<string, unknown>;
+      if (!qaResult) throw new Error('请求失败，请检查后端服务或稍后重试。');
+      const parsedAnswer = QaAnswerSchema.safeParse(qaResult);
+      const result = parsedAnswer.success ? parsedAnswer.data : qaResult;
 
-      const normalizedCitations = ((result.citations as unknown[]) ?? []).map((c: unknown) =>
-        normalizeCitation(c as Parameters<typeof normalizeCitation>[0]),
-      );
+      const normalizedCitations = (result.citations ?? []).map((c) => normalizeCitation(c));
       const messageId =
         typeof result.messageId === 'number' &&
         Number.isFinite(result.messageId) &&
-        (result.messageId as number) > 0
+        result.messageId > 0
           ? String(result.messageId)
           : createId();
       const assistantMessage: WorkspaceChatMessage = {
         id: messageId,
         role: 'assistant',
-        content: result.answer as string,
+        content: result.answer,
         citationChunkIds: collectChunkIds(normalizedCitations),
         citations: normalizedCitations,
         citationScope: selectedScope ?? undefined,
