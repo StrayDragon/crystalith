@@ -27,6 +27,7 @@ import {
   resolvePreviewProviderLabel,
   resolveSlidesRecoveryHint,
   resolveStatusMessage,
+  waitForSlidevPreviewReady,
 } from './slidesStudioUtils';
 import type {
   SlidesInputStageProps,
@@ -736,7 +737,7 @@ export function useSlidesStudioDialog({
   }, [isConnected, notebookId, onOutputsUpdated, refreshDraft, runGenerateStage, saveInputStage]);
 
   const buildPreview = useCallback(
-    async (force = false) => {
+    async (_force = false) => {
       if (!isConnected) {
         setPreviewError(t('studio.slides.connection_required'));
         return;
@@ -762,9 +763,15 @@ export function useSlidesStudioDialog({
       try {
         await handleSaveMarkdown();
         setPreviewMarkdown(markdown);
-        if (force || !previewMarkdown) {
-          setPreviewKey((prev) => prev + 1);
+        // Saving markdown restarts Slidev briefly; wait until /slidev is up
+        // before bumping the iframe key so the panel does not load a 500 page.
+        const probeUrl = buildSlidesPreviewUrl(previewDescriptor, Date.now());
+        const ready = probeUrl ? await waitForSlidevPreviewReady(probeUrl) : false;
+        if (!ready) {
+          setPreviewError('预览服务重启中，请稍后点击“强制刷新”。');
+          return;
         }
+        setPreviewKey((prev) => prev + 1);
       } catch {
         setPreviewError('预览更新失败，请稍后重试。');
       } finally {
@@ -778,7 +785,6 @@ export function useSlidesStudioDialog({
       previewDescriptor,
       previewProviderLabel,
       previewSupported,
-      previewMarkdown,
       slidesConfig,
       slidesConfigErrorMessage,
       slidesTool,

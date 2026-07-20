@@ -81,6 +81,55 @@ export function buildSlidesPreviewUrl(
   return '';
 }
 
+/**
+ * Slidev full-restarts when preview markdown/frontmatter changes; the Vite
+ * `/slidev` proxy returns 500 until listen() returns. Poll before mounting
+ * the iframe so the dialog does not flash the browser "refused / 500" page.
+ */
+export async function waitForSlidevPreviewReady(
+  previewUrl: string,
+  options?: { timeoutMs?: number; intervalMs?: number; signal?: AbortSignal },
+): Promise<boolean> {
+  if (!previewUrl) return false;
+  const timeoutMs = options?.timeoutMs ?? 20_000;
+  const intervalMs = options?.intervalMs ?? 250;
+  const signal = options?.signal;
+  const probe = previewUrl.includes('://')
+    ? previewUrl
+    : new URL(
+        previewUrl,
+        typeof window !== 'undefined' ? window.location.origin : 'http://localhost',
+      ).pathname;
+
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (signal?.aborted) return false;
+    try {
+      const res = await fetch(probe, {
+        method: 'GET',
+        cache: 'no-store',
+        signal,
+        headers: { Accept: 'text/html' },
+      });
+      if (res.ok) return true;
+    } catch {
+      // Connection refused / abort while Slidev restarts.
+    }
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, intervalMs);
+      signal?.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timer);
+          resolve();
+        },
+        { once: true },
+      );
+    });
+  }
+  return false;
+}
+
 export function resolvePreviewProviderLabel(
   preview: PreviewDescriptor | null | undefined,
   engine: string | null | undefined,

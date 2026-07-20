@@ -1,6 +1,8 @@
 import { Button, Chip, IconButton, Spinner, Typography } from '@material-tailwind/react';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import { useEffect, useState } from 'react';
 
+import { waitForSlidevPreviewReady } from '../slidesStudioUtils';
 import type { SlidesPreviewPanelProps } from '../types';
 
 export function SlidesPreviewPanel({
@@ -25,6 +27,45 @@ export function SlidesPreviewPanel({
   onPreview,
   onRefreshPreview,
 }: SlidesPreviewPanelProps) {
+  const [frameSrc, setFrameSrc] = useState('');
+  const [frameWaiting, setFrameWaiting] = useState(false);
+  const [frameFailed, setFrameFailed] = useState(false);
+
+  useEffect(() => {
+    if (!previewReady || !previewSupported || !previewUrl) {
+      setFrameSrc('');
+      setFrameWaiting(false);
+      setFrameFailed(false);
+      return;
+    }
+
+    let cancelled = false;
+    const ac = new AbortController();
+    setFrameSrc('');
+    setFrameWaiting(true);
+    setFrameFailed(false);
+
+    void waitForSlidevPreviewReady(previewUrl, { signal: ac.signal }).then((ok) => {
+      if (cancelled) return;
+      setFrameWaiting(false);
+      if (ok) setFrameSrc(previewUrl);
+      else setFrameFailed(true);
+    });
+
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, [previewReady, previewSupported, previewUrl, previewKey]);
+
+  const showFrame = previewReady && previewSupported;
+  const busy =
+    isPreviewSyncing ||
+    isGenerating ||
+    queueStatus === 'running' ||
+    draftStatus === 'running' ||
+    frameWaiting;
+
   return (
     <div
       className={`rounded-xl border border-gray-200 dark:border-slate-700 bg-gradient-to-br from-white via-white to-slate-50 p-3 flex flex-col min-h-0 shadow-sm ${isPreviewMode ? 'order-1 lg:order-2' : ''}`}
@@ -42,7 +83,7 @@ export function SlidesPreviewPanel({
             size="sm"
             onClick={onOpenPreviewWindow}
             className="rounded-full"
-            disabled={!previewReady}
+            disabled={!previewReady || !frameSrc}
             aria-label="在新窗口打开预览"
           >
             <OpenInNewIcon className="h-4 w-4" />
@@ -97,28 +138,29 @@ export function SlidesPreviewPanel({
           {previewError}
         </div>
       )}
+      {frameFailed && !previewError && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 mt-2"
+        >
+          预览服务尚未就绪，请点击“强制刷新”重试。
+        </div>
+      )}
       <div className="mt-3 flex-1 min-h-0 rounded-lg border border-slate-200 bg-slate-900/5 overflow-hidden flex items-center justify-center p-3">
-        {previewReady && previewSupported ? (
+        {showFrame && frameSrc ? (
           <div className="h-full w-auto max-w-full aspect-video rounded-lg overflow-hidden shadow-lg bg-white dark:bg-slate-800 relative">
-            <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-800 z-0">
-              <Spinner className="h-5 w-5 text-gray-400" />
-            </div>
             <iframe
               key={previewKey}
               title={`${previewProviderLabel} 预览`}
-              src={previewUrl}
-              sandbox="allow-scripts allow-same-origin"
+              src={frameSrc}
               className="h-full w-full border-0 bg-white dark:bg-slate-800 relative z-10"
-              loading="lazy"
             />
           </div>
-        ) : isPreviewSyncing ||
-          isGenerating ||
-          queueStatus === 'running' ||
-          draftStatus === 'running' ? (
+        ) : busy ? (
           <div className="w-full max-w-full aspect-video rounded-lg border border-dashed border-slate-300 bg-white dark:bg-slate-900/70 flex flex-col items-center justify-center gap-2 text-xs text-gray-500 dark:text-slate-400">
             <Spinner className="h-4 w-4" />
-            <span>预览同步中...</span>
+            <span>{frameWaiting ? '等待预览服务就绪…' : '预览同步中...'}</span>
           </div>
         ) : (
           <div className="h-full w-full flex flex-col items-center justify-center gap-2 text-xs text-gray-500 dark:text-slate-400 px-6 text-center">

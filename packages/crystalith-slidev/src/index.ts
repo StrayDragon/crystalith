@@ -21,9 +21,9 @@ export function renderSlides(_config: SlidevConfig): { html: string } {
 const DEFAULT_PREVIEW_URL =
   (import.meta !== undefined &&
     (import.meta as { env?: Record<string, string> }).env?.VITE_SLIDEV_PREVIEW_URL) ||
-  (import.meta !== undefined && (import.meta as { env?: { PROD?: boolean } }).env?.PROD
-    ? '/slidev'
-    : 'http://localhost:3030');
+  // Same-origin path: Vite (dev) / reverse-proxy (prod) forward to Slidev.
+  // Avoid cross-origin http://127.0.0.1:3030 iframes — browsers often refuse them.
+  '/slidev';
 
 export function getSlidevPreviewBaseUrl(): string {
   return String(DEFAULT_PREVIEW_URL).replace(/\/+$/u, '');

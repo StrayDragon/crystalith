@@ -8,6 +8,7 @@ const reactRoot = path.resolve(__dirname, 'node_modules/react');
 const reactDomRoot = path.resolve(__dirname, 'node_modules/react-dom');
 
 const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8032';
+const slidevProxyTarget = process.env.VITE_SLIDEV_PROXY_TARGET || 'http://127.0.0.1:3030';
 const includeExperimentalTests = process.env.VITEST_INCLUDE_EXPERIMENTAL === '1';
 
 function getPackageName(id: string): string | null {
@@ -130,6 +131,8 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    // Match Slidev: avoid [::1]-only bind so 127.0.0.1:3000 also works.
+    host: true,
     fs: {
       allow: [path.resolve(__dirname, '..')],
     },
@@ -153,6 +156,12 @@ export default defineConfig({
       '/health': {
         target: apiProxyTarget,
         changeOrigin: true,
+      },
+      // Studio iframe uses same-origin /slidev → Slidev CLI (:3030, --base /slidev/)
+      '/slidev': {
+        target: slidevProxyTarget,
+        changeOrigin: true,
+        ws: true,
       },
     },
   },
