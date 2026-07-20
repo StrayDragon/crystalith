@@ -7,22 +7,40 @@ import { desc } from './i18n.js';
 export const MessageRoleSchema = z.enum(['user', 'assistant', 'system']);
 export type MessageRole = z.infer<typeof MessageRoleSchema>;
 
-export const MessageSchema = z.object({
-  id: IdSchema.describe(desc('message.id')),
-  sessionId: IdSchema.describe(desc('message.session_id')),
-  role: MessageRoleSchema.describe(desc('message.role')),
-  content: z.string().min(1).describe(desc('message.content')),
-  citations: z.array(CitationSchema).nullable().optional(),
-  createdAt: IsoTimestampSchema.describe(desc('message.created_at')),
-  updatedAt: IsoTimestampSchema,
-});
+export const MessageSchema = z
+  .object({
+    id: IdSchema.describe(desc('message.id')),
+    sessionId: IdSchema.describe(desc('message.session_id')),
+    role: MessageRoleSchema.describe(desc('message.role')),
+    content: z.string().min(1).describe(desc('message.content')),
+    citations: z.array(CitationSchema).nullable().optional(),
+    createdAt: IsoTimestampSchema.describe(desc('message.created_at')),
+    updatedAt: IsoTimestampSchema,
+  })
+  .openapi({
+    description: desc('message.entity', '会话消息'),
+    example: {
+      id: 1,
+      sessionId: 1,
+      role: 'user',
+      content: '你好',
+      citations: null,
+      createdAt: '2026-07-08T12:00:00.000Z',
+      updatedAt: '2026-07-08T12:00:00.000Z',
+    },
+  });
 export type Message = z.infer<typeof MessageSchema>;
 
-export const MessageCreateSchema = z.object({
-  role: MessageRoleSchema.describe(desc('message.role')),
-  content: z.string().min(1).describe(desc('message.content')),
-  citations: z.array(CitationSchema).nullable().optional(),
-});
+export const MessageCreateSchema = z
+  .object({
+    role: MessageRoleSchema.describe(desc('message.role')),
+    content: z.string().min(1).describe(desc('message.content')),
+    citations: z.array(CitationSchema).nullable().optional(),
+  })
+  .openapi({
+    description: desc('message.create', '创建消息'),
+    example: { role: 'user', content: '你好' },
+  });
 export type MessageCreate = z.infer<typeof MessageCreateSchema>;
 
 export const MessageListSchema = z.object({

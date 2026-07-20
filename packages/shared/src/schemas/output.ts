@@ -249,44 +249,66 @@ export type OutputContent = z.infer<typeof OutputContentSchema>;
 // Output entity + request
 // ---------------------------------------------------------------------------
 
-export const OutputSchema = z.object({
-  id: IdSchema.describe(desc('output.id')),
-  notebookId: IdSchema,
-  type: OutputTypeSchema.describe(desc('output.type')),
-  prompt: z.string().nullable().optional(),
-  chunkIds: z.array(IdSchema).nullable().optional(),
-  content: OutputContentSchema.describe(desc('output.content')),
-  createdAt: IsoTimestampSchema.describe(desc('output.created_at')),
-  updatedAt: IsoTimestampSchema,
-});
+export const OutputSchema = z
+  .object({
+    id: IdSchema.describe(desc('output.id')),
+    notebookId: IdSchema,
+    type: OutputTypeSchema.describe(desc('output.type')),
+    prompt: z.string().nullable().optional(),
+    chunkIds: z.array(IdSchema).nullable().optional(),
+    content: OutputContentSchema.describe(desc('output.content')),
+    createdAt: IsoTimestampSchema.describe(desc('output.created_at')),
+    updatedAt: IsoTimestampSchema,
+  })
+  .openapi({
+    description: desc('output.entity', '输出实体（含完整 content）'),
+    example: {
+      id: 1,
+      notebookId: 1,
+      type: 'FAQ',
+      prompt: '生成 FAQ',
+      chunkIds: [1],
+      content: { title: 'FAQ', items: [] },
+      createdAt: '2026-07-08T12:00:00.000Z',
+      updatedAt: '2026-07-08T12:00:00.000Z',
+    },
+  });
 export type Output = z.infer<typeof OutputSchema>;
 
 /**
  * List-row projection (c72): metadata + short preview only — MUST NOT include full content.
  * Title/slideId are derived server-side from stored content then content is omitted.
  */
-export const OutputListItemSchema = z.object({
-  id: IdSchema.describe(desc('output.id')),
-  notebookId: IdSchema,
-  type: OutputTypeSchema.describe(desc('output.type')),
-  prompt: z.string().nullable().optional(),
-  title: z
-    .string()
-    .nullable()
-    .optional()
-    .describe(desc('output.title', '列表展示标题（由正文/prompt 派生）')),
-  preview: z.string().nullable().optional().describe(desc('output.preview', '短预览文本（截断）')),
-  slideId: z
-    .number()
-    .int()
-    .positive()
-    .nullable()
-    .optional()
-    .describe(desc('output.slide_id', 'SLIDES 类型关联的草稿 ID（列表用）')),
-  chunkIds: z.array(IdSchema).nullable().optional(),
-  createdAt: IsoTimestampSchema.describe(desc('output.created_at')),
-  updatedAt: IsoTimestampSchema,
-});
+export const OutputListItemSchema = z
+  .object({
+    id: IdSchema.describe(desc('output.id')),
+    notebookId: IdSchema,
+    type: OutputTypeSchema.describe(desc('output.type')),
+    prompt: z.string().nullable().optional(),
+    title: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(desc('output.title', '列表展示标题（由正文/prompt 派生）')),
+    preview: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(desc('output.preview', '短预览文本（截断）')),
+    slideId: z
+      .number()
+      .int()
+      .positive()
+      .nullable()
+      .optional()
+      .describe(desc('output.slide_id', 'SLIDES 类型关联的草稿 ID（列表用）')),
+    chunkIds: z.array(IdSchema).nullable().optional(),
+    createdAt: IsoTimestampSchema.describe(desc('output.created_at')),
+    updatedAt: IsoTimestampSchema,
+  })
+  .openapi({
+    description: desc('output.list_item', '输出列表项（无完整 content）'),
+  });
 export type OutputListItem = z.infer<typeof OutputListItemSchema>;
 
 /** Paginated list envelope for GET outputs (c68 + c72 thin items). */
@@ -294,23 +316,30 @@ export const OutputsPageSchema = PaginatedSchema(OutputListItemSchema);
 export type OutputsPage = z.infer<typeof OutputsPageSchema>;
 
 /** Body fields for generate (without notebook scope). */
-export const OutputGenerateBodySchema = z.object({
-  /** Output type id; accepts lower/upper case (normalized server-side). */
-  type: z.string().min(1),
-  prompt: z.string().nullable().optional(),
-  content: OutputContentSchema.nullable().optional(),
-  sourceIds: z.array(IdSchema).optional(),
-  chunkIds: z.array(IdSchema).optional(),
-  preference: z.enum(['quality', 'speed']).nullable().optional(),
-  topK: z.number().int().positive().max(50).optional(),
-  minScore: z.number().min(0).max(1).optional(),
-  modelId: z.string().optional(),
-});
+export const OutputGenerateBodySchema = z
+  .object({
+    /** Output type id; accepts lower/upper case (normalized server-side). */
+    type: z.string().min(1),
+    prompt: z.string().nullable().optional(),
+    content: OutputContentSchema.nullable().optional(),
+    sourceIds: z.array(IdSchema).optional(),
+    chunkIds: z.array(IdSchema).optional(),
+    preference: z.enum(['quality', 'speed']).nullable().optional(),
+    topK: z.number().int().positive().max(50).optional(),
+    minScore: z.number().min(0).max(1).optional(),
+    modelId: z.string().optional(),
+  })
+  .openapi({
+    description: desc('output.generate_body', '生成输出请求体'),
+    example: { type: 'FAQ', prompt: '总结要点', sourceIds: [1] },
+  });
 export type OutputGenerateBody = z.infer<typeof OutputGenerateBodySchema>;
 
 /** Flat alias POST /v2/outputs — notebookId required (c67). */
 export const OutputGenerateRequestSchema = OutputGenerateBodySchema.extend({
   notebookId: IdSchema,
+}).openapi({
+  description: desc('output.generate_request', '生成输出请求（flat，含 notebookId）'),
 });
 export type OutputGenerateRequest = z.infer<typeof OutputGenerateRequestSchema>;
 
@@ -320,15 +349,22 @@ export type OutputGenerateRequest = z.infer<typeof OutputGenerateRequestSchema>;
  */
 export const OutputGenerateNestedRequestSchema = OutputGenerateBodySchema.extend({
   notebookId: IdSchema.optional(),
+}).openapi({
+  description: desc('output.generate_nested', '生成输出请求（nested）'),
 });
 export type OutputGenerateNestedRequest = z.infer<typeof OutputGenerateNestedRequestSchema>;
 
 /** POST …/outputs/:id/convert-to-source */
-export const OutputConvertToSourceResponseSchema = z.object({
-  sourceId: IdSchema,
-  filename: z.string(),
-  chunkCount: z.number().int().nonnegative(),
-});
+export const OutputConvertToSourceResponseSchema = z
+  .object({
+    sourceId: IdSchema,
+    filename: z.string(),
+    chunkCount: z.number().int().nonnegative(),
+  })
+  .openapi({
+    description: desc('output.convert_to_source', '输出转为来源结果'),
+    example: { sourceId: 2, filename: 'faq.md', chunkCount: 1 },
+  });
 export type OutputConvertToSourceResponse = z.infer<typeof OutputConvertToSourceResponseSchema>;
 
 export const OutputListSchema = z.object({
