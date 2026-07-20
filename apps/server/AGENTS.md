@@ -40,7 +40,7 @@ From repo root:
 ## Conventions
 
 - One Elysia router per feature under `features/*/router.ts`
-- OpenAPI via `@asteasolutions/zod-to-openapi` — **no** `@elysiajs/swagger` / `t.*`
+- OpenAPI: shared Zod → `z.toJSONSchema` in `openapi.ts` (Scalar `/openapi`); `extendZodWithOpenApi` only for `.openapi()` metadata — **no** `@elysiajs/swagger` / `t.*`
 - AI: AI SDK v7 only (`generateObject`, `streamText`, ToolLoopAgent/WorkflowAgent when needed)
 - Config: `config/app.yaml` + `config/secret.env` (see `config/AGENTS.md`)
 

@@ -20,7 +20,7 @@ Spec workflow paths:
 Spec-workflow-specific notes:
 
 - For v2, do NOT run `pnpm run api:sync` (v1 OpenAPI chain removed in v2).
-- OpenAPI: use `@asteasolutions/zod-to-openapi` from shared Zod schemas. NOT `@elysiajs/swagger`.
+- OpenAPI: shared Zod → `z.toJSONSchema` assembled in `apps/server/src/openapi.ts` (Scalar); `extendZodWithOpenApi` for `.openapi()` metadata only. NOT `@elysiajs/swagger`.
 - Stable entrypoints: `bun test`, `bun typecheck`.
 
 ## Artifact Rules
