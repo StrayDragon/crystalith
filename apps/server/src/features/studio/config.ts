@@ -13,48 +13,48 @@ import type { ConfigOption, SlidesConfigSchema, ThemePresetOption } from '@cryst
 // Range tables (v1 config.py:35-45)
 // ---------------------------------------------------------------------------
 
-export const QUANTITY_RANGES: Record<string, [number, number]> = {
+export const QUANTITY_RANGES = {
   short: [6, 8],
   standard: [8, 12],
   detailed: [12, 18],
-};
+} as const satisfies Record<string, readonly [number, number]>;
 
-export const DENSITY_BULLETS: Record<string, [number, number]> = {
+export const DENSITY_BULLETS = {
   sparse: [2, 3],
   standard: [3, 5],
   dense: [5, 7],
-};
+} as const satisfies Record<string, readonly [number, number]>;
 
 // ---------------------------------------------------------------------------
 // Hint tables (v1 config.py:47-72) — Chinese localized phrases
 // ---------------------------------------------------------------------------
 
-export const STRUCTURE_TEMPLATES: Record<string, string> = {
+export const STRUCTURE_TEMPLATES = {
   standard: '封面 / 议程 / 背景 / 关键发现 / 结论 / 下一步',
   'problem-solution': '背景 / 问题 / 影响 / 方案 / 实施计划 / 收益 / 下一步',
   story: '起点 / 冲突 / 转折 / 洞察 / 行动 / 结尾',
   'project-review': '目标 / 过程 / 结果 / 复盘 / 行动计划',
   training: '目标 / 核心概念 / 示例 / 练习 / 总结',
-};
+} as const satisfies Record<string, string>;
 
-export const AUDIENCE_HINTS: Record<string, string> = {
+export const AUDIENCE_HINTS = {
   general: '通俗易懂，避免过多术语',
   executive: '强调结论与决策要点，简洁直达',
   technical: '保留必要技术细节与定义',
   external: '强调价值与故事性，避免内部术语',
-};
+} as const satisfies Record<string, string>;
 
-export const TONE_HINTS: Record<string, string> = {
+export const TONE_HINTS = {
   professional: '正式、专业',
   friendly: '亲和、易读',
   inspiring: '鼓舞、强调愿景',
   serious: '严谨、客观',
-};
+} as const satisfies Record<string, string>;
 
-export const LANGUAGE_HINTS: Record<string, string> = {
+export const LANGUAGE_HINTS = {
   zh: '中文',
   en: '英文',
-};
+} as const satisfies Record<string, string>;
 
 // ---------------------------------------------------------------------------
 // Theme preset templates (v1 config.py:74-123) — verbatim 6-key structure
@@ -133,7 +133,7 @@ export const DEFAULT_CONFIG = {
   density: 'standard',
   themePreset: 'minimal-clean',
   frontmatter: '',
-};
+} as const;
 
 // ---------------------------------------------------------------------------
 // OPTIONS lists (v1 config.py:125-195) — for the frontend config UI
@@ -202,31 +202,45 @@ export const THEME_PRESET_OPTIONS: ThemePresetOption[] = (
 // ---------------------------------------------------------------------------
 
 export function resolveQuantityRange(quantity?: string | null): [number, number] {
-  return (quantity && QUANTITY_RANGES[quantity]) || QUANTITY_RANGES['standard']!;
+  const range =
+    quantity && quantity in QUANTITY_RANGES
+      ? QUANTITY_RANGES[quantity as keyof typeof QUANTITY_RANGES]
+      : QUANTITY_RANGES.standard;
+  return [range[0], range[1]];
 }
 
 export function resolveBulletRange(density?: string | null): [number, number] {
-  return (density && DENSITY_BULLETS[density]) || DENSITY_BULLETS['standard']!;
+  const range =
+    density && density in DENSITY_BULLETS
+      ? DENSITY_BULLETS[density as keyof typeof DENSITY_BULLETS]
+      : DENSITY_BULLETS.standard;
+  return [range[0], range[1]];
 }
 
 export function resolveStructureHint(structure?: string | null): string | undefined {
-  return structure ? STRUCTURE_TEMPLATES[structure] : undefined;
+  return structure && structure in STRUCTURE_TEMPLATES
+    ? STRUCTURE_TEMPLATES[structure as keyof typeof STRUCTURE_TEMPLATES]
+    : undefined;
 }
 
 export function resolveAudienceHint(audience?: string | null): string | undefined {
-  return audience ? AUDIENCE_HINTS[audience] : undefined;
+  return audience && audience in AUDIENCE_HINTS
+    ? AUDIENCE_HINTS[audience as keyof typeof AUDIENCE_HINTS]
+    : undefined;
 }
 
 export function resolveToneHint(tone?: string | null): string | undefined {
-  return tone ? TONE_HINTS[tone] : undefined;
+  return tone && tone in TONE_HINTS ? TONE_HINTS[tone as keyof typeof TONE_HINTS] : undefined;
 }
 
 export function resolveLanguageHint(language?: string | null): string | undefined {
-  return language ? LANGUAGE_HINTS[language] : undefined;
+  return language && language in LANGUAGE_HINTS
+    ? LANGUAGE_HINTS[language as keyof typeof LANGUAGE_HINTS]
+    : undefined;
 }
 
 export function resolveThemePreset(preset?: string | null): string {
-  return preset && THEME_PRESET_TEMPLATES[preset] ? preset : 'minimal-clean';
+  return preset && preset in THEME_PRESET_TEMPLATES ? preset : 'minimal-clean';
 }
 
 // ---------------------------------------------------------------------------
@@ -270,12 +284,14 @@ export interface RetrievalTuning {
 const DEFAULT_TOP_K = 8;
 const DEFAULT_MIN_SCORE = 0.2;
 
-const SLIDES_TUNING: Record<string, RetrievalTuning> = {
+const SLIDES_TUNING = {
   quality: { topK: 12, minScore: 0.1 },
   speed: { topK: 6, minScore: 0.22 },
-};
+} as const satisfies Record<string, RetrievalTuning>;
 
 export function resolveRetrievalTuning(preference?: string | null): RetrievalTuning {
-  if (preference && SLIDES_TUNING[preference]) return SLIDES_TUNING[preference]!;
+  if (preference && preference in SLIDES_TUNING) {
+    return SLIDES_TUNING[preference as keyof typeof SLIDES_TUNING];
+  }
   return { topK: DEFAULT_TOP_K, minScore: DEFAULT_MIN_SCORE };
 }
