@@ -13,31 +13,34 @@
 
 ## 0. 已固定决策（Grill 摘要）
 
-| ID        | 决策                                                                                                                                                                                                        |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **B**     | **`ResearchRun` 为过程 SSOT**（图 / checkpoint / report 挂在 run）；不把长跑状态塞进 Output 行当唯一权威                                                                                                    |
-| **B1**    | **不自动落笔记**：Run 内始终有权威报告；进「笔记 / 来源」列表靠用户**显式转化**（见 G7：任一步可转）                                                                                                        |
-| **IA-1**  | **前置改造：搜索迁到中间顶栏**（符合习惯；来源栏回归「库管理」）                                                                                                                                            |
-| **IA-2**  | **深研主入口 = 顶栏输入 → 二级页**（任务 / 队列 / 操作 / 活卡片状态），不再以「来源里切 Deep Research」或「笔记生成卡片」为首发壳                                                                           |
-| **IA-3**  | 三栏职责保持清晰：**来源 = 入库与管理**；**笔记 = 合成文档**；**对话 = RAG 问答**；深研是跨栏的「生产流水线」，产物有机流入前两者，供对话消费                                                               |
-| **E1**    | 顶栏二级页 = **顶栏锚定的宽幅面板/抽屉**（非跳路由）；内分「直接搜索 \| 深度研究」；点 Run 在面板内切到图/报告                                                                                              |
-| **F1**    | **E1 = 队列/新建台**；点进 Run 后打开更大 Layer 详情（宽幅/近全屏），内嵌 xyflow + 报告；三栏布局保持                                                                                                       |
-| **G1**    | 打开 Run 详情时 **E1 保持挂载**（可被遮罩盖住）；关闭详情后 E1 仍开在离开前的 Tab，直接搜索 query/队列原样可见                                                                                              |
-| **H1**    | 深研创建：**显式开关** `useNotebookSources`（默认开）+ `allowWeb`（默认开）；来源在**深研台内拉列表重选**，MUST NOT 绑定工作区勾选；开用来源但 `sourceIds` 为空时 MUST 禁用开始并提示；至少一端开启方可创建 |
-| **I1**    | 首版 `convertToNote` / 笔记落库 **仅 Markdown `PARAGRAPH`**（与 Studio「添加笔记」同路径）；不新增 REPORT、不默认 BRIEFING                                                                                  |
-| **K1**    | 引用：Run 报告 SSOT = 结构化内联 cite + **全局** citation map（复用 `Citation` chunk/页/段落/snippet）；转笔记 → GFM `[^n]` + 脚注；首版不做 MD 双向解析                                                    |
-| **L1**    | 深度三档（默认「中」）：浅 8 searches / 12 nodes；中 20 / 30；深 40 / 60；首发 UI 只暴露三档，高级数字后置                                                                                                  |
-| **M1**    | 首发「待确认」仅两类硬停：① 外网预算将尽 → 继续/出报告；② 主控扩展新支路 → 批准/跳过收束；不做逐步审批与转化推荐弹窗                                                                                        |
-| **U1**    | 过程图 = 可交互思路（剪枝 / fork）；Run 详情主表面为图；终局阅读以报告为主，**不**另做「研究思路」并列页                                                                                                    |
-| **U2**    | 剪枝/fork：在 `running` / `awaiting_confirm` 可用；M1「扩支路」与用户主动 fork 合流；`completed` 后图只读，改方向开新 Run（可选「从节点 fork 新 Run」P2）                                                   |
-| **R4**    | 图节点结论态：`clear` / `partial` / `missing` / `pending` / `pruned`；配色见 **C1**，MUST NOT 复刻参考图绿紫红                                                                                              |
-| **C1**    | 图节点色：复用工作区语义色（成功→clear、警告→partial、危险→missing、中性→pending）；`pruned` 降透明度/删线                                                                                                  |
-| **R5**    | 边语义闭集：`decompose`/`expand`/`focus`/`filter`/`compare`/`refine`/`support`/`fork`/`merge` + 可选短备注；MUST NOT 仅用自由中文边标签                                                                     |
-| **R6**    | 报告 SSOT：`sections[].blocks`（paragraph/bullets + citeIds）+ 全局 `citations` map；导出笔记按出现序生成 GFM 脚注                                                                                          |
-| **R7**    | convert 目标为判别联合：`report` \| `node+nodeId` \| `evidence+evidenceId`；笔记恒 PARAGRAPH+K1，来源须 embed 可检索                                                                                        |
-| **A1**    | 取消：协作 cancel + 尽量落盘 checkpoint → `cancelled`；SSE `status`                                                                                                                                         |
-| **CP1**   | Checkpoint：每完成一图节点 + 进入 M1 前强制落盘                                                                                                                                                             |
-| **UI-C1** | 报告/节点引用 UI 复用现有 CitationsControl + popover + 跳转来源                                                                                                                                             |
+| ID         | 决策                                                                                                                                                                                                        |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **B**      | **`ResearchRun` 为过程 SSOT**（图 / checkpoint / report 挂在 run）；不把长跑状态塞进 Output 行当唯一权威                                                                                                    |
+| **B1**     | **不自动落笔记**：Run 内始终有权威报告；进「笔记 / 来源」列表靠用户**显式转化**（见 G7：任一步可转）                                                                                                        |
+| **IA-1**   | **前置改造：搜索迁到中间顶栏**（符合习惯；来源栏回归「库管理」）                                                                                                                                            |
+| **IA-2**   | **深研主入口 = 顶栏输入 → 二级页**（任务 / 队列 / 操作 / 活卡片状态），不再以「来源里切 Deep Research」或「笔记生成卡片」为首发壳                                                                           |
+| **IA-3**   | 三栏职责保持清晰：**来源 = 入库与管理**；**笔记 = 合成文档**；**对话 = RAG 问答**；深研是跨栏的「生产流水线」，产物有机流入前两者，供对话消费                                                               |
+| **E1**     | 顶栏二级页 = **顶栏锚定的宽幅面板/抽屉**（非跳路由）；内分「直接搜索 \| 深度研究」；点 Run 在面板内切到图/报告                                                                                              |
+| **F1**     | **E1 = 队列/新建台**；点进 Run 后打开更大 Layer 详情（宽幅/近全屏），内嵌 xyflow + 报告；三栏布局保持                                                                                                       |
+| **G1**     | 打开 Run 详情时 **E1 保持挂载**（可被遮罩盖住）；关闭详情后 E1 仍开在离开前的 Tab，直接搜索 query/队列原样可见                                                                                              |
+| **H1**     | 深研创建：**显式开关** `useNotebookSources`（默认开）+ `allowWeb`（默认开）；来源在**深研台内拉列表重选**，MUST NOT 绑定工作区勾选；开用来源但 `sourceIds` 为空时 MUST 禁用开始并提示；至少一端开启方可创建 |
+| **I1**     | 首版 `convertToNote` / 笔记落库 **仅 Markdown `PARAGRAPH`**（与 Studio「添加笔记」同路径）；不新增 REPORT、不默认 BRIEFING                                                                                  |
+| **K1**     | 引用：Run 报告 SSOT = 结构化内联 cite + **全局** citation map（复用 `Citation` chunk/页/段落/snippet）；转笔记 → GFM `[^n]` + 脚注；首版不做 MD 双向解析                                                    |
+| **L1**     | 深度三档（默认「中」）：浅 8 searches / 12 nodes；中 20 / 30；深 40 / 60；首发 UI 只暴露三档，高级数字后置                                                                                                  |
+| **M1**     | 首发「待确认」仅两类硬停：① 外网预算将尽 → 继续/出报告；② 主控扩展新支路 → 批准/跳过收束；不做逐步审批与转化推荐弹窗                                                                                        |
+| **U1**     | 过程图 = 可交互思路（剪枝 / fork）；Run 详情主表面为图；终局阅读以报告为主，**不**另做「研究思路」并列页                                                                                                    |
+| **U2**     | 剪枝/fork：在 `running` / `awaiting_confirm` 可用；M1「扩支路」与用户主动 fork 合流；`completed` 后图只读，改方向开新 Run（可选「从节点 fork 新 Run」P2）                                                   |
+| **R4**     | 图节点结论态：`clear` / `partial` / `missing` / `pending` / `pruned`；配色见 **C1**，MUST NOT 复刻参考图绿紫红                                                                                              |
+| **C1**     | 图节点色：复用工作区语义色（成功→clear、警告→partial、危险→missing、中性→pending）；`pruned` 降透明度/删线                                                                                                  |
+| **R5**     | 边语义闭集：`decompose`/`expand`/`focus`/`filter`/`compare`/`refine`/`support`/`fork`/`merge` + 可选短备注；MUST NOT 仅用自由中文边标签                                                                     |
+| **R6**     | 报告 SSOT：`sections[].blocks`（paragraph/bullets + citeIds）+ 全局 `citations` map；导出笔记按出现序生成 GFM 脚注                                                                                          |
+| **R7**     | convert 目标为判别联合：`report` \| `node+nodeId` \| `evidence+evidenceId`；笔记恒 PARAGRAPH+K1，来源须 embed 可检索                                                                                        |
+| **A1**     | 取消：协作 cancel + 尽量落盘 checkpoint → `cancelled`；SSE `status`                                                                                                                                         |
+| **CP1**    | Checkpoint：每完成一图节点 + 进入 M1 前强制落盘                                                                                                                                                             |
+| **UI-C1**  | 报告/节点引用 UI 复用现有 CitationsControl + popover + 跳转来源                                                                                                                                             |
+| **D1**     | SSE `graph_patch`：增量 upsert nodes/edges + removeNodeIds/removeEdgeIds                                                                                                                                    |
+| **E1′**    | 转化：报告顶栏 + 节点均可转笔记/来源；节点入口 MUST 淡化（溢出/右键/…，非主 CTA）                                                                                                                           |
+| **F1-CTA** | M1：图上高亮相关节点 + 详情顶栏确认条（双处同一动作）                                                                                                                                                       |
 
 ---
 
