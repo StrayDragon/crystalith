@@ -2,11 +2,15 @@
  * SSE Streaming Adapter for Eden Treaty v2
  *
  * Eden treaty doesn't natively support SSE/streaming endpoints.
- * This adapter provides `fetch()`-based SSE consumption for streaming
- * endpoints like /v2/notebooks/:nid/qa/stream, /v2/notebooks/:nid/research/:id/stream, etc.
+ * This adapter provides `fetch()`-based SSE consumption.
+ *
+ * Verb convention (c70):
+ *   - QA interactive generation → POST + JSON body
+ *   - Research / studio progress on existing resources → GET (default)
  *
  * Usage:
  *   const stream = streamRequest(`/v2/notebooks/${nid}/qa/stream`, { method: 'POST', body: {...} });
+ *   const progress = streamRequest(`/v2/notebooks/${nid}/research/${id}/stream`); // GET
  *   for await (const event of stream) { ... }
  */
 

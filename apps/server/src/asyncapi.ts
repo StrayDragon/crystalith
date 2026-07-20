@@ -1,13 +1,15 @@
 // AsyncAPI 3.0 document for streaming endpoints (SSE channels).
 //
-// The QA stream and research progress stream are documented as AsyncAPI
-// channels so external consumers can generate async SDK clients. Event
-// payloads are described as inline JSON schemas (matching the shared Zod
-// schemas in @crystalith/shared/schemas/streaming/*).
+// Verb convention (c70):
+//   - QA interactive generation → POST (large body)
+//   - Research / studio progress on existing resources → GET
+// Paths are notebook-nested after c69.
 export interface AsyncApiChannel {
   name: string;
   description: string;
   address: string;
+  /** HTTP method for the SSE subscribe/send operation (c70). */
+  method: 'GET' | 'POST';
   events: Array<{
     name: string;
     description: string;
@@ -17,8 +19,10 @@ export interface AsyncApiChannel {
 
 const QA_STREAM_CHANNEL: AsyncApiChannel = {
   name: 'qaStream',
-  description: 'SSE stream of QA response events (chunk, state_snapshot, done, error).',
+  description:
+    'SSE stream of QA response events (chunk, state_snapshot, done, error). POST with JSON body.',
   address: '/v2/notebooks/{nid}/qa/stream',
+  method: 'POST',
   events: [
     {
       name: 'chunk',
@@ -67,8 +71,9 @@ const QA_STREAM_CHANNEL: AsyncApiChannel = {
 const RESEARCH_PROGRESS_CHANNEL: AsyncApiChannel = {
   name: 'researchProgress',
   description:
-    'SSE stream of research agent progress events. Canonical path uses notebook :nid; flat alias may still pass optional deprecated query notebookId.',
+    'SSE progress for an existing research session. GET subscribe; path uses notebook :nid.',
   address: '/v2/notebooks/{nid}/research/{id}/stream',
+  method: 'GET',
   events: [
     {
       name: 'plan_ready',
@@ -120,6 +125,67 @@ const RESEARCH_PROGRESS_CHANNEL: AsyncApiChannel = {
   ],
 };
 
+const STUDIO_OUTLINE_STREAM_CHANNEL: AsyncApiChannel = {
+  name: 'studioOutlineStream',
+  description: 'SSE stream for slide outline generation on an existing draft. GET subscribe.',
+  address: '/v2/notebooks/{nid}/studio/slides/{id}/outline/stream',
+  method: 'GET',
+  events: [
+    {
+      name: 'chunk',
+      description: 'Outline generation progress / text delta (implementation-defined).',
+      payload: { type: 'object' },
+    },
+    {
+      name: 'done',
+      description: 'Outline stream completed.',
+      payload: { type: 'object' },
+    },
+    {
+      name: 'error',
+      description: 'Outline stream error.',
+      payload: {
+        type: 'object',
+        properties: { message: { type: 'string' } },
+      },
+    },
+  ],
+};
+
+const STUDIO_MARKDOWN_STREAM_CHANNEL: AsyncApiChannel = {
+  name: 'studioMarkdownStream',
+  description: 'SSE stream for slide markdown generation on an existing draft. GET subscribe.',
+  address: '/v2/notebooks/{nid}/studio/slides/{id}/markdown/stream',
+  method: 'GET',
+  events: [
+    {
+      name: 'chunk',
+      description: 'Markdown generation progress / text delta (implementation-defined).',
+      payload: { type: 'object' },
+    },
+    {
+      name: 'done',
+      description: 'Markdown stream completed.',
+      payload: { type: 'object' },
+    },
+    {
+      name: 'error',
+      description: 'Markdown stream error.',
+      payload: {
+        type: 'object',
+        properties: { message: { type: 'string' } },
+      },
+    },
+  ],
+};
+
+const ALL_CHANNELS = [
+  QA_STREAM_CHANNEL,
+  RESEARCH_PROGRESS_CHANNEL,
+  STUDIO_OUTLINE_STREAM_CHANNEL,
+  STUDIO_MARKDOWN_STREAM_CHANNEL,
+] as const;
+
 /** Generate the AsyncAPI 3.0 document. */
 export function generateAsyncApiDocument(info?: {
   title: string;
@@ -129,10 +195,10 @@ export function generateAsyncApiDocument(info?: {
   const {
     title = 'Crystalith v2 Streaming API',
     version = '2.0.0-dev',
-    description = 'SSE streaming channels for QA and research agents.',
+    description = 'SSE streaming channels for QA, research, and studio (c70 verb conventions).',
   } = info ?? {};
   const channels: Record<string, unknown> = {};
-  for (const ch of [QA_STREAM_CHANNEL, RESEARCH_PROGRESS_CHANNEL]) {
+  for (const ch of ALL_CHANNELS) {
     const messages: Record<string, unknown> = {};
     for (const ev of ch.events) {
       messages[ev.name] = {
@@ -143,6 +209,12 @@ export function generateAsyncApiDocument(info?: {
     channels[ch.name] = {
       address: ch.address,
       description: ch.description,
+      // AsyncAPI 3 bindings: document HTTP method alongside address (c70).
+      bindings: {
+        http: {
+          method: ch.method,
+        },
+      },
       messages,
     };
   }
