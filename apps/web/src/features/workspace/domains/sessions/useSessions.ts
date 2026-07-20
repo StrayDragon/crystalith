@@ -100,7 +100,7 @@ export function useSessions() {
                 ? createErr
                 : '',
           );
-        const newSession = created!;
+        const newSession = created;
         const normalized = normalizeSession(newSession);
         const s = store.getState();
         // Update local list before switching so the sessions effect cannot fall
@@ -159,7 +159,7 @@ export function useSessions() {
                 ? updateErr
                 : '',
           );
-        const result = updated!;
+        const result = updated;
         const normalized = normalizeSession(result);
         store
           .getState()

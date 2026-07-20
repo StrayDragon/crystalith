@@ -19,7 +19,7 @@ export type LocaleTranslations = Translation;
  * Direct locale dictionary — maps key → Chinese string at module load time.
  * No runtime locale initialization needed.
  */
-export const L: Translation = zh as Translation;
+export const L: Translation = zh;
 
 /** Available locales (currently only zh). */
 export type Locale = 'zh';

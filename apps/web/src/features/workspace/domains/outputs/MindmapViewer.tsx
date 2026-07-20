@@ -246,7 +246,7 @@ function flatten(node: LayoutNode, collapsed: Set<string>, nodes: Node[], edges:
       hasChildren: node.childCount > 0,
       collapsed: isCollapsed,
       childCount: node.childCount,
-    } as NodeData,
+    },
   });
   for (const c of node.children) {
     edges.push({

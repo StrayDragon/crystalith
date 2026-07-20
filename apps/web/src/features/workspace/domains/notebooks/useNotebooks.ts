@@ -94,7 +94,7 @@ export function useNotebooks() {
                 ? createErr
                 : '',
           );
-        const newNotebook = created!;
+        const newNotebook = created;
         await mutate(async (current) => (current ? [...current, newNotebook] : [newNotebook]), {
           revalidate: false,
         });
@@ -137,7 +137,7 @@ export function useNotebooks() {
       const { data: created, error } = await api.v2.notebooks.post({ name });
       if (error)
         throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
-      const newNotebook = created!;
+      const newNotebook = created;
       await mutate(async (current) => (current ? [...current, newNotebook] : [newNotebook]), {
         revalidate: false,
       });
@@ -169,7 +169,7 @@ export function useNotebooks() {
           throw new Error(
             typeof error === 'string' ? error : typeof error === 'string' ? error : '',
           );
-        const newNotebook = created!;
+        const newNotebook = created;
         await mutate(async (current) => (current ? [...current, newNotebook] : [newNotebook]), {
           revalidate: false,
         });
@@ -204,7 +204,7 @@ export function useNotebooks() {
           throw new Error(
             typeof error === 'string' ? error : typeof error === 'string' ? error : '',
           );
-        const newNotebook = created!;
+        const newNotebook = created;
         await mutate(async (current) => (current ? [...current, newNotebook] : [newNotebook]), {
           revalidate: false,
         });
@@ -241,7 +241,7 @@ export function useNotebooks() {
           throw new Error(
             typeof error === 'string' ? error : typeof error === 'string' ? error : '',
           );
-        const result = updated!;
+        const result = updated;
         const normalized = normalizeNotebook(result);
         await mutate(
           async (current) =>

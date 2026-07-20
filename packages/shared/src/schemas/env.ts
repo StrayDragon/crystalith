@@ -178,13 +178,22 @@ function extractDescriptors(
   deprecated?: boolean,
 ): EnvEntryDescriptor[] {
   const shape = schema.shape;
-  return Object.entries(shape).map(([key, field]) => ({
-    key,
-    description: (field as { description?: string }).description ?? '',
-    target,
-    default: '',
-    deprecated,
-  }));
+  return Object.entries(shape).map(([key, field]) => {
+    const description =
+      field &&
+      typeof field === 'object' &&
+      'description' in field &&
+      typeof field.description === 'string'
+        ? field.description
+        : '';
+    return {
+      key,
+      description,
+      target,
+      default: '',
+      deprecated,
+    };
+  });
 }
 
 /**

@@ -79,7 +79,7 @@ export function hydrateCitations(
   const chunkMetaMap = new Map(chunkRows.map((c) => [c.id, c.metadata]));
 
   return retrieved.map((c) => {
-    const meta = (chunkMetaMap.get(c.chunkId) ?? {}) as Record<string, unknown>;
+    const meta = chunkMetaMap.get(c.chunkId) ?? {};
     const snippet = trimSnippet ? c.text.trim().slice(0, 200) : c.text.slice(0, 200);
     return {
       sourceId: c.sourceId,

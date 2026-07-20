@@ -52,7 +52,7 @@ export function useTemplates() {
       });
       if (error)
         throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
-      const created = normalizeTemplate(data!);
+      const created = normalizeTemplate(data);
       await mutate(async (current) => [...(current ?? []), created], {
         revalidate: false,
       });
@@ -82,7 +82,7 @@ export function useTemplates() {
       });
       if (error)
         throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
-      const created = normalizeTemplate(data!);
+      const created = normalizeTemplate(data);
       await mutate(async (current) => [...(current ?? []), created], {
         revalidate: false,
       });
@@ -98,7 +98,7 @@ export function useTemplates() {
       });
       if (error)
         throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
-      const updated = normalizeTemplate(data!);
+      const updated = normalizeTemplate(data);
       await mutate(
         async (current) => current?.map((t) => (t.id === templateId ? updated : t)) ?? [updated],
         { revalidate: false },

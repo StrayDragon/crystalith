@@ -504,8 +504,8 @@ export function useChat({
       }
       toast.success(
         t('messages.convert.to_source.success', {
-          filename: result!.filename,
-          chunkCount: result!.chunkCount,
+          filename: result.filename,
+          chunkCount: result.chunkCount,
         }),
       );
     } catch (error) {

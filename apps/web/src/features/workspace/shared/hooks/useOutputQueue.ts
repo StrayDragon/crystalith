@@ -178,7 +178,7 @@ export function useOutputQueue({
     }
     if (!outputsData) return;
     const s = store.getState();
-    s.setOutputs(mergeOutputListWithCache(outputsData as never[], s.outputs));
+    s.setOutputs(mergeOutputListWithCache(outputsData, s.outputs));
     s.setError('outputs', '');
   }, [outputsData, outputsError, store]);
 
@@ -303,7 +303,7 @@ export function useOutputQueue({
               ? createErr
               : '',
         );
-      const draftId = created!.id;
+      const draftId = created.id;
 
       onQueueTotal();
       const job: OutputQueueJob = {
@@ -629,7 +629,7 @@ export function useOutputQueue({
           throw new Error(
             typeof getErr === 'string' ? getErr : typeof getErr === 'string' ? getErr : '',
           );
-        const normalized = normalizeOutput(output as never);
+        const normalized = normalizeOutput(output);
         const s2 = store.getState();
         s2.setOutputs(s2.outputs.map((item) => (item.id === outputId ? normalized : item)));
         return normalized;

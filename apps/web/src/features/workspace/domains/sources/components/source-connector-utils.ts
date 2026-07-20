@@ -1,4 +1,4 @@
-import type { JsonValueInput, SnapshotEntry } from './source-connector-types';
+import type { SnapshotEntry } from './source-connector-types';
 
 export type ConnectorDialogStep = 'select' | 'config' | 'snapshot' | 'scope' | 'sync';
 
@@ -59,8 +59,8 @@ type JsonSchemaObject = {
 };
 
 function asJsonSchemaObject(schema: unknown): JsonSchemaObject | null {
-  if (!schema || typeof schema !== 'object') return null;
-  return schema as JsonSchemaObject;
+  if (!isRecord(schema)) return null;
+  return schema;
 }
 
 export function schemaProperties(schema: unknown): Record<string, unknown> {
@@ -75,7 +75,7 @@ export function schemaRequired(schema: unknown): Set<string> {
   return new Set(req.map(String));
 }
 
-export function normalizeConfigValue(value: unknown, type: string | undefined): JsonValueInput {
+export function normalizeConfigValue(value: unknown, type: string | undefined): unknown {
   if (type === 'boolean') {
     return Boolean(value);
   }
@@ -86,5 +86,5 @@ export function normalizeConfigValue(value: unknown, type: string | undefined): 
       return Number.isFinite(parsed) ? parsed : value;
     }
   }
-  return value as JsonValueInput;
+  return value;
 }

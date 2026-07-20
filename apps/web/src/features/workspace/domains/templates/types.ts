@@ -1,4 +1,4 @@
-import type { Template } from '@crystalith/shared';
+import { OutputTypeSchema, type Template } from '@crystalith/shared';
 
 import type { OutputTypeId } from '../../shared/types';
 
@@ -26,9 +26,10 @@ function asStringArray(value: unknown): string[] {
 export function normalizeTemplate(raw: Template): WorkspaceTemplate {
   const configJson =
     raw.configJson && typeof raw.configJson === 'object' && !Array.isArray(raw.configJson)
-      ? (raw.configJson as Record<string, unknown>)
+      ? raw.configJson
       : {};
-  const outputType = configJson.outputType;
+  const outputTypeRaw = 'outputType' in configJson ? configJson.outputType : undefined;
+  const parsedOutputType = OutputTypeSchema.safeParse(outputTypeRaw);
   return {
     id: raw.id,
     name: raw.name ?? '',
@@ -36,9 +37,11 @@ export function normalizeTemplate(raw: Template): WorkspaceTemplate {
     isBuiltin: Boolean(raw.isBuiltin),
     createdAt: raw.createdAt ?? '',
     config: {
-      sessionTitles: asStringArray(configJson.sessionTitles),
-      outputType: typeof outputType === 'string' ? (outputType as OutputTypeId) : null,
-      sourceTags: asStringArray(configJson.sourceTags),
+      sessionTitles: asStringArray(
+        'sessionTitles' in configJson ? configJson.sessionTitles : undefined,
+      ),
+      outputType: parsedOutputType.success ? parsedOutputType.data : null,
+      sourceTags: asStringArray('sourceTags' in configJson ? configJson.sourceTags : undefined),
     },
   };
 }

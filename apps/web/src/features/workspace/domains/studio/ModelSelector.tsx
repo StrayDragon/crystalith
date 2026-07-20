@@ -124,7 +124,7 @@ export function ModelSelector({
       ) : null}
       <Select
         value={value || ''}
-        onChange={(val) => handleChange(val as string)}
+        onChange={(val) => handleChange(val)}
         disabled={disabled}
         size={size}
       >

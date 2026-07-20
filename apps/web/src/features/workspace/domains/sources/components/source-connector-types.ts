@@ -15,17 +15,3 @@ export type {
   ImportResultItem,
   ImportScopeApplyResponse,
 } from '@crystalith/shared';
-
-/** @deprecated Prefer Record<string, unknown> / JsonMetadata from shared. */
-export type JsonValueInput =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValueInput[]
-  | {
-      [key: string]: JsonValueInput;
-    };
-
-/** @deprecated Prefer JsonMetadata from shared. */
-export type JsonDictInput = Record<string, JsonValueInput>;

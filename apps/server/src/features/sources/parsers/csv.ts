@@ -17,7 +17,7 @@ function parseCsvRows(text: string): string[][] {
   let inQuotes = false;
 
   for (let i = 0; i < text.length; i++) {
-    const char = text[i]!;
+    const char = text[i];
 
     if (inQuotes) {
       if (char === '"') {
@@ -98,7 +98,7 @@ export const csvParser: Parser = {
     if (rows.length === 0) return { text: '', metadata: { parser: 'csv' } };
 
     // Normalize header (empty column names → col{N})
-    const rawHeader = rows[0]!;
+    const rawHeader = rows[0];
     const header = rawHeader.map((cell, index) => {
       const name = (cell ?? '').trim();
       return name || `col${index + 1}`;

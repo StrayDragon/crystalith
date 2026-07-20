@@ -1,6 +1,8 @@
 import {
   MessageCreateSchema,
+  MessageRoleSchema,
   MessageSchema,
+  CitationSchema,
   PaginatedSchema,
   PaginationParamsSchema,
   type Message,
@@ -11,6 +13,7 @@ import {
 // Mirrors v1 `features/messages/api.py`.
 import { count, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
+import { z } from 'zod';
 
 import { db } from '../../db/index.ts';
 import { messages, sessions } from '../../db/schema.ts';
@@ -22,6 +25,8 @@ import { requirePositiveIntId } from '../../shared/ids.ts';
 // ---------------------------------------------------------------------------
 
 const MessagesPageSchema = PaginatedSchema(MessageSchema);
+
+const CitationsOrNullSchema = z.array(CitationSchema).nullable();
 
 const apiDocs: OpenApiRoute[] = [
   {
@@ -67,9 +72,9 @@ function serializeMessage(row: {
   return {
     id: row.id,
     sessionId: row.sessionId,
-    role: row.role as Message['role'],
+    role: MessageRoleSchema.parse(row.role),
     content: row.content,
-    citations: (row.citations as Message['citations']) ?? null,
+    citations: CitationsOrNullSchema.parse(row.citations ?? null),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

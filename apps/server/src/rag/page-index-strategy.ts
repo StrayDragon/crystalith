@@ -51,7 +51,7 @@ export class PageIndexStrategy implements RAGStrategy {
     // Group by page
     const pageMap = new Map<string, PageGroup>();
     for (const row of chunkRows) {
-      const meta = row.metadata as Record<string, unknown> | null;
+      const meta = row.metadata;
       const page = typeof meta?.page === 'number' ? meta.page : 1;
       const key = `${row.sourceId}:${page}`;
 

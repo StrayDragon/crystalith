@@ -26,6 +26,10 @@ import { z } from 'zod';
 
 import type { SsrfPolicy } from './net/url-safety.ts';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export function getConfigPath(): string {
   return envValue('CL_CONFIG_PATH') ?? 'config/app.yaml';
 }
@@ -222,7 +226,8 @@ export function loadConfig(path?: string): AppConfig {
   }
   const raw = readFileSync(resolvedPath, 'utf-8');
   const rendered = renderTemplates(raw);
-  const parsed = parseYaml(rendered) as Record<string, unknown>;
+  const parsedYaml = parseYaml(rendered);
+  const parsed = isRecord(parsedYaml) ? parsedYaml : {};
 
   const models = ModelsSettingsSchema.parse(parsed.models ?? {});
 
@@ -349,10 +354,10 @@ export type SourceIngestionSettings = z.infer<typeof SourceIngestionSettingsSche
 
 /** Parse SSRF security policy from config YAML. */
 export function getSecurityPolicy(): SsrfPolicy {
-  const sec = (config().raw.source_ingestion as Record<string, unknown> | undefined)?.url_fetch as
-    | Record<string, unknown>
-    | undefined;
-  const security = parseSection(SsrfPolicyConfigSchema, sec?.security);
+  const sourceIngestion = config().raw.source_ingestion;
+  const urlFetch = isRecord(sourceIngestion) ? sourceIngestion.url_fetch : undefined;
+  const securitySection = isRecord(urlFetch) ? urlFetch.security : undefined;
+  const security = parseSection(SsrfPolicyConfigSchema, securitySection);
   return {
     allowlistOnly: security.allowlist_only,
     hostAllowlist: security.allowlist_hosts.length > 0 ? security.allowlist_hosts : undefined,
@@ -476,7 +481,8 @@ export function getDataRoot(): string {
   const envPath = envValue('CL_DATA_ROOT');
   if (envPath) return envPath;
 
-  const raw = (config().raw.storage ?? {}) as Record<string, unknown>;
+  const storageRaw = config().raw.storage;
+  const raw = isRecord(storageRaw) ? storageRaw : {};
   const result = StorageSettingsSchema.safeParse(raw);
   return result.success ? result.data.data_root : './data';
 }
@@ -488,7 +494,7 @@ function parseSection<T>(schema: z.ZodType<T>, section: unknown): T {
   // When section is absent/undefined, parse an empty object so all nested
   // `.default()` values take effect.  Cast via unknown to satisfy TS since
   // `{}` may not structurally match the schema input type.
-  return schema.parse({} as unknown);
+  return schema.parse({});
 }
 
 export function getAiSettings(): AiSettings {

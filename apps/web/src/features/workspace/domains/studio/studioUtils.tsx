@@ -70,8 +70,9 @@ export function resolveTone(type: OutputTypeId): StudioTone {
     case 'TIMELINE':
       return 'rose';
     case 'SLIDES':
-      return 'slate';
-    default:
+    case 'PARAGRAPH':
+    case 'BULLETS':
+    case 'STRUCTURED':
       return 'slate';
   }
 }
@@ -97,7 +98,9 @@ export function getToolIcon(type: OutputTypeId) {
       return <TimelineIcon {...props} />;
     case 'SLIDES':
       return <SlidesIcon {...props} />;
-    default:
+    case 'PARAGRAPH':
+    case 'BULLETS':
+    case 'STRUCTURED':
       return <SaveIcon {...props} />;
   }
 }
