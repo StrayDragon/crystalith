@@ -125,7 +125,7 @@ type ArtifactRef =
 
 `POST …/research/:rid/cancel`：协作取消；尽量落盘最后 checkpoint；状态 → `cancelled`；SSE 发 `status`（+ 可选 `log`）。
 
-## 10. Checkpoint（B1）
+## 10. Checkpoint（CP1）
 
 - 每完成一个图节点写 checkpoint。
 - 进入 `awaiting_confirm`（M1）前强制 checkpoint。
