@@ -22,6 +22,7 @@ import { LAYER_LEVELS, useLayer } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
 import { toast } from '../../../../shared/toast';
 import CitationsControl from '../../shared/components/citations/CitationsControl';
+import { EmptyHint } from '../../shared/components/EmptyHint';
 import { IconCopy, IconSave, IconSend } from '../../shared/components/Icons';
 import { SkeletonList } from '../../shared/components/Skeleton';
 import { exportQaJsonDownload, exportQaMarkdownDownload } from '../../shared/evidenceExport';
@@ -445,13 +446,9 @@ function ChatPanel({
       >
         <div className={chatColumnClass}>
           {!isConnected ? (
-            <div className="rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-6 text-xs text-gray-500 dark:text-slate-300">
-              未连接到后端服务，请检查服务状态后重试。
-            </div>
+            <EmptyHint title="未连接到后端服务，请检查服务状态后重试。" />
           ) : isBlocked ? (
-            <div className="rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-6 text-xs text-gray-500 dark:text-slate-300">
-              请先创建笔记本，再开始对话。
-            </div>
+            <EmptyHint title="请先创建笔记本，再开始对话。" />
           ) : isLoadingMessages ? (
             <SkeletonList items={3} className="py-1" />
           ) : messagesError ? (
@@ -466,11 +463,13 @@ function ChatPanel({
               </button>
             </div>
           ) : messages.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-6 text-xs text-gray-500 dark:text-slate-300">
-              {hasSources
-                ? '选择来源后提问：输入问题即可基于文档生成回答。'
-                : '添加文档开始分析：上传来源后即可开始提问。'}
-            </div>
+            <EmptyHint
+              title={
+                hasSources
+                  ? '选择来源后提问：输入问题即可基于文档生成回答。'
+                  : '添加文档开始分析：上传来源后即可开始提问。'
+              }
+            />
           ) : null}
 
           {shouldRenderMessageList ? (

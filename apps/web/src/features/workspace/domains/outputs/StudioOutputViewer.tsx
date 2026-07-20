@@ -17,6 +17,7 @@ import { useMemo, useState, useCallback, useEffect } from 'react';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { useLayer } from '../../../../shared/layer';
 import CitationsControl from '../../shared/components/citations/CitationsControl';
+import { EmptyHint } from '../../shared/components/EmptyHint';
 import {
   exportOutputJsonDownload,
   exportOutputMarkdownDownload,
@@ -227,11 +228,7 @@ export default function StudioOutputViewer({
               输出预览
             </Typography>
             {outputs.length === 0 ? (
-              <div className="p-4 text-center border border-dashed border-gray-300 rounded-lg dark:border-slate-600">
-                <Typography variant="small" className="text-gray-500 dark:text-slate-400">
-                  暂无输出
-                </Typography>
-              </div>
+              <EmptyHint title="暂无输出" className="py-4" />
             ) : (
               <div className="flex flex-col gap-1 overflow-y-auto flex-1">
                 {outputs.map((output) => {
