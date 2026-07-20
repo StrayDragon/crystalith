@@ -21,12 +21,24 @@ import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
+import {
+  generateAndPersistSourceSummary,
+  getSourceSummary,
+  scheduleSourceSummary,
+} from './source-summary.ts';
 
 const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/notebooks/:nid/sources/:sid/summary',
     method: 'get',
-    summary: 'Generate AI summary for a source',
+    summary: 'Read cached AI summary for a source (no side effects)',
+    tags: ['sources'],
+    responses: { 200: { description: 'Source summary or empty state' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/sources/:sid/summary',
+    method: 'post',
+    summary: 'Generate and persist AI summary for a source',
     tags: ['sources'],
     responses: { 200: { description: 'Source summary' } },
   },
@@ -49,121 +61,26 @@ const apiDocs: OpenApiRoute[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// parseSummaryResponse — mirrors v1 api_summary.py:36
-// ---------------------------------------------------------------------------
-
-function parseSummaryResponse(response: string): {
-  summary: string;
-  keyPoints: string[];
-  topics: string[];
-} {
-  const lines = response.trim().split('\n');
-  let summary = '';
-  const keyPoints: string[] = [];
-  const topics: string[] = [];
-  let section: string | null = null;
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line) continue;
-
-    if (line.startsWith('摘要：') || line.startsWith('摘要:')) {
-      summary = line.split(/[：:]/u, 2)[1]?.trim() ?? '';
-      section = 'summary';
-    } else if (line.startsWith('要点：') || line.startsWith('要点:')) {
-      section = 'points';
-    } else if (line.startsWith('主题：') || line.startsWith('主题:')) {
-      const topicsStr = line.split(/[：:]/u, 2)[1]?.trim() ?? '';
-      for (const t of topicsStr.replaceAll(/[、,]/gu, ',').split(',')) {
-        const trimmed = t.trim();
-        if (trimmed) topics.push(trimmed);
-      }
-      section = 'topics';
-    } else if (line.startsWith('- ') && section === 'points') {
-      keyPoints.push(line.slice(2).trim());
-    } else if (section === 'summary' && !summary) {
-      summary = line;
-    }
-  }
-
-  return {
-    summary: summary || response.slice(0, 200).trim(),
-    keyPoints:
-      keyPoints.length > 0
-        ? keyPoints.slice(0, 4)
-        : ['核心概念和定义', '主要方法论', '实践案例分析', '建议和最佳实践'],
-    topics: topics.length > 0 ? topics.slice(0, 3) : ['分析', '方法论', '实践'],
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 
 export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
-  // Source summary (v1 api_summary.py parity)
+  // Source summary — GET is cache-only (c74); POST generates & persists
   .get(
+    '/notebooks/:nid/sources/:sid/summary',
+    ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const sid = requirePositiveIntId(params.sid, 'source id');
+      return getSourceSummary(nid, sid);
+    },
+    { response: SourceSummarySchema },
+  )
+  .post(
     '/notebooks/:nid/sources/:sid/summary',
     async ({ params }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const sid = requirePositiveIntId(params.sid, 'source id');
-      const source = db().select().from(sources).where(eq(sources.id, sid)).get();
-      if (!source) throw new NotFoundError(`Source ${sid} not found`);
-      // c44: verify notebook ownership (v1 api_summary.py:82)
-      if (source.notebookId !== nid) throw new NotFoundError(`Source ${sid} not found`);
-      // c44: "not ready" → 400 (v1 api_summary.py:86)
-      if (source.status !== 'ready') {
-        throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Source is not ready');
-      }
-
-      const chunkRows = db()
-        .select()
-        .from(chunks)
-        .where(eq(chunks.sourceId, sid))
-        .orderBy(chunks.chunkIndex)
-        .all();
-
-      if (chunkRows.length === 0) throw new NotFoundError('Source has no content');
-
-      const totalText = chunkRows.map((c) => c.text).join(' ');
-      const wordCount = totalText.split(/\s+/u).length;
-
-      const contextBlocks = chunkRows.slice(0, 10);
-      const context = contextBlocks.map((c, i) => `[片段 ${i + 1}]\n${c.text}`).join('\n\n');
-
-      const modelConfig = getDefaultChatModel();
-      if (modelConfig) {
-        try {
-          const model = withRetry(await resolveModel(modelConfig));
-          const { text } = await generateText({
-            model,
-            abortSignal: AbortSignal.timeout(30_000),
-            system:
-              '你是一个文档摘要助手。请根据提供的文档内容生成：1. 一段简洁的摘要（2-3句话）2. 4个关键要点（每个要点一句话）3. 3个主题标签。请用中文回复，格式如下：\n摘要：<摘要内容>\n要点：\n- <要点1>\n- <要点2>\n- <要点3>\n- <要点4>\n主题：<主题1>、<主题2>、<主题3>',
-            prompt: `请为以下文档「${source.filename}」生成摘要：\n\n${context}`,
-          });
-          const { summary, keyPoints, topics } = parseSummaryResponse(text);
-          return {
-            sourceId: sid,
-            summary,
-            keyPoints,
-            topics,
-            wordCount,
-            generatedAt: new Date().toISOString(),
-          };
-        } catch {
-          // fall through
-        }
-      }
-
-      return {
-        sourceId: sid,
-        summary: `这是关于「${source.filename}」的文档，包含 ${chunkRows.length} 个片段。`,
-        keyPoints: ['核心概念和定义', '主要方法论', '实践案例分析', '建议和最佳实践'],
-        topics: ['分析', '方法论', '实践'],
-        wordCount,
-        generatedAt: new Date().toISOString(),
-      };
+      return generateAndPersistSourceSummary(nid, sid);
     },
     { response: SourceSummarySchema },
   )
@@ -309,6 +226,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
           bumpSourcesEpoch(source.notebookId);
           // Only set ready after successful embedding (c39: fix ready-before-vectors race)
           db().update(sources).set({ status: 'ready' }).where(eq(sources.id, newSource.id)).run();
+          scheduleSourceSummary(newSource.id);
         } catch (error) {
           console.error('[source-extras] qa-to-source embedding failed:', error);
           db()
@@ -322,7 +240,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
           throw new Error('Failed to embed QA source', { cause: error });
         }
       } else {
-        // No chunks — safe to mark ready
+        // No chunks — safe to mark ready (no summary without content)
         db().update(sources).set({ status: 'ready' }).where(eq(sources.id, newSource.id)).run();
       }
 
