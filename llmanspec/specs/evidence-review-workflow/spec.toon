@@ -1,16 +1,8 @@
 kind: llman.sdd.spec
 name: "evidence-review-workflow"
-purpose: "已落地的 citations /context 邻域与 low_similarity 空 citations 合约。结果级审阅状态机 / review notes / 待审 UI 愿景已于 Wave E 移除（不再保留 DEFERRED 条款）。"
+purpose: 已落地的 low_similarity 空 citations 合约（c73 已移除 citations /context HTTP；结果级审阅 UI 愿景早于 Wave E 删除）。
 valid_scope[2]: src/,tests/
-requirements[5]{req_id,title,statement}:
+requirements[1]{req_id,title,statement}:
   "evidence-low-similarity-strip",Low similarity evidence review MUST strip citations,evidence 审查在 low_similarity 判定下 MUST 返回空 citations 列表，因为低相似度证据不应作为引用呈现给用户
-  "citations-context-must-use-notebook-path","Citations context endpoint MUST nest under /notebooks/:nid path (not flat query param)","citations /context 端点 MUST 沿用 v1 路径层级 GET /v2/notebooks/:notebookId/citations/context，MUST NOT 用扁平 /v2/citations/context?notebookId=。实现：GET /v2/notebooks/:nid/citations/context。"
-  "citations-context-defaults-must-match-v1",Citations context defaults MUST be before=1/after=1 (not 2),"citations /context 的 before/after 默认值 MUST 为 1，越界 MUST clamp 到 [0,5]。实现：CitationContextQuerySchema + GET /v2/notebooks/:nid/citations/context。"
-  r_context_endpoint,Citation context neighborhood,系统 MUST 提供 citations context 端点 按 chunkId 或 sourceId 与 chunkIndex 解析目标 chunk 并返回相邻 chunk 邻域窗口 返回 MUST 包含 before 数组 与目标 chunk 与 after 数组
-  r_context_enrichment,Citation context enrichment,系统 MUST 在 citations context 返回的每个 chunk 中包含 pageNumber 与 paragraphIndex 字段以支持证据定位
-scenarios[5]{req_id,id,given,when,then,feature}:
+scenarios[1]{req_id,id,given,when,then,feature}:
   "evidence-low-similarity-strip","low-sim-evidence",检索结果最高 score 低于阈值,evidence 判定,"系统 SHALL 返回 citations=[] 并标记 noEvidenceReason=low_similarity",true
-  "citations-context-must-use-notebook-path","notebook-path","客户端按契约请求 /v2/notebooks/:nid/citations/context",系统路由,SHALL 命中 citations /context（而非 404）,true
-  "citations-context-defaults-must-match-v1","defaults-omitted",客户端省略 before/after 参数,系统返回窗口,默认 SHALL 为 1 before + 1 after（与 v1 一致）,true
-  r_context_endpoint,by_chunk_id,存在指定 chunk,用户请求 context 带 chunkId 与 neighbors,系统 SHALL 返回 before 与 chunk 与 after 邻域,true
-  r_context_enrichment,page_present,source 含 page 元数据,用户请求 context,系统 SHALL 在每个 chunk 返回 pageNumber,true

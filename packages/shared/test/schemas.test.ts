@@ -121,16 +121,6 @@ describe('domain schemas', () => {
     expect(done.totalResults).toBe(3);
   });
 
-  it('eval metrics enforce 0..1 bounds', () => {
-    expect(
-      S.EvalMetricsSchema.safeParse({
-        faithfulness: 1.5,
-        relevance: 0.5,
-        latencyMs: 10,
-      }).success,
-    ).toBe(false);
-  });
-
   it('source connector write requests validate shapes', () => {
     expect(S.SourceConnectorBindingCreateRequestSchema.parse({}).connectionConfig).toEqual({});
     expect(
@@ -148,12 +138,7 @@ describe('domain schemas', () => {
     ).toEqual(['notes']);
   });
 
-  it('command/rag/eval write schemas accept minimal payloads', () => {
+  it('command list schema accepts empty array', () => {
     expect(S.CommandListSchema.parse([]).length).toBe(0);
-    expect(
-      S.NotebookStrategiesSetRequestSchema.parse({ strategies: ['embed'] }).strategies,
-    ).toEqual(['embed']);
-    expect(S.EvalRunRequestSchema.safeParse({ datasetId: 1, strategyIds: [] }).success).toBe(false);
-    expect(S.EvalDatasetUpsertRequestSchema.parse({ name: 'golden', items: [] }).items).toEqual([]);
   });
 });

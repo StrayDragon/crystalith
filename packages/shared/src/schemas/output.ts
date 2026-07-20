@@ -417,7 +417,7 @@ export const FrontendBundleDescriptorSchema = z.object({
 });
 export type FrontendBundleDescriptor = z.infer<typeof FrontendBundleDescriptorSchema>;
 
-/** Full output-type meta including optional renderDescriptor (GET /outputs/types). */
+/** Full output-type meta including optional renderDescriptor (workspace/tools). */
 export const OutputMetaSchema = OutputTypeMetaSchema.extend({
   renderDescriptor: RenderDescriptorSchema.nullable(),
 });

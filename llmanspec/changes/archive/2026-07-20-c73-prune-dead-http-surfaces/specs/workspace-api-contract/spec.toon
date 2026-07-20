@@ -1,0 +1,11 @@
+kind: llman.sdd.delta
+ops[4]{op,req_id,title,statement}:
+  modify_requirement,process-registries-remain-global-flat,"Process registry endpoints MUST remain global flat","进程级 registry 端点 MUST 保持全局扁平且 MUST NOT 嵌套到 /v2/notebooks/:nid/...：至少包括 GET /v2/sources/parsers。另：notebooks 列表、models、commands、prompt-presets、templates MUST 保持扁平。"
+  modify_requirement,notebook-scoped-resources-use-nested-paths,"Notebook-scoped resources MUST use nested paths","notebook 作用域资源（至少包括 outputs CRUD、research、qa（含 stream/export）、studio/slides、sources 单资源与 upload）的 canonical HTTP path MUST 为 /v2/notebooks/:nid/<domain>/...。path 中的 :nid MUST 作为 notebook 归属边界；跨 notebook 访问 MUST 返回 404。"
+  modify_requirement,flat-notebook-scoped-paths-are-deprecated-aliases,"Flat notebook-scoped paths MUST be deprecated aliases","在嵌套路径落地后，旧扁平路径（如 /v2/outputs、/v2/research、/v2/qa）MUST 仅作为 deprecated alias 存在（或在明确窗口后移除）。alias MUST 保留 c67 归属校验语义（query/body notebookId 必填）。一等前端 MUST 改用嵌套路径；文档 MUST 标注旧路径为 deprecated。"
+  modify_requirement,list-endpoints-use-paginated-envelope,"List endpoints MUST use PaginatedSchema envelope","notebook-scoped 或可增长的列表端点（至少包括 messages、sessions、sources、outputs、research sessions、studio slides）MUST 接受 PaginationParams（offset/limit）并 MUST 返回 PaginatedSchema 形状：items、total、offset、limit。MUST NOT 再对上述端点返回无 total 的裸数组作为成功响应。"
+op_scenarios[4]{req_id,id,given,when,then}:
+  process-registries-remain-global-flat,registry-updated,"","removed deleted registry routes from requirement","removed outputs/types qa/presets refine/modes eval strategies references"
+  notebook-scoped-resources-use-nested-paths,paths-updated,"","removed refine from nested resource list","removed refine from notebook-scoped resources"
+  flat-notebook-scoped-paths-are-deprecated-aliases,aliases-updated,"","removed refine from deprecated alias list","removed refine and refine/batch from deprecated aliases"
+  list-endpoints-use-paginated-envelope,tasks-removed,"","removed notebook tasks from paginated list","removed notebook tasks from paginated list endpoints"

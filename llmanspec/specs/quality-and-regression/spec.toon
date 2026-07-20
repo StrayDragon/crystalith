@@ -1,32 +1,30 @@
 kind: llman.sdd.spec
-name: quality-and-regression
+name: "quality-and-regression"
 purpose: "定义 v2 工程质量门槛：以 just qa 为主 PR 门禁，覆盖 typecheck/lint/format、配置漂移、server/shared 单测、web Vitest 与 Playwright @p0；BDD 与 type-aware lint 为可选。"
 valid_scope[4]: apps/,packages/,e2e/,scripts/
-requirements[12]{req_id,title,statement}:
-  r204,Lint and format are part of the quality gate,"本地与 PR 主门禁 MUST 覆盖 oxlint 与 oxfmt 检查（just check / just qa 的 check 段）。"
+requirements[11]{req_id,title,statement}:
+  r204,Lint and format are part of the quality gate,本地与 PR 主门禁 MUST 覆盖 oxlint 与 oxfmt 检查（just check / just qa 的 check 段）。
   r232,Frontend JS/TS lint uses Oxc entrypoints,"前端与仓库 JS/TS lint MUST 通过根 bun lint（oxlint）提供；apps/web MAY 另提供 lint / lint:all 增量与全量入口。"
   r266,Formatting uses Oxfmt,"格式化检查 MUST 使用 oxfmt（bun format:check / just format-check），生成产物按工具配置排除。"
   r99,Backend and frontend verification are mandatory in primary gate,"主门禁 just qa MUST 执行 server+shared 单元/集成测试（just test）与前端 Vitest CI（just test-web / apps/web test:ci）。"
-  r10,Critical browser smoke exists,"仓库 MUST 维护 Playwright @p0 冒烟（just e2e），并纳入 just qa。"
+  r10,Critical browser smoke exists,仓库 MUST 维护 Playwright @p0 冒烟（just e2e），并纳入 just qa。
   r136,Config schema and env example drift checks are mandatory,"just qa MUST 运行 check-env-examples 与 check-app-schema（Zod SSOT → .env.example / secret.env.example / app.schema.gen.json）。MUST NOT 要求已删除的 api/generated 或 hey-api OpenAPI codegen 漂移门禁。"
-  r172,Local default unit entrypoints are scoped,"just test MUST 仅覆盖 apps/server/test/ 与 packages/shared/test/；完整 PR 验证 MUST 使用 just qa（含 web Vitest 与 e2e）。"
+  r172,Local default unit entrypoints are scoped,just test MUST 仅覆盖 apps/server/test/ 与 packages/shared/test/；完整 PR 验证 MUST 使用 just qa（含 web Vitest 与 e2e）。
   r16,Frontend test suites are tiered and reproducible,"前端稳定套件（test:ci）MUST 默认禁止未处理真实网络（MSW onUnhandledRequest=error），并运行 mock-reason 门禁（test-mock-report-check）。核心子集 MAY 通过 test:core 单独运行。"
-  r14,Frontend test-double usage is observable,"仓库 MUST 提供前端 test doubles 报告入口（apps/web test-mock-report / test-mock-report-check），并在 test:ci 中执行 check。"
-  r11,LLM evaluation harness exists,"系统 MUST 提供 eval harness（datasets + runs，见 apps/server/src/features/eval/）。将其纳入 just qa MAY 延后。"
-  r41,Remote CI status checks are optional,"仓库 MAY 提供 GitHub Actions 等远程 CI；在未提供 workflows 时，贡献者 MUST 以本地 just qa 作为 PR 自检门禁。MUST NOT 假定 push/PR 上已有强制 CI 状态检查。"
-  r_bdd_optional,BDD and type-aware lint are out of primary gate,"just test-bdd 与 just type-aware-lint MUST NOT 作为 just qa 的硬性组成部分；BDD 为 CRUD 子集可选回归，type-aware lint 为 advisory。"
-scenarios[14]{req_id,id,given,when,then}:
-  r204,local-checks-match-gate,"","开发者运行 just check","SHALL 覆盖 typecheck、oxlint 与 oxfmt check"
-  r232,repo-oxlint-entrypoint,"","开发者运行 bun lint","SHALL 对受管源码执行 oxlint"
-  r266,format-check-entrypoint,"","开发者运行 bun format:check","SHALL 使用 oxfmt 校验格式"
-  r99,qa-runs-server-and-web-tests,"","开发者运行 just qa","SHALL 执行 just test 与 just test-web"
-  r10,qa-runs-p0-e2e,"","开发者运行 just qa","SHALL 执行 Playwright @p0（just e2e）"
-  r136,env-schema-drift-fails-qa,"",".env.example 或 app.schema.gen.json 与 Zod SSOT 不一致","just qa SHALL 在 drift check 失败并退出非 0"
-  r172,just-test-is-unit-subset,"","开发者仅运行 just test","SHALL 不自动跑 web Vitest 或 e2e"
-  r16,frontend-stable-rejects-unhandled-network,"","稳定套件触发未被 MSW 覆盖的请求","测试 SHALL 失败"
-  r16,frontend-ci-requires-mock-reason,"","稳定测试使用 vi patch 却缺少 Mock reason","test:ci SHALL 失败"
-  r14,frontend-mock-report-runs,"","开发者运行 cd apps/web && bun run test-mock-report","SHALL 输出确定性统计"
-  r11,eval-harness-reachable,"","调用 /v2/eval/datasets 或等价 CLI","系统 SHALL 能管理 dataset / run（不要求在 just qa 内）"
-  r41,local-qa-is-pr-self-check,"","仓库尚无 GitHub Actions workflow","PR 模板 SHALL 要求勾选本地 just qa"
-  r_bdd_optional,bdd-not-in-qa,"","开发者运行 just qa","SHALL 不执行 just test-bdd"
-  r_bdd_optional,type-aware-advisory,"","开发者运行 just type-aware-lint","结果 MAY 失败且不阻塞 just qa"
+  r14,"Frontend test-double usage is observable","仓库 MUST 提供前端 test doubles 报告入口（apps/web test-mock-report / test-mock-report-check），并在 test:ci 中执行 check。"
+  r41,Remote CI status checks are optional,仓库 MAY 提供 GitHub Actions 等远程 CI；在未提供 workflows 时，贡献者 MUST 以本地 just qa 作为 PR 自检门禁。MUST NOT 假定 push/PR 上已有强制 CI 状态检查。
+  r_bdd_optional,"BDD and type-aware lint are out of primary gate","just test-bdd 与 just type-aware-lint MUST NOT 作为 just qa 的硬性组成部分；BDD 为 CRUD 子集可选回归，type-aware lint 为 advisory。"
+scenarios[13]{req_id,id,given,when,then,feature}:
+  r204,"local-checks-match-gate","",开发者运行 just check,SHALL 覆盖 typecheck、oxlint 与 oxfmt check,true
+  r232,"repo-oxlint-entrypoint","",开发者运行 bun lint,SHALL 对受管源码执行 oxlint,true
+  r266,"format-check-entrypoint","","开发者运行 bun format:check",SHALL 使用 oxfmt 校验格式,true
+  r99,"qa-runs-server-and-web-tests","",开发者运行 just qa,"SHALL 执行 just test 与 just test-web",true
+  r10,"qa-runs-p0-e2e","",开发者运行 just qa,SHALL 执行 Playwright @p0（just e2e）,true
+  r136,"env-schema-drift-fails-qa","",.env.example 或 app.schema.gen.json 与 Zod SSOT 不一致,just qa SHALL 在 drift check 失败并退出非 0,true
+  r172,"just-test-is-unit-subset","",开发者仅运行 just test,SHALL 不自动跑 web Vitest 或 e2e,true
+  r16,"frontend-stable-rejects-unhandled-network","",稳定套件触发未被 MSW 覆盖的请求,测试 SHALL 失败,true
+  r16,"frontend-ci-requires-mock-reason","",稳定测试使用 vi patch 却缺少 Mock reason,"test:ci SHALL 失败",true
+  r14,"frontend-mock-report-runs","","开发者运行 cd apps/web && bun run test-mock-report",SHALL 输出确定性统计,true
+  r41,"local-qa-is-pr-self-check","",仓库尚无 GitHub Actions workflow,PR 模板 SHALL 要求勾选本地 just qa,true
+  r_bdd_optional,"bdd-not-in-qa","",开发者运行 just qa,"SHALL 不执行 just test-bdd",true
+  r_bdd_optional,"type-aware-advisory","","开发者运行 just type-aware-lint",结果 MAY 失败且不阻塞 just qa,true

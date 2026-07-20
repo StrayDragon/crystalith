@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "workspace-api-contract"
 purpose: 定义前后端协作所依赖的稳定 API 契约：版本前缀、错误信封、核心端点稳定字段与 SSE 事件最小形状。
 valid_scope[2]: apps/,packages/
-requirements[52]{req_id,title,statement}:
+requirements[51]{req_id,title,statement}:
   r56,API major version prefix is stable,对外业务 API MUST 使用 `/v2` 前缀；同一 major 内保持兼容。健康检查等运维端点 MAY 位于根路径。
   r114,"Optional API key authentication is supported for self-host",DEFERRED(c13)：当 `app.auth.enabled` 且配置鉴权密钥时，`/v2/**` 端点 MUST 要求 Bearer token；未启用时 MAY 匿名访问。当前 v2 运行时尚未强制鉴权。
   r151,"Non-SSE errors use unified envelope","非 SSE 错误响应 MUST 使用统一结构：`errorCode`, `message`, `details?`, `retryAfter?`。"
@@ -16,7 +16,6 @@ requirements[52]{req_id,title,statement}:
   r69,"QA endpoints accept in-band prompt directives in question","QA 端点 MUST 支持在 `question: string` 中内嵌 `/prompt:<preset> <query>` 指令，并在启用 presets 功能时以该指令选择受控的预设生成策略。"
   r73,"QA endpoints provide stable stream and non-stream contracts",`/qa` 与 `/qa/stream` MUST 保持稳定字段语义，stream 至少包含 `chunk|done|error` 事件。
   r75,Citation model remains camelCase within the global camelCase wire,citation 对象 MUST 继续使用 camelCase（sourceId/sourceName/chunkId/chunkIndex/pageNumber/paragraphIndex/snippet/score），并与全局 wire camelCase 规则一致；MUST NOT 回退 snake_case。
-  r77,Citation context lookup is supported,系统 MUST 提供可按 citation 定位并获取上下文的稳定端点，以支持用户复查证据链。
   r78,Exports can include citations,系统 MUST 支持将 QA/Outputs 导出为包含 citations 的格式（Markdown/JSON 或等价），以便分享与复盘。
   r79,Workspace tools and outputs endpoints are stable,`/v2/workspace/tools` 与 outputs/slides 相关端点 MUST 保持可用与向后兼容；其中 `/v2/workspace/tools` 的“可用工具集合”允许随已安装/已启用插件变化而变化，但响应形状与字段语义 MUST 稳定。
   r17,Workspace tools list returns available tools only,`/v2/workspace/tools` 返回的 tools 列表 MUST 仅包含“当前可用”的工具项（可用 = core 内置能力 + 已安装且已启用、并通过兼容性门禁的插件能力）。对于 `SLIDES`，其可用性 MUST 由当前 active `SlidesWorkflowPlugin` 决定，而不是由 core 默认内置。
@@ -42,20 +41,20 @@ requirements[52]{req_id,title,statement}:
   "slides-config-schema-options-must-be-complete",SLIDES tool configSchema MUST expose all config axes with options and defaults,当 SLIDES 工具在 `/v2/workspace/tools` 响应中可用时，其 `configSchema` MUST 返回完整的 options 列表（每个 option 含 id/label/isDefault）与 defaults 对象，MUST NOT 省略 quantity/audience/structure/tone/language/density/themePreset 等配置轴。
   r284,CitationSchema SSOT is camelCase in packages/shared,packages/shared 的 CitationSchema MUST 以 camelCase 字段作为 Zod SSOT，并驱动 OpenAPI/eden 类型；服务端序列化与前端消费 MUST 直接使用该 schema 推断类型，不得并行维护一套 snake_case Citation 线类型。
   r285,"HTTP JSON wire fields MUST be camelCase end-to-end",除 URL path 与 SSE event 名称外，对外 HTTP/SSE JSON（请求体、查询参数键、响应体、流式 done/error data）的字段名 MUST 为 camelCase，并以 packages/shared Zod 为 SSOT；MUST NOT 再使用 notebook_id/source_ids/created_at/error_code 等 snake_case wire 别名。DB 列名不受本要求约束。
-  "notebook-scoped-resource-access","Notebook-scoped resources require notebook boundary",对 source、output、research session、studio slide、task 及 citation 单资源的读取与变更，系统 MUST 能证明请求属于某一 notebook：notebookId（query 或 path）MUST 为必填；当资源存在但不属于该 notebook 时 MUST 返回 404 NOT_FOUND，且 MUST NOT 在缺少 notebook 范围时按全局 id 返回跨 notebook 数据。
+  "notebook-scoped-resource-access","Notebook-scoped resources require notebook boundary",对 source、output、research session、studio slide 等 notebook 归属资源的读取与变更，系统 MUST 能证明请求属于某一 notebook：notebookId（query 或 path）MUST 为必填；当资源存在但不属于该 notebook 时 MUST 返回 404 NOT_FOUND，且 MUST NOT 在缺少 notebook 范围时按全局 id 返回跨 notebook 数据。
   "notebook-scoped-list-forbid-global","Notebook-scoped lists MUST NOT dump all notebooks",笔记本范围列表端点（至少包括 GET /v2/research）在缺少 notebook 过滤时 MUST 拒绝请求（400）；MUST NOT 返回全部 notebook 的聚合列表。
   "domain-errors-use-envelope-and-status",Domain conflicts use AppHttpError envelope,业务状态机非法与乐观锁冲突 MUST 通过 AppHttpError 返回统一 ErrorEnvelope：乐观锁冲突 MUST 使用 409 CONFLICT；非法状态转换 MUST 使用 400 INVALID_REQUEST 或 409 CONFLICT；MUST NOT 用裸 Error 落入非结构化 500，也 MUST NOT 用 NotFoundError 伪装冲突。
-  "list-endpoints-use-paginated-envelope",List endpoints MUST use PaginatedSchema envelope,"notebook-scoped 或可增长的列表端点（至少包括 messages、sessions、sources、outputs、research sessions、studio slides、notebook tasks）MUST 接受 PaginationParams（offset/limit）并 MUST 返回 PaginatedSchema 形状：items、total、offset、limit。MUST NOT 再对上述端点返回无 total 的裸数组作为成功响应。"
-  "openapi-docs-match-handler-paths",OpenAPI and AsyncAPI paths MUST match handlers,registerApiDoc 与 AsyncAPI 中登记的 path MUST 与 Elysia handler 实际 path 一致；已知漂移（citations context、research stream）MUST 修正。列表端点的 OpenAPI response 描述 MUST 反映 PaginatedSchema 而非裸数组。
-  "notebook-scoped-resources-use-nested-paths","Notebook-scoped resources MUST use nested paths","notebook 作用域资源（至少包括 outputs CRUD、research、qa（含 stream/export）、refine（不含 modes）、studio/slides、sources 单资源与 upload）的 canonical HTTP path MUST 为 /v2/notebooks/:nid/<domain>/...。path 中的 :nid MUST 作为 notebook 归属边界；跨 notebook 访问 MUST 返回 404。"
+  "list-endpoints-use-paginated-envelope",List endpoints MUST use PaginatedSchema envelope,"notebook-scoped 或可增长的列表端点（至少包括 messages、sessions、sources、outputs、research sessions、studio slides）MUST 接受 PaginationParams（offset/limit）并 MUST 返回 PaginatedSchema 形状：items、total、offset、limit。MUST NOT 再对上述端点返回无 total 的裸数组作为成功响应。"
+  "openapi-docs-match-handler-paths",OpenAPI and AsyncAPI paths MUST match handlers,registerApiDoc 与 AsyncAPI 中登记的 path MUST 与 Elysia handler 实际 path 一致。列表端点的 OpenAPI response 描述 MUST 反映 PaginatedSchema 而非裸数组。
+  "notebook-scoped-resources-use-nested-paths","Notebook-scoped resources MUST use nested paths","notebook 作用域资源（至少包括 outputs CRUD、research、qa（含 stream/export）、studio/slides、sources 单资源与 upload）的 canonical HTTP path MUST 为 /v2/notebooks/:nid/<domain>/...。path 中的 :nid MUST 作为 notebook 归属边界；跨 notebook 访问 MUST 返回 404。"
   "flat-notebook-scoped-paths-are-deprecated-aliases","Flat notebook-scoped paths MUST be deprecated aliases",在嵌套路径落地后，旧扁平路径（如 /v2/outputs、/v2/research、/v2/qa）MUST 仅作为 deprecated alias 存在（或在明确窗口后移除）。alias MUST 保留 c67 归属校验语义（query/body notebookId 必填）。一等前端 MUST 改用嵌套路径；文档 MUST 标注旧路径为 deprecated。
-  "process-registries-remain-global-flat",Process registry endpoints MUST remain global flat,"进程级 registry 端点 MUST 保持全局扁平且 MUST NOT 嵌套到 /v2/notebooks/:nid/...：至少包括 GET /v2/outputs/types、GET /v2/qa/presets、GET /v2/refine/modes、GET /v2/sources/parsers。另：notebooks 列表、models、commands、prompt-presets、templates、eval、strategies MUST 保持扁平。"
+  "process-registries-remain-global-flat",Process registry endpoints MUST remain global flat,"进程级 registry 端点 MUST 保持全局扁平且 MUST NOT 嵌套到 /v2/notebooks/:nid/...：至少包括 GET /v2/sources/parsers。另：notebooks 列表、models、commands、prompt-presets、templates MUST 保持扁平。"
   "nested-path-nid-is-ownership-ssot","Nested path :nid is ownership SSOT","嵌套 canonical 路由上，path :nid MUST 为归属唯一真源；请求 body MUST NOT 再要求必填 notebookId。若 body 携带 notebookId：等于 :nid 时 MUST 忽略；不等于时 MUST 返回 400。响应实体 MAY/SHOULD 继续包含 notebookId 字段。扁平 alias 不受本条约束（仍走 c67 query/body）。"
   "qa-stream-remains-post-with-body",QA stream MUST remain POST with body,交互式 QA SSE（含 notebook 嵌套路径）MUST 使用 POST，并在 body 中携带问题与上下文（sourceIds/策略等）。MUST NOT 要求客户端把大 payload 塞进 query string。
   "progress-streams-use-get","Existing-resource progress streams MUST use GET",对已存在资源的进度/订阅类 SSE（至少 research session stream、studio slides outline/content stream）MUST 使用 GET .../stream。AsyncAPI/OpenAPI 登记的 method 与 path MUST 与实现一致。
   "output-list-omits-full-content",Output list MUST omit full content,outputs（Studio 笔记）列表端点成功响应中的每个 item MUST NOT 包含完整 generation payload / 长 markdown 正文。item MUST 至少含标识与展示所需元数据（如 id、type、title、status、timestamps）；可选短 preview。完整正文 MUST 仅由单条详情端点返回。
   "output-detail-returns-full-content",Output detail MUST return full content,"GET 单条 output（notebook-scoped）MUST 返回渲染所需的完整内容字段。客户端在用户选中/打开条目前 MUST NOT 依赖 list 内嵌全文。"
-scenarios[66]{req_id,id,given,when,then,feature}:
+scenarios[63]{req_id,id,given,when,then,feature}:
   r56,"client-targets-stable-major-prefix","",客户端调用对外 API,端点 SHALL 使用 `/v2` 前缀且在同一 major 内保持兼容,true
   r114,"auth-enabled-requires-bearer-token-for-v2-deferred","",运维启用鉴权并配置了 API key,客户端请求任意 `/v2/**` 端点若未携带有效 token SHALL 返回 401,true
   r114,"health-endpoints-remain-accessible-without-auth","",运维启用鉴权并配置了 API key,`/health` 与 `/health/dependencies` SHALL 保持匿名可访问以支持探活与运维诊断,true
@@ -75,7 +74,6 @@ scenarios[66]{req_id,id,given,when,then,feature}:
   r73,"qa-stream-emits-minimal-event-set","",客户端使用 `/qa/stream` 发起问答,stream SHALL 至少包含 `chunk|done|error` 事件并保持字段语义稳定,true
   r73,"qa-stream-carries-shared-ui-state-updates","",客户端使用 `/qa/stream` 发起问答且该回答包含交互 UI,stream SHALL 保持 `chunk|done|error` 的最小事件集稳定,true
   r75,"citation-stays-camelcase-under-c65",c65 全局 camelCase 已生效,读取 QA citations,citation 字段 SHALL 仍为 sourceId/sourceName/chunkId 等 camelCase,true
-  r77,"fetch-citation-context","",客户端请求某 citation 的上下文,系统 SHALL 返回片段前后文（或等价上下文）与页码/段落等元信息（如可用）,true
   r78,"export-includes-citation-list","",用户导出 QA 或某个 Output,导出结果 SHALL 包含引用清单与可定位信息（sourceId 或可解析来源标识）,true
   r79,"tools-endpoint-stays-compatible-while-tool-set-is-dynamic","",前端依赖 `/v2/workspace/tools` 获取工具列表,系统 SHALL 保持端点可用且字段语义稳定,true
   r17,"disabled-plugin-removes-tool-but-yields-diagnostics","",某输出类型插件被禁用或加载失败,tools 列表 SHALL 不包含该 tool,true
@@ -109,13 +107,11 @@ scenarios[66]{req_id,id,given,when,then,feature}:
   "notebook-scoped-resource-access","missing-notebook-id-rejected",客户端调用需归属校验的 source/output 单资源端点且省略 notebookId,发送请求,系统 SHALL 拒绝该请求（400 校验失败或等价）且 MUST NOT 返回跨本资源体,false
   "notebook-scoped-list-forbid-global","research-list-requires-notebook",系统中存在多个 notebook 的 research session,客户端调用 GET /v2/research 且省略 notebookId,系统 SHALL 拒绝全表列举（400）且 MUST NOT 返回全部 session,false
   "domain-errors-use-envelope-and-status","session-revision-conflict-409",客户端以过期 sharedStateRevision 更新 session,发生乐观锁冲突,系统 SHALL 返回 409 CONFLICT 与 ErrorEnvelope，且 MUST NOT 返回伪装的 404,false
-  "list-endpoints-use-paginated-envelope","messages-list-returns-paginated",会话中存在多条消息,客户端以 offset/limit 调用 GET messages,响应 SHALL 含 items 与 total 且 items 长度不超过 limit,false
-  "list-endpoints-use-paginated-envelope","research-list-paginated-with-notebook",notebook 下存在 research sessions,客户端携带 notebookId 与分页参数调用 GET /v2/research,响应 SHALL 为 PaginatedSchema 且不得返回其他 notebook 的 session,false
-  "openapi-docs-match-handler-paths","citations-context-doc-path","实现路径为 /v2/notebooks/:nid/citations/context",检查 registerApiDoc 登记,文档 path SHALL 与实现一致且 MUST NOT 再登记过时的 /v2/citations/context 为唯一真源,false
-  "notebook-scoped-resources-use-nested-paths","nested-outputs-list",存在 notebook N 与若干 outputs,客户端调用 GET /v2/notebooks/N/outputs,响应 SHALL 成功列出该 notebook 的 outputs,false
-  "notebook-scoped-resources-use-nested-paths","nested-cross-notebook-404",output 属于 notebook A,"客户端以 notebook B 调用 GET /v2/notebooks/B/outputs/:id",响应 SHALL 为 404,false
-  "flat-notebook-scoped-paths-are-deprecated-aliases","flat-alias-still-works-while-deprecated",嵌套路径与扁平 alias 均已挂载,客户端仍调用旧扁平 /v2/outputs?notebookId=N,响应 SHALL 仍可用且文档/标注 SHALL 表明 deprecated,false
-  "process-registries-remain-global-flat","outputs-types-stays-flat",系统已挂载嵌套 outputs,客户端调用 GET /v2/outputs/types,响应 SHALL 成功且 MUST NOT 要求 notebook 路径前缀,false
+  "list-endpoints-use-paginated-envelope","tasks-removed","",removed notebook tasks from paginated list,removed notebook tasks from paginated list endpoints,true
+  "openapi-docs-match-handler-paths","docs-match-handlers","",检查 registerApiDoc 与 AsyncAPI 登记,文档 path/method SHALL 与 Elysia handler 一致且 MUST NOT 登记已删除端点,true
+  "notebook-scoped-resources-use-nested-paths","paths-updated","",removed refine from nested resource list,"removed refine from notebook-scoped resources",true
+  "flat-notebook-scoped-paths-are-deprecated-aliases","aliases-updated","",removed refine from deprecated alias list,removed refine and refine/batch from deprecated aliases,true
+  "process-registries-remain-global-flat","registry-updated","",removed deleted registry routes from requirement,removed outputs/types qa/presets refine/modes eval strategies references,true
   "nested-path-nid-is-ownership-ssot","nested-post-without-body-notebook-id",存在 notebook N,客户端 POST /v2/notebooks/N/outputs 且 body 省略 notebookId,请求 SHALL 被接受（其余字段合法时）并以 N 为归属,false
   "nested-path-nid-is-ownership-ssot","nested-post-mismatched-body-notebook-id",存在 notebook N,客户端 POST /v2/notebooks/N/outputs 且 body.notebookId=M（M≠N）,响应 SHALL 为 400,false
   "qa-stream-remains-post-with-body","qa-stream-post",notebook 与 sources 就绪,"客户端 POST /v2/notebooks/:nid/qa/stream（或等价 canonical）携带 body",服务端 SHALL 以 SSE 流式返回且 MUST NOT 要求 GET+query 传全文,false

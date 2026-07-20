@@ -2,13 +2,12 @@ kind: llman.sdd.spec
 name: "generation-core"
 purpose: 定义统一生成主链路：上下文解析、结构化生成、后处理、引用映射、持久化，以及 QA/refine 与 preference 的一致语义。
 valid_scope[2]: src/,tests/
-requirements[22]{req_id,title,statement}:
+requirements[21]{req_id,title,statement}:
   r31,Output generation follows deterministic node pipeline,"结构化输出 MUST 遵循 `ResolveContext -> Generate -> Postprocess -> MapCitations -> Persist` 逻辑顺序。"
   r89,Source scope is explicit and validated,生成/问答请求中的 sourceIds 语义 MUST 明确且可校验：非空列表 MUST 限定检索范围；缺失或空列表对 QA 表示 ungrounded（无 RAG）；非法或越权 id MUST 返回错误。
   r126,"Preference tuning is table-driven",`preference` MUST 通过集中 tuning 表映射到检索与重试默认值。
   r162,Explicit request knobs override defaults,请求显式给定 `topK/minScore` 等参数时 MUST 覆盖 preference 默认值。
   r197,"QA stream and non-stream completion logic is shared",流式与非流式 QA MUST 复用同一完成阶段逻辑，保证 citations/evidence/confidence 一致。
-  r227,Refine keeps stable request/response contracts,refine 单格式与批量路径 MUST 保持稳定字段语义与引用返回结构。
   r250,"Postprocessing is deterministic and citation-safe",后处理 MUST 先于引用映射，且对非法 citation 索引做清洗并保持非阻塞。
   r265,Tool output types require a corresponding OutputTypePlugin,"对于 FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING 等“工具输出类型”，系统 MUST 要求存在可用的 `OutputTypePlugin` 才能生成结构化输出；当插件缺失/禁用/加载失败时，生成请求 MUST 失败并返回可执行的恢复提示。 错误响应 MUST 使用统一错误信封（`errorCode`, `message`, `details?`, `retryAfter?`），且： - HTTP status SHOULD 为 409（或等价“能力不可用”语义） - `details` MUST 包含 `outputType` 与推荐的 `requiredPluginId`（例如 `output-faq`） - `message` MUST 可直接面向用户显示"
   "outputs-citation-tree-mapping",Citations MUST be mapped into content tree with camelCase Citation dicts,outputs 生成管线 MUST 递归遍历 content 对象，把每个 citations 数字索引数组替换为完整 Citation dict（camelCase 字段），并持久化映射后的 content；同时返回扁平 citations 数组。
@@ -25,13 +24,12 @@ requirements[22]{req_id,title,statement}:
   r_outputs_rag,Outputs RAG retrieval,结构化输出生成 MUST 通过 RAG 检索获取相关上下文 而非 dump 全部 chunk 以避免上下文窗口溢出 检索 MUST 支持 topK 参数并由生成偏好调节
   r_outputs_citations,Outputs citations attached,结构化输出生成 MUST 把检索到的 chunk 作为 citations 附到生成结果以支持证据追溯
   "context-stats-defined-in-shared","ContextStats type MUST be defined in packages/shared not server-local","The ContextStats type MUST be defined in packages/shared/src/schemas (consistent with the project Zod SSOT rule) and MUST NOT be defined only in apps/server/src/features/qa/retrieve-and-judge.ts as a server-local interface. The current server-local definition violates the AGENTS.md rule that forbids redefining types outside packages/shared. This type also provides the contract for the frontend to display token budget information."
-scenarios[24]{req_id,id,given,when,then,feature}:
+scenarios[23]{req_id,id,given,when,then,feature}:
   r31,"generation-pipeline-order-is-stable","",系统处理一次结构化输出生成请求,"各阶段 SHALL 按 `ResolveContext -> Generate -> Postprocess -> MapCitations -> Persist` 的顺序执行",true
   r89,"empty-source-ids-means-ungrounded-qa",QA 请求 sourceIds 缺失或为空且笔记本有来源,系统处理该请求,系统 SHALL 按 ungrounded 路径生成且不因空 scope 拒绝请求,true
   r126,"preference-maps-to-defaults","",请求选择某个 `preference`,系统 SHALL 从集中 tuning 表加载对应的检索与重试默认值,true
   r162,"request-knobs-override-tuning","",请求同时提供 `preference` 与显式 `topK/minScore` 等参数,系统 SHALL 以显式参数覆盖 tuning 默认值,true
   r197,"stream-and-non-stream-responses-are-consistent","",同一输入分别使用流式与非流式 QA 路径,系统 SHALL 在完成阶段返回一致的 citations/evidence/confidence 语义,true
-  r227,"refine-contract-stays-stable","",调用 refine 的单格式或批量接口,系统 SHALL 返回稳定的字段语义与引用结构,true
   r250,"invalid-citations-are-sanitized","",模型输出包含非法 citation 索引或越界引用,系统 SHALL 在后处理阶段清洗并保持流程非阻塞,true
   r265,"missing-plugin-blocks-tool-output-generation","",客户端请求生成某工具输出类型但服务器未安装/未启用对应插件,系统 SHALL 返回失败响应,true
   "outputs-citation-tree-mapping","persisted-citation-dicts-are-camelcase","content 树中某节点含 citations:[1]",管线持久化,写入的 Citation dict SHALL 使用 sourceId/sourceName/chunkId 等 camelCase 键,true

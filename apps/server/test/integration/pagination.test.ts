@@ -9,7 +9,6 @@ import {
   sessions,
   sources,
   studioSlides,
-  tasks,
 } from '../../src/db/schema.ts';
 import { createApp } from '../../src/server.ts';
 import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from '../helpers/integration.ts';
@@ -60,16 +59,6 @@ beforeAll(() => {
         stage: 'input',
         status: 'idle',
         sourceIds: [],
-      })
-      .run();
-    orm
-      .insert(tasks)
-      .values({
-        notebookId,
-        type: 'refine',
-        status: 'pending',
-        payload: {},
-        progress: 0,
       })
       .run();
   }
@@ -160,12 +149,6 @@ describe('c68 paginated list envelope', () => {
     const { status, body } = await get(
       `/v2/notebooks/${notebookId}/studio/slides?offset=0&limit=2`,
     );
-    expect(status).toBe(200);
-    expectPage(body, { maxItems: 2, minTotal: 5, offset: 0, limit: 2 });
-  });
-
-  it('GET notebook tasks returns PaginatedSchema', async () => {
-    const { status, body } = await get(`/v2/notebooks/${notebookId}/tasks?offset=0&limit=2`);
     expect(status).toBe(200);
     expectPage(body, { maxItems: 2, minTotal: 5, offset: 0, limit: 2 });
   });

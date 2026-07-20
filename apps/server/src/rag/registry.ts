@@ -6,6 +6,10 @@
 import { eq } from 'drizzle-orm';
 
 import { db, strategyConfigs } from '../db/index.ts';
+import { EmbedStrategy } from './embed-strategy.ts';
+import { HybridStrategy } from './hybrid-strategy.ts';
+import { KeywordStrategy } from './keyword-strategy.ts';
+import { PageIndexStrategy } from './page-index-strategy.ts';
 import type { RAGStrategy, RetrieveOptions } from './types.ts';
 
 // ---------------------------------------------------------------------------
@@ -123,3 +127,9 @@ class RAGRegistry {
 
 /** Global singleton registry. */
 export const ragRegistry = new RAGRegistry();
+
+// Auto-register built-in strategies at module load (moved from deleted rag/router.ts)
+ragRegistry.register(new EmbedStrategy());
+ragRegistry.register(new KeywordStrategy());
+ragRegistry.register(new HybridStrategy());
+ragRegistry.register(new PageIndexStrategy());
