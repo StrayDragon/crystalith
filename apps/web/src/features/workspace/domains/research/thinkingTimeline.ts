@@ -14,6 +14,33 @@ export type ResearchStepResponse = {
   iteration: number;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function asNumber(value: unknown): number | undefined {
+  return typeof value === 'number' ? value : undefined;
+}
+
+function asBoolean(value: unknown): boolean | undefined {
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+function asQueryItems(value: unknown): Array<{ query: string }> | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const items: Array<{ query: string }> = [];
+  for (const item of value) {
+    if (isRecord(item) && typeof item.query === 'string') {
+      items.push({ query: item.query });
+    }
+  }
+  return items;
+}
+
 export function stepOutputData(
   step: ResearchStepResponse,
 ): Record<string, unknown> | null | undefined {
@@ -84,8 +111,8 @@ export function buildThinkingTimeline(args: {
         const output = stepOutputData(step);
         if (step.type === 'plan' && output) {
           // Plan step
-          const reasoning = output.reasoning as string | undefined;
-          const queryItems = output.queries as Array<{ query: string }> | undefined;
+          const reasoning = asString(output.reasoning);
+          const queryItems = asQueryItems(output.queries);
 
           if (reasoning) {
             timeline.push({
@@ -106,8 +133,8 @@ export function buildThinkingTimeline(args: {
           }
         } else if (step.type === 'search' && output) {
           // Search step
-          const resultCount = output.resultCount as number | undefined;
-          const newResults = output.newResults as number | undefined;
+          const resultCount = asNumber(output.resultCount);
+          const newResults = asNumber(output.newResults);
 
           timeline.push({
             type: 'search_complete',
@@ -117,9 +144,9 @@ export function buildThinkingTimeline(args: {
           });
         } else if (step.type === 'analyze' && output) {
           // Analyze step
-          const coverage = output.coverageEstimate as number | undefined;
-          const summary = output.summary as string | undefined;
-          const needMore = output.needMore as boolean | undefined;
+          const coverage = asNumber(output.coverageEstimate);
+          const summary = asString(output.summary);
+          const needMore = asBoolean(output.needMore);
 
           timeline.push({
             type: 'analysis_complete',
@@ -147,7 +174,7 @@ export function buildThinkingTimeline(args: {
           }
         } else if (step.type === 'summary' && output) {
           // Summary step
-          const reportLength = output.reportLength as number | undefined;
+          const reportLength = asNumber(output.reportLength);
 
           timeline.push({
             type: 'report_complete',

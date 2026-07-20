@@ -2,22 +2,28 @@
 // Calls the Firecrawl REST API (POST /v2/scrape) without the SDK.
 import type { ExtractedContent, Extractor } from './types.ts';
 
-interface FirecrawlConfig {
-  extraction?: {
-    firecrawl_api_key?: string;
-  };
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function firecrawlApiKey(config: unknown): string | undefined {
+  if (!isRecord(config)) return undefined;
+  const extraction = config.extraction;
+  if (!isRecord(extraction)) return undefined;
+  return typeof extraction.firecrawl_api_key === 'string'
+    ? extraction.firecrawl_api_key
+    : undefined;
 }
 
 export const firecrawlExtractor: Extractor = {
   name: 'firecrawl',
 
   isAvailable(config: unknown): boolean {
-    const c = config as FirecrawlConfig;
-    return !!c?.extraction?.firecrawl_api_key;
+    return !!firecrawlApiKey(config);
   },
 
   async extract(url: string, config: unknown): Promise<ExtractedContent> {
-    const apiKey = (config as FirecrawlConfig)?.extraction?.firecrawl_api_key;
+    const apiKey = firecrawlApiKey(config);
     if (!apiKey) throw new Error('Firecrawl API key required');
 
     const res = await fetch('https://api.firecrawl.dev/v2/scrape', {
@@ -36,15 +42,14 @@ export const firecrawlExtractor: Extractor = {
     if (res.status === 429) throw new Error('Firecrawl rate limit (429).');
     if (!res.ok) throw new Error(`Firecrawl returned ${res.status}: ${res.statusText}`);
 
-    const data = (await res.json()) as {
-      success?: boolean;
-      data?: { markdown?: string; title?: string; description?: string };
-    };
+    const raw: unknown = await res.json();
+    const data = isRecord(raw) ? raw : {};
+    const payload = isRecord(data.data) ? data.data : {};
 
     return {
-      title: data?.data?.title ?? url,
-      content: data?.data?.markdown ?? '',
-      description: data?.data?.description,
+      title: typeof payload.title === 'string' ? payload.title : url,
+      content: typeof payload.markdown === 'string' ? payload.markdown : '',
+      description: typeof payload.description === 'string' ? payload.description : undefined,
       extractorUsed: 'firecrawl',
     };
   },

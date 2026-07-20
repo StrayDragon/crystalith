@@ -83,6 +83,12 @@ type PendingNote = {
   queueJobId?: string;
 };
 
+function isPendingNoteStatus(status: string): status is PendingNote['status'] {
+  return (
+    status === 'queued' || status === 'running' || status === 'error' || status === 'cancelled'
+  );
+}
+
 type StudioListItem =
   | { kind: 'pending'; key: string; note: PendingNote }
   | { kind: 'output'; key: string; note: StudioNote };
@@ -166,19 +172,15 @@ export default function StudioOutputsList({
       cancelled: '已取消',
     } satisfies Record<PendingNote['status'], string>;
     return outputQueueJobs
-      .filter(
-        (job) =>
-          job.status === 'queued' ||
-          job.status === 'running' ||
-          job.status === 'error' ||
-          job.status === 'cancelled',
+      .filter((job): job is typeof job & { status: PendingNote['status'] } =>
+        isPendingNoteStatus(job.status),
       )
       .map((job) => {
         const typeLabel = resolveTypeLabel(job.type, typeLabelMap);
         const sourceLabel = job.sourceIds.length
           ? `基于 ${job.sourceIds.length} 个来源`
           : '未选择来源';
-        const statusLabel = statusLabels[job.status as PendingNote['status']] || job.status;
+        const statusLabel = statusLabels[job.status] || job.status;
         return {
           id: `pending-${job.id}`,
           title:
@@ -189,7 +191,7 @@ export default function StudioOutputsList({
                 : `生成${typeLabel}...`,
           meta: `${sourceLabel} · ${statusLabel}`,
           type: job.type,
-          status: job.status as PendingNote['status'],
+          status: job.status,
           slideId: job.type === 'SLIDES' ? (job.draftId ?? null) : null,
           queueJobId: job.id,
         };

@@ -74,7 +74,7 @@ function extractFrontmatterSummary(filePath: string, raw: Uint8Array): Frontmatt
   }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
 
-  const record = parsed as Record<string, unknown>;
+  const record: Record<string, unknown> = Object.fromEntries(Object.entries(parsed));
   const summary: FrontmatterSummary = {};
 
   const titleRaw = record.title;

@@ -88,7 +88,25 @@ async function fetchDependencyHealth(force = false): Promise<DependencyHealthRes
   if (!res.ok) {
     throw new Error(`诊断请求失败（HTTP ${res.status}）`);
   }
-  return res.json() as Promise<DependencyHealthResponse>;
+  const raw: unknown = await res.json();
+  if (!isDependencyHealthResponse(raw)) {
+    throw new Error('诊断响应格式无效');
+  }
+  return raw;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isDependencyHealthResponse(value: unknown): value is DependencyHealthResponse {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.status === 'string' &&
+    typeof value.generatedAt === 'string' &&
+    isRecord(value.core) &&
+    isRecord(value.optional)
+  );
 }
 
 export function useDependencyHealth(options?: { enabled?: boolean }) {

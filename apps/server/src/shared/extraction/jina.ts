@@ -2,23 +2,26 @@
 // Calls the r.jina.ai API (GET) with optional auth key and markdown format.
 import type { ExtractedContent, Extractor } from './types.ts';
 
-interface JinaConfig {
-  extraction?: {
-    jina_api_key?: string;
-  };
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function jinaApiKey(config: unknown): string | undefined {
+  if (!isRecord(config)) return undefined;
+  const extraction = config.extraction;
+  if (!isRecord(extraction)) return undefined;
+  return typeof extraction.jina_api_key === 'string' ? extraction.jina_api_key : undefined;
 }
 
 export const jinaExtractor: Extractor = {
   name: 'jina',
 
   isAvailable(config: unknown): boolean {
-    const c = config as JinaConfig;
-    return !!c?.extraction?.jina_api_key;
+    return !!jinaApiKey(config);
   },
 
   async extract(url: string, config: unknown): Promise<ExtractedContent> {
-    const c = config as JinaConfig;
-    const apiKey = c?.extraction?.jina_api_key;
+    const apiKey = jinaApiKey(config);
     const headers: Record<string, string> = {
       'X-Return-Format': 'markdown',
       Accept: 'text/markdown',

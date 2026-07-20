@@ -19,7 +19,7 @@ function downloadBlob(blob: Blob, fileName: string) {
   link.download = fileName;
   document.body.append(link);
   link.click();
-  (link as HTMLElement).remove();
+  link.remove();
   URL.revokeObjectURL(objectUrl);
 }
 
@@ -28,7 +28,10 @@ async function exportPdf(output: OutputItem, fileName: string) {
   const { jsPDF } = await import('jspdf');
 
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  const lines = doc.splitTextToSize(markdown, 520) as string[];
+  const linesRaw: unknown = doc.splitTextToSize(markdown, 520);
+  const lines = Array.isArray(linesRaw)
+    ? linesRaw.filter((line): line is string => typeof line === 'string')
+    : [markdown];
   const lineHeight = 16;
   const pageHeight = doc.internal.pageSize.height;
   let y = 40;

@@ -1,6 +1,5 @@
 import { Button, Input, Textarea, Typography } from '@material-tailwind/react';
 
-import type { GenerationPreferenceSetting } from '../../../../shared/types';
 import { ModelSelector } from '../../ModelSelector';
 import type { SlidesInputStageProps } from '../types';
 
@@ -77,7 +76,10 @@ export function SlidesInputStage({
               className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-xs text-gray-700 dark:text-slate-200"
               value={configPreference}
               onChange={(event) => {
-                onConfigPreferenceChange(event.target.value as GenerationPreferenceSetting);
+                const next = event.target.value;
+                if (next === 'default' || next === 'quality' || next === 'speed') {
+                  onConfigPreferenceChange(next);
+                }
               }}
               name="slidePreference"
             >

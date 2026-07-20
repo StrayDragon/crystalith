@@ -15,6 +15,11 @@ import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { OUTPUT_META, FRONTEND_BUNDLES } from '../outputs/generator.ts';
 import { buildSlidesConfigSchema } from '../studio/config.ts';
 
+const FRONTEND_BUNDLE_BY_TYPE: Record<
+  string,
+  (typeof FRONTEND_BUNDLES)[keyof typeof FRONTEND_BUNDLES]
+> = FRONTEND_BUNDLES;
+
 const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/workspace/tools',
@@ -57,7 +62,7 @@ export const workspaceRouter = new Elysia({ prefix: '/v2' })
         // renderDescriptor tells frontend GenericOutputRenderer how to display
         // structured output content (FAQ→cards, GUIDE→sections, MINDMAP→tree, etc.)
         renderDescriptor: meta.renderDescriptor,
-        frontendBundle: FRONTEND_BUNDLES[type as keyof typeof FRONTEND_BUNDLES] ?? null,
+        frontendBundle: FRONTEND_BUNDLE_BY_TYPE[type] ?? null,
       }));
 
       return {

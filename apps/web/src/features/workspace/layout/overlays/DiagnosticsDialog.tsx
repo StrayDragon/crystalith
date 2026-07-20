@@ -50,6 +50,31 @@ function toneForStatus(status: string): { bg: string; text: string } {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function pluginStatusOf(item: unknown): { status: string; hint?: string } {
+  if (!isRecord(item)) return { status: 'unknown' };
+  return {
+    status: typeof item.status === 'string' ? item.status : 'unknown',
+    hint: typeof item.hint === 'string' ? item.hint : undefined,
+  };
+}
+
+function skippedPluginDetailOf(detail: unknown): {
+  errorCode?: string;
+  message?: string;
+  hint?: string;
+} {
+  if (!isRecord(detail)) return {};
+  return {
+    errorCode: typeof detail.errorCode === 'string' ? detail.errorCode : undefined,
+    message: typeof detail.message === 'string' ? detail.message : undefined,
+    hint: typeof detail.hint === 'string' ? detail.hint : undefined,
+  };
+}
+
 function toneForPluginStatus(status: string): { bg: string; text: string } {
   switch (status) {
     case 'loaded':
@@ -129,10 +154,7 @@ export default function DiagnosticsDialog({
     return Object.entries(official).toSorted(([a], [b]) => a.localeCompare(b));
   }, [toolsDiagnostics]);
   const missingOfficial = useMemo(
-    () =>
-      officialEntries.filter(
-        ([, item]) => (item as { status: string; hint?: string }).status !== 'loaded',
-      ),
+    () => officialEntries.filter(([, item]) => pluginStatusOf(item).status !== 'loaded'),
     [officialEntries],
   );
   const slidesDiagnostic = useMemo(() => toolsDiagnostics?.slides ?? null, [toolsDiagnostics]);
@@ -480,11 +502,7 @@ export default function DiagnosticsDialog({
                     </div>
                     <div className="space-y-2">
                       {Object.entries(skippedPlugins).map(([pluginId, _detail]) => {
-                        const detail = _detail as {
-                          errorCode?: string;
-                          message?: string;
-                          hint?: string;
-                        };
+                        const detail = skippedPluginDetailOf(_detail);
                         return (
                           <div
                             key={pluginId}
@@ -535,7 +553,7 @@ export default function DiagnosticsDialog({
                   ) : (
                     <div className="space-y-2">
                       {missingOfficial.map(([pluginId, _item]) => {
-                        const item = _item as { status: string; hint?: string };
+                        const item = pluginStatusOf(_item);
                         const tone = toneForPluginStatus(item.status);
                         return (
                           <div

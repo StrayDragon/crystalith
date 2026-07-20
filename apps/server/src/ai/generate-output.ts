@@ -46,7 +46,8 @@ export interface GenerateOutputResult<T extends ToolOutputType> {
 export async function generateOutput<T extends ToolOutputType>(
   opts: GenerateOutputOptions & { type: T },
 ): Promise<GenerateOutputResult<T>> {
-  const schema = OutputContentSchemaByType[opts.type] as z.ZodType;
+  // ZodType erase: AI SDK Output.object cannot take the ToolOutputType schema union.
+  const schema: z.ZodTypeAny = OutputContentSchemaByType[opts.type];
 
   const model = opts.model ?? (await resolveModelFromConfig(opts.modelId));
   const wrapped = withRetry(model);
@@ -70,9 +71,15 @@ export async function generateOutput<T extends ToolOutputType>(
     throw new Error(`No structured ${opts.type} output generated`);
   }
 
+  // Re-validate with the concrete mapped schema; generic T correlation still needs a cast.
+  const parsed = OutputContentSchemaByType[opts.type].safeParse(result.output);
+  if (!parsed.success) {
+    throw new Error(`Invalid structured ${opts.type} output generated`);
+  }
+
   return {
     type: opts.type,
-    content: result.output as GenerateOutputResult<T>['content'],
+    content: parsed.data as unknown as GenerateOutputResult<T>['content'],
     usage: result.usage
       ? {
           promptTokens: result.usage.inputTokens ?? 0,

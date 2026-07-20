@@ -28,6 +28,21 @@ import { requirePositiveIntId } from '../../shared/ids.ts';
 
 const SessionsPageSchema = PaginatedSchema(SessionSchema);
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function citationChunkIds(citations: unknown[] | null | undefined): number[] {
+  if (!Array.isArray(citations)) return [];
+  const ids: number[] = [];
+  for (const citation of citations) {
+    if (isRecord(citation) && typeof citation.chunkId === 'number') {
+      ids.push(citation.chunkId);
+    }
+  }
+  return ids;
+}
+
 const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/notebooks/:nid/sessions',
@@ -432,14 +447,7 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
       }
 
       // Collect chunk_ids from message citations (v1 api.py:491-500, c39)
-      const chunkIds = [
-        ...new Set(
-          msgRows
-            .flatMap((m) => (m.citations as Array<{ chunkId?: number }> | null) ?? [])
-            .map((c) => c.chunkId)
-            .filter((id): id is number => typeof id === 'number'),
-        ),
-      ];
+      const chunkIds = [...new Set(msgRows.flatMap((m) => citationChunkIds(m.citations)))];
 
       const output = db()
         .insert(outputs)
@@ -457,7 +465,7 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
       return {
         outputId: output.id,
         outputType,
-        title: content.title as string,
+        title: typeof content.title === 'string' ? content.title : title,
         messageCount: msgRows.length,
       };
     },

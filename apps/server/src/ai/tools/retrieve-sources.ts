@@ -64,12 +64,12 @@ export function retrieveSourcesTool(
   });
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 /** Type guard helper for consuming tool results. */
 export function isRetrievedChunk(value: unknown): value is RetrievedChunk {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as RetrievedChunk).chunkId === 'number' &&
-    typeof (value as RetrievedChunk).text === 'string'
-  );
+  if (!isRecord(value)) return false;
+  return typeof value.chunkId === 'number' && typeof value.text === 'string';
 }

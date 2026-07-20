@@ -37,6 +37,39 @@ import {
   serializeBinding,
 } from './sync.ts';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function requiredSchemaKeys(schema: Record<string, unknown>): string[] {
+  if (!Array.isArray(schema.required)) return [];
+  return schema.required.filter((key): key is string => typeof key === 'string');
+}
+
+function schemaPropertyKeys(schema: Record<string, unknown>): string[] {
+  const properties = schema.properties;
+  if (!isRecord(properties)) return [];
+  return Object.keys(properties);
+}
+
+function readThrownExtras(error: unknown): {
+  message: string;
+  status?: number;
+  hint?: string;
+  details?: unknown;
+  errorCode?: string;
+} {
+  const message = error instanceof Error ? error.message : String(error);
+  if (!isRecord(error)) return { message };
+  return {
+    message,
+    status: typeof error.status === 'number' ? error.status : undefined,
+    hint: typeof error.hint === 'string' ? error.hint : undefined,
+    details: error.details,
+    errorCode: typeof error.errorCode === 'string' ? error.errorCode : undefined,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // OpenAPI
 // ---------------------------------------------------------------------------
@@ -163,7 +196,7 @@ function validateConnectionConfig(
   if (schema.type === 'object' && typeof config !== 'object') {
     return 'connection_config must be an object';
   }
-  const required = Array.isArray(schema.required) ? (schema.required as string[]) : [];
+  const required = requiredSchemaKeys(schema);
   for (const key of required) {
     const v = config[key];
     if (v === undefined || v === null || (typeof v === 'string' && v.trim() === '')) {
@@ -171,7 +204,7 @@ function validateConnectionConfig(
     }
   }
   if (schema.additionalProperties === false) {
-    const allowed = new Set(Object.keys((schema.properties as Record<string, unknown>) ?? {}));
+    const allowed = new Set(schemaPropertyKeys(schema));
     for (const key of Object.keys(config)) {
       if (!allowed.has(key)) return `connection_config unknown field: ${key}`;
     }
@@ -217,7 +250,7 @@ async function runSyncCheck(
       scopeDirectories = normalized.directories;
       scopeFiles = normalized.files;
     } catch (error) {
-      const err = error as Error & { errorCode?: string };
+      const err = readThrownExtras(error);
       if (err.errorCode !== 'IMPORT_SCOPE_EMPTY') throw error;
     }
   }
@@ -355,11 +388,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       try {
         return await applySyncCheckToBinding(nid, binding, syncCheckId);
       } catch (error) {
-        const err = error as Error & {
-          status?: number;
-          hint?: string;
-          details?: unknown;
-        };
+        const err = readThrownExtras(error);
         if (err.status) {
           throwStatusError(err.status, err.message, {
             ...(err.hint ? { hint: err.hint } : {}),
@@ -388,7 +417,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       try {
         normalizeImportScope(scope);
       } catch (error) {
-        const err = error as Error & { status?: number; hint?: string };
+        const err = readThrownExtras(error);
         throwStatusError(err.status ?? 400, err.message, err.hint ? { hint: err.hint } : undefined);
       }
 

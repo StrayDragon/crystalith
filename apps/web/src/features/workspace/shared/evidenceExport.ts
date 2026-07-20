@@ -11,6 +11,10 @@ function getBaseUrl(): string {
 
 const BASE_URL = getBaseUrl();
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function downloadTextAsFile(filename: string, text: string, mimeType: string) {
   const blob = new Blob([text], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -68,10 +72,13 @@ export async function exportQaJsonDownload(params: {
   }
   const url = `${BASE_URL}/v2/notebooks/${params.notebookId}/qa/export?${query.toString()}`;
   const response = await fetch(url);
-  const data = await response.json();
-  const { sessionId, messageId } = data as { sessionId: number; messageId: number };
+  const raw: unknown = await response.json();
+  const sessionId =
+    isRecord(raw) && typeof raw.sessionId === 'number' ? raw.sessionId : params.sessionId;
+  const messageId =
+    isRecord(raw) && typeof raw.messageId === 'number' ? raw.messageId : (params.messageId ?? 0);
   const filename = `qa-session-${sessionId}-message-${messageId}.json`;
-  downloadTextAsFile(filename, JSON.stringify(data, null, 2), 'application/json');
+  downloadTextAsFile(filename, JSON.stringify(raw, null, 2), 'application/json');
   toast.success('已导出 QA JSON');
 }
 
@@ -96,9 +103,12 @@ export async function exportOutputJsonDownload(params: { notebookId: number; out
   });
   const url = `${BASE_URL}/v2/notebooks/${params.notebookId}/outputs/${params.outputId}/export?${query.toString()}`;
   const response = await fetch(url);
-  const data = await response.json();
-  const { outputId, outputType } = data as { outputId: number; outputType: string };
+  const raw: unknown = await response.json();
+  const outputId =
+    isRecord(raw) && typeof raw.outputId === 'number' ? raw.outputId : params.outputId;
+  const outputType =
+    isRecord(raw) && typeof raw.outputType === 'string' ? raw.outputType : 'output';
   const filename = `output-${outputId}-${outputType}.json`;
-  downloadTextAsFile(filename, JSON.stringify(data, null, 2), 'application/json');
+  downloadTextAsFile(filename, JSON.stringify(raw, null, 2), 'application/json');
   toast.success('已导出 Output JSON');
 }

@@ -25,6 +25,7 @@ import {
   SourceTagSchema,
   SourceUploadNestedQuerySchema,
   SourceUploadQuerySchema,
+  SourceStatusSchema,
   paginateItems,
   type ExtractorPolicyMode,
   type JsonMetadata,
@@ -67,6 +68,27 @@ import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import { uploadDedupKey, urlDedupKey } from './dedup.ts';
 import { listParsers } from './parser-registry.ts';
 import { ingestSource } from './pipeline.ts';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function uploadFileFromBody(body: unknown): File | undefined {
+  if (body instanceof FormData) {
+    const file = body.get('file');
+    return file instanceof File ? file : undefined;
+  }
+  if (isRecord(body) && body.file instanceof File) {
+    return body.file;
+  }
+  return undefined;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+const DedupActionSchema = z.enum(['prompt', 'reuse', 'create_new']);
 
 // ---------------------------------------------------------------------------
 // OpenAPI doc registration
@@ -211,7 +233,7 @@ function serializeSource(row: {
     parserType: row.parserType,
     metadata: row.metadata,
     dedupKey: row.dedupKey,
-    status: row.status as 'processing' | 'ready' | 'failed',
+    status: SourceStatusSchema.parse(row.status),
     errorCode: row.errorCode,
     errorMessage: row.errorMessage,
     recoveryHint: row.recoveryHint,
@@ -235,7 +257,7 @@ async function handleSourceUpload(
   dedupAction: 'prompt' | 'reuse' | 'create_new' | undefined,
 ) {
   // body is FormData; Elysia parses multipart into { filename, file }
-  const file = (body as { file?: File }).file;
+  const file = uploadFileFromBody(body);
   if (!file) {
     throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'No file provided');
   }
@@ -990,15 +1012,17 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const { url, mode, title, extractor, snippet } = body;
       const normalizedMode = mode;
-      const dedupAction = ((query as Record<string, string> | undefined)?.dedupAction ??
-        'prompt') as 'prompt' | 'reuse' | 'create_new';
+      const dedupParsed = DedupActionSchema.safeParse(
+        isRecord(query) ? (query.dedupAction ?? 'prompt') : 'prompt',
+      );
+      const dedupAction = dedupParsed.success ? dedupParsed.data : 'prompt';
 
       // SSRF guard: validate URL before fetch.
       try {
         await validateUrlForFetch(url, getSecurityPolicy());
       } catch (error) {
         throw new AppHttpError(ErrorCode.SCHEMA_VALIDATION_FAILED, 'SSRF blocked', {
-          reason: (error as Error).message,
+          reason: errorMessage(error),
         });
       }
 
@@ -1102,7 +1126,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
             error instanceof SsrfBlockedError
               ? 'SSRF blocked on fallback'
               : 'fetch failed on fallback',
-            { reason: (error as Error).message },
+            { reason: errorMessage(error) },
           );
         }
         const html = await response.text();

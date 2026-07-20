@@ -307,8 +307,13 @@ export function createSseResponse(
 ): Response {
   const traceId = crypto.randomUUID();
   const ctx: SseContext = { traceId, slideId };
-  const sse = (event: string, data: unknown): string =>
-    `event: ${event}\ndata: ${JSON.stringify({ traceId, ...(data as object) })}\n\n`;
+  const sse = (event: string, data: unknown): string => {
+    const payload =
+      typeof data === 'object' && data !== null && !Array.isArray(data)
+        ? { traceId, ...Object.fromEntries(Object.entries(data)) }
+        : { traceId, data };
+    return `event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`;
+  };
 
   // Check busy guard before starting stream
   if (!clearStaleRunning(slideId)) {

@@ -179,7 +179,19 @@ export default function SaveTemplateDialog({
             <select
               className="w-full h-9 px-3 rounded-lg bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 text-xs text-gray-900 dark:text-slate-100 focus:outline-none focus:border-gray-900"
               value={outputType ?? ''}
-              onChange={(e) => setOutputType((e.target.value || null) as OutputTypeId | null)}
+              onChange={(e) => {
+                const next = e.target.value;
+                if (!next) {
+                  setOutputType(null);
+                  return;
+                }
+                for (const id of OUTPUT_TYPE_OPTIONS) {
+                  if (id === next) {
+                    setOutputType(id);
+                    return;
+                  }
+                }
+              }}
             >
               <option value="">默认</option>
               {OUTPUT_TYPE_OPTIONS.map((id) => (
