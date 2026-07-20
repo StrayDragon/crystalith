@@ -34,7 +34,7 @@
 | 孤儿前端 UI 存根批次           | 2026-07-17 | RefinePanel 等；`useTasks`                                                                                                            |
 | **c73 死 HTTP 整批**           | 2026-07-20 | refine*、tasks*+TaskQueue、eval*、strategies HTTP、`outputs/types`、`qa/presets`、citations HTTP；见 SERVER/10–14 与 MATRIX `removed` |
 
-仍保留并补缺口：`DELETE .../source-connector-bindings`（解绑 UI）；research `modify`（假勾选）。
+仍保留并补缺口：~~`DELETE .../source-connector-bindings`（解绑 UI）~~ ✅；~~research `modify`（假勾选）~~ ✅（2026-07-20）。
 愿景债：`background-jobs-and-task-runtime` 已改为 c73 退役约束；`structural-refinement-*` 仅保留 research 可靠性条款（局部改良 MUST 已删）。
 
 ## 相关代码

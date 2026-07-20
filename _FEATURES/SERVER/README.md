@@ -12,7 +12,7 @@ Crystalith v2 HTTP API（Elysia，`apps/server/src/`）。默认前缀 `/v2`。
 | [02-sessions-messages](02-sessions-messages.md)                               | 9                | 会话 / 消息                                       | Yes                         |
 | [03-qa](03-qa.md)                                                             | 3                | RAG 问答（~~presets list~~ c73 删路由）           | Yes                         |
 | [04-sources](04-sources.md)                                                   | 22               | 来源 CRUD                                         | Yes                         |
-| [05-source-connectors](05-source-connectors.md)                               | 8                | 连接器（解绑 UI 缺口）                            | Yes                         |
+| [05-source-connectors](05-source-connectors.md)                               | 8                | 连接器（含解绑 UI）                               | Yes                         |
 | [06-research](06-research.md)                                                 | 12               | Deep Research HITL + SSE                          | Yes（modify 假勾选见 NOTE） |
 | [08-outputs](08-outputs.md)                                                   | 6                | Output CRUD（~~types~~ c73）                      | Yes                         |
 | [09-studio](09-studio.md)                                                     | 12               | Slides Studio + SSE                               | Yes                         |
