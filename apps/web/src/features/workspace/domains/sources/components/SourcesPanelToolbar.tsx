@@ -192,6 +192,7 @@ export default function SourcesPanelToolbar({
                 variant="text"
                 aria-label="已选来源操作"
                 className="w-6 h-6 min-w-[24px] rounded-full text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800"
+                {...tid(TestIds.sourcesSelectedMenu)}
               >
                 <MoreHorizIcon style={{ fontSize: 16 }} />
               </IconButton>
@@ -212,6 +213,7 @@ export default function SourcesPanelToolbar({
                 <MenuItem
                   disabled={removeDisabled}
                   className="flex items-center gap-2 py-1.5 px-3 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  {...tid(TestIds.sourcesBatchDelete)}
                 >
                   <DeleteIcon style={{ fontSize: 14 }} />
                   删除已选 ({selectedIds.length})

@@ -30,7 +30,6 @@ const SKIP_FEATURE_DIRS = new Set([
   'qa', // LLM-backed
   'research', // LLM-backed
   'source_connectors', // missing step defs + connector plugin infra
-  'sources', // v2 source delete/batch/dedup routes diverge
   'studio', // LLM-backed Slidev generation
   'templates', // depends on builtin seed data
 ]);

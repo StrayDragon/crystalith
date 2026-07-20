@@ -141,13 +141,17 @@ test-bdd:
 e2e:
     cd e2e && bunx playwright test --grep @p0
 
+# Optional @p1 browser flows (not in `just qa`)
+e2e-p1:
+    cd e2e && bunx playwright test --grep @p1
+
 # Install Playwright Chromium (one-time / CI bootstrap)
 e2e-install:
     cd e2e && bunx playwright install chromium
 
-# Full Playwright suite (currently same as @p0; room to grow non-gate specs)
+# Full Playwright suite (@p0 + @p1)
 e2e-all:
-    cd e2e && bunx playwright test
+    cd e2e && bunx playwright test --grep '@p0|@p1'
 
 # --------------------------------------------------------------------------
 # Config

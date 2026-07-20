@@ -32,7 +32,10 @@ export interface TestClient {
   get(path: string): Promise<BddResponse>;
   post(path: string, body?: unknown): Promise<BddResponse>;
   patch(path: string, body?: unknown): Promise<BddResponse>;
-  delete(path: string): Promise<BddResponse>;
+  /** Optional JSON body (tag unbind / other DELETE-with-body routes). */
+  delete(path: string, body?: unknown): Promise<BddResponse>;
+  /** Multipart upload (source ingest / dedup scenarios). */
+  postForm(path: string, form: FormData): Promise<BddResponse>;
   /** Raw SSE stream consumption — returns collected event/data pairs. */
   postStream(path: string, body?: unknown): Promise<BddResponse>;
 }
