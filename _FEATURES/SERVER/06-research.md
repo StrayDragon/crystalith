@@ -69,10 +69,10 @@ HITL 多步研究 Agent + SSE 流。
 - **Domain:** research
 - **Route:** `POST /v2/notebooks/:nid/research/:id/modify`（flat alias 仍存在）
 - **说明:** HITL 提交修改后的 search plan 后继续
-- **用户可见:** Partial — UI 有查询勾选，但 CTA 只调 `approve`，**不调 modify、不传选中集**
-- **代码:** `apps/server/src/features/research/router.ts`；FE `ResearchDetailPanel` / `useResearch`（无 `.modify`）
+- **用户可见:** Yes — 全选 `approve`；勾选子集 `modify`（过滤后的 plan）
+- **代码:** `apps/server/src/features/research/router.ts`；FE `ResearchDetailPanel` / `useResearch.modifySearchPlan` / `useSourcesPanelResearchActions`
 
-> NOTE: 产品缺口（API-ALIGNMENT M6）— 接线 modify 或去掉假勾选；勿当死路由删
+> NOTE: M6 closed 2026-07-20 — subset selection → modify; all selected → approve
 
 ---
 

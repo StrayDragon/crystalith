@@ -413,7 +413,7 @@ export default function StudioToolsGrid({
               <ModelSelector
                 value={configModelId}
                 onChange={setConfigModelId}
-                capability="chat"
+                role="chat"
                 label="选择生成模型"
                 size="md"
               />

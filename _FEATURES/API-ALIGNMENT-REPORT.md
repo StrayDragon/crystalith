@@ -1,17 +1,17 @@
 # Frontend ↔ Backend API Alignment Report
 
 > Generated: 2026-07-17
-> Updated: 2026-07-20 (c73 prune dead HTTP + follow-up r77 / orphan schemas; `just qa` green)
+> Updated: 2026-07-20 (product gaps M4–M6 + connector unbind UI; prior: c73 prune)
 > Scope: apps/web Eden `api.v2` vs apps/server `/v2` routes
 > Truth: **current code**
 
 ## Summary
 
 - **HIGH (open):** 0
-- **MEDIUM (open):** 3 — M4, M5, M6（M7 citations HTTP **removed in c73**）
-- **MEDIUM (resolved earlier):** M1, M2, M3, M8
+- **MEDIUM (open):** 0
+- **MEDIUM (resolved):** M1–M8
 - **Removed (c73):** refine*、tasks* + TaskQueue、eval*、strategies HTTP、`outputs/types`、`qa/presets`、citations HTTP
-- **Live gaps:** connector unbind UI；research modify 假勾选（M6）
+- **Product gaps closed:** ModelSelector `role`；`useSources` 无 `as any`；research modify 接线；connector unbind UI
 
 ## Fixed HIGH (earlier)
 
@@ -21,22 +21,12 @@
 
 ## Medium — resolved
 
-- **M1–M3, M8:** sourceIds / notebook nesting / MSW `/v2`（见历史）
+- **M1–M3, M8:** sourceIds / notebook nesting / MSW `/v2`
+- **M4:** `ModelSelector` prop/query `role`（`ModelRole`；embed 默认读 `defaults.embedding`）；legacy `capability` query 已从 schema 移除
+- **M5:** `useSources.ts` 去掉全部 `as any`（剩余窄断言仅因部分 route 未挂 response schema）
+- **M6:** 勾选子集 → `POST .../research/:id/modify`；全选 → `approve`；server `loadLatestUserInput` 取最新 HITL
 - **M7:** citations HTTP removed in c73（无 FE）
-
-## Medium — still open
-
-### M4. `ModelSelector` `capability` vs server `role`
-
-- FE still sends `{ capability }`; server filters `query.role`（`capability` legacy ignored）
-
-### M5. Sources Eden `as any`
-
-- `useSources.ts` still heavy casts — TS cannot catch missing fields
-
-### M6. Research `modify` unused; query checkboxes cosmetic
-
-- UI selection ignored; CTA only `approve.post()`
+- **Unbind UI:** `SourceConnectorsDialog` → `DELETE /v2/source-connector-bindings/:id`
 
 ## Removed surfaces (c73) — do not reintroduce without product+SDD
 
@@ -56,8 +46,8 @@
 - [x] M1–M3, M8
 - [x] c73 dead HTTP prune + archive
 - [x] Follow-up: workspace-api-contract r77 + orphan wire schemas
-- [ ] M4 ModelSelector `capability` → `role`
-- [ ] M5 reduce sources `as any`
-- [ ] M6 research modify vs cosmetic checkboxes
-- [ ] Connector binding unbind UI
+- [x] M4 ModelSelector `capability` → `role`
+- [x] M5 reduce sources `as any`
+- [x] M6 research modify vs cosmetic checkboxes
+- [x] Connector binding unbind UI
 - [x] Optional: shrink orphan-vision specs (`background-jobs-*` retired; structural local-refine MUST removed, research reqs kept)

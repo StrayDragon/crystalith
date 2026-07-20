@@ -4,6 +4,7 @@ import type { Ref, RefObject } from 'react';
 import { LAYER_LEVELS } from '../../../../../shared/layer';
 import { TestIds, tid } from '../../../../../shared/testids';
 import { SkeletonCard } from '../../../shared/components/Skeleton';
+import type { ResearchPlanConfirmPayload } from '../../research/ResearchDetailPanel';
 import type { Research } from './sources-panel-types';
 
 const ResearchDetailPanel = lazy(() => import('../../research/ResearchDetailPanel'));
@@ -14,7 +15,7 @@ export interface ResearchDetailModalProps {
   researchModalRef: RefObject<HTMLDivElement | null>;
   researchFullscreen: boolean;
   onClose: () => void;
-  onApprove: () => Promise<void>;
+  onApprove: (payload: ResearchPlanConfirmPayload) => Promise<void>;
   onSkip: () => Promise<void>;
   onFinish: () => Promise<void>;
   onCancel: () => Promise<void>;

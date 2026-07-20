@@ -123,6 +123,56 @@ test('deleteSession removes session and clears active session', async () => {
   expect(result.current.activeSession).toBeNull();
 });
 
+test('modifySearchPlan posts filtered plan and updates activeSession status', async () => {
+  let capturedBody: Record<string, unknown> | null = null;
+
+  server.use(
+    http.post('*/v2/notebooks/*/research', async ({ request }) => {
+      const body = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json({
+        id: 9,
+        notebookId: 1,
+        topic: String(body.topic ?? 'Topic'),
+        status: 'waiting_user',
+        currentIteration: 1,
+        maxIterations: Number(body.maxIterations ?? 4),
+        aggregatedResults: null,
+        finalReport: null,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      });
+    }),
+    http.post('*/v2/notebooks/*/research/:id/modify', async ({ request }) => {
+      capturedBody = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json({ id: 9, status: 'searching', modified: true });
+    }),
+  );
+
+  const { result } = renderHook(() => useResearch(1));
+
+  await act(async () => {
+    await result.current.createSession('Topic');
+  });
+
+  expect(result.current.activeSession?.status).toBe('waiting_user');
+
+  const plan = {
+    iteration: 1,
+    queries: [{ query: 'filtered query', engine: 'Web', priority: 1, reason: 'keep this one' }],
+    reasoning: 'user trimmed plan',
+    estimatedResults: 10,
+  };
+
+  await act(async () => {
+    await result.current.modifySearchPlan(9, plan);
+  });
+
+  expect(capturedBody).toEqual({ plan });
+  await waitFor(() => {
+    expect(result.current.activeSession?.status).toBe('searching');
+  });
+});
+
 test('SSE reconnect does not use stale session state after completion', async () => {
   vi.useFakeTimers();
 

@@ -2,35 +2,20 @@
  * ModelSelector - Component for selecting AI models for generation tasks
  */
 
+import type { ModelList, ModelRole } from '@crystalith/shared';
 import { Select, Option, Typography, Chip, Alert } from '@material-tailwind/react';
 import { CloudQueue as CloudIcon } from '@mui/icons-material';
 import { useState, useEffect, useCallback } from 'react';
 
 import { api } from '../../../../api/eden';
 
-interface ModelsListResponse {
-  models: Array<{
-    id: string;
-    displayName: string;
-    provider: string;
-    capabilities: string[];
-    isDefaultChat?: boolean;
-    isDefaultEmbedding?: boolean;
-  }>;
-  defaults?: {
-    chat?: string | null;
-    embedding?: string | null;
-  };
-  providers?: string[];
-}
-
 export interface ModelSelectorProps {
   /** Currently selected model ID */
   value: string | null;
   /** Callback when selection changes */
   onChange: (modelId: string | null) => void;
-  /** Filter by capability */
-  capability?: 'chat' | 'embedding';
+  /** Filter by model role (GET /v2/models?role=…) */
+  role?: ModelRole;
   /** Label for the selector */
   label?: string;
   /** Whether the selector is disabled */
@@ -46,7 +31,7 @@ export interface ModelSelectorProps {
 export function ModelSelector({
   value,
   onChange,
-  capability = 'chat',
+  role = 'chat',
   label = '选择模型',
   disabled = false,
   size = 'md',
@@ -54,7 +39,7 @@ export function ModelSelector({
   fullWidth: _fullWidth = true,
   className = '',
 }: ModelSelectorProps) {
-  const [modelsData, setModelsData] = useState<ModelsListResponse | null>(null);
+  const [modelsData, setModelsData] = useState<ModelList | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,14 +52,11 @@ export function ModelSelector({
         setLoading(true);
         setError(null);
         const { data, error: fetchErr } = await api.v2.models.get({
-          query: capability ? { capability } : undefined,
+          query: { role },
         });
-        if (fetchErr)
-          throw new Error(
-            typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
-          );
+        if (fetchErr) throw new Error(typeof fetchErr === 'string' ? fetchErr : '加载模型列表失败');
         if (!cancelled) {
-          setModelsData(data as unknown as ModelsListResponse);
+          setModelsData(data ?? null);
         }
       } catch (error) {
         if (!cancelled) {
@@ -91,16 +73,17 @@ export function ModelSelector({
     return () => {
       cancelled = true;
     };
-  }, [capability]);
+  }, [role]);
 
   useEffect(() => {
     if (value) return;
     if (!modelsData) return;
 
+    // defaults.embedding is the default for role `embed` (config key ≠ role enum).
     const defaultModel =
-      capability === 'embedding' ? modelsData.defaults?.embedding : modelsData.defaults?.chat;
+      role === 'embed' ? modelsData.defaults?.embedding : modelsData.defaults?.chat;
     if (defaultModel) onChange(defaultModel);
-  }, [capability, modelsData, onChange, value]);
+  }, [role, modelsData, onChange, value]);
 
   const handleChange = useCallback(
     (newValue: string | undefined) => {

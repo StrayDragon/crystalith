@@ -1,6 +1,7 @@
 import {
   ArrowBack as ArrowBackIcon,
   Close as CloseIcon,
+  LinkOff as LinkOffIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -874,6 +875,36 @@ export default function SourceConnectorsDialog({
     }
   }, [binding, busy, notebookId, onSourcesChanged, syncCheck]);
 
+  const handleUnbind = useCallback(async () => {
+    if (!binding) return;
+    if (busy) return;
+    const ok = window.confirm(
+      `确定解除绑定 #${binding.id}？\n\n已导入的来源不会删除，仅移除连接器绑定关系。`,
+    );
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const { error: delErr } = await api.v2['source-connector-bindings']({
+        id: binding.id,
+      }).delete();
+      if (delErr) throw new Error(typeof delErr === 'string' ? delErr : '解除绑定失败');
+      setBinding(null);
+      setSnapshot(null);
+      setSelectedDirs({});
+      setSelectedFiles({});
+      setImportResult(null);
+      setSyncCheck(null);
+      setSyncApplyResult(null);
+      setStep('config');
+      toast.success('已解除连接器绑定');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '解除绑定失败';
+      toast.error(message);
+    } finally {
+      setBusy(false);
+    }
+  }, [binding, busy]);
+
   const configSchema = selectedConnector?.connectionConfigSchema ?? null;
   const configProps = useMemo(() => schemaProperties(configSchema), [configSchema]);
   const configRequired = useMemo(() => schemaRequired(configSchema), [configSchema]);
@@ -977,6 +1008,17 @@ export default function SourceConnectorsDialog({
               返回
             </button>
           ) : null}
+          {binding ? (
+            <button
+              type="button"
+              onClick={() => void handleUnbind()}
+              disabled={busy}
+              className="px-3 py-1.5 rounded-lg text-xs border border-red-200 dark:border-red-900/50 bg-white dark:bg-slate-900 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 disabled:opacity-60 flex items-center gap-1"
+            >
+              <LinkOffIcon sx={{ fontSize: 16 }} />
+              解除绑定
+            </button>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-2">
@@ -1040,6 +1082,7 @@ export default function SourceConnectorsDialog({
     handleLoadSnapshot,
     handleRunSyncCheck,
     handleApplySyncCheck,
+    handleUnbind,
     onClose,
     selectedConnectorId,
     snapshot,

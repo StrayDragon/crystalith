@@ -217,6 +217,32 @@ describe('research HITL — approve', () => {
   });
 });
 
+describe('research HITL — modify', () => {
+  it('modify with filtered plan transitions to searching then completes', async () => {
+    const { body } = await post('/v2/research', {
+      topic: 'Modify filtered plan',
+      notebookId: notebookId,
+      maxIterations: 1,
+    });
+    await waitForStatus(body.id, 'waiting_user');
+
+    const modifyRes = await post(`/v2/research/${body.id}/modify`, {
+      plan: {
+        iteration: 1,
+        queries: [{ query: 'filtered only', engine: 'Web', priority: 1, reason: 'keep' }],
+        reasoning: 'user filtered',
+        estimatedResults: 10,
+      },
+    });
+    expect(modifyRes.status).toBe(200);
+    expect(modifyRes.body.modified).toBe(true);
+    expect(modifyRes.body.status).toBe('searching');
+
+    const reachedComplete = await waitForStatus(body.id, 'completed');
+    expect(reachedComplete).toBe(true);
+  });
+});
+
 describe('research HITL — skip', () => {
   it('skip unblocks the agent without changes', async () => {
     const { body } = await post('/v2/research', {
