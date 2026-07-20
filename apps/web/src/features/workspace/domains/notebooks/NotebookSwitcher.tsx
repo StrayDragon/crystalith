@@ -380,10 +380,8 @@ export default function NotebookSwitcher({
           }}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
+          aria-label={`当前笔记本：${displayTitle}`}
         >
-          <Typography variant="small" className="font-medium text-gray-600 text-[11px]">
-            笔记本
-          </Typography>
           <Typography
             variant="small"
             className="font-semibold text-gray-900 text-xs truncate max-w-[120px] sm:max-w-[160px]"
