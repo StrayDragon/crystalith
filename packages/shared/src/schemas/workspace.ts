@@ -38,7 +38,7 @@ export const WorkspaceToolOfficialDiagnosticSchema = z
     message: z.string().nullable().optional(),
     errorCode: z.string().nullable().optional(),
   })
-  .passthrough();
+  .loose();
 export type WorkspaceToolOfficialDiagnostic = z.infer<typeof WorkspaceToolOfficialDiagnosticSchema>;
 
 /** Slides engine diagnostic blob on GET /v2/workspace/tools. */
@@ -51,7 +51,7 @@ export const WorkspaceToolsSlidesDiagnosticSchema = z
     engine: z.string().nullable().optional(),
     errorCode: z.string().nullable().optional(),
   })
-  .passthrough();
+  .loose();
 export type WorkspaceToolsSlidesDiagnostic = z.infer<typeof WorkspaceToolsSlidesDiagnosticSchema>;
 
 export const WorkspaceToolsDiagnosticsSchema = z.object({
