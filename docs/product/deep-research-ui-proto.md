@@ -1,28 +1,34 @@
-# Deep Research — UI Proto（草案骨架）
+# Deep Research — UI Proto（决策已锁 · FE 另 change）
 
-| 字段     | 值                                                      |
-| -------- | ------------------------------------------------------- |
-| 状态     | Draft skeleton — **待 grill-me 完善**                   |
-| 依赖后端 | `c76-deep-research-runtime`（本 change FE 仅占位）      |
-| 父 PRD   | [`deep-research-prd.md`](./deep-research-prd.md) v0.2.3 |
+| 字段      | 值                                                               |
+| --------- | ---------------------------------------------------------------- |
+| 状态      | **Decisions locked** — 实现另开 FE change；c76 仅后端 + FE 占位  |
+| 依赖后端  | `c76-deep-research-runtime`                                      |
+| 父 PRD    | [`deep-research-prd.md`](./deep-research-prd.md) v0.3（§0 索引） |
+| 后端 SSOT | `llmanspec/changes/c76-deep-research-runtime/design.md`          |
 
-## 已锁定（产品）
+## 已锁定（勿再 grill 推翻，除非改 PRD）
 
-E1 台 / F1 Run 大详情叠层 / G1 关详情保留 E1；深研 Tab 与直接搜索分栏。
+| ID           | 决策                                                            |
+| ------------ | --------------------------------------------------------------- |
+| E1 / F1 / G1 | 顶栏台 + Run 大详情叠层；关详情保留 E1                          |
+| H1′          | 双开关 + 台内来源多选；空选禁用开始                             |
+| L1 / M1      | 三档深度；确认仅预算 / 扩支路                                   |
+| U1 / U2      | 图=可交互思路；running/awaiting_confirm 可剪枝 fork；完成后只读 |
+| R4 / C1      | 结论态五态；工作区语义色（非参考图绿紫红）                      |
+| UI-C1        | 复用 CitationsControl                                           |
+| E1′          | 节点可转笔记/来源，入口淡化                                     |
+| F1-CTA       | M1 = 图高亮 + 详情顶栏确认条                                    |
 
-**H1′ D1**：创建表单含「使用笔记本来源」「同时分析外网」双开关（默认皆开）+ **台内来源多选列表**（拉取 notebook sources，不读工作区勾选）；开用来源但未选时禁用开始。
+## 实现清单（FE change，非 c76）
 
-**过程图**：xyflow DAG = 可交互思路（U1/U2）；节点结论态 R4a。配色 **C1**：复用工作区语义色（成功/警告/危险/中性），`pruned` 降透明度。
-
-## 本文要钉的内容（grill 主题）
-
-1. DeepResearchDesk：配置表单（H1′ D1 双开关 + 台内来源多选 + L1）与队列卡片态
-2. Run 详情：默认/主表面 = **可交互图**；报告为终局阅读面（无并列「研究思路」页）
-3. 剪枝 / fork：**U2a** — `running`/`awaiting_confirm` 可操作；完成后只读；改方向 → 新 Run
-4. Citation chip ↔ popover：**UI-C1** — 复用现有 `CitationsControl` + 跳转来源
-5. Convert：**E1′** — 节点菜单 + 报告顶栏均可「转为笔记/来源」；**节点入口须淡化**（溢出菜单/右键/「…」，非主按钮）
-6. 待确认（M1）：**F1** — 图上高亮相关节点 + 详情顶栏确认条（同一动作）
+1. DeepResearchDesk（H1′ + L1 + 队列卡片）
+2. Run 详情 Layer：主表面 xyflow；报告终局面
+3. prune / fork 控件（对齐 runtime U2）
+4. Citation chips（UI-C1）
+5. Convert 菜单（E1′）
+6. M1 确认条（F1-CTA）
 
 ## 非目标
 
-Runtime HTTP/tool 细节 → [`deep-research-runtime-spec.md`](./deep-research-runtime-spec.md)
+Runtime HTTP / Zod / SSE → **`c76-deep-research-runtime/design.md`**（Runtime wire）
