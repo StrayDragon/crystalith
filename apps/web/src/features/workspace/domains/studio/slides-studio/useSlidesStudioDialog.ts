@@ -304,7 +304,7 @@ export function useSlidesStudioDialog({
         if (latest) syncFromDraft(normalizeDraft(latest));
         else resetDraftState();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       const status = resolveErrorStatus(error);
       if (status === 404) {
         resetDraftState();

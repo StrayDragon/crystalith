@@ -1,4 +1,5 @@
 import { buildSlidevPreviewUrl } from '@crystalith-slidev';
+import type { StudioSlide } from '@crystalith/shared';
 
 import { t } from '../../../../../shared/i18n';
 import type {
@@ -18,7 +19,19 @@ export function resolveOptionId(
   return fallback;
 }
 
-export function normalizeDraft(raw: any): SlideDraft {
+export function normalizeDraft(raw: StudioSlide): SlideDraft {
+  const outline: SlideDraft['outline'] = raw.outline
+    ? {
+        title: raw.outline.title ?? '',
+        slides: (raw.outline.slides ?? []).map((slide) => {
+          const bullets: string[] = Array.isArray(slide.bullets) ? slide.bullets : [];
+          return {
+            title: slide.title ?? '',
+            bullets,
+          };
+        }),
+      }
+    : null;
   return {
     id: Number(raw.id),
     notebookId: Number(raw.notebookId ?? 0),
@@ -28,7 +41,7 @@ export function normalizeDraft(raw: any): SlideDraft {
     engine: typeof raw.engine === 'string' ? raw.engine : '',
     chunkIds: raw.chunkIds ?? null,
     sourceIds: raw.sourceIds ?? null,
-    outline: raw.outline ?? null,
+    outline,
     markdown: raw.markdown ?? null,
     generationConfig: normalizeGenerationConfig(raw.generationConfig),
     stage: raw.stage ?? 'input',
@@ -47,10 +60,11 @@ export function outlineItemsFromDraft(draft: SlideDraft | null): SlideOutlineIte
   return draft?.outline?.slides?.length ? draft.outline.slides : [];
 }
 
-export function resolveErrorStatus(error: any): number | undefined {
-  if (!error) return undefined;
-  if (typeof error.status === 'number') return error.status;
-  if (typeof error?.response?.status === 'number') return error.response.status;
+export function resolveErrorStatus(error: unknown): number | undefined {
+  if (!error || typeof error !== 'object') return undefined;
+  const record = error as { status?: unknown; response?: { status?: unknown } };
+  if (typeof record.status === 'number') return record.status;
+  if (typeof record.response?.status === 'number') return record.response.status;
   return undefined;
 }
 
