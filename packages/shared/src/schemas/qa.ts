@@ -6,6 +6,8 @@
 // into the shared SSOT so the frontend can consume the same contract.
 import { z } from 'zod';
 
+import './zod-extend.js';
+
 /**
  * Token-budget statistics for a QA retrieval context window.
  *
@@ -14,13 +16,17 @@ import { z } from 'zod';
  * Matches v1 field names: total_tokens / system_tokens / history_tokens /
  * retrieval_tokens / query_tokens / max_tokens / compressed.
  */
-export const ContextStatsSchema = z.object({
-  totalTokens: z.number().int().nonnegative(),
-  systemTokens: z.number().int().nonnegative(),
-  historyTokens: z.number().int().nonnegative(),
-  retrievalTokens: z.number().int().nonnegative(),
-  queryTokens: z.number().int().nonnegative(),
-  maxTokens: z.number().int().nonnegative(),
-  compressed: z.boolean(),
-});
+export const ContextStatsSchema = z
+  .object({
+    totalTokens: z.number().int().nonnegative(),
+    systemTokens: z.number().int().nonnegative(),
+    historyTokens: z.number().int().nonnegative(),
+    retrievalTokens: z.number().int().nonnegative(),
+    queryTokens: z.number().int().nonnegative(),
+    maxTokens: z.number().int().nonnegative(),
+    compressed: z.boolean(),
+  })
+  .openapi({
+    description: 'QA 检索上下文 token 预算统计',
+  });
 export type ContextStats = z.infer<typeof ContextStatsSchema>;

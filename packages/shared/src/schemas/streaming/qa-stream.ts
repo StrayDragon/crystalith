@@ -7,42 +7,65 @@
 import { z } from 'zod';
 
 import { CitationSchema, IdSchema, JsonMetadataSchema } from '../common.js';
+import { desc } from '../i18n.js';
 import { ChatTurnSchema } from '../message.js';
 
-export const QaStreamChunkEventSchema = z.object({
-  text: z.string(),
-});
+export const QaStreamChunkEventSchema = z
+  .object({
+    text: z.string(),
+  })
+  .openapi({
+    description: desc('qa.stream_chunk', 'QA SSE chunk 事件'),
+  });
 
-export const QaStreamStateSnapshotSchema = z.object({
-  messageId: IdSchema.nullable().optional(),
-  sharedState: JsonMetadataSchema.optional(),
-});
+export const QaStreamStateSnapshotSchema = z
+  .object({
+    messageId: IdSchema.nullable().optional(),
+    sharedState: JsonMetadataSchema.optional(),
+  })
+  .openapi({
+    description: desc('qa.stream_state_snapshot', 'QA SSE state_snapshot 事件'),
+  });
 
-export const QaStreamDoneEventSchema = z.object({
-  messageId: IdSchema.nullable().optional(),
-  citations: z.array(CitationSchema).default([]),
-  /** Tool calls executed during the agent loop (for transparent UI). */
-  toolCalls: z
-    .array(
-      z.object({
-        name: z.string(),
-        args: JsonMetadataSchema,
-        result: JsonMetadataSchema.nullable().optional(),
-      }),
-    )
-    .default([]),
-  /** Confidence score in [0,1] derived from evidence (similarity + coverage). */
-  confidence: z.number().min(0).max(1).optional(),
-  /** Reason for no evidence (mirrors v1 no_evidence_reason). */
-  noEvidenceReason: z
-    .enum(['no_sources', 'embedding_empty', 'no_vector_hits', 'no_valid_chunks', 'low_similarity'])
-    .optional(),
-});
+export const QaStreamDoneEventSchema = z
+  .object({
+    messageId: IdSchema.nullable().optional(),
+    citations: z.array(CitationSchema).default([]),
+    /** Tool calls executed during the agent loop (for transparent UI). */
+    toolCalls: z
+      .array(
+        z.object({
+          name: z.string(),
+          args: JsonMetadataSchema,
+          result: JsonMetadataSchema.nullable().optional(),
+        }),
+      )
+      .default([]),
+    /** Confidence score in [0,1] derived from evidence (similarity + coverage). */
+    confidence: z.number().min(0).max(1).optional(),
+    /** Reason for no evidence (mirrors v1 no_evidence_reason). */
+    noEvidenceReason: z
+      .enum([
+        'no_sources',
+        'embedding_empty',
+        'no_vector_hits',
+        'no_valid_chunks',
+        'low_similarity',
+      ])
+      .optional(),
+  })
+  .openapi({
+    description: desc('qa.stream_done', 'QA SSE done 事件'),
+  });
 
-export const QaStreamErrorEventSchema = z.object({
-  message: z.string(),
-  errorCode: z.string().optional(),
-});
+export const QaStreamErrorEventSchema = z
+  .object({
+    message: z.string(),
+    errorCode: z.string().optional(),
+  })
+  .openapi({
+    description: desc('qa.stream_error', 'QA SSE error 事件'),
+  });
 
 /** Request body for POST /v2/qa and POST /v2/qa/stream. */
 export const QaDirectiveSchema = z.enum(['Sources_only', 'Knowledge_only', 'Mixed']);
@@ -67,13 +90,23 @@ const QaRequestFieldsSchema = z.object({
 /** Flat alias POST /v2/qa — notebookId required. */
 export const QaRequestSchema = QaRequestFieldsSchema.extend({
   notebookId: IdSchema,
-}).refine((b) => !!(b.question ?? b.content), { message: 'question is required' });
+})
+  .openapi({
+    description: desc('qa.request', 'QA 请求（flat）'),
+    example: { notebookId: 1, question: '这篇讲了什么？', sessionId: 1 },
+  })
+  .refine((b) => !!(b.question ?? b.content), { message: 'question is required' });
 export type QaRequest = z.infer<typeof QaRequestSchema>;
 
 /** Nested POST /v2/notebooks/:nid/qa — optional body notebookId must match path. */
 export const QaNestedRequestSchema = QaRequestFieldsSchema.extend({
   notebookId: IdSchema.optional(),
-}).refine((b) => !!(b.question ?? b.content), { message: 'question is required' });
+})
+  .openapi({
+    description: desc('qa.request_nested', 'QA 请求（nested）'),
+    example: { question: '这篇讲了什么？', sessionId: 1 },
+  })
+  .refine((b) => !!(b.question ?? b.content), { message: 'question is required' });
 export type QaNestedRequest = z.infer<typeof QaNestedRequestSchema>;
 
 /** @deprecated Prefer QaRequestSchema — kept as alias for older imports. */
@@ -81,22 +114,31 @@ export const QaStreamRequestSchema = QaRequestSchema;
 export type QaStreamRequest = QaRequest;
 
 /** Non-streaming QA response (POST /v2/qa). */
-export const QaAnswerSchema = z.object({
-  answer: z.string(),
-  citations: z.array(CitationSchema).default([]),
-  messageId: IdSchema.nullable().optional(),
-  sessionId: IdSchema.optional(),
-  confidence: z.number().min(0).max(1).optional(),
-  evidence: z.unknown().optional(),
-  noEvidenceReason: z.string().optional(),
-});
+export const QaAnswerSchema = z
+  .object({
+    answer: z.string(),
+    citations: z.array(CitationSchema).default([]),
+    messageId: IdSchema.nullable().optional(),
+    sessionId: IdSchema.optional(),
+    confidence: z.number().min(0).max(1).optional(),
+    evidence: z.unknown().optional(),
+    noEvidenceReason: z.string().optional(),
+  })
+  .openapi({
+    description: desc('qa.answer', 'QA 非流式响应'),
+    example: { answer: '…', citations: [], messageId: 1, sessionId: 1 },
+  });
 export type QaAnswer = z.infer<typeof QaAnswerSchema>;
 
-export const QaExportQuerySchema = z.object({
-  sessionId: z.coerce.number().int().positive(),
-  messageId: z.coerce.number().int().positive().optional(),
-  format: z.enum(['markdown', 'json']).default('markdown'),
-});
+export const QaExportQuerySchema = z
+  .object({
+    sessionId: z.coerce.number().int().positive(),
+    messageId: z.coerce.number().int().positive().optional(),
+    format: z.enum(['markdown', 'json']).default('markdown'),
+  })
+  .openapi({
+    description: desc('qa.export_query', '导出 QA 答案查询参数'),
+  });
 export type QaExportQuery = z.infer<typeof QaExportQuerySchema>;
 
 export const QaStreamEventNames = ['chunk', 'state_snapshot', 'done', 'error'] as const;

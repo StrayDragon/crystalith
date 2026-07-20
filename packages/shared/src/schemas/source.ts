@@ -38,33 +38,53 @@ export type Chunk = z.infer<typeof ChunkSchema>;
 // Source
 // ---------------------------------------------------------------------------
 
-export const SourceSchema = z.object({
-  id: IdSchema.describe(desc('source.id')),
-  notebookId: IdSchema,
-  filename: z.string().min(1).max(512).describe(desc('source.title')),
-  mimeType: z.string().nullable().optional(),
-  parserType: z.string().min(1).max(64),
-  metadata: JsonMetadataSchema.nullable().optional(),
-  dedupKey: z.string().nullable().optional(),
-  status: SourceStatusSchema.describe(desc('source.status')),
-  errorCode: z.string().nullable().optional(),
-  errorMessage: z.string().nullable().optional(),
-  recoveryHint: z.string().nullable().optional(),
-  lastErrorAt: OptionalTimestampSchema,
-  chunkCount: z.number().int().nonnegative().default(0),
-  tags: z.array(z.string()).default([]),
-  createdAt: IsoTimestampSchema.describe(desc('source.created_at')),
-  updatedAt: IsoTimestampSchema.describe(desc('source.updated_at')),
-});
+export const SourceSchema = z
+  .object({
+    id: IdSchema.describe(desc('source.id')),
+    notebookId: IdSchema,
+    filename: z.string().min(1).max(512).describe(desc('source.title')),
+    mimeType: z.string().nullable().optional(),
+    parserType: z.string().min(1).max(64),
+    metadata: JsonMetadataSchema.nullable().optional(),
+    dedupKey: z.string().nullable().optional(),
+    status: SourceStatusSchema.describe(desc('source.status')),
+    errorCode: z.string().nullable().optional(),
+    errorMessage: z.string().nullable().optional(),
+    recoveryHint: z.string().nullable().optional(),
+    lastErrorAt: OptionalTimestampSchema,
+    chunkCount: z.number().int().nonnegative().default(0),
+    tags: z.array(z.string()).default([]),
+    createdAt: IsoTimestampSchema.describe(desc('source.created_at')),
+    updatedAt: IsoTimestampSchema.describe(desc('source.updated_at')),
+  })
+  .openapi({
+    description: desc('source.entity', '来源实体'),
+    example: {
+      id: 1,
+      notebookId: 1,
+      filename: 'notes.md',
+      parserType: 'text',
+      status: 'ready',
+      chunkCount: 3,
+      tags: [],
+      createdAt: '2026-07-08T12:00:00.000Z',
+      updatedAt: '2026-07-08T12:00:00.000Z',
+    },
+  });
 export type Source = z.infer<typeof SourceSchema>;
 
-export const SourceCreateSchema = z.object({
-  filename: z.string().min(1).max(512),
-  content: z.string().nullable().optional(),
-  mimeType: z.string().nullable().optional(),
-  parserType: z.string().min(1).max(64).default('text'),
-  metadata: JsonMetadataSchema.nullable().optional(),
-});
+export const SourceCreateSchema = z
+  .object({
+    filename: z.string().min(1).max(512),
+    content: z.string().nullable().optional(),
+    mimeType: z.string().nullable().optional(),
+    parserType: z.string().min(1).max(64).default('text'),
+    metadata: JsonMetadataSchema.nullable().optional(),
+  })
+  .openapi({
+    description: desc('source.create', '创建来源请求'),
+    example: { filename: 'notes.md', parserType: 'text' },
+  });
 export type SourceCreate = z.infer<typeof SourceCreateSchema>;
 
 export const SourceListSchema = z.object({
@@ -75,18 +95,34 @@ export const SourceListSchema = z.object({
 // Source tags
 // ---------------------------------------------------------------------------
 
-export const SourceTagSchema = z.object({
-  id: IdSchema,
-  notebookId: IdSchema,
-  name: z.string().min(1).max(64),
-  createdAt: IsoTimestampSchema,
-  updatedAt: IsoTimestampSchema,
-});
+export const SourceTagSchema = z
+  .object({
+    id: IdSchema,
+    notebookId: IdSchema,
+    name: z.string().min(1).max(64),
+    createdAt: IsoTimestampSchema,
+    updatedAt: IsoTimestampSchema,
+  })
+  .openapi({
+    description: desc('source.tag', '来源标签'),
+    example: {
+      id: 1,
+      notebookId: 1,
+      name: 'paper',
+      createdAt: '2026-07-08T12:00:00.000Z',
+      updatedAt: '2026-07-08T12:00:00.000Z',
+    },
+  });
 export type SourceTag = z.infer<typeof SourceTagSchema>;
 
-export const SourceTagCreateSchema = z.object({
-  name: z.string().min(1).max(64),
-});
+export const SourceTagCreateSchema = z
+  .object({
+    name: z.string().min(1).max(64),
+  })
+  .openapi({
+    description: desc('source.tag_create', '创建来源标签'),
+    example: { name: 'paper' },
+  });
 export type SourceTagCreate = z.infer<typeof SourceTagCreateSchema>;
 
 export const SourceTagBindingRequestSchema = z.object({
@@ -208,23 +244,31 @@ export const SyncCheckResultSchema = z.object({
 });
 export type SyncCheckResult = z.infer<typeof SyncCheckResultSchema>;
 
-export const SourceConnectorBindingSchema = z.object({
-  id: IdSchema,
-  notebookId: IdSchema,
-  connectorId: z.string().min(1).max(128),
-  connectionConfig: JsonMetadataSchema,
-  importScope: ImportScopeSchema.nullable().optional(),
-  lastConfirmedSnapshot: SnapshotSchema.nullable().optional(),
-  lastSyncCheckResult: SyncCheckResultSchema.nullable().optional(),
-  createdAt: IsoTimestampSchema,
-  updatedAt: IsoTimestampSchema,
-});
+export const SourceConnectorBindingSchema = z
+  .object({
+    id: IdSchema,
+    notebookId: IdSchema,
+    connectorId: z.string().min(1).max(128),
+    connectionConfig: JsonMetadataSchema,
+    importScope: ImportScopeSchema.nullable().optional(),
+    lastConfirmedSnapshot: SnapshotSchema.nullable().optional(),
+    lastSyncCheckResult: SyncCheckResultSchema.nullable().optional(),
+    createdAt: IsoTimestampSchema,
+    updatedAt: IsoTimestampSchema,
+  })
+  .openapi({
+    description: desc('source.connector_binding', '来源连接器绑定'),
+  });
 export type SourceConnectorBinding = z.infer<typeof SourceConnectorBindingSchema>;
 
 /** POST …/source-connectors/:connectorId/bindings */
-export const SourceConnectorBindingCreateRequestSchema = z.object({
-  connectionConfig: JsonMetadataSchema.default({}),
-});
+export const SourceConnectorBindingCreateRequestSchema = z
+  .object({
+    connectionConfig: JsonMetadataSchema.default({}),
+  })
+  .openapi({
+    description: desc('source.connector_binding_create', '创建连接器绑定'),
+  });
 export type SourceConnectorBindingCreateRequest = z.infer<
   typeof SourceConnectorBindingCreateRequestSchema
 >;
@@ -308,7 +352,11 @@ export const SourceFromUrlRequestSchema = z
   .transform((v) => ({
     ...v,
     extractor: v.extractor === null || v.extractor === undefined ? null : v.extractor.toLowerCase(),
-  }));
+  }))
+  .openapi({
+    description: desc('source.from_url', '从 URL 导入来源'),
+    example: { url: 'https://example.com/doc', mode: 'link' },
+  });
 export type SourceFromUrlRequest = z.infer<typeof SourceFromUrlRequestSchema>;
 
 /** Query params for flat POST /v2/sources/upload (multipart body is not Zod-validated). */
@@ -329,42 +377,63 @@ export const SourceUploadNestedQuerySchema = z.object({
 export type SourceUploadNestedQuery = z.infer<typeof SourceUploadNestedQuerySchema>;
 
 /** Fresh ingest result from POST …/sources/upload. */
-export const SourceIngestResultSchema = z.object({
-  sourceId: IdSchema,
-  chunkCount: z.number().int().nonnegative(),
-  text: z.string(),
-  parserType: z.string(),
-  status: SourceStatusSchema,
-  errorCode: z.string().optional(),
-  errorMessage: z.string().optional(),
-});
+export const SourceIngestResultSchema = z
+  .object({
+    sourceId: IdSchema,
+    chunkCount: z.number().int().nonnegative(),
+    text: z.string(),
+    parserType: z.string(),
+    status: SourceStatusSchema,
+    errorCode: z.string().optional(),
+    errorMessage: z.string().optional(),
+  })
+  .openapi({
+    description: desc('source.ingest_result', '摄取结果'),
+    example: {
+      sourceId: 1,
+      chunkCount: 2,
+      text: '…',
+      parserType: 'text',
+      status: 'ready',
+    },
+  });
 export type SourceIngestResult = z.infer<typeof SourceIngestResultSchema>;
 
 /** Dedup reuse branch for upload. */
-export const SourceUploadReuseResultSchema = z.object({
-  reused: z.literal(true),
-  source: SourceSchema,
-});
+export const SourceUploadReuseResultSchema = z
+  .object({
+    reused: z.literal(true),
+    source: SourceSchema,
+  })
+  .openapi({
+    description: desc('source.upload_reuse', '去重复用已有来源'),
+  });
 export type SourceUploadReuseResult = z.infer<typeof SourceUploadReuseResultSchema>;
 
-export const SourceUploadResponseSchema = z.union([
-  SourceIngestResultSchema,
-  SourceUploadReuseResultSchema,
-]);
+export const SourceUploadResponseSchema = z
+  .union([SourceIngestResultSchema, SourceUploadReuseResultSchema])
+  .openapi({ description: desc('source.upload_response', '上传来源响应') });
 export type SourceUploadResponse = z.infer<typeof SourceUploadResponseSchema>;
 
 /** Link-mode success from POST …/sources/from-url (HTTP 201). */
-export const SourceFromUrlLinkResultSchema = z.object({
-  sourceId: IdSchema,
-  filename: z.string(),
-  mode: z.literal('link'),
-});
+export const SourceFromUrlLinkResultSchema = z
+  .object({
+    sourceId: IdSchema,
+    filename: z.string(),
+    mode: z.literal('link'),
+  })
+  .openapi({
+    description: desc('source.from_url_link', '链接模式导入结果'),
+    example: { sourceId: 1, filename: 'https://example.com', mode: 'link' },
+  });
 export type SourceFromUrlLinkResult = z.infer<typeof SourceFromUrlLinkResultSchema>;
 
 /** Fetch-mode ingest success (optionally annotated with extractor metadata). */
 export const SourceFromUrlFetchResultSchema = SourceIngestResultSchema.extend({
   extractedBy: z.string().optional(),
   title: z.string().nullable().optional(),
+}).openapi({
+  description: desc('source.from_url_fetch', '抓取模式导入结果'),
 });
 export type SourceFromUrlFetchResult = z.infer<typeof SourceFromUrlFetchResultSchema>;
 
@@ -372,11 +441,13 @@ export type SourceFromUrlFetchResult = z.infer<typeof SourceFromUrlFetchResultSc
  * Success body for POST …/sources/from-url.
  * Dedup reuse shares upload reuse shape; errors use AppHttpError / ErrorEnvelope.
  */
-export const SourceFromUrlResponseSchema = z.union([
-  SourceUploadReuseResultSchema,
-  SourceFromUrlLinkResultSchema,
-  SourceFromUrlFetchResultSchema,
-]);
+export const SourceFromUrlResponseSchema = z
+  .union([
+    SourceUploadReuseResultSchema,
+    SourceFromUrlLinkResultSchema,
+    SourceFromUrlFetchResultSchema,
+  ])
+  .openapi({ description: desc('source.from_url_response', 'URL 导入响应') });
 export type SourceFromUrlResponse = z.infer<typeof SourceFromUrlResponseSchema>;
 
 export const SourceParserSchema = z.object({
@@ -420,24 +491,33 @@ export const ExtractorsListPolicySchema = z.object({
 });
 export type ExtractorsListPolicy = z.infer<typeof ExtractorsListPolicySchema>;
 
-export const ExtractorsListSchema = z.object({
-  notebookId: IdSchema.optional(),
-  extractors: z.array(ExtractorInfoSchema),
-  defaultExtractor: z.string().nullable().optional(),
-  fallbackEnabled: z.boolean().default(true),
-  policy: ExtractorsListPolicySchema,
-});
+export const ExtractorsListSchema = z
+  .object({
+    notebookId: IdSchema.optional(),
+    extractors: z.array(ExtractorInfoSchema),
+    defaultExtractor: z.string().nullable().optional(),
+    fallbackEnabled: z.boolean().default(true),
+    policy: ExtractorsListPolicySchema,
+  })
+  .openapi({
+    description: desc('source.extractors_list', '笔记本提取器策略与可用列表'),
+  });
 export type ExtractorsList = z.infer<typeof ExtractorsListSchema>;
 
 // ---------------------------------------------------------------------------
 // Source search (web)
 // ---------------------------------------------------------------------------
 
-export const SourceSearchRequestSchema = z.object({
-  query: z.string().min(1),
-  engine: z.string().default('Web'),
-  mode: z.string().default('Fast Research'),
-});
+export const SourceSearchRequestSchema = z
+  .object({
+    query: z.string().min(1),
+    engine: z.string().default('Web'),
+    mode: z.string().default('Fast Research'),
+  })
+  .openapi({
+    description: desc('source.search_request', '网页搜索请求'),
+    example: { query: 'RAG evaluation', engine: 'Web' },
+  });
 
 export const SourceSearchResultSchema = z.object({
   title: z.string(),
@@ -450,15 +530,19 @@ export type SourceSearchResult = z.infer<typeof SourceSearchResultSchema>;
 export const SourceSearchStatusSchema = z.enum(['ok', 'not_implemented', 'no_results']);
 export type SourceSearchStatus = z.infer<typeof SourceSearchStatusSchema>;
 
-export const SourceSearchResponseSchema = z.object({
-  status: SourceSearchStatusSchema,
-  query: z.string(),
-  engine: z.string(),
-  mode: z.string(),
-  results: z.array(SourceSearchResultSchema),
-  message: z.string().nullable().optional(),
-  createdAt: IsoTimestampSchema,
-});
+export const SourceSearchResponseSchema = z
+  .object({
+    status: SourceSearchStatusSchema,
+    query: z.string(),
+    engine: z.string(),
+    mode: z.string(),
+    results: z.array(SourceSearchResultSchema),
+    message: z.string().nullable().optional(),
+    createdAt: IsoTimestampSchema,
+  })
+  .openapi({
+    description: desc('source.search_response', '网页搜索响应'),
+  });
 export type SourceSearchResponse = z.infer<typeof SourceSearchResponseSchema>;
 
 // ---------------------------------------------------------------------------
@@ -466,19 +550,28 @@ export type SourceSearchResponse = z.infer<typeof SourceSearchResponseSchema>;
 // ---------------------------------------------------------------------------
 
 /** Live wire uses `generatedAt` (not `createdAt`) — keep Eden/Zod aligned with handlers. */
-export const SourceSummarySchema = z.object({
-  sourceId: IdSchema,
-  summary: z.string(),
-  keyPoints: z.array(z.string()),
-  topics: z.array(z.string()),
-  wordCount: z.number().int().nonnegative(),
-  generatedAt: IsoTimestampSchema,
-});
+export const SourceSummarySchema = z
+  .object({
+    sourceId: IdSchema,
+    summary: z.string(),
+    keyPoints: z.array(z.string()),
+    topics: z.array(z.string()),
+    wordCount: z.number().int().nonnegative(),
+    generatedAt: IsoTimestampSchema,
+  })
+  .openapi({
+    description: desc('source.summary', '来源摘要'),
+  });
 export type SourceSummary = z.infer<typeof SourceSummarySchema>;
 
-export const SourceQARequestSchema = z.object({
-  question: z.string().min(1),
-});
+export const SourceQARequestSchema = z
+  .object({
+    question: z.string().min(1),
+  })
+  .openapi({
+    description: desc('source.qa_request', '单来源问答请求'),
+    example: { question: '这篇讲了什么？' },
+  });
 
 /** Matches POST …/sources/:sid/qa handler body (sourceName + echoed question). */
 export const SourceQAResponseSchema = z.object({

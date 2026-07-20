@@ -8,6 +8,7 @@ import {
   JsonMetadataSchema,
   OptionalTimestampSchema,
 } from './common.js';
+import { desc } from './i18n.js';
 
 export const ResearchStatusSchema = z.enum([
   'planning',
@@ -36,57 +37,86 @@ export type ResearchStepStatus = z.infer<typeof ResearchStepStatusSchema>;
 // Session + step entities
 // ---------------------------------------------------------------------------
 
-export const ResearchSessionSchema = z.object({
-  id: IdSchema,
-  notebookId: IdSchema,
-  topic: z.string().min(1),
-  status: ResearchStatusSchema,
-  currentIteration: z.number().int().positive(),
-  maxIterations: z.number().int().positive(),
-  aggregatedResults: z.array(JsonMetadataSchema).nullable().optional(),
-  finalReport: z.string().nullable().optional(),
-  lockedAt: OptionalTimestampSchema,
-  lockExpiresAt: OptionalTimestampSchema,
-  createdAt: IsoTimestampSchema,
-  updatedAt: IsoTimestampSchema,
-});
+export const ResearchSessionSchema = z
+  .object({
+    id: IdSchema,
+    notebookId: IdSchema,
+    topic: z.string().min(1),
+    status: ResearchStatusSchema,
+    currentIteration: z.number().int().positive(),
+    maxIterations: z.number().int().positive(),
+    aggregatedResults: z.array(JsonMetadataSchema).nullable().optional(),
+    finalReport: z.string().nullable().optional(),
+    lockedAt: OptionalTimestampSchema,
+    lockExpiresAt: OptionalTimestampSchema,
+    createdAt: IsoTimestampSchema,
+    updatedAt: IsoTimestampSchema,
+  })
+  .openapi({
+    description: desc('research.session', '研究会话'),
+    example: {
+      id: 1,
+      notebookId: 1,
+      topic: 'RAG eval',
+      status: 'planning',
+      currentIteration: 1,
+      maxIterations: 3,
+      createdAt: '2026-07-08T12:00:00.000Z',
+      updatedAt: '2026-07-08T12:00:00.000Z',
+    },
+  });
 export type ResearchSession = z.infer<typeof ResearchSessionSchema>;
 
-export const ResearchSessionCreateBodySchema = z.object({
-  /** Canonical topic; some clients send `goal` instead. */
-  topic: z.string().min(1).optional(),
-  goal: z.string().min(1).optional(),
-  maxIterations: z.number().int().positive().max(10).optional(),
-});
+export const ResearchSessionCreateBodySchema = z
+  .object({
+    /** Canonical topic; some clients send `goal` instead. */
+    topic: z.string().min(1).optional(),
+    goal: z.string().min(1).optional(),
+    maxIterations: z.number().int().positive().max(10).optional(),
+  })
+  .openapi({
+    description: desc('research.create_body', '创建研究会话请求体'),
+    example: { topic: 'RAG eval', maxIterations: 3 },
+  });
 export type ResearchSessionCreateBody = z.infer<typeof ResearchSessionCreateBodySchema>;
 
 /** Flat alias POST /v2/research — notebookId required. */
 export const ResearchSessionCreateSchema = ResearchSessionCreateBodySchema.extend({
   notebookId: IdSchema,
+}).openapi({
+  description: desc('research.create', '创建研究会话（flat）'),
 });
 export type ResearchSessionCreate = z.infer<typeof ResearchSessionCreateSchema>;
 
 /** Nested POST /v2/notebooks/:nid/research — optional body notebookId must match path. */
 export const ResearchSessionCreateNestedSchema = ResearchSessionCreateBodySchema.extend({
   notebookId: IdSchema.optional(),
+}).openapi({
+  description: desc('research.create_nested', '创建研究会话（nested）'),
 });
 export type ResearchSessionCreateNested = z.infer<typeof ResearchSessionCreateNestedSchema>;
 
-export const ResearchStepSchema = z.object({
-  id: IdSchema,
-  sessionId: IdSchema,
-  iteration: z.number().int().positive(),
-  type: ResearchStepTypeSchema,
-  inputData: JsonMetadataSchema.nullable().optional(),
-  outputData: JsonMetadataSchema.nullable().optional(),
-  status: ResearchStepStatusSchema,
-  createdAt: IsoTimestampSchema,
-});
+export const ResearchStepSchema = z
+  .object({
+    id: IdSchema,
+    sessionId: IdSchema,
+    iteration: z.number().int().positive(),
+    type: ResearchStepTypeSchema,
+    inputData: JsonMetadataSchema.nullable().optional(),
+    outputData: JsonMetadataSchema.nullable().optional(),
+    status: ResearchStepStatusSchema,
+    createdAt: IsoTimestampSchema,
+  })
+  .openapi({
+    description: desc('research.step', '研究步骤'),
+  });
 export type ResearchStep = z.infer<typeof ResearchStepSchema>;
 
 /** GET …/research/:id — session plus ordered steps. */
 export const ResearchSessionDetailSchema = ResearchSessionSchema.extend({
   steps: z.array(ResearchStepSchema).default([]),
+}).openapi({
+  description: desc('research.session_detail', '研究会话详情（含步骤）'),
 });
 export type ResearchSessionDetail = z.infer<typeof ResearchSessionDetailSchema>;
 
@@ -95,18 +125,22 @@ export const ResearchSessionListSchema = z.object({
 });
 
 /** HITL / control endpoints (approve, modify, skip, finish, cancel, resume). */
-export const ResearchActionResultSchema = z.object({
-  id: IdSchema,
-  status: ResearchStatusSchema,
-  approved: z.boolean().optional(),
-  modified: z.boolean().optional(),
-  skipped: z.boolean().optional(),
-  nextIteration: z.number().int().positive().optional(),
-  reportGenerated: z.literal('pending').optional(),
-  message: z.string().optional(),
-  resumed: z.boolean().optional(),
-  iteration: z.number().int().positive().optional(),
-});
+export const ResearchActionResultSchema = z
+  .object({
+    id: IdSchema,
+    status: ResearchStatusSchema,
+    approved: z.boolean().optional(),
+    modified: z.boolean().optional(),
+    skipped: z.boolean().optional(),
+    nextIteration: z.number().int().positive().optional(),
+    reportGenerated: z.literal('pending').optional(),
+    message: z.string().optional(),
+    resumed: z.boolean().optional(),
+    iteration: z.number().int().positive().optional(),
+  })
+  .openapi({
+    description: desc('research.action_result', '研究 HITL/控制操作结果'),
+  });
 export type ResearchActionResult = z.infer<typeof ResearchActionResultSchema>;
 
 // ---------------------------------------------------------------------------
@@ -121,12 +155,16 @@ export const SearchQuerySchema = z.object({
 });
 export type SearchQuery = z.infer<typeof SearchQuerySchema>;
 
-export const SearchPlanSchema = z.object({
-  iteration: z.number().int().positive(),
-  queries: z.array(SearchQuerySchema).default([]),
-  reasoning: z.string().default(''),
-  estimatedResults: z.number().int().default(10),
-});
+export const SearchPlanSchema = z
+  .object({
+    iteration: z.number().int().positive(),
+    queries: z.array(SearchQuerySchema).default([]),
+    reasoning: z.string().default(''),
+    estimatedResults: z.number().int().default(10),
+  })
+  .openapi({
+    description: desc('research.search_plan', '研究搜索计划'),
+  });
 export type SearchPlan = z.infer<typeof SearchPlanSchema>;
 
 /**
@@ -215,22 +253,31 @@ export const ResearchUserInputSchema = z.object({
 });
 
 /** POST …/research/:id/export body */
-export const ResearchExportBodySchema = z.object({
-  exportType: z.enum(['source', 'note']).optional(),
-});
+export const ResearchExportBodySchema = z
+  .object({
+    exportType: z.enum(['source', 'note']).optional(),
+  })
+  .openapi({
+    description: desc('research.export_body', '导出研究报告'),
+    example: { exportType: 'source' },
+  });
 export type ResearchExportBody = z.infer<typeof ResearchExportBodySchema>;
 
-export const ResearchExportResponseSchema = z.discriminatedUnion('exportType', [
-  z.object({
-    success: z.literal(true),
-    exportType: z.literal('note'),
-    outputId: IdSchema,
-  }),
-  z.object({
-    success: z.literal(true),
-    exportType: z.literal('source'),
-    message: z.string(),
-    sourceId: IdSchema,
-  }),
-]);
+export const ResearchExportResponseSchema = z
+  .discriminatedUnion('exportType', [
+    z.object({
+      success: z.literal(true),
+      exportType: z.literal('note'),
+      outputId: IdSchema,
+    }),
+    z.object({
+      success: z.literal(true),
+      exportType: z.literal('source'),
+      message: z.string(),
+      sourceId: IdSchema,
+    }),
+  ])
+  .openapi({
+    description: desc('research.export_response', '导出研究报告结果'),
+  });
 export type ResearchExportResponse = z.infer<typeof ResearchExportResponseSchema>;
