@@ -14,6 +14,7 @@
 
 import { z } from 'zod';
 
+import './zod-extend.js';
 import { desc } from './i18n.js';
 
 // ---------------------------------------------------------------------------
@@ -36,51 +37,55 @@ export type EnvTarget = (typeof EnvTarget)[keyof typeof EnvTarget];
 // Non-secret parameters controlling server, build, and runtime behavior.
 // ---------------------------------------------------------------------------
 
-export const BuildRunEnvSchema = z.object({
-  // --- Server ---
-  CL_SERVER_PORT: z.coerce.number().default(8032).describe(desc('env.CL_SERVER_PORT')),
+export const BuildRunEnvSchema = z
+  .object({
+    // --- Server ---
+    CL_SERVER_PORT: z.coerce.number().default(8032).describe(desc('env.CL_SERVER_PORT')),
 
-  CL_SERVER_HOST: z.string().default('127.0.0.1').describe(desc('env.CL_SERVER_HOST')),
+    CL_SERVER_HOST: z.string().default('127.0.0.1').describe(desc('env.CL_SERVER_HOST')),
 
-  // --- Paths ---
-  CL_DATA_ROOT: z.string().default('./data').describe(desc('env.CL_DATA_ROOT')),
+    // --- Paths ---
+    CL_DATA_ROOT: z.string().default('./data').describe(desc('env.CL_DATA_ROOT')),
 
-  CL_DB_PATH: z.string().default('').describe(desc('env.CL_DB_PATH')),
+    CL_DB_PATH: z.string().default('').describe(desc('env.CL_DB_PATH')),
 
-  CL_CONFIG_PATH: z.string().default('config/app.yaml').describe(desc('env.CL_CONFIG_PATH')),
+    CL_CONFIG_PATH: z.string().default('config/app.yaml').describe(desc('env.CL_CONFIG_PATH')),
 
-  CL_SECRET_PATH: z.string().default('config/secret.env').describe(desc('env.CL_SECRET_PATH')),
+    CL_SECRET_PATH: z.string().default('config/secret.env').describe(desc('env.CL_SECRET_PATH')),
 
-  // --- API endpoints ---
-  CL_CHAT_API_BASE: z.string().default('').describe(desc('env.CL_CHAT_API_BASE')),
+    // --- API endpoints ---
+    CL_CHAT_API_BASE: z.string().default('').describe(desc('env.CL_CHAT_API_BASE')),
 
-  CL_EMBEDDING_API_BASE: z.string().default('').describe(desc('env.CL_EMBEDDING_API_BASE')),
+    CL_EMBEDDING_API_BASE: z.string().default('').describe(desc('env.CL_EMBEDDING_API_BASE')),
 
-  OPENAI_BASE_URL: z.string().default('').describe(desc('env.OPENAI_BASE_URL')),
+    OPENAI_BASE_URL: z.string().default('').describe(desc('env.OPENAI_BASE_URL')),
 
-  // --- Model overrides ---
-  CL_DEFAULT_CHAT_MODEL: z.string().default('').describe(desc('env.CL_DEFAULT_CHAT_MODEL')),
+    // --- Model overrides ---
+    CL_DEFAULT_CHAT_MODEL: z.string().default('').describe(desc('env.CL_DEFAULT_CHAT_MODEL')),
 
-  CL_DEFAULT_EMBEDDING_MODEL: z
-    .string()
-    .default('')
-    .describe(desc('env.CL_DEFAULT_EMBEDDING_MODEL')),
+    CL_DEFAULT_EMBEDDING_MODEL: z
+      .string()
+      .default('')
+      .describe(desc('env.CL_DEFAULT_EMBEDDING_MODEL')),
 
-  CL_CHAT_MODEL: z.string().default('').describe(desc('env.CL_CHAT_MODEL')),
+    CL_CHAT_MODEL: z.string().default('').describe(desc('env.CL_CHAT_MODEL')),
 
-  CL_CHAT_LIGHT_MODEL: z.string().default('').describe(desc('env.CL_CHAT_LIGHT_MODEL')),
+    CL_CHAT_LIGHT_MODEL: z.string().default('').describe(desc('env.CL_CHAT_LIGHT_MODEL')),
 
-  CL_EMBEDDING_MODEL: z.string().default('').describe(desc('env.CL_EMBEDDING_MODEL')),
+    CL_EMBEDDING_MODEL: z.string().default('').describe(desc('env.CL_EMBEDDING_MODEL')),
 
-  // --- Search ---
-  CL_SEARXNG_HOST: z.string().default('').describe(desc('env.CL_SEARXNG_HOST')),
+    // --- Search ---
+    CL_SEARXNG_HOST: z.string().default('').describe(desc('env.CL_SEARXNG_HOST')),
 
-  // --- Frontend ---
-  VITE_API_PROXY_TARGET: z
-    .string()
-    .default('http://127.0.0.1:8032')
-    .describe(desc('env.VITE_API_PROXY_TARGET')),
-});
+    // --- Frontend ---
+    VITE_API_PROXY_TARGET: z
+      .string()
+      .default('http://127.0.0.1:8032')
+      .describe(desc('env.VITE_API_PROXY_TARGET')),
+  })
+  .openapi({
+    description: desc('env.build_run', '构建/运行环境变量（→ .env）'),
+  });
 
 export type BuildRunEnv = z.infer<typeof BuildRunEnvSchema>;
 
@@ -90,17 +95,21 @@ export type BuildRunEnv = z.infer<typeof BuildRunEnvSchema>;
 // variants. Listed at the bottom of .env.example under "# --- Deprecated ---".
 // ---------------------------------------------------------------------------
 
-export const DeprecatedEnvSchema = z.object({
-  SEARXNG_HOST: z.string().default('').describe(desc('env.SEARXNG_HOST')),
+export const DeprecatedEnvSchema = z
+  .object({
+    SEARXNG_HOST: z.string().default('').describe(desc('env.SEARXNG_HOST')),
 
-  POSTGRES_PASSWORD: z.string().default('').describe(desc('env.POSTGRES_PASSWORD')),
+    POSTGRES_PASSWORD: z.string().default('').describe(desc('env.POSTGRES_PASSWORD')),
 
-  JINA_API_KEY: z.string().default('').describe(desc('env.JINA_API_KEY')),
+    JINA_API_KEY: z.string().default('').describe(desc('env.JINA_API_KEY')),
 
-  FIRECRAWL_API_KEY: z.string().default('').describe(desc('env.FIRECRAWL_API_KEY')),
+    FIRECRAWL_API_KEY: z.string().default('').describe(desc('env.FIRECRAWL_API_KEY')),
 
-  BROWSERLESS_TOKEN: z.string().default('').describe(desc('env.BROWSERLESS_TOKEN')),
-});
+    BROWSERLESS_TOKEN: z.string().default('').describe(desc('env.BROWSERLESS_TOKEN')),
+  })
+  .openapi({
+    description: desc('env.deprecated', '已弃用环境变量（兼容保留）'),
+  });
 
 export type DeprecatedEnv = z.infer<typeof DeprecatedEnvSchema>;
 
@@ -109,22 +118,26 @@ export type DeprecatedEnv = z.infer<typeof DeprecatedEnvSchema>;
 // API keys and tokens. This file is gitignored.
 // ---------------------------------------------------------------------------
 
-export const SecretsEnvSchema = z.object({
-  CL_CHAT_API_KEY: z.string().default('').describe(desc('env.CL_CHAT_API_KEY')),
+export const SecretsEnvSchema = z
+  .object({
+    CL_CHAT_API_KEY: z.string().default('').describe(desc('env.CL_CHAT_API_KEY')),
 
-  CL_EMBEDDING_API_KEY: z.string().default('').describe(desc('env.CL_EMBEDDING_API_KEY')),
+    CL_EMBEDDING_API_KEY: z.string().default('').describe(desc('env.CL_EMBEDDING_API_KEY')),
 
-  CRYSTALITH_API_KEY: z.string().default('').describe(desc('env.CRYSTALITH_API_KEY')),
+    CRYSTALITH_API_KEY: z.string().default('').describe(desc('env.CRYSTALITH_API_KEY')),
 
-  OPENAI_API_KEY: z.string().default('').describe(desc('env.OPENAI_API_KEY')),
+    OPENAI_API_KEY: z.string().default('').describe(desc('env.OPENAI_API_KEY')),
 
-  ANTHROPIC_API_KEY: z.string().default('').describe(desc('env.ANTHROPIC_API_KEY')),
+    ANTHROPIC_API_KEY: z.string().default('').describe(desc('env.ANTHROPIC_API_KEY')),
 
-  GOOGLE_GENERATIVE_AI_API_KEY: z
-    .string()
-    .default('')
-    .describe(desc('env.GOOGLE_GENERATIVE_AI_API_KEY')),
-});
+    GOOGLE_GENERATIVE_AI_API_KEY: z
+      .string()
+      .default('')
+      .describe(desc('env.GOOGLE_GENERATIVE_AI_API_KEY')),
+  })
+  .openapi({
+    description: desc('env.secrets', '密钥环境变量（→ config/secret.env）'),
+  });
 
 export type SecretsEnv = z.infer<typeof SecretsEnvSchema>;
 
