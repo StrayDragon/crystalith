@@ -46,7 +46,7 @@ interface StudioPanelProps {
   onDeleteOutput: (outputId: number) => void;
   onSelectOutput: (outputId: number) => void;
   onSelectOutputFullscreen?: (outputId: number) => void;
-  onSaveNote?: (content: string) => void;
+  onSaveNote?: (content: string) => void | Promise<void>;
   onConvertToSource?: (outputId: number) => void;
   onJumpToCitation?: (citation: Citation, citations: Citation[]) => void;
   isConnected: boolean;
@@ -210,6 +210,7 @@ function StudioPanel({
 }: StudioPanelProps) {
   const [noteEditorOpen, setNoteEditorOpen] = useState(false);
   const [noteEditorContent, setNoteEditorContent] = useState('');
+  const [noteSaving, setNoteSaving] = useState(false);
   const [toolsPopoverOpen, setToolsPopoverOpen] = useState(false);
   const noteEditorBodyRef = useRef<HTMLDivElement | null>(null);
 
@@ -239,12 +240,19 @@ function StudioPanel({
     setNoteEditorContent('');
   }, []);
 
-  const handleSaveNote = useCallback(() => {
-    if (noteEditorContent.trim() && onSaveNote) {
-      onSaveNote(noteEditorContent.trim());
+  const handleSaveNote = useCallback(async () => {
+    const trimmed = noteEditorContent.trim();
+    if (!trimmed || !onSaveNote || noteSaving) return;
+    setNoteSaving(true);
+    try {
+      await onSaveNote(trimmed);
+      handleCloseNoteEditor();
+    } catch {
+      // Error toast/state handled by caller; keep dialog open for retry.
+    } finally {
+      setNoteSaving(false);
     }
-    handleCloseNoteEditor();
-  }, [noteEditorContent, onSaveNote, handleCloseNoteEditor]);
+  }, [noteEditorContent, onSaveNote, noteSaving, handleCloseNoteEditor]);
 
   useEffect(() => {
     if (!noteEditorOpen) return;
@@ -378,12 +386,14 @@ function StudioPanel({
           </Button>
           <Button
             variant="filled"
-            onClick={handleSaveNote}
-            disabled={!noteEditorContent.trim()}
+            onClick={() => {
+              void handleSaveNote();
+            }}
+            disabled={!noteEditorContent.trim() || noteSaving || !onSaveNote}
             className="flex items-center gap-2 rounded-full bg-slate-900 normal-case"
           >
             <SaveIcon className="h-4 w-4" />
-            保存笔记
+            {noteSaving ? '保存中…' : '保存笔记'}
           </Button>
         </DialogFooter>
       </Dialog>

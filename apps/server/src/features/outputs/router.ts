@@ -10,6 +10,7 @@ import {
   OutputSchema,
   OutputsPageSchema,
   PaginationParamsSchema,
+  ParagraphContentSchema,
   CitationSchema,
   ToolOutputTypeSchema,
   type Citation,
@@ -214,7 +215,8 @@ function serializeOutputListItem(row: typeof outputs.$inferSelect) {
     }
     const markdown = typeof content.markdown === 'string' ? content.markdown : null;
     const summary = typeof content.summary === 'string' ? content.summary : null;
-    const rawPreview = (markdown ?? summary ?? '').trim();
+    const text = typeof content.text === 'string' ? content.text : null;
+    const rawPreview = (markdown ?? summary ?? text ?? '').trim();
     if (rawPreview) {
       preview =
         rawPreview.length > PREVIEW_MAX ? `${rawPreview.slice(0, PREVIEW_MAX)}…` : rawPreview;
@@ -287,6 +289,7 @@ async function handleGenerateOutput(
     chunkIds,
     sourceIds,
     prompt: promptRaw,
+    content: contentRaw,
     preference,
     topK,
     minScore,
@@ -295,14 +298,51 @@ async function handleGenerateOutput(
 
   // Normalize output type to uppercase (API accepts both 'faq' and 'FAQ')
   const normalizedType = type.toUpperCase();
-  const parsedType = ToolOutputTypeSchema.safeParse(normalizedType);
-  if (!parsedType.success) {
-    throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Unsupported output type: ${type}`);
-  }
 
   // Verify notebook
   const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
   if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
+
+  // Manual markdown note: schema already allows `content`; honor it for PARAGRAPH
+  // without LLM / sourceIds (Studio「添加笔记」).
+  if (normalizedType === 'PARAGRAPH' && contentRaw !== null && isRecord(contentRaw)) {
+    const parsedContent = ParagraphContentSchema.safeParse(contentRaw);
+    if (!parsedContent.success) {
+      throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Invalid PARAGRAPH content');
+    }
+    const text = parsedContent.data.text?.trim() ?? '';
+    if (!text) {
+      throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'PARAGRAPH content.text must not be empty');
+    }
+    const title =
+      (typeof parsedContent.data.title === 'string' && parsedContent.data.title.trim()) ||
+      text
+        .split('\n')
+        .find((line) => line.trim())
+        ?.replace(/^#+\s*/u, '')
+        .trim()
+        .slice(0, 80) ||
+      '笔记';
+    const content = { ...parsedContent.data, title, text };
+    const output = db()
+      .insert(outputs)
+      .values({
+        notebookId,
+        type: 'PARAGRAPH',
+        prompt: promptRaw?.trim() || title,
+        chunkIds: chunkIds?.length ? chunkIds : [],
+        content,
+      })
+      .returning()
+      .get();
+    set.status = 201;
+    return serializeOutput(output);
+  }
+
+  const parsedType = ToolOutputTypeSchema.safeParse(normalizedType);
+  if (!parsedType.success) {
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Unsupported output type: ${type}`);
+  }
 
   // c50: reject SLIDES — v1 api.py:205-206 returns 400 "Use slides endpoints
   // for SLIDES output". SLIDES has its own studio pipeline; the generic

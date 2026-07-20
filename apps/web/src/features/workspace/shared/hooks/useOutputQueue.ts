@@ -702,5 +702,6 @@ export function useOutputQueue({
     clearOutputs,
     fetchOutput,
     ensureOutputDetail,
+    mutateOutputs,
   };
 }
