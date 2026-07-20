@@ -3,7 +3,13 @@
 // the v2 server can feed the existing renderers without translation.
 import { z } from 'zod';
 
-import { IdSchema, IsoTimestampSchema, JsonMetadataSchema, PaginatedSchema } from './common.js';
+import {
+  CitationSchema,
+  IdSchema,
+  IsoTimestampSchema,
+  JsonMetadataSchema,
+  PaginatedSchema,
+} from './common.js';
 import { desc } from './i18n.js';
 
 // ---------------------------------------------------------------------------
@@ -386,6 +392,32 @@ export const OutputExportFormatQuerySchema = z.object({
   format: z.enum(['markdown', 'json']).default('markdown'),
 });
 export type OutputExportFormatQuery = z.infer<typeof OutputExportFormatQuerySchema>;
+
+/** Source row meta embedded in output/QA JSON exports. */
+export const ExportSourceMetaSchema = z.object({
+  sourceId: IdSchema,
+  sourceName: z.string(),
+  mimeType: z.string().nullable().optional(),
+  parserType: z.string().nullable().optional(),
+});
+export type ExportSourceMeta = z.infer<typeof ExportSourceMetaSchema>;
+
+/** JSON body for GET …/outputs/:id/export?format=json (markdown returns raw Response). */
+export const OutputExportJsonResponseSchema = z
+  .object({
+    notebookId: IdSchema,
+    outputId: IdSchema,
+    outputType: OutputTypeSchema,
+    prompt: z.string().nullable(),
+    content: z.unknown().nullable(),
+    citations: z.array(CitationSchema),
+    sources: z.array(ExportSourceMetaSchema),
+    exportedAt: IsoTimestampSchema,
+  })
+  .openapi({
+    description: desc('output.export_json', '输出 JSON 导出'),
+  });
+export type OutputExportJsonResponse = z.infer<typeof OutputExportJsonResponseSchema>;
 
 /** Metadata describing an output type for UI selectors (tone/prompt/isTool). */
 export const OutputTypeMetaSchema = z.object({

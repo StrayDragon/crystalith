@@ -1,8 +1,10 @@
 import {
   QaAnswerSchema,
+  QaExportJsonResponseSchema,
   QaExportQuerySchema,
   QaNestedRequestSchema,
   QaRequestSchema,
+  type Citation,
   type QaNestedRequest,
   type QaRequest,
 } from '@crystalith/shared';
@@ -14,6 +16,7 @@ import {
 // c36: deterministic retrieval (retrieveAndJudge) + evidence short-circuit.
 import { and, eq, inArray } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
+import { z } from 'zod';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
@@ -25,6 +28,12 @@ import { requirePositiveIntId } from '../../shared/ids.ts';
 import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import { streamQa, generateQaDirect } from './handler.ts';
 import { resolvePreset, parsePromptDirective } from './presets.ts';
+
+/** JSON export is Zod-validated; markdown download is a raw Response. */
+const QaExportResponseSchema = z.union([
+  QaExportJsonResponseSchema,
+  z.custom<Response>((value) => value instanceof Response),
+]);
 
 // ---------------------------------------------------------------------------
 // OpenAPI docs
@@ -358,7 +367,7 @@ function handleQaExport(query: QaExportQuery, pathNotebookId?: number) {
     .find((m) => m.createdAt <= assistantMessage.createdAt);
   const question = precedingUser?.content ?? null;
 
-  const citations = (assistantMessage.citations as unknown[] | null) ?? [];
+  const citations = (assistantMessage.citations as Citation[] | null) ?? [];
 
   // c48: resolve notebookId from session (v1 export is notebook-scoped,
   // api.py:669 filters sources by notebookId) for sources meta + top-level.
@@ -506,7 +515,7 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       return handleQaExport(query, nid);
     },
-    { query: QaExportQuerySchema },
+    { query: QaExportQuerySchema, response: QaExportResponseSchema },
   )
 
   // ---- Flat deprecated aliases (c67 notebookId required on body) ----
@@ -515,6 +524,9 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
     response: { 200: QaAnswerSchema },
   })
   .post('/qa/stream', async ({ body }) => handleQaStream(body), { body: QaRequestSchema })
-  .get('/qa/export', ({ query }) => handleQaExport(query), { query: QaExportQuerySchema });
+  .get('/qa/export', ({ query }) => handleQaExport(query), {
+    query: QaExportQuerySchema,
+    response: QaExportResponseSchema,
+  });
 
 registerApiDoc(apiDocs);

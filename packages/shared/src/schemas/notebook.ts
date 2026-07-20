@@ -32,6 +32,16 @@ export const NotebookCreateSchema = z
   });
 export type NotebookCreate = z.infer<typeof NotebookCreateSchema>;
 
+/** Optional `?templateId=` on POST /v2/notebooks (apply template sessions/tags on create). */
+export const NotebookCreateQuerySchema = z
+  .object({
+    templateId: z.coerce.number().int().positive().optional(),
+  })
+  .openapi({
+    description: desc('notebook.create_query', '创建 Notebook 可选查询参数'),
+  });
+export type NotebookCreateQuery = z.infer<typeof NotebookCreateQuerySchema>;
+
 export const NotebookUpdateSchema = z
   .object({
     name: z.string().min(1).max(255),
