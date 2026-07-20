@@ -3,10 +3,10 @@
  *
  * Eden treaty doesn't natively support SSE/streaming endpoints.
  * This adapter provides `fetch()`-based SSE consumption for streaming
- * endpoints like /v2/qa/stream, /v2/research/:id/stream, etc.
+ * endpoints like /v2/notebooks/:nid/qa/stream, /v2/notebooks/:nid/research/:id/stream, etc.
  *
  * Usage:
- *   const stream = streamRequest('/v2/qa/stream', { method: 'POST', body: {...} });
+ *   const stream = streamRequest(`/v2/notebooks/${nid}/qa/stream`, { method: 'POST', body: {...} });
  *   for await (const event of stream) { ... }
  */
 

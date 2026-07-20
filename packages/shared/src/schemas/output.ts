@@ -261,8 +261,8 @@ export const OutputSchema = z.object({
 });
 export type Output = z.infer<typeof OutputSchema>;
 
-export const OutputGenerateRequestSchema = z.object({
-  notebookId: IdSchema,
+/** Body fields for generate (without notebook scope). */
+export const OutputGenerateBodySchema = z.object({
   /** Output type id; accepts lower/upper case (normalized server-side). */
   type: z.string().min(1),
   prompt: z.string().nullable().optional(),
@@ -274,18 +274,42 @@ export const OutputGenerateRequestSchema = z.object({
   minScore: z.number().min(0).max(1).optional(),
   modelId: z.string().optional(),
 });
+export type OutputGenerateBody = z.infer<typeof OutputGenerateBodySchema>;
+
+/** Flat alias POST /v2/outputs — notebookId required (c67). */
+export const OutputGenerateRequestSchema = OutputGenerateBodySchema.extend({
+  notebookId: IdSchema,
+});
 export type OutputGenerateRequest = z.infer<typeof OutputGenerateRequestSchema>;
+
+/**
+ * Nested POST /v2/notebooks/:nid/outputs — path `:nid` is SSOT;
+ * optional body notebookId must match when present (c69).
+ */
+export const OutputGenerateNestedRequestSchema = OutputGenerateBodySchema.extend({
+  notebookId: IdSchema.optional(),
+});
+export type OutputGenerateNestedRequest = z.infer<typeof OutputGenerateNestedRequestSchema>;
 
 export const OutputListSchema = z.object({
   outputs: z.array(OutputSchema),
 });
 
-/** Query for GET /v2/outputs/:id/export — notebook scope + format (c67). */
+/** Query for flat GET /v2/outputs/:id/export — notebook scope + format (c67). */
 export const OutputExportQuerySchema = z.object({
   notebookId: z.coerce.number().int().positive(),
   format: z.enum(['markdown', 'json']).default('markdown'),
 });
 export type OutputExportQuery = z.infer<typeof OutputExportQuerySchema>;
+
+/**
+ * Nested GET /v2/notebooks/:nid/outputs/:id/export — format only;
+ * path `:nid` is notebook SSOT (c69).
+ */
+export const OutputExportFormatQuerySchema = z.object({
+  format: z.enum(['markdown', 'json']).default('markdown'),
+});
+export type OutputExportFormatQuery = z.infer<typeof OutputExportFormatQuerySchema>;
 
 /** Metadata describing an output type for UI selectors (tone/prompt/isTool). */
 export const OutputTypeMetaSchema = z.object({

@@ -125,7 +125,7 @@ test('sendMessage returns error when no notebook is active', async () => {
 test('sendMessage non-streaming path stores assistant message and shared_state mounts', async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v2/qa', async ({ request }) => {
+    http.post('*/v2/notebooks/*/qa', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         answer: 'Answer',
@@ -166,7 +166,6 @@ test('sendMessage non-streaming path stores assistant message and shared_state m
   expect(result.current.citations).toHaveLength(1);
   expect(capturedBody).toEqual({
     question: 'Hello',
-    notebookId: 1,
     sessionId: 123,
   });
 });
@@ -174,7 +173,7 @@ test('sendMessage non-streaming path stores assistant message and shared_state m
 test('sendMessage passes selected source ids', async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v2/qa', async ({ request }) => {
+    http.post('*/v2/notebooks/*/qa', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         answer: 'Answer',
@@ -206,7 +205,6 @@ test('sendMessage passes selected source ids', async () => {
 
   expect(capturedBody).toEqual({
     question: 'Hello',
-    notebookId: 1,
     sessionId: 456,
     sourceIds: [101, 102],
   });
@@ -215,7 +213,7 @@ test('sendMessage passes selected source ids', async () => {
 test('sendMessage omits sourceIds when nothing is selected (ungrounded)', async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v2/qa', async ({ request }) => {
+    http.post('*/v2/notebooks/*/qa', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         answer: 'Ungrounded answer',
@@ -247,7 +245,6 @@ test('sendMessage omits sourceIds when nothing is selected (ungrounded)', async 
 
   expect(capturedBody).toEqual({
     question: 'Chat freely',
-    notebookId: 1,
     sessionId: 789,
   });
   expect(capturedBody).not.toHaveProperty('sourceIds');
@@ -331,12 +328,11 @@ test('streaming path applies snapshot and delta with backend message id', async 
   expect(result.current.messages[1].id).toBe('9003');
   expect(result.current.messages[1].content).toBe('Answer');
   expect(streamRequestMock).toHaveBeenCalledWith(
-    '/v2/qa/stream',
+    '/v2/notebooks/1/qa/stream',
     expect.objectContaining({
       method: 'POST',
       body: expect.objectContaining({
         question: 'Hello streaming',
-        notebookId: 1,
         sessionId: 123,
       }),
     }),

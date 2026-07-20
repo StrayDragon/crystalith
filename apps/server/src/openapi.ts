@@ -23,6 +23,8 @@ export interface OpenApiRoute {
   summary?: string;
   description?: string;
   tags?: string[];
+  /** When true, marks the OpenAPI operation as deprecated (flat aliases in c69). */
+  deprecated?: boolean;
   request?: {
     body?: z.ZodTypeAny;
     params?: Record<string, z.ZodTypeAny>;
@@ -67,6 +69,9 @@ export function registerApiDoc(routes: OpenApiRoute[]): void {
       tags: route.tags ?? [],
       description: route.summary ?? '',
     };
+    if (route.deprecated) {
+      pathItem.deprecated = true;
+    }
 
     if (route.request?.body) {
       pathItem.requestBody = {

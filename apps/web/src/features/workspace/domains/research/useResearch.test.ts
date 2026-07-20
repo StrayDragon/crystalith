@@ -20,7 +20,7 @@ beforeEach(() => {
 
 test('fetchSessions stores list data', async () => {
   server.use(
-    http.get('*/v2/research', () =>
+    http.get('*/v2/notebooks/*/research', () =>
       HttpResponse.json({
         items: [
           {
@@ -55,11 +55,10 @@ test('fetchSessions stores list data', async () => {
 
 test('createSession updates sessions and activeSession', async () => {
   server.use(
-    http.post('*/v2/research', async ({ request }) => {
+    http.post('*/v2/notebooks/*/research', async ({ request }) => {
       const body = (await request.json()) as Record<string, unknown>;
       expect(body).toEqual({
         topic: 'New Topic',
-        notebookId: 1,
         maxIterations: 4,
       });
       return HttpResponse.json({
@@ -91,7 +90,7 @@ test('createSession updates sessions and activeSession', async () => {
 
 test('deleteSession removes session and clears active session', async () => {
   server.use(
-    http.post('*/v2/research', async ({ request }) => {
+    http.post('*/v2/notebooks/*/research', async ({ request }) => {
       const body = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         id: 22,
@@ -104,7 +103,10 @@ test('deleteSession removes session and clears active session', async () => {
         updatedAt: '2024-01-01T00:00:00Z',
       });
     }),
-    http.delete('*/v2/research/:research_id', () => new HttpResponse(null, { status: 204 })),
+    http.delete(
+      '*/v2/notebooks/*/research/:research_id',
+      () => new HttpResponse(null, { status: 204 }),
+    ),
   );
 
   const { result } = renderHook(() => useResearch(1));
@@ -147,7 +149,7 @@ test('SSE reconnect does not use stale session state after completion', async ()
   });
 
   server.use(
-    http.get('*/v2/research', () => {
+    http.get('*/v2/notebooks/*/research', () => {
       listCount += 1;
       if (listCount === 1) {
         return HttpResponse.json({ items: [baseSession], total: 1, offset: 0, limit: 200 });
@@ -173,7 +175,7 @@ test('SSE reconnect does not use stale session state after completion', async ()
     });
 
     expect(streamRequestMock).toHaveBeenCalledTimes(1);
-    expect(streamRequestMock.mock.calls[0][0]).toContain('notebookId=1');
+    expect(streamRequestMock.mock.calls[0][0]).toBe('/v2/notebooks/1/research/1/stream');
 
     await act(async () => {
       await result.current.fetchSessions();

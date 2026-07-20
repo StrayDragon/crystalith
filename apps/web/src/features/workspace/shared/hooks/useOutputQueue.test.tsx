@@ -72,7 +72,7 @@ beforeEach(() => {
   });
 
   server.use(
-    http.get('*/v2/outputs', () =>
+    http.get('*/v2/notebooks/*/outputs', () =>
       HttpResponse.json({ items: [], total: 0, offset: 0, limit: 200 }),
     ),
   );
@@ -112,7 +112,7 @@ function useOutputQueueHarness({ isConnected }: { isConnected: boolean }) {
 test('enqueueOutputJob processes and updates outputs', async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v2/outputs', async ({ request }) => {
+    http.post('*/v2/notebooks/*/outputs', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         id: 10,
@@ -149,7 +149,6 @@ test('enqueueOutputJob processes and updates outputs', async () => {
   });
 
   expect(capturedBody).toEqual({
-    notebookId: 1,
     type: 'FAQ',
     prompt: 'hello',
     sourceIds: [1],
@@ -161,7 +160,7 @@ test('enqueueOutputJob propagates generation preference', async () => {
 
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v2/outputs', async ({ request }) => {
+    http.post('*/v2/notebooks/*/outputs', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         id: 12,
@@ -194,7 +193,6 @@ test('enqueueOutputJob propagates generation preference', async () => {
   });
 
   expect(capturedBody).toEqual({
-    notebookId: 1,
     type: 'FAQ',
     prompt: 'hello',
     sourceIds: [1],
@@ -208,7 +206,7 @@ test('cancelOutputJob aborts running output job', async () => {
   let deleteCalled = false;
   try {
     server.use(
-      http.post('*/v2/outputs', async () => {
+      http.post('*/v2/notebooks/*/outputs', async () => {
         await delay(200);
         return HttpResponse.json({
           id: 11,
@@ -221,7 +219,7 @@ test('cancelOutputJob aborts running output job', async () => {
           updatedAt: '2024-01-01T00:00:00Z',
         });
       }),
-      http.delete('*/v2/outputs/:id', () => {
+      http.delete('*/v2/notebooks/*/outputs/:id', () => {
         deleteCalled = true;
         return new HttpResponse(null, { status: 204 });
       }),
@@ -316,7 +314,7 @@ test('enqueueSlidesJob settles when outline+markdown generation completes', asyn
   let draftStage: 'input' | 'outline' | 'markdown' = 'input';
 
   server.use(
-    http.post('*/v2/studio/slides', async ({ request }) => {
+    http.post('*/v2/notebooks/*/studio/slides', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         id: 5,
@@ -337,15 +335,15 @@ test('enqueueSlidesJob settles when outline+markdown generation completes', asyn
         updatedAt: '2024-01-01T00:00:00Z',
       });
     }),
-    http.post('*/v2/studio/slides/:id/outline', () => {
+    http.post('*/v2/notebooks/*/studio/slides/:id/outline', () => {
       draftStage = 'outline';
       return HttpResponse.json({ ok: true });
     }),
-    http.post('*/v2/studio/slides/:id/markdown', () => {
+    http.post('*/v2/notebooks/*/studio/slides/:id/markdown', () => {
       draftStage = 'markdown';
       return HttpResponse.json({ ok: true });
     }),
-    http.get('*/v2/studio/slides/:id', () => {
+    http.get('*/v2/notebooks/*/studio/slides/:id', () => {
       if (draftStage === 'outline') {
         return HttpResponse.json({
           id: 5,
@@ -385,7 +383,7 @@ test('enqueueSlidesJob settles when outline+markdown generation completes', asyn
         updatedAt: '2024-01-01T00:00:02Z',
       });
     }),
-    http.get('*/v2/outputs', () =>
+    http.get('*/v2/notebooks/*/outputs', () =>
       HttpResponse.json(
         draftStage === 'markdown'
           ? {
@@ -437,7 +435,6 @@ test('enqueueSlidesJob settles when outline+markdown generation completes', asyn
   });
 
   expect(capturedBody).toEqual({
-    notebookId: 1,
     title: 'Deck',
     prompt: 'Outline',
     sourceIds: [1],

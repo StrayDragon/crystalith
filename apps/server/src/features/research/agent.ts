@@ -20,7 +20,7 @@ import {
   type ResearchPlanLlm,
 } from '@crystalith/shared';
 import { generateObject, streamText } from 'ai';
-import { eq } from 'drizzle-orm';
+import { and, eq, notInArray } from 'drizzle-orm';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
@@ -476,7 +476,12 @@ export async function runResearchCore(
         db()
           .update(researchSessions)
           .set({ status: 'waiting_user' })
-          .where(eq(researchSessions.id, sessionId))
+          .where(
+            and(
+              eq(researchSessions.id, sessionId),
+              notInArray(researchSessions.status, ['cancelled', 'completed']),
+            ),
+          )
           .run();
 
         decision = await waitForApproval(state, plan, signal);
@@ -851,7 +856,12 @@ async function waitForApproval(
   db()
     .update(researchSessions)
     .set({ status: 'waiting_user' })
-    .where(eq(researchSessions.id, state.sessionId))
+    .where(
+      and(
+        eq(researchSessions.id, state.sessionId),
+        notInArray(researchSessions.status, ['cancelled', 'completed']),
+      ),
+    )
     .run();
 
   const maxWait = 600_000;

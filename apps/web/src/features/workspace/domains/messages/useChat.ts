@@ -243,14 +243,13 @@ export function useChat({
       try {
         const body: Record<string, unknown> = {
           question: text,
-          notebookId: notebookId,
           sessionId: sessionId,
         };
         if (explicitSourceIds.length) {
           (body as Record<string, unknown>).sourceIds = explicitSourceIds;
         }
 
-        const stream = streamRequest('/v2/qa/stream', {
+        const stream = streamRequest(`/v2/notebooks/${notebookId}/qa/stream`, {
           method: 'POST',
           body,
           signal: abortController.signal,
@@ -407,18 +406,18 @@ export function useChat({
     try {
       const qaBody: {
         question: string;
-        notebookId: number;
         sessionId: number;
         sourceIds?: number[];
       } = {
         question: text,
-        notebookId: notebookId,
         sessionId: sessionId,
       };
       if (explicitSourceIds.length) {
         qaBody.sourceIds = explicitSourceIds;
       }
-      const { data: qaResult, error: qaErr } = await api.v2.qa.post(qaBody);
+      const { data: qaResult, error: qaErr } = await api.v2
+        .notebooks({ nid: notebookId })
+        .qa.post(qaBody);
       if (qaErr)
         throw new Error(typeof qaErr === 'string' ? qaErr : typeof qaErr === 'string' ? qaErr : '');
       const result = qaResult! as Record<string, unknown>;

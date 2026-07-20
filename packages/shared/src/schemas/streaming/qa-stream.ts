@@ -48,25 +48,33 @@ export const QaStreamErrorEventSchema = z.object({
 export const QaDirectiveSchema = z.enum(['Sources_only', 'Knowledge_only', 'Mixed']);
 export type QaDirective = z.infer<typeof QaDirectiveSchema>;
 
-export const QaRequestSchema = z
-  .object({
-    question: z.string().min(1).optional(),
-    /** Alias used by some clients for `question`. */
-    content: z.string().min(1).optional(),
-    notebookId: IdSchema,
-    sessionId: IdSchema.optional(),
-    preset: z.string().max(32).optional(),
-    directive: QaDirectiveSchema.optional(),
-    strategyId: z.string().optional(),
-    topK: z.number().int().positive().max(50).optional(),
-    minScore: z.number().min(0).max(1).optional(),
-    sourceIds: z.array(IdSchema).optional(),
-    /** Legacy stream-only fields (ignored by server if present). */
-    history: z.array(ChatTurnSchema).optional(),
-    modelId: z.string().optional(),
-  })
-  .refine((b) => !!(b.question ?? b.content), { message: 'question is required' });
+const QaRequestFieldsSchema = z.object({
+  question: z.string().min(1).optional(),
+  /** Alias used by some clients for `question`. */
+  content: z.string().min(1).optional(),
+  sessionId: IdSchema.optional(),
+  preset: z.string().max(32).optional(),
+  directive: QaDirectiveSchema.optional(),
+  strategyId: z.string().optional(),
+  topK: z.number().int().positive().max(50).optional(),
+  minScore: z.number().min(0).max(1).optional(),
+  sourceIds: z.array(IdSchema).optional(),
+  /** Legacy stream-only fields (ignored by server if present). */
+  history: z.array(ChatTurnSchema).optional(),
+  modelId: z.string().optional(),
+});
+
+/** Flat alias POST /v2/qa — notebookId required. */
+export const QaRequestSchema = QaRequestFieldsSchema.extend({
+  notebookId: IdSchema,
+}).refine((b) => !!(b.question ?? b.content), { message: 'question is required' });
 export type QaRequest = z.infer<typeof QaRequestSchema>;
+
+/** Nested POST /v2/notebooks/:nid/qa — optional body notebookId must match path. */
+export const QaNestedRequestSchema = QaRequestFieldsSchema.extend({
+  notebookId: IdSchema.optional(),
+}).refine((b) => !!(b.question ?? b.content), { message: 'question is required' });
+export type QaNestedRequest = z.infer<typeof QaNestedRequestSchema>;
 
 /** @deprecated Prefer QaRequestSchema — kept as alias for older imports. */
 export const QaStreamRequestSchema = QaRequestSchema;

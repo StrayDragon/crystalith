@@ -92,13 +92,12 @@ async function runSlidesGenerate(
   const timeout = AbortSignal.timeout(SLIDES_GENERATE_TIMEOUT_MS);
   const combined = signal != null ? AbortSignal.any([signal, timeout]) : timeout;
 
-  const slides = api.v2.studio.slides({ id: slideId });
+  const slides = api.v2.notebooks({ nid: notebookId }).studio.slides({ id: slideId });
   const fetchOpts = edenFetchOptions(combined);
-  const query = { notebookId };
   const { error } =
     stage === 'outline'
-      ? await slides.outline.post(undefined, { ...fetchOpts, query })
-      : await slides.markdown.post(undefined, { ...fetchOpts, query });
+      ? await slides.outline.post(undefined, fetchOpts)
+      : await slides.markdown.post(undefined, fetchOpts);
 
   if (error) {
     const rawValue =
@@ -110,9 +109,10 @@ async function runSlidesGenerate(
   }
 
   // Confirm stage settled (server returns after completion, but re-check for safety)
-  const { data: draft, error: draftErr } = await api.v2.studio.slides({ id: slideId }).get({
-    query: { notebookId },
-  });
+  const { data: draft, error: draftErr } = await api.v2
+    .notebooks({ nid: notebookId })
+    .studio.slides({ id: slideId })
+    .get();
   if (draftErr)
     throw new Error(
       typeof draftErr === 'string' ? draftErr : typeof draftErr === 'string' ? draftErr : '',
@@ -153,9 +153,11 @@ export function useOutputQueue({
   } = useSWR(
     activeNotebookId && isConnected ? ['workspace/outputs', activeNotebookId] : null,
     async () => {
-      const { data, error: fetchErr } = await api.v2.outputs.get({
-        query: { notebookId: activeNotebookId ?? 0, offset: 0, limit: 200 },
-      });
+      const { data, error: fetchErr } = await api.v2
+        .notebooks({ nid: activeNotebookId! })
+        .outputs.get({
+          query: { offset: 0, limit: 200 },
+        });
       if (fetchErr)
         throw new Error(
           typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
@@ -285,13 +287,14 @@ export function useOutputQueue({
       }
 
       const payload = {
-        notebookId: activeNotebookId,
         title: title.trim() || undefined,
         prompt: prompt.trim() || undefined,
         sourceIds,
         generationConfig: normalizeSlideGenerationConfig(generationConfig),
       };
-      const { data: created, error: createErr } = await api.v2.studio.slides.post(payload);
+      const { data: created, error: createErr } = await api.v2
+        .notebooks({ nid: activeNotebookId })
+        .studio.slides.post(payload);
       if (createErr)
         throw new Error(
           typeof createErr === 'string'
@@ -375,14 +378,14 @@ export function useOutputQueue({
         } else if (job.notebookId) {
           const preference = job.preference;
           const body = {
-            notebookId: job.notebookId,
             type: job.type,
             prompt: job.prompt || undefined,
             sourceIds: job.sourceIds.length ? job.sourceIds : undefined,
             modelId: job.modelId || undefined,
             ...(preference ? { preference } : {}),
           };
-          const { data: response, error: createErr } = await api.v2.outputs.post(
+          const nbOutputs = api.v2.notebooks({ nid: job.notebookId }).outputs;
+          const { data: response, error: createErr } = await nbOutputs.post(
             body,
             edenFetchOptions(abortController.signal),
           );
@@ -400,9 +403,7 @@ export function useOutputQueue({
             const createdId = (response as { id?: number } | null)?.id;
             if (typeof createdId === 'number') {
               try {
-                await api.v2.outputs({ id: createdId }).delete(null, {
-                  query: { notebookId: job.notebookId },
-                });
+                await nbOutputs({ id: createdId }).delete();
               } catch {
                 // Best-effort cleanup; UI already shows cancelled.
               }
@@ -565,9 +566,10 @@ export function useOutputQueue({
       s.setOutputs(s.outputs.filter((item) => item.id !== outputId));
 
       try {
-        const { error: deleteErr } = await api.v2.outputs({ id: outputId }).delete(null, {
-          query: { notebookId: s.activeNotebookId },
-        });
+        const { error: deleteErr } = await api.v2
+          .notebooks({ nid: s.activeNotebookId })
+          .outputs({ id: outputId })
+          .delete();
         if (deleteErr)
           throw new Error(
             typeof deleteErr === 'string'
@@ -593,9 +595,10 @@ export function useOutputQueue({
       const s = store.getState();
       if (!s.activeNotebookId || !isConnected) return null;
       try {
-        const { data: output, error: getErr } = await api.v2.outputs({ id: outputId }).get({
-          query: { notebookId: s.activeNotebookId },
-        });
+        const { data: output, error: getErr } = await api.v2
+          .notebooks({ nid: s.activeNotebookId })
+          .outputs({ id: outputId })
+          .get();
         if (getErr)
           throw new Error(
             typeof getErr === 'string' ? getErr : typeof getErr === 'string' ? getErr : '',

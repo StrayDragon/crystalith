@@ -46,9 +46,8 @@ export const SlideDraftCreateSchema = z.object({
 });
 export type SlideDraftCreate = z.infer<typeof SlideDraftCreateSchema>;
 
-/** POST /v2/studio/slides — create draft (includes notebookId + required sources). */
-export const SlideDraftCreateRequestSchema = z.object({
-  notebookId: IdSchema,
+/** Create-draft body without notebook scope. */
+export const SlideDraftCreateBodySchema = z.object({
   title: z.string().nullable().optional(),
   prompt: z.string().nullable().optional(),
   /** Defaults to `slidev` in the studio router when omitted (kept optional for Eden clients). */
@@ -56,7 +55,19 @@ export const SlideDraftCreateRequestSchema = z.object({
   sourceIds: z.array(IdSchema).min(1),
   generationConfig: JsonMetadataSchema.nullable().optional(),
 });
+export type SlideDraftCreateBody = z.infer<typeof SlideDraftCreateBodySchema>;
+
+/** Flat alias POST /v2/studio/slides — notebookId required. */
+export const SlideDraftCreateRequestSchema = SlideDraftCreateBodySchema.extend({
+  notebookId: IdSchema,
+});
 export type SlideDraftCreateRequest = z.infer<typeof SlideDraftCreateRequestSchema>;
+
+/** Nested POST /v2/notebooks/:nid/studio/slides — optional body notebookId must match path. */
+export const SlideDraftCreateNestedRequestSchema = SlideDraftCreateBodySchema.extend({
+  notebookId: IdSchema.optional(),
+});
+export type SlideDraftCreateNestedRequest = z.infer<typeof SlideDraftCreateNestedRequestSchema>;
 
 export const SlideDraftUpdateSchema = z.object({
   title: z.string().nullable().optional(),

@@ -27,7 +27,7 @@ async function seedMarkdownSource(
     file,
     '# P0 Seed\n\nStable fixture for source-detail gate.\n\n- item a\n- item b\n',
   );
-  const res = await page.request.post(`/v2/sources/upload?notebookId=${notebookId}`, {
+  const res = await page.request.post(`/v2/notebooks/${notebookId}/sources/upload`, {
     multipart: {
       file: {
         name: 'p0-seed.md',

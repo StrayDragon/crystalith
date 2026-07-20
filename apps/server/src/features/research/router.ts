@@ -1,24 +1,25 @@
-// Research router — /v2/research CRUD + agent execution.
+// Research router — /v2/notebooks/:nid/research (canonical) + flat /v2/research aliases.
 //
-// Endpoints:
-//   POST   /v2/research                    — Start a new research session
-//   GET    /v2/research                    — List research sessions for a notebook
-//   GET    /v2/research/:id                — Get research session status + results
-//   DELETE /v2/research/:id                — Delete a research session (c37)
-//   POST   /v2/research/:id/approve        — Approve search plan (HITL)
-//   POST   /v2/research/:id/modify         — Modify search plan (HITL)
-//   POST   /v2/research/:id/skip           — Skip iteration (c37: advance iteration)
-//   POST   /v2/research/:id/finish         — Early complete (c37: triggers report)
-//   POST   /v2/research/:id/cancel         — Cancel a running research
-//   POST   /v2/research/:id/resume         — Resume from inferred state (c37)
-//   POST   /v2/research/:id/export         — Export report → source/note
-//   GET    /v2/research/:id/stream         — SSE progress relay (c37: named events)
+// Endpoints (nested canonical; flat kept as deprecated aliases):
+//   POST   .../research                    — Start a new research session
+//   GET    .../research                    — List research sessions for a notebook
+//   GET    .../research/:id                — Get research session status + results
+//   DELETE .../research/:id                — Delete a research session (c37)
+//   POST   .../research/:id/approve        — Approve search plan (HITL)
+//   POST   .../research/:id/modify         — Modify search plan (HITL)
+//   POST   .../research/:id/skip           — Skip iteration (c37: advance iteration)
+//   POST   .../research/:id/finish         — Early complete (c37: triggers report)
+//   POST   .../research/:id/cancel         — Cancel a running research
+//   POST   .../research/:id/resume         — Resume from inferred state (c37)
+//   POST   .../research/:id/export         — Export report → source/note
+//   GET    .../research/:id/stream         — SSE progress relay (c37: named events)
 //
 // c37: control endpoints now record steps + transition correctly (v1 parity).
 import {
   NotebookIdQuerySchema,
   PaginatedSchema,
   PaginationParamsSchema,
+  ResearchSessionCreateNestedSchema,
   ResearchSessionCreateSchema,
   ResearchSessionSchema,
   SearchPlanSchema,
@@ -39,6 +40,7 @@ import {
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
+import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import {
   runResearch,
   runResearchFromState,
@@ -58,20 +60,118 @@ export { cleanupExpiredLocks, isLockHeld, renewLock, acquireLock, releaseLock } 
 
 const ResearchListQuerySchema = NotebookIdQuerySchema.merge(PaginationParamsSchema);
 const ResearchPageSchema = PaginatedSchema(ResearchSessionSchema);
+const ResearchModifyBodySchema = z.object({ plan: SearchPlanSchema });
 
-const apiDocs: OpenApiRoute[] = [
+const nestedResearchDocs: OpenApiRoute[] = [
   {
-    path: '/v2/research',
+    path: '/v2/notebooks/:nid/research',
     method: 'post',
     summary: 'Start a new research session',
     tags: ['research'],
     responses: { 201: { description: 'Created research session' } },
   },
   {
-    path: '/v2/research',
+    path: '/v2/notebooks/:nid/research',
     method: 'get',
     summary: 'List research sessions',
     tags: ['research'],
+    request: {
+      query: {
+        offset: PaginationParamsSchema.shape.offset,
+        limit: PaginationParamsSchema.shape.limit,
+      },
+    },
+    responses: {
+      200: { description: 'Paginated research session list', body: ResearchPageSchema },
+    },
+  },
+  {
+    path: '/v2/notebooks/:nid/research/:id',
+    method: 'get',
+    summary: 'Get research session details',
+    tags: ['research'],
+    responses: { 200: { description: 'Research session with results' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/research/:id',
+    method: 'delete',
+    summary: 'Delete a research session',
+    tags: ['research'],
+    responses: { 204: { description: 'Deleted' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/research/:id/approve',
+    method: 'post',
+    summary: 'Approve search plan (HITL)',
+    tags: ['research'],
+    responses: { 200: { description: 'Approval recorded' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/research/:id/modify',
+    method: 'post',
+    summary: 'Modify search plan and continue (HITL)',
+    tags: ['research'],
+    responses: { 200: { description: 'Modified plan recorded, resuming' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/research/:id/skip',
+    method: 'post',
+    summary: 'Skip iteration',
+    tags: ['research'],
+    responses: { 200: { description: 'Iteration skipped' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/research/:id/finish',
+    method: 'post',
+    summary: 'Early complete + report generation',
+    tags: ['research'],
+    responses: { 200: { description: 'Session completed with report' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/research/:id/cancel',
+    method: 'post',
+    summary: 'Cancel a research session',
+    tags: ['research'],
+    responses: { 200: { description: 'Session cancelled' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/research/:id/resume',
+    method: 'post',
+    summary: 'Resume from inferred state',
+    tags: ['research'],
+    responses: { 200: { description: 'Research resumed' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/research/:id/export',
+    method: 'post',
+    summary: 'Export research report',
+    tags: ['research'],
+    responses: { 200: { description: 'Report exported' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/research/:id/stream',
+    method: 'get',
+    summary: 'SSE stream for research progress',
+    tags: ['research'],
+    responses: { 200: { description: 'SSE event stream' } },
+  },
+];
+
+const flatResearchAliasDocs: OpenApiRoute[] = [
+  {
+    path: '/v2/research',
+    method: 'post',
+    summary: 'Start a new research session (flat alias)',
+    tags: ['research'],
+    deprecated: true,
+    responses: { 201: { description: 'Created research session' } },
+  },
+  {
+    path: '/v2/research',
+    method: 'get',
+    summary: 'List research sessions (flat alias)',
+    tags: ['research'],
+    deprecated: true,
     request: {
       query: {
         notebookId: NotebookIdQuerySchema.shape.notebookId,
@@ -86,75 +186,86 @@ const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/research/:id',
     method: 'get',
-    summary: 'Get research session details',
+    summary: 'Get research session details (flat alias)',
     tags: ['research'],
+    deprecated: true,
     responses: { 200: { description: 'Research session with results' } },
   },
   {
     path: '/v2/research/:id',
     method: 'delete',
-    summary: 'Delete a research session',
+    summary: 'Delete a research session (flat alias)',
     tags: ['research'],
+    deprecated: true,
     responses: { 204: { description: 'Deleted' } },
   },
   {
     path: '/v2/research/:id/approve',
     method: 'post',
-    summary: 'Approve search plan (HITL)',
+    summary: 'Approve search plan (HITL) (flat alias)',
     tags: ['research'],
+    deprecated: true,
     responses: { 200: { description: 'Approval recorded' } },
   },
   {
     path: '/v2/research/:id/modify',
     method: 'post',
-    summary: 'Modify search plan and continue (HITL)',
+    summary: 'Modify search plan and continue (HITL) (flat alias)',
     tags: ['research'],
+    deprecated: true,
     responses: { 200: { description: 'Modified plan recorded, resuming' } },
   },
   {
     path: '/v2/research/:id/skip',
     method: 'post',
-    summary: 'Skip iteration',
+    summary: 'Skip iteration (flat alias)',
     tags: ['research'],
+    deprecated: true,
     responses: { 200: { description: 'Iteration skipped' } },
   },
   {
     path: '/v2/research/:id/finish',
     method: 'post',
-    summary: 'Early complete + report generation',
+    summary: 'Early complete + report generation (flat alias)',
     tags: ['research'],
+    deprecated: true,
     responses: { 200: { description: 'Session completed with report' } },
   },
   {
     path: '/v2/research/:id/cancel',
     method: 'post',
-    summary: 'Cancel a research session',
+    summary: 'Cancel a research session (flat alias)',
     tags: ['research'],
+    deprecated: true,
     responses: { 200: { description: 'Session cancelled' } },
   },
   {
     path: '/v2/research/:id/resume',
     method: 'post',
-    summary: 'Resume from inferred state',
+    summary: 'Resume from inferred state (flat alias)',
     tags: ['research'],
+    deprecated: true,
     responses: { 200: { description: 'Research resumed' } },
   },
   {
     path: '/v2/research/:id/export',
     method: 'post',
-    summary: 'Export research report',
+    summary: 'Export research report (flat alias)',
     tags: ['research'],
+    deprecated: true,
     responses: { 200: { description: 'Report exported' } },
   },
   {
     path: '/v2/research/:id/stream',
     method: 'get',
-    summary: 'SSE stream for research progress',
+    summary: 'SSE stream for research progress (flat alias)',
     tags: ['research'],
+    deprecated: true,
     responses: { 200: { description: 'SSE event stream' } },
   },
 ];
 
+const apiDocs: OpenApiRoute[] = [...nestedResearchDocs, ...flatResearchAliasDocs];
 // ---------------------------------------------------------------------------
 // Active sessions — AbortController management for cancel
 // ---------------------------------------------------------------------------
@@ -328,585 +439,640 @@ function inferResumeState(sessionId: number): {
 }
 
 // ---------------------------------------------------------------------------
+// Handlers (shared by nested canonical + flat alias routes)
+// ---------------------------------------------------------------------------
+
+type SetStatus = { status?: number | string; headers: Record<string, string | number> };
+
+async function handleCreateResearch(
+  notebookId: number,
+  body: { topic?: string; goal?: string; maxIterations?: number },
+  set: SetStatus,
+) {
+  // Accept both 'topic' (canonical) and 'goal' (some clients' convention)
+  const topic = (body.topic ?? body.goal ?? '').trim() || '深度研究';
+
+  const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
+  if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
+
+  const session = db()
+    .insert(researchSessions)
+    .values({
+      notebookId,
+      topic,
+      status: 'planning',
+      maxIterations: Number(body.maxIterations ?? 4),
+    })
+    .returning()
+    .get();
+
+  spawnResearch(session.id, runResearch);
+  set.status = 201;
+  return serializeSession(session);
+}
+
+function handleListResearch(notebookId: number, offset: number, limit: number) {
+  const total =
+    db()
+      .select({ n: count() })
+      .from(researchSessions)
+      .where(eq(researchSessions.notebookId, notebookId))
+      .get()?.n ?? 0;
+  const rows = db()
+    .select()
+    .from(researchSessions)
+    .where(eq(researchSessions.notebookId, notebookId))
+    .orderBy(desc(researchSessions.createdAt))
+    .limit(limit)
+    .offset(offset)
+    .all();
+  return {
+    items: rows.map(serializeSession),
+    total,
+    offset,
+    limit,
+  };
+}
+
+function handleGetResearch(id: number, notebookId: number) {
+  const row = getResearchOrThrow(id, notebookId);
+  const steps = db()
+    .select()
+    .from(researchSteps)
+    .where(eq(researchSteps.sessionId, id))
+    .orderBy(researchSteps.id)
+    .all();
+  return { ...serializeSession(row), steps };
+}
+
+function handleDeleteResearch(id: number, notebookId: number, set: SetStatus) {
+  getResearchOrThrow(id, notebookId);
+
+  const ac = activeResearch.get(id);
+  if (ac) {
+    ac.abort();
+    activeResearch.delete(id);
+  }
+
+  db().delete(researchSessions).where(eq(researchSessions.id, id)).run();
+  set.status = 204;
+  return '';
+}
+
+function handleApproveResearch(id: number, notebookId: number) {
+  const row = getResearchOrThrow(id, notebookId);
+  if (row.status !== 'waiting_user') {
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      `Session ${id} is not waiting for approval (status: ${row.status})`,
+    );
+  }
+
+  recordUserStep(id, row.currentIteration, 'approve');
+
+  db()
+    .update(researchSessions)
+    .set({ status: 'searching' })
+    .where(eq(researchSessions.id, id))
+    .run();
+
+  return { id, status: 'searching', approved: true };
+}
+
+function handleModifyResearch(
+  id: number,
+  notebookId: number,
+  plan: z.infer<typeof SearchPlanSchema>,
+) {
+  const row = getResearchOrThrow(id, notebookId);
+  if (row.status !== 'waiting_user') {
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      `Session ${id} is not waiting for approval (status: ${row.status})`,
+    );
+  }
+
+  recordUserStep(id, row.currentIteration, 'modify', { plan });
+
+  db()
+    .update(researchSessions)
+    .set({ status: 'searching' })
+    .where(eq(researchSessions.id, id))
+    .run();
+
+  return { id, status: 'searching', modified: true };
+}
+
+function handleSkipResearch(id: number, notebookId: number) {
+  const row = getResearchOrThrow(id, notebookId);
+  if (row.status !== 'waiting_user') {
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      `Cannot skip from status '${row.status}' (must be waiting_user)`,
+    );
+  }
+
+  recordUserStep(id, row.currentIteration, 'skip');
+
+  const nextIteration = row.currentIteration + 1;
+  if (nextIteration > row.maxIterations) {
+    db()
+      .update(researchSessions)
+      .set({ status: 'completed', currentIteration: row.maxIterations })
+      .where(eq(researchSessions.id, id))
+      .run();
+    return { id, status: 'completed', skipped: true };
+  }
+
+  db()
+    .update(researchSessions)
+    .set({ status: 'planning', currentIteration: nextIteration })
+    .where(eq(researchSessions.id, id))
+    .run();
+
+  return { id, status: 'planning', skipped: true, nextIteration };
+}
+
+function handleFinishResearch(id: number, notebookId: number) {
+  const row = getResearchOrThrow(id, notebookId);
+  if (row.status === 'completed' || row.status === 'cancelled') {
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      `Cannot finish from terminal status '${row.status}'`,
+    );
+  }
+
+  recordUserStep(id, row.currentIteration, 'finish');
+
+  const ac = activeResearch.get(id);
+  if (ac) {
+    ac.abort();
+    activeResearch.delete(id);
+  }
+
+  db()
+    .update(researchSessions)
+    .set({ status: 'completed', lockedAt: null, lockExpiresAt: null })
+    .where(eq(researchSessions.id, id))
+    .run();
+
+  const state: ResearchState = {
+    sessionId: id,
+    notebookId: row.notebookId,
+    topic: row.topic,
+    iteration: row.currentIteration,
+    maxIterations: row.maxIterations,
+    results: (row.aggregatedResults ?? []) as ResearchResult[],
+  };
+  void Promise.resolve()
+    .then(() => generateFinalReport(state))
+    .then((report) => {
+      db()
+        .update(researchSessions)
+        .set({ finalReport: report })
+        .where(eq(researchSessions.id, id))
+        .run();
+    })
+    .catch((error) => {
+      console.error(`[research] finish report failed for session ${id}:`, error);
+      const results = (row.aggregatedResults ?? []) as ResearchResult[];
+      db()
+        .update(researchSessions)
+        .set({ finalReport: synthesizeFallbackReport(row.topic, results) })
+        .where(eq(researchSessions.id, id))
+        .run();
+    });
+
+  return { id, status: 'completed', reportGenerated: 'pending' as const };
+}
+
+function handleCancelResearch(id: number, notebookId: number) {
+  const row = getResearchOrThrow(id, notebookId);
+  if (row.status === 'cancelled') {
+    return { id, status: 'cancelled', message: 'Already cancelled' };
+  }
+  if (row.status === 'completed') {
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      `Cannot cancel from terminal status 'completed'`,
+    );
+  }
+
+  recordUserStep(id, row.currentIteration, 'cancel');
+
+  const ac = activeResearch.get(id);
+  if (ac) {
+    ac.abort();
+    activeResearch.delete(id);
+  }
+
+  db()
+    .update(researchSessions)
+    .set({ status: 'cancelled', lockedAt: null, lockExpiresAt: null })
+    .where(eq(researchSessions.id, id))
+    .run();
+
+  return { id, status: 'cancelled' };
+}
+
+async function handleResumeResearch(id: number, notebookId: number) {
+  const row = getResearchOrThrow(id, notebookId);
+  if (row.status !== 'cancelled' && row.lockExpiresAt && isLockHeld(row)) {
+    throw new AppHttpError(
+      ErrorCode.CONFLICT,
+      `Session ${id} is still active (status: ${row.status}, lock held)`,
+    );
+  }
+
+  const { status: inferredStatus, iteration } = inferResumeState(id);
+
+  if (inferredStatus === null) {
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      `Session ${id} cannot be resumed (completed, cancelled by user, or already has a report)`,
+    );
+  }
+
+  db()
+    .update(researchSessions)
+    .set({ status: inferredStatus, currentIteration: iteration })
+    .where(eq(researchSessions.id, id))
+    .run();
+
+  spawnResearch(id, runResearchFromState);
+  return { id, status: inferredStatus, resumed: true, iteration };
+}
+
+async function handleExportResearch(
+  id: number,
+  notebookId: number,
+  body: { exportType?: string } | undefined,
+) {
+  const row = getResearchOrThrow(id, notebookId);
+
+  if (!row.finalReport) {
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Research has no final report to export');
+  }
+
+  const exportType = body?.exportType ?? 'source';
+
+  const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, '-');
+  const reportContent = [
+    `# 研究报告：${row.topic}`,
+    '',
+    `> 生成时间：${new Date().toISOString()}`,
+    `> 研究轮次：${row.currentIteration}/${row.maxIterations}`,
+    '',
+    '---',
+    '',
+    row.finalReport,
+  ].join('\n');
+
+  if (exportType === 'note') {
+    const output = db()
+      .insert(outputs)
+      .values({
+        notebookId: row.notebookId,
+        type: 'STRUCTURED',
+        prompt: `research:${id}`,
+        content: {
+          title: `研究报告：${row.topic}`,
+          text: row.finalReport,
+          metadata: {
+            researchId: id,
+            researchTopic: row.topic,
+            exportTimestamp: timestamp,
+          },
+        },
+      })
+      .returning()
+      .get();
+    return { success: true, exportType: 'note', outputId: output.id };
+  }
+
+  const filename = `研究报告_${row.topic.slice(0, 20)}_${timestamp}.md`;
+
+  const source = db()
+    .insert(sources)
+    .values({
+      notebookId: row.notebookId,
+      filename,
+      status: 'processing',
+    })
+    .returning()
+    .get();
+
+  const { chunkText } = await import('../../rag/chunker.ts');
+  const reportChunks = chunkText(reportContent);
+
+  const chunkRows: Array<{ id: number; text: string }> = [];
+  for (const chunk of reportChunks) {
+    const chunkRow = db()
+      .insert(chunks)
+      .values({
+        sourceId: source.id,
+        chunkIndex: chunk.index,
+        text: chunk.text,
+      })
+      .returning()
+      .get();
+    chunkRows.push({ id: chunkRow.id, text: chunk.text });
+  }
+
+  if (chunkRows.length > 0) {
+    try {
+      const { embedBatch } = await import('../../rag/embedder.ts');
+      const { insertChunkVector } = await import('../../db/vectors.ts');
+      const vectors = await embedBatch(chunkRows.map((c) => c.text));
+
+      for (let i = 0; i < vectors.length; i++) {
+        insertChunkVector(db(), chunkRows[i].id, row.notebookId, source.id, vectors[i]);
+      }
+
+      const { bumpVectorEpoch } = await import('../../rag/cache.ts');
+      bumpVectorEpoch(row.notebookId);
+    } catch (error) {
+      console.error('[research] export embedding failed:', error);
+      db().update(sources).set({ status: 'failed' }).where(eq(sources.id, source.id)).run();
+      throw new Error('Failed to embed exported report', { cause: error });
+    }
+  }
+
+  db().update(sources).set({ status: 'ready' }).where(eq(sources.id, source.id)).run();
+
+  const { bumpSourcesEpoch } = await import('../../rag/cache.ts');
+  bumpSourcesEpoch(row.notebookId);
+
+  return {
+    success: true,
+    exportType: 'source',
+    message: `报告已导出为来源：${filename}`,
+    sourceId: source.id,
+  };
+}
+
+function handleResearchStream(id: number, notebookId: number, set: SetStatus) {
+  const row = getResearchOrThrow(id, notebookId);
+
+  const isActiveStatus =
+    row.status === 'planning' ||
+    row.status === 'searching' ||
+    row.status === 'analyzing' ||
+    row.status === 'waiting_user';
+  if (isActiveStatus && !activeResearch.has(id)) {
+    spawnResearch(id, runResearchFromState);
+  }
+
+  set.headers['Content-Type'] = 'text/event-stream';
+  set.headers['Cache-Control'] = 'no-cache';
+  set.headers.Connection = 'keep-alive';
+
+  return new ReadableStream({
+    start(controller) {
+      let lastStepId = 0;
+      let lastStatus: string | null = null;
+      let closed = false;
+      const encoder = new TextEncoder();
+
+      const emit = (eventName: string, data: unknown) => {
+        controller.enqueue(
+          encoder.encode(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`),
+        );
+      };
+
+      const heartbeat = setInterval(() => {
+        if (!closed) emit('heartbeat', {});
+      }, 30_000);
+
+      const poll = async () => {
+        while (!closed) {
+          const current = db()
+            .select()
+            .from(researchSessions)
+            .where(eq(researchSessions.id, id))
+            .get();
+          if (!current) break;
+
+          if (current.status !== lastStatus) {
+            const prev = lastStatus;
+            lastStatus = current.status;
+            emit('status', {
+              type: 'status',
+              status: current.status,
+              previous: prev,
+              iteration: current.currentIteration,
+              message: statusMessage(current.status),
+            });
+          }
+
+          const steps = db()
+            .select()
+            .from(researchSteps)
+            .where(and(gt(researchSteps.id, lastStepId), eq(researchSteps.sessionId, id)))
+            .all();
+
+          for (const step of steps) {
+            const { event, data } = deriveNamedEvent(step);
+            emit(event, data);
+            lastStepId = step.id;
+          }
+
+          if (current.status === 'completed' || current.status === 'cancelled') {
+            emit('done', {
+              type: 'done',
+              status: current.status,
+              totalResults: (current.aggregatedResults as unknown[] | null)?.length ?? 0,
+              hasReport: !!current.finalReport,
+            });
+            closed = true;
+            clearInterval(heartbeat);
+            controller.close();
+            break;
+          }
+
+          await sleep(250);
+        }
+      };
+
+      poll().catch((error) => {
+        if (!closed) {
+          emit('error', { type: 'error', message: String(error) });
+          clearInterval(heartbeat);
+          controller.close();
+        }
+      });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 
 export const researchRouter = new Elysia({ prefix: '/v2' })
-  // Start a new research session
+  // ---- Nested canonical ----
   .post(
-    '/research',
-    async ({ body, set }) => {
-      // Accept both 'topic' (canonical) and 'goal' (some clients' convention)
-      const topic = (body.topic ?? body.goal ?? '').trim() || '深度研究';
-      const nid = body.notebookId;
-
-      const nb = db().select().from(notebooks).where(eq(notebooks.id, nid)).get();
-      if (!nb) throw new NotFoundError(`Notebook ${nid} not found`);
-
-      const session = db()
-        .insert(researchSessions)
-        .values({
-          notebookId: nid,
-          topic,
-          status: 'planning',
-          maxIterations: Number(body.maxIterations ?? 4),
-        })
-        .returning()
-        .get();
-
-      spawnResearch(session.id, runResearch);
-      set.status = 201;
-      return serializeSession(session);
+    '/notebooks/:nid/research',
+    async ({ params, body, set }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const notebookId = resolveNestedNotebookId(nid, body.notebookId);
+      return handleCreateResearch(notebookId, body, set);
     },
-    { body: ResearchSessionCreateSchema },
+    { body: ResearchSessionCreateNestedSchema },
   )
+  .get(
+    '/notebooks/:nid/research',
+    ({ params, query }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      return handleListResearch(nid, query.offset ?? 0, query.limit ?? 20);
+    },
+    { query: PaginationParamsSchema, response: ResearchPageSchema },
+  )
+  .get('/notebooks/:nid/research/:id', ({ params }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'research id');
+    return handleGetResearch(id, nid);
+  })
+  .delete('/notebooks/:nid/research/:id', ({ params, set }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'research id');
+    return handleDeleteResearch(id, nid, set);
+  })
+  .post('/notebooks/:nid/research/:id/approve', ({ params }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'research id');
+    return handleApproveResearch(id, nid);
+  })
+  .post(
+    '/notebooks/:nid/research/:id/modify',
+    ({ params, body }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'research id');
+      return handleModifyResearch(id, nid, body.plan);
+    },
+    { body: ResearchModifyBodySchema },
+  )
+  .post('/notebooks/:nid/research/:id/skip', ({ params }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'research id');
+    return handleSkipResearch(id, nid);
+  })
+  .post('/notebooks/:nid/research/:id/finish', ({ params }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'research id');
+    return handleFinishResearch(id, nid);
+  })
+  .post('/notebooks/:nid/research/:id/cancel', ({ params }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'research id');
+    return handleCancelResearch(id, nid);
+  })
+  .post('/notebooks/:nid/research/:id/resume', async ({ params }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'research id');
+    return handleResumeResearch(id, nid);
+  })
+  .post('/notebooks/:nid/research/:id/export', async ({ params, body }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'research id');
+    return handleExportResearch(id, nid, body as { exportType?: string } | undefined);
+  })
+  .get('/notebooks/:nid/research/:id/stream', ({ params, set }) => {
+    const nid = requirePositiveIntId(params.nid, 'notebook id');
+    const id = requirePositiveIntId(params.id, 'research id');
+    return handleResearchStream(id, nid, set);
+  })
 
-  // List research sessions — c67: notebookId required (no global dump)
+  // ---- Flat aliases (deprecated; c67 notebookId still required) ----
+  .post('/research', async ({ body, set }) => handleCreateResearch(body.notebookId, body, set), {
+    body: ResearchSessionCreateSchema,
+  })
   .get(
     '/research',
-    ({ query }) => {
-      const offset = query.offset ?? 0;
-      const limit = query.limit ?? 20;
-      const total =
-        db()
-          .select({ n: count() })
-          .from(researchSessions)
-          .where(eq(researchSessions.notebookId, query.notebookId))
-          .get()?.n ?? 0;
-      const rows = db()
-        .select()
-        .from(researchSessions)
-        .where(eq(researchSessions.notebookId, query.notebookId))
-        .orderBy(desc(researchSessions.createdAt))
-        .limit(limit)
-        .offset(offset)
-        .all();
-      return {
-        items: rows.map(serializeSession),
-        total,
-        offset,
-        limit,
-      };
-    },
+    ({ query }) => handleListResearch(query.notebookId, query.offset ?? 0, query.limit ?? 20),
     { query: ResearchListQuerySchema, response: ResearchPageSchema },
   )
-
-  // Get single session — c67: notebookId required
   .get(
     '/research/:id',
     ({ params, query }) => {
       const id = requirePositiveIntId(params.id, 'research id');
-      const row = getResearchOrThrow(id, query.notebookId);
-      const steps = db()
-        .select()
-        .from(researchSteps)
-        .where(eq(researchSteps.sessionId, id))
-        .orderBy(researchSteps.id)
-        .all();
-      return { ...serializeSession(row), steps };
+      return handleGetResearch(id, query.notebookId);
     },
     { query: NotebookIdQuerySchema },
   )
-
-  // Delete a research session (c37 — v1 api.py:440-463) — c67: notebookId required
   .delete(
     '/research/:id',
     ({ params, query, set }) => {
       const id = requirePositiveIntId(params.id, 'research id');
-      getResearchOrThrow(id, query.notebookId);
-
-      // Cancel if running
-      const ac = activeResearch.get(id);
-      if (ac) {
-        ac.abort();
-        activeResearch.delete(id);
-      }
-
-      db().delete(researchSessions).where(eq(researchSessions.id, id)).run();
-      set.status = 204;
-      return '';
+      return handleDeleteResearch(id, query.notebookId, set);
     },
     { query: NotebookIdQuerySchema },
   )
-
-  // Approve search plan (c37: record step + ensure resume) — c67: notebookId required
   .post(
     '/research/:id/approve',
     ({ params, query }) => {
       const id = requirePositiveIntId(params.id, 'research id');
-      const row = getResearchOrThrow(id, query.notebookId);
-      if (row.status !== 'waiting_user') {
-        throw new AppHttpError(
-          ErrorCode.INVALID_REQUEST,
-          `Session ${id} is not waiting for approval (status: ${row.status})`,
-        );
-      }
-
-      // Record approve step (v1 api.py:483-534)
-      recordUserStep(id, row.currentIteration, 'approve');
-
-      // Transition to searching so the agent loop unblocks
-      db()
-        .update(researchSessions)
-        .set({ status: 'searching' })
-        .where(eq(researchSessions.id, id))
-        .run();
-
-      return { id, status: 'searching', approved: true };
+      return handleApproveResearch(id, query.notebookId);
     },
     { query: NotebookIdQuerySchema },
   )
-
-  // Modify search plan (c37: record step + store plan in inputData) — c67: notebookId required
   .post(
     '/research/:id/modify',
     ({ params, query, body }) => {
       const id = requirePositiveIntId(params.id, 'research id');
-      const row = getResearchOrThrow(id, query.notebookId);
-      if (row.status !== 'waiting_user') {
-        throw new AppHttpError(
-          ErrorCode.INVALID_REQUEST,
-          `Session ${id} is not waiting for approval (status: ${row.status})`,
-        );
-      }
-
-      const { plan } = body;
-
-      // Record modify step with the new plan (v1 api.py:537-577)
-      recordUserStep(id, row.currentIteration, 'modify', { plan });
-
-      db()
-        .update(researchSessions)
-        .set({ status: 'searching' })
-        .where(eq(researchSessions.id, id))
-        .run();
-
-      return { id, status: 'searching', modified: true };
+      return handleModifyResearch(id, query.notebookId, body.plan);
     },
-    { body: z.object({ plan: SearchPlanSchema }), query: NotebookIdQuerySchema },
+    { body: ResearchModifyBodySchema, query: NotebookIdQuerySchema },
   )
-
-  // Skip iteration (c37: record step + advance iteration + set planning) — c67: notebookId required
   .post(
     '/research/:id/skip',
     ({ params, query }) => {
       const id = requirePositiveIntId(params.id, 'research id');
-      const row = getResearchOrThrow(id, query.notebookId);
-      // Status guard: only skip from waiting_user (v1 api.py:602-606)
-      if (row.status !== 'waiting_user') {
-        throw new AppHttpError(
-          ErrorCode.INVALID_REQUEST,
-          `Cannot skip from status '${row.status}' (must be waiting_user)`,
-        );
-      }
-
-      // Record skip step (v1 api.py:591-647)
-      recordUserStep(id, row.currentIteration, 'skip');
-
-      // Advance iteration; if at max, mark completed
-      const nextIteration = row.currentIteration + 1;
-      if (nextIteration > row.maxIterations) {
-        // At max iteration — skip completes the research
-        db()
-          .update(researchSessions)
-          .set({ status: 'completed', currentIteration: row.maxIterations })
-          .where(eq(researchSessions.id, id))
-          .run();
-        return { id, status: 'completed', skipped: true };
-      }
-
-      db()
-        .update(researchSessions)
-        .set({ status: 'planning', currentIteration: nextIteration })
-        .where(eq(researchSessions.id, id))
-        .run();
-
-      return { id, status: 'planning', skipped: true, nextIteration };
+      return handleSkipResearch(id, query.notebookId);
     },
     { query: NotebookIdQuerySchema },
   )
-
-  // Finish early (c37: record step; 2026-07-13: non-blocking report generation)
-  // v1 api.py:650-687 uses FastAPI BackgroundTasks — /finish marks COMPLETED and
-  // returns immediately; the report is generated off the request path. The v2
-  // spec `research-finish-generates-report` still requires the report to be
-  // generated and persisted, so we spawn a fire-and-forget promise rather than
-  // awaiting inside the handler (which previously blocked until the LLM finished
-  // and risked client timeouts on large reports).
-  // c67: notebookId required
   .post(
     '/research/:id/finish',
     ({ params, query }) => {
       const id = requirePositiveIntId(params.id, 'research id');
-      const row = getResearchOrThrow(id, query.notebookId);
-      // Status guard: reject from terminal states (v1 api.py:659-663)
-      if (row.status === 'completed' || row.status === 'cancelled') {
-        throw new AppHttpError(
-          ErrorCode.INVALID_REQUEST,
-          `Cannot finish from terminal status '${row.status}'`,
-        );
-      }
-
-      // Record finish step (v1 api.py:650-687)
-      recordUserStep(id, row.currentIteration, 'finish');
-
-      // Abort the in-flight agent loop BEFORE spawning the report generator.
-      // Without this, both the fire-and-forget `generateFinalReport` below and
-      // `runResearchCore`'s afterLoop path can concurrently read/write
-      // `finalReport` (v1 has no race because only the graph node writes the
-      // report). Mirrors the `/cancel` abort pattern (router.ts:533-537).
-      const ac = activeResearch.get(id);
-      if (ac) {
-        ac.abort();
-        activeResearch.delete(id);
-      }
-
-      // Mark COMPLETED immediately so the client + DB reflect the terminal state
-      // without waiting for report generation (v1 parity: return right away).
-      db()
-        .update(researchSessions)
-        .set({ status: 'completed', lockedAt: null, lockExpiresAt: null })
-        .where(eq(researchSessions.id, id))
-        .run();
-
-      // Generate the report in the background (v1 GenerateReport node). On success
-      // it persists finalReport; on failure it records a sentinel so callers can
-      // tell a pending/failed report apart from a deliberately-empty one. Errors
-      // are logged but never reject — the session is already COMPLETED.
-      const state: ResearchState = {
-        sessionId: id,
-        notebookId: row.notebookId,
-        topic: row.topic,
-        iteration: row.currentIteration,
-        maxIterations: row.maxIterations,
-        results: (row.aggregatedResults ?? []) as ResearchResult[],
-      };
-      void Promise.resolve()
-        .then(() => generateFinalReport(state))
-        .then((report) => {
-          db()
-            .update(researchSessions)
-            .set({ finalReport: report })
-            .where(eq(researchSessions.id, id))
-            .run();
-        })
-        .catch((error) => {
-          console.error(`[research] finish report failed for session ${id}:`, error);
-          // c58: synthesize meaningful fallback (v1 graph.py:811-823), NOT a
-          // sentinel string — sentinel passes the export guard and yields garbage.
-          const results = (row.aggregatedResults ?? []) as ResearchResult[];
-          db()
-            .update(researchSessions)
-            .set({ finalReport: synthesizeFallbackReport(row.topic, results) })
-            .where(eq(researchSessions.id, id))
-            .run();
-        });
-
-      return { id, status: 'completed', reportGenerated: 'pending' as const };
+      return handleFinishResearch(id, query.notebookId);
     },
     { query: NotebookIdQuerySchema },
   )
-
-  // Cancel (c37: record step + release lock) — c67: notebookId required
   .post(
     '/research/:id/cancel',
     ({ params, query }) => {
       const id = requirePositiveIntId(params.id, 'research id');
-      const row = getResearchOrThrow(id, query.notebookId);
-      // Status guard: idempotent on already-cancelled (v1 returns 200);
-      // reject from completed (v1 api.py:699-703)
-      if (row.status === 'cancelled') {
-        return { id, status: 'cancelled', message: 'Already cancelled' };
-      }
-      if (row.status === 'completed') {
-        throw new AppHttpError(
-          ErrorCode.INVALID_REQUEST,
-          `Cannot cancel from terminal status 'completed'`,
-        );
-      }
-
-      // Record cancel step
-      recordUserStep(id, row.currentIteration, 'cancel');
-
-      const ac = activeResearch.get(id);
-      if (ac) {
-        ac.abort();
-        activeResearch.delete(id);
-      }
-
-      db()
-        .update(researchSessions)
-        .set({ status: 'cancelled', lockedAt: null, lockExpiresAt: null })
-        .where(eq(researchSessions.id, id))
-        .run();
-
-      return { id, status: 'cancelled' };
+      return handleCancelResearch(id, query.notebookId);
     },
     { query: NotebookIdQuerySchema },
   )
-
-  // Resume from inferred state (c37: uses _infer_resume_state instead of force-planning)
-  // c67: notebookId required
   .post(
     '/research/:id/resume',
     async ({ params, query }) => {
       const id = requirePositiveIntId(params.id, 'research id');
-      const row = getResearchOrThrow(id, query.notebookId);
-      // Status guard: only resume non-active sessions (v1 api.py:749-753).
-      // Resuming an active session (planning/searching/waiting_user) would spawn
-      // a second concurrent agent.
-      if (row.status !== 'cancelled' && row.lockExpiresAt && isLockHeld(row)) {
-        throw new AppHttpError(
-          ErrorCode.CONFLICT,
-          `Session ${id} is still active (status: ${row.status}, lock held)`,
-        );
-      }
-
-      // Infer resume state from last step (v1 _infer_resume_state)
-      const { status: inferredStatus, iteration } = inferResumeState(id);
-
-      if (inferredStatus === null) {
-        throw new AppHttpError(
-          ErrorCode.INVALID_REQUEST,
-          `Session ${id} cannot be resumed (completed, cancelled by user, or already has a report)`,
-        );
-      }
-
-      // Set the inferred status so runResearchFromState picks up correctly
-      db()
-        .update(researchSessions)
-        .set({ status: inferredStatus, currentIteration: iteration })
-        .where(eq(researchSessions.id, id))
-        .run();
-
-      spawnResearch(id, runResearchFromState);
-      return { id, status: inferredStatus, resumed: true, iteration };
+      return handleResumeResearch(id, query.notebookId);
     },
     { query: NotebookIdQuerySchema },
   )
-
-  // Export report → source or note (c37: adds exportType=note) — c67: notebookId required
   .post(
     '/research/:id/export',
     async ({ params, query, body }) => {
       const id = requirePositiveIntId(params.id, 'research id');
-      const row = getResearchOrThrow(id, query.notebookId);
-
-      if (!row.finalReport) {
-        throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Research has no final report to export');
-      }
-
-      const exportType = (body as { exportType?: string })?.exportType ?? 'source';
-
-      // Build markdown report content
-      const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, '-');
-      const reportContent = [
-        `# 研究报告：${row.topic}`,
-        '',
-        `> 生成时间：${new Date().toISOString()}`,
-        `> 研究轮次：${row.currentIteration}/${row.maxIterations}`,
-        '',
-        '---',
-        '',
-        row.finalReport,
-      ].join('\n');
-
-      if (exportType === 'note') {
-        // c49: create an Output with type=STRUCTURED + v1 content shape
-        const output = db()
-          .insert(outputs)
-          .values({
-            notebookId: row.notebookId,
-            type: 'STRUCTURED',
-            prompt: `research:${id}`,
-            content: {
-              title: `研究报告：${row.topic}`,
-              text: row.finalReport,
-              metadata: {
-                researchId: id,
-                researchTopic: row.topic,
-                exportTimestamp: timestamp,
-              },
-            },
-          })
-          .returning()
-          .get();
-        return { success: true, exportType: 'note', outputId: output.id };
-      }
-
-      // Default: export as source (v1 api.py:1245-1430)
-      const filename = `研究报告_${row.topic.slice(0, 20)}_${timestamp}.md`;
-
-      const source = db()
-        .insert(sources)
-        .values({
-          notebookId: row.notebookId,
-          filename,
-          status: 'processing',
-        })
-        .returning()
-        .get();
-
-      // Chunk the report
-      const { chunkText } = await import('../../rag/chunker.ts');
-      const reportChunks = chunkText(reportContent);
-
-      const chunkRows: Array<{ id: number; text: string }> = [];
-      for (const chunk of reportChunks) {
-        const chunkRow = db()
-          .insert(chunks)
-          .values({
-            sourceId: source.id,
-            chunkIndex: chunk.index,
-            text: chunk.text,
-          })
-          .returning()
-          .get();
-        chunkRows.push({ id: chunkRow.id, text: chunk.text });
-      }
-
-      // Embed and store vectors
-      if (chunkRows.length > 0) {
-        try {
-          const { embedBatch } = await import('../../rag/embedder.ts');
-          const { insertChunkVector } = await import('../../db/vectors.ts');
-          const vectors = await embedBatch(chunkRows.map((c) => c.text));
-
-          for (let i = 0; i < vectors.length; i++) {
-            insertChunkVector(db(), chunkRows[i].id, row.notebookId, source.id, vectors[i]);
-          }
-
-          const { bumpVectorEpoch } = await import('../../rag/cache.ts');
-          bumpVectorEpoch(row.notebookId);
-        } catch (error) {
-          console.error('[research] export embedding failed:', error);
-          db().update(sources).set({ status: 'failed' }).where(eq(sources.id, source.id)).run();
-          throw new Error('Failed to embed exported report', { cause: error });
-        }
-      }
-
-      db().update(sources).set({ status: 'ready' }).where(eq(sources.id, source.id)).run();
-
-      const { bumpSourcesEpoch } = await import('../../rag/cache.ts');
-      bumpSourcesEpoch(row.notebookId);
-
-      return {
-        success: true,
-        exportType: 'source',
-        message: `报告已导出为来源：${filename}`,
-        sourceId: source.id,
-      };
+      return handleExportResearch(
+        id,
+        query.notebookId,
+        body as { exportType?: string } | undefined,
+      );
     },
     { query: NotebookIdQuerySchema },
   )
-
-  // SSE stream endpoint (c37: named events + heartbeat) — c67: notebookId required
   .get(
     '/research/:id/stream',
     ({ params, query, set }) => {
       const id = requirePositiveIntId(params.id, 'research id');
-      const row = getResearchOrThrow(id, query.notebookId);
-
-      // c58: auto-resume stalled sessions (v1 api.py:972-983 _should_resume_research).
-      // If status is active but no in-process AbortController exists (process
-      // crashed/restarted) OR the lock expired, trigger a resume so reconnecting
-      // clients don't have to manually call /resume.
-      const isActiveStatus =
-        row.status === 'planning' ||
-        row.status === 'searching' ||
-        row.status === 'analyzing' ||
-        row.status === 'waiting_user';
-      if (isActiveStatus && !activeResearch.has(id)) {
-        spawnResearch(id, runResearchFromState);
-      }
-
-      set.headers['Content-Type'] = 'text/event-stream';
-      set.headers['Cache-Control'] = 'no-cache';
-      set.headers.Connection = 'keep-alive';
-
-      return new ReadableStream({
-        start(controller) {
-          let lastStepId = 0;
-          let lastStatus: string | null = null;
-          let closed = false;
-          const encoder = new TextEncoder();
-
-          const emit = (eventName: string, data: unknown) => {
-            controller.enqueue(
-              encoder.encode(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`),
-            );
-          };
-
-          // Heartbeat every 30s (v1 api.py heartbeat)
-          const heartbeat = setInterval(() => {
-            if (!closed) emit('heartbeat', {});
-          }, 30_000);
-
-          const poll = async () => {
-            while (!closed) {
-              const current = db()
-                .select()
-                .from(researchSessions)
-                .where(eq(researchSessions.id, id))
-                .get();
-              if (!current) break;
-
-              // c49: emit `status` event on every status transition (v1 api.py:1037-1058).
-              // Before c49 the poll only derived events from new step rows, so pure
-              // status transitions (planning→waiting_user→searching) were invisible.
-              // D.4: check BEFORE sleeping so fast mock/dev transitions are not skipped
-              // by the initial 1s delay (previously first poll slept first).
-              if (current.status !== lastStatus) {
-                const prev = lastStatus;
-                lastStatus = current.status;
-                emit('status', {
-                  type: 'status',
-                  status: current.status,
-                  previous: prev,
-                  iteration: current.currentIteration,
-                  message: statusMessage(current.status),
-                });
-              }
-
-              // Emit step-derived events
-              const steps = db()
-                .select()
-                .from(researchSteps)
-                .where(and(gt(researchSteps.id, lastStepId), eq(researchSteps.sessionId, id)))
-                .all();
-
-              for (const step of steps) {
-                const { event, data } = deriveNamedEvent(step);
-                emit(event, data);
-                lastStepId = step.id;
-              }
-
-              if (current.status === 'completed' || current.status === 'cancelled') {
-                emit('done', {
-                  type: 'done',
-                  status: current.status,
-                  totalResults: (current.aggregatedResults as unknown[] | null)?.length ?? 0,
-                  hasReport: !!current.finalReport,
-                });
-                closed = true;
-                clearInterval(heartbeat);
-                controller.close();
-                break;
-              }
-
-              await sleep(250);
-            }
-          };
-
-          poll().catch((error) => {
-            if (!closed) {
-              emit('error', { type: 'error', message: String(error) });
-              clearInterval(heartbeat);
-              controller.close();
-            }
-          });
-        },
-      });
+      return handleResearchStream(id, query.notebookId, set);
     },
     { query: NotebookIdQuerySchema },
   );

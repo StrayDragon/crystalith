@@ -142,8 +142,9 @@ async function fetchSourceSummary(notebookId: number, sourceId: number) {
 
 async function fetchSourceChunks(notebookId: number, sourceId: number) {
   const { data, error } = await api.v2
-    .sources({ id: sourceId })
-    .chunks.get({ query: { notebookId: notebookId } } as any);
+    .notebooks({ nid: notebookId })
+    .sources({ sid: sourceId })
+    .chunks.get();
   if (error)
     throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
   return data as any;

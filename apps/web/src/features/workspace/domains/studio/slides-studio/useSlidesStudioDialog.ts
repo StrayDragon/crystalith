@@ -279,18 +279,21 @@ export function useSlidesStudioDialog({
     setError('');
     try {
       if (draftId) {
-        const { data, error: fetchErr } = await api.v2.studio.slides({ id: draftId }).get({
-          query: { notebookId },
-        });
+        const { data, error: fetchErr } = await api.v2
+          .notebooks({ nid: notebookId })
+          .studio.slides({ id: draftId })
+          .get();
         if (fetchErr)
           throw new Error(
             typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
           );
         syncFromDraft(normalizeDraft(data));
       } else {
-        const { data, error: fetchErr } = await api.v2.studio.slides.get({
-          query: { notebookId, offset: 0, limit: 200 },
-        });
+        const { data, error: fetchErr } = await api.v2
+          .notebooks({ nid: notebookId })
+          .studio.slides.get({
+            query: { offset: 0, limit: 200 },
+          });
         if (fetchErr)
           throw new Error(
             typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
@@ -317,9 +320,10 @@ export function useSlidesStudioDialog({
       if (!notebookId || !isConnected) return;
       const targetId = slideId ?? draft?.id;
       if (!targetId) return;
-      const { data, error: fetchErr } = await api.v2.studio.slides({ id: targetId }).get({
-        query: { notebookId },
-      });
+      const { data, error: fetchErr } = await api.v2
+        .notebooks({ nid: notebookId })
+        .studio.slides({ id: targetId })
+        .get();
       if (fetchErr)
         throw new Error(
           typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
@@ -486,10 +490,9 @@ export function useSlidesStudioDialog({
       generationConfig: buildGenerationConfigPayload(),
     };
     if (!draft) {
-      const { data: created, error: createErr } = await api.v2.studio.slides.post({
-        notebookId: notebookId,
-        ...payload,
-      });
+      const { data: created, error: createErr } = await api.v2
+        .notebooks({ nid: notebookId })
+        .studio.slides.post(payload);
       if (createErr)
         throw new Error(
           typeof createErr === 'string'
@@ -502,9 +505,10 @@ export function useSlidesStudioDialog({
       syncFromDraft(normalized);
       return normalized;
     }
-    const { data: updated, error: updateErr } = await api.v2.studio
-      .slides({ id: draft.id })
-      .patch(payload, { query: { notebookId } });
+    const { data: updated, error: updateErr } = await api.v2
+      .notebooks({ nid: notebookId })
+      .studio.slides({ id: draft.id })
+      .patch(payload);
     if (updateErr)
       throw new Error(
         typeof updateErr === 'string' ? updateErr : typeof updateErr === 'string' ? updateErr : '',
@@ -588,9 +592,10 @@ export function useSlidesStudioDialog({
         bullets: item.bullets.map((bullet) => bullet.trim()).filter(Boolean),
       })),
     };
-    const { data: updated, error: updateErr } = await api.v2.studio
-      .slides({ id: draft.id })
-      .outline.put({ outline }, { query: { notebookId } });
+    const { data: updated, error: updateErr } = await api.v2
+      .notebooks({ nid: notebookId })
+      .studio.slides({ id: draft.id })
+      .outline.put({ outline });
     if (updateErr)
       throw new Error(
         typeof updateErr === 'string' ? updateErr : typeof updateErr === 'string' ? updateErr : '',
@@ -604,9 +609,10 @@ export function useSlidesStudioDialog({
       setError(t('studio.slides.connection_required'));
       return;
     }
-    const { data: updated, error: updateErr } = await api.v2.studio
-      .slides({ id: draft.id })
-      .markdown.put({ markdown }, { query: { notebookId } });
+    const { data: updated, error: updateErr } = await api.v2
+      .notebooks({ nid: notebookId })
+      .studio.slides({ id: draft.id })
+      .markdown.put({ markdown });
     if (updateErr)
       throw new Error(
         typeof updateErr === 'string' ? updateErr : typeof updateErr === 'string' ? updateErr : '',
@@ -631,14 +637,13 @@ export function useSlidesStudioDialog({
 
       try {
         setEvents((prev) => [...prev, { type: 'progress', message: '生成中...' }]);
-        const slides = api.v2.studio.slides({ id: slideId });
-        const fetchOpts = edenFetchOptions(ac.signal);
         if (!notebookId) return;
-        const query = { notebookId };
+        const slides = api.v2.notebooks({ nid: notebookId }).studio.slides({ id: slideId });
+        const fetchOpts = edenFetchOptions(ac.signal);
         const { error: genErr } =
           stage === 'outline'
-            ? await slides.outline.post(undefined, { ...fetchOpts, query })
-            : await slides.markdown.post(undefined, { ...fetchOpts, query });
+            ? await slides.outline.post(undefined, fetchOpts)
+            : await slides.markdown.post(undefined, fetchOpts);
         if (genErr)
           throw new Error(
             typeof genErr === 'string' ? genErr : typeof genErr === 'string' ? genErr : '',

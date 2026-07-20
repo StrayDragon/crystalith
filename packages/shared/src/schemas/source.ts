@@ -311,12 +311,22 @@ export const SourceFromUrlRequestSchema = z
   }));
 export type SourceFromUrlRequest = z.infer<typeof SourceFromUrlRequestSchema>;
 
-/** Query params for POST /v2/sources/upload (multipart body is not Zod-validated). */
+/** Query params for flat POST /v2/sources/upload (multipart body is not Zod-validated). */
 export const SourceUploadQuerySchema = z.object({
   notebookId: z.coerce.number().int().positive(),
   dedupAction: z.enum(['prompt', 'reuse', 'create_new']).default('prompt'),
 });
 export type SourceUploadQuery = z.infer<typeof SourceUploadQuerySchema>;
+
+/**
+ * Nested POST /v2/notebooks/:nid/sources/upload — path `:nid` is SSOT;
+ * optional query notebookId must match when present.
+ */
+export const SourceUploadNestedQuerySchema = z.object({
+  notebookId: z.coerce.number().int().positive().optional(),
+  dedupAction: z.enum(['prompt', 'reuse', 'create_new']).default('prompt'),
+});
+export type SourceUploadNestedQuery = z.infer<typeof SourceUploadNestedQuerySchema>;
 
 export const ExtractorInfoSchema = z.object({
   type: z.string(),

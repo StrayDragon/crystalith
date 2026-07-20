@@ -76,6 +76,26 @@ async function patch(path: string, body: unknown) {
   return { status: res.status, body: await res.json() };
 }
 
+async function post(path: string, body: unknown) {
+  const res = await app.handle(
+    new Request(`${BASE}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  );
+  const text = await res.text();
+  let parsed: unknown = null;
+  if (text) {
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = text;
+    }
+  }
+  return { status: res.status, body: parsed };
+}
+
 describe('c67 notebook isolation', () => {
   it('GET /v2/sources/:id cross-notebook → 404 ErrorEnvelope', async () => {
     const { status, body } = await get(`/v2/sources/${sourceId}?notebookId=${notebookB}`);
@@ -133,5 +153,63 @@ describe('c67 notebook isolation', () => {
     });
     expect(status).toBe(409);
     expect((body as { errorCode: string }).errorCode).toBe('CONFLICT');
+  });
+});
+
+describe('c69 nested notebook paths', () => {
+  it('GET nested outputs list for notebook A', async () => {
+    const { status, body } = await get(`/v2/notebooks/${notebookA}/outputs`);
+    expect(status).toBe(200);
+    const page = body as { items: Array<{ id: number; notebookId: number }> };
+    expect(page.items.some((o) => o.id === outputId)).toBe(true);
+    expect(page.items.every((o) => o.notebookId === notebookA)).toBe(true);
+  });
+
+  it('GET nested output with wrong notebook → 404', async () => {
+    const { status, body } = await get(`/v2/notebooks/${notebookB}/outputs/${outputId}`);
+    expect(status).toBe(404);
+    expect((body as { errorCode: string }).errorCode).toBe('NOT_FOUND');
+  });
+
+  it('GET nested source by sid', async () => {
+    const { status, body } = await get(`/v2/notebooks/${notebookA}/sources/${sourceId}`);
+    expect(status).toBe(200);
+    expect((body as { id: number }).id).toBe(sourceId);
+  });
+
+  it('POST nested outputs with mismatched body notebookId → 400', async () => {
+    const { status, body } = await post(`/v2/notebooks/${notebookA}/outputs`, {
+      notebookId: notebookB,
+      type: 'BRIEFING',
+      sourceIds: [sourceId],
+    });
+    expect(status).toBe(400);
+    expect((body as { errorCode: string }).errorCode).toBe('INVALID_REQUEST');
+  });
+
+  it('POST nested research without body notebookId → 201 with path nid', async () => {
+    const { status, body } = await post(`/v2/notebooks/${notebookA}/research`, {
+      topic: 'c69 omit body notebookId',
+      maxIterations: 1,
+    });
+    expect(status).toBe(201);
+    const created = body as { id: number; notebookId: number };
+    expect(created.notebookId).toBe(notebookA);
+    // Cancel so background agent does not race later tests.
+    const cancel = await post(`/v2/notebooks/${notebookA}/research/${created.id}/cancel`);
+    expect(cancel.status).toBe(200);
+  });
+
+  it('GET flat outputs alias still works while nested is canonical', async () => {
+    const { status, body } = await get(`/v2/outputs?notebookId=${notebookA}`);
+    expect(status).toBe(200);
+    const page = body as { items: Array<{ id: number }> };
+    expect(page.items.some((o) => o.id === outputId)).toBe(true);
+  });
+
+  it('GET /v2/outputs/types stays global flat', async () => {
+    const { status, body } = await get('/v2/outputs/types');
+    expect(status).toBe(200);
+    expect(Array.isArray(body)).toBe(true);
   });
 });
