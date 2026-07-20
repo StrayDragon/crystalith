@@ -1,24 +1,28 @@
 // Integration test: outputs generation of core structural types.
 //
-// Mocks the 'ai' module (generateObject) and verifies generateOutputByType
-// returns the mocked structured object for FAQ and TIMELINE types.
+// Mocks the 'ai' module (generateText + Output.object) and verifies
+// generateOutputByType returns the mocked structured object for FAQ and TIMELINE.
 import { describe, expect, it, mock } from 'bun:test';
 
 // Install the AI mock BEFORE importing the module under test.
 mock.module('ai', () => ({
-  generateObject: async ({ prompt }: { prompt?: string }) => {
+  Output: {
+    object: <T>(spec: T) => spec,
+  },
+  generateText: async ({ prompt, output }: { prompt?: string; output?: unknown }) => {
+    if (!output) return { text: '' };
     // Distinguish by prompt content tag embedded by the test context.
     if (prompt?.includes('FAQ_CONTEXT')) {
       return {
-        object: {
+        output: {
           items: [{ q: 'What is Crystalith?', a: 'A RAG notebook.' }],
         },
       };
     }
     if (prompt?.includes('TIMELINE_CONTEXT')) {
-      return { object: { events: [{ date: '2026', event: 'v2 launch' }] } };
+      return { output: { events: [{ date: '2026', event: 'v2 launch' }] } };
     }
-    return { object: {} };
+    return { output: {} };
   },
 }));
 

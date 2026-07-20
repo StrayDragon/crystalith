@@ -14,9 +14,11 @@ const MOCK_AI_OBJECT = {
   suggestedQueries: [],
 };
 mock.module('ai', () => ({
-  generateObject: async () => ({ object: MOCK_AI_OBJECT }),
-  generateText: async () => ({ text: 'SSE report' }),
+  Output: { object: <T>(spec: T) => spec },
+  generateText: async ({ output }: { output?: unknown }) =>
+    output ? { output: MOCK_AI_OBJECT } : { text: 'SSE report' },
   streamText: () => ({
+    stream: (async function* () {})(),
     fullStream: (async function* () {})(),
     textStream: (async function* () {
       yield 'streamed content.';

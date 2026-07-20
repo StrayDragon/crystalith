@@ -10,7 +10,7 @@ import {
 //
 // Extracted from router.ts (H5+H6 fix) to eliminate duplication between
 // POST and SSE stream endpoints for outline + markdown generation.
-import { generateObject, streamText } from 'ai';
+import { generateText, Output, streamText } from 'ai';
 import { and, eq, inArray } from 'drizzle-orm';
 
 import { withRetry } from '../../ai/middleware.ts';
@@ -207,7 +207,7 @@ export function syncSlideOutput(slide: typeof studioSlides.$inferSelect, markdow
 // ---------------------------------------------------------------------------
 
 /**
- * Generate outline via generateObject. Shared by POST /outline and SSE stream.
+ * Generate outline via generateText + Output.object. Shared by POST /outline and SSE stream.
  * Returns the outline object. Caller handles DB status transitions.
  */
 export async function generateOutline(
@@ -221,14 +221,18 @@ export async function generateOutline(
   // c56: interpret generation_config into concrete ranges (v1 _build_outline_prompt).
   const hintLines = buildConfigHints(slide.generationConfig ?? null);
 
-  const { object: outline } = await generateObject({
+  const { output: outline } = await generateText({
     model,
-    schema: SlidesOutlineSchema,
-    system:
+    output: Output.object({ schema: SlidesOutlineSchema }),
+    instructions:
       'You are a presentation designer. Create a slide outline with title and bullet points for each slide.' +
       hintLines,
     prompt: `Create a slide outline based on:\n\nTitle: ${slide.title || 'Presentation'}\n\nContent:\n${context}\n\n${slide.prompt ? `Additional instructions: ${slide.prompt}` : ''}`,
   });
+
+  if (outline === null || outline === undefined) {
+    throw new Error('No slide outline generated');
+  }
 
   return outline;
 }
@@ -259,12 +263,12 @@ export async function generateMarkdown(
 
   const result = streamText({
     model,
-    system: `You are an expert presentation designer. Generate Slidev markdown.\nEach slide separated by ---. Keep content concise.${hintLines}`,
+    instructions: `You are an expert presentation designer. Generate Slidev markdown.\nEach slide separated by ---. Keep content concise.${hintLines}`,
     prompt: `Generate slides from this outline:\n${JSON.stringify(slide.outline, null, 2)}\n\nBased on this content:\n${context}\n\n${slide.prompt ? `Additional: ${slide.prompt}` : ''}`,
   });
 
   let rawMarkdown = '';
-  for await (const part of result.fullStream) {
+  for await (const part of result.stream) {
     if (part.type === 'text-delta') {
       rawMarkdown += part.text;
       onDelta?.(part.text);

@@ -13,6 +13,7 @@ import {
 let generateTextCalls = 0;
 
 mock.module('ai', () => ({
+  Output: { object: <T>(spec: T) => spec },
   generateText: async () => {
     generateTextCalls += 1;
     return {
@@ -21,6 +22,7 @@ mock.module('ai', () => ({
   },
   generateObject: async () => ({ object: {} }),
   streamText: () => ({
+    stream: (async function* () {})(),
     fullStream: (async function* () {})(),
     textStream: (async function* () {})(),
   }),

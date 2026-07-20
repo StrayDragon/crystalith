@@ -1,6 +1,7 @@
-// Output generator — generateObject(schema) per output type.
+// Output generator — generateText + Output.object(schema) per output type.
 //
-// Each output type has its own Zod schema (from shared). generateObject
+// Each output type has its own Zod schema (from shared). generateText with
+// Output.object validates the LLM response against that schema.
 // is called with the schema, system prompt, and chunk context.
 import type { LanguageModelV4 } from '@ai-sdk/provider';
 import {
@@ -10,7 +11,7 @@ import {
   type OutputType,
   type RenderDescriptor,
 } from '@crystalith/shared';
-import { generateObject } from 'ai';
+import { generateText, Output } from 'ai';
 import type { z } from 'zod';
 
 export type { OutputMeta, RenderDescriptor };
@@ -244,14 +245,18 @@ export async function generateOutputByType(
   const systemPrompt = customPrompt || meta.prompt;
   const fullPrompt = `Context:\n${context}\n\nGenerate a ${meta.displayText} (${meta.description}) based on the above context.`;
 
-  const { object } = await generateObject({
+  const { output } = await generateText({
     model,
-    schema,
-    system: systemPrompt,
+    output: Output.object({ schema }),
+    instructions: systemPrompt,
     prompt: fullPrompt,
   });
 
-  return object;
+  if (output === null || output === undefined) {
+    throw new Error(`No structured ${type} output generated`);
+  }
+
+  return output;
 }
 
 /** List available output type metadata. */

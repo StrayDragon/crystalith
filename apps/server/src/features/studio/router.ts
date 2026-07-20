@@ -4,7 +4,7 @@
 // Flat aliases: /v2/studio/slides* (c67 ?notebookId=)
 //
 // Two-stage generation with HITL review/edit:
-//   1. POST /slides/:id/outline   → generateObject → stage=outline
+//   1. POST /slides/:id/outline   → generateText+Output → stage=outline
 //   2. PUT  /slides/:id/outline   → manual edit outline (HITL review)
 //   3. POST /slides/:id/markdown  → streamText from outline → stage=markdown
 //   4. PUT  /slides/:id/markdown  → manual edit markdown + Slidev persist + output sync

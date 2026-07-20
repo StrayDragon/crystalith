@@ -2,11 +2,11 @@
 //
 // Exercises the full outline → markdown flow via the in-process Elysia app:
 //   1. POST /v2/studio/slides            → create draft (stage='input')
-//   2. POST /v2/studio/slides/:id/outline → generateObject (mocked) → stage='outline'
+//   2. POST /v2/studio/slides/:id/outline → generateText+Output (mocked) → stage='outline'
 //   3. (review) ORM update of outline column
 //   4. POST /v2/studio/slides/:id/markdown → streamText (mocked) → stage='markdown'
 //
-// generateObject returns a canned outline; streamText yields Slidev markdown
+// generateText+Output returns a canned outline; streamText yields Slidev markdown
 // text-deltas. Both are distinguished by the router's call site (not prompt
 // parsing) since the router imports them as distinct named exports.
 import { afterAll, beforeAll, describe, expect, it, mock } from 'bun:test';
@@ -21,13 +21,20 @@ const MOCK_OUTLINE = {
 const MOCK_MARKDOWN =
   '---\ntheme: seriph\n---\n# Intro\n- point one\n- point two\n---\n# Details\n- alpha\n- beta\n';
 
-// Mock the 'ai' module: generateObject → outline, streamText → markdown deltas.
+// Mock the 'ai' module: generateText+Output → outline, streamText → markdown deltas.
 mock.module('ai', () => ({
-  generateObject: async () => ({ object: MOCK_OUTLINE }),
-  generateText: async () => ({ text: MOCK_MARKDOWN }),
+  Output: {
+    object: <T>(spec: T) => spec,
+  },
+  generateText: async ({ output }: { output?: unknown }) =>
+    output ? { output: MOCK_OUTLINE } : { text: MOCK_MARKDOWN },
   streamText: () => ({
-    fullStream: (async function* () {
+    stream: (async function* () {
       // Split into two deltas to verify accumulation across chunks.
+      yield { type: 'text-delta', text: MOCK_MARKDOWN.slice(0, 20) };
+      yield { type: 'text-delta', text: MOCK_MARKDOWN.slice(20) };
+    })(),
+    fullStream: (async function* () {
       yield { type: 'text-delta', text: MOCK_MARKDOWN.slice(0, 20) };
       yield { type: 'text-delta', text: MOCK_MARKDOWN.slice(20) };
     })(),

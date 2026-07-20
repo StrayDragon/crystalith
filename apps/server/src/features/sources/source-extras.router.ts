@@ -139,7 +139,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
       const { text } = await generateText({
         model,
         abortSignal: AbortSignal.timeout(30_000),
-        system:
+        instructions:
           'You are a QA assistant. Answer questions based strictly on the provided document. If the document does not contain relevant information, say so honestly.',
         prompt: `Document: ${source.filename}\n\nContent:\n${context}\n\nQuestion: ${question}`,
       });

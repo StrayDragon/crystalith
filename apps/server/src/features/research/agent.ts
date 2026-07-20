@@ -3,7 +3,7 @@
 // Architecture:
 //   for loop (Plan → HITL → Execute → Analyze → continue/break) → Report
 //
-// - Plan/Analyze: generateObject with Zod schema (structured output)
+// - Plan/Analyze: generateText + Output.object with Zod schema (structured output)
 // - HITL: DB polling (wait for approve/skip/modify/finish)
 // - Execute: searxngFetch via Semaphore(3)
 // - Report: streamText → eagerly drain → persist completed immediately
@@ -19,7 +19,7 @@ import {
   type IterationAnalysisLlm,
   type ResearchPlanLlm,
 } from '@crystalith/shared';
-import { generateObject, streamText } from 'ai';
+import { generateText, Output, streamText } from 'ai';
 import { and, eq, notInArray } from 'drizzle-orm';
 
 import { withRetry } from '../../ai/middleware.ts';
@@ -30,7 +30,7 @@ import { getDefaultChatModel } from '../../shared/config.ts';
 import { Semaphore } from '../../shared/semaphore.ts';
 import { renewLock } from './lock.ts';
 
-/** Persist generateObject / plain objects into research step JSON columns. */
+/** Persist structured LLM / plain objects into research step JSON columns. */
 function asStepJson(value: object): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
@@ -104,13 +104,17 @@ async function planSearches(state: ResearchState, signal: AbortSignal): Promise<
   const modelConfig = getDefaultChatModel();
   const model = withRetry(await resolveModel(modelConfig!));
 
-  const { object } = await generateObject({
+  const { output: object } = await generateText({
     model,
-    schema: ResearchPlanLlmSchema,
-    system: `You are a research assistant planning search queries. Generate 2-4 search queries covering different aspects of the topic.`,
+    output: Output.object({ schema: ResearchPlanLlmSchema }),
+    instructions: `You are a research assistant planning search queries. Generate 2-4 search queries covering different aspects of the topic.`,
     prompt: buildPlanPrompt(state),
     abortSignal: signal,
   });
+
+  if (object === null || object === undefined) {
+    throw new Error('No research plan generated');
+  }
 
   db()
     .insert(researchSteps)
@@ -138,13 +142,17 @@ async function analyzeResults(state: ResearchState, signal: AbortSignal): Promis
     .map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.snippet}\n`)
     .join('\n');
 
-  const { object } = await generateObject({
+  const { output: object } = await generateText({
     model,
-    schema: IterationAnalysisLlmSchema,
-    system: `You analyze research results to determine coverage and whether more searches are needed.`,
+    output: Output.object({ schema: IterationAnalysisLlmSchema }),
+    instructions: `You analyze research results to determine coverage and whether more searches are needed.`,
     prompt: `Topic: ${state.topic}\n\nResults found (${state.results.length}):\n${context}\n\nEstimate coverage [0-1] and state if more searches are needed.`,
     abortSignal: signal,
   });
+
+  if (object === null || object === undefined) {
+    throw new Error('No research analysis generated');
+  }
 
   db()
     .insert(researchSteps)
@@ -400,7 +408,7 @@ async function generateReport(
     model,
     // c49: use the shared 6-section REPORT_SYSTEM_PROMPT (was a 1-line minimal prompt;
     // only generateFinalReport had the rich prompt before — now both paths align to v1).
-    system: REPORT_SYSTEM_PROMPT,
+    instructions: REPORT_SYSTEM_PROMPT,
     prompt: `Topic: ${state.topic}\n\nResults:\n${context}\n\nWrite a detailed report following the structure above.`,
     abortSignal: signal,
   });
@@ -717,7 +725,7 @@ export async function generateFinalReport(state: ResearchState): Promise<string>
   const result = streamText({
     model,
     // c49: shared REPORT_SYSTEM_PROMPT (was inline duplicate; now both paths use one constant)
-    system: REPORT_SYSTEM_PROMPT,
+    instructions: REPORT_SYSTEM_PROMPT,
     prompt: `Topic: ${state.topic}\n\nResults:\n${context}\n\nWrite a detailed report following the structure above.`,
   });
 
