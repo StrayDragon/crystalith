@@ -48,9 +48,27 @@ if (!fs.existsSync(bin)) {
   process.exit(1);
 }
 
+// Slidev 52 defaults host to "localhost" (often [::1] only). Passing
+// --remote unlocks --bind; use empty password so it does NOT call
+// public-ip (that lookup times out offline and kills the process).
+// --base /slidev/ matches the same-origin iframe path used by Studio.
+// Do NOT pass --theme here: CLI theme must match slides.md frontmatter
+// (`theme: default`) or every markdown write triggers a full server restart
+// and the Vite /slidev proxy returns 500 during that window.
 const child = spawn(
   process.execPath,
-  [bin, previewPath, '--port', String(port), '--theme', '@slidev/theme-default'],
+  [
+    bin,
+    previewPath,
+    '--port',
+    String(port),
+    '--remote',
+    '',
+    '--bind',
+    '0.0.0.0',
+    '--base',
+    '/slidev/',
+  ],
   {
     cwd: packageRoot,
     stdio: 'inherit',
