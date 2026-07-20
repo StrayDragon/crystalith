@@ -328,6 +328,48 @@ export const SourceUploadNestedQuerySchema = z.object({
 });
 export type SourceUploadNestedQuery = z.infer<typeof SourceUploadNestedQuerySchema>;
 
+/** Fresh ingest result from POST …/sources/upload. */
+export const SourceIngestResultSchema = z.object({
+  sourceId: IdSchema,
+  chunkCount: z.number().int().nonnegative(),
+  text: z.string(),
+  parserType: z.string(),
+  status: SourceStatusSchema,
+  errorCode: z.string().optional(),
+  errorMessage: z.string().optional(),
+});
+export type SourceIngestResult = z.infer<typeof SourceIngestResultSchema>;
+
+/** Dedup reuse branch for upload. */
+export const SourceUploadReuseResultSchema = z.object({
+  reused: z.literal(true),
+  source: SourceSchema,
+});
+export type SourceUploadReuseResult = z.infer<typeof SourceUploadReuseResultSchema>;
+
+export const SourceUploadResponseSchema = z.union([
+  SourceIngestResultSchema,
+  SourceUploadReuseResultSchema,
+]);
+export type SourceUploadResponse = z.infer<typeof SourceUploadResponseSchema>;
+
+export const SourceParserSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  mimeTypes: z.array(z.string()),
+  extensions: z.array(z.string()),
+});
+export type SourceParser = z.infer<typeof SourceParserSchema>;
+
+export const SourceParserListSchema = SourceParserSchema.array();
+export type SourceParserList = z.infer<typeof SourceParserListSchema>;
+
+export const SourceReembedResponseSchema = z.object({
+  sourceId: IdSchema,
+  reEmbedded: z.literal(true),
+});
+export type SourceReembedResponse = z.infer<typeof SourceReembedResponseSchema>;
+
 export const ExtractorInfoSchema = z.object({
   type: z.string(),
   pluginId: z.string().nullable().optional(),

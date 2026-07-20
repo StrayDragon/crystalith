@@ -9,6 +9,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { db } from '../../db/index.ts';
 import { templates } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
 
 const apiDocs: OpenApiRoute[] = [
@@ -98,14 +99,13 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
   )
   .patch(
     '/templates/:id',
-    ({ params, body, set }) => {
+    ({ params, body }) => {
       const id = requirePositiveIntId(params.id, 'template id');
       const existing = db().select().from(templates).where(eq(templates.id, id)).get();
       if (!existing) throw new NotFoundError(`Template ${id} not found`);
       // c61: builtin templates cannot be modified (v1 service.py:110-111)
       if (existing.isBuiltin) {
-        set.status = 409;
-        return { error: 'Built-in templates cannot be modified' };
+        throw new AppHttpError(ErrorCode.CONFLICT, 'Built-in templates cannot be modified');
       }
 
       const updateData: Record<string, unknown> = {};
@@ -121,7 +121,7 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
         .get();
       return serializeTemplate(updated);
     },
-    { body: TemplateCreateSchema.partial() },
+    { body: TemplateCreateSchema.partial(), response: TemplateSchema },
   )
   .delete('/templates/:id', ({ params, set }) => {
     const id = requirePositiveIntId(params.id, 'template id');
@@ -129,8 +129,7 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
     if (!existing) throw new NotFoundError(`Template ${id} not found`);
     // c61: builtin templates cannot be deleted (v1 service.py:126-127)
     if (existing.isBuiltin) {
-      set.status = 409;
-      return { error: 'Built-in templates cannot be deleted' };
+      throw new AppHttpError(ErrorCode.CONFLICT, 'Built-in templates cannot be deleted');
     }
     db().delete(templates).where(eq(templates.id, id)).run();
     set.status = 204;

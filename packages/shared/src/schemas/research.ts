@@ -213,3 +213,24 @@ export const ResearchUserInputSchema = z.object({
   modifiedPlan: SearchPlanSchema.nullable().optional(),
   message: z.string().optional(),
 });
+
+/** POST …/research/:id/export body */
+export const ResearchExportBodySchema = z.object({
+  exportType: z.enum(['source', 'note']).optional(),
+});
+export type ResearchExportBody = z.infer<typeof ResearchExportBodySchema>;
+
+export const ResearchExportResponseSchema = z.discriminatedUnion('exportType', [
+  z.object({
+    success: z.literal(true),
+    exportType: z.literal('note'),
+    outputId: IdSchema,
+  }),
+  z.object({
+    success: z.literal(true),
+    exportType: z.literal('source'),
+    message: z.string(),
+    sourceId: IdSchema,
+  }),
+]);
+export type ResearchExportResponse = z.infer<typeof ResearchExportResponseSchema>;

@@ -1,3 +1,9 @@
+import {
+  ApiRootSchema,
+  HealthDependenciesSchema,
+  HealthResponseSchema,
+  type HealthDependencies,
+} from '@crystalith/shared';
 import { openapi } from '@elysiajs/openapi';
 import { Elysia, NotFoundError } from 'elysia';
 
@@ -92,68 +98,74 @@ export function createApp() {
         },
       }),
     )
-    .get('/health', () => ({ status: 'ok', version: '2.0.0-dev' }))
-    .get('/health/dependencies', async () => {
-      const opt = getOptionalServices();
-      const now = new Date().toISOString();
-
-      // Probe SearXNG if enabled — short timeout, fail fast.
-      let searxngStatus: string;
-      let searxngHealthy: boolean | null;
-      if (opt.searxng.enabled && opt.searxng.endpoint) {
-        try {
-          const res = await fetch(opt.searxng.endpoint, {
-            method: 'GET',
-            signal: AbortSignal.timeout((opt.searxng.timeout_s ?? 3) * 1000),
-          });
-          searxngStatus = res.ok ? 'healthy' : 'degraded';
-          searxngHealthy = res.ok;
-        } catch {
-          searxngStatus = 'degraded';
-          searxngHealthy = false;
-        }
-      } else {
-        searxngStatus = 'disabled';
-        searxngHealthy = null;
-      }
-
-      return {
-        status: 'ok',
-        generatedAt: now,
-        lastProbe: now,
-        core: {
-          backend: { service: 'api', healthy: true },
-          frontend: {
-            service: 'web',
-            healthy: null,
-            note: 'frontend health is validated through reverse-proxy route /health',
-          },
-        },
-        optional: {
-          cacheRedis: {
-            service: 'Redis (Cache)',
-            enabled: false,
-            endpoint: null,
-            status: 'disabled',
-            healthy: null,
-          },
-          searchSearxng: {
-            service: 'SearXNG (Search)',
-            enabled: opt.searxng.enabled,
-            endpoint: opt.searxng.enabled ? opt.searxng.endpoint : null,
-            status: searxngStatus,
-            healthy: searxngHealthy,
-          },
-        },
-      };
+    .get('/health', () => ({ status: 'ok', version: '2.0.0-dev' }), {
+      response: HealthResponseSchema,
     })
+    .get(
+      '/health/dependencies',
+      async (): Promise<HealthDependencies> => {
+        const opt = getOptionalServices();
+        const now = new Date().toISOString();
+
+        // Probe SearXNG if enabled — short timeout, fail fast.
+        let searxngStatus: string;
+        let searxngHealthy: boolean | null;
+        if (opt.searxng.enabled && opt.searxng.endpoint) {
+          try {
+            const res = await fetch(opt.searxng.endpoint, {
+              method: 'GET',
+              signal: AbortSignal.timeout((opt.searxng.timeout_s ?? 3) * 1000),
+            });
+            searxngStatus = res.ok ? 'healthy' : 'degraded';
+            searxngHealthy = res.ok;
+          } catch {
+            searxngStatus = 'degraded';
+            searxngHealthy = false;
+          }
+        } else {
+          searxngStatus = 'disabled';
+          searxngHealthy = null;
+        }
+
+        return {
+          status: 'ok',
+          generatedAt: now,
+          lastProbe: now,
+          core: {
+            backend: { service: 'api', healthy: true },
+            frontend: {
+              service: 'web',
+              healthy: null,
+              note: 'frontend health is validated through reverse-proxy route /health',
+            },
+          },
+          optional: {
+            cacheRedis: {
+              service: 'Redis (Cache)',
+              enabled: false,
+              endpoint: null,
+              status: 'disabled',
+              healthy: null,
+            },
+            searchSearxng: {
+              service: 'SearXNG (Search)',
+              enabled: opt.searxng.enabled,
+              endpoint: opt.searxng.enabled ? (opt.searxng.endpoint ?? null) : null,
+              status: searxngStatus,
+              healthy: searxngHealthy,
+            },
+          },
+        };
+      },
+      { response: HealthDependenciesSchema },
+    )
     .get('/openapi.json', () => generateOpenApiDocument())
     .get('/asyncapi.json', () => generateAsyncApiDocument())
 
     .group('/v2', (app) =>
       app
-        .get('/', () => ({ message: 'Crystalith v2 API' }))
-        .get('/health', () => ({ status: 'ok' })),
+        .get('/', () => ({ message: 'Crystalith v2 API' }), { response: ApiRootSchema })
+        .get('/health', () => ({ status: 'ok' }), { response: HealthResponseSchema }),
     )
 
     .use(notebooksRouter)
