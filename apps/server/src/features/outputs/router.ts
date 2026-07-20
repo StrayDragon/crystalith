@@ -1,4 +1,5 @@
 import {
+  Empty204Schema,
   NotebookIdQuerySchema,
   OutputConvertToSourceResponseSchema,
   OutputExportFormatQuerySchema,
@@ -394,7 +395,7 @@ function handleDeleteOutput(id: number, notebookId: number, set: SetStatus) {
   requireOutputInNotebook(id, notebookId);
   db().delete(outputs).where(eq(outputs.id, id)).run();
   set.status = 204;
-  return '';
+  return;
 }
 
 function handleExportOutput(id: number, notebookId: number, format: 'markdown' | 'json') {
@@ -567,11 +568,15 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     },
     { response: OutputSchema },
   )
-  .delete('/notebooks/:nid/outputs/:id', ({ params, set }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const id = requirePositiveIntId(params.id, 'output id');
-    return handleDeleteOutput(id, nid, set);
-  })
+  .delete(
+    '/notebooks/:nid/outputs/:id',
+    ({ params, set }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const id = requirePositiveIntId(params.id, 'output id');
+      return handleDeleteOutput(id, nid, set);
+    },
+    { response: { 204: Empty204Schema } },
+  )
   .get(
     '/notebooks/:nid/outputs/:id/export',
     ({ params, query }) => {
@@ -616,7 +621,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'output id');
       return handleDeleteOutput(id, query.notebookId, set);
     },
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: { 204: Empty204Schema } },
   )
   .get(
     '/outputs/:id/export',

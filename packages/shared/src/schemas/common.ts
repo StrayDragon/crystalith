@@ -199,3 +199,13 @@ export const HealthDependenciesSchema = z.object({
   }),
 });
 export type HealthDependencies = z.infer<typeof HealthDependenciesSchema>;
+
+/**
+ * HTTP 204 No Content success body.
+ * Elysia strips any returned value to `undefined` for status 204 before
+ * response validation — mount as `response: { 204: Empty204Schema }`.
+ */
+export const Empty204Schema = z.undefined().openapi({
+  description: desc('common.empty_204', '无响应体（HTTP 204）'),
+});
+export type Empty204 = z.infer<typeof Empty204Schema>;

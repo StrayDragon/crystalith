@@ -77,6 +77,28 @@ export interface StreamRequestOptions {
   signal?: AbortSignal;
 }
 
+/**
+ * undici's `fetch` (used under Vitest/MSW) rejects jsdom `AbortSignal` instances
+ * (`instanceof` fails across realms). Real browsers accept the page's signal.
+ * Probe once; if incompatible, omit signal (callers still cancel via their own flags).
+ */
+let fetchSignalCompatible: boolean | null = null;
+
+function resolveFetchSignal(signal?: AbortSignal): AbortSignal | undefined {
+  if (signal === null || signal === undefined) return undefined;
+  if (fetchSignalCompatible === false) return undefined;
+  if (fetchSignalCompatible === true) return signal;
+  try {
+    // Trigger undici/jsdom realm check without performing a network request.
+    void new Request('https://crystalith.invalid/', { method: 'GET', signal });
+    fetchSignalCompatible = true;
+    return signal;
+  } catch {
+    fetchSignalCompatible = false;
+    return undefined;
+  }
+}
+
 export async function* streamRequest(
   path: string,
   options: StreamRequestOptions = {},
@@ -95,7 +117,7 @@ export async function* streamRequest(
     method: options.method ?? 'GET',
     headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-    signal: options.signal,
+    signal: resolveFetchSignal(options.signal),
   });
 
   if (!response.ok) {

@@ -4,11 +4,13 @@ import {
   PaginationParamsSchema,
   PatchNotebookExtractorPolicySchema,
   ChunkListSchema,
+  Empty204Schema,
   SourceBatchDeleteRequestSchema,
   SourceBatchDeleteResponseSchema,
   SourceBatchReembedRequestSchema,
   SourceBatchReembedResponseSchema,
   SourceFromUrlRequestSchema,
+  SourceFromUrlResponseSchema,
   SourceParserListSchema,
   SourceReembedResponseSchema,
   SourceSchema,
@@ -50,7 +52,7 @@ import {
   getSecurityPolicy,
   getUploadMaxBytes,
 } from '../../shared/config.ts';
-import { AppHttpError, ErrorCode, sendError } from '../../shared/errors.ts';
+import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import {
   extractUrl,
   extractors,
@@ -308,7 +310,7 @@ function handleDeleteSource(id: number, notebookId: number, set: UploadSet) {
   if (row.notebookId) bumpSourcesEpoch(row.notebookId);
 
   set.status = 204;
-  return '';
+  return;
 }
 
 function handleGetSourceChunks(id: number, notebookId: number) {
@@ -530,11 +532,15 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   )
 
   // Delete a source (nested canonical)
-  .delete('/notebooks/:nid/sources/:sid', ({ params, set }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const sid = requirePositiveIntId(params.sid, 'source id');
-    return handleDeleteSource(sid, nid, set);
-  })
+  .delete(
+    '/notebooks/:nid/sources/:sid',
+    ({ params, set }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const sid = requirePositiveIntId(params.sid, 'source id');
+      return handleDeleteSource(sid, nid, set);
+    },
+    { response: { 204: Empty204Schema } },
+  )
 
   // Delete a source (flat alias — c67 notebookId required)
   .delete(
@@ -543,7 +549,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'source id');
       return handleDeleteSource(id, query.notebookId, set);
     },
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: { 204: Empty204Schema } },
   )
 
   // List available parsers (global flat — do not nest)
@@ -663,22 +669,26 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     { body: SourceTagCreateSchema, response: SourceTagSchema },
   )
 
-  .delete('/notebooks/:nid/sources/tags/:tid', ({ params, set }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const tid = requirePositiveIntId(params.tid, 'tag id');
-    // Ownership check (v1 api_tags.py:110)
-    const existing = db()
-      .select()
-      .from(sourceTags)
-      .where(and(eq(sourceTags.id, tid), eq(sourceTags.notebookId, nid)))
-      .get();
-    if (!existing) throw new NotFoundError(`Tag ${tid} not found in notebook ${nid}`);
-    db().delete(sourceTags).where(eq(sourceTags.id, tid)).run();
-    // c57: invalidate sources cache
-    bumpSourcesEpoch(nid);
-    set.status = 204;
-    return '';
-  })
+  .delete(
+    '/notebooks/:nid/sources/tags/:tid',
+    ({ params, set }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const tid = requirePositiveIntId(params.tid, 'tag id');
+      // Ownership check (v1 api_tags.py:110)
+      const existing = db()
+        .select()
+        .from(sourceTags)
+        .where(and(eq(sourceTags.id, tid), eq(sourceTags.notebookId, nid)))
+        .get();
+      if (!existing) throw new NotFoundError(`Tag ${tid} not found in notebook ${nid}`);
+      db().delete(sourceTags).where(eq(sourceTags.id, tid)).run();
+      // c57: invalidate sources cache
+      bumpSourcesEpoch(nid);
+      set.status = 204;
+      return;
+    },
+    { response: { 204: Empty204Schema } },
+  )
 
   .post(
     '/notebooks/:nid/sources/tags/:tid/sources',
@@ -981,7 +991,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       try {
         await validateUrlForFetch(url, getSecurityPolicy());
       } catch (error) {
-        return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, 'SSRF blocked', {
+        throw new AppHttpError(ErrorCode.SCHEMA_VALIDATION_FAILED, 'SSRF blocked', {
           reason: (error as Error).message,
         });
       }
@@ -996,13 +1006,12 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
           .get();
         if (hit) {
           if (dedupAction === 'prompt') {
-            return sendError(set, ErrorCode.CONFLICT, 'Source dedup hit', {
+            throw new AppHttpError(ErrorCode.CONFLICT, 'Source dedup hit', {
               existingSourceId: hit.id,
             });
           }
           if (dedupAction === 'reuse') {
-            const existing = db().select().from(sources).where(eq(sources.id, hit.id)).get();
-            return { reused: true, source: existing };
+            return { reused: true as const, source: handleGetSource(hit.id, nid) };
           }
         }
       }
@@ -1054,7 +1063,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         }
         bumpSourcesEpoch(nid);
         set.status = 201;
-        return { sourceId: sourceRow.id, filename: linkTitle, mode: 'link' };
+        return { sourceId: sourceRow.id, filename: linkTitle, mode: 'link' as const };
       }
 
       // Default mode: fetch and extract URL content
@@ -1080,8 +1089,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         try {
           response = await fetchWithRedirectGuard(url, getSecurityPolicy());
         } catch (error) {
-          return sendError(
-            set,
+          throw new AppHttpError(
             ErrorCode.SCHEMA_VALIDATION_FAILED,
             error instanceof SsrfBlockedError
               ? 'SSRF blocked on fallback'
@@ -1101,7 +1109,10 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         return result;
       }
     },
-    { body: SourceFromUrlRequestSchema },
+    {
+      body: SourceFromUrlRequestSchema,
+      response: { 200: SourceFromUrlResponseSchema, 201: SourceFromUrlResponseSchema },
+    },
   )
 
   // c44: Extractor policy routes — GET returns full ExtractorsListResponse (v1 api_ingest.py:79-153)

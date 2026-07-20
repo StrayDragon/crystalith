@@ -1,4 +1,5 @@
 import {
+  Empty204Schema,
   PaginatedSchema,
   PaginationParamsSchema,
   SessionConvertToOutputRequestSchema,
@@ -216,15 +217,19 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
   )
 
   // Delete a session (c39: notebook ownership check)
-  .delete('/notebooks/:nid/sessions/:sid', ({ params, set }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const sid = requirePositiveIntId(params.sid, 'session id');
-    const existing = db().select().from(sessions).where(eq(sessions.id, sid)).get();
-    if (!existing || existing.notebookId !== nid) notFound(sid);
-    db().delete(sessions).where(eq(sessions.id, sid)).run();
-    set.status = 204;
-    return '';
-  })
+  .delete(
+    '/notebooks/:nid/sessions/:sid',
+    ({ params, set }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const sid = requirePositiveIntId(params.sid, 'session id');
+      const existing = db().select().from(sessions).where(eq(sessions.id, sid)).get();
+      if (!existing || existing.notebookId !== nid) notFound(sid);
+      db().delete(sessions).where(eq(sessions.id, sid)).run();
+      set.status = 204;
+      return;
+    },
+    { response: { 204: Empty204Schema } },
+  )
 
   // Convert session to source (c34: chunk + embed + vector — v1 behavior; c39: ownership + 201)
   .post(
