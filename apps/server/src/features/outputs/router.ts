@@ -10,6 +10,7 @@ import {
   OutputSchema,
   OutputsPageSchema,
   PaginationParamsSchema,
+  CitationSchema,
   type Citation,
   type OutputGenerateBody,
 } from '@crystalith/shared';
@@ -192,12 +193,13 @@ function serializeOutput(row: typeof outputs.$inferSelect) {
 
 const PREVIEW_MAX = 160;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 /** Thin list projection — no full content (c72). */
 function serializeOutputListItem(row: typeof outputs.$inferSelect) {
-  const content =
-    row.content && typeof row.content === 'object' && !Array.isArray(row.content)
-      ? (row.content as Record<string, unknown>)
-      : null;
+  const content = isRecord(row.content) ? row.content : null;
 
   let title: string | null = null;
   let preview: string | null = null;
@@ -255,20 +257,20 @@ export function collectCitedCitations(content: Record<string, unknown> | null): 
       for (const item of node) visit(item);
       return;
     }
-    const obj = node as Record<string, unknown>;
-    const cited = obj.citations;
+    if (!isRecord(node)) return;
+    const cited = node.citations;
     if (Array.isArray(cited)) {
       for (const c of cited) {
-        if (!c || typeof c !== 'object') continue;
-        const cit = c as Record<string, unknown>;
-        const chunkId = cit.chunkId;
-        if (typeof chunkId !== 'number' || seen.has(chunkId)) continue;
+        const parsed = CitationSchema.safeParse(c);
+        if (!parsed.success) continue;
+        const chunkId = parsed.data.chunkId;
+        if (seen.has(chunkId)) continue;
         seen.add(chunkId);
-        out.push(cit as unknown as Citation);
+        out.push(parsed.data);
       }
     }
     // Recurse into all object-valued properties.
-    for (const v of Object.values(obj)) visit(v);
+    for (const v of Object.values(node)) visit(v);
   };
   visit(content);
   return out;
@@ -417,7 +419,7 @@ function handleExportOutput(id: number, notebookId: number, format: 'markdown' |
   // leaf nodes, so we walk the tree and dedup by chunk_id (first-seen order).
   // This replaces the prior `row.chunkIds` join which listed ALL retrieved
   // chunks (the superset), not just the cited ones.
-  const citations = collectCitedCitations(row.content as Record<string, unknown> | null);
+  const citations = collectCitedCitations(isRecord(row.content) ? row.content : null);
   const sourceIds = [...new Set(citations.map((c) => c.sourceId))];
   const sourceRows = sourceIds.length
     ? db().select().from(sources).where(inArray(sources.id, sourceIds)).all()
@@ -449,7 +451,7 @@ function handleExportOutput(id: number, notebookId: number, format: 'markdown' |
   //   > snippet
   const bodyMarkdown = renderOutputToMarkdown(
     row.type,
-    row.content as Record<string, unknown> | null,
+    isRecord(row.content) ? row.content : null,
     row.prompt,
   );
   const citationLines = citations.map((c, i) => {
@@ -485,7 +487,7 @@ async function handleConvertOutputToSource(id: number, notebookId: number, set: 
   // Render output content to type-aware markdown (not raw JSON)
   const markdown = renderOutputToMarkdown(
     row.type,
-    row.content as Record<string, unknown> | null,
+    isRecord(row.content) ? row.content : null,
     row.prompt,
   );
 

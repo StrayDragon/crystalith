@@ -5,6 +5,7 @@ import type {
   OutputTypeId,
   TypedOutputItem,
   UnknownOutputPayload,
+  KnownOutputPayload,
 } from './types';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -80,31 +81,75 @@ function isStructuredContent(content: unknown): content is OutputContentByType['
   return false;
 }
 
-export function decodeOutputContent<K extends OutputTypeId>(
-  type: K,
+export function decodeOutputContent(
+  type: 'FAQ',
   content: unknown,
-): OutputContentByType[K] | null {
+): OutputContentByType['FAQ'] | null;
+export function decodeOutputContent(
+  type: 'GUIDE',
+  content: unknown,
+): OutputContentByType['GUIDE'] | null;
+export function decodeOutputContent(
+  type: 'TIMELINE',
+  content: unknown,
+): OutputContentByType['TIMELINE'] | null;
+export function decodeOutputContent(
+  type: 'MINDMAP',
+  content: unknown,
+): OutputContentByType['MINDMAP'] | null;
+export function decodeOutputContent(
+  type: 'QUIZ',
+  content: unknown,
+): OutputContentByType['QUIZ'] | null;
+export function decodeOutputContent(
+  type: 'BRIEFING',
+  content: unknown,
+): OutputContentByType['BRIEFING'] | null;
+export function decodeOutputContent(
+  type: 'SLIDES',
+  content: unknown,
+): OutputContentByType['SLIDES'] | null;
+export function decodeOutputContent(
+  type: 'PARAGRAPH',
+  content: unknown,
+): OutputContentByType['PARAGRAPH'] | null;
+export function decodeOutputContent(
+  type: 'BULLETS',
+  content: unknown,
+): OutputContentByType['BULLETS'] | null;
+export function decodeOutputContent(
+  type: 'STRUCTURED',
+  content: unknown,
+): OutputContentByType['STRUCTURED'] | null;
+export function decodeOutputContent(
+  type: OutputTypeId,
+  content: unknown,
+): KnownOutputPayload | null;
+export function decodeOutputContent(
+  type: OutputTypeId,
+  content: unknown,
+): KnownOutputPayload | null {
   switch (type) {
     case 'FAQ':
-      return (isFaqContent(content) ? content : null) as OutputContentByType[K] | null;
+      return isFaqContent(content) ? content : null;
     case 'GUIDE':
-      return (isGuideContent(content) ? content : null) as OutputContentByType[K] | null;
+      return isGuideContent(content) ? content : null;
     case 'TIMELINE':
-      return (isTimelineContent(content) ? content : null) as OutputContentByType[K] | null;
+      return isTimelineContent(content) ? content : null;
     case 'MINDMAP':
-      return (isMindmapContent(content) ? content : null) as OutputContentByType[K] | null;
+      return isMindmapContent(content) ? content : null;
     case 'QUIZ':
-      return (isQuizContent(content) ? content : null) as OutputContentByType[K] | null;
+      return isQuizContent(content) ? content : null;
     case 'BRIEFING':
-      return (isBriefingContent(content) ? content : null) as OutputContentByType[K] | null;
+      return isBriefingContent(content) ? content : null;
     case 'SLIDES':
-      return (isSlidesContent(content) ? content : null) as OutputContentByType[K] | null;
+      return isSlidesContent(content) ? content : null;
     case 'PARAGRAPH':
-      return (isParagraphContent(content) ? content : null) as OutputContentByType[K] | null;
+      return isParagraphContent(content) ? content : null;
     case 'BULLETS':
-      return (isBulletsContent(content) ? content : null) as OutputContentByType[K] | null;
+      return isBulletsContent(content) ? content : null;
     case 'STRUCTURED':
-      return (isStructuredContent(content) ? content : null) as OutputContentByType[K] | null;
+      return isStructuredContent(content) ? content : null;
     default:
       return null;
   }
@@ -114,17 +159,78 @@ export function isOutputContentForType<K extends OutputTypeId>(
   type: K,
   content: unknown,
 ): content is OutputContentByType[K] {
-  return decodeOutputContent(type, content) !== null;
+  switch (type) {
+    case 'FAQ':
+      return isFaqContent(content);
+    case 'GUIDE':
+      return isGuideContent(content);
+    case 'TIMELINE':
+      return isTimelineContent(content);
+    case 'MINDMAP':
+      return isMindmapContent(content);
+    case 'QUIZ':
+      return isQuizContent(content);
+    case 'BRIEFING':
+      return isBriefingContent(content);
+    case 'SLIDES':
+      return isSlidesContent(content);
+    case 'PARAGRAPH':
+      return isParagraphContent(content);
+    case 'BULLETS':
+      return isBulletsContent(content);
+    case 'STRUCTURED':
+      return isStructuredContent(content);
+    default:
+      return false;
+  }
 }
 
 export function decodeOutputItem(output: OutputItem): TypedOutputItem | null {
   if (!output.content) return null;
-  const decoded = decodeOutputContent(output.type, output.content);
-  if (!decoded) return null;
-  return {
-    ...output,
-    content: decoded,
-  } as TypedOutputItem;
+  switch (output.type) {
+    case 'FAQ': {
+      if (!isFaqContent(output.content)) return null;
+      return { ...output, type: 'FAQ', content: output.content };
+    }
+    case 'GUIDE': {
+      if (!isGuideContent(output.content)) return null;
+      return { ...output, type: 'GUIDE', content: output.content };
+    }
+    case 'TIMELINE': {
+      if (!isTimelineContent(output.content)) return null;
+      return { ...output, type: 'TIMELINE', content: output.content };
+    }
+    case 'MINDMAP': {
+      if (!isMindmapContent(output.content)) return null;
+      return { ...output, type: 'MINDMAP', content: output.content };
+    }
+    case 'QUIZ': {
+      if (!isQuizContent(output.content)) return null;
+      return { ...output, type: 'QUIZ', content: output.content };
+    }
+    case 'BRIEFING': {
+      if (!isBriefingContent(output.content)) return null;
+      return { ...output, type: 'BRIEFING', content: output.content };
+    }
+    case 'SLIDES': {
+      if (!isSlidesContent(output.content)) return null;
+      return { ...output, type: 'SLIDES', content: output.content };
+    }
+    case 'PARAGRAPH': {
+      if (!isParagraphContent(output.content)) return null;
+      return { ...output, type: 'PARAGRAPH', content: output.content };
+    }
+    case 'BULLETS': {
+      if (!isBulletsContent(output.content)) return null;
+      return { ...output, type: 'BULLETS', content: output.content };
+    }
+    case 'STRUCTURED': {
+      if (!isStructuredContent(output.content)) return null;
+      return { ...output, type: 'STRUCTURED', content: output.content };
+    }
+    default:
+      return null;
+  }
 }
 
 export function normalizeOutputPayload(type: OutputTypeId, content: unknown): OutputPayload {
