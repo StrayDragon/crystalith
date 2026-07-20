@@ -5,7 +5,6 @@ import {
   messages,
   notebooks,
   outputs,
-  researchSessions,
   sessions,
   sources,
   studioSlides,
@@ -46,10 +45,6 @@ beforeAll(() => {
         prompt: `p${i}`,
         content: { text: `o${i}` },
       })
-      .run();
-    orm
-      .insert(researchSessions)
-      .values({ notebookId, topic: `t${i}`, status: 'planning' })
       .run();
     orm
       .insert(studioSlides)
@@ -134,15 +129,6 @@ describe('c68 paginated list envelope', () => {
     const { status, body } = await get(`/v2/outputs?notebookId=${notebookId}&offset=0&limit=2`);
     expect(status).toBe(200);
     expectPage(body, { maxItems: 2, minTotal: 5, offset: 0, limit: 2 });
-  });
-
-  it('GET nested research returns PaginatedSchema scoped to notebook', async () => {
-    const { status, body } = await get(`/v2/notebooks/${notebookId}/research?offset=0&limit=2`);
-    expect(status).toBe(200);
-    const page = expectPage(body, { maxItems: 2, minTotal: 5, offset: 0, limit: 2 });
-    expect(
-      (page.items as Array<{ notebookId: number }>).every((r) => r.notebookId === notebookId),
-    ).toBe(true);
   });
 
   it('GET nested studio slides returns PaginatedSchema', async () => {

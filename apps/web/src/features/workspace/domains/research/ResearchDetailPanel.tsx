@@ -119,7 +119,7 @@ function ResearchDetailPanel({
   }, [sseEvents]);
   const latestErrorEvent = useMemo(() => {
     const errorEvents = sseEvents.filter(
-      (event): event is Extract<SSEEvent, { type: 'error' }> => event.type === 'error',
+      (event): event is SSEEvent & { type: 'error' } => event.type === 'error',
     );
     if (errorEvents.length === 0) return null;
     return errorEvents.at(-1);
@@ -133,7 +133,8 @@ function ResearchDetailPanel({
 
   // Get latest plan from SSE events or steps
   const latestPlanEvent = [...sseEvents].toReversed().find((e) => e.type === 'plan_ready');
-  const latestPlanFromSteps = useMemo(() => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const latestPlanFromSteps = useMemo((): any => {
     if (!session.steps || session.steps.length === 0) return null;
     const planStep = [...session.steps]
       .toReversed()
@@ -154,7 +155,8 @@ function ResearchDetailPanel({
     latestPlanEvent?.type === 'plan_ready' ? latestPlanEvent.data.data : latestPlanFromSteps;
 
   // Get queries from plan
-  const queries = useMemo(() => latestPlan?.queries ?? [], [latestPlan]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const queries = useMemo(() => (latestPlan?.queries ?? []) as any[], [latestPlan]);
 
   // Extract thinking/reasoning timeline from events or reconstruct from steps
   const thinkingTimeline = useMemo(

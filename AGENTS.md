@@ -37,7 +37,7 @@ crystalith/
 ├── packages/
 │   ├── shared/            # Zod schemas + types SSOT
 │   │   └── src/schemas/   # notebook, session, message, source, qa, output,
-│   │                      # research, studio, model, etc. (refine HTTP removed c73)
+│   │                      # studio, model, etc. (research schemas stubbed / pending rewrite; refine HTTP removed c73)
 │   └── crystalith-slidev/ # Slidev integration
 ├── config/                # Runtime config (app.yaml + secret.env)
 ├── llmanspec/             # Spec-driven development specs + changes
@@ -48,6 +48,7 @@ crystalith/
 ## Current State
 
 - ✅ All c00–c62 completed (63 changes); v1 parity confirmed through E2E
+- ⏸️ **Deep Research** backend stubbed (501 Not Implemented), pending rewrite
 - ✅ Frontend: all output renderers aligned with v1 interactive components
 - ✅ c14: `backend/py/` + `api/generated/` deleted；wire 类型走 Eden + `@crystalith/shared`（`shared-types.ts` 已移除）
 - ⏸️ **c13** distribution (Tauri / single-binary) — blocked on human auth

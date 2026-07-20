@@ -100,27 +100,6 @@ describe('domain schemas', () => {
     ).toBe(true);
   });
 
-  it('research progress event union discriminates on type', () => {
-    const ev = S.ResearchProgressEventSchema.parse({
-      type: 'plan_ready',
-      sessionId: 1,
-      plan: {
-        queries: [{ query: 'topic overview', engine: 'Web', priority: 1, reason: 'seed' }],
-        reasoning: 'initial plan',
-      },
-    });
-    expect(ev.type).toBe('plan_ready');
-
-    const done = S.ResearchProgressEventSchema.parse({
-      type: 'done',
-      status: 'completed',
-      totalResults: 3,
-      hasReport: true,
-    });
-    expect(done.type).toBe('done');
-    expect(done.totalResults).toBe(3);
-  });
-
   it('source connector write requests validate shapes', () => {
     expect(S.SourceConnectorBindingCreateRequestSchema.parse({}).connectionConfig).toEqual({});
     expect(

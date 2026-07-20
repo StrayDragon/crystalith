@@ -9,14 +9,14 @@ requirements[8]{req_id,title,statement}:
   r168,Generated OpenAPI client artifacts stay deleted,仓库 MUST NOT 再引入 `api/generated/` 或将 `openapi.gen.json` 作为一等 client 漂移门禁。OpenAPI 文档 MUST 由路由挂载的 Zod 在运行时导出。
   "openapi-route-docs-stay-synced",OpenAPI route docs stay synced with mounted Zod,对外列表与关键读写端点的 registerApiDoc（及路由 query/response Zod 挂载）MUST 与运行时契约同步：分页列表 MUST 文档化为 PaginatedSchema；文档 path MUST 与 handler 一致。MUST NOT 以过时 apiDocs 路径或裸数组响应描述误导 Scalar/外部消费者。
   "openapi-documents-nested-canonical-paths",OpenAPI MUST document nested canonical paths,"registerApiDoc 与 OpenAPI 文档 MUST 以嵌套 /v2/notebooks/:nid/... 为 notebook-scoped 资源的 canonical path；旧扁平 path 若仍登记 MUST 标为 deprecated。MUST NOT 仅以扁平 path 作为唯一真源误导消费者。"
-  "asyncapi-stream-verbs-match-handlers",AsyncAPI stream verbs MUST match handlers,AsyncAPI（及 OpenAPI 中流式端点登记）的 method/path MUST 与 Elysia handler 一致：QA stream POST；research/studio progress stream GET。MUST NOT 文档与实现动词不一致。
+  "asyncapi-stream-verbs-match-handlers",AsyncAPI stream verbs MUST match handlers,AsyncAPI（及 OpenAPI 中流式端点登记）的 method/path MUST 与 Elysia handler 一致：QA stream POST；studio progress stream GET。MUST NOT 文档与实现动词不一致。
   "openapi-json-generates-without-crash",OpenAPI JSON MUST generate without crash,加载全部对外 router 后，OpenAPI 文档生成（/openapi.json 或等价 generateOpenApiDocument）MUST 在合理时间内成功完成且 MUST NOT stack overflow / hang。生成结果 MUST 包含关键 path（至少 notebooks、qa、outputs、citations context）。MUST NOT 恢复 api/generated 作为一等 TS client。
 scenarios[8]{req_id,id,given,when,then,feature}:
   r37,"eden-and-openapi-coexist","",检查前端依赖与 /openapi,前端 SHALL 通过 eden 调用 API，且 OpenAPI/Scalar SHALL 可访问并反映 camelCase schema,true
   r95,"no-generated-client","",搜索 apps/web 对 api/generated 的依赖,SHALL 无此类 import,true
   r132,"openapi-reflects-camelcase","",查看 /openapi.json 或 Scalar,文档中的 schema 属性名 SHALL 为 camelCase,true
   r168,"artifacts-stay-gone","",检查仓库树,SHALL 不存在作为一等 client 的 api/generated 目录,true
-  "openapi-route-docs-stay-synced","paginated-list-documented",messages 或 research 列表已改为 PaginatedSchema,检查对应 registerApiDoc responses,文档 SHALL 描述含 items/total 的分页信封而非仅 Message 数组,false
+  "openapi-route-docs-stay-synced","paginated-list-documented",列表已改为 PaginatedSchema,检查对应 registerApiDoc responses,文档 SHALL 描述含 items/total 的分页信封而非仅裸数组,false
   "openapi-documents-nested-canonical-paths","outputs-nested-in-docs",outputs 已挂载嵌套路径,检查 registerApiDoc / OpenAPI,"文档 SHALL 含 /v2/notebooks/{nid}/outputs 且旧扁平路径若存在 SHALL 标 deprecated",false
-  "asyncapi-stream-verbs-match-handlers","research-asyncapi-get",research stream handler 为 GET,检查 AsyncAPI address/method,文档 SHALL 反映 GET 且 path 与 handler 对齐,false
+  "asyncapi-stream-verbs-match-handlers","research-asyncapi-get",research stream handler 已移除（stub pending rewrite）,检查 AsyncAPI address/method,research SHALL 不在 AsyncAPI 文档中,false
   "openapi-json-generates-without-crash","openapi-json-smoke",server 已挂载全部对外路由,请求 /openapi.json 或运行文档生成,进程 SHALL 成功返回 OpenAPI 文档且含关键 path，MUST NOT 因 Zod 转换崩溃,false
