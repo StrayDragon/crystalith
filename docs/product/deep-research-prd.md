@@ -34,6 +34,7 @@
 | **C1**   | 图节点色：复用工作区语义色（成功→clear、警告→partial、危险→missing、中性→pending）；`pruned` 降透明度/删线                                                                                                  |
 | **R5**   | 边语义闭集：`decompose`/`expand`/`focus`/`filter`/`compare`/`refine`/`support`/`fork`/`merge` + 可选短备注；MUST NOT 仅用自由中文边标签                                                                     |
 | **R6**   | 报告 SSOT：`sections[].blocks`（paragraph/bullets + citeIds）+ 全局 `citations` map；导出笔记按出现序生成 GFM 脚注                                                                                          |
+| **R7**   | convert 目标为判别联合：`report` \| `node+nodeId` \| `evidence+evidenceId`；笔记恒 PARAGRAPH+K1，来源须 embed 可检索                                                                                        |
 
 ---
 

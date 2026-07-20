@@ -106,10 +106,25 @@ API 占位：`POST …/research/:rid/nodes/:nodeId/prune`、`…/fork`（body �
 - 交互预览：chip 绑定 `citeIds` → `citations[citeId]`。
 - `convertToNote`：按出现序编号 → GFM `[^n]` + 脚注附录。
 
+## 8. Convert artifactRef（R7a）
+
+```ts
+type ArtifactRef =
+  { kind: 'report' } | { kind: 'node'; nodeId: string } | { kind: 'evidence'; evidenceId: string };
+
+// POST …/convert-to-note | …/convert-to-source
+{
+  artifact: ArtifactRef;
+}
+```
+
+- Note：始终 PARAGRAPH + K1 脚注投影。
+- Source：ingest + embed，须可被对话检索。
+
 ## 待钉（grill 主题）
 
-1. convertToNote / convertToSource 请求体（artifactRef）
-2. 错误码与取消语义
+1. 错误码与取消语义
+2. checkpoint 粒度 / graph_patch 最小字段（可并入下批）
 
 ## 非目标
 
