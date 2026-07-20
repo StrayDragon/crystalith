@@ -827,25 +827,45 @@ function handleResearchStream(id: number, notebookId: number, set: SetStatus) {
   set.headers['Cache-Control'] = 'no-cache';
   set.headers.Connection = 'keep-alive';
 
+  const flag = { closed: false };
+  let heartbeat: ReturnType<typeof setInterval> | undefined;
+
   return new ReadableStream({
     start(controller) {
       let lastStepId = 0;
       let lastStatus: string | null = null;
-      let closed = false;
       const encoder = new TextEncoder();
 
-      const emit = (eventName: string, data: unknown) => {
-        controller.enqueue(
-          encoder.encode(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`),
-        );
+      const safeClose = () => {
+        if (flag.closed) return;
+        flag.closed = true;
+        if (heartbeat) clearInterval(heartbeat);
+        try {
+          controller.close();
+        } catch {
+          // already closed by the runtime
+        }
       };
 
-      const heartbeat = setInterval(() => {
-        if (!closed) emit('heartbeat', {});
+      const emit = (eventName: string, data: unknown) => {
+        if (flag.closed) return;
+        try {
+          controller.enqueue(
+            encoder.encode(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`),
+          );
+        } catch {
+          // Client disconnected — stop polling/heartbeats.
+          flag.closed = true;
+          if (heartbeat) clearInterval(heartbeat);
+        }
+      };
+
+      heartbeat = setInterval(() => {
+        if (!flag.closed) emit('heartbeat', {});
       }, 30_000);
 
       const poll = async () => {
-        while (!closed) {
+        while (!flag.closed) {
           const current = db()
             .select()
             .from(researchSessions)
@@ -884,9 +904,7 @@ function handleResearchStream(id: number, notebookId: number, set: SetStatus) {
               totalResults: (current.aggregatedResults as unknown[] | null)?.length ?? 0,
               hasReport: !!current.finalReport,
             });
-            closed = true;
-            clearInterval(heartbeat);
-            controller.close();
+            safeClose();
             break;
           }
 
@@ -895,12 +913,15 @@ function handleResearchStream(id: number, notebookId: number, set: SetStatus) {
       };
 
       poll().catch((error) => {
-        if (!closed) {
+        if (!flag.closed) {
           emit('error', { type: 'error', message: String(error) });
-          clearInterval(heartbeat);
-          controller.close();
+          safeClose();
         }
       });
+    },
+    cancel() {
+      flag.closed = true;
+      if (heartbeat) clearInterval(heartbeat);
     },
   });
 }

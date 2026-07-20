@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '../../../../../api/eden';
-import { edenFetchOptions } from '../../../../../api/edenFetchOptions';
 import { t } from '../../../../../shared/i18n';
 import { toast } from '../../../../../shared/toast';
 import {
@@ -17,6 +16,7 @@ import type {
   SlideStage,
 } from '../../../shared/types';
 import { buildFrontmatterPreview } from '../utils/slides';
+import { consumeSlidesStageStream } from './consumeSlidesStageStream';
 import {
   buildSlidesPreviewUrl,
   normalizeDraft,
@@ -636,18 +636,25 @@ export function useSlidesStudioDialog({
       generateAbortRef.current = ac;
 
       try {
-        setEvents((prev) => [...prev, { type: 'progress', message: '生成中...' }]);
         if (!notebookId) return;
-        const slides = api.v2.notebooks({ nid: notebookId }).studio.slides({ id: slideId });
-        const fetchOpts = edenFetchOptions(ac.signal);
-        const { error: genErr } =
-          stage === 'outline'
-            ? await slides.outline.post(undefined, fetchOpts)
-            : await slides.markdown.post(undefined, fetchOpts);
-        if (genErr)
-          throw new Error(
-            typeof genErr === 'string' ? genErr : typeof genErr === 'string' ? genErr : '',
-          );
+        // c70: drive generation via GET SSE (progress + done), not POST sync.
+        await consumeSlidesStageStream(notebookId, slideId, stage, {
+          signal: ac.signal,
+          onEvent: (event) => {
+            if (event.event === 'progress' || event.event === 'toolcall') {
+              const data =
+                event.data && typeof event.data === 'object'
+                  ? (event.data as Record<string, unknown>)
+                  : {};
+              const message =
+                (typeof data.message === 'string' && data.message) ||
+                (typeof data.delta === 'string' && data.delta) ||
+                (typeof data.tool === 'string' && `调用 ${data.tool}`) ||
+                (event.event === 'toolcall' ? '工具调用' : '生成中...');
+              setEvents((prev) => [...prev, { type: event.event, message }]);
+            }
+          },
+        });
         setIsGenerating(false);
         generateAbortRef.current = null;
         if (handlers.onDone) await handlers.onDone();

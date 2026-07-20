@@ -329,16 +329,31 @@ export function createSseResponse(
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      let closed = false;
       const encoder = new TextEncoder();
       const emit: SseEmit = (event, data) => {
-        controller.enqueue(encoder.encode(sse(event, data)));
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(sse(event, data)));
+        } catch {
+          closed = true;
+        }
       };
       try {
         await run(emit, ctx);
       } catch (error) {
         emit('error', { message: String(error), slideId });
       }
-      controller.close();
+      if (!closed) {
+        try {
+          controller.close();
+        } catch {
+          // already closed
+        }
+      }
+    },
+    cancel() {
+      // Client aborted — run() may still finish; emit guards skip enqueue.
     },
   });
 
