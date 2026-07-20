@@ -79,12 +79,12 @@ Output 查看、渲染、导出、删除、转换与任务队列。
 - **名称:** Output 生成任务队列
 - **位置:** Studio / 全局任务状态
 - **入口:** 触发生成后
-- **操作:** 轮询 task 状态、显示 pending/running/completed
-- **Server:** `GET /v2/notebooks/:nid/tasks`、`GET /v2/tasks/:id`、`POST /v2/tasks/:id/cancel`
+- **操作:** 客户端本地队列（queued/running/error）串行跑 `POST .../outputs` 或 slides SSE；失败可重试
+- **Server:** `POST /v2/notebooks/:nid/outputs`、studio slides stream（**不**使用 `/v2/tasks*`）
 - **代码:** `apps/web/src/features/workspace/shared/hooks/useOutputQueue.ts`
 - **截图:** `screenshots/output-queue-jobs.png`（待截图）
 
-> NOTE: 待盘点
+> NOTE: 2026-07-20 以代码为准 — 本功能是客户端本地队列，**不**调用 `/v2/tasks*`。后者已标 dead-candidate（见 SERVER/12、MATRIX）。
 
 ---
 

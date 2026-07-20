@@ -68,11 +68,11 @@
 
 - **Domain:** tasks
 - **Route:** —
-- **说明:** `TaskQueue` 持久队列 + worker 分发；崩溃恢复 `recoverStaleTasks`
+- **说明:** `TaskQueue` 持久队列 + worker；崩溃恢复 `recoverStaleTasks`。当前几乎只服务 refine HTTP。
 - **用户可见:** Internal
 - **代码:** `apps/server/src/shared/queue.ts`、`features/tasks/worker.ts`、`server.ts`
 
-> NOTE: 待盘点
+> NOTE: 2026-07-20 — 随 `/v2/refine*` + `/v2/tasks*` 删除候选一并评估；若无 enqueue 生产者可整段移除
 
 ---
 
@@ -80,11 +80,11 @@
 
 - **Domain:** tasks
 - **Route:** —
-- **说明:** 任务类型：`refine`、`output`、`source_ingest` 等 stage 限流
+- **说明:** DB/enqueue 类型仅为 `refine` | `document_parse`（**不是** output / source_ingest）。`document_parse` worker 分支无调用方。
 - **用户可见:** Internal
-- **代码:** `apps/server/src/features/tasks/worker.ts`
+- **代码:** `apps/server/src/features/tasks/worker.ts`、`shared/queue.ts`、`db/schema.ts` tasks.type
 
-> NOTE: 待盘点
+> NOTE: 2026-07-20 — 旧文档写 output/source_ingest 为错误；以 schema enum 为准
 
 ---
 
