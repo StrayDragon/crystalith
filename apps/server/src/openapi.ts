@@ -1,21 +1,23 @@
-// OpenAPI 3.1 document generation from shared Zod schemas.
+// OpenAPI 3.1 document generation from shared Zod schemas (c71).
 //
-// Uses @asteasolutions/zod-to-openapi to register schemas + paths, then
-// generates an OpenAPI 3.1 JSON document served at GET /openapi.json.
-// External SDK users (Python/Go/Rust) consume this endpoint via
-// openapi-generator-cli.
-import {
-  OpenAPIRegistry,
-  OpenApiGeneratorV31,
-  extendZodWithOpenApi,
-} from '@asteasolutions/zod-to-openapi';
+// History: `@asteasolutions/zod-to-openapi` OpenApiGeneratorV31 + Zod v4 hits
+// Maximum call stack in `isNullableSchema` (safeParse recursion) on our
+// full route set. We still use `extendZodWithOpenApi` for `.openapi()` metadata
+// on schemas, but convert Zod → JSON Schema with Zod's native `z.toJSONSchema`
+// and assemble the OpenAPI document ourselves.
+import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
 
-// Extend Zod with .openapi() metadata once.
 extendZodWithOpenApi(z);
 
-// Collect unique tags for the document root.
 const _allTags = new Set<string>();
+
+/** Accumulated path operations for document assembly (c71). */
+const _pathOps: Array<{
+  path: string;
+  method: OpenApiRoute['method'];
+  operation: Record<string, unknown>;
+}> = [];
 
 export interface OpenApiRoute {
   path: string;
@@ -42,78 +44,95 @@ export interface OpenApiRoute {
   >;
 }
 
-const registry = new OpenAPIRegistry();
-
-/** Register a schema under a component name for $ref reuse. */
-export function registerSchema(name: string, schema: z.ZodTypeAny): z.ZodTypeAny {
-  return registry.register(refName(name), schema);
+/** Convert a Zod schema to an OpenAPI-friendly JSON Schema object. */
+export function zodSchemaToOpenApi(schema: z.ZodTypeAny): Record<string, unknown> {
+  try {
+    const json = z.toJSONSchema(schema, {
+      target: 'openapi-3.0',
+      // Break cycles / unrepresentable Zod constructs (lazy, custom, …).
+      unrepresentable: 'any',
+    }) as Record<string, unknown>;
+    const { $schema: _schema, ...rest } = json;
+    return rest;
+  } catch {
+    try {
+      const json = z.toJSONSchema(schema, { unrepresentable: 'any' }) as Record<string, unknown>;
+      const { $schema: _schema, ...rest } = json;
+      return rest;
+    } catch {
+      return { type: 'object', description: 'Schema conversion fallback' };
+    }
+  }
 }
 
-function refName(name: string): string {
-  return name;
+/** @deprecated No longer registers into zod-to-openapi registry; kept for call-site compat. */
+export function registerSchema(name: string, schema: z.ZodTypeAny): z.ZodTypeAny {
+  void name;
+  return schema;
 }
 
 /**
  * Register API route documentation for OpenAPI generation.
- *
- * The canonical call-site is server.ts (scaffold) or each
- * features router module once c04 lands. The actual Elysia handler
- * lives on the app instance (.get / .post); the OpenApiRoute descriptor here
- * mirrors it for OpenAPI doc generation only.
+ * Converts Zod request/response schemas via `z.toJSONSchema` (c71).
  */
 export function registerApiDoc(routes: OpenApiRoute[]): void {
   for (const route of routes) {
-    // Scalar uses 'summary' as the collapsed endpoint title.
-    // We want the path visible, so swap: summary ← path, description ← summary.
-    const pathItem: Record<string, unknown> = {
+    const operation: Record<string, unknown> = {
       tags: route.tags ?? [],
-      description: route.summary ?? '',
+      // Scalar collapsed title: prefer path visibility via summary ← path, description ← human summary
+      summary: route.path,
+      description: route.summary ?? route.description ?? '',
     };
     if (route.deprecated) {
-      pathItem.deprecated = true;
+      operation.deprecated = true;
     }
 
     if (route.request?.body) {
-      pathItem.requestBody = {
+      operation.requestBody = {
         content: {
-          'application/json': { schema: route.request.body },
+          'application/json': { schema: zodSchemaToOpenApi(route.request.body) },
         },
       };
     }
 
+    const parameters: Record<string, unknown>[] = [];
+
     if (route.request?.params) {
-      pathItem.parameters = Object.entries(route.request.params).map(([name, schema]) => {
-        // Resolve Zod v4 schema to OpenAPI parameter object.
-        // zod-to-openapi v7 does not support Zod v4, so we extract
-        // metadata directly from the schema instance.
+      for (const [name, schema] of Object.entries(route.request.params)) {
         const s: Record<string, unknown> = schema as never;
         const desc = typeof s.description === 'string' ? s.description : undefined;
-        return {
+        parameters.push({
           name,
           in: 'path',
           required: true,
           description: desc,
-          schema: { type: s.type === 'number' ? 'integer' : 'string' },
-        };
-      });
+          schema: zodSchemaToOpenApi(schema),
+        });
+      }
     }
 
     if (route.request?.query) {
-      const queryParams = Object.entries(route.request.query).map(([name, schema]) => ({
-        name,
-        in: 'query',
-        required: !schema.isOptional(),
-        schema,
-      }));
-      pathItem.parameters = [...((pathItem.parameters as unknown[]) ?? []), ...queryParams];
+      for (const [name, schema] of Object.entries(route.request.query)) {
+        parameters.push({
+          name,
+          in: 'query',
+          required: !schema.isOptional(),
+          schema: zodSchemaToOpenApi(schema),
+        });
+      }
     }
 
-    pathItem.responses = {} as Record<string, unknown>;
+    if (parameters.length > 0) {
+      operation.parameters = parameters;
+    }
+
+    const responses: Record<string, unknown> = {};
     for (const [status, resp] of Object.entries(route.responses)) {
       const respObj: Record<string, unknown> = { description: resp.description };
       if (resp.body) {
-        const mediaType: Record<string, unknown> = { schema: resp.body };
-        // Inject optional example at the media type level.
+        const mediaType: Record<string, unknown> = {
+          schema: zodSchemaToOpenApi(resp.body),
+        };
         if (resp.example !== undefined) {
           mediaType.example = resp.example;
         }
@@ -121,23 +140,19 @@ export function registerApiDoc(routes: OpenApiRoute[]): void {
           [resp.contentType ?? 'application/json']: mediaType,
         };
       }
-      (pathItem.responses as Record<string, unknown>)[status] = respObj;
+      responses[status] = respObj;
     }
+    operation.responses = responses;
 
-    // Collect tags for document root.
     for (const tag of route.tags ?? []) {
       _allTags.add(tag);
     }
 
-    registry.registerPath({
-      path: route.path,
-      method: route.method,
-      ...pathItem,
-    } as Parameters<typeof registry.registerPath>[0]);
+    _pathOps.push({ path: route.path, method: route.method, operation });
   }
 }
 
-/** Generate the full OpenAPI 3.1 document. */
+/** Generate the full OpenAPI 3.1 document (stable under Zod v4 — c71). */
 export function generateOpenApiDocument(info?: {
   title: string;
   version: string;
@@ -148,22 +163,23 @@ export function generateOpenApiDocument(info?: {
     version = '2.0.0-dev',
     description = 'RAG-powered knowledge notebook — v2 API',
   } = info ?? {};
-  const generator = new OpenApiGeneratorV31(registry.definitions);
-  const doc = generator.generateDocument({
+
+  const paths: Record<string, Record<string, unknown>> = {};
+  for (const { path, method, operation } of _pathOps) {
+    if (!paths[path]) paths[path] = {};
+    paths[path][method] = operation;
+  }
+
+  const doc: Record<string, unknown> = {
     openapi: '3.1.0',
     info: { title, version, description },
     servers: [{ url: '/', description: 'Crystalith v2 API' }],
-  }) as unknown as Record<string, unknown>;
+    paths,
+  };
 
-  // Inject tags for Scalar UI grouping.
   if (_allTags.size > 0) {
     doc.tags = [..._allTags].toSorted().map((name) => ({ name, description: '' }));
   }
 
   return doc;
 }
-
-// Note: schemas are inlined into path definitions rather than registered as
-// named components. This avoids the zod-v4 prototype timing issue where
-// extendZodWithOpenApi must run before schema creation. The generated
-// OpenAPI doc is fully valid — schemas appear inline in responses/requestBodies.
