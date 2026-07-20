@@ -3,6 +3,7 @@ import { Close as CloseIcon, History as HistoryIcon } from '@mui/icons-material'
 
 import { LAYER_LEVELS } from '../../../../../shared/layer';
 import { TestIds, tid } from '../../../../../shared/testids';
+import { formatTimestamp } from '../../../shared/utils';
 import type { Research } from './sources-panel-types';
 
 export interface ResearchHistoryDialogProps {
@@ -84,9 +85,7 @@ export default function ResearchHistoryDialog({
                   className="text-xs"
                 />
               </div>
-              <p className="text-xs text-gray-400 mt-2">
-                {new Date(session.createdAt).toLocaleString('zh-CN')}
-              </p>
+              <p className="text-xs text-gray-400 mt-2">{formatTimestamp(session.createdAt)}</p>
             </button>
           ))}
           {historySessions.length === 0 && (

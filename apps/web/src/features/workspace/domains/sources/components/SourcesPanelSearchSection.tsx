@@ -109,7 +109,7 @@ export default function SourcesPanelSearchSection({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
-                  void onSearch();
+                  onSearch();
                 }
               }}
               id="source-search-input"
@@ -131,7 +131,7 @@ export default function SourcesPanelSearchSection({
               className="rounded-lg w-9 h-9 transition-all duration-200 active:scale-[0.98] bg-blue-500 hover:bg-blue-600"
               {...tid(TestIds.sourcesSearchSubmit)}
               onClick={() => {
-                void onSearch();
+                onSearch();
               }}
             >
               <ArrowForwardIcon style={{ fontSize: 16 }} />

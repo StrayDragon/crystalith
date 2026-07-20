@@ -98,6 +98,23 @@ test('formatRelativeTime returns humanized values', () => {
   expect(formatRelativeTime('2024-06-01T11:59:00.000Z')).toBe('1 分钟前');
   expect(formatRelativeTime('2024-06-01T10:00:00.000Z')).toBe('2 小时前');
   expect(formatRelativeTime('2024-05-30T12:00:00.000Z')).toBe('2 天前');
+  expect(formatRelativeTime(new Date('2024-06-01T11:59:00.000Z'))).toBe('1 分钟前');
+});
+
+test('normalizeSource accepts Eden Date timestamps without crashing UI models', () => {
+  const source = normalizeSource({
+    id: 8,
+    filename: 'notes.md',
+    mimeType: 'text/markdown',
+    status: 'READY',
+    chunkCount: 1,
+    createdAt: new Date('2024-01-01T00:00:00.000Z'),
+    lastErrorAt: new Date('2024-01-02T00:00:00.000Z'),
+  } as any);
+
+  expect(source.createdAtRaw).toBe('2024-01-01T00:00:00.000Z');
+  expect(source.lastErrorAt).toBe('2024-01-02T00:00:00.000Z');
+  expect(source.createdAt.length).toBeGreaterThan(0);
 });
 
 test('normalizeSource resolves type and status labels', () => {

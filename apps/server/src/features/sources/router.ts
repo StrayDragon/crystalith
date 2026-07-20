@@ -263,7 +263,7 @@ async function handleSourceUpload(
     }
   }
 
-  return await ingestSource({
+  return ingestSource({
     buffer,
     filename: file.name,
     notebookId,

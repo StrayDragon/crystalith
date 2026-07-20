@@ -365,7 +365,9 @@ function SourceConnectorSnapshotStep({
         <div className="text-xs text-gray-600 dark:text-slate-400">共 {count} 项</div>
         <button
           type="button"
-          onClick={() => void onLoadSnapshot()}
+          onClick={() => {
+            onLoadSnapshot();
+          }}
           disabled={busy}
           className="px-3 py-1.5 rounded-lg text-xs border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-60"
         >
@@ -1154,7 +1156,9 @@ export default function SourceConnectorsDialog({
               filteredEntries={filteredEntries}
               snapshotFilter={snapshotFilter}
               busy={busy}
-              onLoadSnapshot={handleLoadSnapshot}
+              onLoadSnapshot={() => {
+                void handleLoadSnapshot();
+              }}
               onSnapshotFilterChange={setSnapshotFilter}
             />
           )}

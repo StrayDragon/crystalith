@@ -63,10 +63,31 @@ export function buildRefineOutput(text: string): RefineOutput {
   };
 }
 
-export function formatTimestamp(value?: string | null): string {
-  if (!value) return '';
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return '';
+/** Eden may coerce ISO wire timestamps into `Date`; UI formatters must accept both. */
+export type TimestampInput = string | Date | null | undefined;
+
+function parseTimestamp(value?: TimestampInput): Date | null {
+  if (value == null || value === '') return null;
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+}
+
+/** Stable ISO/string for raw caches / Date.parse — never keep a live `Date` in UI models. */
+export function toTimestampRaw(value?: unknown): string | undefined {
+  if (value == null || value === '') return undefined;
+  if (typeof value === 'string') return value;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+  }
+  return undefined;
+}
+
+export function formatTimestamp(value?: TimestampInput): string {
+  const parsed = parseTimestamp(value);
+  if (!parsed) return '';
   return parsed.toLocaleString('zh-CN', {
     month: '2-digit',
     day: '2-digit',
@@ -75,10 +96,9 @@ export function formatTimestamp(value?: string | null): string {
   });
 }
 
-export function formatDate(value?: string | null): string {
-  if (!value) return '';
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return '';
+export function formatDate(value?: TimestampInput): string {
+  const parsed = parseTimestamp(value);
+  if (!parsed) return '';
   return parsed.toLocaleDateString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
@@ -86,11 +106,10 @@ export function formatDate(value?: string | null): string {
   });
 }
 
-export function formatRelativeTime(value?: string | null): string {
-  if (!value) return '';
-  const parsed = new Date(value);
+export function formatRelativeTime(value?: TimestampInput): string {
+  const parsed = parseTimestamp(value);
+  if (!parsed) return '';
   const timestamp = parsed.getTime();
-  if (Number.isNaN(timestamp)) return '';
   const diff = Date.now() - timestamp;
   const minute = 60 * 1000;
   const hour = 60 * minute;
@@ -100,7 +119,7 @@ export function formatRelativeTime(value?: string | null): string {
   if (diff < day) return `${Math.floor(diff / hour)} 小时前`;
   const days = Math.floor(diff / day);
   if (days < 30) return `${days} 天前`;
-  return formatDate(value);
+  return formatDate(parsed);
 }
 
 export function buildSourceSummaryPrompt(title?: string | null): string {
@@ -273,7 +292,7 @@ export function normalizeNotebook(row: WireNotebook): Notebook {
     id: Number(row.id),
     title: row.name ?? '未命名笔记本',
     updatedAt: formatTimestamp(row.updatedAt ?? undefined),
-    updatedAtRaw: row.updatedAt ?? undefined,
+    updatedAtRaw: toTimestampRaw(row.updatedAt),
   };
 }
 
@@ -330,8 +349,8 @@ export function normalizeOutput(row: WireOutput & Partial<WireOutputListItem>): 
     slideId: 'slideId' in row ? ((row as WireOutputListItem).slideId ?? null) : null,
     createdAt: formatTimestamp(row.createdAt ?? undefined),
     updatedAt: formatTimestamp(row.updatedAt ?? undefined),
-    createdAtRaw: row.createdAt ?? undefined,
-    updatedAtRaw: row.updatedAt ?? undefined,
+    createdAtRaw: toTimestampRaw(row.createdAt),
+    updatedAtRaw: toTimestampRaw(row.updatedAt),
   };
 }
 
@@ -399,14 +418,14 @@ export function normalizeSource(row: WireSource): SourceItem {
       typeof row.errorMessage === 'string' && row.errorMessage ? row.errorMessage : null,
     recoveryHint:
       typeof row.recoveryHint === 'string' && row.recoveryHint ? row.recoveryHint : null,
-    lastErrorAt: typeof row.lastErrorAt === 'string' && row.lastErrorAt ? row.lastErrorAt : null,
+    lastErrorAt: toTimestampRaw(row.lastErrorAt) ?? null,
     indexProgress,
     chunks: row.chunkCount ?? 0,
     tags: Array.isArray(row.tags)
       ? row.tags.filter((tag): tag is string => typeof tag === 'string' && tag.length > 0)
       : [],
     createdAt: formatTimestamp(row.createdAt ?? undefined),
-    createdAtRaw: row.createdAt ?? undefined,
+    createdAtRaw: toTimestampRaw(row.createdAt),
   };
 }
 

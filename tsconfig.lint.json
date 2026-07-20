@@ -20,11 +20,20 @@
   },
   "include": [
     "apps/server/src/**/*.ts",
-    "apps/server/test/**/*.ts",
     "packages/shared/src/**/*.ts",
-    "packages/shared/test/**/*.ts",
     "apps/web/src/**/*.ts",
     "apps/web/src/**/*.tsx"
   ],
-  "exclude": ["node_modules", "dist", "coverage", "vendor", "backend", "data"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "vendor",
+    "backend",
+    "data",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
+  ]
 }

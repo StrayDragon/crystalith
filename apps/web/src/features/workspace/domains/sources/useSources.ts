@@ -126,7 +126,7 @@ export function useSources() {
         .sources.get({ query: sourceListQuery })
         .then((r) => {
           // eslint-disable-next-line typescript/no-base-to-string
-          if (r.error) throw new Error(String(r.error));
+          if (r.error) throw new Error(parseServerError(r.error).message);
           return r.data?.items ?? [];
         }),
     { revalidateOnFocus: false },
@@ -140,7 +140,7 @@ export function useSources() {
         .sources.tags.get()
         .then((r) => {
           // eslint-disable-next-line typescript/no-base-to-string
-          if (r.error) throw new Error(String(r.error));
+          if (r.error) throw new Error(parseServerError(r.error).message);
           return r.data ?? [];
         }),
     { revalidateOnFocus: false },
@@ -276,7 +276,7 @@ export function useSources() {
               .sources.upload.post({ file }, { query: { dedupAction: 'prompt' } })
               .then((r) => {
                 // eslint-disable-next-line typescript/no-base-to-string
-                if (r.error) throw new Error(String(r.error));
+                if (r.error) throw new Error(parseServerError(r.error).message);
               });
             successCount += 1;
             setUploadQueue((prev) =>
@@ -303,7 +303,7 @@ export function useSources() {
                   .sources.upload.post({ file }, { query: { dedupAction } })
                   .then((r) => {
                     // eslint-disable-next-line typescript/no-base-to-string, eslint/preserve-caught-error
-                    if (r.error) throw new Error(String(r.error));
+                    if (r.error) throw new Error(parseServerError(r.error).message);
                   });
                 successCount += 1;
                 setUploadQueue((prev) =>
@@ -414,7 +414,7 @@ export function useSources() {
         const { data: response, error: srErr } = await api.v2
           .notebooks({ nid: activeNotebookId })
           .sources.search.post({ query: trimmed, engine, mode });
-        if (srErr) throw srErr;
+        if (srErr) throw new Error(parseServerError(srErr).message);
         const results = response?.results ?? [];
         let notice = '';
         if (response?.message) {
@@ -478,7 +478,7 @@ export function useSources() {
         const { error: delBatchErr } = await api.v2
           .notebooks({ nid: activeNotebookId })
           .sources.batch.delete.post({ sourceIds });
-        if (delBatchErr) throw delBatchErr;
+        if (delBatchErr) throw new Error(parseServerError(delBatchErr).message);
         await mutate();
         toast.success('来源删除成功');
         return true;
@@ -508,7 +508,7 @@ export function useSources() {
           .notebooks({ nid: activeNotebookId })
           .sources({ sid: sourceId })
           .delete();
-        if (delErr) throw delErr;
+        if (delErr) throw new Error(parseServerError(delErr).message);
         await mutate();
         toast.success('来源删除成功');
         return true;
@@ -539,7 +539,7 @@ export function useSources() {
         const { data: result, error: breErr } = await api.v2
           .notebooks({ nid: activeNotebookId })
           .sources.batch['re-embed'].post({ sourceIds });
-        if (breErr) throw breErr;
+        if (breErr) throw new Error(parseServerError(breErr).message);
         await mutate();
         if ((result?.failedCount ?? 0) > 0) {
           toast.warning(`部分来源重新嵌入失败（${result?.failedCount} 个）。`);
@@ -565,7 +565,7 @@ export function useSources() {
         const { data: tag, error: ctErr } = await api.v2
           .notebooks({ nid: activeNotebookId })
           .sources.tags.post({ name });
-        if (ctErr) throw ctErr;
+        if (ctErr) throw new Error(parseServerError(ctErr).message);
         if (!tag || !('id' in tag)) throw new Error('创建标签失败');
         await mutateTags();
         await mutate();
@@ -590,7 +590,7 @@ export function useSources() {
           .notebooks({ nid: activeNotebookId })
           .sources.tags({ tid: tagId })
           .patch({ name });
-        if (utErr) throw utErr;
+        if (utErr) throw new Error(parseServerError(utErr).message);
         if (!tag || !('id' in tag)) throw new Error('更新标签失败');
         await mutateTags();
         await mutate();
@@ -615,7 +615,7 @@ export function useSources() {
           .notebooks({ nid: activeNotebookId })
           .sources.tags({ tid: tagId })
           .delete();
-        if (dtErr) throw dtErr;
+        if (dtErr) throw new Error(parseServerError(dtErr).message);
         await mutateTags();
         await mutate();
         if (tagFilter && tagsData?.some((item) => item.id === tagId && item.name === tagFilter)) {
@@ -642,7 +642,7 @@ export function useSources() {
           .notebooks({ nid: activeNotebookId })
           .sources.tags({ tid: tagId })
           .sources.post({ sourceIds });
-        if (atErr) throw atErr;
+        if (atErr) throw new Error(parseServerError(atErr).message);
         await mutateTags();
         await mutate();
         toast.success('标签已分配');
@@ -666,7 +666,7 @@ export function useSources() {
           .notebooks({ nid: activeNotebookId })
           .sources.tags({ tid: tagId })
           .sources.delete({ sourceIds });
-        if (rtErr) throw rtErr;
+        if (rtErr) throw new Error(parseServerError(rtErr).message);
         await mutateTags();
         await mutate();
         toast.success('标签已移除');
@@ -695,7 +695,7 @@ export function useSources() {
           ['convert-to-source'].post(undefined, {
             query: { notebookId: activeNotebookId },
           });
-        if (coErr) throw coErr;
+        if (coErr) throw new Error(parseServerError(coErr).message);
         await mutate();
         toast.success(`已转换为来源：${result?.filename}（${result?.chunkCount} 个分块）`);
       } catch (error) {
@@ -733,7 +733,7 @@ export function useSources() {
                 .notebooks({ nid: activeNotebookId })
                 .sources['from-url'].post(body, { query: { dedupAction } })
             : await api.v2.notebooks({ nid: activeNotebookId }).sources['from-url'].post(body);
-          if (r.error) throw r.error;
+          if (r.error) throw new Error(parseServerError(r.error).message);
           return r.data;
         })();
         if (mode === 'fetch') {
@@ -786,7 +786,7 @@ export function useSources() {
         .extractors.get()
         .then((r) => {
           // eslint-disable-next-line typescript/no-base-to-string
-          if (r.error) throw new Error(String(r.error));
+          if (r.error) throw new Error(parseServerError(r.error).message);
           if (!r.data) throw new Error('加载提取器失败');
           return r.data;
         }),
@@ -830,7 +830,7 @@ export function useSources() {
       const { error: peErr } = await api.v2
         .notebooks({ nid: activeNotebookId })
         .extractors.patch(patch);
-      if (peErr) throw peErr;
+      if (peErr) throw new Error(parseServerError(peErr).message);
       await mutateExtractors();
     },
     [activeNotebookId, isConnected, mutateExtractors],
@@ -855,7 +855,7 @@ export function useSources() {
         .sources({ sid: sourceId })
         // eslint-disable-next-line no-unexpected-multiline
         ['qa-to-source'].post({ messages });
-      if (csErr) throw csErr;
+      if (csErr) throw new Error(parseServerError(csErr).message);
       await mutate();
       return result;
     },
@@ -878,7 +878,7 @@ export function useSources() {
           .sources({ sid: sourceId })
           // eslint-disable-next-line no-unexpected-multiline
           ['re-embed'].post();
-        if (reErr) throw reErr;
+        if (reErr) throw new Error(parseServerError(reErr).message);
         toast.success('已重新嵌入来源');
         await mutate();
       } catch (error) {
