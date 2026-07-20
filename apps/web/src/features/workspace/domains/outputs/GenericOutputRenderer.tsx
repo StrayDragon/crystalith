@@ -94,7 +94,7 @@ function coerceText(value: unknown): string {
  * Check if a value is a v1 CitedText object: `{ text: string, citations?: [...] }`.
  * Used to decide whether to render citations alongside the text.
  */
-function isCitedText(value: unknown): boolean {
+function isCitedText(value: unknown): value is { text: string; citations?: unknown } {
   return isRecord(value) && typeof value.text === 'string';
 }
 
@@ -105,12 +105,10 @@ function isCitedText(value: unknown): boolean {
 function renderTextWithCitations(value: unknown): ReactNode {
   if (typeof value === 'string') return <>{value}</>;
   if (isCitedText(value)) {
-    const text = (value as Record<string, unknown>).text as string;
-    const citations = (value as Record<string, unknown>).citations;
     return (
       <>
-        <span>{text}</span>
-        {renderCitations(citations)}
+        <span>{value.text}</span>
+        {renderCitations(value.citations)}
       </>
     );
   }
