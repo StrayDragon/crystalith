@@ -171,6 +171,45 @@ test.describe('@p0 workspace smoke', () => {
     });
   });
 
+  test('S10: connector bind → snapshot → unbind', async ({ page }) => {
+    const dir = resolve(import.meta.dirname, '../.tmp/connector-unbind');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(resolve(dir, 'note.md'), '# e2e connector\n');
+
+    page.on('dialog', (dialog) => {
+      void dialog.accept();
+    });
+
+    await page.getByTestId(TestIds.sourcesConnectors).click();
+    const dialog = page.getByTestId(TestIds.sourcesConnectorsDialog);
+    await expect(dialog).toBeVisible();
+
+    await page.getByTestId(`${TestIds.sourcesConnectorsOption}-local-directory`).click();
+    await page.getByTestId(TestIds.sourcesConnectorsNext).click();
+    await page.getByTestId(`${TestIds.sourcesConnectorsConfigField}-directoryPath`).fill(dir);
+    await page.getByTestId(TestIds.sourcesConnectorsCreateBinding).click();
+
+    await expect(page.getByTestId(TestIds.sourcesConnectorsUnbind)).toBeVisible({
+      timeout: 20_000,
+    });
+    // Snapshot auto-load should not crash the sources ErrorBoundary.
+    await expect(page.getByTestId(TestIds.sourcesPanel)).toBeVisible();
+    await expect(page.getByText('来源模块异常')).toHaveCount(0);
+
+    const deleteResp = page.waitForResponse(
+      (res) =>
+        res.request().method() === 'DELETE' &&
+        /\/v2\/source-connector-bindings\/\d+/.test(res.url()) &&
+        res.status() === 204,
+    );
+    await page.getByTestId(TestIds.sourcesConnectorsUnbind).click();
+    await deleteResp;
+
+    await expect(page.getByTestId(TestIds.sourcesConnectorsUnbind)).toHaveCount(0);
+    await expect(page.getByTestId(TestIds.sourcesConnectorsCreateBinding)).toBeVisible();
+    await page.keyboard.press('Escape');
+  });
+
   test('C01: chat input and send controls exist', async ({ page }) => {
     await expect(page.getByTestId(TestIds.chatInput)).toBeVisible();
     await expect(page.getByTestId(TestIds.chatSend)).toBeVisible();

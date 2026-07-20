@@ -92,10 +92,10 @@ test('unbind deletes binding and shows success toast', async () => {
   fireEvent.click(screen.getByRole('button', { name: '创建绑定' }));
 
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: /解除绑定/ })).toBeInTheDocument();
+    expect(screen.getByTestId('sources-connectors-unbind')).toBeInTheDocument();
   });
 
-  fireEvent.click(screen.getByRole('button', { name: /解除绑定/ }));
+  fireEvent.click(screen.getByTestId('sources-connectors-unbind'));
 
   await waitFor(() => {
     expect(deleteCalled).toBe(true);
