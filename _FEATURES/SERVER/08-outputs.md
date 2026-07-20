@@ -9,10 +9,10 @@ Output 生成、CRUD、导出与转来源。
 - **Domain:** outputs
 - **Route:** `GET /v2/outputs/types`
 - **说明:** 列出 Output 类型元数据（FAQ/GUIDE/…）
-- **用户可见:** Partial
+- **用户可见:** No（FE 用 `GET /v2/workspace/tools`）
 - **代码:** `apps/server/src/features/outputs/router.ts`、`outputs/generator.ts`
 
-> NOTE: 待盘点
+> NOTE: 删除候选 — 重复 registry；保留 `OUTPUT_META` / workspace tools
 
 ---
 

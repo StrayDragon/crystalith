@@ -180,7 +180,7 @@ Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `ope
 
 - React 18.2.0 locked
 - Rivu dropped (message-embedded JSON components instead of server state machine)
-- Built-in Eval Benchmark Harness (Golden Dataset + LLM-as-Judge)
+- Built-in Eval Benchmark Harness (Golden Dataset + LLM-as-Judge) — **present in code**; `_FEATURES` marks `/v2/eval/*` as **dead-candidate** (no UI/CI/CLI; pending removal + spec shrink)
 
 ## v2 Workflow
 
