@@ -58,19 +58,19 @@
 | `source-batch-reembed`          | 批量重嵌        | `POST .../batch/re-embed`                                              | active            | 待盘点                                            |
 | `source-single-reembed`         | 单条重嵌        | `POST /sources/:id/re-embed`                                           | active            | 待盘点                                            |
 | `source-detail-dialog`          | 来源详情        | `GET /sources/:id`, `GET .../chunks`, `POST .../qa`, `GET .../summary` | active            | 待盘点                                            |
-| `source-connectors-wizard`      | 连接器向导      | `GET/POST /v2/notebooks/:nid/source-connectors*`, `.../bindings/*`     | active            | 待盘点                                            |
+| `source-connectors-wizard`      | 连接器向导      | `GET/POST /v2/notebooks/:nid/source-connectors*`, `.../bindings/*`     | active            | unbind UI closed 2026-07-20                       |
 | `extractor-policy-dialog`       | 提取器策略      | `GET/PATCH .../extractors`                                             | active            | 待盘点                                            |
 | `source-jump-highlight`         | 跳转高亮        | `GET /sources/:id/chunks`                                              | active            | 待盘点                                            |
 | `deep-research-start`           | 启动研究        | `POST /v2/research`                                                    | active            | 待盘点                                            |
 | `research-capsule`              | 研究胶囊        | `GET /v2/research`, `POST .../cancel                                   | resume`           | active                                            | 待盘点 |
-| `research-detail-panel`         | 研究详情        | `GET /v2/research/:id`, HITL `POST .../*`, `GET .../stream`            | active            | 待盘点                                            |
+| `research-detail-panel`         | 研究详情        | `GET /v2/research/:id`, HITL `POST .../*`, `GET .../stream`            | active            | modify 接线 closed 2026-07-20（M6）               |
 | `research-history`              | 研究历史        | `GET/DELETE /v2/research`                                              | active            | 待盘点                                            |
 | `studio-panel`                  | Studio 面板     | `GET /v2/outputs`                                                      | active            | 待盘点                                            |
 | `studio-outputs-list`           | Output 列表     | `GET /v2/outputs`                                                      | active            | 待盘点                                            |
 | `studio-add-manual-note`        | 手动笔记        | `POST /v2/outputs`                                                     | active            | 待盘点                                            |
 | `studio-generate-tools`         | 生成工具        | `GET /v2/workspace/tools`, `POST /v2/outputs`                          | active            | 待盘点                                            |
 | `studio-tool-config-dialog`     | 工具配置        | `GET /v2/workspace/tools/:id/config`                                   | active            | 待盘点                                            |
-| `model-selector`                | 模型选择        | `GET /v2/models`                                                       | active            | 待盘点                                            |
+| `model-selector`                | 模型选择        | `GET /v2/models`                                                       | active            | role 过滤 closed 2026-07-20（M4；非 capability）  |
 | `generation-preference`         | 生成偏好        | `POST /v2/outputs`                                                     | active            | 待盘点                                            |
 | `slides-studio-dialog`          | Slides Studio   | `POST/GET/PATCH /v2/studio/slides*`, stream                            | active            | 待盘点                                            |
 | `studio-output-viewer`          | Output 查看     | `GET /v2/outputs/:id`                                                  | active            | 待盘点                                            |

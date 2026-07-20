@@ -34,8 +34,15 @@
 | 孤儿前端 UI 存根批次           | 2026-07-17 | RefinePanel 等；`useTasks`                                                                                                            |
 | **c73 死 HTTP 整批**           | 2026-07-20 | refine*、tasks*+TaskQueue、eval*、strategies HTTP、`outputs/types`、`qa/presets`、citations HTTP；见 SERVER/10–14 与 MATRIX `removed` |
 
-仍保留并补缺口：~~`DELETE .../source-connector-bindings`（解绑 UI）~~ ✅；~~research `modify`（假勾选）~~ ✅（2026-07-20）。
+已关闭产品缺口（2026-07-20）：connector unbind UI；research `modify` 接线；ModelSelector `role`（M4–M6）。详见 [`API-ALIGNMENT-REPORT.md`](API-ALIGNMENT-REPORT.md)。
 愿景债：`background-jobs-and-task-runtime` 已改为 c73 退役约束；`structural-refinement-*` 仅保留 research 可靠性条款（局部改良 MUST 已删）。
+
+## 「待盘点」含义
+
+`MATRIX.md` / `USER` / `SERVER` 条目里的 **「待盘点」** 表示：该行尚未做产品级保留/删除/合并结论，**不是**「功能未实现」或「API 缺口」。
+
+- API-alignment MEDIUM 产品缺口 **M4–M6 + connector unbind** 已于 **2026-07-20 CLOSED**（见 alignment report）。
+- MATRIX **逐行盘点**刻意 **deferred**：不要把全表「待盘点」批量改成 Yes —— 那是假盘点，不是活缺口清单。
 
 ## 相关代码
 
