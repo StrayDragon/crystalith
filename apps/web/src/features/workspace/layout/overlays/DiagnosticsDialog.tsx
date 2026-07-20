@@ -13,6 +13,7 @@ import { TestIds, tid } from '../../../../shared/testids';
 import { toast } from '../../../../shared/toast';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import type { WorkspaceToolsDiagnostics } from '../../shared/types';
+import { formatTimestamp } from '../../shared/utils';
 import {
   toOptionalServiceDiagnostics,
   type DependencyHealthResponse,
@@ -176,7 +177,9 @@ export default function DiagnosticsDialog({
             </div>
             <div className="mt-0.5 text-[11px] text-gray-600 dark:text-slate-400">
               {data?.generatedAt
-                ? t('workspace.diagnostics.generated_at', { timestamp: data.generatedAt })
+                ? t('workspace.diagnostics.generated_at', {
+                    timestamp: formatTimestamp(data.generatedAt) || String(data.generatedAt),
+                  })
                 : t('workspace.diagnostics.description')}
             </div>
           </div>

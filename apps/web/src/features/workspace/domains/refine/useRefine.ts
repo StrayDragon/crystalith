@@ -33,7 +33,7 @@ function normalizeFieldDescriptor(field: unknown): FieldDescriptor {
   };
 }
 
-function normalizeRenderDescriptor(descriptor?: unknown | null): RenderDescriptor | null {
+function normalizeRenderDescriptor(descriptor?: unknown): RenderDescriptor | null {
   if (!descriptor) return null;
   const d = asRecord(descriptor);
   const rawItemSchema = d.itemSchema as Record<string, unknown> | null | undefined;
@@ -65,7 +65,7 @@ function normalizeSlideGenerationDefaults(
   };
 }
 
-function normalizePreviewDescriptor(descriptor?: unknown | null): PreviewDescriptor | null {
+function normalizePreviewDescriptor(descriptor?: unknown): PreviewDescriptor | null {
   if (!descriptor) return null;
   const d = asRecord(descriptor);
   return {
@@ -77,7 +77,7 @@ function normalizePreviewDescriptor(descriptor?: unknown | null): PreviewDescrip
   };
 }
 
-function normalizeConfigSchema(schema?: unknown | null): PluginConfigSchema | null {
+function normalizeConfigSchema(schema?: unknown): PluginConfigSchema | null {
   if (!schema) return null;
   const s = asRecord(schema);
   return {
@@ -105,7 +105,7 @@ function normalizeConfigSchema(schema?: unknown | null): PluginConfigSchema | nu
   };
 }
 
-function normalizeFrontendBundle(bundle?: unknown | null): FrontendBundleDescriptor | null {
+function normalizeFrontendBundle(bundle?: unknown): FrontendBundleDescriptor | null {
   if (!bundle) return null;
   const b = asRecord(bundle);
   return {

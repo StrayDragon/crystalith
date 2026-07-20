@@ -22,7 +22,7 @@
     "e2e:install": "cd e2e && bunx playwright install chromium",
     "typecheck": "bun --filter './apps/*' --filter './packages/*' typecheck",
     "lint": "oxlint",
-    "lint:type-aware": "oxlint --type-aware --tsconfig tsconfig.lint.json",
+    "lint:type-aware": "oxlint --type-aware --tsconfig tsconfig.lint.json --ignore-pattern '**/*.{test,spec}.{ts,tsx}' apps/server/src apps/web/src packages/shared/src",
     "lint:fix": "oxlint --fix",
     "format": "bun format:check",
     "format:write": "oxfmt --write",

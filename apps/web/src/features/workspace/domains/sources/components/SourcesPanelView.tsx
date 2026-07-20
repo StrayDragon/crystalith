@@ -250,7 +250,9 @@ function SourcesPanelView({
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
           onToggleSearchMode={handleToggleSearchMode}
-          onSearch={handleSearch}
+          onSearch={() => {
+            void handleSearch();
+          }}
           searchInputRef={searchInputRef}
         />
       </div>
