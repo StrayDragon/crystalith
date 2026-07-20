@@ -3,6 +3,9 @@ name: 'llman-sdd-propose'
 description: '创建 llman SDD 变更提案，一次性生成 proposal + delta specs + tasks 等规划工件。用于正式定义变更——尤其是涉及 MUST/SHALL 行为合约的变更。'
 metadata:
   version: '0.0.64'
+  llman_sdd:
+    bdd_mode: 'off'
+    skill_set: 'default'
 ---
 
 # LLMAN SDD 提案（Propose）
@@ -30,7 +33,8 @@ flowchart LR
 - **必须与用户确认 change id 后再写文件**：不同变更的边界不能模糊。
 - **BDD-off 的 delta specs 至少含一个 op + 一个 scenario**：否则验证不通过。（BDD-on 以 feature 分支上的 live specs 为 SSOT。）
 - **不要问「要不要继续」**：在 propose 阶段内一路执行到底，生成工件并校验。
-- **若变更已存在**：STOP 并建议用户使用 `llman-sdd-apply` 或 `llman-sdd-continue`。
+
+- **若变更已存在**：STOP 并建议用户使用 `llman-sdd-apply`；若需补齐缺失 artifact，直接编辑 `llmanspec/changes/<id>/`（或启用 `extra_skills: [llman-sdd-continue]` 后使用 continue）。
 
 ## 步骤
 
@@ -63,7 +67,9 @@ flowchart LR
 ### 3) 创建变更目录与工件
 
 - 建议先用 `llman sdd change new <change-id>` 生成草稿 `proposal.md`（或手动创建 `llmanspec/changes/<change-id>/`）。
-- 若变更已存在，STOP 并建议使用 `llman-sdd-continue`。
+
+- 若变更已存在，STOP 并建议补齐缺失 artifact 或改用 `llman-sdd-apply`（可选启用 `extra_skills` 中的 continue）。
+
 - 充实 `proposal.md`（Why / What Changes / Capabilities / Impact）
 - 仅在涉及权衡/迁移时创建 `design.md`
 - `tasks.md`：按顺序拆分为可勾选清单（包含校验命令）
@@ -92,7 +98,15 @@ llman sdd validate <change-id> --strict --no-interactive
 ### 4b) BDD-on 模式——仅当 `config.yaml` 含 `bdd:` 段时（Git-native）
 
 - 在**非默认 Git feature 分支**上工作（禁止在 main/master 上 propose/实现 BDD-on 变更）。
-- **Partitioned SSOT**：编辑 live `spec.toon`（约束）与 `*.feature`（可执行 GWT + `@req`）；禁止同一 scenario id 双写。
+- **Partitioned SSOT**：编辑 live `spec.toon`（约束）与 `*.feature`（可执行 GWT + `@req`）；禁止同一 scenario id 双写。双写形状对照：
+
+  | 场景类型                             | `spec.toon` `scenarios[]`                                  | `*.feature`                   |
+  | ------------------------------------ | ---------------------------------------------------------- | ----------------------------- |
+  | 可执行场景（有 `@req` / 走 harness） | **MUST NOT** 出现（requirements 放 toon，例子放 .feature） | **唯一**存放可执行 GWT 的地方 |
+  | 不可执行场景（纯文档）               | `feature: false` + GWT 可填                                | n/a（不要放）                 |
+
+  要点：Partitioned SSOT 下 toon 里 **不要** 写 `feature: true` 的行；requirement 语句放 toon，可执行例子放 `.feature` 并用 `@req:<req_id>` 挂回。
+
 - Change 壳：`llman sdd change new <change-id>` → 充实 proposal/tasks → `llman sdd change attach <change-id>`。
 - **不要**跑 solidify / 写 `change delta` / 新建 feature_delta；若仓库里已有活跃 `*.feature.delta.toon`，先迁移再继续。
 - **BDD-off**（无 `bdd:`）：用 `change delta …`；不要求 feature 分支 / attach / checkpoint。
@@ -123,11 +137,16 @@ llman sdd validate <change-id> --strict --no-interactive
 - `llman sdd index rebuild`（重建 pageindex 树索引——不需要模型）
 - `llman sdd index check`（检查索引新鲜度）
 - `llman sdd change new <id>`（创建草稿 `changes/<id>/proposal.md`）
+  {% if bdd_enabled %}
 - `llman sdd change attach <id> [--force]`（BDD-on：绑定 feature 分支 + base SHA）
-- `llman sdd change checkpoint <id> [--no-check]`（BDD-on：干净工作区 + 归档前门禁）
+- `llman sdd change finalize <id> [--no-check]`（BDD-on：**推荐单 commit 路径**——不要求干净树；同进程 checkpoint + docs-only archive；写 `checkpoint_sha = base_sha`）
+- `llman sdd change checkpoint <id> [--no-check]`（BDD-on：干净工作区 + 归档前门禁；严格 sha = HEAD）
 - `llman sdd change diff <id> [--export-patch <path>]`（BDD-on：只读 `base...HEAD` 审查/导出）
+  {% endif %}
+  {% if not bdd_enabled %}
 - `llman sdd change delta …`（仅 BDD-off：TOON delta 作者工具；BDD-on 会拒绝）
-- `llman sdd change archive <id>`（封存变更；BDD-on：checkpoint 后仅文档；BDD-off：合并 TOON delta）
+  {% endif %}
+- `llman sdd change archive <id>`（封存变更；BDD-on：checkpoint 后仅文档 / 或作 finalize fallback；BDD-off：合并 TOON delta）
 - `llman sdd archive freeze [--before YYYY-MM-DD] [--keep-recent N] [--dry-run]`（冻结已归档目录）
 - `llman sdd archive thaw [--change <id> ...] [--dest <path>]`（从冷备份恢复）
 - `llman sdd graph [CHANGE] [--format mermaid] [--scope active|archived|all] [--depth N]`（生成变更依赖图）
@@ -172,7 +191,7 @@ r1,happy,"","a trigger happens","the outcome is observed"
 ```
 
 4. BDD-on 护栏（Git-native Partitioned SSOT）：
-   `config.yaml` 有 `bdd:` 时：`spec.toon`=约束/不可执行场景；`*.feature`=可执行 GWT（`@req`）。在非默认分支编辑 live 文件 → `change attach` / `checkpoint` → docs-only `change archive` → Git merge。不要找 solidify，也不要新建 `*.feature.delta.toon`（若已存在则是迁移阻断，跑 `project migrate --kind partitioned`）。空 requirements 且无 `.feature` = ERROR。
+   `config.yaml` 有 `bdd:` 时：`spec.toon`=约束/不可执行场景；`*.feature`=可执行 GWT（`@req`）。在非默认分支编辑 live 文件 → `change attach` → 优先 `change finalize`（单 commit）或 fallback `checkpoint` → docs-only `change archive` → Git merge。不要找 solidify，也不要新建 `*.feature.delta.toon`（若已存在则是迁移阻断，跑 `project migrate --kind partitioned`）。空 requirements 且无 `.feature` = ERROR。
 
 备注：
 
