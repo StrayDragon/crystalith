@@ -24,6 +24,7 @@ import type {
   SourceConnectorDescriptor,
   SourceConnectorsListResponse,
   SyncCheckResult,
+  SyncCandidate,
 } from './source-connector-types';
 import {
   buildDirectories,
@@ -567,7 +568,7 @@ function SourceConnectorSyncStep({
                 {group.label}（{group.items.length}）
               </div>
               <div className="max-h-[35vh] overflow-y-auto">
-                {group.items.map((item: any) => (
+                {group.items.map((item: SyncCandidate) => (
                   <div
                     key={`${group.label}-${item.relativePath}`}
                     className="px-4 py-2 border-b border-gray-100 dark:border-slate-800 last:border-b-0"

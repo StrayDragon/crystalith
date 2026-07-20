@@ -1,18 +1,23 @@
 import type { SlideGenerationConfig } from '../../../shared/types';
 
-export function normalizeGenerationConfig(raw: any): SlideGenerationConfig | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const config = raw as Record<string, any>;
+function asNullableString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+export function normalizeGenerationConfig(raw: unknown): SlideGenerationConfig | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const config = raw as Record<string, unknown>;
+  const preference = config.preference;
   return {
-    preference: config.preference ?? null,
-    quantity: config.quantity ?? null,
-    audience: config.audience ?? null,
-    structure: config.structure ?? null,
-    tone: config.tone ?? null,
-    language: config.language ?? null,
-    density: config.density ?? null,
-    themePreset: config.themePreset ?? null,
-    frontmatter: config.frontmatter ?? null,
+    preference: preference === 'quality' || preference === 'speed' ? preference : null,
+    quantity: asNullableString(config.quantity),
+    audience: asNullableString(config.audience),
+    structure: asNullableString(config.structure),
+    tone: asNullableString(config.tone),
+    language: asNullableString(config.language),
+    density: asNullableString(config.density),
+    themePreset: asNullableString(config.themePreset),
+    frontmatter: asNullableString(config.frontmatter),
   };
 }
 
@@ -36,7 +41,7 @@ function yamlValue(value: unknown) {
 
 export function buildFrontmatterPreview(
   title: string,
-  themeTemplate: Record<string, any> | null | undefined,
+  themeTemplate: Record<string, unknown> | null | undefined,
   override: string,
 ): string {
   const normalizedOverride = normalizeFrontmatterOverride(override);
