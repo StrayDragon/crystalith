@@ -14,6 +14,10 @@ export interface ParsedServerError {
   status?: number;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 /**
  * Parse an eden treaty error (or any thrown value) into a stable shape.
  *
@@ -21,28 +25,26 @@ export interface ParsedServerError {
  * `code` for robustness. Exposes the code as `errorCode`.
  */
 export function parseServerError(error: unknown): ParsedServerError {
-  if (!error || typeof error !== 'object') {
-    return { message: String(error) };
+  if (!isRecord(error)) {
+    if (typeof error === 'string') return { message: error };
+    if (typeof error === 'number' || typeof error === 'boolean' || typeof error === 'bigint') {
+      return { message: String(error) };
+    }
+    return { message: 'Unknown error' };
   }
-  const e = error as Record<string, unknown>;
   const errorCode =
-    typeof e.errorCode === 'string'
-      ? e.errorCode
-      : typeof e.code === 'string'
-        ? e.code
-        : typeof e.errorCode === 'string'
-          ? e.errorCode
-          : undefined;
+    typeof error.errorCode === 'string'
+      ? error.errorCode
+      : typeof error.code === 'string'
+        ? error.code
+        : undefined;
   const message =
-    typeof e.message === 'string'
-      ? e.message
-      : typeof e.detail === 'string'
-        ? e.detail
+    typeof error.message === 'string'
+      ? error.message
+      : typeof error.detail === 'string'
+        ? error.detail
         : 'Unknown error';
-  const details =
-    typeof e.details === 'object' && e.details !== null
-      ? (e.details as Record<string, unknown>)
-      : undefined;
-  const status = typeof e.status === 'number' ? e.status : undefined;
+  const details = isRecord(error.details) ? error.details : undefined;
+  const status = typeof error.status === 'number' ? error.status : undefined;
   return { errorCode, message, details, status };
 }

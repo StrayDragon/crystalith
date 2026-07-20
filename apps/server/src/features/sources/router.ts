@@ -3,6 +3,7 @@ import {
   PaginatedSchema,
   PaginationParamsSchema,
   PatchNotebookExtractorPolicySchema,
+  ChunkListSchema,
   SourceBatchDeleteRequestSchema,
   SourceBatchReembedRequestSchema,
   SourceFromUrlRequestSchema,
@@ -760,11 +761,15 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   )
 
   // Get source chunks (nested canonical)
-  .get('/notebooks/:nid/sources/:sid/chunks', ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const sid = requirePositiveIntId(params.sid, 'source id');
-    return handleGetSourceChunks(sid, nid);
-  })
+  .get(
+    '/notebooks/:nid/sources/:sid/chunks',
+    ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const sid = requirePositiveIntId(params.sid, 'source id');
+      return handleGetSourceChunks(sid, nid);
+    },
+    { response: ChunkListSchema },
+  )
 
   // Get source chunks (flat alias — c67 notebookId required)
   .get(
@@ -773,7 +778,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'source id');
       return handleGetSourceChunks(id, query.notebookId);
     },
-    { query: NotebookIdQuerySchema },
+    { query: NotebookIdQuerySchema, response: ChunkListSchema },
   )
 
   // Re-embed a source (nested canonical)

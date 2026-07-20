@@ -23,7 +23,10 @@ const OFFSET = 8;
 interface ConfirmPopoverProps {
   message: string;
   onConfirm: () => void;
-  children: ReactElement<any>;
+  children: ReactElement<{
+    onClick?: (event: React.MouseEvent<HTMLElement>) => void;
+    ref?: React.Ref<HTMLElement>;
+  }>;
   confirmText?: string;
   cancelText?: string;
   placement?: Placement;
@@ -151,14 +154,16 @@ const ConfirmPopover = forwardRef<HTMLElement, ConfirmPopoverProps>(function Con
       }
       if (event.defaultPrevented) return;
       if (disabled) return;
-      triggerRef.current = event.currentTarget as HTMLElement;
+      triggerRef.current = event.currentTarget;
       updateAnchor();
       setOpen(true);
     },
     [children, disabled, updateAnchor],
   );
 
-  const handleClose = useCallback(() => setOpen(false), []);
+  const handleClose = useCallback(() => {
+    setOpen(false);
+  }, []);
 
   const handleConfirm = useCallback(() => {
     onConfirm();
@@ -176,7 +181,9 @@ const ConfirmPopover = forwardRef<HTMLElement, ConfirmPopoverProps>(function Con
       event.stopImmediatePropagation();
       setOpen(false);
     };
-    const handleResize = () => updateAnchor();
+    const handleResize = () => {
+      updateAnchor();
+    };
     window.addEventListener('keydown', handleKeyDown, true);
     window.addEventListener('resize', handleResize);
     window.addEventListener('scroll', handleResize, true);
@@ -196,14 +203,14 @@ const ConfirmPopover = forwardRef<HTMLElement, ConfirmPopoverProps>(function Con
   const anchor = useMemo(() => {
     if (!anchorRect) return null;
     switch (actualPlacement) {
+      case 'top':
+        return { x: anchorRect.left + anchorRect.width / 2, y: anchorRect.top };
       case 'bottom':
         return { x: anchorRect.left + anchorRect.width / 2, y: anchorRect.bottom };
       case 'left':
         return { x: anchorRect.left, y: anchorRect.top + anchorRect.height / 2 };
       case 'right':
         return { x: anchorRect.right, y: anchorRect.top + anchorRect.height / 2 };
-      default:
-        return { x: anchorRect.left + anchorRect.width / 2, y: anchorRect.top };
     }
   }, [anchorRect, actualPlacement]);
 
@@ -211,14 +218,14 @@ const ConfirmPopover = forwardRef<HTMLElement, ConfirmPopoverProps>(function Con
   const transform = useMemo(() => {
     if (!anchorRect) {
       switch (actualPlacement) {
+        case 'top':
+          return 'translate(-50%, calc(-100% - 8px))';
         case 'bottom':
           return 'translate(-50%, 8px)';
         case 'left':
           return 'translate(calc(-100% - 8px), -50%)';
         case 'right':
           return 'translate(8px, -50%)';
-        default:
-          return 'translate(-50%, calc(-100% - 8px))';
       }
     }
 
@@ -288,7 +295,9 @@ const ConfirmPopover = forwardRef<HTMLElement, ConfirmPopoverProps>(function Con
               data-confirm-popover=""
               // Keep parent dropdown click-outside handlers from treating this
               // portal as an outside click (Confirm lives on document.body).
-              onMouseDown={(event) => event.stopPropagation()}
+              onMouseDown={(event) => {
+                event.stopPropagation();
+              }}
             >
               <button
                 type="button"

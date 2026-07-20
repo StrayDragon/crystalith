@@ -1,4 +1,4 @@
-import type { Chunk as ChunkRead } from '@crystalith/shared';
+import type { Chunk as ChunkRead, SourceSummary } from '@crystalith/shared';
 import {
   IconButton,
   Typography,
@@ -35,6 +35,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 import { api } from '../../../../api/eden';
+import { parseServerError } from '../../../../api/parseServerError';
 import { copyToClipboard } from '../../../../shared/clipboard';
 import { t } from '../../../../shared/i18n';
 import { useLayer } from '../../../../shared/layer';
@@ -130,24 +131,23 @@ function ChunkItem({ chunk }: { chunk: ChunkRead }) {
   );
 }
 
-async function fetchSourceSummary(notebookId: number, sourceId: number) {
+async function fetchSourceSummary(notebookId: number, sourceId: number): Promise<SourceSummary> {
   const { data, error } = await api.v2
     .notebooks({ nid: notebookId })
     .sources({ sid: sourceId })
     .summary.get();
-  if (error)
-    throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
-  return data as any;
+  if (error) throw new Error(parseServerError(error).message);
+  if (!data) throw new Error('source summary returned an empty payload');
+  return data;
 }
 
-async function fetchSourceChunks(notebookId: number, sourceId: number) {
+async function fetchSourceChunks(notebookId: number, sourceId: number): Promise<ChunkRead[]> {
   const { data, error } = await api.v2
     .notebooks({ nid: notebookId })
     .sources({ sid: sourceId })
     .chunks.get();
-  if (error)
-    throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
-  return data as any;
+  if (error) throw new Error(parseServerError(error).message);
+  return data ?? [];
 }
 
 export default function SourceDetailDialog({
@@ -313,9 +313,8 @@ export default function SourceDetailDialog({
       const { data: response, error: qaErr } = await api.v2
         .notebooks({ nid: notebookId })
         .sources({ sid: source.id })
-        .qa.post({ question: userMessage.content } as any);
-      if (qaErr)
-        throw new Error(typeof qaErr === 'string' ? qaErr : typeof qaErr === 'string' ? qaErr : '');
+        .qa.post({ question: userMessage.content });
+      if (qaErr) throw new Error(parseServerError(qaErr).message);
       if (!response || !('answer' in response)) {
         throw new Error('source QA returned an unexpected payload');
       }
@@ -323,7 +322,7 @@ export default function SourceDetailDialog({
         id: `assistant-${Date.now()}`,
         role: 'assistant',
         content: response.answer,
-        timestamp: new Date((response as { createdAt?: string }).createdAt || Date.now()),
+        timestamp: new Date(),
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {

@@ -5,6 +5,9 @@
 import {
   ConvertSourceQAToSourceRequestSchema,
   ConvertSourceQAToSourceResponseSchema,
+  SourceQARequestSchema,
+  SourceQAResponseSchema,
+  SourceSummarySchema,
 } from '@crystalith/shared';
 import { generateText } from 'ai';
 import { eq } from 'drizzle-orm';
@@ -16,7 +19,7 @@ import { db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
-import { ErrorCode, sendError } from '../../shared/errors.ts';
+import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
 
 const apiDocs: OpenApiRoute[] = [
@@ -99,132 +102,140 @@ function parseSummaryResponse(response: string): {
 
 export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
   // Source summary (v1 api_summary.py parity)
-  .get('/notebooks/:nid/sources/:sid/summary', async ({ params, set }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const sid = requirePositiveIntId(params.sid, 'source id');
-    const source = db().select().from(sources).where(eq(sources.id, sid)).get();
-    if (!source) throw new NotFoundError(`Source ${sid} not found`);
-    // c44: verify notebook ownership (v1 api_summary.py:82)
-    if (source.notebookId !== nid) throw new NotFoundError(`Source ${sid} not found`);
-    // c44: "not ready" → 400 (v1 api_summary.py:86)
-    if (source.status !== 'ready') {
-      return sendError(set, ErrorCode.INVALID_REQUEST, 'Source is not ready');
-    }
-
-    const chunkRows = db()
-      .select()
-      .from(chunks)
-      .where(eq(chunks.sourceId, sid))
-      .orderBy(chunks.chunkIndex)
-      .all();
-
-    if (chunkRows.length === 0) throw new NotFoundError('Source has no content');
-
-    const totalText = chunkRows.map((c) => c.text).join(' ');
-    const wordCount = totalText.split(/\s+/u).length;
-
-    const contextBlocks = chunkRows.slice(0, 10);
-    const context = contextBlocks.map((c, i) => `[片段 ${i + 1}]\n${c.text}`).join('\n\n');
-
-    const modelConfig = getDefaultChatModel();
-    if (modelConfig) {
-      try {
-        const model = withRetry(await resolveModel(modelConfig));
-        const { text } = await generateText({
-          model,
-          abortSignal: AbortSignal.timeout(30_000),
-          system:
-            '你是一个文档摘要助手。请根据提供的文档内容生成：1. 一段简洁的摘要（2-3句话）2. 4个关键要点（每个要点一句话）3. 3个主题标签。请用中文回复，格式如下：\n摘要：<摘要内容>\n要点：\n- <要点1>\n- <要点2>\n- <要点3>\n- <要点4>\n主题：<主题1>、<主题2>、<主题3>',
-          prompt: `请为以下文档「${source.filename}」生成摘要：\n\n${context}`,
-        });
-        const { summary, keyPoints, topics } = parseSummaryResponse(text);
-        return {
-          sourceId: sid,
-          summary,
-          keyPoints,
-          topics,
-          wordCount,
-          generatedAt: new Date().toISOString(),
-        };
-      } catch {
-        // fall through
+  .get(
+    '/notebooks/:nid/sources/:sid/summary',
+    async ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const sid = requirePositiveIntId(params.sid, 'source id');
+      const source = db().select().from(sources).where(eq(sources.id, sid)).get();
+      if (!source) throw new NotFoundError(`Source ${sid} not found`);
+      // c44: verify notebook ownership (v1 api_summary.py:82)
+      if (source.notebookId !== nid) throw new NotFoundError(`Source ${sid} not found`);
+      // c44: "not ready" → 400 (v1 api_summary.py:86)
+      if (source.status !== 'ready') {
+        throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Source is not ready');
       }
-    }
 
-    return {
-      sourceId: sid,
-      summary: `这是关于「${source.filename}」的文档，包含 ${chunkRows.length} 个片段。`,
-      keyPoints: ['核心概念和定义', '主要方法论', '实践案例分析', '建议和最佳实践'],
-      topics: ['分析', '方法论', '实践'],
-      wordCount,
-      generatedAt: new Date().toISOString(),
-    };
-  })
-
-  // Per-source QA (c39: vector retrieval instead of first-N chunks — v1 api_qa.py:82-119)
-  .post('/notebooks/:nid/sources/:sid/qa', async ({ params, body, set }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const sid = requirePositiveIntId(params.sid, 'source id');
-    const source = db().select().from(sources).where(eq(sources.id, sid)).get();
-    if (!source) throw new NotFoundError(`Source ${sid} not found`);
-    // c44: verify notebook ownership (v1 api_qa.py:64)
-    if (source.notebookId !== nid) throw new NotFoundError(`Source ${sid} not found`);
-    // c44: "not ready" → 400 (v1 api_qa.py:67)
-    if (source.status !== 'ready') {
-      return sendError(set, ErrorCode.INVALID_REQUEST, 'Source is not ready');
-    }
-
-    const { question } = body as { question: string };
-    if (!question?.trim()) throw new NotFoundError('Question is required');
-
-    const modelConfig = getDefaultChatModel();
-    if (!modelConfig) throw new Error('No chat model configured');
-
-    // c39: Use vector retrieval scoped to this source (v1 cached_vector_search)
-    let contextChunks: Array<{ text: string; score: number }> = [];
-    try {
-      const { ragRegistry } = await import('../../rag/registry.ts');
-      const results = await ragRegistry.retrieveWith('embed', source.notebookId, question.trim(), {
-        topK: 5,
-        minScore: 0.1,
-        sourceIds: [sid],
-      });
-      contextChunks = results.map((r) => ({ text: r.text, score: r.score }));
-    } catch {
-      // Fallback: vector search unavailable — use first N chunks
-    }
-
-    // Fallback: if vector search returned nothing, take first chunks
-    if (contextChunks.length === 0) {
       const chunkRows = db()
-        .select({ text: chunks.text })
+        .select()
         .from(chunks)
         .where(eq(chunks.sourceId, sid))
         .orderBy(chunks.chunkIndex)
         .all();
-      contextChunks = chunkRows.slice(0, 15).map((c) => ({ text: c.text, score: 0 }));
-    }
 
-    if (contextChunks.length === 0) throw new NotFoundError('Source has no content');
+      if (chunkRows.length === 0) throw new NotFoundError('Source has no content');
 
-    const context = contextChunks.map((c) => c.text).join('\n\n');
+      const totalText = chunkRows.map((c) => c.text).join(' ');
+      const wordCount = totalText.split(/\s+/u).length;
 
-    const model = withRetry(await resolveModel(modelConfig));
-    const { text } = await generateText({
-      model,
-      abortSignal: AbortSignal.timeout(30_000),
-      system:
-        'You are a QA assistant. Answer questions based strictly on the provided document. If the document does not contain relevant information, say so honestly.',
-      prompt: `Document: ${source.filename}\n\nContent:\n${context}\n\nQuestion: ${question.trim()}`,
-    });
+      const contextBlocks = chunkRows.slice(0, 10);
+      const context = contextBlocks.map((c, i) => `[片段 ${i + 1}]\n${c.text}`).join('\n\n');
 
-    return {
-      sourceId: sid,
-      sourceName: source.filename,
-      question: question.trim(),
-      answer: text,
-    };
-  })
+      const modelConfig = getDefaultChatModel();
+      if (modelConfig) {
+        try {
+          const model = withRetry(await resolveModel(modelConfig));
+          const { text } = await generateText({
+            model,
+            abortSignal: AbortSignal.timeout(30_000),
+            system:
+              '你是一个文档摘要助手。请根据提供的文档内容生成：1. 一段简洁的摘要（2-3句话）2. 4个关键要点（每个要点一句话）3. 3个主题标签。请用中文回复，格式如下：\n摘要：<摘要内容>\n要点：\n- <要点1>\n- <要点2>\n- <要点3>\n- <要点4>\n主题：<主题1>、<主题2>、<主题3>',
+            prompt: `请为以下文档「${source.filename}」生成摘要：\n\n${context}`,
+          });
+          const { summary, keyPoints, topics } = parseSummaryResponse(text);
+          return {
+            sourceId: sid,
+            summary,
+            keyPoints,
+            topics,
+            wordCount,
+            generatedAt: new Date().toISOString(),
+          };
+        } catch {
+          // fall through
+        }
+      }
+
+      return {
+        sourceId: sid,
+        summary: `这是关于「${source.filename}」的文档，包含 ${chunkRows.length} 个片段。`,
+        keyPoints: ['核心概念和定义', '主要方法论', '实践案例分析', '建议和最佳实践'],
+        topics: ['分析', '方法论', '实践'],
+        wordCount,
+        generatedAt: new Date().toISOString(),
+      };
+    },
+    { response: SourceSummarySchema },
+  )
+
+  // Per-source QA (c39: vector retrieval instead of first-N chunks — v1 api_qa.py:82-119)
+  .post(
+    '/notebooks/:nid/sources/:sid/qa',
+    async ({ params, body }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const sid = requirePositiveIntId(params.sid, 'source id');
+      const source = db().select().from(sources).where(eq(sources.id, sid)).get();
+      if (!source) throw new NotFoundError(`Source ${sid} not found`);
+      // c44: verify notebook ownership (v1 api_qa.py:64)
+      if (source.notebookId !== nid) throw new NotFoundError(`Source ${sid} not found`);
+      // c44: "not ready" → 400 (v1 api_qa.py:67)
+      if (source.status !== 'ready') {
+        throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Source is not ready');
+      }
+
+      const question = body.question.trim();
+      if (!question) throw new NotFoundError('Question is required');
+
+      const modelConfig = getDefaultChatModel();
+      if (!modelConfig) throw new Error('No chat model configured');
+
+      // c39: Use vector retrieval scoped to this source (v1 cached_vector_search)
+      let contextChunks: Array<{ text: string; score: number }> = [];
+      try {
+        const { ragRegistry } = await import('../../rag/registry.ts');
+        const results = await ragRegistry.retrieveWith('embed', source.notebookId, question, {
+          topK: 5,
+          minScore: 0.1,
+          sourceIds: [sid],
+        });
+        contextChunks = results.map((r) => ({ text: r.text, score: r.score }));
+      } catch {
+        // Fallback: vector search unavailable — use first N chunks
+      }
+
+      // Fallback: if vector search returned nothing, take first chunks
+      if (contextChunks.length === 0) {
+        const chunkRows = db()
+          .select({ text: chunks.text })
+          .from(chunks)
+          .where(eq(chunks.sourceId, sid))
+          .orderBy(chunks.chunkIndex)
+          .all();
+        contextChunks = chunkRows.slice(0, 15).map((c) => ({ text: c.text, score: 0 }));
+      }
+
+      if (contextChunks.length === 0) throw new NotFoundError('Source has no content');
+
+      const context = contextChunks.map((c) => c.text).join('\n\n');
+
+      const model = withRetry(await resolveModel(modelConfig));
+      const { text } = await generateText({
+        model,
+        abortSignal: AbortSignal.timeout(30_000),
+        system:
+          'You are a QA assistant. Answer questions based strictly on the provided document. If the document does not contain relevant information, say so honestly.',
+        prompt: `Document: ${source.filename}\n\nContent:\n${context}\n\nQuestion: ${question}`,
+      });
+
+      return {
+        sourceId: sid,
+        sourceName: source.filename,
+        question,
+        answer: text,
+      };
+    },
+    { body: SourceQARequestSchema, response: SourceQAResponseSchema },
+  )
 
   // Convert per-source QA to a source (v1 api_qa.py:204 parity)
   .post(
