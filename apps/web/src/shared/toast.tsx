@@ -46,21 +46,26 @@ export const useToastStore = create<ToastStore>((set) => ({
       }, resolvedDuration);
     }
   },
-  removeToast: (id: string) =>
+  removeToast: (id: string) => {
     set((state) => ({
       toasts: state.toasts.filter((t) => t.id !== id),
-    })),
+    }));
+  },
 }));
 
 export const toast = {
-  success: (message: string, duration?: number) =>
-    useToastStore.getState().addToast(message, 'success', duration),
-  error: (message: string, duration?: number) =>
-    useToastStore.getState().addToast(message, 'error', duration),
-  info: (message: string, duration?: number) =>
-    useToastStore.getState().addToast(message, 'info', duration),
-  warning: (message: string, duration?: number) =>
-    useToastStore.getState().addToast(message, 'warning', duration),
+  success: (message: string, duration?: number) => {
+    useToastStore.getState().addToast(message, 'success', duration);
+  },
+  error: (message: string, duration?: number) => {
+    useToastStore.getState().addToast(message, 'error', duration);
+  },
+  info: (message: string, duration?: number) => {
+    useToastStore.getState().addToast(message, 'info', duration);
+  },
+  warning: (message: string, duration?: number) => {
+    useToastStore.getState().addToast(message, 'warning', duration);
+  },
 };
 
 const iconMap = {
@@ -107,7 +112,13 @@ export function ToastContainer() {
   return (
     <div className="fixed top-4 right-4 flex flex-col gap-2 max-w-sm" style={style}>
       {toasts.map((t) => (
-        <ToastItem key={t.id} toast={t} onClose={() => removeToast(t.id)} />
+        <ToastItem
+          key={t.id}
+          toast={t}
+          onClose={() => {
+            removeToast(t.id);
+          }}
+        />
       ))}
     </div>
   );

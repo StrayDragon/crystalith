@@ -65,7 +65,9 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
   return Promise.race([
     promise,
     new Promise<T>((_, reject) => {
-      setTimeout(() => reject(new Error(message)), ms);
+      setTimeout(() => {
+        reject(new Error(message));
+      }, ms);
     }),
   ]);
 }
@@ -192,7 +194,9 @@ export function useSources() {
     const timer = window.setTimeout(() => {
       store.getState().setJumpToCitation(null);
     }, 1800);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [jumpToCitationChunkId, store]);
 
   const setHoveredCitationChunkId = useCallback(

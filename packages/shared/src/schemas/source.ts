@@ -397,24 +397,32 @@ export type SourceSearchResponse = z.infer<typeof SourceSearchResponseSchema>;
 // Source summary + per-source QA
 // ---------------------------------------------------------------------------
 
+/** Live wire uses `generatedAt` (not `createdAt`) — keep Eden/Zod aligned with handlers. */
 export const SourceSummarySchema = z.object({
   sourceId: IdSchema,
   summary: z.string(),
   keyPoints: z.array(z.string()),
   topics: z.array(z.string()),
   wordCount: z.number().int().nonnegative(),
-  createdAt: IsoTimestampSchema,
+  generatedAt: IsoTimestampSchema,
 });
+export type SourceSummary = z.infer<typeof SourceSummarySchema>;
 
 export const SourceQARequestSchema = z.object({
   question: z.string().min(1),
 });
 
+/** Matches POST …/sources/:sid/qa handler body (sourceName + echoed question). */
 export const SourceQAResponseSchema = z.object({
   sourceId: IdSchema,
+  sourceName: z.string(),
+  question: z.string(),
   answer: z.string(),
-  createdAt: IsoTimestampSchema,
 });
+export type SourceQAResponse = z.infer<typeof SourceQAResponseSchema>;
+
+export const ChunkListSchema = z.array(ChunkSchema);
+export type ChunkList = z.infer<typeof ChunkListSchema>;
 
 export const QAMessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
