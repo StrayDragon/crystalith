@@ -2,9 +2,14 @@
 //
 // Mirrors v1 `features/source_connectors/api.py`.
 import {
+  ImportScopeApplyResponseSchema,
   ImportScopeSchema,
+  SnapshotSchema,
   SourceConnectorBindingCreateRequestSchema,
+  SourceConnectorBindingSchema,
+  SourceConnectorsListResponseSchema,
   SyncCheckApplyRequestSchema,
+  SyncCheckResultSchema,
   type ImportScope,
   type Snapshot,
   type SyncCheckResult,
@@ -15,6 +20,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { db } from '../../db/index.ts';
 import { notebooks, sourceConnectorBindings } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
 import {
   BUILTIN_CONNECTORS,
@@ -173,13 +179,18 @@ function validateConnectionConfig(
   return null;
 }
 
-function apiError(
-  set: { status?: number | string },
+function throwStatusError(
   status: number,
-  detail: Record<string, unknown>,
+  message: string,
+  details?: Record<string, unknown>,
 ): never {
-  set.status = status;
-  throw new Error(typeof detail === 'string' ? detail : typeof detail === 'string' ? detail : '');
+  const code =
+    status === 400
+      ? ErrorCode.INVALID_REQUEST
+      : status === 409
+        ? ErrorCode.CONFLICT
+        : ErrorCode.INTERNAL_ERROR;
+  throw new AppHttpError(code, message, details);
 }
 
 async function runSyncCheck(
@@ -247,19 +258,23 @@ async function runSyncCheck(
 // ---------------------------------------------------------------------------
 
 export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
-  .get('/notebooks/:nid/source-connectors', async ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    requireNotebook(nid);
+  .get(
+    '/notebooks/:nid/source-connectors',
+    async ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      requireNotebook(nid);
 
-    const connectors = await Promise.all(
-      BUILTIN_CONNECTORS.map(async (connector) => ({
-        ...connector,
-        diagnostics: await getConnectorDiagnostics(connector.connectorId, null),
-      })),
-    );
+      const connectors = await Promise.all(
+        BUILTIN_CONNECTORS.map(async (connector) => ({
+          ...connector,
+          diagnostics: await getConnectorDiagnostics(connector.connectorId, null),
+        })),
+      );
 
-    return { connectors };
-  })
+      return { connectors };
+    },
+    { response: SourceConnectorsListResponseSchema },
+  )
 
   .post(
     '/notebooks/:nid/source-connectors/:connectorId/bindings',
@@ -276,13 +291,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       // (v1 api.py:77-98,199-200 Draft7Validator). Malformed → 400.
       const validationError = validateConnectionConfig(config, connector.connectionConfigSchema);
       if (validationError) {
-        return new Response(
-          JSON.stringify({ detail: validationError, errorCode: 'INVALID_CONFIG' }),
-          {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-          },
-        );
+        throw new AppHttpError(ErrorCode.INVALID_REQUEST, validationError);
       }
 
       const binding = db()
@@ -298,11 +307,14 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       set.status = 201;
       return serializeBinding(binding);
     },
-    { body: SourceConnectorBindingCreateRequestSchema },
+    {
+      body: SourceConnectorBindingCreateRequestSchema,
+      response: SourceConnectorBindingSchema,
+    },
   )
   .post(
     '/notebooks/:nid/source-connector-bindings/:bindingId/snapshot',
-    async ({ params, set }) => {
+    async ({ params }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const bindingId = requirePositiveIntId(params.bindingId, 'binding id');
       const binding = getBindingOr404(nid, bindingId);
@@ -315,26 +327,29 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : '连接器快照枚举失败';
-        apiError(set, 500, {
-          errorCode: 'CONNECTOR_SNAPSHOT_FAILED',
-          message: '连接器快照枚举失败',
+        throw new AppHttpError(ErrorCode.INTERNAL_ERROR, '连接器快照枚举失败', {
           hint: '检查连接参数与目录权限，或查看后端日志。',
-          details: { error: message },
+          error: message,
         });
       }
     },
+    { response: SnapshotSchema },
   )
 
-  .post('/notebooks/:nid/source-connector-bindings/:bindingId/sync-check', async ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const bindingId = requirePositiveIntId(params.bindingId, 'binding id');
-    const binding = getBindingOr404(nid, bindingId);
-    return runSyncCheck(nid, binding);
-  })
+  .post(
+    '/notebooks/:nid/source-connector-bindings/:bindingId/sync-check',
+    async ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const bindingId = requirePositiveIntId(params.bindingId, 'binding id');
+      const binding = getBindingOr404(nid, bindingId);
+      return runSyncCheck(nid, binding);
+    },
+    { response: SyncCheckResultSchema },
+  )
 
   .post(
     '/notebooks/:nid/source-connector-bindings/:bindingId/sync-check/apply',
-    async ({ params, body, set }) => {
+    async ({ params, body }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const bindingId = requirePositiveIntId(params.bindingId, 'binding id');
       const binding = getBindingOr404(nid, bindingId);
@@ -345,14 +360,11 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       } catch (error) {
         const err = error as Error & {
           status?: number;
-          errorCode?: string;
           hint?: string;
           details?: unknown;
         };
         if (err.status) {
-          apiError(set, err.status, {
-            errorCode: err.errorCode ?? 'SYNC_CHECK_APPLY_FAILED',
-            message: err.message,
+          throwStatusError(err.status, err.message, {
             ...(err.hint ? { hint: err.hint } : {}),
             ...(err.details ? { details: err.details } : {}),
           });
@@ -360,12 +372,15 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
         throw error;
       }
     },
-    { body: SyncCheckApplyRequestSchema },
+    {
+      body: SyncCheckApplyRequestSchema,
+      response: ImportScopeApplyResponseSchema,
+    },
   )
 
   .post(
     '/notebooks/:nid/source-connector-bindings/:bindingId/import-scope',
-    async ({ params, body, set }) => {
+    async ({ params, body }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const bindingId = requirePositiveIntId(params.bindingId, 'binding id');
       const binding = getBindingOr404(nid, bindingId);
@@ -376,12 +391,8 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       try {
         normalizeImportScope(scope);
       } catch (error) {
-        const err = error as Error & { status?: number; errorCode?: string; hint?: string };
-        apiError(set, err.status ?? 400, {
-          errorCode: err.errorCode ?? 'IMPORT_SCOPE_INVALID',
-          message: err.message,
-          ...(err.hint ? { hint: err.hint } : {}),
-        });
+        const err = error as Error & { status?: number; hint?: string };
+        throwStatusError(err.status ?? 400, err.message, err.hint ? { hint: err.hint } : undefined);
       }
 
       let currentSnapshot: Snapshot;
@@ -392,28 +403,33 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : '连接器快照枚举失败';
-        apiError(set, 500, {
-          errorCode: 'CONNECTOR_SNAPSHOT_FAILED',
-          message: '连接器快照枚举失败',
+        throw new AppHttpError(ErrorCode.INTERNAL_ERROR, '连接器快照枚举失败', {
           hint: '检查连接参数与目录权限，或查看后端日志。',
-          details: { error: message },
+          error: message,
         });
       }
 
       return applyImportScopeToBinding(nid, binding, scope, currentSnapshot);
     },
-    { body: ImportScopeSchema },
+    {
+      body: ImportScopeSchema,
+      response: ImportScopeApplyResponseSchema,
+    },
   )
-  .post('/source-connector-bindings/:id/sync', async ({ params }) => {
-    const bindingId = requirePositiveIntId(params.id, 'binding id');
-    const binding = db()
-      .select()
-      .from(sourceConnectorBindings)
-      .where(eq(sourceConnectorBindings.id, bindingId))
-      .get();
-    if (!binding) throw new NotFoundError(`Connector binding ${bindingId} not found`);
-    return runSyncCheck(binding.notebookId, binding);
-  })
+  .post(
+    '/source-connector-bindings/:id/sync',
+    async ({ params }) => {
+      const bindingId = requirePositiveIntId(params.id, 'binding id');
+      const binding = db()
+        .select()
+        .from(sourceConnectorBindings)
+        .where(eq(sourceConnectorBindings.id, bindingId))
+        .get();
+      if (!binding) throw new NotFoundError(`Connector binding ${bindingId} not found`);
+      return runSyncCheck(binding.notebookId, binding);
+    },
+    { response: SyncCheckResultSchema },
+  )
 
   .delete('/source-connector-bindings/:id', ({ params, set }) => {
     const id = requirePositiveIntId(params.id, 'binding id');

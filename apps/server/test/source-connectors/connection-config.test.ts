@@ -29,9 +29,9 @@ describe('source-connector connectionConfig validation', () => {
       }),
     );
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { errorCode?: string; detail?: string };
-    expect(body.errorCode).toBe('INVALID_CONFIG');
-    expect(String(body.detail)).toMatch(/vaultPath/i);
+    const body = (await res.json()) as { errorCode?: string; message?: string };
+    expect(body.errorCode).toBe('INVALID_REQUEST');
+    expect(String(body.message)).toMatch(/vaultPath/i);
   });
 
   it('rejects unknown keys when additionalProperties is false', async () => {
@@ -45,7 +45,8 @@ describe('source-connector connectionConfig validation', () => {
       }),
     );
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { errorCode?: string };
-    expect(body.errorCode).toBe('INVALID_CONFIG');
+    const body = (await res.json()) as { errorCode?: string; message?: string };
+    expect(body.errorCode).toBe('INVALID_REQUEST');
+    expect(String(body.message).length).toBeGreaterThan(0);
   });
 });

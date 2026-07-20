@@ -1,7 +1,9 @@
+import type { WorkspaceToolsListResponse } from '@crystalith/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
 import { api } from '../../../../api/eden';
+import { parseServerError } from '../../../../api/parseServerError';
 import { useOutputQueue } from '../../shared/hooks/useOutputQueue';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type {
@@ -14,6 +16,7 @@ import type {
   RenderDescriptor,
   SlideGenerationConfig,
   WorkspaceTool,
+  WorkspaceToolsDiagnostics,
 } from '../../shared/types';
 import { collectOutputCitations } from '../../shared/utils';
 
@@ -154,18 +157,21 @@ export function useRefine() {
     mutate: refreshTools,
   } = useSWR(
     isConnected ? 'workspace/tools' : null,
-    async () => {
+    async (): Promise<WorkspaceToolsListResponse> => {
       const { data, error } = await api.v2.workspace.tools.get();
-      if (error)
-        throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
-      return data as any;
+      if (error) throw new Error(parseServerError(error).message);
+      if (!data) throw new Error('workspace tools returned an empty payload');
+      return data;
     },
     {
       revalidateOnFocus: false,
     },
   );
 
-  const toolsDiagnostics = useMemo(() => toolsData?.diagnostics ?? null, [toolsData]);
+  const toolsDiagnostics = useMemo(
+    () => (toolsData?.diagnostics ?? null) as WorkspaceToolsDiagnostics,
+    [toolsData],
+  );
 
   const tools = useMemo<WorkspaceTool[]>(() => {
     // Return backend data if available

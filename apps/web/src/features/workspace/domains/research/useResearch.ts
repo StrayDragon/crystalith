@@ -1,10 +1,48 @@
-import type { ResearchStatus } from '@crystalith/shared';
+import type { ResearchSession, ResearchSessionDetail, ResearchStatus } from '@crystalith/shared';
 import { useCallback, useRef, useState, useEffect } from 'react';
 
 import { api } from '../../../../api/eden';
+import { parseServerError } from '../../../../api/parseServerError';
 import { streamRequest } from '../../../../api/stream';
 
-export type { ResearchStatus };
+export type { ResearchStatus, ResearchSessionDetail };
+
+function toSessionItem(session: ResearchSession): ResearchSessionItem {
+  return {
+    id: session.id,
+    notebookId: session.notebookId,
+    topic: session.topic,
+    status: session.status,
+    currentIteration: session.currentIteration,
+    maxIterations: session.maxIterations,
+    createdAt: session.createdAt,
+    updatedAt: session.updatedAt,
+  };
+}
+
+function asResearchStatus(value: unknown): ResearchStatus | null {
+  if (
+    value === 'planning' ||
+    value === 'searching' ||
+    value === 'analyzing' ||
+    value === 'waiting_user' ||
+    value === 'completed' ||
+    value === 'cancelled'
+  ) {
+    return value;
+  }
+  return null;
+}
+
+function toSessionDetail(
+  session: ResearchSession | ResearchSessionDetail | null | undefined,
+): ResearchSessionDetail | null {
+  if (!session) return null;
+  return {
+    ...session,
+    steps: 'steps' in session && Array.isArray(session.steps) ? session.steps : [],
+  };
+}
 
 // SSE Event types
 interface SSEStatusEvent {
@@ -87,28 +125,10 @@ export interface ResearchSessionItem {
   id: number;
   notebookId: number;
   topic: string;
-  status: string;
+  status: ResearchStatus;
   currentIteration: number;
   maxIterations: number;
   resultCount?: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ResearchSessionDetail {
-  id: number;
-  notebookId: number;
-  topic: string;
-  status: string;
-  currentIteration: number;
-  maxIterations: number;
-  aggregatedResults: Array<Record<string, unknown>> | null;
-  finalReport: string | null;
-  steps?: Array<{
-    type: string;
-    outputData?: Record<string, unknown> | null;
-    iteration: number;
-  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -185,11 +205,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       const { data, error: fetchErr } = await api.v2.notebooks({ nid: notebookId }).research.get({
         query: { offset: 0, limit: 200 },
       });
-      if (fetchErr)
-        throw new Error(
-          typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
-        );
-      setSessions((data?.items ?? []) as ResearchSessionItem[]);
+      if (fetchErr) throw new Error(parseServerError(fetchErr).message);
+      setSessions((data?.items ?? []).map(toSessionItem));
     } catch (error) {
       setError(error instanceof Error ? error.message : '获取研究列表失败');
     } finally {
@@ -207,12 +224,10 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           .notebooks({ nid: notebookId })
           .research({ id: researchId })
           .get();
-        if (fetchErr)
-          throw new Error(
-            typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
-          );
-        setActiveSession(data as unknown as ResearchSessionDetail);
-        return data as unknown as ResearchSessionDetail;
+        if (fetchErr) throw new Error(parseServerError(fetchErr).message);
+        const detail = toSessionDetail(data);
+        setActiveSession(detail);
+        return detail;
       } catch (error) {
         setError(error instanceof Error ? error.message : '获取研究详情失败');
         return null;
@@ -233,24 +248,10 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           topic,
           maxIterations: maxIterations,
         });
-        if (postErr)
-          throw new Error(
-            typeof postErr === 'string' ? postErr : typeof postErr === 'string' ? postErr : '',
-          );
-        const sessionData = data as unknown as ResearchSessionDetail;
-        setSessions((prev) => [
-          {
-            id: sessionData.id,
-            notebookId: sessionData.notebookId,
-            topic: sessionData.topic,
-            status: sessionData.status,
-            currentIteration: sessionData.currentIteration,
-            maxIterations: sessionData.maxIterations,
-            createdAt: sessionData.createdAt,
-            updatedAt: sessionData.createdAt,
-          },
-          ...prev,
-        ]);
+        if (postErr) throw new Error(parseServerError(postErr).message);
+        const sessionData = toSessionDetail(data);
+        if (!sessionData) throw new Error('创建研究返回空数据');
+        setSessions((prev) => [toSessionItem(sessionData), ...prev]);
         setActiveSession(sessionData);
         return sessionData;
       } catch (error) {
@@ -304,11 +305,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           .notebooks({ nid: notebookId })
           .research({ id: researchId })
           .get();
-        if (fetchErr)
-          throw new Error(
-            typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
-          );
-        setActiveSession(data as unknown as ResearchSessionDetail);
+        if (fetchErr) throw new Error(parseServerError(fetchErr).message);
+        setActiveSession(toSessionDetail(data));
       } catch (error) {
         setError(error instanceof Error ? error.message : '启动研究失败');
       }
@@ -325,10 +323,9 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           .notebooks({ nid: notebookId })
           .research({ id: researchId })
           .approve.post();
-        if (postErr) throw new Error(typeof postErr === 'string' ? postErr : '批准计划失败');
-        setActiveSession((prev) =>
-          prev ? { ...prev, status: (data as unknown as { status: string }).status } : prev,
-        );
+        if (postErr) throw new Error(parseServerError(postErr).message);
+        if (!data) throw new Error('批准计划失败');
+        setActiveSession((prev) => (prev ? { ...prev, status: data.status } : prev));
       } catch (error) {
         setError(error instanceof Error ? error.message : '批准计划失败');
       }
@@ -360,10 +357,9 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
               estimatedResults: plan.estimatedResults ?? 10,
             },
           });
-        if (postErr) throw new Error(typeof postErr === 'string' ? postErr : '修改计划失败');
-        setActiveSession((prev) =>
-          prev ? { ...prev, status: (data as unknown as { status: string }).status } : prev,
-        );
+        if (postErr) throw new Error(parseServerError(postErr).message);
+        if (!data) throw new Error('修改计划失败');
+        setActiveSession((prev) => (prev ? { ...prev, status: data.status } : prev));
       } catch (error) {
         setError(error instanceof Error ? error.message : '修改计划失败');
       }
@@ -380,13 +376,9 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           .notebooks({ nid: notebookId })
           .research({ id: researchId })
           .skip.post();
-        if (postErr)
-          throw new Error(
-            typeof postErr === 'string' ? postErr : typeof postErr === 'string' ? postErr : '',
-          );
-        setActiveSession((prev) =>
-          prev ? { ...prev, status: (data as unknown as { status: string }).status } : prev,
-        );
+        if (postErr) throw new Error(parseServerError(postErr).message);
+        if (!data) throw new Error('跳过迭代失败');
+        setActiveSession((prev) => (prev ? { ...prev, status: data.status } : prev));
       } catch (error) {
         setError(error instanceof Error ? error.message : '跳过迭代失败');
       }
@@ -399,15 +391,13 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       if (!notebookId) return;
       setError('');
       try {
-        const { error: postErr } = await api.v2
+        const { data, error: postErr } = await api.v2
           .notebooks({ nid: notebookId })
           .research({ id: researchId })
           .finish.post();
-        if (postErr)
-          throw new Error(
-            typeof postErr === 'string' ? postErr : typeof postErr === 'string' ? postErr : '',
-          );
-        setActiveSession((prev) => (prev ? { ...prev, status: 'completed' } : prev));
+        if (postErr) throw new Error(parseServerError(postErr).message);
+        const status = data?.status ?? 'completed';
+        setActiveSession((prev) => (prev ? { ...prev, status } : prev));
       } catch (error) {
         setError(error instanceof Error ? error.message : '结束研究失败');
       }
@@ -424,11 +414,9 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           .notebooks({ nid: notebookId })
           .research({ id: researchId })
           .cancel.post();
-        if (postErr)
-          throw new Error(
-            typeof postErr === 'string' ? postErr : typeof postErr === 'string' ? postErr : '',
-          );
-        const newStatus = (data as unknown as { status: string }).status;
+        if (postErr) throw new Error(parseServerError(postErr).message);
+        if (!data) throw new Error('取消研究失败');
+        const newStatus = data.status;
         setActiveSession((prev) => (prev ? { ...prev, status: newStatus } : prev));
         setSessions((prev) =>
           prev.map((s) => (s.id === researchId ? { ...s, status: newStatus } : s)),
@@ -456,30 +444,27 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           .notebooks({ nid: notebookId })
           .research({ id: researchId })
           .resume.post();
-        if (postErr)
-          throw new Error(
-            typeof postErr === 'string' ? postErr : typeof postErr === 'string' ? postErr : '',
-          );
-        const sessionData = data as unknown as ResearchSessionDetail;
-        setActiveSession(sessionData);
+        if (postErr) throw new Error(parseServerError(postErr).message);
+        if (!data) throw new Error('继续研究失败');
         setSessions((prev) =>
           prev.map((s) =>
             s.id === researchId
               ? {
                   ...s,
-                  status: sessionData.status,
-                  currentIteration: sessionData.currentIteration,
+                  status: data.status,
+                  currentIteration: data.iteration ?? s.currentIteration,
                 }
               : s,
           ),
         );
-        return sessionData;
+        // Action result is not a full session — reload detail for Eden-typed steps.
+        return await fetchSession(researchId);
       } catch (error) {
         setError(error instanceof Error ? error.message : '继续研究失败');
         return null;
       }
     },
-    [notebookId],
+    [fetchSession, notebookId],
   );
 
   const unsubscribeFromSSE = useCallback(() => {
@@ -597,12 +582,14 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
             });
 
             if (eventType === 'status' && data.status) {
+              const nextStatus = asResearchStatus(data.status);
+              if (!nextStatus) continue;
               setActiveSession((prev) =>
                 prev
                   ? {
                       ...prev,
                       currentIteration: (data.iteration as number) ?? prev.currentIteration,
-                      status: data.status as string,
+                      status: nextStatus,
                     }
                   : prev,
               );
@@ -612,17 +599,13 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
                     ? {
                         ...s,
                         currentIteration: (data.iteration as number) ?? s.currentIteration,
-                        status: data.status as string,
+                        status: nextStatus,
                       }
                     : s,
                 ),
               );
 
-              if (
-                !['planning', 'searching', 'analyzing', 'waiting_user'].includes(
-                  data.status as string,
-                )
-              ) {
+              if (!['planning', 'searching', 'analyzing', 'waiting_user'].includes(nextStatus)) {
                 unsubscribeFromSSE();
               }
             }
