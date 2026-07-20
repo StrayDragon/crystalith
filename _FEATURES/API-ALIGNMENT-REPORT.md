@@ -60,4 +60,4 @@
 - [ ] M5 reduce sources `as any`
 - [ ] M6 research modify vs cosmetic checkboxes
 - [ ] Connector binding unbind UI
-- [ ] Optional: shrink orphan-vision specs (`background-jobs-*`, structural local-refine MUST)
+- [x] Optional: shrink orphan-vision specs (`background-jobs-*` retired; structural local-refine MUST removed, research reqs kept)
