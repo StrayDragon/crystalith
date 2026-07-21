@@ -104,7 +104,18 @@ export const TestIds = {
   slidesStudioDialog: 'slides-studio-dialog',
   slidesStudioClose: 'slides-studio-close',
 
-  // Research
+  // Research (c77 DeepResearchDesk)
+  deepResearchDesk: 'deep-research-desk',
+  researchTopicInput: 'research-topic-input',
+  researchStartButton: 'research-start-button',
+  researchSourceMultiSelect: 'research-source-multi-select',
+  researchRunQueue: 'research-run-queue',
+  researchRunCard: 'research-run-card',
+  researchRunDetail: 'research-run-detail',
+  researchGraph: 'research-graph',
+  researchNodeInspector: 'research-node-inspector',
+  researchM1ConfirmBar: 'research-m1-confirm-bar',
+  researchReportSurface: 'research-report-surface',
   researchDetailDialog: 'research-detail-dialog',
   researchHistoryDialog: 'research-history-dialog',
   researchResultsDialog: 'research-results-dialog',

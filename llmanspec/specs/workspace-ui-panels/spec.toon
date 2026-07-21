@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "workspace-ui-panels"
 purpose: 定义 Workspace 业务面板（Sources/Chat/Studio/Research 与引用交互）的最小 UI 契约：面板装配、流式反馈、状态与取消语义、错误可恢复路径。该规范聚焦“用户可观察行为与稳定边界”，不绑定具体组件实现。
 valid_scope[2]: src/,tests/
-requirements[19]{req_id,title,statement}:
+requirements[20]{req_id,title,statement}:
   r59,Panel composition stays stable with topbar research entry,Workspace MUST 以稳定的面板集合装配 Sources/Chat/Studio 等能力，并保持各面板的基本区域划分与入口可发现；网搜添来源与深研入口 MUST 经由顶栏 E1 面板发现，而非嵌在来源栏主搜索条。
   r117,Streaming UX supports send/chunk/done/error and cancel,涉及流式输出的面板（如 Chat/Research）MUST 显式呈现 send/chunk/done/error 状态，并 MUST 支持用户取消以停止继续追加内容。
   r154,"Chat input supports /prompt directives as user-facing commands","Workspace 的 Chat 面板 MUST 允许用户在输入框中使用 `/prompt:<preset> <query>` 指令来请求受控的预设生成模式。"
@@ -21,8 +21,9 @@ requirements[19]{req_id,title,statement}:
   "source-detail-summary-actions","Source detail MUST expose generate and refresh-regenerate",来源详情自动摘要区：无缓存时 MUST 提供「生成摘要」操作以 POST 生成；有缓存时 MUST 用既有刷新控件触发 POST 重新生成（MUST NOT 依赖 GET 产生副作用）。
   "sources-panel-must-not-host-primary-web-search",Sources panel MUST NOT host primary web search,来源面板 MUST NOT 再承载用于「在网络中搜索新来源」的主搜索条，也 MUST NOT 再以 Deep/Fast 模式切换作为网搜/深研主入口；来源面板 MUST 专注库管理（添加 URL/上传/连接器/列表）。若保留本地过滤，placeholder MUST 表达筛选已有来源而非网搜。
   "topbar-fast-search-reuses-web-ingest",Fast Search tab MUST reuse existing web search and ingest,E1「直接搜索」Tab MUST 使用与迁出前一致的网搜 API（SearXNG）与添加到来源的 ingest 路径；前端 MUST NOT 复制第二套独立的 SearXNG fetch 实现。失败与空结果 MUST 有明确用户可见反馈。
-  "deep-research-tab-is-shell-until-runtime","Deep Research tab MUST be a non-agent shell",E1「深度研究」Tab 在本变更范围内 MUST 仅提供壳（空队列/重建提示或禁用开始）；MUST NOT 调用已删除或 stub 的 Deep Research agent 编排逻辑；MUST NOT 假装任务已在运行。
-scenarios[27]{req_id,id,given,when,then,feature}:
+  "deep-research-tab-is-shell-until-runtime",Deep Research tab MUST host DeepResearchDesk,E1「深度研究」Tab MUST 承载 DeepResearchDesk（创建、队列与打开 Run 详情的入口），并 MUST 通过 c76 ResearchRun API 创建与追踪任务；MUST NOT 再以「重建中/暂不可用」壳作为唯一交付，也 MUST NOT 调用已删除的 HITL Deep Research agent 编排。
+  "sources-must-not-host-deep-research-queue",Sources panel MUST NOT host deep research queue,来源面板 MUST NOT 再嵌深研任务队列、深研历史对话框或旧 HITL 深研详情作为主路径；深研入口与队列 MUST 仅经由顶栏 E1 deep tab / Desk 提供。
+scenarios[28]{req_id,id,given,when,then,feature}:
   r59,"research-entry-via-topbar","",用户需要网搜或深研入口,系统 SHALL 通过顶栏 E1 面板提供可发现入口，而不是依赖来源栏主搜索条,false
   r117,"cancel-stops-streaming","",用户在流式生成过程中点击取消,系统 SHALL 停止继续追加 chunk，并展示取消后的可恢复状态（如可重试）,true
   r154,"user-can-send-a-prompt-message","","用户在 Chat 输入框中输入以 `/prompt:` 开头的内容并发送（无论是否打开自动补全）",UI SHALL 将该文本作为一次消息发送（不应在前端预过滤为“非法输入”）,true
@@ -49,4 +50,5 @@ scenarios[27]{req_id,id,given,when,then,feature}:
   "sources-panel-must-not-host-primary-web-search","sources-has-no-primary-web-search","",用户查看来源面板,界面 SHALL 不展示「在网络中搜索新来源」主搜索条，也不展示 Deep/Fast 网搜模式切换作为主入口,false
   "topbar-fast-search-reuses-web-ingest","fast-search-can-add-source",顶栏 E1 直接搜索 Tab 已打开,用户提交网搜查询并选择结果添加到笔记本,系统 SHALL 走现有网搜与 ingest 路径将来源加入当前 notebook,false
   "topbar-fast-search-reuses-web-ingest","searxng-error-is-visible",SearXNG 不可用或网搜失败,用户在直接搜索 Tab 发起查询,系统 SHALL 展示明确错误/降级提示且不静默空成功,false
-  "deep-research-tab-is-shell-until-runtime","shell-does-not-start-agent","",用户打开深度研究 Tab 并尝试开始,系统 SHALL 不启动 Deep Research agent；SHALL 展示壳态或禁用/提示重建中,false
+  "deep-research-tab-is-shell-until-runtime","desk-can-start-run",c76 合约可用且 notebook 合法,用户在深度研究 Tab 填写合法创建表并开始,系统 SHALL 创建 ResearchRun 并在 Desk 队列展示而非仅显示重建壳,false
+  "sources-must-not-host-deep-research-queue","sources-no-research-queue",用户在工作区,打开 Sources 面板,界面 SHALL 不展示深研队列或旧 HITL 深研历史主入口,false
