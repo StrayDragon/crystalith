@@ -22,7 +22,8 @@ function jsonToText(value: unknown): string {
   try {
     return JSON.stringify(value);
   } catch {
-    return String(value);
+    // Avoid Object's default '[object Object]' when stringify fails.
+    return '';
   }
 }
 

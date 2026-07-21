@@ -12,8 +12,9 @@ export const pdfParser: Parser = {
   async parse(buf: Uint8Array, _filename?: string): Promise<ParseResult> {
     const pdf = await getDocumentProxy(buf);
     const { text: pages } = await extractText(pdf, { mergePages: false });
+    const pageTexts = Array.isArray(pages) ? pages : [pages];
 
-    const typedPages = (pages as unknown as string[]).map((pageText, i) => ({
+    const typedPages = pageTexts.map((pageText, i) => ({
       text: String(pageText),
       metadata: { page: i + 1 },
     }));
