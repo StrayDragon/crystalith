@@ -101,7 +101,7 @@ export function createApp() {
         const opt = getOptionalServices();
         const now = new Date().toISOString();
 
-        // Probe SearXNG if enabled — short timeout, fail fast.
+        // Probe SearXNG via same host as searchWeb (getSearxngHost SSOT).
         let searxngStatus: string;
         let searxngHealthy: boolean | null;
         if (opt.searxng.enabled && opt.searxng.endpoint) {

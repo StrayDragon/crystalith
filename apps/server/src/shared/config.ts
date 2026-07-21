@@ -439,7 +439,7 @@ export const SearXNGSettingsSchema = z.object({
     .number()
     .int()
     .positive()
-    .max(120_000)
+    .max(300_000)
     .default(20_000)
     .describe(desc('search.searxng.timeout')),
 });
@@ -568,25 +568,35 @@ const OptionalServiceEntrySchema = z.object({
     .describe(desc('optional_services.generic.timeout_s', '请求超时（秒）')),
 });
 
-/** Optional services schema — maps from `optional_services.*`. */
+/**
+ * Optional services yaml shape (legacy). SearXNG fields here are ignored at
+ * runtime — see `getOptionalServices()` which derives from `search.searxng`.
+ */
 export const OptionalServicesSchema = z.object({
-  searxng: OptionalServiceEntrySchema.default({
-    enabled: false,
-    endpoint: 'http://127.0.0.1:50201',
-    timeout_s: 10,
-  } as z.infer<typeof OptionalServiceEntrySchema>),
+  searxng: OptionalServiceEntrySchema.optional(),
   cache_redis: OptionalServiceEntrySchema.optional(),
 });
 export type OptionalServicesSettings = z.infer<typeof OptionalServicesSchema>;
 
-/** Read optional_services config section. Returns defaults when absent. */
+/**
+ * Optional services for `/health/dependencies`.
+ *
+ * SearXNG is **not** configured here: host / enablement / probe timeout are
+ * derived from `search.searxng.*` via `getSearxngHost()` (same SSOT as
+ * `searchWeb`). Empty host → disabled in diagnostics and web search.
+ */
 export function getOptionalServices(): OptionalServicesConfig {
-  const parsed = parseSection(OptionalServicesSchema, config().raw.optional_services);
+  // Still parse yaml so unknown keys / redis stubs stay valid against RootConfig.
+  parseSection(OptionalServicesSchema, config().raw.optional_services);
+  const host = getSearxngHost();
+  const timeoutMs = getSearchSettings().searxng.timeout ?? 10_000;
+  // Health probe must stay short; searchWeb uses the full search.searxng.timeout.
+  const probeTimeoutS = Math.min(10, Math.max(1, Math.ceil(timeoutMs / 1000)));
   return {
     searxng: {
-      enabled: parsed.searxng.enabled,
-      endpoint: parsed.searxng.endpoint ?? 'http://127.0.0.1:50201',
-      timeout_s: parsed.searxng.timeout_s ?? 10,
+      enabled: Boolean(host),
+      endpoint: host || undefined,
+      timeout_s: probeTimeoutS,
     },
   };
 }
@@ -701,7 +711,10 @@ export const RootConfigSchema = z.object({
     desc('root.search', '搜索引擎设置：SearXNG 实例地址、超时、最大结果数'),
   ),
   optional_services: OptionalServicesSchema.describe(
-    desc('root.optional_services', '可选服务配置：SearXNG、Redis 的启用状态与接入点'),
+    desc(
+      'root.optional_services',
+      '可选服务段落（Redis 等）。SearXNG 诊断与网搜统一走 search.searxng.host / CL_SEARXNG_HOST，本段 searxng 字段已忽略。',
+    ),
   ),
   storage: StorageSettingsSchema.describe(desc('root.storage', '存储设置：数据根目录路径')),
   source_ingestion: z

@@ -1,7 +1,7 @@
 import type { ResearchDepth } from '@crystalith/shared';
 import { Typography } from '@material-tailwind/react';
 import { Psychology as PsychologyIcon } from '@mui/icons-material';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api } from '../../../../api/eden';
 import { parseServerError } from '../../../../api/parseServerError';
@@ -10,8 +10,8 @@ import { TestIds, tid } from '../../../../shared/testids';
 import { formatRelativeTime } from '../../shared/utils';
 import DeepResearchRunDetail from './DeepResearchRunDetail';
 import {
-  canStartResearch,
   DEFAULT_RESEARCH_CREATE_FORM,
+  researchStartBlockedReason,
   type ResearchCreateFormState,
 } from './researchCreateGate';
 import { useResearchRuns } from './useResearchRuns';
@@ -21,6 +21,7 @@ const DEPTHS: ResearchDepth[] = ['shallow', 'medium', 'deep'];
 interface SourceOption {
   id: number;
   filename: string;
+  status: string;
 }
 
 export interface DeepResearchDeskProps {
@@ -36,6 +37,7 @@ export default function DeepResearchDesk({
 }: DeepResearchDeskProps) {
   const [form, setForm] = useState<ResearchCreateFormState>(DEFAULT_RESEARCH_CREATE_FORM);
   const [sources, setSources] = useState<SourceOption[]>([]);
+  const [sourcesLoaded, setSourcesLoaded] = useState(false);
   const [detailRunId, setDetailRunId] = useState<number | null>(null);
 
   const { runs, isLoading, error, creating, createRun, refresh, setError } = useResearchRuns({
@@ -44,6 +46,8 @@ export default function DeepResearchDesk({
     isConnected,
   });
 
+  const readySources = useMemo(() => sources.filter((s) => s.status === 'ready'), [sources]);
+
   useEffect(() => {
     onDetailOpenChange?.(detailRunId != null);
   }, [detailRunId, onDetailOpenChange]);
@@ -51,9 +55,11 @@ export default function DeepResearchDesk({
   useEffect(() => {
     if (!notebookId || !isConnected) {
       setSources([]);
+      setSourcesLoaded(false);
       return;
     }
     let cancelled = false;
+    setSourcesLoaded(false);
     void api.v2
       .notebooks({ nid: notebookId })
       .sources.get({ query: { offset: 0, limit: 200 } })
@@ -61,26 +67,51 @@ export default function DeepResearchDesk({
         if (cancelled) return;
         if (r.error) {
           setError(parseServerError(r.error).message);
+          setSourcesLoaded(true);
           return;
         }
         const items = (r.data?.items ?? []) as Array<{
           id: number;
           filename?: string;
           name?: string;
+          status?: string;
         }>;
         setSources(
           items.map((s) => ({
             id: Number(s.id),
             filename: s.filename || s.name || `#${s.id}`,
+            status: s.status ?? 'ready',
           })),
         );
+        setSourcesLoaded(true);
       });
     return () => {
       cancelled = true;
     };
   }, [notebookId, isConnected, setError]);
 
-  const startDisabled = !notebookId || !isConnected || creating || !canStartResearch(form);
+  // When notebook has no ready sources, default off "use notebook sources" so Start can enable with web.
+  useEffect(() => {
+    if (!sourcesLoaded) return;
+    if (readySources.length > 0) return;
+    setForm((prev) => {
+      if (!prev.useNotebookSources) return prev;
+      return { ...prev, useNotebookSources: false, sourceIds: [] };
+    });
+  }, [sourcesLoaded, readySources.length]);
+
+  // Drop selected ids that are no longer ready.
+  useEffect(() => {
+    const readyIds = new Set(readySources.map((s) => s.id));
+    setForm((prev) => {
+      const nextIds = prev.sourceIds.filter((id) => readyIds.has(id));
+      if (nextIds.length === prev.sourceIds.length) return prev;
+      return { ...prev, sourceIds: nextIds };
+    });
+  }, [readySources]);
+
+  const blockReason = researchStartBlockedReason(form);
+  const startDisabled = !notebookId || !isConnected || creating || blockReason !== null;
 
   const handleStart = useCallback(async () => {
     if (startDisabled) return;
@@ -180,10 +211,12 @@ export default function DeepResearchDesk({
             className="max-h-28 overflow-y-auto rounded-lg border border-gray-200 dark:border-slate-700 p-2 flex flex-col gap-1"
             {...tid(TestIds.researchSourceMultiSelect)}
           >
-            {sources.length === 0 ? (
-              <span className="text-[11px] text-gray-400">{t('research.desk.no_sources')}</span>
+            {readySources.length === 0 ? (
+              <span className="text-[11px] text-amber-700 dark:text-amber-400">
+                {t('research.desk.no_ready_sources')}
+              </span>
             ) : (
-              sources.map((s) => (
+              readySources.map((s) => (
                 <label key={s.id} className="inline-flex items-center gap-2 text-xs cursor-pointer">
                   <input
                     type="checkbox"
@@ -211,6 +244,15 @@ export default function DeepResearchDesk({
         >
           {creating ? t('research.desk.starting') : t('research.desk.start')}
         </button>
+        {blockReason && notebookId && isConnected && !creating ? (
+          <Typography
+            variant="small"
+            className="text-[11px] text-amber-700 dark:text-amber-400"
+            {...tid(TestIds.researchStartHint)}
+          >
+            {t(`research.desk.blocked.${blockReason}` as 'research.desk.blocked.topic')}
+          </Typography>
+        ) : null}
       </div>
 
       {error ? (
@@ -268,4 +310,4 @@ export default function DeepResearchDesk({
 }
 
 /** Exported for Vitest — create disable conditions. */
-export { canStartResearch };
+export { canStartResearch } from './researchCreateGate';

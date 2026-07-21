@@ -27,7 +27,7 @@ import {
   OpenInNew as OpenInNewIcon,
   Error as ErrorIcon,
 } from '@mui/icons-material';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 
 import { LAYER_LEVELS } from '../../../../shared/layer';
@@ -67,10 +67,42 @@ export default function SearchResultsQueue({
   const [isFullscreen, setIsFullscreen] = useState(false);
   // 跟踪每个队列项的展开状态
   const [expandedQueueItems, setExpandedQueueItems] = useState<Set<string>>(new Set());
+  /** Auto-expand each item once on loading / once on first success (user may still collapse). */
+  const autoExpandedKeysRef = useRef<Set<string>>(new Set());
   // 选中的提取器
   const [selectedExtractor, setSelectedExtractor] = useState<ExtractorType | undefined>(
     defaultExtractor ?? undefined,
   );
+
+  useEffect(() => {
+    setExpandedQueueItems((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const item of searchQueue) {
+        if (item.status === 'loading') {
+          const key = `${item.id}:loading`;
+          if (!autoExpandedKeysRef.current.has(key)) {
+            autoExpandedKeysRef.current.add(key);
+            if (!next.has(item.id)) {
+              next.add(item.id);
+              changed = true;
+            }
+          }
+        }
+        if (item.status === 'success' && item.results.length > 0) {
+          const key = `${item.id}:success`;
+          if (!autoExpandedKeysRef.current.has(key)) {
+            autoExpandedKeysRef.current.add(key);
+            if (!next.has(item.id)) {
+              next.add(item.id);
+              changed = true;
+            }
+          }
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [searchQueue]);
 
   // 合并所有队列项的结果（用于全屏视图和批量操作）
   const allQueueResults = useMemo(() => {
@@ -224,7 +256,7 @@ export default function SearchResultsQueue({
             </Typography>
             {isLoading ? (
               <Chip
-                value="搜索中..."
+                value="查询中…"
                 size="sm"
                 className="bg-blue-400 text-[10px] h-5 py-0 px-2 flex-shrink-0"
               />
@@ -248,8 +280,7 @@ export default function SearchResultsQueue({
                 className="bg-gray-900 text-[10px] h-5 py-0 px-2 flex-shrink-0"
               />
             )}
-            {!isLoading &&
-              itemResults.length > 0 &&
+            {(isLoading || (!isLoading && itemResults.length > 0)) &&
               (isItemExpanded ? (
                 <ExpandLessIcon style={{ fontSize: 18 }} className="text-blue-600 flex-shrink-0" />
               ) : (
@@ -279,6 +310,20 @@ export default function SearchResultsQueue({
             </button>
           </div>
         </div>
+
+        {/* Loading body — keep expanded so “搜索中” is not only a collapsed chip */}
+        {isLoading && isItemExpanded ? (
+          <div className="px-3 py-3 border-t border-blue-200 bg-blue-50/80 text-[11px] text-blue-900 space-y-1">
+            <div className="flex items-center gap-2 font-medium">
+              <Spinner className="h-3.5 w-3.5 text-blue-600" />
+              正在查询网络搜索引擎…
+            </div>
+            <p className="text-blue-800/80 leading-relaxed">
+              外网检索通常需要约 10–30 秒，请稍候。完成后结果会自动展开。
+            </p>
+            {queueItem.notice ? <p className="text-blue-700">{queueItem.notice}</p> : null}
+          </div>
+        ) : null}
 
         {/* Expandable Content */}
         {!isLoading && isItemExpanded && itemResults.length > 0 && (

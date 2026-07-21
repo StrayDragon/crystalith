@@ -8,33 +8,37 @@ import {
   DEFAULT_RESEARCH_CREATE_FORM,
   isProcessResearchStatus,
   isTerminalResearchStatus,
+  researchStartBlockedReason,
 } from './researchCreateGate';
 
 describe('canStartResearch', () => {
   it('disables when topic empty', () => {
     expect(canStartResearch({ ...DEFAULT_RESEARCH_CREATE_FORM, topic: '  ' })).toBe(false);
+    expect(researchStartBlockedReason({ ...DEFAULT_RESEARCH_CREATE_FORM, topic: '  ' })).toBe(
+      'topic',
+    );
   });
 
   it('disables when both switches off', () => {
-    expect(
-      canStartResearch({
-        ...DEFAULT_RESEARCH_CREATE_FORM,
-        topic: '量子',
-        useNotebookSources: false,
-        allowWeb: false,
-      }),
-    ).toBe(false);
+    const form = {
+      ...DEFAULT_RESEARCH_CREATE_FORM,
+      topic: '量子',
+      useNotebookSources: false,
+      allowWeb: false,
+    };
+    expect(canStartResearch(form)).toBe(false);
+    expect(researchStartBlockedReason(form)).toBe('no_channel');
   });
 
   it('disables when useNotebookSources and no sourceIds', () => {
-    expect(
-      canStartResearch({
-        ...DEFAULT_RESEARCH_CREATE_FORM,
-        topic: '量子',
-        useNotebookSources: true,
-        sourceIds: [],
-      }),
-    ).toBe(false);
+    const form = {
+      ...DEFAULT_RESEARCH_CREATE_FORM,
+      topic: '量子',
+      useNotebookSources: true,
+      sourceIds: [] as number[],
+    };
+    expect(canStartResearch(form)).toBe(false);
+    expect(researchStartBlockedReason(form)).toBe('need_sources');
   });
 
   it('enables with web-only', () => {
@@ -47,6 +51,15 @@ describe('canStartResearch', () => {
         sourceIds: [],
       }),
     ).toBe(true);
+    expect(
+      researchStartBlockedReason({
+        ...DEFAULT_RESEARCH_CREATE_FORM,
+        topic: '量子',
+        useNotebookSources: false,
+        allowWeb: true,
+        sourceIds: [],
+      }),
+    ).toBeNull();
   });
 
   it('enables with sources selected', () => {

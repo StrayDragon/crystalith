@@ -17,6 +17,7 @@ import {
   getContextWindowSettings,
   getSearchSettings,
   getSearxngHost,
+  getOptionalServices,
   getCompletionOptions,
 } from '../src/shared/config.ts';
 
@@ -307,6 +308,62 @@ search:
     delete process.env.CL_SEARXNG_HOST;
     process.env.SEARXNG_HOST = 'http://env-host:9090';
     expect(getSearxngHost()).toBe('http://env-host:9090');
+  });
+
+  it('getOptionalServices SearXNG derives from getSearxngHost (ignores yaml endpoint)', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+search:
+  searxng:
+    host: http://ssot-host:8080
+    timeout: 5000
+optional_services:
+  searxng:
+    enabled: true
+    endpoint: http://stale-yaml-host:50201
+    timeout_s: 99
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    delete process.env.CL_SEARXNG_HOST;
+    delete process.env.SEARXNG_HOST;
+    const opt = getOptionalServices();
+    expect(opt.searxng.enabled).toBe(true);
+    expect(opt.searxng.endpoint).toBe('http://ssot-host:8080');
+    // Health probe is capped (≤10s); full search timeout is independent.
+    expect(opt.searxng.timeout_s).toBe(5);
+  });
+
+  it('getOptionalServices caps health probe timeout at 10s', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+search:
+  searxng:
+    host: http://ssot-host:8080
+    timeout: 300000
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    delete process.env.CL_SEARXNG_HOST;
+    delete process.env.SEARXNG_HOST;
+    expect(getSearchSettings().searxng.timeout).toBe(300_000);
+    expect(getOptionalServices().searxng.timeout_s).toBe(10);
+  });
+
+  it('getOptionalServices disables SearXNG when host is empty', () => {
+    writeFileSync(TMP, `models:\n  defaults: {}\n  available: []\n`);
+    resetConfig(loadConfig(TMP));
+    delete process.env.CL_SEARXNG_HOST;
+    delete process.env.SEARXNG_HOST;
+    const opt = getOptionalServices();
+    expect(opt.searxng.enabled).toBe(false);
+    expect(opt.searxng.endpoint).toBeUndefined();
   });
 
   it('parses completion_options section', () => {

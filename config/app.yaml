@@ -248,26 +248,24 @@ context_window:
     - system
 
 # ----------------------------------------------------------------------------
-# Search engine (optional)
+# Search engine (optional) — SSOT for web search AND /health/dependencies SearXNG
 # ----------------------------------------------------------------------------
 search:
   searxng:
-    # SearXNG instance URL. Override via CL_SEARXNG_HOST.
-    # Empty host disables web search.
+    # Instance URL. Set via CL_SEARXNG_HOST (recommended: repo-root `.env`).
+    # Empty host disables web search and marks SearXNG as disabled in diagnostics.
     host: "{{ env.CL_SEARXNG_HOST | default('') }}"
-    # Milliseconds (schema / zh i18n). Must not be seconds — e.g. 10 would abort in 10ms.
-    timeout: 10000
+    # Milliseconds. 300s allows slow SearXNG / remote engines to return.
+    timeout: 300000
     max_results: 10
 
 # ----------------------------------------------------------------------------
 # Optional service contracts (core remains available when these are unavailable)
 # ----------------------------------------------------------------------------
 optional_services:
-  # Optional service contracts (simplified — probes removed).
-  searxng:
-    enabled: true
-    endpoint: "http://gateway.lan:50201"
-    timeout_s: 10
+  # SearXNG is NOT configured here. Diagnostics + searchWeb both use
+  # search.searxng.host / getSearxngHost() (CL_SEARXNG_HOST). Legacy
+  # optional_services.searxng.{enabled,endpoint,timeout_s} keys are ignored.
 
 # ----------------------------------------------------------------------------
 # Proxy settings (YAML anchor for optional reuse)

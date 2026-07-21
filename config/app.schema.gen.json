@@ -220,7 +220,7 @@
               "type": "number"
             },
             "timeout": {
-              "description": "SearXNG 请求超时（毫秒），最大 120000",
+              "description": "SearXNG 请求超时（毫秒），最大 300000（5 分钟）",
               "default": 20000,
               "type": "number"
             }
@@ -229,15 +229,10 @@
       }
     },
     "optional_services": {
-      "description": "可选服务配置：SearXNG、Redis 的启用状态与接入点",
+      "description": "可选服务段落（Redis 等）。SearXNG 诊断与网搜统一走 search.searxng.host / CL_SEARXNG_HOST，本段 searxng 字段已忽略。",
       "type": "object",
       "properties": {
         "searxng": {
-          "default": {
-            "enabled": false,
-            "endpoint": "http://127.0.0.1:50201",
-            "timeout_s": 10
-          },
           "type": "object",
           "properties": {
             "enabled": {

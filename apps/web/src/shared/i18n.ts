@@ -98,6 +98,8 @@ const ZH_CN_MESSAGES = {
   'sources.search.hint.deep':
     '深度研究会创建研究会话并生成报告；写清楚目标、范围和期望输出会更准确。',
   'sources.search.searching': '搜索中…',
+  'sources.search.searching_detail': '正在查询网络搜索引擎（SearXNG）…',
+  'sources.search.searching_elapsed': '已等待 {seconds} 秒，通常约需 10–30 秒',
   'sources.search.engine.web': '网页',
   'sources.search.mode.fast': '直接搜索',
   'sources.search.mode.deep': '深度研究',
@@ -119,6 +121,12 @@ const ZH_CN_MESSAGES = {
   'research.desk.use_sources': '使用笔记本来源',
   'research.desk.allow_web': '允许外网检索',
   'research.desk.no_sources': '当前笔记本暂无来源',
+  'research.desk.no_ready_sources':
+    '暂无「就绪」来源（处理中/失败的不计入）。可取消勾选「使用笔记本来源」，仅用外网检索开始。',
+  'research.desk.blocked.topic': '请先填写研究主题',
+  'research.desk.blocked.no_channel': '请至少开启「使用笔记本来源」或「允许外网检索」',
+  'research.desk.blocked.need_sources':
+    '已勾选「使用笔记本来源」：请在下方勾选至少一个就绪来源，或取消该勾选并使用外网检索',
   'research.desk.start': '开始深度研究',
   'research.desk.starting': '创建中…',
   'research.desk.queue': '任务队列',
