@@ -96,7 +96,8 @@ export function buildFrontmatter(
     return `---\n${body}\n---\n`;
   }
   const resolvedPreset = resolveThemePreset(preset);
-  const template = THEME_PRESET_TEMPLATES[resolvedPreset]!;
+  const template =
+    THEME_PRESET_TEMPLATES[resolvedPreset] ?? THEME_PRESET_TEMPLATES['minimal-clean']!;
   return `---\n${buildPresetBody(template, title)}\n---\n`;
 }
 

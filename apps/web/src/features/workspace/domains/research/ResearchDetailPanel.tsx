@@ -29,7 +29,7 @@ import {
   stepOutputData,
   type ResearchStepResponse,
 } from './thinkingTimeline';
-import type { ResearchSessionDetail, SSEEvent } from './useResearch';
+import type { ResearchSessionDetail, ResearchStatus, SSEEvent } from './useResearch';
 import { useResearchThinkingWindow } from './useResearchThinkingWindow';
 
 export type ResearchPlanConfirmPayload = {
@@ -63,7 +63,7 @@ const STATUS_COLORS = {
   waiting_user: { bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-200' },
   completed: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-200' },
   cancelled: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-200' },
-};
+} as const satisfies Record<ResearchStatus, { bg: string; text: string; border: string }>;
 
 const STATUS_LABELS = {
   planning: '规划中',
@@ -72,7 +72,7 @@ const STATUS_LABELS = {
   waiting_user: '待确认',
   completed: '已完成',
   cancelled: '已取消',
-};
+} as const satisfies Record<ResearchStatus, string>;
 
 function ResearchDetailPanel({
   session,
@@ -268,9 +268,8 @@ function ResearchDetailPanel({
   // 如果有 steps，说明研究已经开始过，即使状态是 planning 也不应该显示
   const hasSteps = session.steps && session.steps.length > 0;
   const isPlanning = session.status === 'planning' && !hasSteps;
-  const statusKey = (
-    session.status in STATUS_COLORS ? session.status : 'planning'
-  ) as keyof typeof STATUS_COLORS;
+  const statusKey: ResearchStatus =
+    session.status in STATUS_COLORS ? (session.status as ResearchStatus) : 'planning';
   const statusColors = STATUS_COLORS[statusKey];
 
   // Get completed steps for this session

@@ -36,7 +36,10 @@ const STATUS_CONFIG: Record<
   waiting_user: { label: '待确认', color: 'amber', animate: true },
   completed: { label: '已完成', color: 'green' },
   cancelled: { label: '已取消', color: 'gray' },
-};
+} satisfies Record<
+  ResearchStatus,
+  { label: string; color: 'blue' | 'amber' | 'green' | 'red' | 'gray'; animate?: boolean }
+>;
 
 function ResearchCapsule({
   session,
@@ -46,13 +49,13 @@ function ResearchCapsule({
   isExpanded,
 }: ResearchCapsuleProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const config = STATUS_CONFIG[session.status as ResearchStatus] || {
+  const config = STATUS_CONFIG[session.status] ?? {
     label: session.status,
     color: 'gray' as const,
   };
   const progress = Math.round((session.currentIteration / session.maxIterations) * 100);
   const isActive = ['planning', 'searching', 'analyzing', 'waiting_user'].includes(session.status);
-  const shouldAnimate = config.animate;
+  const shouldAnimate = Boolean(config.animate);
 
   const handleStart = useCallback(() => {
     setMenuOpen(false);
