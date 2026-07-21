@@ -86,7 +86,7 @@ API 占位：`POST …/research/:rid/nodes/:nodeId/prune`、`…/fork`（body �
 2. Report JSON 形状与脚注 serializer
 3. convertToNote / convertToSource 请求体（artifactRef）
 4. 错误码与取消语义
-5. （ui-proto）图节点色板 — 独立于参考图
+5. （ui-proto）图节点色板 — **已定 C1**（工作区语义色 + pruned 降透明度）
 
 ## 非目标
 
