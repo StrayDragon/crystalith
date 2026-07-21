@@ -66,12 +66,27 @@ GET `…/research/:rid/stream`（SSE，对齐 c70）。事件：
 
 API 占位：`POST …/research/:rid/nodes/:nodeId/prune`、`…/fork`（body 可含 `hint`）。
 
+## 5. Node conclusion status（R4a）
+
+语义（与参考图**同构、异色**——配色走 Crystalith token / 深研专用色板，**不**复刻参考图绿紫红）：
+
+| status    | 含义          |
+| --------- | ------------- |
+| `clear`   | 结论明确      |
+| `partial` | 结论待完善    |
+| `missing` | 信息缺失      |
+| `pending` | 尚未检索/生成 |
+| `pruned`  | 已剪枝        |
+
+执行中过程用节点 `phase`（如 `retrieving` / `synthesizing`），与结论态分离。
+
 ## 待钉（grill 主题）
 
-1. 图节点状态枚举与边标签集合
+1. 边标签集合（筛选/扩展/聚焦/细化…是否枚举闭集）
 2. Report JSON 形状与脚注 serializer
 3. convertToNote / convertToSource 请求体（artifactRef）
 4. 错误码与取消语义
+5. （ui-proto）图节点色板 — 独立于参考图
 
 ## 非目标
 
