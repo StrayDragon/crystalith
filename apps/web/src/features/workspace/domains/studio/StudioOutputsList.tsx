@@ -24,6 +24,7 @@ import { copyToClipboard } from '../../../../shared/clipboard';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
+import { EmptyHint } from '../../shared/components/EmptyHint';
 import { SkeletonCard } from '../../shared/components/Skeleton';
 import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';
 import { getSlideIdFromOutput } from '../../shared/outputPayload';
@@ -217,17 +218,10 @@ export default function StudioOutputsList({
       )}
 
       {showEmpty && (
-        <div className="p-4 text-center border border-dashed border-gray-300 dark:border-slate-600 rounded-xl bg-gray-100 dark:bg-slate-800">
-          <Typography variant="small" className="text-gray-700 dark:text-slate-200 font-semibold">
-            选择来源 → 点击工具卡片生成
-          </Typography>
-          <Typography
-            variant="small"
-            className="text-[11px] text-gray-500 dark:text-slate-400 mt-1"
-          >
-            生成后的内容会显示在这里，可继续转换为来源或导出。
-          </Typography>
-        </div>
+        <EmptyHint
+          title="选择来源 → 点击工具卡片生成"
+          description="生成后的内容会显示在这里，可继续转换为来源或导出。"
+        />
       )}
 
       {!showSkeleton && !showEmpty && (

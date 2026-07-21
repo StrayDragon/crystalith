@@ -12,6 +12,7 @@ import {
 import { Close as CloseIcon, Edit as EditIcon } from '@mui/icons-material';
 import { useCallback, useMemo, useState } from 'react';
 
+import { EmptyHint } from '../../shared/components/EmptyHint';
 import { useGenerationPreference } from '../../shared/hooks/useGenerationPreference';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type {
@@ -188,13 +189,7 @@ export default function StudioToolsGrid({
   }
 
   if (tools.length === 0) {
-    return (
-      <div className="p-3 text-center border border-dashed border-gray-400 rounded-lg bg-gray-100">
-        <Typography variant="small" className="font-medium text-gray-600">
-          暂无可用工具
-        </Typography>
-      </div>
-    );
+    return <EmptyHint title="暂无可用工具" className="py-3" />;
   }
 
   return (

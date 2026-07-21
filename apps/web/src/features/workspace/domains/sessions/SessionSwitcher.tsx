@@ -20,6 +20,8 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
+import { EmptyHint } from '../../shared/components/EmptyHint';
+import { SkeletonLine, SkeletonList } from '../../shared/components/Skeleton';
 import type { SessionSummary } from '../../shared/types';
 
 interface SessionSwitcherProps {
@@ -63,6 +65,9 @@ export default function SessionSwitcher({
   const editInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeSession = sessions.find((item) => item.id === activeSessionId) ?? null;
+  const showTitleSkeleton = isLoading && !activeSession;
+  const displayTitle = activeSession?.title ?? (showTitleSkeleton ? '' : '选择会话');
+  const triggerAriaLabel = showTitleSkeleton ? '正在加载会话' : `当前会话：${displayTitle}`;
   const filteredSessions = useMemo(() => {
     const keyword = searchValue.trim().toLowerCase();
     if (!keyword) return sessions;
@@ -137,16 +142,19 @@ export default function SessionSwitcher({
           <button
             className="flex items-center gap-2 px-3 py-1 h-full hover:bg-gray-100 transition-colors text-left min-w-[120px] max-w-[200px]"
             {...tid(TestIds.sessionSwitcherTrigger)}
+            aria-label={triggerAriaLabel}
+            aria-busy={showTitleSkeleton || undefined}
           >
-            <Typography variant="small" className="font-medium text-gray-600 text-[11px]">
-              会话
-            </Typography>
-            <Typography
-              variant="small"
-              className="font-semibold text-gray-900 text-xs truncate max-w-[100px]"
-            >
-              {activeSession?.title ?? '未命名'}
-            </Typography>
+            {showTitleSkeleton ? (
+              <SkeletonLine className="h-3 w-[6.5rem] max-w-[100px]" />
+            ) : (
+              <Typography
+                variant="small"
+                className="font-semibold text-gray-900 text-xs truncate max-w-[100px]"
+              >
+                {displayTitle}
+              </Typography>
+            )}
             <ExpandMoreIcon
               className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
             />
@@ -193,13 +201,9 @@ export default function SessionSwitcher({
 
           <div className="max-h-[260px] overflow-y-auto p-2 flex flex-col gap-1">
             {isLoading ? (
-              <div className="flex justify-center py-4">
-                <Spinner className="h-5 w-5" />
-              </div>
+              <SkeletonList items={3} className="py-1" />
             ) : filteredSessions.length === 0 ? (
-              <div className="py-4 text-center text-xs text-gray-600">
-                {searchValue ? '未找到匹配会话' : '暂无会话记录'}
-              </div>
+              <EmptyHint className="py-4" title={searchValue ? '未找到匹配会话' : '暂无会话记录'} />
             ) : (
               filteredSessions.map((item) => (
                 <div

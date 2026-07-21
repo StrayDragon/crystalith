@@ -18,6 +18,8 @@ import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { useLayer } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
 import type { AsyncStatus } from '../../../../shared/types';
+import { EmptyHint } from '../../shared/components/EmptyHint';
+import { SkeletonLine, SkeletonList } from '../../shared/components/Skeleton';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { Notebook } from '../../shared/types';
 import SaveTemplateDialog from '../templates/SaveTemplateDialog';
@@ -312,7 +314,9 @@ export default function NotebookSwitcher({
     setEditingTitle('');
   }, [isOpen]);
 
-  const displayTitle = activeNotebook?.title ?? '未命名笔记本';
+  const showTitleSkeleton = isLoading && !activeNotebook;
+  const displayTitle = activeNotebook?.title ?? (showTitleSkeleton ? '' : '选择笔记本');
+  const triggerAriaLabel = showTitleSkeleton ? '正在加载笔记本' : `当前笔记本：${displayTitle}`;
 
   return (
     <div className="flex items-center border border-gray-300 rounded-lg bg-white overflow-hidden h-8">
@@ -380,14 +384,19 @@ export default function NotebookSwitcher({
           }}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
-          aria-label={`当前笔记本：${displayTitle}`}
+          aria-label={triggerAriaLabel}
+          aria-busy={showTitleSkeleton || undefined}
         >
-          <Typography
-            variant="small"
-            className="font-semibold text-gray-900 text-xs truncate max-w-[120px] sm:max-w-[160px]"
-          >
-            {displayTitle}
-          </Typography>
+          {showTitleSkeleton ? (
+            <SkeletonLine className="h-3 w-[7.5rem] max-w-[160px]" />
+          ) : (
+            <Typography
+              variant="small"
+              className="font-semibold text-gray-900 text-xs truncate max-w-[120px] sm:max-w-[160px]"
+            >
+              {displayTitle}
+            </Typography>
+          )}
           <ExpandMoreIcon
             className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           />
@@ -457,13 +466,12 @@ export default function NotebookSwitcher({
                 {...tid(TestIds.notebookList)}
               >
                 {isLoading ? (
-                  <div className="flex justify-center py-4">
-                    <Spinner className="h-5 w-5" />
-                  </div>
+                  <SkeletonList items={3} className="py-1" />
                 ) : filteredNotebooks.length === 0 ? (
-                  <div className="py-4 text-center text-xs text-gray-600">
-                    {searchValue ? '未找到匹配笔记本' : '暂无笔记本'}
-                  </div>
+                  <EmptyHint
+                    className="py-4"
+                    title={searchValue ? '未找到匹配笔记本' : '暂无笔记本'}
+                  />
                 ) : (
                   filteredNotebooks.map((item) => (
                     <div
