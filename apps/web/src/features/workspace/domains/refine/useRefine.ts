@@ -9,6 +9,7 @@ import useSWR from 'swr';
 
 import { api } from '../../../../api/eden';
 import { parseServerError } from '../../../../api/parseServerError';
+import { toast } from '../../../../shared/toast';
 import { useOutputQueue } from '../../shared/hooks/useOutputQueue';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type {
@@ -18,7 +19,7 @@ import type {
   RenderDescriptor,
   WorkspaceTool,
 } from '../../shared/types';
-import { collectOutputCitations } from '../../shared/utils';
+import { collectOutputCitations, normalizeOutput } from '../../shared/utils';
 
 /**
  * Map Eden/shared workspace tool → UI view-model.
@@ -199,6 +200,7 @@ export function useRefine() {
     clearOutputs,
     fetchOutput,
     ensureOutputDetail,
+    mutateOutputs,
   } = useOutputQueue({
     isConnected,
     hasPendingRefineJobs,
@@ -313,27 +315,59 @@ export function useRefine() {
   );
 
   const saveContentAsNote = useCallback(
-    (content: string) => {
+    async (content: string) => {
       const s = store.getState();
       if (!isConnected) {
-        s.setError('outputs', '未连接到后端服务。');
-        return;
+        toast.warning('未连接到后端服务。');
+        throw new Error('offline');
       }
       if (!s.activeNotebookId) {
-        s.setError('outputs', '请先创建笔记本。');
-        return;
+        toast.warning('请先创建笔记本。');
+        throw new Error('no notebook');
       }
-      enqueueOutputJob({
-        type: 'PARAGRAPH',
-        prompt: content,
-        sourceIds: [],
-      });
-      if (s.activePanel !== 'refine') {
-        s.setHasNewOutput(true);
+      const trimmed = content.trim();
+      if (!trimmed) {
+        toast.warning('请输入笔记内容。');
+        throw new Error('empty');
       }
-      s.setActivePanel('refine');
+      const firstLine =
+        trimmed
+          .split('\n')
+          .map((line) => line.trim())
+          .find(Boolean)
+          ?.replace(/^#+\s*/u, '')
+          .slice(0, 80) ?? '笔记';
+      const title = firstLine || '笔记';
+
+      s.setError('outputs', '');
+      s.setLoading('outputs', true);
+      try {
+        const { data, error } = await api.v2.notebooks({ nid: s.activeNotebookId }).outputs.post({
+          type: 'PARAGRAPH',
+          prompt: title,
+          content: { title, text: trimmed },
+        });
+        if (error) throw new Error(parseServerError(error).message);
+        if (!data) throw new Error('创建笔记失败');
+        const normalized = normalizeOutput(data);
+        const s2 = store.getState();
+        s2.setOutputs([normalized, ...s2.outputs.filter((item) => item.id !== normalized.id)]);
+        await mutateOutputs();
+        if (s2.activePanel !== 'refine') {
+          s2.setHasNewOutput(true);
+        }
+        s2.setActivePanel('refine');
+        toast.success('笔记已保存');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '保存笔记失败';
+        store.getState().setError('outputs', message);
+        toast.error(message);
+        throw error;
+      } finally {
+        store.getState().setLoading('outputs', false);
+      }
     },
-    [enqueueOutputJob, isConnected, store],
+    [isConnected, mutateOutputs, store],
   );
 
   return {

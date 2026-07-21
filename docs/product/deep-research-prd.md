@@ -7,7 +7,7 @@
 | 范围     | 产品总纲：工作区信息架构前置 + 原子化深研 Runtime + 原型验证                                      |
 | 前置现状 | 旧 Deep Research 后端已 stub（`POST …/research` → 501）；前端壳保留待替换；c75 顶栏直接搜索已落地 |
 | 关联参考 | 图1 节点化研究 DAG；图2 章节引用报告；三栏「来源 / 笔记 / 对话」；`@xyflow/react`                 |
-| 决策来源 | Grill：B / B1 / IA-* / E1 / **F1** / **G1** / **H1** 已定；grilling 进行中                        |
+| 决策来源 | Grill：B / B1 / IA-* / E1 / F1 / G1 / H1 / **I1**（markdown PARAGRAPH）已定；grilling 进行中      |
 
 ---
 
@@ -24,6 +24,7 @@
 | **F1**   | **E1 = 队列/新建台**；点进 Run 后打开更大 Layer 详情（宽幅/近全屏），内嵌 xyflow + 报告；三栏布局保持                                         |
 | **G1**   | 打开 Run 详情时 **E1 保持挂载**（可被遮罩盖住）；关闭详情后 E1 仍开在离开前的 Tab，直接搜索 query/队列原样可见                                |
 | **H1**   | 新建 Run 默认用**当前勾选来源**；若无勾选 → 允许外网自研并明示；可选改为「全库」                                                              |
+| **I1**   | 首版 `convertToNote` / 笔记落库 **仅 Markdown `PARAGRAPH`**（与 Studio「添加笔记」同路径）；不新增 REPORT、不默认 BRIEFING                    |
 
 ---
 
@@ -300,7 +301,7 @@
 4. 「待确认」首发要哪些具体确认点（继续支路 / 外网预算 / 转化推荐）？
 5. 报告引用编号：全局 run 级 vs 章节局部？（图2 偏全局）
 6. 深度档位数值（maxNodes / maxSearches）？
-7. `convertToNote` 默认 OutputType：`STRUCTURED` 还是新类型？
+7. ~~`convertToNote` 默认 OutputType~~ → **已定 I1**：首版仅 Markdown `PARAGRAPH`
 
 ---
 
