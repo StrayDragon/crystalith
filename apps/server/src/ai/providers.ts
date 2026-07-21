@@ -17,7 +17,7 @@ interface ProviderEntry {
   factory: string;
 }
 
-const KNOWN_PROVIDERS: Record<string, ProviderEntry> = {
+const KNOWN_PROVIDERS = {
   openai: { sdk: '@ai-sdk/openai', factory: 'createOpenAI' },
   anthropic: { sdk: '@ai-sdk/anthropic', factory: 'createAnthropic' },
   google: { sdk: '@ai-sdk/google', factory: 'createGoogleGenerativeAI' },
@@ -29,11 +29,66 @@ const KNOWN_PROVIDERS: Record<string, ProviderEntry> = {
   groq: { sdk: '@ai-sdk/openai-compatible', factory: 'createOpenAICompatible' },
   together: { sdk: '@ai-sdk/openai-compatible', factory: 'createOpenAICompatible' },
   bedrock: { sdk: '@ai-sdk/amazon-bedrock', factory: 'createAmazonBedrock' },
-};
+} as const satisfies Record<string, ProviderEntry>;
+
+type ProviderFactory = (opts: Record<string, unknown>) => unknown;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** Dynamic SDK import + factory lookup — one cast wall at the module boundary. */
+async function loadProviderFactory(sdk: string, factory: string): Promise<ProviderFactory> {
+  const mod: unknown = await import(sdk);
+  if (!isRecord(mod)) {
+    throw new TypeError(`Module '${sdk}' did not export an object`);
+  }
+  const factoryFn = mod[factory];
+  if (typeof factoryFn !== 'function') {
+    throw new TypeError(`Factory '${factory}' not found in '${sdk}'`);
+  }
+  return factoryFn as ProviderFactory;
+}
+
+function resolveChatModel(provider: unknown, modelId: string, sdk: string): LanguageModelV4 {
+  if (typeof provider === 'function') {
+    return (provider as (id: string) => LanguageModelV4)(modelId);
+  }
+  if (isRecord(provider) && typeof provider.chat === 'function') {
+    return (provider.chat as (id: string) => LanguageModelV4)(modelId);
+  }
+  if (isRecord(provider) && typeof provider.languageModel === 'function') {
+    return (provider.languageModel as (id: string) => LanguageModelV4)(modelId);
+  }
+  throw new Error(`Provider from '${sdk}' is neither callable nor has .chat()/.languageModel()`);
+}
+
+function resolveEmbeddingAccessor(
+  provider: unknown,
+  modelId: string,
+  sdk: string,
+): EmbeddingModelV4 {
+  if (isRecord(provider) && typeof provider.embedding === 'function') {
+    return (provider.embedding as (id: string) => EmbeddingModelV4)(modelId);
+  }
+  throw new Error(`Provider from '${sdk}' has no .embedding() accessor`);
+}
+
+function buildProviderOpts(config: ModelConfig, includeHeaders: boolean): Record<string, unknown> {
+  const providerConfig = config.providerConfig ?? {};
+  return {
+    apiKey: resolveApiKey(providerConfig.apiKey),
+    baseURL: providerConfig.baseUrl || undefined,
+    organization: providerConfig.organization || undefined,
+    project: providerConfig.project || undefined,
+    ...(includeHeaders ? { headers: config.requestOptions?.headers ?? undefined } : {}),
+    supportsStructuredOutputs: providerConfig.supportsStructuredOutputs ?? false,
+  };
+}
 
 /** Resolve a ModelConfig into a concrete LanguageModelV4. */
 export async function resolveModel(config: ModelConfig): Promise<LanguageModelV4> {
-  const entry = KNOWN_PROVIDERS[config.provider];
+  const entry = KNOWN_PROVIDERS[config.provider as keyof typeof KNOWN_PROVIDERS];
 
   const sdk = entry?.sdk ?? config.sdk;
   const factory = entry?.factory ?? config.factory;
@@ -44,46 +99,14 @@ export async function resolveModel(config: ModelConfig): Promise<LanguageModelV4
     );
   }
 
-  const mod = (await import(sdk)) as Record<string, unknown>;
-  const factoryFn = mod[factory];
-  if (typeof factoryFn !== 'function') {
-    throw new TypeError(`Factory '${factory}' not found in '${sdk}'`);
-  }
-
-  const providerConfig = config.providerConfig ?? {};
-  const opts: Record<string, unknown> = {
-    apiKey: resolveApiKey(providerConfig.apiKey),
-    baseURL: providerConfig.baseUrl || undefined,
-    organization: providerConfig.organization || undefined,
-    project: providerConfig.project || undefined,
-    headers: config.requestOptions?.headers ?? undefined,
-    supportsStructuredOutputs: providerConfig.supportsStructuredOutputs ?? false,
-  };
-
-  // Create the provider instance, then select the model by id.
-  const provider = (factoryFn as (o: Record<string, unknown>) => unknown)(opts);
-
-  // Most AI SDK providers are callable: `provider(modelId)`.
-  if (typeof provider === 'function') {
-    return (provider as (id: string) => LanguageModelV4)(config.model);
-  }
-
-  // Fallback: `.chat(modelId)` or `.languageModel(modelId)`.
-  if (provider && typeof (provider as { chat?: unknown }).chat === 'function') {
-    return (provider as { chat: (id: string) => LanguageModelV4 }).chat(config.model);
-  }
-  if (provider && typeof (provider as { languageModel?: unknown }).languageModel === 'function') {
-    return (provider as { languageModel: (id: string) => LanguageModelV4 }).languageModel(
-      config.model,
-    );
-  }
-
-  throw new Error(`Provider from '${sdk}' is neither callable nor has .chat()/.languageModel()`);
+  const factoryFn = await loadProviderFactory(sdk, factory);
+  const provider = factoryFn(buildProviderOpts(config, true));
+  return resolveChatModel(provider, config.model, sdk);
 }
 
 /** Resolve an embedding model (same provider mechanism, .embedding() accessor). */
 export async function resolveEmbeddingModel(config: ModelConfig): Promise<EmbeddingModelV4> {
-  const entry = KNOWN_PROVIDERS[config.provider];
+  const entry = KNOWN_PROVIDERS[config.provider as keyof typeof KNOWN_PROVIDERS];
 
   const sdk = entry?.sdk ?? config.sdk;
   const factory = entry?.factory ?? config.factory;
@@ -92,28 +115,9 @@ export async function resolveEmbeddingModel(config: ModelConfig): Promise<Embedd
     throw new Error(`Unknown provider for embedding model '${config.id}'`);
   }
 
-  const mod = (await import(sdk)) as Record<string, unknown>;
-  const factoryFn = mod[factory];
-  if (typeof factoryFn !== 'function') {
-    throw new TypeError(`Factory '${factory}' not found in '${sdk}'`);
-  }
-
-  const providerConfig = config.providerConfig ?? {};
-  const opts: Record<string, unknown> = {
-    apiKey: resolveApiKey(providerConfig.apiKey),
-    baseURL: providerConfig.baseUrl || undefined,
-    organization: providerConfig.organization || undefined,
-    project: providerConfig.project || undefined,
-    supportsStructuredOutputs: providerConfig.supportsStructuredOutputs ?? false,
-  };
-
-  const provider = (factoryFn as (o: Record<string, unknown>) => unknown)(opts);
-
-  if (provider && typeof (provider as { embedding?: unknown }).embedding === 'function') {
-    return (provider as { embedding: (id: string) => EmbeddingModelV4 }).embedding(config.model);
-  }
-
-  throw new Error(`Provider from '${sdk}' has no .embedding() accessor`);
+  const factoryFn = await loadProviderFactory(sdk, factory);
+  const provider = factoryFn(buildProviderOpts(config, false));
+  return resolveEmbeddingAccessor(provider, config.model, sdk);
 }
 
 /** Resolve an API key — may be empty string (some local gateways don't need one). */
