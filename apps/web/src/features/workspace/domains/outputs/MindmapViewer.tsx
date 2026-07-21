@@ -346,8 +346,13 @@ function InnerFlow({ data, autoCollapseDepth, isDarkTheme }: InnerFlowProps) {
   // Handle node click for toggle
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
-      const nodeData = node.data as NodeData;
-      if (nodeData.hasChildren) {
+      const nodeData = node.data;
+      if (
+        typeof nodeData === 'object' &&
+        nodeData !== null &&
+        'hasChildren' in nodeData &&
+        Boolean(nodeData.hasChildren)
+      ) {
         toggle(node.id);
       }
     },

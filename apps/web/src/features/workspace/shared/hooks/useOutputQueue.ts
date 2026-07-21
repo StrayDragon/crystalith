@@ -37,6 +37,42 @@ type SlidesDraftSnapshot = {
   outline?: { slides?: unknown[] } | null;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function toSlidesDraftSnapshot(value: unknown): SlidesDraftSnapshot | null {
+  if (!isRecord(value)) return null;
+  const outlineRaw = value.outline;
+  const outline = isRecord(outlineRaw)
+    ? { slides: Array.isArray(outlineRaw.slides) ? outlineRaw.slides : undefined }
+    : null;
+  return {
+    stage: typeof value.stage === 'string' ? value.stage : value.stage === null ? null : undefined,
+    status:
+      typeof value.status === 'string' ? value.status : value.status === null ? null : undefined,
+    outputId:
+      typeof value.outputId === 'number'
+        ? value.outputId
+        : value.outputId === null
+          ? null
+          : undefined,
+    errorMessage:
+      typeof value.errorMessage === 'string'
+        ? value.errorMessage
+        : value.errorMessage === null
+          ? null
+          : undefined,
+    markdown:
+      typeof value.markdown === 'string'
+        ? value.markdown
+        : value.markdown === null
+          ? null
+          : undefined,
+    outline,
+  };
+}
+
 const SLIDES_GENERATE_TIMEOUT_MS = 600_000;
 // 10 min per stage — LLM outline often exceeds the old 3 min cap.
 
@@ -117,7 +153,10 @@ async function runSlidesGenerate(
     throw new Error(
       typeof draftErr === 'string' ? draftErr : typeof draftErr === 'string' ? draftErr : '',
     );
-  const snapshot = draft as SlidesDraftSnapshot;
+  const snapshot = toSlidesDraftSnapshot(draft);
+  if (!snapshot) {
+    throw new Error('生成未完成，请稍后重试。');
+  }
   if (snapshot.status === 'error') {
     throw new Error(snapshot.errorMessage?.trim() || '生成失败，请稍后重试。');
   }
@@ -375,7 +414,7 @@ export function useOutputQueue({
                 .notebooks({ nid: job.notebookId })
                 .studio.slides({ id: job.draftId })
                 .get();
-              const snap = draftAfterOutline as SlidesDraftSnapshot | null;
+              const snap = toSlidesDraftSnapshot(draftAfterOutline);
               const outlineReady =
                 snap != null &&
                 (snap.stage === 'outline' ||

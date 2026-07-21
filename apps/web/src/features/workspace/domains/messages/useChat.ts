@@ -6,6 +6,7 @@ import {
   QaStreamDoneEventSchema,
   QaStreamErrorEventSchema,
   QaStreamStateSnapshotSchema,
+  SessionConvertToOutputRequestSchema,
 } from '@crystalith/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
@@ -31,6 +32,15 @@ interface UseChatOptions {
   refreshSources?: () => Promise<void>;
   refreshOutputs?: () => Promise<void>;
   enableStreaming?: boolean;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function errorStatus(error: unknown): number | undefined {
+  if (!isRecord(error)) return undefined;
+  return typeof error.status === 'number' ? error.status : undefined;
 }
 
 function ensureAssistantMessage(
@@ -385,8 +395,10 @@ export function useChat({
             setLastFailedDraft('');
           }
         } else {
-          const errStatus = (error as Error & { status?: number }).status;
-          const errorMessage = mapTransportError(error instanceof Error ? error : null, errStatus);
+          const errorMessage = mapTransportError(
+            error instanceof Error ? error : null,
+            errorStatus(error),
+          );
           store.getState().setError('send', errorMessage);
           setLastFailedDraft(text);
         }
@@ -445,8 +457,10 @@ export function useChat({
       }
       setLastFailedDraft('');
     } catch (error) {
-      const errStatus = (error as Error & { status?: number }).status;
-      const userFacingError = mapTransportError(error instanceof Error ? error : null, errStatus);
+      const userFacingError = mapTransportError(
+        error instanceof Error ? error : null,
+        errorStatus(error),
+      );
 
       const assistantMessage: WorkspaceChatMessage = {
         id: createId(),
@@ -527,12 +541,18 @@ export function useChat({
       }
       setIsConverting(true);
       try {
+        const parsedOutputType =
+          SessionConvertToOutputRequestSchema.shape.outputType.safeParse(outputType);
+        if (!parsedOutputType.success) {
+          toast.error(t('messages.convert.failure', { message: '不支持的输出类型' }));
+          return;
+        }
         const { data: result, error: convErr } = await api.v2
           .notebooks({ nid: s.activeNotebookId })
           .sessions({ sid: s.activeSessionId })
           // eslint-disable-next-line no-unexpected-multiline
           ['convert-to-output'].post({
-            outputType: outputType as 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED',
+            outputType: parsedOutputType.data,
           });
         if (convErr) throw new Error(parseServerError(convErr).message);
         if (refreshOutputs) {

@@ -289,12 +289,11 @@ export function useSources() {
           } catch (error) {
             const { errorCode, details } = parseServerError(error);
             if (errorCode === 'SOURCE_DEDUP_HIT') {
-              const dedupDetails = details as { existing_filename?: unknown } | null;
               const existingFilename =
-                dedupDetails &&
-                typeof dedupDetails.existing_filename === 'string' &&
-                dedupDetails.existing_filename
-                  ? dedupDetails.existing_filename
+                details &&
+                typeof details.existing_filename === 'string' &&
+                details.existing_filename
+                  ? details.existing_filename
                   : file.name;
               const reuse = window.confirm(
                 `检测到重复来源：${existingFilename}\n\n点击“确定”复用已有来源；点击“取消”仍创建新来源。`,
@@ -759,7 +758,7 @@ export function useSources() {
         if (errorCode !== 'SOURCE_DEDUP_HIT') {
           throw error;
         }
-        const dedupDetails = details as { existing_filename?: unknown } | null;
+        const dedupDetails = details;
         const existingFilename =
           dedupDetails &&
           typeof dedupDetails.existing_filename === 'string' &&

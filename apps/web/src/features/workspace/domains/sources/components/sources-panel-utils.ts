@@ -6,7 +6,10 @@ import { SEARCH_MODES, type SearchMode } from './sources-panel-types';
 
 export function normalizeSearchMode(value: string | null): SearchMode {
   if (!value) return 'Fast Research';
-  return SEARCH_MODES.includes(value as SearchMode) ? (value as SearchMode) : 'Fast Research';
+  for (const mode of SEARCH_MODES) {
+    if (mode === value) return mode;
+  }
+  return 'Fast Research';
 }
 
 export function splitUploadFiles(files: File[]) {

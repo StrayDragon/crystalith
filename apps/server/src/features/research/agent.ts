@@ -32,7 +32,7 @@ import { renewLock } from './lock.ts';
 
 /** Persist structured LLM / plain objects into research step JSON columns. */
 function asStepJson(value: object): Record<string, unknown> {
-  return value as Record<string, unknown>;
+  return Object.fromEntries(Object.entries(value));
 }
 
 function isJsonRecord(value: unknown): value is Record<string, unknown> {
@@ -263,15 +263,17 @@ async function searxngFetch(
     const url = `${host}/search?q=${encodeURIComponent(query)}&format=json`;
     const res = await fetch(url, { signal: combinedSignal });
     if (!res.ok) return [];
-    const data = (await res.json()) as {
-      results?: Array<{ title: string; url: string; content: string; engine: string }>;
-    };
-    return (data.results ?? []).slice(0, max_results).map((r) => ({
-      title: r.title,
-      url: r.url,
-      snippet: r.content,
-      engine: r.engine,
-    }));
+    const raw: unknown = await res.json();
+    if (!isJsonRecord(raw) || !Array.isArray(raw.results)) return [];
+    return raw.results
+      .filter(isJsonRecord)
+      .slice(0, max_results)
+      .map((r) => ({
+        title: typeof r.title === 'string' ? r.title : '',
+        url: typeof r.url === 'string' ? r.url : '',
+        snippet: typeof r.content === 'string' ? r.content : '',
+        engine: typeof r.engine === 'string' ? r.engine : '',
+      }));
   } catch {
     return [];
   } finally {

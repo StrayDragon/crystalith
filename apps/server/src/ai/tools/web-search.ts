@@ -29,6 +29,10 @@ export interface WebSearchConfig {
   maxResults: number;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 const DEFAULT_CONFIG: WebSearchConfig = {
   host: '',
   timeoutMs: getSearchSettings().searxng.timeout,
@@ -63,16 +67,19 @@ export async function searchWeb(
   try {
     const resp = await fetch(url, { signal: controller.signal });
     if (!resp.ok) return [];
-    const data = (await resp.json()) as { results?: Array<Record<string, unknown>> };
-    const results = data.results ?? [];
-    return results.slice(0, maxResults).map((r) => ({
-      title: typeof r.title === 'string' ? r.title : typeof r.title === 'string' ? r.title : '',
-      url: typeof r.url === 'string' ? r.url : typeof r.url === 'string' ? r.url : '',
-      snippet:
-        typeof r.content === 'string' ? r.content : typeof r.content === 'string' ? r.content : '',
-      source:
-        typeof r.engine === 'string' ? r.engine : typeof r.engine === 'string' ? r.engine : '',
-    }));
+    const raw: unknown = await resp.json();
+    const results = isRecord(raw) && Array.isArray(raw.results) ? raw.results : [];
+    return results.slice(0, maxResults).flatMap((item) => {
+      if (!isRecord(item)) return [];
+      return [
+        {
+          title: typeof item.title === 'string' ? item.title : '',
+          url: typeof item.url === 'string' ? item.url : '',
+          snippet: typeof item.content === 'string' ? item.content : '',
+          source: typeof item.engine === 'string' ? item.engine : '',
+        },
+      ];
+    });
   } catch {
     return [];
   } finally {
