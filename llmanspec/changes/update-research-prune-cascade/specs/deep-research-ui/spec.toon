@@ -1,0 +1,5 @@
+kind: llman.sdd.delta
+ops[1]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r414,Pruned branch fade and failed merge retain,研究图 UI MUST 将 conclusionStatus=pruned 的节点以降透明度（或等价弱化）展示；触达 pruned 节点的边 MUST 弱化描边但仍可见；来自 pruned 节点的 merge 边 MUST 保留且标签可继续显示「汇入」（或产品等价文案），MUST NOT 因剪枝从画布移除该 merge；当存在失败汇入时，结论节点 MUST 以可见文案或脚注提示「部分汇入失败」（或等价）。,null,null,null
+op_scenarios[1]{req_id,id,given,when,then,feature}:
+  r414,"prune-keeps-failed-merge-on-canvas",详情图已渲染且某研究节点有 merge 到结论,用户确认剪枝该节点后 graph_patch 到达,该节点呈 pruned 弱化态，其 merge 边仍可见且弱化，结论侧出现部分汇入失败提示,true

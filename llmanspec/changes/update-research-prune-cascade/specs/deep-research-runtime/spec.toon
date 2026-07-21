@@ -1,0 +1,9 @@
+kind: llman.sdd.delta
+ops[2]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r316,"Prune closure exclusive-parent B",剪枝 MUST 计算排他父闭包：从目标研究节点出发仅沿非 merge 边向下扩展；子节点仅当其全部非保护入边父节点已在闭包内或已为 pruned 时方可纳入；闭包 MUST NOT 包含 root/question/conclusion（或 id 前缀 node_root_/node_conclusion_）；MUST NOT 沿 merge 边级联；对保护节点的 prune 请求 MUST 拒绝（INVALID_REQUEST 或等价）；被纳入闭包的节点 MUST 标记 conclusionStatus=pruned，且其既有 merge 入结论边 MUST 保留（失败汇入），MUST NOT 仅因剪枝删除该 merge。,null,null,null
+  modify_requirement,r310,Interactive prune and fork on live runs,在 running 或 awaiting_confirm 状态时系统 MUST 支持对研究图节点的剪枝与 fork；剪枝语义 MUST 遵循 r316（排他父闭包、禁 sink、保留失败 merge）；fork MUST 与 M1 扩展支路共用能力面；completed/failed/cancelled 时图 MUST 只读且 MUST NOT 在同一 Run 上继续扩展（改方向须新 Run，除非后续 P2 明确允许从节点 fork 新 Run）。,null,null,null
+op_scenarios[4]{req_id,id,given,when,then,feature}:
+  r316,"shared-child-stays-live",图中 libs 与 perf 均指向共享子节点 stream，且 libs 另有 merge 到 conclusion,用户对 libs 执行 prune,libs 标为 pruned；stream 因仍有活父 perf 保持未剪枝；conclusion 不被剪枝；libs→conclusion 的 merge 边仍在,true
+  r316,"exclusive-child-cascades",data 仅有独占子 minimize，minimize merge 到 conclusion,用户对 data 执行 prune,data 与 minimize 均标为 pruned；minimize→conclusion 的 merge 边保留；conclusion 不被剪枝,true
+  r316,"reject-protected-root",Run 处于 running 且存在 node_root_*,客户端对该 root 调用 prune,请求被拒绝且图不变,true
+  r310,"prune-while-running-keeps-merge",Run 处于 running 且某研究节点有 merge 到结论,用户对该节点执行剪枝,该节点（及 r316 闭包内独占下游）标为 pruned，后续编排不再扩展该支路，且 merge 边保留为失败汇入,true
