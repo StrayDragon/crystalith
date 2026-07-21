@@ -19,7 +19,6 @@ import type {
   SnapshotEntry,
   SyncCandidate,
   SyncCandidates,
-  SyncCheckResult,
 } from './types.ts';
 
 export function serializeBinding(
@@ -29,10 +28,10 @@ export function serializeBinding(
     id: row.id,
     notebookId: row.notebookId,
     connectorId: row.connectorId,
-    connectionConfig: row.connectionConfig as Record<string, unknown>,
-    importScope: (row.importScope as ImportScope | null) ?? null,
-    lastConfirmedSnapshot: (row.lastConfirmedSnapshot as Snapshot | null) ?? null,
-    lastSyncCheckResult: (row.lastSyncCheckResult as SyncCheckResult | null) ?? null,
+    connectionConfig: row.connectionConfig,
+    importScope: row.importScope ?? null,
+    lastConfirmedSnapshot: row.lastConfirmedSnapshot ?? null,
+    lastSyncCheckResult: row.lastSyncCheckResult ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -164,7 +163,7 @@ async function ingestConnectorEntry(
   try {
     raw = await readConnectorFileBytes(
       binding.connectorId,
-      binding.connectionConfig as Record<string, unknown>,
+      binding.connectionConfig,
       entry.relativePath,
     );
   } catch (error) {
@@ -252,7 +251,7 @@ async function ingestConnectorEntry(
     .update(sources)
     .set({
       metadata: {
-        ...(existing?.metadata as Record<string, unknown> | null | undefined),
+        ...existing?.metadata,
         sourceConnector: connectorMetadata,
       },
     })
@@ -336,7 +335,7 @@ export async function applySyncCheckToBinding(
     });
   }
 
-  const stored = binding.lastSyncCheckResult as unknown as SyncCheckResult;
+  const stored = binding.lastSyncCheckResult;
   if (stored.id !== syncCheckId) {
     throw Object.assign(new Error('sync_check 已过期'), {
       status: 409,
@@ -365,7 +364,7 @@ export async function applySyncCheckToBinding(
     updatedBinding = db()
       .update(sourceConnectorBindings)
       .set({
-        lastConfirmedSnapshot: stored.currentSnapshot as unknown as Record<string, unknown>,
+        lastConfirmedSnapshot: stored.currentSnapshot,
         lastSyncCheckResult: null,
         updatedAt: new Date(),
       })
@@ -410,10 +409,10 @@ export async function applyImportScopeToBinding(
   const updatedBinding = db()
     .update(sourceConnectorBindings)
     .set({
-      importScope: normalizedScope as unknown as Record<string, unknown>,
+      importScope: normalizedScope,
       ...(shouldConfirmSnapshot
         ? {
-            lastConfirmedSnapshot: currentSnapshot as unknown as Record<string, unknown>,
+            lastConfirmedSnapshot: currentSnapshot,
             lastSyncCheckResult: null,
           }
         : {}),
