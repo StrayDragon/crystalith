@@ -2,6 +2,10 @@ import type { WidgetDef, WidgetMeta } from './types';
 
 export const GRID_ROWS = 6;
 
+/** Known modular-canvas widget ids (layout + catalog). */
+export type CanvasWidgetId = 'sources' | 'chat' | 'studio';
+
+/** Keep Record<string, …> so ModularCanvas can index with runtime string ids. */
 export const WIDGET_REGISTRY: Record<string, WidgetMeta> = {
   sources: {
     id: 'sources',
@@ -22,7 +26,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetMeta> = {
     minW: 2,
     minH: 2,
   },
-};
+} satisfies Record<CanvasWidgetId, WidgetMeta>;
 
 export const DEFAULT_LAYOUT: WidgetDef[] = [
   { id: 'sources', x: 0, y: 0, w: 3, h: GRID_ROWS, minW: 2, minH: 2 },

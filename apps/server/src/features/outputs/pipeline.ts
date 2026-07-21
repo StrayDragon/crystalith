@@ -30,10 +30,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export type GenerationPreference = 'quality' | 'speed';
 
 /** Maps preference to topK for RAG retrieval. */
-const PREF_TOPK: Record<GenerationPreference, number> = {
+const PREF_TOPK = {
   quality: 10,
   speed: 3,
-};
+} as const satisfies Record<GenerationPreference, number>;
 
 export interface PipelineInput {
   model: LanguageModelV4;

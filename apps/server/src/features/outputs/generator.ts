@@ -21,7 +21,10 @@ export type { OutputMeta, RenderDescriptor };
 // Option keys, itemSchema, and content field keys are camelCase on the wire (c65+).
 // ---------------------------------------------------------------------------
 
-const RENDER_DESCRIPTORS: Record<string, RenderDescriptor> = {
+/** Output types that ship a GenericOutputRenderer descriptor (excludes SLIDES + freeform). */
+type DescriptorOutputType = Exclude<OutputType, 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED'>;
+
+const RENDER_DESCRIPTORS = {
   FAQ: {
     layout: 'cards',
     itemSchema: {
@@ -89,8 +92,9 @@ const RENDER_DESCRIPTORS: Record<string, RenderDescriptor> = {
     },
     options: { itemsKey: 'sections' },
   },
-};
+} as const satisfies Record<DescriptorOutputType, RenderDescriptor>;
 
+/** Keep Record<string, …> so workspace `:id` string lookup stays valid. */
 export const OUTPUT_META: Record<string, OutputMeta> = {
   FAQ: {
     type: 'FAQ',
@@ -192,7 +196,7 @@ export const OUTPUT_META: Record<string, OutputMeta> = {
     isTool: false,
     renderDescriptor: null,
   },
-};
+} satisfies Record<OutputType, OutputMeta>;
 
 export type { OutputType };
 
@@ -200,7 +204,7 @@ export type { OutputType };
 export type ToolOutputType = OutputType;
 
 /** Builtin frontend bundles for interactive output renderers (GET /workspace/tools). */
-export const FRONTEND_BUNDLES: Partial<Record<OutputType, FrontendBundleDescriptor>> = {
+export const FRONTEND_BUNDLES = {
   FAQ: { apiVersion: 'v1', kind: 'builtin', id: 'output-faq', export: 'default', meta: {} },
   GUIDE: { apiVersion: 'v1', kind: 'builtin', id: 'output-guide', export: 'default', meta: {} },
   TIMELINE: {
@@ -226,7 +230,7 @@ export const FRONTEND_BUNDLES: Partial<Record<OutputType, FrontendBundleDescript
     meta: {},
   },
   SLIDES: { apiVersion: 'v1', kind: 'builtin', id: 'output-slides', export: 'default', meta: {} },
-};
+} as const satisfies Partial<Record<OutputType, FrontendBundleDescriptor>>;
 
 /**
  * Generate a structured output object of a specific type.

@@ -15,13 +15,13 @@ export interface ContextPart {
 
 // Priority: higher number = more important (kept when over budget).
 // system/query are never truncated; history is cheapest to drop.
-const PRIORITY: Record<ContextPartRole, number> = {
+const PRIORITY = {
   history: 1,
   retrieval: 2,
   recent: 3,
   system: 4,
   query: 4,
-};
+} as const satisfies Record<ContextPartRole, number>;
 
 /**
  * Assemble context parts into a single string, truncating low-priority parts
