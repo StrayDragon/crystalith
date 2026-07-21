@@ -339,8 +339,10 @@ export function normalizeMessage(row: WireMessage): ChatMessage {
   };
 }
 
-export function normalizeOutput(row: WireOutput & Partial<WireOutputListItem>): OutputItem {
-  const hasContent = row.content !== undefined && row.content !== null;
+export function normalizeOutput(
+  row: WireOutput | (WireOutputListItem & Partial<WireOutput>),
+): OutputItem {
+  const hasContent = 'content' in row && row.content !== undefined && row.content !== null;
   return {
     id: Number(row.id),
     type: row.type,
@@ -348,9 +350,9 @@ export function normalizeOutput(row: WireOutput & Partial<WireOutputListItem>): 
     chunkIds: row.chunkIds ?? [],
     content: hasContent ? normalizeOutputPayload(row.type, row.content) : null,
     contentLoaded: hasContent,
-    title: 'title' in row ? ((row as WireOutputListItem).title ?? null) : null,
-    preview: 'preview' in row ? ((row as WireOutputListItem).preview ?? null) : null,
-    slideId: 'slideId' in row ? ((row as WireOutputListItem).slideId ?? null) : null,
+    title: 'title' in row ? (row.title ?? null) : null,
+    preview: 'preview' in row ? (row.preview ?? null) : null,
+    slideId: 'slideId' in row ? (row.slideId ?? null) : null,
     createdAt: formatTimestamp(row.createdAt ?? undefined),
     updatedAt: formatTimestamp(row.updatedAt ?? undefined),
     createdAtRaw: toTimestampRaw(row.createdAt),
@@ -365,7 +367,7 @@ export function mergeOutputListWithCache(
 ): OutputItem[] {
   const byId = new Map(existing.map((item) => [item.id, item]));
   return listRows.map((row) => {
-    const next = normalizeOutput(row as WireOutput & Partial<WireOutputListItem>);
+    const next = normalizeOutput({ ...row });
     const prev = byId.get(next.id);
     if (prev?.contentLoaded && prev.content != null) {
       return {

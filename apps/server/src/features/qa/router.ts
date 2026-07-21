@@ -4,7 +4,7 @@ import {
   QaExportQuerySchema,
   QaNestedRequestSchema,
   QaRequestSchema,
-  type Citation,
+  CitationSchema,
   type QaNestedRequest,
   type QaRequest,
 } from '@crystalith/shared';
@@ -109,7 +109,7 @@ function loadHistory(
     .all();
 
   return msgRows.map((m) => ({
-    role: m.role as 'user' | 'assistant' | 'system',
+    role: m.role,
     content: m.content,
   }));
 }
@@ -310,7 +310,7 @@ async function handleQaStream(body: QaBody) {
       } else {
         db()
           .update(messages)
-          .set({ content: text, citations: (citations ?? []) as unknown[] })
+          .set({ content: text, citations: citations ?? [] })
           .where(eq(messages.id, messageId))
           .run();
       }
@@ -367,7 +367,9 @@ function handleQaExport(query: QaExportQuery, pathNotebookId?: number) {
     .find((m) => m.createdAt <= assistantMessage.createdAt);
   const question = precedingUser?.content ?? null;
 
-  const citations = (assistantMessage.citations as Citation[] | null) ?? [];
+  const citations = CitationSchema.array()
+    .catch([])
+    .parse(assistantMessage.citations ?? []);
 
   // c48: resolve notebookId from session (v1 export is notebook-scoped,
   // api.py:669 filters sources by notebookId) for sources meta + top-level.
@@ -378,16 +380,12 @@ function handleQaExport(query: QaExportQuery, pathNotebookId?: number) {
   // fallback entries (v1 api.py:576-595 _build_sources_meta).
   const citedSourceIds = [
     ...new Set(
-      citations
-        .map((c) => (c as { sourceId?: number }).sourceId)
-        .filter((id): id is number => typeof id === 'number'),
+      citations.map((c) => c.sourceId).filter((id): id is number => typeof id === 'number'),
     ),
   ];
   const fallbackNames = new Map<number, string>();
   for (const c of citations) {
-    const cit = c as { sourceId?: number; sourceName?: string };
-    if (typeof cit.sourceId === 'number')
-      fallbackNames.set(cit.sourceId, cit.sourceName ?? '未知来源');
+    if (typeof c.sourceId === 'number') fallbackNames.set(c.sourceId, c.sourceName ?? '未知来源');
   }
   const sourceRows =
     citedSourceIds.length && notebookId !== undefined

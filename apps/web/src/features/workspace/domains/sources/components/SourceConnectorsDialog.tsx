@@ -1,3 +1,4 @@
+import type { JsonMetadata } from '@crystalith/shared';
 import {
   ArrowBack as ArrowBackIcon,
   Close as CloseIcon,
@@ -18,7 +19,6 @@ import type {
   ImportResultItem,
   ImportScope,
   ImportScopeApplyResponse,
-  JsonDictInput,
   Snapshot,
   SnapshotEntry,
   SourceConnectorDescriptor,
@@ -207,7 +207,7 @@ function SourceConnectorConfigStep({
   selectedConnector: SourceConnectorDescriptor | null;
   configProps: Record<string, unknown>;
   configRequired: Set<string>;
-  connectionConfig: JsonDictInput;
+  connectionConfig: JsonMetadata;
   onUpdateConfig: (key: string, next: unknown, typeHint?: string) => void;
 }) {
   if (!selectedConnector) {
@@ -617,7 +617,7 @@ export default function SourceConnectorsDialog({
 
   const [step, setStep] = useState<ConnectorDialogStep>('select');
   const [selectedConnectorId, setSelectedConnectorId] = useState<string>('');
-  const [connectionConfig, setConnectionConfig] = useState<JsonDictInput>({});
+  const [connectionConfig, setConnectionConfig] = useState<JsonMetadata>({});
   const [binding, setBinding] = useState<ConnectorBindingRead | null>(null);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [snapshotFilter, setSnapshotFilter] = useState('');

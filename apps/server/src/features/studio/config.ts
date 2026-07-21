@@ -202,41 +202,45 @@ export const THEME_PRESET_OPTIONS: ThemePresetOption[] = (
 // ---------------------------------------------------------------------------
 
 export function resolveQuantityRange(quantity?: string | null): [number, number] {
-  const range =
-    quantity && quantity in QUANTITY_RANGES
-      ? QUANTITY_RANGES[quantity as keyof typeof QUANTITY_RANGES]
-      : QUANTITY_RANGES.standard;
-  return [range[0], range[1]];
+  for (const [id, range] of Object.entries(QUANTITY_RANGES)) {
+    if (id === quantity) return [range[0], range[1]];
+  }
+  return [QUANTITY_RANGES.standard[0], QUANTITY_RANGES.standard[1]];
 }
 
 export function resolveBulletRange(density?: string | null): [number, number] {
-  const range =
-    density && density in DENSITY_BULLETS
-      ? DENSITY_BULLETS[density as keyof typeof DENSITY_BULLETS]
-      : DENSITY_BULLETS.standard;
-  return [range[0], range[1]];
+  for (const [id, range] of Object.entries(DENSITY_BULLETS)) {
+    if (id === density) return [range[0], range[1]];
+  }
+  return [DENSITY_BULLETS.standard[0], DENSITY_BULLETS.standard[1]];
 }
 
 export function resolveStructureHint(structure?: string | null): string | undefined {
-  return structure && structure in STRUCTURE_TEMPLATES
-    ? STRUCTURE_TEMPLATES[structure as keyof typeof STRUCTURE_TEMPLATES]
-    : undefined;
+  for (const [id, hint] of Object.entries(STRUCTURE_TEMPLATES)) {
+    if (id === structure) return hint;
+  }
+  return undefined;
 }
 
 export function resolveAudienceHint(audience?: string | null): string | undefined {
-  return audience && audience in AUDIENCE_HINTS
-    ? AUDIENCE_HINTS[audience as keyof typeof AUDIENCE_HINTS]
-    : undefined;
+  for (const [id, hint] of Object.entries(AUDIENCE_HINTS)) {
+    if (id === audience) return hint;
+  }
+  return undefined;
 }
 
 export function resolveToneHint(tone?: string | null): string | undefined {
-  return tone && tone in TONE_HINTS ? TONE_HINTS[tone as keyof typeof TONE_HINTS] : undefined;
+  for (const [id, hint] of Object.entries(TONE_HINTS)) {
+    if (id === tone) return hint;
+  }
+  return undefined;
 }
 
 export function resolveLanguageHint(language?: string | null): string | undefined {
-  return language && language in LANGUAGE_HINTS
-    ? LANGUAGE_HINTS[language as keyof typeof LANGUAGE_HINTS]
-    : undefined;
+  for (const [id, hint] of Object.entries(LANGUAGE_HINTS)) {
+    if (id === language) return hint;
+  }
+  return undefined;
 }
 
 export function resolveThemePreset(preset?: string | null): string {
@@ -290,8 +294,8 @@ const SLIDES_TUNING = {
 } as const satisfies Record<string, RetrievalTuning>;
 
 export function resolveRetrievalTuning(preference?: string | null): RetrievalTuning {
-  if (preference && preference in SLIDES_TUNING) {
-    return SLIDES_TUNING[preference as keyof typeof SLIDES_TUNING];
+  for (const [id, tuning] of Object.entries(SLIDES_TUNING)) {
+    if (id === preference) return tuning;
   }
   return { topK: DEFAULT_TOP_K, minScore: DEFAULT_MIN_SCORE };
 }

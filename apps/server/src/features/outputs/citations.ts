@@ -76,7 +76,7 @@ function mapCitationsIntoContent(
           .map((idx) => citationMap.get(idx))
           .filter((c): c is Citation => c !== undefined);
         // Fallback: if no indices resolved but we have citations, use the first (v1)
-        result[key] = resolved.length > 0 ? resolved : fallback.length > 0 ? [fallback[0]!] : [];
+        result[key] = resolved.length > 0 ? resolved : fallback.length > 0 ? [fallback[0]] : [];
       } else {
         result[key] = mapCitationsIntoContent(value, citationMap, fallback);
       }

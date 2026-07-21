@@ -87,7 +87,7 @@ export function useResearchThinkingWindow(thinkingTimeline: ThinkingTimelineItem
     const supportsIdleCallback = typeof idleWindow.requestIdleCallback === 'function';
 
     if (supportsIdleCallback) {
-      handle = idleWindow.requestIdleCallback!(expand, { timeout: 200 });
+      handle = idleWindow.requestIdleCallback(expand, { timeout: 200 });
     } else {
       handle = window.setTimeout(expand, 50);
     }

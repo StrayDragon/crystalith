@@ -268,8 +268,7 @@ function ResearchDetailPanel({
   // 如果有 steps，说明研究已经开始过，即使状态是 planning 也不应该显示
   const hasSteps = session.steps && session.steps.length > 0;
   const isPlanning = session.status === 'planning' && !hasSteps;
-  const statusKey: ResearchStatus =
-    session.status in STATUS_COLORS ? (session.status as ResearchStatus) : 'planning';
+  const statusKey: ResearchStatus = session.status in STATUS_COLORS ? session.status : 'planning';
   const statusColors = STATUS_COLORS[statusKey];
 
   // Get completed steps for this session

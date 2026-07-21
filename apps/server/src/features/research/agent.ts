@@ -765,7 +765,7 @@ export function synthesizeFallbackReport(topic: string, results: ResearchResult[
   const lines = [`# ${topic}`, '', '## 研究结果摘要', ''];
   const top = results.slice(0, 20);
   for (let i = 0; i < top.length; i++) {
-    const r = top[i]!;
+    const r = top[i];
     const snippet = r.snippet ? r.snippet.slice(0, 200) : '';
     lines.push(`${i + 1}. **${r.title || '(无标题)'}**`);
     lines.push(`   - URL: ${r.url}`);
@@ -797,7 +797,7 @@ function loadLatestUserInput(sessionId: number): { action: string; plan?: Search
     .orderBy(researchSteps.id)
     .all();
   for (let i = steps.length - 1; i >= 0; i--) {
-    const step = steps[i]!;
+    const step = steps[i];
     if (step.type !== 'user_input') continue;
     if (!step.inputData || typeof step.inputData !== 'object') continue;
     const data = step.inputData;
@@ -825,7 +825,7 @@ function extractPlanFromSteps(sessionId: number, iteration: number): SearchPlan 
 
   // Prefer user-modified plan (reversed = latest first)
   for (let i = steps.length - 1; i >= 0; i--) {
-    const s = steps[i]!;
+    const s = steps[i];
     if (s.type === 'user_input' && s.inputData && typeof s.inputData === 'object') {
       const data = s.inputData;
       if (data.action === 'modify' && isJsonRecord(data.plan)) {
@@ -836,7 +836,7 @@ function extractPlanFromSteps(sessionId: number, iteration: number): SearchPlan 
   }
   // Fall back to latest PLAN step output
   for (let i = steps.length - 1; i >= 0; i--) {
-    const s = steps[i]!;
+    const s = steps[i];
     if (s.type === 'plan' && s.outputData && typeof s.outputData === 'object') {
       const plan = parseSearchPlan(s.outputData);
       if (plan) return plan;

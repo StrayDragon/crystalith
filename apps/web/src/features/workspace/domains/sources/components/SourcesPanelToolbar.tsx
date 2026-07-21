@@ -124,7 +124,7 @@ export default function SourcesPanelToolbar({
             ).map(([val, label]) => (
               <MenuItem
                 key={val}
-                onClick={() => onSortByChange?.(val as SourceSortBy)}
+                onClick={() => onSortByChange?.(val)}
                 className={`py-1.5 px-3 text-xs ${sortBy === val ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
               >
                 {sortBy === val ? '✓ ' : '   '}
@@ -143,7 +143,7 @@ export default function SourcesPanelToolbar({
             ).map(([val, label]) => (
               <MenuItem
                 key={val}
-                onClick={() => onSortOrderChange?.(val as SourceSortOrder)}
+                onClick={() => onSortOrderChange?.(val)}
                 className={`py-1.5 px-3 text-xs ${sortOrder === val ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
               >
                 {sortOrder === val ? '✓ ' : '   '}

@@ -11,6 +11,7 @@ import {
   OutputsPageSchema,
   PaginationParamsSchema,
   CitationSchema,
+  ToolOutputTypeSchema,
   type Citation,
   type OutputGenerateBody,
 } from '@crystalith/shared';
@@ -40,7 +41,6 @@ import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
 import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
-import { type ToolOutputType } from './generator.ts';
 import { runOutputPipeline } from './pipeline.ts';
 import { renderOutputToMarkdown, splitTextToChunks } from './render.ts';
 
@@ -295,6 +295,10 @@ async function handleGenerateOutput(
 
   // Normalize output type to uppercase (API accepts both 'faq' and 'FAQ')
   const normalizedType = type.toUpperCase();
+  const parsedType = ToolOutputTypeSchema.safeParse(normalizedType);
+  if (!parsedType.success) {
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Unsupported output type: ${type}`);
+  }
 
   // Verify notebook
   const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
@@ -303,7 +307,7 @@ async function handleGenerateOutput(
   // c50: reject SLIDES — v1 api.py:205-206 returns 400 "Use slides endpoints
   // for SLIDES output". SLIDES has its own studio pipeline; the generic
   // outputs pipeline has no SLIDES postprocess/isContentEmpty case.
-  if (normalizedType === 'SLIDES') {
+  if (parsedType.data === 'SLIDES') {
     throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Use slides endpoints for SLIDES output');
   }
 
@@ -340,7 +344,7 @@ async function handleGenerateOutput(
     result = await runOutputPipeline({
       model,
       notebookId,
-      type: normalizedType as ToolOutputType,
+      type: parsedType.data,
       chunkIds: resolvedChunkIds,
       sourceIds: resolvedSourceIds,
       prompt: promptRaw ?? undefined,

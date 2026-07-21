@@ -31,7 +31,6 @@ import {
   type ResearchActionResult,
   type ResearchExportBody,
   type ResearchStatus,
-  type ResearchStepType,
 } from '@crystalith/shared';
 import { and, count, desc, eq, gt } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
@@ -67,7 +66,7 @@ export { cleanupExpiredLocks, isLockHeld, renewLock, acquireLock, releaseLock } 
 // OpenAPI docs
 // ---------------------------------------------------------------------------
 
-const ResearchListQuerySchema = NotebookIdQuerySchema.merge(PaginationParamsSchema);
+const ResearchListQuerySchema = NotebookIdQuerySchema.extend(PaginationParamsSchema.shape);
 const ResearchPageSchema = PaginatedSchema(ResearchSessionSchema);
 const ResearchModifyBodySchema = z.object({ plan: SearchPlanSchema });
 
@@ -298,7 +297,7 @@ function serializeSession(row: typeof researchSessions.$inferSelect) {
     id: row.id,
     notebookId: row.notebookId,
     topic: row.topic,
-    status: row.status as ResearchStatus,
+    status: row.status,
     currentIteration: row.currentIteration,
     maxIterations: row.maxIterations,
     aggregatedResults: row.aggregatedResults ?? null,
@@ -313,10 +312,10 @@ function serializeStep(row: typeof researchSteps.$inferSelect) {
     id: row.id,
     sessionId: row.sessionId,
     iteration: row.iteration,
-    type: row.type as ResearchStepType,
+    type: row.type,
     inputData: row.inputData ?? null,
     outputData: row.outputData ?? null,
-    status: row.status as 'pending' | 'running' | 'completed' | 'skipped',
+    status: row.status,
     createdAt: row.createdAt?.toISOString?.() ?? String(row.createdAt),
   };
 }
@@ -442,6 +441,9 @@ function inferResumeState(sessionId: number): {
       return { status: 'waiting_user', iteration: lastStep.iteration };
     case 'search':
       return { status: 'analyzing', iteration: lastStep.iteration };
+    case 'search_result':
+      // Mid-search per-result step — resume search loop for this iteration.
+      return { status: 'searching', iteration: lastStep.iteration };
     case 'analyze': {
       const needMore = Boolean(lastStep.outputData?.needMore);
       if (needMore && lastStep.iteration < session.maxIterations) {
@@ -644,7 +646,7 @@ function handleFinishResearch(id: number, notebookId: number): ResearchActionRes
     topic: row.topic,
     iteration: row.currentIteration,
     maxIterations: row.maxIterations,
-    results: (row.aggregatedResults ?? []) as ResearchResult[],
+    results: row.aggregatedResults ?? [],
   };
   void Promise.resolve()
     .then(() => generateFinalReport(state))

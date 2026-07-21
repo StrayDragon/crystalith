@@ -22,7 +22,7 @@ import type {
   WorkspaceTool,
 } from '../../shared/types';
 import { ModelSelector } from './ModelSelector';
-import { getToolIcon, resolveTypeLabel, type StudioTone, TONE_COLORS } from './studioUtils';
+import { getToolIcon, resolveTypeLabel, TONE_COLORS } from './studioUtils';
 
 const FALLBACK_QUANTITY_OPTIONS: ConfigOption[] = [
   { id: 'less', label: '更少', isDefault: false },
@@ -198,8 +198,9 @@ export default function StudioToolsGrid({
         {tools.map((tool) => {
           const isDisabled = !tool.enabled || !tool.outputType || !hasSelectedSources;
           const isSlidesTool = tool.outputType === 'SLIDES';
-          const tone = (tool.tone as StudioTone) || 'slate';
-          const colors = TONE_COLORS[tone] ?? TONE_COLORS.slate;
+          const tone = tool.tone ?? 'slate';
+          const colors =
+            Object.entries(TONE_COLORS).find(([id]) => id === tone)?.[1] ?? TONE_COLORS.slate;
 
           const tooltipContent = !hasSelectedSources
             ? '请先选择来源'

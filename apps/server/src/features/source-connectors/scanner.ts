@@ -300,7 +300,7 @@ export async function readConnectorFileBytes(
 
   const extensions = extensionsForConnector(connectorId);
   const suffix = candidate.includes('.') ? `.${candidate.split('.').pop()!.toLowerCase()}` : '';
-  if (!extensions.includes(suffix as (typeof extensions)[number])) {
+  if (!extensions.includes(suffix)) {
     throw new Error('unsupported file type');
   }
 

@@ -42,7 +42,7 @@ async function exportPdf(output: OutputItem, fileName: string) {
     y += lineHeight;
   }
 
-  const blob = doc.output('blob') as Blob;
+  const blob = doc.output('blob');
   downloadBlob(blob, fileName);
 }
 

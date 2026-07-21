@@ -46,7 +46,7 @@ export function noEvidenceAnswerForReason(reason: NoEvidenceReason | null): stri
       return LOW_SIMILARITY_ANSWER;
     case 'embedding_empty':
       return EMBEDDING_EMPTY_ANSWER;
-    default:
+    case null:
       return NO_EVIDENCE_ANSWER;
   }
 }
@@ -234,7 +234,7 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
 
   const citations: Citation[] = validResults.map((r) => {
     const chunk = chunkMap.get(r.chunkId)!;
-    const metadata = (chunk.metadata ?? {}) as Record<string, unknown>;
+    const metadata = chunk.metadata ?? {};
     const pageNumber = typeof metadata.page === 'number' ? metadata.page : null;
     const paragraphIndex =
       typeof metadata.paragraph_index === 'number' ? metadata.paragraph_index : null;

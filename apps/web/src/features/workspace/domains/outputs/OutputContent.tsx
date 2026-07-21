@@ -17,7 +17,7 @@ import {
   isFallbackOutputPayload,
 } from '../../shared/outputPayload';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
-import type { OutputItem, OutputTypeId, SlidesOutputContent } from '../../shared/types';
+import type { OutputItem, SlidesOutputContent } from '../../shared/types';
 import { EXPORT_FORMAT_LABELS } from './exporters';
 import FlashcardViewer from './FlashcardViewer';
 import GenericOutputRenderer from './GenericOutputRenderer';
@@ -60,7 +60,7 @@ export default function OutputContent({ output, onRetry, onDelete }: OutputConte
   const isFallback = isFallbackOutputPayload(content);
   const warnings = useMemo(() => getOutputPayloadWarnings(content), [content]);
   const warningKeyCounts = new Map<string, number>();
-  const typeId = output.type as OutputTypeId;
+  const typeId = output.type;
   const { isExporting, activeFormat, getSupportedFormats, exportOutput } = useExport();
   const renderDescriptor = useWorkspaceStore((s) => s.outputTypeRenderDescriptors[typeId] ?? null);
   const frontendBundle = useWorkspaceStore((s) => s.outputTypeFrontendBundles[typeId] ?? null);
