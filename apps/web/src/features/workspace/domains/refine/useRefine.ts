@@ -1,4 +1,9 @@
-import type { WorkspaceToolsListResponse } from '@crystalith/shared';
+import type {
+  WorkspaceTool as WireWorkspaceTool,
+  WorkspaceToolsDiagnostics,
+  WorkspaceToolsListResponse,
+} from '@crystalith/shared';
+import { PluginConfigSchema } from '@crystalith/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
@@ -7,133 +12,31 @@ import { parseServerError } from '../../../../api/parseServerError';
 import { useOutputQueue } from '../../shared/hooks/useOutputQueue';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type {
-  FieldDescriptor,
   FrontendBundleDescriptor,
   OutputItem,
   OutputTypeId,
-  PluginConfigSchema,
-  PreviewDescriptor,
   RenderDescriptor,
-  SlideGenerationConfig,
   WorkspaceTool,
-  WorkspaceToolsDiagnostics,
 } from '../../shared/types';
 import { collectOutputCitations } from '../../shared/utils';
 
-/** Wire payloads from Eden `workspace/tools` — normalize into UI types (no shared-types island). */
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
-}
-
-function normalizeFieldDescriptor(field: unknown): FieldDescriptor {
-  const f = asRecord(field);
-  const children = Array.isArray(f.children) ? f.children : [];
+/**
+ * Map Eden/shared workspace tool → UI view-model.
+ * Nested descriptors stay shared SSOT; PluginConfig is re-parsed so Zod defaults apply
+ * even when a partial payload arrives (e.g. MSW fixtures).
+ */
+function toUiTool(tool: WireWorkspaceTool): WorkspaceTool {
   return {
-    key: f.key as string,
-    type: f.type as FieldDescriptor['type'],
-    label: (f.label as string | null) ?? null,
-    children: children.map(normalizeFieldDescriptor),
-  };
-}
-
-function normalizeRenderDescriptor(descriptor?: unknown): RenderDescriptor | null {
-  if (!descriptor) return null;
-  const d = asRecord(descriptor);
-  const rawItemSchema = d.itemSchema as Record<string, unknown> | null | undefined;
-  return {
-    layout: d.layout as RenderDescriptor['layout'],
-    itemSchema: rawItemSchema
-      ? {
-          fields: ((rawItemSchema.fields as unknown[]) ?? []).map(normalizeFieldDescriptor),
-        }
-      : null,
-    options: (d.options as Record<string, unknown>) ?? {},
-  };
-}
-
-function normalizeSlideGenerationDefaults(
-  raw: Record<string, unknown> | null | undefined,
-): SlideGenerationConfig | null {
-  if (!raw || typeof raw !== 'object') return null;
-  return {
-    preference: (raw.preference as SlideGenerationConfig['preference']) ?? null,
-    quantity: (raw.quantity as string | null | undefined) ?? null,
-    audience: (raw.audience as string | null | undefined) ?? null,
-    structure: (raw.structure as string | null | undefined) ?? null,
-    tone: (raw.tone as string | null | undefined) ?? null,
-    language: (raw.language as string | null | undefined) ?? null,
-    density: (raw.density as string | null | undefined) ?? null,
-    themePreset: (raw.themePreset as string | null | undefined) ?? null,
-    frontmatter: (raw.frontmatter as string | null | undefined) ?? null,
-  };
-}
-
-function normalizePreviewDescriptor(descriptor?: unknown): PreviewDescriptor | null {
-  if (!descriptor) return null;
-  const d = asRecord(descriptor);
-  return {
-    kind: (d.kind as PreviewDescriptor['kind']) ?? 'external_url',
-    service: (d.service as string | null) ?? null,
-    url: (d.url as string | null) ?? null,
-    openInNewTab: (d.openInNewTab as boolean) ?? false,
-    meta: (d.meta as Record<string, unknown>) ?? {},
-  };
-}
-
-function normalizeConfigSchema(schema?: unknown): PluginConfigSchema | null {
-  if (!schema) return null;
-  const s = asRecord(schema);
-  return {
-    defaults: normalizeSlideGenerationDefaults(
-      (s.defaults ?? null) as Record<string, unknown> | null,
-    ) as PluginConfigSchema['defaults'],
-    quantityOptions: (s.quantityOptions ?? []) as PluginConfigSchema['quantityOptions'],
-    difficultyOptions: (s.difficultyOptions ?? []) as PluginConfigSchema['difficultyOptions'],
-    audienceOptions: (s.audienceOptions ?? []) as PluginConfigSchema['audienceOptions'],
-    structureOptions: (s.structureOptions ?? []) as PluginConfigSchema['structureOptions'],
-    toneOptions: (s.toneOptions ?? []) as PluginConfigSchema['toneOptions'],
-    languageOptions: (s.languageOptions ?? []) as PluginConfigSchema['languageOptions'],
-    densityOptions: (s.densityOptions ?? []) as PluginConfigSchema['densityOptions'],
-    themePresetOptions: ((s.themePresetOptions ?? []) as Array<Record<string, unknown>>).map(
-      (option) => ({
-        id: option.id as string,
-        label: option.label as string,
-        template: (option.template ?? {}) as Record<string, unknown>,
-      }),
-    ),
-    topicPlaceholder: (s.topicPlaceholder as string) ?? '',
-    supportsTopic: (s.supportsTopic as boolean) ?? false,
-    engine: (s.engine as string | null) ?? null,
-    preview: normalizePreviewDescriptor(s.preview ?? null),
-  };
-}
-
-function normalizeFrontendBundle(bundle?: unknown): FrontendBundleDescriptor | null {
-  if (!bundle) return null;
-  const b = asRecord(bundle);
-  return {
-    apiVersion: (b.apiVersion as FrontendBundleDescriptor['apiVersion']) ?? 'v1',
-    kind: (b.kind as FrontendBundleDescriptor['kind']) ?? 'builtin',
-    id: b.id as string,
-    export: (b.export as string) ?? 'render',
-    meta: (b.meta as Record<string, unknown>) ?? {},
-  };
-}
-
-function normalizeTool(tool: unknown): WorkspaceTool {
-  const t = asRecord(tool);
-  return {
-    id: t.id as string,
-    label: t.label as string,
-    description: t.description as string,
-    tone: t.tone as WorkspaceTool['tone'],
-    outputType: t.outputType as WorkspaceTool['outputType'],
-    prompt: t.prompt as string,
-    renderDescriptor: normalizeRenderDescriptor(t.renderDescriptor ?? null),
-    configSchema: normalizeConfigSchema(t.configSchema ?? null),
-    frontendBundle: normalizeFrontendBundle(t.frontendBundle ?? null),
-    badge: (t.badge as string | undefined) ?? undefined,
-    enabled: (t.enabled as boolean) !== false,
+    id: tool.id,
+    label: tool.label,
+    description: tool.description,
+    tone: tool.tone,
+    outputType: tool.outputType,
+    prompt: tool.prompt,
+    enabled: tool.enabled,
+    renderDescriptor: tool.renderDescriptor,
+    configSchema: tool.configSchema != null ? PluginConfigSchema.parse(tool.configSchema) : null,
+    frontendBundle: tool.frontendBundle ?? null,
   };
 }
 
@@ -169,16 +72,14 @@ export function useRefine() {
   );
 
   const toolsDiagnostics = useMemo(
-    () => (toolsData?.diagnostics ?? null) as WorkspaceToolsDiagnostics,
+    (): WorkspaceToolsDiagnostics | null => toolsData?.diagnostics ?? null,
     [toolsData],
   );
 
   const tools = useMemo<WorkspaceTool[]>(() => {
-    // Return backend data if available
     if (toolsData?.tools?.length) {
-      return toolsData.tools.map(normalizeTool);
+      return toolsData.tools.map(toUiTool);
     }
-    // Return empty array while loading or on error (UI should show appropriate state)
     return [];
   }, [toolsData]);
 
