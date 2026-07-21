@@ -25,7 +25,8 @@
 POST /v2/notebooks/:nid/research          → create Run (H1′ D1 toggles + desk sourceIds + L1)
 GET  /v2/notebooks/:nid/research          → listRuns
 GET  /v2/notebooks/:nid/research/:rid     → getRun (graph + report summary)
-POST .../research/:rid/confirm            → M1 continue | finish-report | approve-branch | skip-branch
+POST .../research/:rid/nodes/:nodeId/prune → U2a 剪枝
+POST .../research/:rid/nodes/:nodeId/fork  → U2a fork（hint?）；与 M1 扩支路同能力面
 POST .../research/:rid/convert-to-note    → PARAGRAPH + K1 footnotes
 POST .../research/:rid/convert-to-source  → ingest + embed
 GET  .../research/:rid/stream             → status / graph_patch / confirm / report_ready / log / error（R3b）
