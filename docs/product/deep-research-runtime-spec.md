@@ -2,7 +2,7 @@
 
 | 字段        | 值                                                      |
 | ----------- | ------------------------------------------------------- |
-| 状态        | Draft — grill 进行中（R1′ D1、R2a、R3b 已定）           |
+| 状态        | Draft — grill 进行中（R1′–R6a 等已定）                  |
 | 对应 change | `c76-deep-research-runtime`                             |
 | 父 PRD      | [`deep-research-prd.md`](./deep-research-prd.md) v0.2.3 |
 
@@ -86,11 +86,30 @@ API 占位：`POST …/research/:rid/nodes/:nodeId/prune`、`…/fork`（body �
 
 `decompose` | `expand` | `focus` | `filter` | `compare` | `refine` | `support` | `fork` | `merge`
 
+## 7. Report shape（R6a + K1）
+
+```ts
+{
+  title: string;
+  sections: Array<{
+    id: string;
+    heading: string;
+    blocks: Array<
+      | { type: 'paragraph'; text: string; citeIds: string[] }
+      | { type: 'bullets'; items: Array<{ text: string; citeIds: string[] }> }
+    >;
+  }>;
+  citations: Record<string, Citation>; // 全局 map；Citation 复用 shared schema
+}
+```
+
+- 交互预览：chip 绑定 `citeIds` → `citations[citeId]`。
+- `convertToNote`：按出现序编号 → GFM `[^n]` + 脚注附录。
+
 ## 待钉（grill 主题）
 
-1. Report JSON 形状与脚注 serializer
-2. convertToNote / convertToSource 请求体（artifactRef）
-3. 错误码与取消语义
+1. convertToNote / convertToSource 请求体（artifactRef）
+2. 错误码与取消语义
 
 ## 非目标
 

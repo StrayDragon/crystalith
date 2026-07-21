@@ -33,6 +33,7 @@
 | **R4**   | 图节点结论态：`clear` / `partial` / `missing` / `pending` / `pruned`；配色见 **C1**，MUST NOT 复刻参考图绿紫红                                                                                              |
 | **C1**   | 图节点色：复用工作区语义色（成功→clear、警告→partial、危险→missing、中性→pending）；`pruned` 降透明度/删线                                                                                                  |
 | **R5**   | 边语义闭集：`decompose`/`expand`/`focus`/`filter`/`compare`/`refine`/`support`/`fork`/`merge` + 可选短备注；MUST NOT 仅用自由中文边标签                                                                     |
+| **R6**   | 报告 SSOT：`sections[].blocks`（paragraph/bullets + citeIds）+ 全局 `citations` map；导出笔记按出现序生成 GFM 脚注                                                                                          |
 
 ---
 
