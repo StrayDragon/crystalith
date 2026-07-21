@@ -30,7 +30,8 @@
 | **M1**   | 首发「待确认」仅两类硬停：① 外网预算将尽 → 继续/出报告；② 主控扩展新支路 → 批准/跳过收束；不做逐步审批与转化推荐弹窗                                                                                        |
 | **U1**   | 过程图 = 可交互思路（剪枝 / fork）；Run 详情主表面为图；终局阅读以报告为主，**不**另做「研究思路」并列页                                                                                                    |
 | **U2**   | 剪枝/fork：在 `running` / `awaiting_confirm` 可用；M1「扩支路」与用户主动 fork 合流；`completed` 后图只读，改方向开新 Run（可选「从节点 fork 新 Run」P2）                                                   |
-| **R4**   | 图节点结论态：`clear` / `partial` / `missing` / `pending` / `pruned`；UI 配色 MUST 用本产品色板，MUST NOT 复刻参考图绿紫红                                                                                  |
+| **R4**   | 图节点结论态：`clear` / `partial` / `missing` / `pending` / `pruned`；配色见 **C1**，MUST NOT 复刻参考图绿紫红                                                                                              |
+| **C1**   | 图节点色：复用工作区语义色（成功→clear、警告→partial、危险→missing、中性→pending）；`pruned` 降透明度/删线                                                                                                  |
 
 ---
 
