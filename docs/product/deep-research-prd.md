@@ -329,11 +329,11 @@
 
 ## 附录 C — 建议下一文档
 
-1. ~~`docs/product/workspace-topbar-search.md`~~ → 已并入 llman change **`c75-workspace-topbar-search`**（临时文档已删）
-2. `docs/product/deep-research-runtime-spec.md` — Run/tool/转化 API
-3. `docs/product/deep-research-ui-proto.md` — 二级页深研台 + xyflow + 活卡片
+1. ~~`docs/product/workspace-topbar-search.md`~~ → 已并入 llman change **`c75-workspace-topbar-search`**
+2. [`docs/product/deep-research-runtime-spec.md`](./deep-research-runtime-spec.md) — **骨架已建**；用 grill-me 完善后回填 **`c76-deep-research-runtime`**
+3. [`docs/product/deep-research-ui-proto.md`](./deep-research-ui-proto.md) — **骨架已建**；grill 完善后另开 FE change（c76 FE 仅占位）
 
-P-1 实现：`llman-sdd-apply` → `c75-workspace-topbar-search`。
+后端落地：`llman-sdd-apply` → **`c76-deep-research-runtime`**。
 
 ---
 
