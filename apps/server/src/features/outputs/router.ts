@@ -3,6 +3,7 @@ import {
   NotebookIdQuerySchema,
   OutputConvertToSourceResponseSchema,
   OutputExportFormatQuerySchema,
+  OutputExportJsonResponseSchema,
   OutputExportQuerySchema,
   OutputGenerateNestedRequestSchema,
   OutputGenerateRequestSchema,
@@ -26,6 +27,7 @@ import { NoSuchModelError, TypeValidationError, APICallError, NoObjectGeneratedE
 // (c73: GET /v2/outputs/types removed — FE uses GET /v2/workspace/tools)
 import { count, desc, eq, inArray } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
+import { z } from 'zod';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
@@ -40,6 +42,12 @@ import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import { type ToolOutputType } from './generator.ts';
 import { runOutputPipeline } from './pipeline.ts';
 import { renderOutputToMarkdown, splitTextToChunks } from './render.ts';
+
+/** JSON export is Zod-validated; markdown download is a raw Response (bypass object schema). */
+const OutputExportResponseSchema = z.union([
+  OutputExportJsonResponseSchema,
+  z.custom<Response>((value) => value instanceof Response),
+]);
 
 function requireOutputInNotebook(id: number, notebookId: number): typeof outputs.$inferSelect {
   const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
@@ -584,7 +592,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'output id');
       return handleExportOutput(id, nid, query.format);
     },
-    { query: OutputExportFormatQuerySchema },
+    { query: OutputExportFormatQuerySchema, response: OutputExportResponseSchema },
   )
   .post(
     '/notebooks/:nid/outputs/:id/convert-to-source',
@@ -629,7 +637,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
       const id = requirePositiveIntId(params.id, 'output id');
       return handleExportOutput(id, query.notebookId, query.format);
     },
-    { query: OutputExportQuerySchema },
+    { query: OutputExportQuerySchema, response: OutputExportResponseSchema },
   )
   .post(
     '/outputs/:id/convert-to-source',

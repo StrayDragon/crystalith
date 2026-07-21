@@ -1,5 +1,6 @@
 import {
   Empty204Schema,
+  NotebookCreateQuerySchema,
   NotebookCreateSchema,
   NotebookUpdateSchema,
   NotebookSchema,
@@ -17,7 +18,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { db } from '../../db/index.ts';
 import { notebooks, sessions, sourceTags, templates } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
-import { requirePositiveIntId, requireOptionalPositiveIntId } from '../../shared/ids.ts';
+import { requirePositiveIntId } from '../../shared/ids.ts';
 
 // ---------------------------------------------------------------------------
 // OpenAPI doc registration (manual spec — @elysiajs/openapi auto-gen uses
@@ -141,9 +142,7 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks',
     ({ body, query, set }) => {
-      const queryParams = query as { templateId?: string };
-      const templateIdRaw = queryParams.templateId;
-      const templateId = requireOptionalPositiveIntId(templateIdRaw, 'template id');
+      const templateId = query.templateId ?? null;
 
       const row = db().insert(notebooks).values({ name: body.name }).returning().get();
 
@@ -170,7 +169,7 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
       set.status = 201;
       return serializeNotebook(row);
     },
-    { body: NotebookCreateSchema, response: NotebookSchema },
+    { query: NotebookCreateQuerySchema, body: NotebookCreateSchema, response: NotebookSchema },
   )
 
   // Get a single notebook

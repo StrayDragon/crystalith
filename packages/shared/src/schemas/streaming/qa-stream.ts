@@ -6,9 +6,10 @@
 // the existing frontend renderer works with minimal adaptation.
 import { z } from 'zod';
 
-import { CitationSchema, IdSchema, JsonMetadataSchema } from '../common.js';
+import { CitationSchema, IdSchema, IsoTimestampSchema, JsonMetadataSchema } from '../common.js';
 import { desc } from '../i18n.js';
 import { ChatTurnSchema } from '../message.js';
+import { ExportSourceMetaSchema } from '../output.js';
 
 export const QaStreamChunkEventSchema = z
   .object({
@@ -140,6 +141,23 @@ export const QaExportQuerySchema = z
     description: desc('qa.export_query', '导出 QA 答案查询参数'),
   });
 export type QaExportQuery = z.infer<typeof QaExportQuerySchema>;
+
+/** JSON body for GET …/qa/export?format=json (markdown returns raw Response). */
+export const QaExportJsonResponseSchema = z
+  .object({
+    notebookId: IdSchema,
+    sessionId: IdSchema,
+    messageId: IdSchema,
+    question: z.string().nullable(),
+    answer: z.string(),
+    citations: z.array(CitationSchema),
+    sources: z.array(ExportSourceMetaSchema),
+    exportedAt: IsoTimestampSchema,
+  })
+  .openapi({
+    description: desc('qa.export_json', 'QA JSON 导出'),
+  });
+export type QaExportJsonResponse = z.infer<typeof QaExportJsonResponseSchema>;
 
 export const QaStreamEventNames = ['chunk', 'state_snapshot', 'done', 'error'] as const;
 export type QaStreamEventName = (typeof QaStreamEventNames)[number];
