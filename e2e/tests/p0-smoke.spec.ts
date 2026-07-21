@@ -151,6 +151,16 @@ test.describe('@p0 workspace smoke', () => {
     await expect(page.getByTestId(TestIds.topbarSearchTabDeep)).toBeVisible();
   });
 
+  test('S06b: deep tab shows DeepResearchDesk', async ({ page }) => {
+    await page.getByTestId(TestIds.topbarSearchTrigger).click();
+    await expect(page.getByTestId(TestIds.topbarSearchPanel)).toBeVisible();
+    await page.getByTestId(TestIds.topbarSearchTabDeep).click();
+    await expect(page.getByTestId(TestIds.deepResearchDesk)).toBeVisible();
+    await expect(page.getByTestId(TestIds.researchTopicInput)).toBeVisible();
+    await expect(page.getByTestId(TestIds.researchStartButton)).toBeVisible();
+    await expect(page.getByTestId(TestIds.researchRunQueue)).toBeVisible();
+  });
+
   test('S07: sort menu opens', async ({ page }) => {
     await page.getByTestId(TestIds.sourcesSortMenu).click();
     await expect(page.getByTestId(TestIds.sourcesSortMenuList)).toBeVisible();

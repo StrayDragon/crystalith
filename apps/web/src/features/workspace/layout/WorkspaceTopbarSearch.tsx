@@ -1,14 +1,13 @@
 /**
- * Workspace top-bar search (c75) — E1 anchored panel.
+ * Workspace top-bar search (c75/c77) — E1 anchored panel.
  * Fast Search: reuse useSources.handleSearch + SearchResultsQueue.
- * Deep Research: shell only (runtime pending rewrite).
+ * Deep Research: DeepResearchDesk (c77).
  */
 import type { ExtractorInfo, SourceFromUrlMode } from '@crystalith/shared';
 import { IconButton, Typography } from '@material-tailwind/react';
 import {
   ArrowForward as ArrowForwardIcon,
   Close as CloseIcon,
-  Psychology as PsychologyIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
@@ -19,6 +18,7 @@ import { useLayer } from '../../../shared/layer';
 import { TestIds, tid } from '../../../shared/testids';
 import { toast } from '../../../shared/toast';
 import type { AsyncStatus } from '../../../shared/types';
+import DeepResearchDesk from '../domains/research/DeepResearchDesk';
 import AddSearchResultDialog from '../domains/sources/AddSearchResultDialog';
 import type { ExtractorType } from '../domains/sources/components/sources-panel-types';
 import { useSourcesPanelAddFromSearch } from '../domains/sources/components/useSourcesPanelAddFromSearch';
@@ -128,32 +128,11 @@ function FastSearchBody({
   );
 }
 
-/** c75 shell — full Desk / xyflow / report UI lands in c77-deep-research-ui. */
-function DeepResearchShell() {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 py-10 px-4 text-center">
-      <PsychologyIcon className="text-indigo-400" style={{ fontSize: 36 }} />
-      <div className="text-sm font-medium text-gray-800 dark:text-slate-100">深度研究</div>
-      <Typography variant="small" className="text-gray-500 dark:text-slate-400 max-w-md">
-        节点化深度研究正在重建。当前无法启动任务；请使用「快速搜索」添加网络来源。
-      </Typography>
-      <button
-        type="button"
-        disabled
-        className="px-4 py-2 rounded-lg text-sm bg-gray-100 dark:bg-slate-800 text-gray-400 cursor-not-allowed"
-        onClick={() => toast.info('深度研究正在重建')}
-      >
-        开始深度研究（暂不可用）
-      </button>
-    </div>
-  );
-}
-
 export default function WorkspaceTopbarSearch({
   open,
   onOpenChange,
   isConnected,
-  notebookId: _notebookId,
+  notebookId,
   searchState,
   searchQueue,
   onSearch,
@@ -166,6 +145,7 @@ export default function WorkspaceTopbarSearch({
 }: WorkspaceTopbarSearchProps) {
   const [tab, setTab] = useState<TopbarSearchTab>('fast');
   const [searchQuery, setSearchQuery] = useState('');
+  const [detailOpen, setDetailOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null!);
   const { style: layerStyle } = useLayer('popover');
 
@@ -190,11 +170,12 @@ export default function WorkspaceTopbarSearch({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onOpenChange(false);
+      // Run detail (modal) owns Escape first; keep E1 mounted while detail is open.
+      if (e.key === 'Escape' && !detailOpen) onOpenChange(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onOpenChange]);
+  }, [open, onOpenChange, detailOpen]);
 
   useEffect(() => {
     if (!open || tab !== 'fast') return;
@@ -244,7 +225,13 @@ export default function WorkspaceTopbarSearch({
                 onClick={() => onOpenChange(false)}
                 aria-label="关闭搜索面板"
               />
-              <div className="absolute top-16 left-1/2 z-10 w-[min(960px,calc(100%-2rem))] -translate-x-1/2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl">
+              <div
+                className={
+                  tab === 'deep'
+                    ? 'absolute top-16 left-1/2 z-10 w-[min(1100px,calc(100%-2rem))] -translate-x-1/2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl'
+                    : 'absolute top-16 left-1/2 z-10 w-[min(960px,calc(100%-2rem))] -translate-x-1/2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl'
+                }
+              >
                 <div className="flex items-center justify-between gap-2 px-3 pt-3 pb-2 border-b border-gray-100 dark:border-slate-700">
                   <div
                     role="tablist"
@@ -306,13 +293,12 @@ export default function WorkspaceTopbarSearch({
                       defaultExtractor={defaultExtractor}
                     />
                   ) : (
-                    <DeepResearchShell />
+                    <DeepResearchDesk
+                      notebookId={notebookId}
+                      isConnected={isConnected}
+                      onDetailOpenChange={setDetailOpen}
+                    />
                   )}
-                  {!isConnected ? (
-                    <Typography variant="small" className="mt-2 text-amber-600 text-xs">
-                      {t('sources.research.backend_disconnected')}
-                    </Typography>
-                  ) : null}
                 </div>
               </div>
             </div>,

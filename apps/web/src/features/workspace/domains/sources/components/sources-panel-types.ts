@@ -9,7 +9,6 @@ import type {
 
 import type { AsyncStatus } from '../../../../../shared/types';
 import type { SourceItem } from '../../../shared/types';
-import type { useResearch } from '../../research/useResearch';
 import type {
   SearchQueueItem,
   SourceSortBy,
@@ -92,7 +91,5 @@ export interface SourcesPanelProps {
   notebookId?: number;
   onSelectedSourceIdsChange?: (selected: Record<number, boolean>) => void;
 }
-
-export type Research = ReturnType<typeof useResearch>;
 
 export type SourcesPanelViewProps = SourcesPanelProps;

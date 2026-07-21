@@ -25,30 +25,6 @@ vi.mock('react-virtuoso', async () => {
   };
 });
 
-// Mock reason: keep this test focused on SourcesPanel interaction wiring, not research hook internals.
-vi.mock('../research/useResearch', () => ({
-  useResearch: () => ({
-    sessions: [],
-    activeSession: null,
-    sseEvents: [],
-    isLoading: false,
-    fetchSessions: vi.fn(),
-    subscribeToSSE: vi.fn(),
-    unsubscribeFromSSE: vi.fn(),
-    clearEvents: vi.fn(),
-    fetchSession: vi.fn().mockResolvedValue(null),
-    startResearch: vi.fn(),
-    deleteSession: vi.fn(),
-    approveSearchPlan: vi.fn(),
-    modifySearchPlan: vi.fn(),
-    skipIteration: vi.fn(),
-    finishResearch: vi.fn(),
-    cancelResearch: vi.fn(),
-    resumeResearch: vi.fn().mockResolvedValue(true),
-    createSession: vi.fn().mockResolvedValue(null),
-  }),
-}));
-
 // Mock reason: isolate panel interaction tests from child component rendering details.
 vi.mock('./SearchResultsQueue', () => ({
   default: () => null,
@@ -56,11 +32,6 @@ vi.mock('./SearchResultsQueue', () => ({
 
 // Mock reason: isolate panel interaction tests from child component rendering details.
 vi.mock('./AddSearchResultDialog', () => ({
-  default: () => null,
-}));
-
-// Mock reason: isolate panel interaction tests from child component rendering details.
-vi.mock('../research/ResearchCapsule', () => ({
   default: () => null,
 }));
 
