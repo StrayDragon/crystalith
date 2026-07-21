@@ -30,13 +30,37 @@ export const WorkspaceToolSchema = z
   });
 export type WorkspaceTool = z.infer<typeof WorkspaceToolSchema>;
 
+/** Per-plugin entry under diagnostics.official (passthrough for forward-compatible keys). */
+export const WorkspaceToolOfficialDiagnosticSchema = z
+  .object({
+    hint: z.string().nullable().optional(),
+    status: z.string().optional(),
+    message: z.string().nullable().optional(),
+    errorCode: z.string().nullable().optional(),
+  })
+  .passthrough();
+export type WorkspaceToolOfficialDiagnostic = z.infer<typeof WorkspaceToolOfficialDiagnosticSchema>;
+
+/** Slides engine diagnostic blob on GET /v2/workspace/tools. */
+export const WorkspaceToolsSlidesDiagnosticSchema = z
+  .object({
+    available: z.boolean().optional(),
+    message: z.string().nullable().optional(),
+    hint: z.string().nullable().optional(),
+    activePluginId: z.string().nullable().optional(),
+    engine: z.string().nullable().optional(),
+    errorCode: z.string().nullable().optional(),
+  })
+  .passthrough();
+export type WorkspaceToolsSlidesDiagnostic = z.infer<typeof WorkspaceToolsSlidesDiagnosticSchema>;
+
 export const WorkspaceToolsDiagnosticsSchema = z.object({
   plugins: z.object({
     loaded: z.array(z.string()),
     skipped: z.record(z.string(), z.unknown()),
   }),
-  official: z.record(z.string(), z.unknown()),
-  slides: z.unknown().nullable(),
+  official: z.record(z.string(), WorkspaceToolOfficialDiagnosticSchema),
+  slides: WorkspaceToolsSlidesDiagnosticSchema.nullable(),
 });
 export type WorkspaceToolsDiagnostics = z.infer<typeof WorkspaceToolsDiagnosticsSchema>;
 

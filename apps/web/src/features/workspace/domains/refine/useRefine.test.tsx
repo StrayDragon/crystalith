@@ -92,12 +92,15 @@ test('normalizes slides tool config schema from workspace tools', async () => {
         tools: [
           {
             id: 'slides-slidev',
+            kind: 'outputType',
             label: '演示',
             description: '演示文稿',
             tone: 'indigo',
             outputType: 'SLIDES',
             prompt: '生成 slides',
+            isTool: true,
             enabled: true,
+            renderDescriptor: null,
             configSchema: {
               engine: 'slidev',
               preview: {
