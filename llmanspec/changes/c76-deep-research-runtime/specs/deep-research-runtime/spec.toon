@@ -4,7 +4,7 @@ ops[10]{op,req_id,title,statement,from,to,name}:
   add_requirement,r301,Create replaces 501 stub,"POST /v2/notebooks/:nid/research MUST 在合法 notebook 下创建 ResearchRun 并返回可追踪 id 与初始状态；MUST NOT 再以 501 NOT_IMPLEMENTED 作为成功创建路径。",null,null,null
   add_requirement,r302,List and get runs for desk queue,系统 MUST 提供 notebook 作用域的 listRuns 与 getRun；缺少 notebook 作用域时 MUST 拒绝全表列举。,null,null,null
   add_requirement,r303,Shared webSearch tool only,深研 Runtime 的外网检索 MUST 复用既有 searchWeb/SearXNG 实现；MUST NOT 在 research 模块内复制第二套 SearXNG fetch。,null,null,null
-  add_requirement,r304,H1 source scope defaults,创建 Run 时默认来源边界 MUST 为当前提供的勾选 sourceIds；当 sourceIds 为空时 MUST 允许外网自研并在 Run 元数据或响应中明示；系统 MUST 支持显式选择全库 scope。,null,null,null
+  add_requirement,r304,H1 explicit source and web toggles,"创建 ResearchRun 时 MUST 接受显式 useNotebookSources 与 allowWeb（默认皆为 true）；sourceIds MUST 仅表示深研配置台内选择、MUST NOT 隐式绑定工作区勾选状态；当 useNotebookSources 为 true 且 sourceIds 为空时 MUST 拒绝创建；当 useNotebookSources 与 allowWeb 皆为 false 时 MUST 拒绝创建；MUST NOT 在省略字段时静默改为仅外网自研。",null,null,null
   add_requirement,r305,L1 depth tiers,系统 MUST 支持浅/中/深三档深度并映射为 maxSearches 与 maxNodes（浅 8/12、中 20/30、深 40/60）；默认档 MUST 为中。,null,null,null
   add_requirement,r306,M1 confirm gates only,首发待确认 MUST 仅覆盖两类硬停：外网预算将尽与主控扩展新支路；系统 MUST 提供继续/出报告或批准支路/跳过收束的确认动作；MUST NOT 恢复逐步审批计划或强制转化弹窗。,null,null,null
   add_requirement,r307,Convert to note is PARAGRAPH with footnotes,显式 convertToNote MUST 将选定产物写入 Markdown PARAGRAPH Output；引用 MUST 按全局 citation map 序列化为 GFM 脚注形式；MUST NOT 在完成时自动写入笔记。,null,null,null
@@ -15,7 +15,7 @@ op_scenarios[10]{req_id,id,given,when,then,feature}:
   r301,"create-returns-run-id",notebook 存在且请求合法,客户端 POST 创建深研,系统返回 ResearchRun id 与初始状态且不得以 501 作为成功路径,true
   r302,"list-requires-notebook",系统中存在多个 notebook 的 Run,客户端省略 notebook 作用域调用 list,系统拒绝全表列举,true
   r303,"websearch-shared",顶栏直接搜索与深研均需外网检索,深研 Runtime 发起 web 搜索,走与 sources 网搜相同的 searchWeb 实现,true
-  r304,"empty-selection-allows-web",用户未勾选任何来源,创建深研 Run,允许外网自研并明示未选来源边界,true
+  r304,"toggles-require-explicit-selection",用户打开用来源开关但未在深研台勾选来源,尝试创建深研 Run,系统拒绝创建且不得静默改为仅外网,true
   r305,"default-medium-tier",用户未指定深度档位,创建深研 Run,系统使用中档预算 maxSearches=20 与 maxNodes=30,true
   r306,"budget-confirm",Run 外网预算将尽,主控需要继续消耗搜索额度,进入待确认并提供继续或出报告动作,true
   r307,"convert-note-footnotes",Run 已有带 citation map 的终稿,用户显式 convertToNote,写入 PARAGRAPH 且正文含 GFM 脚注投影,true

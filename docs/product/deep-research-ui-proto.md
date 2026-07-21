@@ -10,9 +10,11 @@
 
 E1 台 / F1 Run 大详情叠层 / G1 关详情保留 E1；深研 Tab 与直接搜索分栏。
 
+**H1′ D1**：创建表单含「使用笔记本来源」「同时分析外网」双开关（默认皆开）+ **台内来源多选列表**（拉取 notebook sources，不读工作区勾选）；开用来源但未选时禁用开始。
+
 ## 本文要钉的内容（grill 主题）
 
-1. DeepResearchDesk：配置表单（H1/L1）与队列卡片态
+1. DeepResearchDesk：配置表单（H1′ D1 双开关 + 台内来源多选 + L1）与队列卡片态
 2. ResearchRun 详情 Layer：xyflow 节点/边语义、报告入口
 3. Citation chip ↔ popover（复用现有 CitationsControl 与否）
 4. Convert 菜单信息架构

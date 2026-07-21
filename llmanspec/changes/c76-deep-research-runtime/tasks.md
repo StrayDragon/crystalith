@@ -15,7 +15,7 @@
 
 ## 3. Runtime 核心（后端 full）
 
-- [ ] 3.1 create / list / get（H1 sourceScope + L1 depth → maxSearches/maxNodes）
+- [ ] 3.1 create / list / get（H1′ D1 toggles + desk sourceIds + L1 depth → maxSearches/maxNodes）
 - [ ] 3.2 执行循环：tools 编排；共享 `searchWeb`；checkpoint；状态机
 - [ ] 3.3 GET SSE（或约定 stream）推送 graph/status patch；取消/abort
 - [ ] 3.4 M1 confirm API（预算将尽 / 扩支路）

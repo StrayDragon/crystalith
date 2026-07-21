@@ -22,7 +22,7 @@
 ## Architecture
 
 ```text
-POST /v2/notebooks/:nid/research          → create Run (H1/L1 config)
+POST /v2/notebooks/:nid/research          → create Run (H1′ D1 toggles + desk sourceIds + L1)
 GET  /v2/notebooks/:nid/research          → listRuns
 GET  /v2/notebooks/:nid/research/:rid     → getRun (graph + report summary)
 POST .../research/:rid/confirm            → M1 continue | finish-report | approve-branch | skip-branch
@@ -37,15 +37,16 @@ GET  .../research/:rid/stream             → graph/status patches (GET SSE，�
 
 ## Decisions
 
-| 主题       | 选择                          | 依据            |
-| ---------- | ----------------------------- | --------------- |
-| SSOT       | ResearchRun                   | Grill B         |
-| 笔记       | 显式 convert → PARAGRAPH      | B1 / I1         |
-| 引用导出   | GFM footnotes，无 MD 双向解析 | K1              |
-| 深度       | L1 三档                       | Grill L1        |
-| 确认       | M1 两类                       | Grill M1        |
-| Agent 框架 | AI SDK tools + 自研 loop      | NG4 / AGENTS.md |
-| FE         | 本 change 占位                | 用户确认范围    |
+| 主题       | 选择                                                               | 依据            |
+| ---------- | ------------------------------------------------------------------ | --------------- |
+| SSOT       | ResearchRun                                                        | Grill B         |
+| 笔记       | 显式 convert → PARAGRAPH                                           | B1 / I1         |
+| 引用导出   | GFM footnotes，无 MD 双向解析                                      | K1              |
+| 来源/外网  | 显式双开关 + 台内重选；默认皆开；空选禁用开始；不绑 workspace 勾选 | H1′ D1          |
+| 深度       | L1 三档                                                            | Grill L1        |
+| 确认       | M1 两类                                                            | Grill M1        |
+| Agent 框架 | AI SDK tools + 自研 loop                                           | NG4 / AGENTS.md |
+| FE         | 本 change 占位                                                     | 用户确认范围    |
 
 ## Risks
 
