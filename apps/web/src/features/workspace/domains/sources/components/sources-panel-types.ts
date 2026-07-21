@@ -95,6 +95,4 @@ export interface SourcesPanelProps {
 
 export type Research = ReturnType<typeof useResearch>;
 
-export type SourcesPanelViewProps = SourcesPanelProps & {
-  research: Research;
-};
+export type SourcesPanelViewProps = SourcesPanelProps;

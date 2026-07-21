@@ -7,7 +7,7 @@ import {
   LockOpen as LockOpenIcon,
   SettingsBrightness as SystemThemeIcon,
 } from '@mui/icons-material';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import ConfirmPopover from '../../../shared/ConfirmPopover';
 import { TestIds, tid } from '../../../shared/testids';
@@ -42,6 +42,8 @@ interface WorkspaceHeaderProps {
   onToggleLock?: () => void;
   onOpenCatalog?: () => void;
   onOpenCommandPalette?: () => void;
+  /** c75: top-bar search / research entry */
+  topbarSearch?: ReactNode;
 }
 
 const THEME_OPTIONS: Array<{
@@ -98,6 +100,7 @@ export default function WorkspaceHeader({
   onToggleLock,
   onOpenCatalog,
   onOpenCommandPalette,
+  topbarSearch,
 }: WorkspaceHeaderProps) {
   const [notebookSwitcherOpen, setNotebookSwitcherOpen] = useState(false);
   const [notebookSwitcherRequest, setNotebookSwitcherRequest] =
@@ -191,6 +194,12 @@ export default function WorkspaceHeader({
           onCreateNotebookFromTemplate={onCreateNotebookFromTemplate}
         />
       </div>
+
+      {topbarSearch ? (
+        <div className="flex-1 flex justify-center min-w-0 px-2 order-last sm:order-none w-full sm:w-auto basis-full sm:basis-auto">
+          {topbarSearch}
+        </div>
+      ) : null}
 
       <div className="flex items-center gap-1.5">
         {/* Subtle lock status indicator */}

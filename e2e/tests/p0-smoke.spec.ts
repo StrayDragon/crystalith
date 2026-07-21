@@ -140,10 +140,15 @@ test.describe('@p0 workspace smoke', () => {
     await expect(page.getByTestId(TestIds.sourcesUploadInput)).toBeAttached();
   });
 
-  test('S06: search input and submit exist', async ({ page }) => {
+  test('S06: topbar search opens E1 panel with fast search', async ({ page }) => {
+    await expect(page.getByTestId(TestIds.topbarSearchTrigger)).toBeVisible();
+    await page.getByTestId(TestIds.topbarSearchTrigger).click();
+    await expect(page.getByTestId(TestIds.topbarSearchPanel)).toBeVisible();
     await expect(page.getByTestId(TestIds.sourcesSearchInput)).toBeVisible();
     await expect(page.getByTestId(TestIds.sourcesSearchSubmit)).toBeVisible();
     await expect(page.getByTestId(TestIds.sourcesModeToggle)).toBeVisible();
+    await expect(page.getByTestId(TestIds.topbarSearchTabFast)).toBeVisible();
+    await expect(page.getByTestId(TestIds.topbarSearchTabDeep)).toBeVisible();
   });
 
   test('S07: sort menu opens', async ({ page }) => {

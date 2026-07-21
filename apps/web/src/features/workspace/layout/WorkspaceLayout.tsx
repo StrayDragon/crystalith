@@ -42,6 +42,7 @@ import DiagnosticsDialog from './overlays/DiagnosticsDialog';
 import SystemConfigDialog from './overlays/SystemConfigDialog';
 import WorkspaceHeader from './WorkspaceHeader';
 import WorkspaceTabs from './WorkspaceTabs';
+import WorkspaceTopbarSearch from './WorkspaceTopbarSearch';
 
 const WORKSPACE_WIDGET_TO_PANEL = {
   sources: 'sources',
@@ -388,12 +389,12 @@ export default function WorkspaceLayout() {
     uploadFileInputRef.current?.click();
   }, []);
 
+  const [topbarSearchOpen, setTopbarSearchOpen] = useState(false);
+  const [topbarSearchOpenToken, setTopbarSearchOpenToken] = useState(0);
+
   const handleFocusSourceSearch = useCallback(() => {
-    const el = document.getElementById('source-search-input') as HTMLInputElement | null;
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.focus();
-    el.select();
+    setTopbarSearchOpenToken((n) => n + 1);
+    setTopbarSearchOpen(true);
   }, []);
 
   const handleFocusChat = useCallback(() => {
@@ -667,8 +668,8 @@ export default function WorkspaceLayout() {
               }}
               onClearUploadQueue={sources.clearUploadQueue}
               searchState={sources.searchState}
-              onSearch={(...args) => {
-                void sources.handleSearch(...args);
+              onSearch={() => {
+                /* web search moved to top bar (c75) */
               }}
               onAddSourceFromUrl={sources.addSourceFromUrl}
               onOpenUrlImport={handleOpenAddSourceFromUrl}
@@ -690,7 +691,7 @@ export default function WorkspaceLayout() {
               isLoading={sources.isLoading}
               removeState={sources.removeState}
               isFullscreen={false}
-              searchQueue={sources.searchQueue}
+              searchQueue={[]}
               onRemoveSearchQueueItem={sources.removeSearchQueueItem}
               onRemoveResultsFromQueue={sources.removeResultsFromQueue}
               extractors={sources.extractors}
@@ -879,6 +880,25 @@ export default function WorkspaceLayout() {
           onToggleLock={showCanvasControls ? toggleLock : undefined}
           onOpenCatalog={showCanvasControls ? overlays.toggleCatalog : undefined}
           onOpenCommandPalette={overlays.openCommandPalette}
+          topbarSearch={
+            <WorkspaceTopbarSearch
+              open={topbarSearchOpen}
+              onOpenChange={setTopbarSearchOpen}
+              openRequestToken={topbarSearchOpenToken}
+              isConnected={sources.isConnected}
+              notebookId={activeNotebookId ?? undefined}
+              searchState={sources.searchState}
+              searchQueue={sources.searchQueue}
+              onSearch={(...args) => {
+                void sources.handleSearch(...args);
+              }}
+              onRemoveSearchQueueItem={sources.removeSearchQueueItem}
+              onRemoveResultsFromQueue={sources.removeResultsFromQueue}
+              onAddSourceFromUrl={sources.addSourceFromUrl}
+              availableExtractors={sources.availableExtractors}
+              defaultExtractor={sources.defaultExtractor}
+            />
+          }
         />
       </div>
 
