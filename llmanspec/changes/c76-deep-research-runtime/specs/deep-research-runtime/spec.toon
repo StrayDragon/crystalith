@@ -1,16 +1,17 @@
 kind: llman.sdd.delta
-ops[10]{op,req_id,title,statement,from,to,name}:
+ops[11]{op,req_id,title,statement,from,to,name}:
   add_requirement,r300,ResearchRun is process SSOT,系统 MUST 以 notebook 作用域的 ResearchRun 作为深研过程 SSOT（图、checkpoint、权威报告与 citation map 挂在 Run 上）；MUST NOT 把长跑过程态的唯一权威塞进 Output 行。,null,null,null
   add_requirement,r301,Create replaces 501 stub,"POST /v2/notebooks/:nid/research MUST 在合法 notebook 下创建 ResearchRun 并返回可追踪 id 与初始状态；MUST NOT 再以 501 NOT_IMPLEMENTED 作为成功创建路径。",null,null,null
   add_requirement,r302,List and get runs for desk queue,系统 MUST 提供 notebook 作用域的 listRuns 与 getRun；缺少 notebook 作用域时 MUST 拒绝全表列举。,null,null,null
   add_requirement,r303,Shared webSearch tool only,深研 Runtime 的外网检索 MUST 复用既有 searchWeb/SearXNG 实现；MUST NOT 在 research 模块内复制第二套 SearXNG fetch。,null,null,null
-  add_requirement,r304,H1 explicit source and web toggles,"创建 ResearchRun 时 MUST 接受显式 useNotebookSources 与 allowWeb（默认皆为 true）；sourceIds MUST 仅表示深研配置台内选择、MUST NOT 隐式绑定工作区勾选状态；当 useNotebookSources 为 true 且 sourceIds 为空时 MUST 拒绝创建；当 useNotebookSources 与 allowWeb 皆为 false 时 MUST 拒绝创建；MUST NOT 在省略字段时静默改为仅外网自研。",null,null,null
+  add_requirement,r304,H1 explicit source and web toggles,创建 ResearchRun 时 MUST 接受显式 useNotebookSources 与 allowWeb（默认皆为 true）；sourceIds MUST 仅表示深研配置台内选择、MUST NOT 隐式绑定工作区勾选状态；当 useNotebookSources 为 true 且 sourceIds 为空时 MUST 拒绝创建；当 useNotebookSources 与 allowWeb 皆为 false 时 MUST 拒绝创建；MUST NOT 在省略字段时静默改为仅外网自研。,null,null,null
   add_requirement,r305,L1 depth tiers,系统 MUST 支持浅/中/深三档深度并映射为 maxSearches 与 maxNodes（浅 8/12、中 20/30、深 40/60）；默认档 MUST 为中。,null,null,null
   add_requirement,r306,M1 confirm gates only,首发待确认 MUST 仅覆盖两类硬停：外网预算将尽与主控扩展新支路；系统 MUST 提供继续/出报告或批准支路/跳过收束的确认动作；MUST NOT 恢复逐步审批计划或强制转化弹窗。,null,null,null
   add_requirement,r307,Convert to note is PARAGRAPH with footnotes,显式 convertToNote MUST 将选定产物写入 Markdown PARAGRAPH Output；引用 MUST 按全局 citation map 序列化为 GFM 脚注形式；MUST NOT 在完成时自动写入笔记。,null,null,null
   add_requirement,r308,Convert to source is retrievable,显式 convertToSource MUST 将来源入库并进入可嵌入索引路径，使得后续对话检索能够命中转化内容。,null,null,null
   add_requirement,r309,Report uses structured citations,Run 权威报告 MUST 使用结构化正文加全局 citation map（可复用 Citation：chunk/页/段落/snippet）；交互预览以该 SSOT 为准，笔记导出仅为投影。,null,null,null
-op_scenarios[10]{req_id,id,given,when,then,feature}:
+  add_requirement,r310,Interactive prune and fork on live runs,在 running 或 awaiting_confirm 状态时系统 MUST 支持对研究图节点的剪枝与 fork；fork MUST 与 M1 扩展支路共用能力面；completed/failed/cancelled 时图 MUST 只读且 MUST NOT 在同一 Run 上继续扩展（改方向须新 Run，除非后续 P2 明确允许从节点 fork 新 Run）。,null,null,null
+op_scenarios[11]{req_id,id,given,when,then,feature}:
   r300,"run-holds-graph-and-report",用户已创建一次深研 Run,系统推进研究并生成报告,图与权威报告及 citation map 均挂在该 ResearchRun 上，而非仅存在于 Output 行,true
   r301,"create-returns-run-id",notebook 存在且请求合法,客户端 POST 创建深研,系统返回 ResearchRun id 与初始状态且不得以 501 作为成功路径,true
   r302,"list-requires-notebook",系统中存在多个 notebook 的 Run,客户端省略 notebook 作用域调用 list,系统拒绝全表列举,true
@@ -21,3 +22,4 @@ op_scenarios[10]{req_id,id,given,when,then,feature}:
   r307,"convert-note-footnotes",Run 已有带 citation map 的终稿,用户显式 convertToNote,写入 PARAGRAPH 且正文含 GFM 脚注投影,true
   r308,"convert-source-rag",用户将证据或报告转为来源,转化完成并完成索引,对话检索可以命中转化内容,true
   r309,"structured-report-ssot",报告已合成,客户端读取 Run 报告,返回结构化章节与全局 citation map,true
+  r310,"prune-while-running",Run 处于 running,用户对中间节点执行剪枝,该子树被标记废弃且后续编排不再扩展该支路,true

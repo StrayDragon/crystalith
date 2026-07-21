@@ -18,7 +18,7 @@ E1 台 / F1 Run 大详情叠层 / G1 关详情保留 E1；深研 Tab 与直接�
 
 1. DeepResearchDesk：配置表单（H1′ D1 双开关 + 台内来源多选 + L1）与队列卡片态
 2. Run 详情：默认/主表面 = **可交互图**；报告为终局阅读面（无并列「研究思路」页）
-3. 剪枝 / fork 的触发时机与 API 对齐（见 runtime-spec）
+3. 剪枝 / fork：**U2a** — `running`/`awaiting_confirm` 可操作；完成后只读；改方向 → 新 Run
 4. Citation chip ↔ popover（复用现有 CitationsControl 与否）
 5. Convert 菜单信息架构
 6. 待确认（M1）CTA 文案与位置

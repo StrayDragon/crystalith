@@ -56,9 +56,19 @@ GET `…/research/:rid/stream`（SSE，对齐 c70）。事件：
 
 **产品形态补充**：图即思路（可剪枝 / fork）；终局以报告为主，无并列「研究思路」文档页。`graph_patch` + 后续 prune/fork API 为数据面。
 
+## 4. Graph interaction（U2a）
+
+| 动作  | 时机                                   | 语义                                                                                              |
+| ----- | -------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| prune | `running` \| `awaiting_confirm`        | 废弃子树，后续不再扩展；证据是否仍可被报告引用 = 实现默认「可引用已产出证据，跳过废弃支路新检索」 |
+| fork  | 同上                                   | 从节点开新支路（可选 user hint）；与 M1「扩支路」同一能力面                                       |
+| 只读  | `completed` \| `failed` \| `cancelled` | 可浏览图；改方向 → 新 Run（P2：从节点 fork 新 Run）                                               |
+
+API 占位：`POST …/research/:rid/nodes/:nodeId/prune`、`…/fork`（body 可含 `hint`）。
+
 ## 待钉（grill 主题）
 
-1. 图节点状态枚举与边标签；**prune / fork** 请求语义与对 M1「扩支路」的关系
+1. 图节点状态枚举与边标签集合
 2. Report JSON 形状与脚注 serializer
 3. convertToNote / convertToSource 请求体（artifactRef）
 4. 错误码与取消语义
