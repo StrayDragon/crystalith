@@ -17,7 +17,7 @@ import {
   isFallbackOutputPayload,
 } from '../../shared/outputPayload';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
-import type { OutputItem, OutputTypeId } from '../../shared/types';
+import type { OutputItem, OutputTypeId, SlidesOutputContent } from '../../shared/types';
 import { EXPORT_FORMAT_LABELS } from './exporters';
 import FlashcardViewer from './FlashcardViewer';
 import GenericOutputRenderer from './GenericOutputRenderer';
@@ -40,6 +40,20 @@ interface OutputContentProps {
 type BundleRenderer = (content: unknown, isFallback?: boolean) => ReactNode;
 
 const EMPTY_OUTPUT_CONTENT: Record<string, never> = {};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isBundleRenderer(value: unknown): value is BundleRenderer {
+  return typeof value === 'function';
+}
+
+function readBundleExport(mod: unknown, exportName: string): BundleRenderer | null {
+  if (!isRecord(mod)) return null;
+  const exported = mod[exportName];
+  return isBundleRenderer(exported) ? exported : null;
+}
 
 export default function OutputContent({ output, onRetry, onDelete }: OutputContentProps) {
   const content = output.content ?? EMPTY_OUTPUT_CONTENT;
@@ -79,8 +93,8 @@ export default function OutputContent({ output, onRetry, onDelete }: OutputConte
 
     void loader()
       .then((mod) => {
-        const exported = (mod as unknown as Record<string, unknown>)[frontendBundleExport];
-        if (typeof exported !== 'function') {
+        const exported = readBundleExport(mod, frontendBundleExport);
+        if (!exported) {
           if (import.meta.env.DEV) {
             console.warn(
               `Invalid frontend bundle export "${frontendBundleExport}" for "${frontendBundleId}"`,
@@ -89,7 +103,7 @@ export default function OutputContent({ output, onRetry, onDelete }: OutputConte
           return;
         }
         if (cancelled) return;
-        setBundleRenderer(() => exported as BundleRenderer);
+        setBundleRenderer(() => exported);
       })
       .catch((error: unknown) => {
         if (import.meta.env.DEV) {
@@ -138,8 +152,8 @@ export default function OutputContent({ output, onRetry, onDelete }: OutputConte
           ) : null}
         </div>
         <div className="mt-6 text-xs text-gray-400 dark:text-slate-500">
-          {typeof content === 'object' && content !== null
-            ? Object.keys(content as Record<string, unknown>).length > 0
+          {isRecord(content)
+            ? Object.keys(content).length > 0
               ? '输出存在部分数据处理异常'
               : '输出内容为空'
             : '输出内容格式异常'}
@@ -148,44 +162,44 @@ export default function OutputContent({ output, onRetry, onDelete }: OutputConte
     );
   }
 
+  const mindmap = typeId === 'MINDMAP' ? decodeOutputContent('MINDMAP', content) : null;
+  const faq = typeId === 'FAQ' ? decodeOutputContent('FAQ', content) : null;
+  const quiz = typeId === 'QUIZ' ? decodeOutputContent('QUIZ', content) : null;
+  const guide = typeId === 'GUIDE' ? decodeOutputContent('GUIDE', content) : null;
+  const timeline = typeId === 'TIMELINE' ? decodeOutputContent('TIMELINE', content) : null;
+  const briefing = typeId === 'BRIEFING' ? decodeOutputContent('BRIEFING', content) : null;
+  const slides = typeId === 'SLIDES' ? decodeOutputContent('SLIDES', content) : null;
+
   const body = bundleRenderer ? (
     bundleRenderer(content, isFallback)
-  ) : typeId === 'MINDMAP' &&
-    content &&
-    typeof content === 'object' &&
-    'root' in (content as Record<string, unknown>) ? (
+  ) : mindmap ? (
     <div className="StructuredMindmapInteractive h-[400px]">
-      <MindmapViewer
-        data={{ root: normalizeMindmapNode((content as Record<string, unknown>).root) }}
-      />
+      <MindmapViewer data={{ root: normalizeMindmapNode(mindmap.root) }} />
     </div>
-  ) : typeId === 'FAQ' && content && decodeOutputContent('FAQ', content) ? (
+  ) : faq ? (
     <div className="StructuredOutputFaq">
-      <FlashcardViewer items={decodeOutputContent('FAQ', content)!.items} />
+      <FlashcardViewer items={faq.items} />
     </div>
-  ) : typeId === 'QUIZ' && content && decodeOutputContent('QUIZ', content) ? (
+  ) : quiz ? (
     <div className="StructuredOutputQuiz">
-      <QuizRunner questions={decodeOutputContent('QUIZ', content)!.questions} />
+      <QuizRunner questions={quiz.questions} />
     </div>
-  ) : typeId === 'GUIDE' && content && decodeOutputContent('GUIDE', content) ? (
+  ) : guide ? (
     <div className="StructuredOutputGuide">
-      <GuideChecklist modules={decodeOutputContent('GUIDE', content)!.modules} />
+      <GuideChecklist modules={guide.modules} />
     </div>
-  ) : typeId === 'TIMELINE' && content && decodeOutputContent('TIMELINE', content) ? (
+  ) : timeline ? (
     <div className="StructuredOutputTimeline">
-      <TimelineViewer events={decodeOutputContent('TIMELINE', content)!.events} />
+      <TimelineViewer events={timeline.events} />
     </div>
-  ) : typeId === 'BRIEFING' && content && decodeOutputContent('BRIEFING', content) ? (
+  ) : briefing ? (
     <div className="StructuredOutputBriefing">
-      <ReportViewer sections={decodeOutputContent('BRIEFING', content)!.sections} />
+      <ReportViewer sections={briefing.sections} />
     </div>
   ) : renderDescriptor ? (
     <GenericOutputRenderer content={content} renderDescriptor={renderDescriptor} />
-  ) : typeId === 'SLIDES' &&
-    content &&
-    typeof content === 'object' &&
-    'markdown' in (content as Record<string, unknown>) ? (
-    <SlidesMarkdownRenderer content={content as Record<string, unknown>} />
+  ) : slides && typeof slides.markdown === 'string' ? (
+    <SlidesMarkdownRenderer content={slides} />
   ) : (
     <pre className="StructuredOutputRaw rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700 whitespace-pre-wrap dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200">
       {JSON.stringify(output.content ?? {}, null, 2)}
@@ -268,7 +282,7 @@ export default function OutputContent({ output, onRetry, onDelete }: OutputConte
  * slides, instead of falling back to raw JSON (which was the default for
  * SLIDES outputs that have no render_descriptor).
  */
-function SlidesMarkdownRenderer({ content }: { content: Record<string, unknown> }) {
+function SlidesMarkdownRenderer({ content }: { content: SlidesOutputContent }) {
   const markdown = typeof content.markdown === 'string' ? content.markdown : '';
   const title = typeof content.title === 'string' ? content.title : '幻灯片';
   const engine = typeof content.engine === 'string' ? content.engine : 'slidev';
