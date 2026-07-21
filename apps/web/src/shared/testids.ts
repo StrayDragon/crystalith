@@ -104,6 +104,7 @@ export const TestIds = {
   deepResearchDesk: 'deep-research-desk',
   researchTopicInput: 'research-topic-input',
   researchStartButton: 'research-start-button',
+  researchStartHint: 'research-start-hint',
   researchSourceMultiSelect: 'research-source-multi-select',
   researchRunQueue: 'research-run-queue',
   researchRunCard: 'research-run-card',

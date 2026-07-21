@@ -4,7 +4,7 @@
  * Deep Research: DeepResearchDesk (c77).
  */
 import type { ExtractorInfo, SourceFromUrlMode } from '@crystalith/shared';
-import { IconButton, Typography } from '@material-tailwind/react';
+import { IconButton, Spinner } from '@material-tailwind/react';
 import {
   ArrowForward as ArrowForwardIcon,
   Close as CloseIcon,
@@ -78,6 +78,20 @@ function FastSearchBody({
   availableExtractors: ExtractorInfo[];
   defaultExtractor: ExtractorType | null;
 }) {
+  const [elapsedSec, setElapsedSec] = useState(0);
+
+  useEffect(() => {
+    if (!isSearching) {
+      setElapsedSec(0);
+      return;
+    }
+    const started = Date.now();
+    const id = window.setInterval(() => {
+      setElapsedSec(Math.floor((Date.now() - started) / 1000));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [isSearching]);
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
@@ -105,14 +119,25 @@ function FastSearchBody({
           className="rounded-lg w-10 h-10 bg-blue-500 hover:bg-blue-600"
           {...tid(TestIds.sourcesSearchSubmit)}
           onClick={onSubmit}
+          disabled={isSearching}
         >
-          <ArrowForwardIcon style={{ fontSize: 16 }} />
+          {isSearching ? (
+            <Spinner className="h-4 w-4 text-white" />
+          ) : (
+            <ArrowForwardIcon style={{ fontSize: 16 }} />
+          )}
         </IconButton>
       </div>
       {isSearching ? (
-        <Typography variant="small" className="text-[11px] text-gray-600 font-medium">
-          {t('sources.search.searching')}
-        </Typography>
+        <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50/80 px-3 py-2 text-[11px] text-blue-900">
+          <Spinner className="h-3.5 w-3.5 text-blue-600 mt-0.5 flex-shrink-0" />
+          <div className="min-w-0 space-y-0.5">
+            <p className="font-medium">{t('sources.search.searching_detail')}</p>
+            <p className="text-blue-800/80">
+              {t('sources.search.searching_elapsed', { seconds: String(elapsedSec) })}
+            </p>
+          </div>
+        </div>
       ) : null}
       <div className="max-h-[min(420px,50vh)] overflow-y-auto">
         <SearchResultsQueue

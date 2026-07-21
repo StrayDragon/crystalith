@@ -403,7 +403,7 @@ export function useSources() {
         mode,
         status: 'loading',
         results: [],
-        notice: '',
+        notice: '正在查询网络搜索引擎…',
         createdAt: Date.now(),
       };
       setSearchQueue((prev) => {

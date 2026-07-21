@@ -20,6 +20,7 @@
 - `app.database.path` — SQLite database file path
 - `app.rag.*` — RAG strategy configurations
 - `app.source_ingestion.*` — PDF/HTML/URL extraction settings
+- `search.searxng.host` — SearXNG SSOT (`CL_SEARXNG_HOST`); used by `searchWeb` **and** `/health/dependencies` diagnostics. Empty host disables both. Do not configure a separate `optional_services.searxng.endpoint`.
 
 ## Template Variables
 
@@ -28,8 +29,8 @@
 - `env.*` — from environment variables (`.env` overrides)
 - `secret.*` — from `config/secret.env`
 
-Env file SSOT: `packages/shared/src/schemas/env.ts` → `just gen-env-examples`  
-(produces `.env.example` and `config/secret.env.example` with `CL_*` keys).  
+Env file SSOT: `packages/shared/src/schemas/env.ts` → `just gen-env-examples`
+(produces `.env.example` and `config/secret.env.example` with `CL_*` keys).
 Prefer copying those examples. `just upsert-env-configs` / `scripts/init_config.sh` is **legacy** (subset + some old key names).
 
 Example:
