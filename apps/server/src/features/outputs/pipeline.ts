@@ -23,6 +23,10 @@ import {
 import { generateOutputByType, buildOutputQuery, type ToolOutputType } from './generator.ts';
 import { generateFallbackContent, needsRepair, postprocessOutput } from './postprocess.ts';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 export type GenerationPreference = 'quality' | 'speed';
 
 /** Maps preference to topK for RAG retrieval. */
@@ -208,14 +212,9 @@ async function finishPipeline(
     sanitized.changed || warnings.length > 0,
     allWarnings,
   );
-  if (
-    sanitized.changed &&
-    finalContent &&
-    typeof finalContent === 'object' &&
-    !Array.isArray(finalContent)
-  ) {
+  if (sanitized.changed && isRecord(finalContent)) {
     finalContent = {
-      ...(finalContent as Record<string, unknown>),
+      ...finalContent,
       citations_sanitized: true,
     };
   }
@@ -227,6 +226,7 @@ async function finishPipeline(
   }
 
   // Persist — content now has resolved citation objects (not bare integers)
+  const content = isRecord(finalContent) ? finalContent : {};
   const row = db()
     .insert(outputs)
     .values({
@@ -234,7 +234,7 @@ async function finishPipeline(
       type: input.type,
       prompt: input.prompt ?? null,
       chunkIds: chunkRows.map((c) => c.id),
-      content: finalContent as Record<string, unknown>,
+      content,
     })
     .returning()
     .get();

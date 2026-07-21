@@ -6,6 +6,10 @@ import type { Citation } from '@crystalith/shared';
 
 import { hydrateCitations } from '../../shared/citations.ts';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 export interface ChunkRow {
   id: number;
   text: string;
@@ -60,9 +64,9 @@ function mapCitationsIntoContent(
   if (Array.isArray(content)) {
     return content.map((item) => mapCitationsIntoContent(item, citationMap, fallback));
   }
-  if (content && typeof content === 'object' && !Array.isArray(content)) {
+  if (isRecord(content)) {
     const result: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(content as Record<string, unknown>)) {
+    for (const [key, value] of Object.entries(content)) {
       if (key === 'citations' && Array.isArray(value)) {
         // Resolve numeric indices to full Citation objects (v1 _resolve_citations)
         const indices = value
@@ -117,9 +121,9 @@ function sanitizeRecursive(
   if (Array.isArray(payload)) {
     return payload.map((item) => sanitizeRecursive(item, maxIndex, warnings, markChanged));
   }
-  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+  if (isRecord(payload)) {
     const result: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(payload as Record<string, unknown>)) {
+    for (const [key, value] of Object.entries(payload)) {
       if (key === 'citations' && Array.isArray(value)) {
         const { clean, didChange } = sanitizeCitationList(value, maxIndex);
         if (didChange) {
@@ -177,8 +181,8 @@ export function markPostprocessed(
   _postprocessed: boolean,
   warnings: string[],
 ): unknown {
-  if (content && typeof content === 'object' && !Array.isArray(content)) {
-    const result = { ...(content as Record<string, unknown>) };
+  if (isRecord(content)) {
+    const result = { ...content };
     result._postprocessed = true;
     if (warnings.length > 0) result._warnings = warnings;
     return result;
