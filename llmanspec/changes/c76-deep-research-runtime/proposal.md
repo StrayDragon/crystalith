@@ -11,7 +11,7 @@ depends_on: [c75-workspace-topbar-search]
 1. **ResearchRun SSOT（B）**：notebook 作用域下 create / list / get；图、checkpoint、权威 report、citation map 挂在 Run；**不**自动写 Output（B1）。
 2. **替换 501 stub**：创建 Run 返回可追踪 id + 初始状态；执行可异步推进（stream/patch 契约在 apply 中定稿）。
 3. **原子 tools**：共享既有 `searchWeb`；`retrieveSources` / evidence 读；`synthesizeReport`；禁止深研内第二套 SearXNG。
-4. **来源边界（H1）**：create 默认勾选 sourceIds；空则允许外网自研并在 Run 元数据明示；可选 `sourceScope=library`。
+4. **来源 / 外网（H1′ D1）**：create 带显式 `useNotebookSources`（默认 true）与 `allowWeb`（默认 true）；`sourceIds` 仅来自深研台选择器，**不**读工作区勾选；开用来源但未选 id → 拒创建/禁用开始；至少一端为 true。
 5. **深度档位（L1）**：浅 8/12、中 20/30（默认）、深 40/60 → `maxSearches` / `maxNodes`。
 6. **M1 确认**：仅「预算将尽」与「扩展支路」两类硬停 API（approve / skip-and-finish）；无逐步审批、无转化弹窗。
 7. **转化（G7 / I1 / K1）**：`convertToNote` → Markdown `PARAGRAPH`（GFM `[^n]` 脚注）；`convertToSource` → ingest + embed；转化后可被对话检索。
