@@ -701,22 +701,71 @@ export function synthesizeReport(row: RunRow): ResearchReport {
   };
 }
 
+function isPruneProtectedNodeId(nodeId: string): boolean {
+  // c76 graph has no role field yet — protect root (and future conclusion ids).
+  return nodeId.startsWith('node_root') || nodeId.startsWith('node_conclusion');
+}
+
+/**
+ * Prune closure (r316 / update-research-prune-cascade) — keep in sync with
+ * Lab `collectPruneClosure` in apps/web/.../fake/deriveLabState.ts.
+ * - never includes protected sink/root nodes
+ * - does not walk `merge` edges (failed merges stay attached)
+ * - cascades only when every non-protected inbound parent is already in the
+ *   closure or already pruned (shared children with a live parent stay live)
+ */
+export function collectResearchPruneClosure(
+  rootId: string,
+  nodes: ResearchNode[],
+  edges: ResearchEdge[],
+): Set<string> {
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  if (!byId.has(rootId) || isPruneProtectedNodeId(rootId)) return new Set();
+
+  const children = new Map<string, string[]>();
+  const parents = new Map<string, string[]>();
+  for (const e of edges) {
+    if (e.kind === 'merge') continue;
+    const outs = children.get(e.source) ?? [];
+    outs.push(e.target);
+    children.set(e.source, outs);
+    const inns = parents.get(e.target) ?? [];
+    inns.push(e.source);
+    parents.set(e.target, inns);
+  }
+
+  const out = new Set<string>([rootId]);
+  const stack = [rootId];
+  while (stack.length) {
+    const id = stack.pop()!;
+    for (const childId of children.get(id) ?? []) {
+      if (out.has(childId)) continue;
+      if (isPruneProtectedNodeId(childId)) continue;
+      const blocking = (parents.get(childId) ?? []).some((pid) => {
+        if (out.has(pid)) return false;
+        if (isPruneProtectedNodeId(pid)) return false;
+        if (byId.get(pid)?.conclusionStatus === 'pruned') return false;
+        return true;
+      });
+      if (blocking) continue;
+      out.add(childId);
+      stack.push(childId);
+    }
+  }
+  return out;
+}
+
 export function pruneNode(notebookId: number, runId: number, nodeId: string): ResearchRun {
   const row = requireRun(notebookId, runId);
   assertLiveMutable(row.status);
   const graph = getGraph(row);
-  const toPrune = new Set<string>();
-  const collect = (id: string) => {
-    if (toPrune.has(id)) return;
-    toPrune.add(id);
-    for (const e of graph.edges) {
-      if (e.source === id) collect(e.target);
-    }
-  };
   if (!graph.nodes.some((n) => n.id === nodeId)) {
     throw new AppHttpError(ErrorCode.NOT_FOUND, `Node ${nodeId} not found`);
   }
-  collect(nodeId);
+  if (isPruneProtectedNodeId(nodeId)) {
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Cannot prune protected node ${nodeId}`);
+  }
+  const toPrune = collectResearchPruneClosure(nodeId, graph.nodes, graph.edges);
   for (const n of graph.nodes) {
     if (toPrune.has(n.id)) {
       n.conclusionStatus = 'pruned';
@@ -729,7 +778,7 @@ export function pruneNode(notebookId: number, runId: number, nodeId: string): Re
   emitGraphPatch(runId, {
     nodes: graph.nodes.filter((n) => toPrune.has(n.id)) as ResearchNode[],
   });
-  emitLog(runId, `已剪枝节点 ${nodeId}`);
+  emitLog(runId, `已剪枝节点 ${nodeId}${toPrune.size > 1 ? `（级联 ${toPrune.size}）` : ''}`);
   return serializeRun(requireRun(notebookId, runId));
 }
 
