@@ -40,6 +40,12 @@ describe('needsRepair', () => {
     expect(needsRepair('FAQ', { _fallback: true, items: [] })).toBe(false);
   });
 
+  it('returns true for non-object content', () => {
+    expect(needsRepair('FAQ', null)).toBe(true);
+    expect(needsRepair('FAQ', [])).toBe(true);
+    expect(needsRepair('FAQ', 'x')).toBe(true);
+  });
+
   it('returns true for empty FAQ items', () => {
     expect(needsRepair('FAQ', { items: [] })).toBe(true);
   });
@@ -60,7 +66,27 @@ describe('needsRepair', () => {
     expect(needsRepair('BULLETS', { items: [{ text: 'point' }] })).toBe(false);
   });
 
+  it('returns true for empty TIMELINE/QUIZ/GUIDE/BRIEFING/MINDMAP', () => {
+    expect(needsRepair('TIMELINE', { events: [] })).toBe(true);
+    expect(needsRepair('QUIZ', { questions: [] })).toBe(true);
+    expect(needsRepair('GUIDE', { modules: [] })).toBe(true);
+    expect(needsRepair('BRIEFING', { sections: [] })).toBe(true);
+    expect(needsRepair('MINDMAP', {})).toBe(true);
+  });
+
+  it('returns false for complete TIMELINE/QUIZ/GUIDE/BRIEFING/MINDMAP', () => {
+    expect(needsRepair('TIMELINE', { events: [{ date: '1', event: 'e' }] })).toBe(false);
+    expect(needsRepair('QUIZ', { questions: [{ question: 'q' }] })).toBe(false);
+    expect(needsRepair('GUIDE', { modules: [{ title: 'm' }] })).toBe(false);
+    expect(needsRepair('BRIEFING', { sections: [{ heading: 'h' }] })).toBe(false);
+    expect(needsRepair('MINDMAP', { root: { label: 'r' } })).toBe(false);
+  });
+
   it('returns true for empty PARAGRAPH text', () => {
     expect(needsRepair('PARAGRAPH', { text: '   ' })).toBe(true);
+  });
+
+  it('returns false for unknown output types', () => {
+    expect(needsRepair('SLIDES', { anything: true })).toBe(false);
   });
 });

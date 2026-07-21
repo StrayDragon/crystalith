@@ -77,4 +77,21 @@ describe('c59: ensureMinimumContentFields nested backfill', () => {
     const item = (content.items as Array<Record<string, unknown>>)[0]!;
     expect(item.citations).toEqual([1]);
   });
+
+  it('BULLETS/TIMELINE/QUIZ items get citations:[1] if missing', () => {
+    const bullets = ensureMinimumContentFields({ items: [{ text: 'b' }] }, 'BULLETS');
+    expect((bullets.items as Array<Record<string, unknown>>)[0]!.citations).toEqual([1]);
+
+    const timeline = ensureMinimumContentFields({ events: [{ event: 'e' }] }, 'TIMELINE');
+    expect((timeline.events as Array<Record<string, unknown>>)[0]!.citations).toEqual([1]);
+
+    const quiz = ensureMinimumContentFields({ questions: [{ question: 'q' }] }, 'QUIZ');
+    expect((quiz.questions as Array<Record<string, unknown>>)[0]!.citations).toEqual([1]);
+  });
+
+  it('STRUCTURED ensures bullets and terms arrays', () => {
+    const content = ensureMinimumContentFields({}, 'STRUCTURED');
+    expect(content.bullets).toEqual([]);
+    expect(content.terms).toEqual([]);
+  });
 });
