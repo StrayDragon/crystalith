@@ -163,6 +163,10 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
       .where(eq(sources.id, sourceRow.id))
       .run();
 
+    // c74: async auto-summary after ready (must not block ingest response)
+    const { scheduleSourceSummary } = await import('./source-summary.ts');
+    scheduleSourceSummary(sourceRow.id);
+
     return {
       sourceId: sourceRow.id,
       chunkCount: chunked.length,

@@ -361,6 +361,9 @@ async function handleReEmbedSource(id: number, notebookId: number) {
     await strategy.indexSource(id, row.notebookId);
     db().update(sources).set({ status: 'ready' }).where(eq(sources.id, id)).run();
     bumpSourcesEpoch(row.notebookId);
+    // c74: re-embed success → refresh auto-summary asynchronously
+    const { scheduleSourceSummary } = await import('./source-summary.ts');
+    scheduleSourceSummary(id, { force: true });
     return { sourceId: id, reEmbedded: true as const };
   } catch (error) {
     db()
@@ -950,6 +953,8 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
           db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sid)).run();
           reembedded.push(sid);
           results.push({ sourceId: sid, ok: true });
+          const { scheduleSourceSummary } = await import('./source-summary.ts');
+          scheduleSourceSummary(sid, { force: true });
         } catch (error) {
           const msg = error instanceof Error ? error.message : String(error);
           db()
@@ -1051,6 +1056,8 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
           const strategy = new EmbedStrategy();
           await strategy.indexSource(sourceRow.id, nid);
           db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)).run();
+          const { scheduleSourceSummary } = await import('./source-summary.ts');
+          scheduleSourceSummary(sourceRow.id);
         } catch (error) {
           db()
             .update(sources)

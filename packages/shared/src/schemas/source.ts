@@ -549,7 +549,10 @@ export type SourceSearchResponse = z.infer<typeof SourceSearchResponseSchema>;
 // Source summary + per-source QA
 // ---------------------------------------------------------------------------
 
-/** Live wire uses `generatedAt` (not `createdAt`) — keep Eden/Zod aligned with handlers. */
+/**
+ * Live wire uses `generatedAt` (not `createdAt`) — keep Eden/Zod aligned with handlers.
+ * `generatedAt: null` means not yet generated (GET empty state; no LLM side effect).
+ */
 export const SourceSummarySchema = z
   .object({
     sourceId: IdSchema,
@@ -557,7 +560,7 @@ export const SourceSummarySchema = z
     keyPoints: z.array(z.string()),
     topics: z.array(z.string()),
     wordCount: z.number().int().nonnegative(),
-    generatedAt: IsoTimestampSchema,
+    generatedAt: IsoTimestampSchema.nullable(),
   })
   .openapi({
     description: desc('source.summary', '来源摘要'),

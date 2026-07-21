@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "workspace-ui-panels"
 purpose: 定义 Workspace 业务面板（Sources/Chat/Studio/Research 与引用交互）的最小 UI 契约：面板装配、流式反馈、状态与取消语义、错误可恢复路径。该规范聚焦“用户可观察行为与稳定边界”，不绑定具体组件实现。
 valid_scope[2]: src/,tests/
-requirements[15]{req_id,title,statement}:
+requirements[16]{req_id,title,statement}:
   r59,Panel composition is stable,Workspace MUST 以稳定的面板集合装配 Sources/Chat/Studio/Research 等能力，并保持各面板的基本区域划分与入口可发现。
   r117,Streaming UX supports send/chunk/done/error and cancel,涉及流式输出的面板（如 Chat/Research）MUST 显式呈现 send/chunk/done/error 状态，并 MUST 支持用户取消以停止继续追加内容。
   r154,"Chat input supports /prompt directives as user-facing commands","Workspace 的 Chat 面板 MUST 允许用户在输入框中使用 `/prompt:<preset> <query>` 指令来请求受控的预设生成模式。"
@@ -18,7 +18,8 @@ requirements[15]{req_id,title,statement}:
   "frontend-extractor-types-must-not-duplicate",Frontend MUST NOT keep stale duplicate type definitions that diverge from the SSOT,"前端 MUST NOT 在 apps/web 本地保留与 `@crystalith/shared` / shared-types（SSOT）重复且字段不全的类型定义（如 ExtractorInfoResponse 缺 priority/displayName/requiresApiKey/requiresService/recoveryHint 等字段）。重复类型 MUST 删除以消除混淆，统一从 `@crystalith/shared` 导入。"
   r283,Citation UI distinguishes source count from chunk count,Chat 引用入口与引用详情弹层 MUST 同时展示唯一来源数与片段（citation/chunk）数，文案 MUST 避免将片段数表述为来源数（例如「来自 N 个来源 · K 个片段」）。
   "studio-panel-lazy-loads-output-body","Studio panel MUST lazy-load output body",工作台 Studio/笔记列首屏 MUST 仅依赖 outputs 列表摘要渲染条目。用户选中或打开某条时 MUST 再请求详情拉取全文；已加载详情 SHOULD 缓存以避免重复请求。
-scenarios[21]{req_id,id,given,when,then,feature}:
+  "source-detail-summary-actions","Source detail MUST expose generate and refresh-regenerate",来源详情自动摘要区：无缓存时 MUST 提供「生成摘要」操作以 POST 生成；有缓存时 MUST 用既有刷新控件触发 POST 重新生成（MUST NOT 依赖 GET 产生副作用）。
+scenarios[23]{req_id,id,given,when,then,feature}:
   r59,"panels-are-consistently-discoverable","",用户进入 Workspace 并切换面板,系统 SHALL 以一致的方式展示面板入口与基本区域，不因刷新或重连丢失,true
   r117,"cancel-stops-streaming","",用户在流式生成过程中点击取消,系统 SHALL 停止继续追加 chunk，并展示取消后的可恢复状态（如可重试）,true
   r154,"user-can-send-a-prompt-message","","用户在 Chat 输入框中输入以 `/prompt:` 开头的内容并发送（无论是否打开自动补全）",UI SHALL 将该文本作为一次消息发送（不应在前端预过滤为“非法输入”）,true
@@ -40,3 +41,5 @@ scenarios[21]{req_id,id,given,when,then,feature}:
   "frontend-extractor-types-must-not-duplicate","stale-extractor-type-removed",apps/web 存在字段不全的本地 ExtractorInfoResponse,the change is applied,the stale type MUST be deleted and all imports MUST reference the complete `@crystalith/shared` version,true
   r283,"citation-label-shows-sources-and-chunks",一条回答含 3 条 citation 且均来自同一 source,用户查看引用按钮或引用详情标题,UI SHALL 展示来源数为 1 且片段数为 3 的区分文案,true
   "studio-panel-lazy-loads-output-body","open-fetches-detail",Studio 列已显示摘要列表,用户点击一条 output,前端 SHALL 请求详情并渲染全文，首屏列表请求 MUST NOT 以拉全文为前置,false
+  "source-detail-summary-actions","empty-shows-generate",GET 返回空态摘要,用户查看自动摘要区,界面 SHALL 展示生成摘要入口且不假装已有摘要正文,false
+  "source-detail-summary-actions","refresh-icon-regenerates",已展示缓存摘要,用户点击摘要区刷新图标,客户端 SHALL POST summary 并更新展示,false

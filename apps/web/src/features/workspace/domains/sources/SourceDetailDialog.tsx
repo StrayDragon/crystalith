@@ -1,6 +1,7 @@
 import type { Chunk as ChunkRead, SourceSummary } from '@crystalith/shared';
 import {
   IconButton,
+  Button,
   Typography,
   Chip,
   Spinner,
@@ -66,10 +67,26 @@ interface SourceBrief {
   keyPoints: string[];
   topics: string[];
   wordCount: number;
-  generatedAt: Date;
+  generatedAt: Date | null;
 }
 
-// Cache for source briefs and chunks
+function hasGeneratedBrief(brief: SourceBrief | null): brief is SourceBrief & {
+  generatedAt: Date;
+} {
+  return Boolean(brief?.generatedAt && brief.summary);
+}
+
+function briefFromResponse(response: SourceSummary): SourceBrief {
+  return {
+    summary: response.summary,
+    keyPoints: response.keyPoints,
+    topics: response.topics,
+    wordCount: response.wordCount,
+    generatedAt: response.generatedAt ? new Date(response.generatedAt) : null,
+  };
+}
+
+// Cache for source briefs and chunks (GET/POST results only — empty GET is cacheable too)
 const briefCache = new Map<number, SourceBrief>();
 const chunksCache = new Map<number, ChunkRead[]>();
 
@@ -141,6 +158,16 @@ async function fetchSourceSummary(notebookId: number, sourceId: number): Promise
   return data;
 }
 
+async function postSourceSummary(notebookId: number, sourceId: number): Promise<SourceSummary> {
+  const { data, error } = await api.v2
+    .notebooks({ nid: notebookId })
+    .sources({ sid: sourceId })
+    .summary.post();
+  if (error) throw new Error(parseServerError(error).message);
+  if (!data) throw new Error('source summary POST returned an empty payload');
+  return data;
+}
+
 async function fetchSourceChunks(notebookId: number, sourceId: number): Promise<ChunkRead[]> {
   const { data, error } = await api.v2
     .notebooks({ nid: notebookId })
@@ -188,7 +215,7 @@ export default function SourceDetailDialog({
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Load or generate brief when source changes
+  // Load cached brief when source changes (GET is side-effect free)
   useEffect(() => {
     if (!source || !open) return;
 
@@ -202,7 +229,7 @@ export default function SourceDetailDialog({
 
     if (!notebookId || !isConnected) {
       setBrief(null);
-      setBriefError('未连接到后端服务，无法生成摘要。');
+      setBriefError('未连接到后端服务，无法加载摘要。');
       setIsBriefLoading(false);
       return;
     }
@@ -211,19 +238,18 @@ export default function SourceDetailDialog({
     if (fetchedSourceRef.current === source.id) return;
     fetchedSourceRef.current = source.id;
 
-    // Call real API
     setIsBriefLoading(true);
     setBriefError('');
     fetchSourceSummary(notebookId, source.id)
       .then((response) => {
-        const newBrief: SourceBrief = {
-          summary: response.summary,
-          keyPoints: response.keyPoints,
-          topics: response.topics,
-          wordCount: response.wordCount,
-          generatedAt: new Date(response.generatedAt),
-        };
-        briefCache.set(source.id, newBrief);
+        const newBrief = briefFromResponse(response);
+        // Only persist generated summaries in memory; empty state re-GETs on reopen
+        // so async post-ingest pregenerate can become visible.
+        if (hasGeneratedBrief(newBrief)) {
+          briefCache.set(source.id, newBrief);
+        } else {
+          briefCache.delete(source.id);
+        }
         setBrief(newBrief);
       })
       .catch((error) => {
@@ -279,6 +305,7 @@ export default function SourceDetailDialog({
       setChunks([]);
       setChunksError('');
       setActiveTab('overview');
+      fetchedSourceRef.current = null;
     }
   }, [open]);
 
@@ -338,34 +365,26 @@ export default function SourceDetailDialog({
     }
   }, [inputValue, isLoading, source, notebookId, isConnected]);
 
-  const handleRefreshBrief = useCallback(() => {
+  const handleGenerateOrRefreshBrief = useCallback(() => {
     if (!source) return;
     briefCache.delete(source.id);
-    setBrief(null);
     setBriefError('');
     setIsBriefLoading(true);
 
     if (!notebookId || !isConnected) {
-      setBriefError('未连接到后端服务，无法刷新摘要。');
+      setBriefError('未连接到后端服务，无法生成摘要。');
       setIsBriefLoading(false);
       return;
     }
 
-    // Call real API
-    fetchSourceSummary(notebookId, source.id)
+    postSourceSummary(notebookId, source.id)
       .then((response) => {
-        const newBrief: SourceBrief = {
-          summary: response.summary,
-          keyPoints: response.keyPoints,
-          topics: response.topics,
-          wordCount: response.wordCount,
-          generatedAt: new Date(response.generatedAt),
-        };
+        const newBrief = briefFromResponse(response);
         briefCache.set(source.id, newBrief);
         setBrief(newBrief);
       })
       .catch((error) => {
-        setBriefError(error.message || '刷新摘要失败');
+        setBriefError(error.message || '生成摘要失败');
       })
       .finally(() => {
         setIsBriefLoading(false);
@@ -641,7 +660,7 @@ export default function SourceDetailDialog({
                       <Typography variant="small" className="font-semibold text-xs">
                         自动摘要
                       </Typography>
-                      {summaryCollapsed && brief && (
+                      {summaryCollapsed && hasGeneratedBrief(brief) && (
                         <Typography
                           variant="small"
                           className="text-xs text-gray-400 dark:text-slate-500 font-normal ml-2 truncate max-w-[300px]"
@@ -655,11 +674,11 @@ export default function SourceDetailDialog({
                         <ExpandLessIcon className="h-4 w-4 text-gray-400 dark:text-slate-500 ml-auto" />
                       )}
                     </button>
-                    {!summaryCollapsed && (
+                    {!summaryCollapsed && hasGeneratedBrief(brief) && (
                       <IconButton
                         variant="text"
                         size="sm"
-                        onClick={handleRefreshBrief}
+                        onClick={handleGenerateOrRefreshBrief}
                         disabled={isBriefLoading}
                         className={`rounded-full w-6 h-6 text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:text-slate-200 ${isBriefLoading ? 'animate-spin' : ''}`}
                         aria-label="刷新摘要"
@@ -678,10 +697,21 @@ export default function SourceDetailDialog({
                           <div className="h-4 bg-gray-200 rounded w-4/6 animate-pulse" />
                         </div>
                       ) : briefError ? (
-                        <Typography variant="small" color="red" className="text-xs">
-                          {briefError}
-                        </Typography>
-                      ) : brief ? (
+                        <div className="space-y-2">
+                          <Typography variant="small" color="red" className="text-xs">
+                            {briefError}
+                          </Typography>
+                          <Button
+                            size="sm"
+                            variant="outlined"
+                            className="normal-case text-xs"
+                            onClick={handleGenerateOrRefreshBrief}
+                            disabled={!notebookId || !isConnected}
+                          >
+                            生成摘要
+                          </Button>
+                        </div>
+                      ) : hasGeneratedBrief(brief) ? (
                         <div className="space-y-3">
                           <Typography
                             variant="small"
@@ -741,7 +771,25 @@ export default function SourceDetailDialog({
                             </Typography>
                           </div>
                         </div>
-                      ) : null}
+                      ) : (
+                        <div className="space-y-2">
+                          <Typography
+                            variant="small"
+                            className="text-xs text-gray-500 dark:text-slate-400"
+                          >
+                            尚未生成自动摘要
+                          </Typography>
+                          <Button
+                            size="sm"
+                            variant="outlined"
+                            className="normal-case text-xs"
+                            onClick={handleGenerateOrRefreshBrief}
+                            disabled={!notebookId || !isConnected || isBriefLoading}
+                          >
+                            生成摘要
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
