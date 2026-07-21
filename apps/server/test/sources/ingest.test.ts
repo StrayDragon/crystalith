@@ -11,9 +11,11 @@ import { eq } from 'drizzle-orm';
 // may touch the AI runtime). Source ingest itself doesn't call the LLM, but
 // the worker loop is started on server import, so keep the mock in place.
 mock.module('ai', () => ({
+  Output: { object: <T>(spec: T) => spec },
   generateObject: async () => ({ object: {} }),
   generateText: async () => ({ text: 'mocked' }),
   streamText: () => ({
+    stream: (async function* () {})(),
     fullStream: (async function* () {})(),
     textStream: (async function* () {})(),
   }),

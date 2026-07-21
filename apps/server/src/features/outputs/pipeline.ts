@@ -1,6 +1,6 @@
 import type { LanguageModelV4 } from '@ai-sdk/provider';
 import type { Citation } from '@crystalith/shared';
-// Output pipeline — RAG retrieval → build context → generateObject →
+// Output pipeline — RAG retrieval → build context → generateText+Output →
 // postprocess → map citations → persist.
 //
 // c38: aligned with v1 output_graph.py 5-node pipeline:
@@ -174,7 +174,7 @@ async function finishPipeline(
 
   // c50: LLM repair loop (v1 output_graph.py:595-719 PostprocessOutput node).
   // When preference=quality AND needs_repair detects salvageable-but-incomplete
-  // output, run a second generateObject pass to try to fix it before falling
+  // output, run a second structured-output pass to try to fix it before falling
   // back. Falls back gracefully if the repair pass also fails.
   if (input.preference === 'quality' && needsRepair(input.type, object)) {
     try {

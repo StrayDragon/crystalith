@@ -123,7 +123,7 @@ export async function streamQa(opts: QaHandlerOptions): Promise<Response> {
     try {
       const { text } = await generateText({
         model: opts.model,
-        system: systemWithContext,
+        instructions: systemWithContext,
         messages: [...opts.history, { role: 'user' as const, content: opts.question }],
       });
       const parsed = parseStatsPresetOutput(text);
@@ -326,7 +326,7 @@ export async function generateQaDirect(opts: QaHandlerOptions): Promise<QaDirect
   const systemWithContext = withOptionalSourceMaterial(opts.systemPrompt, judgment.context);
   const { text } = await generateText({
     model: opts.model,
-    system: systemWithContext,
+    instructions: systemWithContext,
     messages: [...opts.history, { role: 'user' as const, content: opts.question }],
   });
 

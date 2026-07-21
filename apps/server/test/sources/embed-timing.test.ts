@@ -6,9 +6,11 @@ import { afterAll, beforeAll, describe, expect, it, mock } from 'bun:test';
 
 // Stub 'ai' (server import starts worker loop).
 mock.module('ai', () => ({
+  Output: { object: <T>(spec: T) => spec },
   generateObject: async () => ({ object: {} }),
   generateText: async () => ({ text: 'mocked' }),
   streamText: () => ({
+    stream: (async function* () {})(),
     fullStream: (async function* () {})(),
     textStream: (async function* () {})(),
   }),

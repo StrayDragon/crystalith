@@ -41,19 +41,19 @@ export function getOrm(): Orm {
 // `installAiMock`) at module top-level BEFORE importing the module under test.
 // ---------------------------------------------------------------------------
 
-/** A single part yielded by a mocked streamText fullStream. */
+/** A single part yielded by a mocked streamText stream. */
 export type MockStreamPart =
   | { type: 'text-delta'; text: string }
   | { type: 'tool-result'; toolName: string; output: unknown }
   | { type: 'error'; error: string };
 
 export interface AiMockOptions {
-  /** Returns a structured object for a generateObject call (keyed by prompt). */
+  /** Returns a structured object for a generateText+Output.object call (keyed by prompt). */
   object?: (prompt: string) => unknown;
   /** Plain text for generateText / default streamText text-delta. */
   text?: string;
   /**
-   * Custom stream parts for streamText's fullStream. When omitted, a single
+   * Custom stream parts for streamText's stream. When omitted, a single
    * text-delta carrying `text` is yielded. Use this to emit tool-result +
    * text-delta sequences (e.g. QA citation flow).
    */
@@ -66,19 +66,32 @@ export interface AiMockOptions {
  */
 export function installAiMock(opts: AiMockOptions): void {
   const text = opts.text ?? 'mocked answer';
+  const makePartsStream = () =>
+    (async function* () {
+      if (opts.streamParts) {
+        for await (const p of opts.streamParts()) yield p;
+      } else {
+        yield { type: 'text-delta', text } as MockStreamPart;
+      }
+    })();
+
   mock.module('ai', () => ({
+    Output: {
+      object: <T>(spec: T) => spec,
+    },
     generateObject: async ({ prompt }: { prompt?: string }) => ({
       object: opts.object?.(prompt ?? '') ?? {},
     }),
-    generateText: async () => ({ text }),
+    generateText: async ({ prompt, output }: { prompt?: string; output?: unknown }) => {
+      if (output) {
+        return { output: opts.object?.(prompt ?? '') ?? {}, text };
+      }
+      return { text };
+    },
     streamText: () => ({
-      fullStream: (async function* () {
-        if (opts.streamParts) {
-          for await (const p of opts.streamParts()) yield p;
-        } else {
-          yield { type: 'text-delta', text } as MockStreamPart;
-        }
-      })(),
+      stream: makePartsStream(),
+      // Keep fullStream alias for any leftover callers during migration.
+      fullStream: makePartsStream(),
       // streamText consumers in this codebase also read .textStream (QA SSE
       // relay); provide it so they don't crash.
       textStream: (async function* () {

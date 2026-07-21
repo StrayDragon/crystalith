@@ -1,7 +1,7 @@
 import type { LanguageModelV4 } from '@ai-sdk/provider';
 // AI middleware — retry with exponential backoff for transient provider errors.
 //
-// Wraps a LanguageModelV4 so `generateText`/`streamText`/`generateObject`
+// Wraps a LanguageModelV4 so `generateText`/`streamText`
 // automatically retry on rate-limit (429) and 5xx errors.
 //
 // c40: aligned with v1 retry.py — honors Retry-After header, includes the

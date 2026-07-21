@@ -164,7 +164,7 @@ async function generateSummaryPayload(
       const { text } = await generateText({
         model,
         abortSignal: AbortSignal.timeout(30_000),
-        system:
+        instructions:
           '你是一个文档摘要助手。请根据提供的文档内容生成：1. 一段简洁的摘要（2-3句话）2. 4个关键要点（每个要点一句话）3. 3个主题标签。请用中文回复，格式如下：\n摘要：<摘要内容>\n要点：\n- <要点1>\n- <要点2>\n- <要点3>\n- <要点4>\n主题：<主题1>、<主题2>、<主题3>',
         prompt: `请为以下文档「${source.filename}」生成摘要：\n\n${context}`,
       });

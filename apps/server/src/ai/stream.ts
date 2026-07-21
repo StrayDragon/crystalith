@@ -1,6 +1,6 @@
 import type { LanguageModelV4 } from '@ai-sdk/provider';
 import type { ChatTurn, Citation, ContextStats } from '@crystalith/shared';
-// Streaming — relay Vercel AI SDK `streamText` fullStream parts into SSE
+// Streaming — relay Vercel AI SDK `streamText` stream parts into SSE
 // events compatible with the v1 frontend chat consumer (`useChat.ts`).
 //
 // SSE event contract (backward-compatible with v1):
@@ -38,7 +38,7 @@ export interface StreamQaOptions {
    */
   contextStats?: ContextStats;
   /**
-   * Optional sink for tool-result events emitted during the fullStream loop.
+   * Optional sink for tool-result events emitted during the stream loop.
    * Each tool call's result is forwarded here so the caller can accumulate
    * retrieved chunks (or other tool outputs) for citation resolution.
    */
@@ -82,14 +82,14 @@ export function streamQaResponse(opts: StreamQaOptions): Response {
 
         const result = streamText({
           model: opts.model,
-          system: opts.systemPrompt,
+          instructions: opts.systemPrompt,
           messages: opts.messages.map((m) => ({ role: m.role, content: m.content })),
           tools: opts.tools,
           stopWhen: isStepCount(opts.maxSteps ?? 5),
         });
 
         let accumulated = '';
-        for await (const part of result.fullStream) {
+        for await (const part of result.stream) {
           // Relay text deltas and errors to the SSE stream; forward tool
           // results to the caller's sink (so it can accumulate retrieved
           // chunks for citation resolution). Other part types (reasoning,

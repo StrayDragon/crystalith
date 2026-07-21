@@ -4,14 +4,14 @@ import {
   type ToolOutputType,
   type ModelConfig,
 } from '@crystalith/shared';
-// Structured output generation — generateObject wrapper that dispatches on
-// the shared output-type Zod schemas.
+// Structured output generation — generateText + Output.object wrapper that
+// dispatches on the shared output-type Zod schemas.
 //
 // Each of the 7 "tool" output types (FAQ, GUIDE, TIMELINE, MINDMAP, QUIZ,
 // BRIEFING, SLIDES) has a dedicated Zod content schema in
 // @crystalith/shared. `generateOutput` resolves the model, calls
-// `generateObject` with the right schema, and returns the validated object.
-import { generateObject, isStepCount } from 'ai';
+// `generateText` with `Output.object`, and returns the validated object.
+import { generateText, Output, isStepCount } from 'ai';
 import { z } from 'zod';
 
 import { getModelById, getDefaultChatModel, getCompletionOptions } from '../shared/config.ts';
@@ -46,7 +46,7 @@ export interface GenerateOutputResult<T extends ToolOutputType> {
 export async function generateOutput<T extends ToolOutputType>(
   opts: GenerateOutputOptions & { type: T },
 ): Promise<GenerateOutputResult<T>> {
-  const schema = OutputContentSchemaByType[opts.type] as z.ZodTypeAny;
+  const schema = OutputContentSchemaByType[opts.type] as z.ZodType;
 
   const model = opts.model ?? (await resolveModelFromConfig(opts.modelId));
   const wrapped = withRetry(model);
@@ -54,10 +54,10 @@ export async function generateOutput<T extends ToolOutputType>(
   const systemPrompt = opts.systemPrompt ?? defaultSystemPrompt(opts.type, opts.context);
   const co = getCompletionOptions();
 
-  const result = await generateObject({
+  const result = await generateText({
     model: wrapped,
-    schema,
-    system: systemPrompt,
+    output: Output.object({ schema }),
+    instructions: systemPrompt,
     prompt: opts.prompt,
     ...(opts.maxTokens !== undefined ? { maxOutputTokens: opts.maxTokens } : {}),
     temperature: opts.temperature ?? co.temperature,
@@ -66,9 +66,13 @@ export async function generateOutput<T extends ToolOutputType>(
     ...(co.stop !== undefined ? { stopSequences: co.stop } : {}),
   });
 
+  if (result.output === null || result.output === undefined) {
+    throw new Error(`No structured ${opts.type} output generated`);
+  }
+
   return {
     type: opts.type,
-    content: result.object as GenerateOutputResult<T>['content'],
+    content: result.output as GenerateOutputResult<T>['content'],
     usage: result.usage
       ? {
           promptTokens: result.usage.inputTokens ?? 0,
