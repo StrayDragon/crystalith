@@ -122,10 +122,66 @@ const STUDIO_MARKDOWN_STREAM_CHANNEL: AsyncApiChannel = {
   ],
 };
 
+const RESEARCH_STREAM_CHANNEL: AsyncApiChannel = {
+  name: 'researchStream',
+  description: 'SSE stream for ResearchRun progress (R3b). GET subscribe.',
+  address: '/v2/notebooks/{nid}/research/{rid}/stream',
+  method: 'GET',
+  events: [
+    {
+      name: 'status',
+      description: 'ResearchRun status transition.',
+      payload: {
+        type: 'object',
+        properties: { status: { type: 'string' }, reason: { type: 'string' } },
+        required: ['status'],
+      },
+    },
+    {
+      name: 'graph_patch',
+      description: 'Incremental graph upsert/remove (D1).',
+      payload: { type: 'object' },
+    },
+    {
+      name: 'confirm',
+      description: 'M1 hard-stop awaiting user confirm (budget | expand_branch).',
+      payload: { type: 'object' },
+    },
+    {
+      name: 'report_ready',
+      description: 'Structured report is available on the run.',
+      payload: {
+        type: 'object',
+        properties: { runId: { type: 'integer' } },
+        required: ['runId'],
+      },
+    },
+    {
+      name: 'log',
+      description: 'Human-readable progress log line.',
+      payload: {
+        type: 'object',
+        properties: { message: { type: 'string' }, at: { type: 'string' } },
+        required: ['message'],
+      },
+    },
+    {
+      name: 'error',
+      description: 'Error aligned with ErrorEnvelope.',
+      payload: {
+        type: 'object',
+        properties: { errorCode: { type: 'string' }, message: { type: 'string' } },
+        required: ['errorCode', 'message'],
+      },
+    },
+  ],
+};
+
 const ALL_CHANNELS = [
   QA_STREAM_CHANNEL,
   STUDIO_OUTLINE_STREAM_CHANNEL,
   STUDIO_MARKDOWN_STREAM_CHANNEL,
+  RESEARCH_STREAM_CHANNEL,
 ] as const;
 
 /** Generate the AsyncAPI 3.0 document. */

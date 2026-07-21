@@ -1,10 +1,11 @@
 /**
- * Deep Research — frontend hook shell (pending full rewrite).
+ * Deep Research — frontend hook shell.
  *
- * Backend only exposes POST …/research → 501. UI chrome stays so SourcesPanel /
- * capsules / detail panels keep compiling; no real sessions, SSE, or HITL.
+ * Backend ResearchRun API is live (c76). Full Desk / xyflow / report UI is
+ * `c77-deep-research-ui` — this hook stays a compile-time shell so SourcesPanel
+ * chrome keeps working until c77 lands.
  *
- * REWRITE MARKER: restore real Eden calls + state once the new runtime exists.
+ * REWRITE MARKER (c77): wire Eden list/get/stream/confirm + Desk state.
  */
 import { useCallback, useState } from 'react';
 
@@ -31,7 +32,7 @@ export interface ResearchSessionItem {
 }
 
 export interface ResearchSessionDetail extends ResearchSessionItem {
-  // Loose until rewrite — detail/timeline panels still expect rich step/result shapes.
+  // Loose until c77 — detail/timeline panels still expect rich step/result shapes.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- stub UI shell
   steps: any[];
   finalReport?: string | null;
@@ -39,7 +40,7 @@ export interface ResearchSessionDetail extends ResearchSessionItem {
   aggregatedResults?: any[] | null;
 }
 
-/** Loose SSE shape for thinkingTimeline / detail panel props (REWRITE MARKER). */
+/** Loose SSE shape for thinkingTimeline / detail panel props (REWRITE MARKER c77). */
 export interface SSEEvent {
   type: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- stub UI shell
@@ -69,7 +70,7 @@ export interface UseResearchResult {
   setActiveSession: (session: ResearchSessionDetail | null) => void;
 }
 
-const STUB_MSG = '深度研究尚未实现，等待重写';
+const STUB_MSG = '深度研究 UI 尚未接入（见 c77-deep-research-ui）';
 
 export function useResearch(notebookId: number | undefined): UseResearchResult {
   const [activeSession, setActiveSession] = useState<ResearchSessionDetail | null>(null);
@@ -80,16 +81,18 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     setError(`${label}: ${STUB_MSG}`);
   }, []);
 
-  /** Only live call: surfaces backend 501 / STUB_MSG. Never creates a session. */
+  /** Probe create with H1′ body; UI still does not own the Desk flow (c77). */
   const createSession = useCallback(
-    async (topic: string, maxIterations = 4): Promise<ResearchSessionDetail | null> => {
+    async (topic: string, _maxIterations = 4): Promise<ResearchSessionDetail | null> => {
       if (!notebookId) return null;
       setIsLoading(true);
       setError('');
       try {
         const { error: postErr } = await api.v2.notebooks({ nid: notebookId }).research.post({
           topic,
-          maxIterations,
+          useNotebookSources: false,
+          allowWeb: true,
+          depth: 'medium',
         });
         setError(postErr ? parseServerError(postErr).message : STUB_MSG);
       } catch (error) {

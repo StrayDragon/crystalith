@@ -28,6 +28,8 @@ export const ErrorCode = {
   MODEL_ERROR: 'MODEL_ERROR',
   NOT_IMPLEMENTED: 'NOT_IMPLEMENTED',
   CONNECTOR_UNAVAILABLE: 'CONNECTOR_UNAVAILABLE',
+  RESEARCH_INVALID_STATE: 'RESEARCH_INVALID_STATE',
+  RESEARCH_BUDGET: 'RESEARCH_BUDGET',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
@@ -45,6 +47,8 @@ const STATUS_BY_CODE = {
   [ErrorCode.MODEL_ERROR]: 503,
   [ErrorCode.NOT_IMPLEMENTED]: 501,
   [ErrorCode.CONNECTOR_UNAVAILABLE]: 409,
+  [ErrorCode.RESEARCH_INVALID_STATE]: 409,
+  [ErrorCode.RESEARCH_BUDGET]: 409,
   [ErrorCode.INTERNAL_ERROR]: 500,
 } as const satisfies Record<ErrorCode, number>;
 

@@ -29,6 +29,8 @@ describe('sendError', () => {
       [ErrorCode.MODEL_UNAVAILABLE, 503],
       [ErrorCode.MODEL_ERROR, 503],
       [ErrorCode.CONNECTOR_UNAVAILABLE, 409],
+      [ErrorCode.RESEARCH_INVALID_STATE, 409],
+      [ErrorCode.RESEARCH_BUDGET, 409],
       [ErrorCode.INTERNAL_ERROR, 500],
     ];
     for (const [code, status] of cases) {
