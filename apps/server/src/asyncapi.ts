@@ -68,63 +68,6 @@ const QA_STREAM_CHANNEL: AsyncApiChannel = {
   ],
 };
 
-const RESEARCH_PROGRESS_CHANNEL: AsyncApiChannel = {
-  name: 'researchProgress',
-  description:
-    'SSE progress for an existing research session. GET subscribe; path uses notebook :nid.',
-  address: '/v2/notebooks/{nid}/research/{id}/stream',
-  method: 'GET',
-  events: [
-    {
-      name: 'plan_ready',
-      description: 'Search plan is ready for user review.',
-      payload: {
-        type: 'object',
-        properties: { sessionId: { type: 'integer' }, plan: { type: 'object' } },
-      },
-    },
-    {
-      name: 'search_result',
-      description: 'A web search result was retrieved.',
-      payload: {
-        type: 'object',
-        properties: { sessionId: { type: 'integer' }, result: { type: 'object' } },
-      },
-    },
-    {
-      name: 'analysis',
-      description: 'Analysis result for the current iteration.',
-      payload: {
-        type: 'object',
-        properties: { sessionId: { type: 'integer' }, analysis: { type: 'object' } },
-      },
-    },
-    {
-      name: 'done',
-      description: 'Research completed (or cancelled). Matches runtime SSE done payload.',
-      payload: {
-        type: 'object',
-        properties: {
-          type: { type: 'string', const: 'done' },
-          status: { type: 'string' },
-          totalResults: { type: 'integer' },
-          hasReport: { type: 'boolean' },
-        },
-        required: ['type', 'status', 'totalResults', 'hasReport'],
-      },
-    },
-    {
-      name: 'error',
-      description: 'Research encountered an error.',
-      payload: {
-        type: 'object',
-        properties: { sessionId: { type: 'integer' }, message: { type: 'string' } },
-        required: ['message'],
-      },
-    },
-  ],
-};
-
 const STUDIO_OUTLINE_STREAM_CHANNEL: AsyncApiChannel = {
   name: 'studioOutlineStream',
   description: 'SSE stream for slide outline generation on an existing draft. GET subscribe.',
@@ -181,7 +124,6 @@ const STUDIO_MARKDOWN_STREAM_CHANNEL: AsyncApiChannel = {
 
 const ALL_CHANNELS = [
   QA_STREAM_CHANNEL,
-  RESEARCH_PROGRESS_CHANNEL,
   STUDIO_OUTLINE_STREAM_CHANNEL,
   STUDIO_MARKDOWN_STREAM_CHANNEL,
 ] as const;
@@ -195,7 +137,7 @@ export function generateAsyncApiDocument(info?: {
   const {
     title = 'Crystalith v2 Streaming API',
     version = '2.0.0-dev',
-    description = 'SSE streaming channels for QA, research, and studio (c70 verb conventions).',
+    description = 'SSE streaming channels for QA and studio (c70 verb conventions).',
   } = info ?? {};
   const channels: Record<string, unknown> = {};
   for (const ch of ALL_CHANNELS) {

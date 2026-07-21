@@ -79,7 +79,6 @@ export const notebookRelations = relations(notebooks, ({ many }) => ({
   sourceConnectorBindings: many(sourceConnectorBindings),
   extractorPolicy: many(notebookExtractorPolicies),
   studioSlides: many(studioSlides),
-  researchSessions: many(researchSessions),
   strategyConfigs: many(strategyConfigs),
 }));
 
@@ -426,71 +425,6 @@ export type ResearchAggregatedResultRow = {
   query: string;
 };
 
-export const researchSessions = sqliteTable(
-  'research_sessions',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    notebookId: integer('notebook_id')
-      .notNull()
-      .references(() => notebooks.id, { onDelete: 'cascade' }),
-    topic: text('topic').notNull(),
-    status: text('status', {
-      enum: ['planning', 'searching', 'analyzing', 'waiting_user', 'completed', 'cancelled'],
-    })
-      .notNull()
-      .default('planning'),
-    currentIteration: integer('current_iteration').notNull().default(1),
-    maxIterations: integer('max_iterations').notNull().default(4),
-    aggregatedResults: text('aggregated_results', { mode: 'json' }).$type<
-      ResearchAggregatedResultRow[] | null
-    >(),
-    finalReport: text('final_report'),
-    lockedAt: tsNull('locked_at'),
-    lockExpiresAt: tsNull('lock_expires_at'),
-    createdAt: ts('created_at'),
-    updatedAt: tsUpd('updated_at'),
-  },
-  (t) => [index('ix_research_sessions_status').on(t.status)],
-);
-
-export const researchSessionRelations = relations(researchSessions, ({ one, many }) => ({
-  notebook: one(notebooks, {
-    fields: [researchSessions.notebookId],
-    references: [notebooks.id],
-  }),
-  steps: many(researchSteps),
-}));
-
-export const researchSteps = sqliteTable(
-  'research_steps',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    sessionId: integer('session_id')
-      .notNull()
-      .references(() => researchSessions.id, { onDelete: 'cascade' }),
-    iteration: integer('iteration').notNull(),
-    type: text('type', {
-      enum: ['plan', 'search', 'search_result', 'analyze', 'user_input', 'summary'],
-    }).notNull(),
-    inputData: json<Record<string, unknown> | null>('input_data'),
-    outputData: json<Record<string, unknown> | null>('output_data'),
-    status: text('status', {
-      enum: ['pending', 'running', 'completed', 'skipped'],
-    })
-      .notNull()
-      .default('pending'),
-    createdAt: ts('created_at'),
-  },
-  (t) => [index('ix_research_steps_session_iteration').on(t.sessionId, t.iteration)],
-);
-
-export const researchStepRelations = relations(researchSteps, ({ one }) => ({
-  session: one(researchSessions, {
-    fields: [researchSteps.sessionId],
-    references: [researchSessions.id],
-  }),
-}));
-
 // ---------------------------------------------------------------------------
 // Barrel — table map passed to `drizzle({ schema })` for relational queries
 // ---------------------------------------------------------------------------
@@ -510,8 +444,6 @@ export const schema = {
   sourceConnectorBindings,
   outputs,
   studioSlides,
-  researchSessions,
-  researchSteps,
 };
 
 export type Schema = typeof schema;

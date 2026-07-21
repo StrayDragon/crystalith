@@ -67,11 +67,11 @@ export function buildThinkingTimeline(args: {
     sseEvents.forEach((event, index) => {
       if (event.type === 'thinking') {
         timeline.push({
-          type: event.data.type,
-          message: event.data.message,
+          type: event.data.type as string,
+          message: event.data.message as string,
           timestamp: index,
-          iteration: event.data.iteration,
-          queries: event.data.queries,
+          iteration: event.data.iteration as number | undefined,
+          queries: event.data.queries as string[] | undefined,
         });
       }
       if (event.type === 'connection') {

@@ -6,9 +6,8 @@ import {
   Source as SourceIcon,
   Download as DownloadIcon,
 } from '@mui/icons-material';
-import { memo, useState, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
 
-import { api } from '../../../../api/eden';
 import { useLayer } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
 import { toast } from '../../../../shared/toast';
@@ -17,17 +16,15 @@ import type { ResearchSessionDetail } from './useResearch';
 interface ResearchExportDialogProps {
   session: ResearchSessionDetail;
   onClose: () => void;
-  onExportComplete?: () => void;
 }
 
 type ExportTarget = 'source' | 'note';
 
 /**
- * Export research final report to a notebook source or Studio note.
- * Server contract (`POST /v2/notebooks/:nid/research/:id/export`) accepts `exportType`
- * and always exports the full `finalReport` — UI matches that (no fake filters).
+ * Export dialog shell — Deep Research export API removed (pending rewrite).
+ * Submit only surfaces the stub "尚未实现" toast until the new runtime lands.
  */
-function ResearchExportDialog({ session, onClose, onExportComplete }: ResearchExportDialogProps) {
+function ResearchExportDialog({ session, onClose }: ResearchExportDialogProps) {
   const [exportTarget, setExportTarget] = useState<ExportTarget>('source');
   const [isExporting, setIsExporting] = useState(false);
   const { style: modalStyle } = useLayer('modal');
@@ -43,36 +40,12 @@ function ResearchExportDialog({ session, onClose, onExportComplete }: ResearchEx
 
     setIsExporting(true);
     try {
-      const { data: result, error: exportErr } = await api.v2
-        .notebooks({ nid: session.notebookId })
-        .research({ id: session.id })
-        .export.post({ exportType: exportTarget });
-      if (exportErr)
-        throw new Error(
-          typeof exportErr === 'string'
-            ? exportErr
-            : typeof exportErr === 'string'
-              ? exportErr
-              : '导出失败',
-        );
-      const data = result as { success?: boolean; message?: string } | null;
-
-      if (data?.success) {
-        toast.success(
-          data.message ?? (exportTarget === 'source' ? '报告已导出为来源' : '报告已导出为笔记'),
-        );
-        onExportComplete?.();
-        onClose();
-      } else {
-        toast.error(data?.message || '导出失败');
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : '导出失败';
-      toast.error(message);
+      toast.error('深度研究尚未实现，等待重写');
+      onClose();
     } finally {
       setIsExporting(false);
     }
-  }, [exportTarget, hasReport, session.id, session.notebookId, onExportComplete, onClose]);
+  }, [hasReport, onClose]);
 
   return (
     <div

@@ -1,7 +1,7 @@
 // c67 — notebook isolation: required notebookId + cross-notebook → 404.
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 
-import { notebooks, outputs, researchSessions, sessions, sources } from '../../src/db/schema.ts';
+import { notebooks, outputs, sessions, sources } from '../../src/db/schema.ts';
 import { createApp } from '../../src/server.ts';
 import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from '../helpers/integration.ts';
 
@@ -11,7 +11,6 @@ let notebookA: number;
 let notebookB: number;
 let sourceId: number;
 let outputId: number;
-let researchId: number;
 let sessionId: number;
 
 beforeAll(() => {
@@ -33,11 +32,6 @@ beforeAll(() => {
       prompt: 'p',
       content: { text: 'x' },
     })
-    .returning()
-    .get().id;
-  researchId = orm
-    .insert(researchSessions)
-    .values({ notebookId: notebookA, topic: 't', status: 'planning' })
     .returning()
     .get().id;
   sessionId = orm
@@ -126,26 +120,6 @@ describe('c67 notebook isolation', () => {
     expect(status).toBe(422);
   });
 
-  it('GET /v2/research missing notebookId → reject (no global dump)', async () => {
-    const { status, body } = await get('/v2/research');
-    expect(status).toBe(422);
-    expect((body as { errorCode: string }).errorCode).toBe('SCHEMA_VALIDATION_FAILED');
-  });
-
-  it('GET /v2/research/:id cross-notebook → 404', async () => {
-    const { status, body } = await get(`/v2/research/${researchId}?notebookId=${notebookB}`);
-    expect(status).toBe(404);
-    expect((body as { errorCode: string }).errorCode).toBe('NOT_FOUND');
-  });
-
-  it('GET /v2/research?notebookId=A returns only A sessions', async () => {
-    const { status, body } = await get(`/v2/research?notebookId=${notebookA}`);
-    expect(status).toBe(200);
-    const page = body as { items: Array<{ id: number; notebookId: number }> };
-    expect(page.items.some((r) => r.id === researchId)).toBe(true);
-    expect(page.items.every((r) => r.notebookId === notebookA)).toBe(true);
-  });
-
   it('session optimistic lock conflict → 409 CONFLICT', async () => {
     const { status, body } = await patch(`/v2/notebooks/${notebookA}/sessions/${sessionId}`, {
       sharedStateRevision: 0,
@@ -185,19 +159,6 @@ describe('c69 nested notebook paths', () => {
     });
     expect(status).toBe(400);
     expect((body as { errorCode: string }).errorCode).toBe('INVALID_REQUEST');
-  });
-
-  it('POST nested research without body notebookId → 201 with path nid', async () => {
-    const { status, body } = await post(`/v2/notebooks/${notebookA}/research`, {
-      topic: 'c69 omit body notebookId',
-      maxIterations: 1,
-    });
-    expect(status).toBe(201);
-    const created = body as { id: number; notebookId: number };
-    expect(created.notebookId).toBe(notebookA);
-    // Cancel so background agent does not race later tests.
-    const cancel = await post(`/v2/notebooks/${notebookA}/research/${created.id}/cancel`);
-    expect(cancel.status).toBe(200);
   });
 
   it('GET flat outputs alias still works while nested is canonical', async () => {

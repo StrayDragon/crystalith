@@ -17,7 +17,7 @@ import { notebooksRouter } from './features/notebooks/router.ts';
 import { outputsRouter } from './features/outputs/router.ts';
 import { promptPresetsRouter } from './features/prompt-presets/router.ts';
 import { qaRouter } from './features/qa/router.ts';
-import { researchRouter, cleanupExpiredLocks } from './features/research/router.ts';
+import { researchRouter } from './features/research/router.ts';
 import { sessionsRouter } from './features/sessions/router.ts';
 import { sourceConnectorsRouter } from './features/source-connectors/router.ts';
 import { sourcesRouter } from './features/sources/router.ts';
@@ -28,12 +28,6 @@ import { workspaceRouter } from './features/workspace/router.ts';
 import { generateOpenApiDocument, registerApiDoc, type OpenApiRoute } from './openapi.ts';
 import { getOptionalServices } from './shared/config.ts';
 import { ErrorCode, sendError, AppHttpError } from './shared/errors.ts';
-
-// ---------------------------------------------------------------------------
-// Crash recovery for research locks
-// ---------------------------------------------------------------------------
-
-cleanupExpiredLocks();
 
 // ---------------------------------------------------------------------------
 // Scaffold OpenAPI docs

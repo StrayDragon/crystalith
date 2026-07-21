@@ -1,14 +1,8 @@
 kind: llman.sdd.spec
 name: "structural-refinement-for-generated-results"
-purpose: "本 capability 现仅约束 research 报告与 agent 可靠性（富 prompt、失败回退、waiting 心跳、lock 续期）。局部结构改良 / Refine HTTP 愿景与实现已移除（c73）；不得再假定存在 /v2/refine* 或可写回的结构单元改良 API。"
+purpose: "本 capability 已废弃（原 research 相关约束随 Deep Research stub 移除），等待未来重写时重新定义。"
 valid_scope[2]: src/,tests/
-requirements[4]{req_id,title,statement}:
-  "research-report-rich-prompt","Research report MUST use structured 6-section prompt",research report 生成 MUST 使用 v1 结构化 REPORT_SYSTEM_PROMPT（Executive Summary/Background/Key Findings/Analysis/Recommendations/References 六段），MUST NOT 用一行通用 prompt
-  "research-ai-failure-fallback",Research MUST have AI failure fallbacks for plan and analyze,"research plan/analyze 失败时 MUST 有 fallback（plan→2-query fallback；analyze→coverage heuristic），MUST NOT 直接中止整个 run"
-  "research-waiting-heartbeat",Research SSE MUST emit waiting heartbeat while awaiting approval,research stream 在 status=waiting_user 时 MUST 定期重发 waiting 事件作为心跳，MUST NOT 只发一次
-  "research-lock-renewal",Research MUST renew lock during long runs,research agent loop MUST 定期续期 lock，防止长任务（>10min）被 cleanupExpiredLocks 误杀
-scenarios[4]{req_id,id,given,when,then,feature}:
-  "research-report-rich-prompt","finish-generates-report",客户端 finish research,report 生成,系统 SHALL 使用 6 段结构化 prompt 生成 report,false
-  "research-ai-failure-fallback","plan-throws",planSearches 抛出错误,agent loop,"系统 SHALL 使用 fallback 2-query plan 继续而非中止 run",true
-  "research-waiting-heartbeat","awaiting-approval",status=waiting_user 持续中,stream poll loop,系统 SHALL 每次 poll 重发 waiting 事件,true
-  "research-lock-renewal","long-running-iteration",单次迭代超过 5min,agent loop,系统 SHALL 续期 lock 防止过期,true
+requirements[1]{req_id,title,statement}:
+  stub_placeholder,"Deep Research is stubbed (501), pending rewrite","本 capability 的原需求与场景已随 Deep Research 后端 stub 移除。在正式重写前不得再添加 MUST/SHALL 要求。"
+scenarios[1]{req_id,id,given,when,then,feature}:
+  stub_placeholder,stub_removed,capability 已废弃,验证不执行,无条件通过,false
