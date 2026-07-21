@@ -121,7 +121,7 @@ export const ModelsSettingsSchema = z
       const defId = val.defaults[role];
       if (defId && !ids.has(defId)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           message: `Default ${role} model '${defId}' not found in models.available`,
           path: ['defaults', role],
         });

@@ -328,12 +328,9 @@ export type SourceFromUrlMode = z.infer<typeof SourceFromUrlModeSchema>;
 
 export const SourceFromUrlRequestSchema = z
   .object({
-    url: z
-      .string()
-      .url()
-      .refine((v) => v.startsWith('http://') || v.startsWith('https://'), {
-        message: 'url must start with http:// or https://',
-      }),
+    url: z.url().refine((v) => v.startsWith('http://') || v.startsWith('https://'), {
+      message: 'url must start with http:// or https://',
+    }),
     title: z.string().nullable().optional(),
     snippet: z.string().nullable().optional(),
     mode: SourceFromUrlModeSchema.default('link'),

@@ -62,7 +62,7 @@ function requireOutputInNotebook(id: number, notebookId: number): typeof outputs
 // OpenAPI docs
 // ---------------------------------------------------------------------------
 
-const OutputsListQuerySchema = NotebookIdQuerySchema.merge(PaginationParamsSchema);
+const OutputsListQuerySchema = NotebookIdQuerySchema.extend(PaginationParamsSchema.shape);
 
 const apiDocs: OpenApiRoute[] = [
   {

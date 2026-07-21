@@ -28,15 +28,15 @@ export interface OpenApiRoute {
   /** When true, marks the OpenAPI operation as deprecated (flat aliases in c69). */
   deprecated?: boolean;
   request?: {
-    body?: z.ZodTypeAny;
-    params?: Record<string, z.ZodTypeAny>;
-    query?: Record<string, z.ZodTypeAny>;
+    body?: z.ZodType;
+    params?: Record<string, z.ZodType>;
+    query?: Record<string, z.ZodType>;
   };
   responses: Record<
     number,
     {
       description: string;
-      body?: z.ZodTypeAny;
+      body?: z.ZodType;
       contentType?: string;
       /** Optional example value for the response body (shown in Scalar). */
       example?: unknown;
@@ -45,7 +45,7 @@ export interface OpenApiRoute {
 }
 
 /** Convert a Zod schema to an OpenAPI-friendly JSON Schema object. */
-export function zodSchemaToOpenApi(schema: z.ZodTypeAny): Record<string, unknown> {
+export function zodSchemaToOpenApi(schema: z.ZodType): Record<string, unknown> {
   try {
     const json = z.toJSONSchema(schema, {
       target: 'openapi-3.0',
@@ -66,7 +66,7 @@ export function zodSchemaToOpenApi(schema: z.ZodTypeAny): Record<string, unknown
 }
 
 /** @deprecated No longer registers into zod-to-openapi registry; kept for call-site compat. */
-export function registerSchema(name: string, schema: z.ZodTypeAny): z.ZodTypeAny {
+export function registerSchema(name: string, schema: z.ZodType): z.ZodType {
   void name;
   return schema;
 }

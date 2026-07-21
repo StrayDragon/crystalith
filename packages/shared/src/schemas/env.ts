@@ -149,7 +149,9 @@ export type SecretsEnv = z.infer<typeof SecretsEnvSchema>;
  * All env vars merged into one flat schema.
  * Useful for runtime validation of the full environment.
  */
-export const AllEnvSchema = BuildRunEnvSchema.merge(DeprecatedEnvSchema).merge(SecretsEnvSchema);
+export const AllEnvSchema = BuildRunEnvSchema.extend(DeprecatedEnvSchema.shape).extend(
+  SecretsEnvSchema.shape,
+);
 export type AllEnv = z.infer<typeof AllEnvSchema>;
 
 // ---------------------------------------------------------------------------

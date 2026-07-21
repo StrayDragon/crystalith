@@ -13,7 +13,7 @@ import { z } from 'zod';
 import { desc } from './i18n.js';
 
 /** ISO 8601 UTC datetime string, e.g. `2026-07-08T12:00:00.000Z`. */
-export const IsoTimestampSchema = z.string().datetime({ offset: true }).or(z.string().min(1));
+export const IsoTimestampSchema = z.iso.datetime({ offset: true }).or(z.string().min(1));
 
 /** Positive integer identifier. */
 export const IdSchema = z.number().int().positive();
@@ -65,7 +65,7 @@ export const PaginationParamsSchema = z
 export type PaginationParams = z.infer<typeof PaginationParamsSchema>;
 
 /** Generic paginated list wrapper `{ items, total, offset, limit }`. */
-export function PaginatedSchema<T extends z.ZodTypeAny>(item: T) {
+export function PaginatedSchema<T extends z.ZodType>(item: T) {
   return z
     .object({
       items: z.array(item).openapi({ description: desc('common.paginated_items', '当前页条目') }),
