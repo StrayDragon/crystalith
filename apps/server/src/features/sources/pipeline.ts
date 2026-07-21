@@ -138,7 +138,7 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
           text: c.text,
           startOffset: offset,
           endOffset: offset + c.text.length,
-          metadata: chunkMetadata as Record<string, unknown> | null,
+          metadata: chunkMetadata,
         })
         .run();
       // +1 for the separator

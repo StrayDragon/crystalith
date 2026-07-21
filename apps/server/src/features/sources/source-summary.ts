@@ -24,22 +24,22 @@ export interface AutoSummaryCache {
 
 type SourceRow = typeof sources.$inferSelect;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 function asMetadataRecord(metadata: unknown): Record<string, unknown> {
-  if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
-    return { ...(metadata as Record<string, unknown>) };
-  }
-  return {};
+  return isRecord(metadata) ? { ...metadata } : {};
 }
 
 function isAutoSummaryCache(value: unknown): value is AutoSummaryCache {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  const v = value as Record<string, unknown>;
+  if (!isRecord(value)) return false;
   return (
-    typeof v.summary === 'string' &&
-    Array.isArray(v.keyPoints) &&
-    Array.isArray(v.topics) &&
-    typeof v.wordCount === 'number' &&
-    typeof v.generatedAt === 'string'
+    typeof value.summary === 'string' &&
+    Array.isArray(value.keyPoints) &&
+    Array.isArray(value.topics) &&
+    typeof value.wordCount === 'number' &&
+    typeof value.generatedAt === 'string'
   );
 }
 

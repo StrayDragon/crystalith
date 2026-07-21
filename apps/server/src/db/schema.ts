@@ -212,7 +212,7 @@ export const sources = sqliteTable(
     filename: text('filename').notNull(),
     mimeType: text('mime_type'),
     parserType: text('parser_type').notNull().default('text'),
-    metadata: json('metadata'),
+    metadata: json<JsonMetadata | null>('metadata'),
     dedupKey: text('dedup_key'),
     status: text('status', { enum: ['processing', 'ready', 'failed'] })
       .notNull()
@@ -247,7 +247,7 @@ export const chunks = sqliteTable(
     text: text('text').notNull(),
     startOffset: integer('start_offset'),
     endOffset: integer('end_offset'),
-    metadata: json('metadata'),
+    metadata: json<JsonMetadata | null>('metadata'),
     createdAt: ts('created_at'),
     updatedAt: tsUpd('updated_at'),
   },
