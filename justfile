@@ -30,9 +30,7 @@ dev:
     echo "✅ Overmind daemonized — services running in background"
     echo ""
     echo "📋 Available processes: server  web  slidev"
-    echo "   Attach to a process:  overmind connect server"
-    echo "   View aggregated logs: overmind echo"
-    echo "   Check status:         overmind status"
+    echo "   Attach to a process:  just dev-connect <some-app> | just dev-attach"
     echo "   Gracefully stop:      just dev-quit"
 
 # Start development environment in foreground (interactive tmux session)
@@ -67,6 +65,8 @@ dev-connect process='server':
 # Gracefully stop Overmind (same as Ctrl-C on the start session)
 dev-quit:
     overmind quit 2>/dev/null || true
+
+alias dev-stop := dev-quit
 
 # --------------------------------------------------------------------------
 # Build
