@@ -54,15 +54,14 @@ GET `…/research/:rid/stream`（SSE，对齐 c70）。事件：
 
 **不做**：报告正文逐 token 流式（合成后挂 Run，再 `report_ready` / 拉取）。
 
-**产品形态补充（相对纯 API）**：活 Run 还须提供「看图 / 研究思路」入口（xyflow 过程图）与「查看报告」入口——见 ui-proto；stream 的 `graph_patch` 为图的数据面。
+**产品形态补充**：图即思路（可剪枝 / fork）；终局以报告为主，无并列「研究思路」文档页。`graph_patch` + 后续 prune/fork API 为数据面。
 
 ## 待钉（grill 主题）
 
-1. 图节点状态枚举（对齐参考图：结论明确 / 待完善 / 信息缺失）与边标签集合
-2. 「看图」入口放哪（E1 卡片 vs F1 详情默认页）
-3. Report JSON 形状与脚注 serializer
-4. convertToNote / convertToSource 请求体（artifactRef）
-5. 错误码与取消语义
+1. 图节点状态枚举与边标签；**prune / fork** 请求语义与对 M1「扩支路」的关系
+2. Report JSON 形状与脚注 serializer
+3. convertToNote / convertToSource 请求体（artifactRef）
+4. 错误码与取消语义
 
 ## 非目标
 
