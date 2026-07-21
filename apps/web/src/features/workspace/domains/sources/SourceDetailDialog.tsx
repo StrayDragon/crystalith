@@ -1,50 +1,38 @@
-import type { Chunk as ChunkRead, SourceSummary } from '@crystalith/shared';
 import {
   IconButton,
-  Button,
   Typography,
-  Chip,
-  Spinner,
   Tabs,
   TabsHeader,
   TabsBody,
   Tab,
   TabPanel,
-  Menu,
-  MenuHandler,
-  MenuList,
-  MenuItem,
 } from '@material-tailwind/react';
 import {
   Close as CloseIcon,
-  Send as SendIcon,
   Description as DescriptionIcon,
   AutoAwesome as AutoAwesomeIcon,
-  Refresh as RefreshIcon,
   Fullscreen as FullscreenIcon,
   FullscreenExit as FullscreenExitIcon,
   DataObject as DataObjectIcon,
-  QuestionAnswer as QuestionAnswerIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
-  SaveAlt as SaveAltIcon,
   ContentCopy as ContentCopyIcon,
-  FileDownload as FileDownloadIcon,
-  NoteAdd as NoteAddIcon,
 } from '@mui/icons-material';
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import { createPortal } from 'react-dom';
 
-import { api } from '../../../../api/eden';
-import { parseServerError } from '../../../../api/parseServerError';
 import { copyToClipboard } from '../../../../shared/clipboard';
 import { t } from '../../../../shared/i18n';
 import { useLayer } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
 import { toast } from '../../../../shared/toast';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
-import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { SourceItem } from '../../shared/types';
+import { SourceDetailChunksPanel } from './SourceDetailChunksPanel';
+import { SourceDetailQAPanel } from './SourceDetailQAPanel';
+import { SourceDetailSummaryPanel } from './SourceDetailSummaryPanel';
+import type { ChatMessage } from './sourceDetailTypes';
+import { useSourceDetailDialog } from './useSourceDetailDialog';
+
+export type { ChatMessage } from './sourceDetailTypes';
 
 interface SourceDetailDialogProps {
   open: boolean;
@@ -55,128 +43,6 @@ interface SourceDetailDialogProps {
   onSaveQAAsSource?: (sourceName: string, messages: ChatMessage[]) => Promise<void>;
 }
 
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
-
-interface SourceBrief {
-  summary: string;
-  keyPoints: string[];
-  topics: string[];
-  wordCount: number;
-  generatedAt: Date | null;
-}
-
-function hasGeneratedBrief(brief: SourceBrief | null): brief is SourceBrief & {
-  generatedAt: Date;
-} {
-  return Boolean(brief?.generatedAt && brief.summary);
-}
-
-function briefFromResponse(response: SourceSummary): SourceBrief {
-  return {
-    summary: response.summary,
-    keyPoints: response.keyPoints,
-    topics: response.topics,
-    wordCount: response.wordCount,
-    generatedAt: response.generatedAt ? new Date(response.generatedAt) : null,
-  };
-}
-
-// Cache for source briefs and chunks (GET/POST results only — empty GET is cacheable too)
-const briefCache = new Map<number, SourceBrief>();
-const chunksCache = new Map<number, ChunkRead[]>();
-
-type TabValue = 'overview' | 'raw';
-
-// Chunk item component with expand/collapse
-function ChunkItem({ chunk }: { chunk: ChunkRead }) {
-  const [expanded, setExpanded] = useState(false);
-  const charCount = chunk.text.length;
-  const previewLength = 150;
-  const needsTruncate = chunk.text.length > previewLength;
-
-  return (
-    <div className="border border-gray-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 hover:border-gray-300 dark:border-slate-600 transition-colors">
-      <button type="button" className="w-full p-3 text-left" onClick={() => setExpanded(!expanded)}>
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-xs font-medium">
-              #{chunk.chunkIndex + 1}
-            </span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <Typography
-              variant="small"
-              className="text-xs text-gray-700 dark:text-slate-200 leading-relaxed"
-            >
-              {expanded || !needsTruncate ? chunk.text : `${chunk.text.slice(0, previewLength)}...`}
-            </Typography>
-          </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {needsTruncate &&
-              (expanded ? (
-                <ExpandLessIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
-              ) : (
-                <ExpandMoreIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
-              ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400 dark:text-slate-500">
-          <span>{charCount} 字符</span>
-          {chunk.startOffset !== null && chunk.endOffset !== null && (
-            <span>
-              位置: {chunk.startOffset}-{chunk.endOffset}
-            </span>
-          )}
-          {chunk.metadata && Object.keys(chunk.metadata).length > 0 && (
-            <span className="text-blue-400">有元数据</span>
-          )}
-        </div>
-      </button>
-      {expanded && chunk.metadata && Object.keys(chunk.metadata).length > 0 && (
-        <div className="px-3 pb-3 pt-0">
-          <div className="p-2 bg-gray-50 dark:bg-slate-800 rounded text-[10px] font-mono text-gray-500 dark:text-slate-400 overflow-x-auto">
-            {JSON.stringify(chunk.metadata, null, 2)}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-async function fetchSourceSummary(notebookId: number, sourceId: number): Promise<SourceSummary> {
-  const { data, error } = await api.v2
-    .notebooks({ nid: notebookId })
-    .sources({ sid: sourceId })
-    .summary.get();
-  if (error) throw new Error(parseServerError(error).message);
-  if (!data) throw new Error('source summary returned an empty payload');
-  return data;
-}
-
-async function postSourceSummary(notebookId: number, sourceId: number): Promise<SourceSummary> {
-  const { data, error } = await api.v2
-    .notebooks({ nid: notebookId })
-    .sources({ sid: sourceId })
-    .summary.post();
-  if (error) throw new Error(parseServerError(error).message);
-  if (!data) throw new Error('source summary POST returned an empty payload');
-  return data;
-}
-
-async function fetchSourceChunks(notebookId: number, sourceId: number): Promise<ChunkRead[]> {
-  const { data, error } = await api.v2
-    .notebooks({ nid: notebookId })
-    .sources({ sid: sourceId })
-    .chunks.get();
-  if (error) throw new Error(parseServerError(error).message);
-  return data ?? [];
-}
-
 export default function SourceDetailDialog({
   open,
   source,
@@ -185,273 +51,34 @@ export default function SourceDetailDialog({
   onToggleFullscreen,
   onSaveQAAsSource,
 }: SourceDetailDialogProps) {
-  const notebookId = useWorkspaceStore((s) => s.activeNotebookId);
-  const connectionState = useWorkspaceStore((s) => s.connectionState);
-  const isConnected = connectionState === 'live';
-
-  const [activeTab, setActiveTab] = useState<TabValue>('overview');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [brief, setBrief] = useState<SourceBrief | null>(null);
-  const [isBriefLoading, setIsBriefLoading] = useState(false);
-  const [briefError, setBriefError] = useState<string>('');
-  const [chunks, setChunks] = useState<ChunkRead[]>([]);
-  const [isChunksLoading, setIsChunksLoading] = useState(false);
-  const [chunksError, setChunksError] = useState<string>('');
-  const [summaryCollapsed, setSummaryCollapsed] = useState(false);
-  const [isSavingAsSource, setIsSavingAsSource] = useState(false);
-  const [exportMenuOpen, setExportMenuOpen] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
-  const fetchedSourceRef = useRef<number | null>(null);
-
-  // Scroll to bottom when new messages arrive
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
-
-  // Load cached brief when source changes (GET is side-effect free)
-  useEffect(() => {
-    if (!source || !open) return;
-
-    // Check cache first
-    const cached = briefCache.get(source.id);
-    if (cached) {
-      setBrief(cached);
-      setBriefError('');
-      return;
-    }
-
-    if (!notebookId || !isConnected) {
-      setBrief(null);
-      setBriefError('未连接到后端服务，无法加载摘要。');
-      setIsBriefLoading(false);
-      return;
-    }
-
-    // Dedup: skip if a fetch is already in-flight for this source
-    if (fetchedSourceRef.current === source.id) return;
-    fetchedSourceRef.current = source.id;
-
-    setIsBriefLoading(true);
-    setBriefError('');
-    fetchSourceSummary(notebookId, source.id)
-      .then((response) => {
-        const newBrief = briefFromResponse(response);
-        // Only persist generated summaries in memory; empty state re-GETs on reopen
-        // so async post-ingest pregenerate can become visible.
-        if (hasGeneratedBrief(newBrief)) {
-          briefCache.set(source.id, newBrief);
-        } else {
-          briefCache.delete(source.id);
-        }
-        setBrief(newBrief);
-      })
-      .catch((error) => {
-        setBriefError(error.message || '加载摘要失败');
-      })
-      .finally(() => {
-        setIsBriefLoading(false);
-      });
-  }, [source, open, notebookId, isConnected]);
-
-  // Load chunks when switching to raw tab
-  useEffect(() => {
-    if (!source || !open || activeTab !== 'raw') return;
-
-    // Check cache first
-    const cached = chunksCache.get(source.id);
-    if (cached) {
-      setChunks(cached);
-      setChunksError('');
-      return;
-    }
-
-    if (!notebookId || !isConnected) {
-      setChunks([]);
-      setChunksError('未连接到后端服务，无法加载原始内容。');
-      setIsChunksLoading(false);
-      return;
-    }
-
-    // Call real API
-    setIsChunksLoading(true);
-    setChunksError('');
-    fetchSourceChunks(notebookId, source.id)
-      .then((response) => {
-        chunksCache.set(source.id, response);
-        setChunks(response);
-      })
-      .catch((error) => {
-        setChunksError(error.message || '加载原始数据失败');
-      })
-      .finally(() => {
-        setIsChunksLoading(false);
-      });
-  }, [source, open, activeTab, notebookId, isConnected]);
-
-  // Reset state when dialog closes
-  useEffect(() => {
-    if (!open) {
-      setMessages([]);
-      setInputValue('');
-      setBrief(null);
-      setBriefError('');
-      setChunks([]);
-      setChunksError('');
-      setActiveTab('overview');
-      fetchedSourceRef.current = null;
-    }
-  }, [open]);
-
-  const handleSend = useCallback(async () => {
-    if (!inputValue.trim() || isLoading || !source) return;
-
-    const userMessage: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: inputValue.trim(),
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInputValue('');
-    setIsLoading(true);
-
-    if (!notebookId || !isConnected) {
-      const assistantMessage: ChatMessage = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: '未连接到后端服务，无法生成回答。',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-      setIsLoading(false);
-      return;
-    }
-
-    // Call real API
-    try {
-      const { data: response, error: qaErr } = await api.v2
-        .notebooks({ nid: notebookId })
-        .sources({ sid: source.id })
-        .qa.post({ question: userMessage.content });
-      if (qaErr) throw new Error(parseServerError(qaErr).message);
-      if (!response || !('answer' in response)) {
-        throw new Error('source QA returned an unexpected payload');
-      }
-      const assistantMessage: ChatMessage = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: response.answer,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      const errorMessage: ChatMessage = {
-        id: `error-${Date.now()}`,
-        role: 'assistant',
-        content: `抱歉，回答生成失败：${error instanceof Error ? error.message : '未知错误'}`,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [inputValue, isLoading, source, notebookId, isConnected]);
-
-  const handleGenerateOrRefreshBrief = useCallback(() => {
-    if (!source) return;
-    briefCache.delete(source.id);
-    setBriefError('');
-    setIsBriefLoading(true);
-
-    if (!notebookId || !isConnected) {
-      setBriefError('未连接到后端服务，无法生成摘要。');
-      setIsBriefLoading(false);
-      return;
-    }
-
-    postSourceSummary(notebookId, source.id)
-      .then((response) => {
-        const newBrief = briefFromResponse(response);
-        briefCache.set(source.id, newBrief);
-        setBrief(newBrief);
-      })
-      .catch((error) => {
-        setBriefError(error.message || '生成摘要失败');
-      })
-      .finally(() => {
-        setIsBriefLoading(false);
-      });
-  }, [source, notebookId, isConnected]);
-
-  // Generate QA content as markdown
-  const generateQAContent = useCallback(() => {
-    if (!source || messages.length === 0) return '';
-
-    const timestamp = new Date().toLocaleString('zh-CN');
-    let content = `# 来源问答记录\n\n`;
-    content += `**来源**: ${source.title}\n`;
-    content += `**导出时间**: ${timestamp}\n\n`;
-    content += `---\n\n`;
-
-    for (const msg of messages) {
-      const role = msg.role === 'user' ? '**问**' : '**答**';
-      content += `${role}: ${msg.content}\n\n`;
-    }
-
-    return content;
-  }, [source, messages]);
-
-  // Copy QA to clipboard
-  const handleCopyToClipboard = useCallback(async () => {
-    const content = generateQAContent();
-    if (!content) return;
-
-    const success = await copyToClipboard(content);
-    if (success) {
-      toast.success('问答内容已复制到剪贴板');
-    } else {
-      toast.error('复制失败，请尝试下载文件');
-    }
-  }, [generateQAContent]);
-
-  // Download QA as markdown file
-  const handleDownloadAsFile = useCallback(() => {
-    if (!source) return;
-    const content = generateQAContent();
-    if (!content) return;
-
-    const blob = new Blob([content], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${source.title}-问答记录.md`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('文件下载已开始');
-  }, [source, generateQAContent]);
-
-  // Save QA as a new source
-  const handleSaveAsSource = useCallback(async () => {
-    if (!source || messages.length === 0 || !onSaveQAAsSource) return;
-
-    setIsSavingAsSource(true);
-    try {
-      await onSaveQAAsSource(source.title, messages);
-      toast.success('问答记录已保存为新来源');
-    } catch (error) {
-      toast.error(`保存失败：${error instanceof Error ? error.message : '未知错误'}`);
-    } finally {
-      setIsSavingAsSource(false);
-    }
-  }, [source, messages, onSaveQAAsSource]);
+  const {
+    notebookId,
+    isConnected,
+    activeTab,
+    setActiveTab,
+    messages,
+    inputValue,
+    setInputValue,
+    isLoading,
+    brief,
+    isBriefLoading,
+    briefError,
+    chunks,
+    isChunksLoading,
+    chunksError,
+    summaryCollapsed,
+    setSummaryCollapsed,
+    isSavingAsSource,
+    exportMenuOpen,
+    setExportMenuOpen,
+    messagesEndRef,
+    handleSend,
+    handleGenerateOrRefreshBrief,
+    handleCopyToClipboard,
+    handleDownloadAsFile,
+    handleSaveAsSource,
+  } = useSourceDetailDialog({ open, source, onSaveQAAsSource });
 
   const { style: modalStyle } = useLayer('modal');
 
@@ -538,7 +165,6 @@ export default function SourceDetailDialog({
 
         <div className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden">
           <Tabs value={activeTab} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-            {/* Tab Header */}
             <TabsHeader
               className="bg-transparent border-b border-gray-100 dark:border-slate-700 rounded-none p-0"
               indicatorProps={{
@@ -575,7 +201,6 @@ export default function SourceDetailDialog({
             </TabsHeader>
 
             <TabsBody className="flex-1 min-h-0 overflow-hidden">
-              {/* Overview Tab - Summary + QA combined */}
               <TabPanel value="overview" className="p-0 h-full flex flex-col overflow-hidden">
                 {source.statusTone === 'FAILED' &&
                 (source.errorMessage || source.recoveryHint || source.errorCode) ? (
@@ -646,359 +271,50 @@ export default function SourceDetailDialog({
                     </div>
                   </div>
                 ) : null}
-                {/* Summary Section - Collapsible */}
-                <div className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
-                  <div className="w-full px-4 py-3 flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-800/50 transition-colors">
-                    <button
-                      type="button"
-                      aria-expanded={!summaryCollapsed}
-                      aria-controls="source-detail-auto-summary"
-                      className="flex flex-1 items-center gap-2 text-blue-500 text-left"
-                      onClick={() => setSummaryCollapsed((prev) => !prev)}
-                    >
-                      <AutoAwesomeIcon style={{ fontSize: 16 }} />
-                      <Typography variant="small" className="font-semibold text-xs">
-                        自动摘要
-                      </Typography>
-                      {summaryCollapsed && hasGeneratedBrief(brief) && (
-                        <Typography
-                          variant="small"
-                          className="text-xs text-gray-400 dark:text-slate-500 font-normal ml-2 truncate max-w-[300px]"
-                        >
-                          {brief.summary.slice(0, 50)}...
-                        </Typography>
-                      )}
-                      {summaryCollapsed ? (
-                        <ExpandMoreIcon className="h-4 w-4 text-gray-400 dark:text-slate-500 ml-auto" />
-                      ) : (
-                        <ExpandLessIcon className="h-4 w-4 text-gray-400 dark:text-slate-500 ml-auto" />
-                      )}
-                    </button>
-                    {!summaryCollapsed && hasGeneratedBrief(brief) && (
-                      <IconButton
-                        variant="text"
-                        size="sm"
-                        onClick={handleGenerateOrRefreshBrief}
-                        disabled={isBriefLoading}
-                        className={`rounded-full w-6 h-6 text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:text-slate-200 ${isBriefLoading ? 'animate-spin' : ''}`}
-                        aria-label="刷新摘要"
-                      >
-                        <RefreshIcon style={{ fontSize: 16 }} />
-                      </IconButton>
-                    )}
-                  </div>
 
-                  {!summaryCollapsed && (
-                    <div id="source-detail-auto-summary" className="px-4 pb-4">
-                      {isBriefLoading ? (
-                        <div className="space-y-2">
-                          <div className="h-4 bg-gray-200 rounded w-full animate-pulse" />
-                          <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse" />
-                          <div className="h-4 bg-gray-200 rounded w-4/6 animate-pulse" />
-                        </div>
-                      ) : briefError ? (
-                        <div className="space-y-2">
-                          <Typography variant="small" color="red" className="text-xs">
-                            {briefError}
-                          </Typography>
-                          <Button
-                            size="sm"
-                            variant="outlined"
-                            className="normal-case text-xs"
-                            onClick={handleGenerateOrRefreshBrief}
-                            disabled={!notebookId || !isConnected}
-                          >
-                            生成摘要
-                          </Button>
-                        </div>
-                      ) : hasGeneratedBrief(brief) ? (
-                        <div className="space-y-3">
-                          <Typography
-                            variant="small"
-                            className="text-xs text-gray-600 dark:text-slate-300 leading-relaxed"
-                          >
-                            {brief.summary}
-                          </Typography>
-                          <div className="h-px bg-gray-200" />
-                          <div>
-                            <Typography
-                              variant="small"
-                              className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5"
-                            >
-                              关键要点
-                            </Typography>
-                            <div className="space-y-1">
-                              {(() => {
-                                const keyCounts = new Map<string, number>();
-                                return brief.keyPoints.map((point) => {
-                                  const ordinal = keyCounts.get(point) ?? 0;
-                                  keyCounts.set(point, ordinal + 1);
-                                  const pointKey = `${point}:${ordinal}`;
-                                  return (
-                                    <div key={pointKey} className="flex items-start gap-1.5">
-                                      <span className="text-gray-400 dark:text-slate-500 text-xs">
-                                        •
-                                      </span>
-                                      <Typography
-                                        variant="small"
-                                        className="text-[11px] text-gray-600 dark:text-slate-300 font-medium leading-tight"
-                                      >
-                                        {point}
-                                      </Typography>
-                                    </div>
-                                  );
-                                });
-                              })()}
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between pt-1">
-                            <div className="flex gap-1">
-                              {brief.topics.map((topic) => (
-                                <Chip
-                                  key={topic}
-                                  value={topic}
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-5 px-2 py-0 text-[10px] bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 normal-case font-normal"
-                                />
-                              ))}
-                            </div>
-                            <Typography
-                              variant="small"
-                              className="text-[10px] text-gray-500 dark:text-slate-400 font-medium"
-                            >
-                              约 {brief.wordCount.toLocaleString()} 字
-                            </Typography>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <Typography
-                            variant="small"
-                            className="text-xs text-gray-500 dark:text-slate-400"
-                          >
-                            尚未生成自动摘要
-                          </Typography>
-                          <Button
-                            size="sm"
-                            variant="outlined"
-                            className="normal-case text-xs"
-                            onClick={handleGenerateOrRefreshBrief}
-                            disabled={!notebookId || !isConnected || isBriefLoading}
-                          >
-                            生成摘要
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <SourceDetailSummaryPanel
+                  brief={brief}
+                  isBriefLoading={isBriefLoading}
+                  briefError={briefError}
+                  summaryCollapsed={summaryCollapsed}
+                  onToggleCollapsed={() => setSummaryCollapsed((prev) => !prev)}
+                  onGenerateOrRefresh={handleGenerateOrRefreshBrief}
+                  canGenerate={Boolean(notebookId && isConnected)}
+                />
 
-                {/* QA Section */}
-                <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-white dark:bg-slate-900">
-                  {/* QA Header */}
-                  <div className="px-4 py-2 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
-                    <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400">
-                      <QuestionAnswerIcon style={{ fontSize: 14 }} />
-                      <Typography variant="small" className="font-medium text-xs">
-                        基于来源问答
-                      </Typography>
-                    </div>
-                  </div>
-
-                  {/* Messages */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                    {messages.length === 0 ? (
-                      <div className="text-center py-4">
-                        <Typography
-                          variant="small"
-                          className="text-gray-400 dark:text-slate-500 text-xs"
-                        >
-                          在下方输入问题，获取基于此来源的针对性回答
-                        </Typography>
-                      </div>
-                    ) : (
-                      messages.map((message, _index) => (
-                        <div
-                          key={message.id}
-                          className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div
-                            className={`max-w-[85%] px-3 py-2 rounded-xl text-xs leading-relaxed whitespace-pre-wrap ${
-                              message.role === 'user'
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200'
-                            }`}
-                          >
-                            {message.content}
-                          </div>
-                          {/* Export button for assistant messages */}
-                          {message.role === 'assistant' && (
-                            <div className="flex items-end ml-1">
-                              <Menu
-                                placement="bottom-start"
-                                open={exportMenuOpen === message.id}
-                                handler={(isMenuOpen) =>
-                                  setExportMenuOpen(isMenuOpen ? message.id : null)
-                                }
-                              >
-                                <MenuHandler>
-                                  <IconButton
-                                    variant="text"
-                                    size="sm"
-                                    className="rounded-full w-5 h-5 min-w-[20px] text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:text-slate-200 opacity-0 group-hover:opacity-100 hover:opacity-100"
-                                    title="导出问答记录"
-                                    disabled={isSavingAsSource}
-                                    style={{ opacity: 1 }}
-                                  >
-                                    {isSavingAsSource ? (
-                                      <Spinner className="h-3 w-3" />
-                                    ) : (
-                                      <SaveAltIcon style={{ fontSize: 12 }} />
-                                    )}
-                                  </IconButton>
-                                </MenuHandler>
-                                <MenuList className="min-w-[160px]">
-                                  <MenuItem
-                                    className="flex items-center gap-2 text-xs"
-                                    onClick={() => {
-                                      void handleCopyToClipboard();
-                                      setExportMenuOpen(null);
-                                    }}
-                                  >
-                                    <ContentCopyIcon style={{ fontSize: 14 }} />
-                                    {t('common.copy_to_clipboard')}
-                                  </MenuItem>
-                                  <MenuItem
-                                    className="flex items-center gap-2 text-xs"
-                                    onClick={() => {
-                                      handleDownloadAsFile();
-                                      setExportMenuOpen(null);
-                                    }}
-                                  >
-                                    <FileDownloadIcon style={{ fontSize: 14 }} />
-                                    {t('sources.detail.qa_export.download_markdown')}
-                                  </MenuItem>
-                                  {onSaveQAAsSource && (
-                                    <MenuItem
-                                      className="flex items-center gap-2 text-xs"
-                                      onClick={() => {
-                                        void handleSaveAsSource();
-                                        setExportMenuOpen(null);
-                                      }}
-                                      disabled={isSavingAsSource}
-                                    >
-                                      <NoteAddIcon style={{ fontSize: 14 }} />
-                                      保存为来源
-                                    </MenuItem>
-                                  )}
-                                </MenuList>
-                              </Menu>
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    )}
-                    {isLoading && (
-                      <div className="flex justify-start">
-                        <div className="bg-gray-100 dark:bg-slate-800 px-3 py-2 rounded-xl flex items-center gap-2">
-                          <Spinner className="h-3 w-3" />
-                          <span className="text-xs text-gray-500 dark:text-slate-400">
-                            思考中...
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                  </div>
-
-                  {/* Input */}
-                  <div className="p-3 border-t border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-900 flex-shrink-0">
-                    <div className="relative">
-                      <input
-                        className="w-full h-9 pl-3 pr-10 rounded-full bg-gray-50 dark:bg-slate-800 border border-transparent focus:bg-white dark:bg-slate-900 focus:border-gray-200 dark:border-slate-700 focus:ring-0 text-sm outline-none transition-all placeholder:text-gray-400 dark:text-slate-500"
-                        placeholder="基于此来源内容提问..."
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            void handleSend();
-                          }
-                        }}
-                        disabled={isLoading}
-                        id="source-question-input"
-                        name="sourceQuestion"
-                        aria-label="基于来源内容提问"
-                      />
-                      <div className="absolute right-1 top-1/2 -translate-y-1/2">
-                        <IconButton
-                          size="sm"
-                          className={`rounded-full w-7 h-7 ${!inputValue.trim() || isLoading ? 'bg-gray-200 text-gray-400 dark:text-slate-500' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
-                          onClick={() => {
-                            void handleSend();
-                          }}
-                          aria-label="发送问题"
-                          disabled={!inputValue.trim() || isLoading}
-                        >
-                          <SendIcon style={{ fontSize: 14 }} />
-                        </IconButton>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <SourceDetailQAPanel
+                  messages={messages}
+                  inputValue={inputValue}
+                  onInputChange={setInputValue}
+                  isLoading={isLoading}
+                  isSavingAsSource={isSavingAsSource}
+                  exportMenuOpen={exportMenuOpen}
+                  onExportMenuOpenChange={setExportMenuOpen}
+                  messagesEndRef={messagesEndRef}
+                  onSend={() => {
+                    void handleSend();
+                  }}
+                  onCopyToClipboard={() => {
+                    void handleCopyToClipboard();
+                  }}
+                  onDownloadAsFile={handleDownloadAsFile}
+                  onSaveAsSource={
+                    onSaveQAAsSource
+                      ? () => {
+                          void handleSaveAsSource();
+                        }
+                      : undefined
+                  }
+                  canSaveAsSource={Boolean(onSaveQAAsSource)}
+                />
               </TabPanel>
 
-              {/* Raw Data Tab */}
               <TabPanel value="raw" className="p-0 h-full overflow-y-auto">
-                <div className="p-4">
-                  {isChunksLoading ? (
-                    <div className="space-y-3">
-                      {[1, 2, 3].map((i) => (
-                        <div
-                          key={i}
-                          className="border border-gray-200 dark:border-slate-700 rounded-lg p-3 animate-pulse"
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-6 h-6 bg-gray-200 rounded" />
-                            <div className="h-4 bg-gray-200 rounded w-3/4" />
-                          </div>
-                          <div className="h-3 bg-gray-200 rounded w-1/4" />
-                        </div>
-                      ))}
-                    </div>
-                  ) : chunksError ? (
-                    <div className="text-center py-8">
-                      <Typography variant="small" color="red" className="text-xs">
-                        {chunksError}
-                      </Typography>
-                    </div>
-                  ) : chunks.length === 0 ? (
-                    <div className="text-center py-8">
-                      <DataObjectIcon className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                      <Typography
-                        variant="small"
-                        className="text-gray-500 dark:text-slate-400 text-xs"
-                      >
-                        暂无原始数据
-                      </Typography>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between mb-3">
-                        <Typography
-                          variant="small"
-                          className="text-xs text-gray-500 dark:text-slate-400 font-medium"
-                        >
-                          共 {chunks.length} 个片段
-                        </Typography>
-                      </div>
-                      {chunks.map((chunk) => (
-                        <ChunkItem key={chunk.id} chunk={chunk} />
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <SourceDetailChunksPanel
+                  chunks={chunks}
+                  isChunksLoading={isChunksLoading}
+                  chunksError={chunksError}
+                />
               </TabPanel>
             </TabsBody>
           </Tabs>
