@@ -2,7 +2,7 @@
 
 | 字段        | 值                                                      |
 | ----------- | ------------------------------------------------------- |
-| 状态        | Draft — grill 进行中（R1′ D1、R2a 已定）                |
+| 状态        | Draft — grill 进行中（R1′ D1、R2a、R3b 已定）           |
 | 对应 change | `c76-deep-research-runtime`                             |
 | 父 PRD      | [`deep-research-prd.md`](./deep-research-prd.md) v0.2.3 |
 
@@ -39,10 +39,27 @@ B / B1 / **H1′（D1）** / I1 / K1 / L1 / M1 及顶栏 E1/F1/G1（见父 PRD �
 | `failed`           | 不可恢复失败      |
 | `cancelled`        | 用户取消          |
 
+## 3. Stream events（R3b）
+
+GET `…/research/:rid/stream`（SSE，对齐 c70）。事件：
+
+| event          | 用途                                              |
+| -------------- | ------------------------------------------------- |
+| `status`       | `{ status, reason? }`                             |
+| `graph_patch`  | 节点/边增改（增量）；须足以驱动图中状态色与边标签 |
+| `confirm`      | M1 payload（预算将尽 / 扩支路 + 选项）            |
+| `report_ready` | 终稿可取（亦可仅靠 `status=completed`）           |
+| `log`          | 人类可读进度行（时间线/调试）                     |
+| `error`        | 错误信息                                          |
+
+**不做**：报告正文逐 token 流式（合成后挂 Run，再 `report_ready` / 拉取）。
+
+**产品形态补充（相对纯 API）**：活 Run 还须提供「看图 / 研究思路」入口（xyflow 过程图）与「查看报告」入口——见 ui-proto；stream 的 `graph_patch` 为图的数据面。
+
 ## 待钉（grill 主题）
 
-1. stream 事件形状（graph patch / status / confirm payload）
-2. Tool 输入/输出与 checkpoint 粒度
+1. 图节点状态枚举（对齐参考图：结论明确 / 待完善 / 信息缺失）与边标签集合
+2. 「看图」入口放哪（E1 卡片 vs F1 详情默认页）
 3. Report JSON 形状与脚注 serializer
 4. convertToNote / convertToSource 请求体（artifactRef）
 5. 错误码与取消语义
