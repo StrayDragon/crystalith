@@ -54,7 +54,7 @@ export function deriveNamedEvent(step: typeof researchSteps.$inferSelect): {
 export function thinkingMessageForStep(
   step: Pick<typeof researchSteps.$inferSelect, 'type' | 'outputData'>,
 ): string {
-  const out = step.outputData as Record<string, unknown> | null;
+  const out = step.outputData;
   if (out) {
     for (const key of ['summary', 'reasoning', 'insight', 'decision', 'message'] as const) {
       const v = out[key];

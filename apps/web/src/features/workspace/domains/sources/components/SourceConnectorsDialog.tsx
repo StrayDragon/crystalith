@@ -29,6 +29,7 @@ import type {
 import {
   buildDirectories,
   formatSnapshotTimestamp,
+  isRecord,
   normalizeConfigValue,
   safeArray,
   schemaProperties,
@@ -234,10 +235,7 @@ function SourceConnectorConfigStep({
     <div className="space-y-3">
       {keys.map((key) => {
         const rawField = props[key];
-        const field =
-          rawField && typeof rawField === 'object' && !Array.isArray(rawField)
-            ? (rawField as Record<string, unknown>)
-            : {};
+        const field = isRecord(rawField) ? rawField : {};
         const typeHint = typeof field.type === 'string' ? field.type : undefined;
         const label =
           typeof field.title === 'string' && field.title.trim() ? field.title.trim() : key;

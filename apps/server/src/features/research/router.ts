@@ -301,7 +301,7 @@ function serializeSession(row: typeof researchSessions.$inferSelect) {
     status: row.status as ResearchStatus,
     currentIteration: row.currentIteration,
     maxIterations: row.maxIterations,
-    aggregatedResults: row.aggregatedResults as Array<Record<string, unknown>> | null,
+    aggregatedResults: row.aggregatedResults ?? null,
     finalReport: row.finalReport,
     createdAt: row.createdAt?.toISOString?.() ?? String(row.createdAt),
     updatedAt: row.updatedAt?.toISOString?.() ?? String(row.updatedAt),
@@ -314,8 +314,8 @@ function serializeStep(row: typeof researchSteps.$inferSelect) {
     sessionId: row.sessionId,
     iteration: row.iteration,
     type: row.type as ResearchStepType,
-    inputData: (row.inputData as Record<string, unknown> | null) ?? null,
-    outputData: (row.outputData as Record<string, unknown> | null) ?? null,
+    inputData: row.inputData ?? null,
+    outputData: row.outputData ?? null,
     status: row.status as 'pending' | 'running' | 'completed' | 'skipped',
     createdAt: row.createdAt?.toISOString?.() ?? String(row.createdAt),
   };
@@ -334,7 +334,7 @@ function recordUserStep(
       sessionId,
       iteration,
       type: 'user_input',
-      inputData: { action, ...extra } as Record<string, unknown>,
+      inputData: { action, ...extra },
       status: 'completed',
     })
     .run();
@@ -401,10 +401,7 @@ function inferResumeState(sessionId: number): {
       .orderBy(desc(researchSteps.id))
       .all()
       .find((s) => s.type === 'user_input');
-    if (
-      lastCancel?.inputData &&
-      (lastCancel.inputData as Record<string, unknown>).action === 'cancel'
-    ) {
+    if (lastCancel?.inputData && lastCancel.inputData.action === 'cancel') {
       return { status: null, iteration: session.currentIteration };
     }
   }
@@ -428,7 +425,7 @@ function inferResumeState(sessionId: number): {
 
   switch (lastStep.type) {
     case 'user_input': {
-      const action = (lastStep.inputData as Record<string, unknown>)?.action;
+      const action = lastStep.inputData?.action;
       // v1 api.py:203-212 — finish/skip-at-max → completed; approve/modify → searching
       if (action === 'finish') return { status: null, iteration: lastStep.iteration };
       if (action === 'cancel') return { status: null, iteration: lastStep.iteration };
@@ -446,7 +443,7 @@ function inferResumeState(sessionId: number): {
     case 'search':
       return { status: 'analyzing', iteration: lastStep.iteration };
     case 'analyze': {
-      const needMore = Boolean((lastStep.outputData as Record<string, unknown> | null)?.needMore);
+      const needMore = Boolean(lastStep.outputData?.needMore);
       if (needMore && lastStep.iteration < session.maxIterations) {
         return { status: 'planning', iteration: lastStep.iteration + 1 };
       }
