@@ -253,9 +253,10 @@ context_window:
 search:
   searxng:
     # SearXNG instance URL. Override via CL_SEARXNG_HOST.
-    # Empty host disables web search.
+    # Empty host disables web search (falls back to optional_services.searxng.endpoint when enabled).
     host: "{{ env.CL_SEARXNG_HOST | default('') }}"
-    timeout: 10
+    # Milliseconds (schema / zh i18n). Was wrongly set to 10 (=10ms abort).
+    timeout: 10000
     max_results: 10
 
 # ----------------------------------------------------------------------------

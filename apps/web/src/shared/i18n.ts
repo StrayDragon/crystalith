@@ -92,14 +92,14 @@ const ZH_CN_MESSAGES = {
   'sources.search.aria_label': '在网络中搜索新来源',
   'sources.search.aria_label.deep': '输入研究需求',
   'sources.search.toggle.to_deep': '切换到深度研究',
-  'sources.search.toggle.to_fast': '切换到快速研究',
+  'sources.search.toggle.to_fast': '切换到直接搜索',
   'sources.search.action.fast': '开始搜索',
   'sources.search.action.deep': '开始深度研究',
   'sources.search.hint.deep':
     '深度研究会创建研究会话并生成报告；写清楚目标、范围和期望输出会更准确。',
   'sources.search.searching': '搜索中…',
   'sources.search.engine.web': '网页',
-  'sources.search.mode.fast': '快速研究',
+  'sources.search.mode.fast': '直接搜索',
   'sources.search.mode.deep': '深度研究',
 
   'sources.research.backend_disconnected': '未连接到后端服务，暂不支持深度研究',
