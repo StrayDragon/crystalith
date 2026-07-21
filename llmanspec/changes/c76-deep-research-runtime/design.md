@@ -48,6 +48,8 @@ GET  .../research/:rid/stream             → status / graph_patch / confirm / r
 | 确认       | M1 两类                                                            | Grill M1        |
 | Agent 框架 | AI SDK tools + 自研 loop                                           | NG4 / AGENTS.md |
 | FE         | 本 change 占位                                                     | 用户确认范围    |
+| 取消       | 协作 cancel + checkpoint（A1）                                     | Grill A1        |
+| Checkpoint | 每节点 + M1 前强制（CP1）                                          | Grill CP1       |
 
 ## Risks
 

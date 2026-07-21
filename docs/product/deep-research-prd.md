@@ -36,7 +36,7 @@
 | **R6**    | 报告 SSOT：`sections[].blocks`（paragraph/bullets + citeIds）+ 全局 `citations` map；导出笔记按出现序生成 GFM 脚注                                                                                          |
 | **R7**    | convert 目标为判别联合：`report` \| `node+nodeId` \| `evidence+evidenceId`；笔记恒 PARAGRAPH+K1，来源须 embed 可检索                                                                                        |
 | **A1**    | 取消：协作 cancel + 尽量落盘 checkpoint → `cancelled`；SSE `status`                                                                                                                                         |
-| **B1**    | Checkpoint：每完成一图节点 + 进入 M1 前强制落盘                                                                                                                                                             |
+| **CP1**   | Checkpoint：每完成一图节点 + 进入 M1 前强制落盘                                                                                                                                                             |
 | **UI-C1** | 报告/节点引用 UI 复用现有 CitationsControl + popover + 跳转来源                                                                                                                                             |
 
 ---
