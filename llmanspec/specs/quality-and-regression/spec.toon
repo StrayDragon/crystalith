@@ -9,7 +9,7 @@ requirements[11]{req_id,title,statement}:
   r99,Backend and frontend verification are mandatory in primary gate,"主门禁 just qa MUST 执行 server+shared 单元/集成测试（just test）与前端 Vitest CI（just test-web / apps/web test:ci）。"
   r10,Critical browser smoke exists,仓库 MUST 维护 Playwright @p0 冒烟（just e2e），并纳入 just qa。
   r136,Config schema and env example drift checks are mandatory,"just qa MUST 运行 check-env-examples 与 check-app-schema（Zod SSOT → .env.example / secret.env.example / app.schema.gen.json）。MUST NOT 要求已删除的 api/generated 或 hey-api OpenAPI codegen 漂移门禁。"
-  r172,Local default unit entrypoints are scoped,just test MUST 仅覆盖 apps/server/test/ 与 packages/shared/test/；完整 PR 验证 MUST 使用 just qa（含 web Vitest 与 e2e）。
+  r172,Local default unit entrypoints are scoped,just test MUST 仅覆盖 apps/server/tests/ 与 packages/shared/test/；完整 PR 验证 MUST 使用 just qa（含 web Vitest 与 e2e）。
   r16,Frontend test suites are tiered and reproducible,"前端稳定套件（test:ci）MUST 默认禁止未处理真实网络（MSW onUnhandledRequest=error），并运行 mock-reason 门禁（test-mock-report-check）。核心子集 MAY 通过 test:core 单独运行。"
   r14,"Frontend test-double usage is observable","仓库 MUST 提供前端 test doubles 报告入口（apps/web test-mock-report / test-mock-report-check），并在 test:ci 中执行 check。"
   r41,Remote CI status checks are optional,仓库 MAY 提供 GitHub Actions 等远程 CI；在未提供 workflows 时，贡献者 MUST 以本地 just qa 作为 PR 自检门禁。MUST NOT 假定 push/PR 上已有强制 CI 状态检查。

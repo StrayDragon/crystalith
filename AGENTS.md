@@ -75,7 +75,7 @@ From repo root:
 - `bun dev` / `just dev` — Overmind (`Procfile`: server + web + slidev)
 - `bun run dev:server` / `just dev-server` — server only (:8032)
 - `bun run dev:web` / `just dev-web` — Vite only (:3000)
-- `just test` — server (`apps/server/test/`) + shared unit/integration tests
+- `just test` — server (`apps/server/tests/`) + shared unit/integration tests
 - `just test-web` — frontend Vitest CI (`apps/web` `test:ci`)
 - `bun typecheck` — typecheck everything
 - `just e2e` / `bun run e2e` — Playwright critical browser gate (`@p0`, testid-based)
@@ -199,7 +199,7 @@ Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `ope
 `just qa`（typecheck + lint + format-check + env/schema drift + **server/shared** tests + **web Vitest** + **e2e @p0**）必须全员通过才算一次成功的 PR。
 
 **门禁组成（与 `justfile` 一致）**：
-`check` → `check-env-examples` → `check-app-schema` → `test`（`apps/server/test/` + `packages/shared/test/`）→ `test-web`（`apps/web` `test:ci`）→ `e2e`。
+`check` → `check-env-examples` → `check-app-schema` → `test`（`apps/server/tests/` + `packages/shared/test/`）→ `test-web`（`apps/web` `test:ci`）→ `e2e`。
 
 **门外（相关 PR 请另跑）**：
 
