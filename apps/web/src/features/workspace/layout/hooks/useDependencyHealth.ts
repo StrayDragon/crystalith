@@ -52,10 +52,10 @@ export interface DependencyDiagnosticItem {
   lastProbe: string | null;
 }
 
-const OPTIONAL_SERVICE_LABELS: Record<OptionalServiceKey, string> = {
+const OPTIONAL_SERVICE_LABELS = {
   cacheRedis: 'Redis (Cache)',
   searchSearxng: 'SearXNG (Search)',
-};
+} as const satisfies Record<OptionalServiceKey, string>;
 
 export function toOptionalServiceDiagnostics(
   optional: DependencyHealthResponse['optional'] | null | undefined,

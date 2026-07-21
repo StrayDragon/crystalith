@@ -43,17 +43,17 @@ import SystemConfigDialog from './overlays/SystemConfigDialog';
 import WorkspaceHeader from './WorkspaceHeader';
 import WorkspaceTabs from './WorkspaceTabs';
 
-const WORKSPACE_WIDGET_TO_PANEL: Record<'sources' | 'chat' | 'studio', PanelId> = {
+const WORKSPACE_WIDGET_TO_PANEL = {
   sources: 'sources',
   chat: 'chat',
   studio: 'refine',
-};
+} as const satisfies Record<'sources' | 'chat' | 'studio', PanelId>;
 
-const WORKSPACE_PANEL_TO_WIDGET: Record<PanelId, 'sources' | 'chat' | 'studio'> = {
+const WORKSPACE_PANEL_TO_WIDGET = {
   sources: 'sources',
   chat: 'chat',
   refine: 'studio',
-};
+} as const satisfies Record<PanelId, 'sources' | 'chat' | 'studio'>;
 
 export default function WorkspaceLayout() {
   const selectedSourceIds_raw = useWorkspaceStore((s) => s.selectedSourceIds);

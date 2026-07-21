@@ -15,6 +15,9 @@ export interface QAPreset {
 /** Directive tokens that are replaced at runtime with dynamic context. */
 export type Directive = 'Sources_only' | 'Knowledge_only' | 'Mixed';
 
+/** Built-in QA preset names (UI + `/prompt:` directive). */
+export type QAPresetName = 'default' | 'analysis' | 'creative' | 'explainer' | 'stats';
+
 /**
  * c48: STATS_SYSTEM_PROMPT — verbatim port of v1 presets.py:59-66.
  * Instructs the model to return a single JSON object with
@@ -22,7 +25,7 @@ export type Directive = 'Sources_only' | 'Knowledge_only' | 'Mixed';
  */
 export const STATS_SYSTEM_PROMPT = `You are a research assistant. Answer ONLY using the provided sources. Return a SINGLE JSON object with keys: fallback_markdown, chart, table (optional). Do NOT wrap the JSON in code fences. Do NOT include any extra text before or after the JSON. fallback_markdown MUST be non-empty, human-readable, and SHOULD include inline citations like [1], [2]. chart MUST include: title (string), unit (optional string), items (array of {label, value:number}). table (optional) MUST include: columns (string[]), rows ((string|number|null)[][]).`;
 
-/** Preset registry (add new presets here). */
+/** Preset registry (add new presets here). Keep Record<string, …> for runtime string lookup. */
 export const PRESETS: Record<string, QAPreset> = {
   default: {
     name: 'default',
@@ -82,15 +85,15 @@ Rules:
     label: '统计图表',
     systemPrompt: STATS_SYSTEM_PROMPT,
   },
-};
+} satisfies Record<QAPresetName, QAPreset>;
 
 /** Directive templates — injected at `{{directive}}` depending on user selection. */
-export const DIRECTIVES: Record<Directive, string> = {
+export const DIRECTIVES = {
   Sources_only:
     'CRITICAL: Only use information from the retrieved sources. Do NOT use external knowledge.',
   Knowledge_only: 'Use your knowledge freely. Only consult sources if explicitly needed.',
   Mixed: 'Use both retrieved sources and your own knowledge. Prioritize high-quality sources.',
-};
+} as const satisfies Record<Directive, string>;
 
 /**
  * Render a preset's system prompt with the selected directive.

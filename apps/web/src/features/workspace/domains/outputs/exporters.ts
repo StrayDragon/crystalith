@@ -12,14 +12,14 @@ interface SlideExportItem {
 
 const DEFAULT_EXPORT_FORMATS: ExportFormat[] = ['markdown'];
 
-export const EXPORT_FORMAT_LABELS: Record<ExportFormat, string> = {
+export const EXPORT_FORMAT_LABELS = {
   markdown: 'Markdown',
   json: 'JSON',
   pdf: 'PDF',
   pptx: 'PPTX',
-};
+} as const satisfies Record<ExportFormat, string>;
 
-export const OUTPUT_EXPORT_FORMATS: Record<OutputTypeId, ExportFormat[]> = {
+export const OUTPUT_EXPORT_FORMATS = {
   FAQ: ['markdown', 'json'],
   GUIDE: ['markdown'],
   TIMELINE: ['markdown'],
@@ -30,7 +30,7 @@ export const OUTPUT_EXPORT_FORMATS: Record<OutputTypeId, ExportFormat[]> = {
   PARAGRAPH: ['markdown'],
   BULLETS: ['markdown'],
   STRUCTURED: ['markdown'],
-};
+} satisfies Record<OutputTypeId, ExportFormat[]>;
 
 function resolveOutputTitle(output: OutputItem): string {
   return getOutputTitle(output);

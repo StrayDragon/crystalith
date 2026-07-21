@@ -32,7 +32,7 @@ export const ErrorCode = {
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
 /** Canonical HTTP status for each error code. */
-const STATUS_BY_CODE: Record<ErrorCode, number> = {
+const STATUS_BY_CODE = {
   [ErrorCode.INVALID_REQUEST]: 400,
   [ErrorCode.NOT_FOUND]: 404,
   [ErrorCode.FORBIDDEN]: 403,
@@ -44,7 +44,7 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   [ErrorCode.MODEL_ERROR]: 503,
   [ErrorCode.CONNECTOR_UNAVAILABLE]: 409,
   [ErrorCode.INTERNAL_ERROR]: 500,
-};
+} as const satisfies Record<ErrorCode, number>;
 
 /** Elysia `set` object (only the status field is touched). */
 interface SetStatus {
