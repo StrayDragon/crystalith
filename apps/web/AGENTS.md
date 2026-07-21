@@ -4,11 +4,33 @@
 
 - Source code: `src/`
 - Static assets: `public/`
+- `DESIGN.md` — Crystalith Web 设计系统（token + 视觉原则；改 UI 观感前先读）
 - `src/features/workspace/` — main workspace feature
   - `domains/` — business domains (notebooks, sessions, messages, sources, outputs, refine, studio, research)
   - `layout/`, `shared/`, `app/` — workspace scaffolding
+- `src/features/research-lab/` — Deep Research **UX Lab**（fake 运行时；非生产 Desk）
 - `src/api/` — API client：**Eden** `treaty<App>`（`eden.ts`）一等
 - `src/shared/` — shared utilities, Layer system, types
+
+## Design System
+
+- SSOT 文档：包根 [`DESIGN.md`](./DESIGN.md)（YAML tokens + 中文原则）
+- 实现侧：Tailwind / `src/app/tailwind.css`、MUI 局部组件；新表面优先对齐 DESIGN token，避免另起一套色板
+
+## Research Lab（mock vs real）
+
+`/research-lab` 是交互原型，用来锁定图剪枝/分叉、报告与 cite UX，再经 SDD 接到 c76/c77。
+
+| Lab（本目录）                             | Real（Desk / ResearchRun）      |
+| ----------------------------------------- | ------------------------------- |
+| `fake/*` + `deriveLabState`               | Run 图 SSOT + SSE `graph_patch` |
+| `useLabController` 本地突变               | Eden `…/nodes/:id/{prune,fork}` |
+| phase 定时回放                            | Run 状态机 + stream             |
+| `labSession` / revisions → sessionStorage | 服务端 report + checkpoints     |
+
+- 剪枝闭包 **B** 与 server `collectResearchPruneClosure` 对齐（`fake/deriveLabState`）；变更走 `llmanspec/changes/update-research-prune-cascade`
+- 接 Eden 时：保留 `LabGraph` / 报告 Plate 等展示层，替换 `fake/` 下 controller / data 端口
+- **不要**把 Lab 路由当成生产 E1 DeepResearchDesk
 
 ## Build, Test, and Development Commands
 
