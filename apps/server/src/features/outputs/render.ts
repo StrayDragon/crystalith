@@ -6,15 +6,23 @@
 //  - export endpoint (format=markdown)
 //  - convert-to-source (type-aware chunking instead of raw JSON)
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function asString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
 /** Coerce a JSON value to text (v1 _json_to_text). */
 function jsonToText(value: unknown): string {
   if (value === null || value === undefined) return '';
-  if (typeof value === 'string') return value;
+  if (typeof value === 'string') return asString(value);
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
   try {
     return JSON.stringify(value);
   } catch {
-    return typeof value === 'string' ? value : typeof value === 'string' ? value : '';
+    return String(value);
   }
 }
 
@@ -94,7 +102,7 @@ function renderBullets(content: Record<string, unknown>, parts: string[]): void 
   if (!Array.isArray(items)) return;
   for (const item of items) {
     const text =
-      typeof item === 'string' ? item : jsonToText((item as Record<string, unknown>)?.text);
+      typeof item === 'string' ? item : jsonToText(isRecord(item) ? item.text : undefined);
     if (text) parts.push(`- ${text}`);
   }
 }
@@ -103,10 +111,9 @@ function renderFaq(content: Record<string, unknown>, parts: string[]): void {
   const items = content.items;
   if (!Array.isArray(items)) return;
   for (const item of items) {
-    if (typeof item !== 'object' || item === null) continue;
-    const d = item as Record<string, unknown>;
-    const q = jsonToText(d.question);
-    const a = jsonToText(d.answer);
+    if (!isRecord(item)) continue;
+    const q = jsonToText(item.question);
+    const a = jsonToText(item.answer);
     if (q) parts.push(`**Q: ${q}**`);
     if (a) parts.push(`A: ${a}`);
     parts.push('');
@@ -117,11 +124,10 @@ function renderTimeline(content: Record<string, unknown>, parts: string[]): void
   const events = content.events;
   if (!Array.isArray(events)) return;
   for (const event of events) {
-    if (typeof event !== 'object' || event === null) continue;
-    const d = event as Record<string, unknown>;
-    const date = jsonToText(d.date);
-    const title = jsonToText(d.event);
-    const desc = jsonToText(d.description);
+    if (!isRecord(event)) continue;
+    const date = jsonToText(event.date);
+    const title = jsonToText(event.event);
+    const desc = jsonToText(event.description);
     parts.push(`**${date}** - ${title}`);
     if (desc) parts.push(`  ${desc}`);
   }
@@ -131,15 +137,14 @@ function renderQuiz(content: Record<string, unknown>, parts: string[]): void {
   const questions = content.questions;
   if (!Array.isArray(questions)) return;
   questions.forEach((q, i) => {
-    if (typeof q !== 'object' || q === null) return;
-    const d = q as Record<string, unknown>;
-    const question = jsonToText(d.question);
+    if (!isRecord(q)) return;
+    const question = jsonToText(q.question);
     parts.push(`${i + 1}. ${question}`);
-    const options = d.options;
+    const options = q.options;
     if (Array.isArray(options)) {
       for (const opt of options) parts.push(`   - ${jsonToText(opt)}`);
     }
-    const answer = jsonToText(d.answer);
+    const answer = jsonToText(q.answer);
     if (answer) parts.push(`   答案: ${answer}`);
     parts.push('');
   });
@@ -147,7 +152,7 @@ function renderQuiz(content: Record<string, unknown>, parts: string[]): void {
 
 function renderMindmap(content: Record<string, unknown>, parts: string[]): void {
   const root = content.root;
-  if (typeof root !== 'object' || root === null) return;
+  if (!isRecord(root)) return;
   const traverse = (node: Record<string, unknown>, indent: number) => {
     const label = jsonToText(node.label);
     const prefix = '  '.repeat(indent) + (indent > 0 ? '- ' : '# ');
@@ -155,36 +160,32 @@ function renderMindmap(content: Record<string, unknown>, parts: string[]): void 
     const children = node.children;
     if (Array.isArray(children)) {
       for (const child of children) {
-        if (typeof child === 'object' && child !== null) {
-          traverse(child as Record<string, unknown>, indent + 1);
+        if (isRecord(child)) {
+          traverse(child, indent + 1);
         }
       }
     }
   };
-  traverse(root as Record<string, unknown>, 0);
+  traverse(root, 0);
 }
 
 function renderGuide(content: Record<string, unknown>, parts: string[]): void {
   const modules = content.modules;
   if (!Array.isArray(modules)) return;
   for (const mod of modules) {
-    if (typeof mod !== 'object' || mod === null) continue;
-    const d = mod as Record<string, unknown>;
-    const title = jsonToText(d.title);
+    if (!isRecord(mod)) continue;
+    const title = jsonToText(mod.title);
     if (title) parts.push(`## ${title}`);
-    const objective = d.objective;
-    if (typeof objective === 'object' && objective !== null) {
-      const objText = jsonToText((objective as Record<string, unknown>).text);
+    const objective = mod.objective;
+    if (isRecord(objective)) {
+      const objText = jsonToText(objective.text);
       if (objText) parts.push(objText);
     }
-    const keyPoints = Array.isArray(d.keyPoints) ? d.keyPoints : null;
+    const keyPoints = Array.isArray(mod.keyPoints) ? mod.keyPoints : null;
     if (Array.isArray(keyPoints) && keyPoints.length > 0) {
       parts.push('', '### 要点');
       for (const point of keyPoints) {
-        const text =
-          typeof point === 'object' && point !== null
-            ? jsonToText((point as Record<string, unknown>).text)
-            : jsonToText(point);
+        const text = isRecord(point) ? jsonToText(point.text) : jsonToText(point);
         if (text) parts.push(`- ${text}`);
       }
     }
@@ -196,17 +197,13 @@ function renderBriefing(content: Record<string, unknown>, parts: string[]): void
   const sections = content.sections;
   if (!Array.isArray(sections)) return;
   for (const section of sections) {
-    if (typeof section !== 'object' || section === null) continue;
-    const d = section as Record<string, unknown>;
-    const heading = jsonToText(d.heading);
+    if (!isRecord(section)) continue;
+    const heading = jsonToText(section.heading);
     if (heading) parts.push(`## ${heading}`);
-    const points = d.points;
+    const points = section.points;
     if (Array.isArray(points)) {
       for (const point of points) {
-        const text =
-          typeof point === 'object' && point !== null
-            ? jsonToText((point as Record<string, unknown>).text)
-            : jsonToText(point);
+        const text = isRecord(point) ? jsonToText(point.text) : jsonToText(point);
         if (text) parts.push(`- ${text}`);
       }
     }
@@ -221,20 +218,18 @@ function renderSlides(content: Record<string, unknown>, parts: string[]): void {
     return;
   }
   const outline = content.outline;
-  if (typeof outline !== 'object' || outline === null) return;
-  const o = outline as Record<string, unknown>;
+  if (!isRecord(outline)) return;
   if (!content.title) {
-    const title = jsonToText(o.title) || '演示';
+    const title = jsonToText(outline.title) || '演示';
     parts.push(`# ${title}`);
   }
-  const slides = o.slides;
+  const slides = outline.slides;
   if (!Array.isArray(slides)) return;
   for (const slide of slides) {
-    if (typeof slide !== 'object' || slide === null) continue;
-    const d = slide as Record<string, unknown>;
-    const slideTitle = jsonToText(d.title) || '幻灯片';
+    if (!isRecord(slide)) continue;
+    const slideTitle = jsonToText(slide.title) || '幻灯片';
     parts.push(`## ${slideTitle}`);
-    const bullets = d.bullets;
+    const bullets = slide.bullets;
     if (Array.isArray(bullets)) {
       for (const bullet of bullets) parts.push(`- ${jsonToText(bullet)}`);
     }
@@ -245,10 +240,7 @@ function renderStructured(content: Record<string, unknown>, parts: string[]): vo
   const bullets = content.bullets;
   if (Array.isArray(bullets)) {
     for (const bullet of bullets) {
-      const text =
-        typeof bullet === 'object' && bullet !== null
-          ? jsonToText((bullet as Record<string, unknown>).text)
-          : jsonToText(bullet);
+      const text = isRecord(bullet) ? jsonToText(bullet.text) : jsonToText(bullet);
       if (text) parts.push(`- ${text}`);
     }
   }

@@ -178,6 +178,10 @@ export const DENSITY_OPTIONS: ConfigOption[] = [
   { id: 'dense', label: '密集（5-7 要点）', isDefault: false },
 ];
 
+function themeTemplateJson(id: keyof typeof THEME_PRESET_TEMPLATES): Record<string, unknown> {
+  return { ...THEME_PRESET_TEMPLATES[id] };
+}
+
 export const THEME_PRESET_OPTIONS: ThemePresetOption[] = (
   [
     ['minimal-clean', '清爽极简'],
@@ -190,7 +194,7 @@ export const THEME_PRESET_OPTIONS: ThemePresetOption[] = (
 ).map(([id, label]) => ({
   id,
   label,
-  template: THEME_PRESET_TEMPLATES[id] as unknown as Record<string, unknown>,
+  template: themeTemplateJson(id),
 }));
 
 // ---------------------------------------------------------------------------
