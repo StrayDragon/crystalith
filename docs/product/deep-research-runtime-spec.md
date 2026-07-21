@@ -121,10 +121,20 @@ type ArtifactRef =
 - Note：始终 PARAGRAPH + K1 脚注投影。
 - Source：ingest + embed，须可被对话检索。
 
+## 9. Cancel（A1）
+
+`POST …/research/:rid/cancel`：协作取消；尽量落盘最后 checkpoint；状态 → `cancelled`；SSE 发 `status`（+ 可选 `log`）。
+
+## 10. Checkpoint（B1）
+
+- 每完成一个图节点写 checkpoint。
+- 进入 `awaiting_confirm`（M1）前强制 checkpoint。
+
 ## 待钉（grill 主题）
 
-1. 错误码与取消语义
-2. checkpoint 粒度 / graph_patch 最小字段（可并入下批）
+1. graph_patch 最小字段（节点/边 payload）
+2. 错误码表（与 AppHttpError 对齐）
+3. （ui 已定 C1）报告/节点详情复用 CitationsControl — 写入 ui-proto 即可
 
 ## 非目标
 
