@@ -410,6 +410,15 @@ export const studioSlideRelations = relations(studioSlides, ({ one }) => ({
 // Research sessions + steps
 // ---------------------------------------------------------------------------
 
+/** Row shape for research_sessions.aggregated_results JSON column. */
+export type ResearchAggregatedResultRow = {
+  title: string;
+  url: string;
+  snippet: string;
+  engine: string;
+  query: string;
+};
+
 export const researchSessions = sqliteTable(
   'research_sessions',
   {
@@ -425,7 +434,9 @@ export const researchSessions = sqliteTable(
       .default('planning'),
     currentIteration: integer('current_iteration').notNull().default(1),
     maxIterations: integer('max_iterations').notNull().default(4),
-    aggregatedResults: text('aggregated_results', { mode: 'json' }).$type<unknown[] | null>(),
+    aggregatedResults: text('aggregated_results', { mode: 'json' }).$type<
+      ResearchAggregatedResultRow[] | null
+    >(),
     finalReport: text('final_report'),
     lockedAt: tsNull('locked_at'),
     lockExpiresAt: tsNull('lock_expires_at'),
@@ -454,8 +465,8 @@ export const researchSteps = sqliteTable(
     type: text('type', {
       enum: ['plan', 'search', 'search_result', 'analyze', 'user_input', 'summary'],
     }).notNull(),
-    inputData: json('input_data'),
-    outputData: json('output_data'),
+    inputData: json<Record<string, unknown> | null>('input_data'),
+    outputData: json<Record<string, unknown> | null>('output_data'),
     status: text('status', {
       enum: ['pending', 'running', 'completed', 'skipped'],
     })

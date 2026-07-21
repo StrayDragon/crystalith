@@ -30,6 +30,15 @@ import { getDefaultChatModel } from '../../shared/config.ts';
 import { Semaphore } from '../../shared/semaphore.ts';
 import { renewLock } from './lock.ts';
 
+/** Persist generateObject / plain objects into research step JSON columns. */
+function asStepJson(value: object): Record<string, unknown> {
+  return value as Record<string, unknown>;
+}
+
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 // ---------------------------------------------------------------------------
 // Types (LLM shapes = shared Zod SSOT)
 // ---------------------------------------------------------------------------
@@ -109,7 +118,7 @@ async function planSearches(state: ResearchState, signal: AbortSignal): Promise<
       sessionId: state.sessionId,
       iteration: state.iteration,
       type: 'plan',
-      outputData: object as unknown as Record<string, unknown>,
+      outputData: asStepJson(object),
       status: 'completed',
     })
     .run();
@@ -143,7 +152,7 @@ async function analyzeResults(state: ResearchState, signal: AbortSignal): Promis
       sessionId: state.sessionId,
       iteration: state.iteration,
       type: 'analyze',
-      outputData: object as unknown as Record<string, unknown>,
+      outputData: asStepJson(object),
       status: 'completed',
     })
     .run();
@@ -189,10 +198,10 @@ async function executeSearches(
       sessionId: state.sessionId,
       iteration: state.iteration,
       type: 'search',
-      outputData: {
+      outputData: asStepJson({
         resultCount: deduped.length,
         queriesExecuted: plan.queries.length,
-      } as Record<string, unknown>,
+      }),
       status: 'completed',
     })
     .run();
@@ -211,7 +220,7 @@ async function executeSearches(
           sessionId: state.sessionId,
           iteration: state.iteration,
           type: 'search_result' as const,
-          outputData: {
+          outputData: asStepJson({
             title: r.title,
             url: r.url,
             snippet: r.snippet,
@@ -219,7 +228,7 @@ async function executeSearches(
             iteration: state.iteration,
             relevanceScore: 0,
             query: r.query,
-          } as Record<string, unknown>,
+          }),
           status: 'completed' as const,
         })),
       )
@@ -527,7 +536,7 @@ export async function runResearchCore(
 
       db()
         .update(researchSessions)
-        .set({ aggregatedResults: state.results as unknown as Record<string, unknown>[] })
+        .set({ aggregatedResults: state.results })
         .where(eq(researchSessions.id, sessionId))
         .run();
 
@@ -663,7 +672,7 @@ export async function runResearchFromState(
     .get();
   if (!session) return null;
 
-  const aggregatedResults = (session.aggregatedResults ?? []) as ResearchResult[];
+  const aggregatedResults = session.aggregatedResults ?? [];
   const iteration = session.currentIteration ?? 1;
 
   // c49: restore the in-flight plan + resume status so runResearchCore can
@@ -726,7 +735,7 @@ export async function generateFinalReport(state: ResearchState): Promise<string>
       sessionId: state.sessionId,
       iteration: state.iteration,
       type: 'summary',
-      outputData: { reportLength: fullReport.length } as Record<string, unknown>,
+      outputData: asStepJson({ reportLength: fullReport.length }),
       status: 'completed',
     })
     .run();
@@ -783,11 +792,11 @@ function loadLatestUserInput(sessionId: number): { action: string; plan?: Search
     const step = steps[i]!;
     if (step.type !== 'user_input') continue;
     if (!step.inputData || typeof step.inputData !== 'object') continue;
-    const data = step.inputData as Record<string, unknown>;
+    const data = step.inputData;
     const action = typeof data.action === 'string' ? data.action : '';
     if (!action) continue;
-    const plan = data.plan as SearchPlan | undefined;
-    return { action, plan };
+    const plan = isJsonRecord(data.plan) ? parseSearchPlan(data.plan) : undefined;
+    return { action, plan: plan ?? undefined };
   }
   return null;
 }
@@ -810,9 +819,9 @@ function extractPlanFromSteps(sessionId: number, iteration: number): SearchPlan 
   for (let i = steps.length - 1; i >= 0; i--) {
     const s = steps[i]!;
     if (s.type === 'user_input' && s.inputData && typeof s.inputData === 'object') {
-      const data = s.inputData as Record<string, unknown>;
-      if (data.action === 'modify' && typeof data.plan === 'object') {
-        const plan = parseSearchPlan(data.plan as Record<string, unknown>);
+      const data = s.inputData;
+      if (data.action === 'modify' && isJsonRecord(data.plan)) {
+        const plan = parseSearchPlan(data.plan);
         if (plan) return plan;
       }
     }
@@ -821,7 +830,7 @@ function extractPlanFromSteps(sessionId: number, iteration: number): SearchPlan 
   for (let i = steps.length - 1; i >= 0; i--) {
     const s = steps[i]!;
     if (s.type === 'plan' && s.outputData && typeof s.outputData === 'object') {
-      const plan = parseSearchPlan(s.outputData as Record<string, unknown>);
+      const plan = parseSearchPlan(s.outputData);
       if (plan) return plan;
     }
   }

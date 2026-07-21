@@ -6,6 +6,10 @@ export function safeArray<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : [];
 }
 
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 export function titleForEntry(entry: SnapshotEntry): string | null {
   const title = entry.frontmatterSummary?.title;
   return typeof title === 'string' && title.trim() ? title.trim() : null;
