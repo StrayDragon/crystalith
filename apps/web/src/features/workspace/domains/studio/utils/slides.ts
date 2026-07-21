@@ -1,23 +1,26 @@
 import type { SlideGenerationConfig } from '../../../shared/types';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function asNullableString(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
 }
 
 export function normalizeGenerationConfig(raw: unknown): SlideGenerationConfig | null {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-  const config = raw as Record<string, unknown>;
-  const preference = config.preference;
+  if (!isRecord(raw)) return null;
+  const preference = raw.preference;
   return {
     preference: preference === 'quality' || preference === 'speed' ? preference : null,
-    quantity: asNullableString(config.quantity),
-    audience: asNullableString(config.audience),
-    structure: asNullableString(config.structure),
-    tone: asNullableString(config.tone),
-    language: asNullableString(config.language),
-    density: asNullableString(config.density),
-    themePreset: asNullableString(config.themePreset),
-    frontmatter: asNullableString(config.frontmatter),
+    quantity: asNullableString(raw.quantity),
+    audience: asNullableString(raw.audience),
+    structure: asNullableString(raw.structure),
+    tone: asNullableString(raw.tone),
+    language: asNullableString(raw.language),
+    density: asNullableString(raw.density),
+    themePreset: asNullableString(raw.themePreset),
+    frontmatter: asNullableString(raw.frontmatter),
   };
 }
 
@@ -56,9 +59,9 @@ export function buildFrontmatterPreview(
   }
   const lines: string[] = [`title: ${yamlValue(title)}`];
   Object.entries(themeTemplate).forEach(([key, value]) => {
-    if (key === 'fonts' && typeof value === 'object' && value) {
+    if (key === 'fonts' && isRecord(value)) {
       lines.push('fonts:');
-      Object.entries(value as Record<string, string>).forEach(([fontKey, fontValue]) => {
+      Object.entries(value).forEach(([fontKey, fontValue]) => {
         lines.push(`  ${fontKey}: ${yamlValue(fontValue)}`);
       });
       return;

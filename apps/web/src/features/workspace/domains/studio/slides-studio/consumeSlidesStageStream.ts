@@ -16,12 +16,15 @@ export function slidesStageStreamPath(
     : `/v2/notebooks/${notebookId}/studio/slides/${slideId}/markdown/stream`;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function eventMessage(data: unknown): string {
-  if (!data || typeof data !== 'object') return '';
-  const record = data as Record<string, unknown>;
-  if (typeof record.message === 'string' && record.message.trim()) return record.message.trim();
-  if (typeof record.delta === 'string' && record.delta.trim()) return record.delta.trim();
-  if (typeof record.tool === 'string' && record.tool.trim()) return `调用 ${record.tool}`;
+  if (!isRecord(data)) return '';
+  if (typeof data.message === 'string' && data.message.trim()) return data.message.trim();
+  if (typeof data.delta === 'string' && data.delta.trim()) return data.delta.trim();
+  if (typeof data.tool === 'string' && data.tool.trim()) return `调用 ${data.tool}`;
   return '';
 }
 

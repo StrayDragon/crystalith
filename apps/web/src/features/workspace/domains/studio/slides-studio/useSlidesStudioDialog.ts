@@ -38,6 +38,10 @@ import type {
   SlidesStudioDialogProps,
 } from './types';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export function useSlidesStudioDialog({
   open,
   onClose,
@@ -643,10 +647,7 @@ export function useSlidesStudioDialog({
           signal: ac.signal,
           onEvent: (event) => {
             if (event.event === 'progress' || event.event === 'toolcall') {
-              const data =
-                event.data && typeof event.data === 'object'
-                  ? (event.data as Record<string, unknown>)
-                  : {};
+              const data = isRecord(event.data) ? event.data : {};
               const message =
                 (typeof data.message === 'string' && data.message) ||
                 (typeof data.delta === 'string' && data.delta) ||
