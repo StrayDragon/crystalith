@@ -32,6 +32,7 @@
 | **U2**   | 剪枝/fork：在 `running` / `awaiting_confirm` 可用；M1「扩支路」与用户主动 fork 合流；`completed` 后图只读，改方向开新 Run（可选「从节点 fork 新 Run」P2）                                                   |
 | **R4**   | 图节点结论态：`clear` / `partial` / `missing` / `pending` / `pruned`；配色见 **C1**，MUST NOT 复刻参考图绿紫红                                                                                              |
 | **C1**   | 图节点色：复用工作区语义色（成功→clear、警告→partial、危险→missing、中性→pending）；`pruned` 降透明度/删线                                                                                                  |
+| **R5**   | 边语义闭集：`decompose`/`expand`/`focus`/`filter`/`compare`/`refine`/`support`/`fork`/`merge` + 可选短备注；MUST NOT 仅用自由中文边标签                                                                     |
 
 ---
 

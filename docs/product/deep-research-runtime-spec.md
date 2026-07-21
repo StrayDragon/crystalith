@@ -80,13 +80,17 @@ API 占位：`POST …/research/:rid/nodes/:nodeId/prune`、`…/fork`（body �
 
 执行中过程用节点 `phase`（如 `retrieving` / `synthesizing`），与结论态分离。
 
+## 6. Edge kinds（R5a）
+
+闭集（主控/用户 fork 只能选这些）；UI 用 i18n 显示。可选 `labelNote?: string` 短备注。
+
+`decompose` | `expand` | `focus` | `filter` | `compare` | `refine` | `support` | `fork` | `merge`
+
 ## 待钉（grill 主题）
 
-1. 边标签集合（筛选/扩展/聚焦/细化…是否枚举闭集）
-2. Report JSON 形状与脚注 serializer
-3. convertToNote / convertToSource 请求体（artifactRef）
-4. 错误码与取消语义
-5. （ui-proto）图节点色板 — **已定 C1**（工作区语义色 + pruned 降透明度）
+1. Report JSON 形状与脚注 serializer
+2. convertToNote / convertToSource 请求体（artifactRef）
+3. 错误码与取消语义
 
 ## 非目标
 
