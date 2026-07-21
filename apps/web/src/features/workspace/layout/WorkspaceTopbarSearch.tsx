@@ -166,7 +166,6 @@ export default function WorkspaceTopbarSearch({
   const [tab, setTab] = useState<TopbarSearchTab>('fast');
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null!);
-  const debounceRef = useRef<number | null>(null);
   const { style: layerStyle } = useLayer('popover');
 
   const {
@@ -201,18 +200,15 @@ export default function WorkspaceTopbarSearch({
     window.requestAnimationFrame(() => searchInputRef.current?.focus());
   }, [open, tab]);
 
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current != null) window.clearTimeout(debounceRef.current);
-    };
-  }, []);
-
   const submitFastSearch = useCallback(() => {
-    if (debounceRef.current != null) window.clearTimeout(debounceRef.current);
-    debounceRef.current = window.setTimeout(() => {
-      onSearch({ query: searchQuery, engine: 'Web', mode: 'Fast Research' });
-    }, 300);
-  }, [onSearch, searchQuery]);
+    if (searchState === 'loading') return;
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      toast.warning('请输入搜索关键词。');
+      return;
+    }
+    onSearch({ query: trimmed, engine: 'Web', mode: 'Fast Research' });
+  }, [onSearch, searchQuery, searchState]);
 
   const triggerClass =
     'flex-1 min-w-[12rem] max-w-xl mx-auto flex items-center gap-2 h-9 px-3 rounded-lg border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-800/80 text-left text-sm text-gray-500 dark:text-slate-400 hover:border-blue-300 dark:hover:border-slate-500 transition-colors';

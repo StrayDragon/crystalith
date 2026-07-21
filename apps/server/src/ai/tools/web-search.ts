@@ -35,7 +35,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 const DEFAULT_CONFIG: WebSearchConfig = {
   host: '',
-  timeoutMs: getSearchSettings().searxng.timeout,
+  // Prefer live config each call — do not bake timeout at module load.
+  timeoutMs: 20_000,
   maxResults: 10,
 };
 
@@ -50,8 +51,10 @@ export async function searchWeb(
 ): Promise<WebSearchResultItem[]> {
   const host = opts?.host ?? getSearxngHost();
   if (!host) return [];
-  const maxResults = opts?.maxResults ?? DEFAULT_CONFIG.maxResults;
-  const timeoutMs = opts?.timeoutMs ?? DEFAULT_CONFIG.timeoutMs;
+  const maxResults =
+    opts?.maxResults ?? getSearchSettings().searxng.max_results ?? DEFAULT_CONFIG.maxResults;
+  const timeoutMs =
+    opts?.timeoutMs ?? getSearchSettings().searxng.timeout ?? DEFAULT_CONFIG.timeoutMs;
 
   const url = new URL('/search', host);
   url.searchParams.set('q', query);

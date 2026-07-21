@@ -524,10 +524,19 @@ export function getSearchSettings(): SearchSettings {
   return parseSection(SearchSettingsSchema, config().raw.search);
 }
 
-/** SearXNG host resolved from config → CL_SEARXNG_HOST → SEARXNG_HOST env fallback. Empty disables web search. */
+/**
+ * SearXNG host: `search.searxng.host` → CL_SEARXNG_HOST → SEARXNG_HOST →
+ * (when optional_services.searxng.enabled) its endpoint.
+ * Empty still disables web search when nothing is configured.
+ */
 export function getSearxngHost(): string {
   const host = getSearchSettings().searxng.host;
-  return host || process.env.CL_SEARXNG_HOST || process.env.SEARXNG_HOST || '';
+  if (host) return host;
+  const fromEnv = process.env.CL_SEARXNG_HOST || process.env.SEARXNG_HOST || '';
+  if (fromEnv) return fromEnv;
+  const opt = getOptionalServices().searxng;
+  if (opt.enabled && opt.endpoint) return opt.endpoint;
+  return '';
 }
 
 /** Completion options from `completion_options` config section (optional fields). */

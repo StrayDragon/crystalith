@@ -16,7 +16,7 @@ requirements[14]{req_id,title,statement}:
   r70,Command palette is discoverable and includes core actions,Workspace MUST 提供可发现的命令面板（例如 Ctrl+K）并包含覆盖核心流程的最小动作集；其中与可选能力相关的动作 MUST 随运行时 capability 动态变化。
   r74,Slides entry points follow runtime capability,Workspace 中的 slides 入口（如 onboarding、快捷按钮、Studio tool cards）MUST 跟随运行时 capability，而不是默认显示为可用。
   "workspace-topbar-e1-search-panel",Top bar MUST open E1 anchored search panel,"用户点击或聚焦顶栏搜索/调研输入时，Workspace MUST 打开锚定于顶栏的宽幅面板（E1）：面板层级与关闭策略 MUST 走统一 Layer（Esc 与遮罩可关闭）；MUST NOT 使用硬编码 z-index。"
-  "workspace-topbar-panel-tabs",E1 panel MUST expose Fast Search and Deep Research tabs,顶栏 E1 面板 MUST 至少提供「快速搜索」与「深度研究」两个 Tab；「快速搜索」MUST 为默认可用的网搜添来源路径；「深度研究」Tab 在本阶段可为壳，但 MUST 可发现。
+  "workspace-topbar-panel-tabs",E1 panel MUST expose Fast Search and Deep Research tabs,顶栏 E1 面板 MUST 至少提供「直接搜索」与「深度研究」两个 Tab；「直接搜索」MUST 为默认可用的网搜添来源路径；「深度研究」Tab 在本阶段可为壳，但 MUST 可发现。
 scenarios[20]{req_id,id,given,when,then,feature}:
   r58,"default-workspace-layout","",用户首次进入 Workspace,系统 SHALL 呈现模块化画布布局，并包含 Sources/Chat/Studio 核心模块的入口,true
   r116,"topbar-shows-search-entry","",用户进入 Workspace 桌面布局,系统 SHALL 在顶部栏中间区域展示可点击的搜索/调研输入入口,false
@@ -36,5 +36,5 @@ scenarios[20]{req_id,id,given,when,then,feature}:
   r70,"open-command-palette","",用户触发 Ctrl+K（或等价入口）,系统 SHALL 打开命令面板,true
   r74,"missing-slides-capability-shows-guidance-instead-of-a-broken","",`/v2/workspace/tools` 未返回 `SLIDES`，且 diagnostics / official catalog 提供 slides 相关恢复提示,客户端 SHALL 不渲染可直接打开的 slides 入口,true
   "workspace-topbar-e1-search-panel","click-opens-anchored-panel","",用户点击顶栏搜索输入,系统 SHALL 打开锚定顶栏的宽幅面板且可用 Esc 或遮罩关闭,false
-  "workspace-topbar-panel-tabs","default-tab-is-fast-search","",用户打开 E1 面板,系统 SHALL 展示快速搜索与深度研究 Tab，且快速搜索可用于发起网搜,false
+  "workspace-topbar-panel-tabs","default-tab-is-fast-search","",用户打开 E1 面板,系统 SHALL 展示直接搜索与深度研究 Tab，且直接搜索可用于发起网搜,false
   "workspace-topbar-panel-tabs","deep-research-tab-visible","",用户打开 E1 面板并切换到深度研究,系统 SHALL 展示深度研究 Tab 内容（可为重建中壳），且不得因缺 Runtime 而整页崩溃,false
