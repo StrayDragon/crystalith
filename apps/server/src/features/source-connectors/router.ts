@@ -11,7 +11,6 @@ import {
   SourceConnectorsListResponseSchema,
   SyncCheckApplyRequestSchema,
   SyncCheckResultSchema,
-  type ImportScope,
   type Snapshot,
   type SyncCheckResult,
 } from '@crystalith/shared';
@@ -202,19 +201,19 @@ async function runSyncCheck(
 
   let baseSnapshot: Snapshot | null = null;
   if (binding.lastConfirmedSnapshot) {
-    baseSnapshot = binding.lastConfirmedSnapshot as unknown as Snapshot;
+    baseSnapshot = binding.lastConfirmedSnapshot;
   }
 
   const currentSnapshot = await buildFilesystemSnapshot(
     binding.connectorId,
-    binding.connectionConfig as Record<string, unknown>,
+    binding.connectionConfig,
   );
 
   let scopeDirectories: string[] = [];
   let scopeFiles: string[] = [];
   if (binding.importScope) {
     try {
-      const normalized = normalizeImportScope(binding.importScope as ImportScope);
+      const normalized = normalizeImportScope(binding.importScope);
       scopeDirectories = normalized.directories;
       scopeFiles = normalized.files;
     } catch (error) {
@@ -245,7 +244,7 @@ async function runSyncCheck(
   db()
     .update(sourceConnectorBindings)
     .set({
-      lastSyncCheckResult: result as unknown as Record<string, unknown>,
+      lastSyncCheckResult: result,
       updatedAt: new Date(),
     })
     .where(eq(sourceConnectorBindings.id, binding.id))
@@ -322,10 +321,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       getConnectorOr404(binding.connectorId);
 
       try {
-        return await buildFilesystemSnapshot(
-          binding.connectorId,
-          binding.connectionConfig as Record<string, unknown>,
-        );
+        return await buildFilesystemSnapshot(binding.connectorId, binding.connectionConfig);
       } catch (error) {
         const message = error instanceof Error ? error.message : '连接器快照枚举失败';
         throw new AppHttpError(ErrorCode.INTERNAL_ERROR, '连接器快照枚举失败', {
@@ -400,7 +396,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       try {
         currentSnapshot = await buildFilesystemSnapshot(
           binding.connectorId,
-          binding.connectionConfig as Record<string, unknown>,
+          binding.connectionConfig,
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : '连接器快照枚举失败';

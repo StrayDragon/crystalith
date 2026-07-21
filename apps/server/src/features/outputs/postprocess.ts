@@ -5,14 +5,22 @@ interface PostprocessResult {
   warnings: string[];
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function asString(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
 function postprocessOutput(object: unknown, type: string): PostprocessResult {
   const warnings: string[] = [];
-  let content = (object && typeof object === 'object' ? object : {}) as Record<string, unknown>;
+  let content: Record<string, unknown> = isRecord(object) ? object : {};
 
   // ensure_minimum_content: if the generated content is empty, use fallback
   if (Object.keys(content).length === 0 || isContentEmpty(content, type)) {
     warnings.push('Generated content was empty — using fallback');
-    content = generateFallbackContent(type) as Record<string, unknown>;
+    content = generateFallbackContent(type);
   }
 
   // Detect "no content found" template responses from AI and convert to fallback.
@@ -21,7 +29,7 @@ function postprocessOutput(object: unknown, type: string): PostprocessResult {
   // generation failures so the frontend shows the error+retry UI.
   if (isNoContentTemplate(content, type)) {
     warnings.push('AI generated placeholder content instead of real output — using fallback');
-    content = generateFallbackContent(type) as Record<string, unknown>;
+    content = generateFallbackContent(type);
   }
 
   // c42: per-type field-level backfill (v1 _ensure_minimum_content output_graph.py:290-375)
@@ -41,10 +49,12 @@ export function ensureMinimumContentFields(
   type: string,
 ): Record<string, unknown> {
   const ensureArray = (key: string): unknown[] => {
-    if (!Array.isArray(content[key]) || (content[key] as unknown[]).length === 0) {
+    const value = content[key];
+    if (!Array.isArray(value) || value.length === 0) {
       content[key] = [];
+      return [];
     }
-    return content[key] as unknown[];
+    return value;
   };
   const ensureString = (key: string, fallback = ''): void => {
     if (typeof content[key] !== 'string' || !content[key]) {
@@ -53,107 +63,66 @@ export function ensureMinimumContentFields(
   };
   // A leaf entry that should carry a citation anchor
   const leaf = (text: string): Record<string, unknown> => ({ text, citations: [1] });
+  const ensureCitations = (entries: unknown[]): void => {
+    for (const entry of entries) {
+      if (isRecord(entry) && !('citations' in entry)) {
+        entry.citations = [1];
+      }
+    }
+  };
 
   switch (type) {
-    case 'FAQ': {
-      const items = ensureArray('items');
-      for (const item of items) {
-        if (item && typeof item === 'object' && !('citations' in item)) {
-          (item as Record<string, unknown>).citations = [1];
-        }
-      }
+    case 'FAQ':
+      ensureCitations(ensureArray('items'));
       break;
-    }
-    case 'BULLETS': {
-      const items = ensureArray('items');
-      for (const item of items) {
-        if (item && typeof item === 'object' && !('citations' in item)) {
-          (item as Record<string, unknown>).citations = [1];
-        }
-      }
+    case 'BULLETS':
+      ensureCitations(ensureArray('items'));
       break;
-    }
-    case 'TIMELINE': {
-      const events = ensureArray('events');
-      for (const ev of events) {
-        if (ev && typeof ev === 'object' && !('citations' in ev)) {
-          (ev as Record<string, unknown>).citations = [1];
-        }
-      }
+    case 'TIMELINE':
+      ensureCitations(ensureArray('events'));
       break;
-    }
-    case 'QUIZ': {
-      const questions = ensureArray('questions');
-      for (const q of questions) {
-        if (q && typeof q === 'object' && !('citations' in q)) {
-          (q as Record<string, unknown>).citations = [1];
-        }
-      }
+    case 'QUIZ':
+      ensureCitations(ensureArray('questions'));
       break;
-    }
     case 'GUIDE': {
       const modules = ensureArray('modules');
       for (const mod of modules) {
-        if (mod && typeof mod === 'object') {
-          const m = mod as Record<string, unknown>;
-          // backfill objective {text, citations:[1]}
-          if (!m.objective || typeof m.objective !== 'object') {
-            m.objective = leaf(
-              typeof m.title === 'string' ? m.title : typeof m.title === 'string' ? m.title : '',
-            );
-          } else {
-            const obj = m.objective as Record<string, unknown>;
-            if (!Array.isArray(obj.citations)) obj.citations = [1];
-          }
-          // backfill keyPoints with at least one entry
-          if (!Array.isArray(m.keyPoints) || (m.keyPoints as unknown[]).length === 0) {
-            m.keyPoints = [
-              leaf(
-                typeof m.title === 'string' ? m.title : typeof m.title === 'string' ? m.title : '',
-              ),
-            ];
-          }
-          if (!Array.isArray(m.examples)) m.examples = [];
-          if (!Array.isArray(m.exercises)) m.exercises = [];
+        if (!isRecord(mod)) continue;
+        // backfill objective {text, citations:[1]}
+        if (!isRecord(mod.objective)) {
+          mod.objective = leaf(asString(mod.title));
+        } else if (!Array.isArray(mod.objective.citations)) {
+          mod.objective.citations = [1];
         }
+        // backfill keyPoints with at least one entry
+        if (!Array.isArray(mod.keyPoints) || mod.keyPoints.length === 0) {
+          mod.keyPoints = [leaf(asString(mod.title))];
+        }
+        if (!Array.isArray(mod.examples)) mod.examples = [];
+        if (!Array.isArray(mod.exercises)) mod.exercises = [];
       }
       break;
     }
     case 'BRIEFING': {
       const sections = ensureArray('sections');
       for (const sec of sections) {
-        if (sec && typeof sec === 'object') {
-          const s = sec as Record<string, unknown>;
-          if (!Array.isArray(s.points) || (s.points as unknown[]).length === 0) {
-            s.points = [
-              leaf(
-                typeof s.heading === 'string'
-                  ? s.heading
-                  : typeof s.heading === 'string'
-                    ? s.heading
-                    : '',
-              ),
-            ];
-          }
+        if (!isRecord(sec)) continue;
+        if (!Array.isArray(sec.points) || sec.points.length === 0) {
+          sec.points = [leaf(asString(sec.heading))];
         }
       }
       break;
     }
     case 'MINDMAP': {
-      if (!content.root || typeof content.root !== 'object') {
-        content.root = { label: '', citations: [], children: [] };
-      }
-      const root = content.root as Record<string, unknown>;
+      const root: Record<string, unknown> = isRecord(content.root)
+        ? content.root
+        : { label: '', citations: [], children: [] };
+      content.root = root;
       if (!Array.isArray(root.citations)) root.citations = [1];
-      if (!Array.isArray(root.children) || (root.children as unknown[]).length === 0) {
+      if (!Array.isArray(root.children) || root.children.length === 0) {
         root.children = [
           {
-            label:
-              typeof root.label === 'string'
-                ? root.label
-                : typeof root.label === 'string'
-                  ? root.label
-                  : '',
+            label: asString(root.label),
             citations: [1],
             children: [],
           },
@@ -182,8 +151,8 @@ export function ensureMinimumContentFields(
  * required fields (e.g. empty question text, missing module title).
  */
 export function needsRepair(type: string, content: unknown): boolean {
-  if (!content || typeof content !== 'object' || Array.isArray(content)) return true;
-  const c = content as Record<string, unknown>;
+  if (!isRecord(content)) return true;
+  const c = content;
   // already a fallback — don't repair
   if (c._fallback === true) return false;
   const isBlank = (v: unknown): boolean => typeof v !== 'string' || v.trim() === '';
@@ -191,19 +160,13 @@ export function needsRepair(type: string, content: unknown): boolean {
   switch (type) {
     case 'FAQ':
       if (!Array.isArray(items) || items.length === 0) return true;
-      return items.some(
-        (it) =>
-          !it ||
-          typeof it !== 'object' ||
-          isBlank((it as Record<string, unknown>).question) ||
-          isBlank((it as Record<string, unknown>).answer),
-      );
+      return items.some((it) => !isRecord(it) || isBlank(it.question) || isBlank(it.answer));
     case 'BULLETS':
       if (!Array.isArray(items) || items.length === 0) return true;
       return items.some((it) => {
         if (typeof it === 'string') return isBlank(it);
-        if (!it || typeof it !== 'object') return true;
-        return isBlank((it as Record<string, unknown>).text);
+        if (!isRecord(it)) return true;
+        return isBlank(it.text);
       });
     case 'TIMELINE':
       return !Array.isArray(c.events) || c.events.length === 0;
@@ -214,7 +177,7 @@ export function needsRepair(type: string, content: unknown): boolean {
     case 'BRIEFING':
       return !Array.isArray(c.sections) || c.sections.length === 0;
     case 'MINDMAP':
-      return !c.root || typeof c.root !== 'object';
+      return !isRecord(c.root);
     case 'PARAGRAPH':
       return isBlank(c.text);
     default:
@@ -275,39 +238,36 @@ function isNoContentTemplate(content: Record<string, unknown>, type: string): bo
       const items = content.items;
       if (!Array.isArray(items) || items.length === 0) return false;
       const first = items[0];
-      if (!first || typeof first !== 'object') return false;
-      const f = first as Record<string, unknown>;
+      if (!isRecord(first)) return false;
       return (
-        hasNoContentPrefix(f.question) || hasNoContentPrefix(f.answer) || hasNoContentPrefix(f.text)
+        hasNoContentPrefix(first.question) ||
+        hasNoContentPrefix(first.answer) ||
+        hasNoContentPrefix(first.text)
       );
     }
     case 'TIMELINE': {
       const events = content.events;
       if (!Array.isArray(events) || events.length === 0) return false;
       const first = events[0];
-      if (!first || typeof first !== 'object') return false;
-      const f = first as Record<string, unknown>;
-      return hasNoContentPrefix(f.event) || hasNoContentPrefix(f.description);
+      if (!isRecord(first)) return false;
+      return hasNoContentPrefix(first.event) || hasNoContentPrefix(first.description);
     }
     case 'GUIDE': {
       const modules = content.modules;
       if (!Array.isArray(modules) || modules.length === 0) return false;
       const first = modules[0];
-      if (!first || typeof first !== 'object') return false;
-      const f = first as Record<string, unknown>;
+      if (!isRecord(first)) return false;
       // Objective could be {text: string} or raw string
-      const obj = f.objective;
-      const objText =
-        typeof obj === 'object' && obj !== null ? (obj as Record<string, unknown>).text : obj;
-      return hasNoContentPrefix(f.title) || hasNoContentPrefix(objText);
+      const obj = first.objective;
+      const objText = isRecord(obj) ? obj.text : obj;
+      return hasNoContentPrefix(first.title) || hasNoContentPrefix(objText);
     }
     case 'BRIEFING': {
       const sections = content.sections;
       if (!Array.isArray(sections) || sections.length === 0) return false;
       const first = sections[0];
-      if (!first || typeof first !== 'object') return false;
-      const f = first as Record<string, unknown>;
-      return hasNoContentPrefix(f.heading);
+      if (!isRecord(first)) return false;
+      return hasNoContentPrefix(first.heading);
     }
     default:
       return false;

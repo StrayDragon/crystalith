@@ -1,4 +1,4 @@
-import type { JsonMetadata } from '@crystalith/shared';
+import type { ImportScope, JsonMetadata, Snapshot, SyncCheckResult } from '@crystalith/shared';
 // Drizzle ORM schema for Crystalith v2 — single SQLite database.
 //
 // Maps the business tables 1:1 (incl. strategy_configs for RAG). The sqlite-vec
@@ -310,10 +310,10 @@ export const sourceConnectorBindings = sqliteTable(
       .notNull()
       .references(() => notebooks.id, { onDelete: 'cascade' }),
     connectorId: text('connector_id').notNull(),
-    connectionConfig: jsonReq('connection_config'),
-    importScope: json('import_scope'),
-    lastConfirmedSnapshot: json('last_confirmed_snapshot'),
-    lastSyncCheckResult: json('last_sync_check_result'),
+    connectionConfig: jsonReq<Record<string, unknown>>('connection_config'),
+    importScope: json<ImportScope | null>('import_scope'),
+    lastConfirmedSnapshot: json<Snapshot | null>('last_confirmed_snapshot'),
+    lastSyncCheckResult: json<SyncCheckResult | null>('last_sync_check_result'),
     createdAt: ts('created_at'),
     updatedAt: tsUpd('updated_at'),
   },
