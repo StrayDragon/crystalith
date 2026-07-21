@@ -1,3 +1,4 @@
+import { viteApiBaseUrl } from '../../../api/viteEnv';
 import { toast } from '../../../shared/toast';
 
 function getBaseUrl(): string {
@@ -5,10 +6,7 @@ function getBaseUrl(): string {
     // Browser: use same origin (Vite proxy handles forwarding in dev)
     return window.location.origin;
   }
-  return (
-    (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_BASE_URL ??
-    'http://localhost:8032'
-  );
+  return viteApiBaseUrl();
 }
 
 const BASE_URL = getBaseUrl();

@@ -9,6 +9,8 @@ import type { App } from '@crystalith/server';
 // + compile-time validation on every path/body/response.
 import { treaty } from '@elysiajs/eden';
 
+import { viteApiBaseUrl } from './viteEnv';
+
 /**
  * API base URL:
  * - Browser: routes through Vite proxy (same-origin, default '')
@@ -24,10 +26,7 @@ function getBaseUrl(): string {
     return window.location.origin;
   }
   // Server-side or env override
-  return (
-    (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_BASE_URL ??
-    'http://localhost:8032'
-  );
+  return viteApiBaseUrl();
 }
 
 const baseUrl = getBaseUrl();

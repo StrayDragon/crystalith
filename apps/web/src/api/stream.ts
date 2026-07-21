@@ -14,6 +14,8 @@
  *   for await (const event of stream) { ... }
  */
 
+import { viteApiBaseUrl } from './viteEnv';
+
 export interface SseEvent {
   event: string;
   data: unknown;
@@ -62,10 +64,7 @@ function getBaseUrl(): string {
     return window.location.origin;
   }
   // Server-side or env override
-  return (
-    (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_BASE_URL ??
-    'http://localhost:8032'
-  );
+  return viteApiBaseUrl();
 }
 
 const BASE_URL = getBaseUrl();
