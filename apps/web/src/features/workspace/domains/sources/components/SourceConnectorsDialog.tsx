@@ -22,7 +22,6 @@ import type {
   Snapshot,
   SnapshotEntry,
   SourceConnectorDescriptor,
-  SourceConnectorsListResponse,
   SyncCheckResult,
   SyncCandidate,
 } from './source-connector-types';
@@ -646,7 +645,7 @@ export default function SourceConnectorsDialog({
   }, [open]);
 
   const canQuery = Boolean(open && notebookId && isConnected);
-  const { data, error, isLoading, mutate } = useSWR<SourceConnectorsListResponse>(
+  const { data, error, isLoading, mutate } = useSWR(
     canQuery ? ['workspace/source-connectors', notebookId] : null,
     async () => {
       const { data: response, error: fetchErr } = await api.v2
@@ -656,7 +655,8 @@ export default function SourceConnectorsDialog({
         throw new Error(
           typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
         );
-      return response as SourceConnectorsListResponse;
+      if (!response) throw new Error('无法获取连接器列表');
+      return response;
     },
     { revalidateOnFocus: false },
   );
@@ -734,7 +734,7 @@ export default function SourceConnectorsDialog({
               : '',
         );
       if (!created) throw new Error('创建绑定失败');
-      setBinding(created as ConnectorBindingRead);
+      setBinding(created);
       setSnapshot(null);
       setSelectedDirs({});
       setSelectedFiles({});
@@ -764,8 +764,8 @@ export default function SourceConnectorsDialog({
           typeof snapErr === 'string' ? snapErr : typeof snapErr === 'string' ? snapErr : '',
         );
       if (!snap) throw new Error('加载快照失败');
-      setSnapshot(snap as Snapshot);
-      toast.success(`快照已加载：${safeArray((snap as Snapshot).entries).length} 项`);
+      setSnapshot(snap);
+      toast.success(`快照已加载：${safeArray(snap.entries).length} 项`);
     } catch (error) {
       const message = error instanceof Error ? error.message : '加载快照失败';
       toast.error(message);
@@ -807,11 +807,11 @@ export default function SourceConnectorsDialog({
               : '',
         );
       if (!result) throw new Error('导入失败');
-      setBinding((result as ImportScopeApplyResponse).binding);
-      setImportResult(result as ImportScopeApplyResponse);
+      setBinding(result.binding);
+      setImportResult(result);
       await onSourcesChanged?.();
       toast.success(
-        `导入完成：新增 ${safeArray((result as ImportScopeApplyResponse).importedSourceIds).length} · 复用 ${safeArray((result as ImportScopeApplyResponse).reusedSourceIds).length}`,
+        `导入完成：新增 ${safeArray(result.importedSourceIds).length} · 复用 ${safeArray(result.reusedSourceIds).length}`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : '导入失败';
@@ -845,7 +845,7 @@ export default function SourceConnectorsDialog({
           typeof syncErr === 'string' ? syncErr : typeof syncErr === 'string' ? syncErr : '',
         );
       if (!result) throw new Error('同步检查失败');
-      setSyncCheck(result as SyncCheckResult);
+      setSyncCheck(result);
       toast.success('同步检查完成');
     } catch (error) {
       const message = error instanceof Error ? error.message : '同步检查失败';
@@ -869,11 +869,11 @@ export default function SourceConnectorsDialog({
           typeof applyErr === 'string' ? applyErr : typeof applyErr === 'string' ? applyErr : '',
         );
       if (!result) throw new Error('同步应用失败');
-      setBinding((result as ImportScopeApplyResponse).binding);
-      setSyncApplyResult(result as ImportScopeApplyResponse);
+      setBinding(result.binding);
+      setSyncApplyResult(result);
       await onSourcesChanged?.();
       toast.success(
-        `同步应用完成：新增 ${safeArray((result as ImportScopeApplyResponse).importedSourceIds).length} · 复用 ${safeArray((result as ImportScopeApplyResponse).reusedSourceIds).length}`,
+        `同步应用完成：新增 ${safeArray(result.importedSourceIds).length} · 复用 ${safeArray(result.reusedSourceIds).length}`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : '同步应用失败';
