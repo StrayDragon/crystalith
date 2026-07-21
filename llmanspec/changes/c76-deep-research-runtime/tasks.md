@@ -3,7 +3,7 @@
 - [x] 1.1 proposal / design / tasks
 - [x] 1.2 delta `deep-research-runtime` + structural-refinement 收窄
 - [x] 1.3 `llman sdd validate c76-deep-research-runtime --strict --no-interactive --stage spec`
-- [x] 1.4 PRD 瘦身为 §0 索引；runtime-spec 并入 design.md 并删除；ui-proto 保留待 FE change
+- [x] 1.4 PRD/runtime-spec 并入 design；ui-proto 决策由 `c77-deep-research-ui` 承接（docs/product 已移除）
 
 ## 2. Shared 合约 + DB
 
@@ -32,7 +32,7 @@
 
 ## 5. FE 占位
 
-- [ ] 5.1 深研 Tab 保持壳；注释指向 ui-proto / 后续 FE change
+- [ ] 5.1 深研 Tab 保持壳；注释指向 `c77-deep-research-ui`
 - [ ] 5.2（可选）仅导出 shared 类型给 web，不接 UI
 
 验证：壳不崩；无强制深研 e2e

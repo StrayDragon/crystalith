@@ -1,7 +1,7 @@
 ## Context
 
-- **后端 wire SSOT = 本文**（原 `docs/product/deep-research-runtime-spec.md` 已并入）。
-- 产品决策索引：`docs/product/deep-research-prd.md` §0。
+- **后端 wire SSOT = 本文**（原 runtime-spec / PRD 后端决策已并入）。
+- FE：`c77-deep-research-ui`。
 - 现状：`research/router.ts` 501 stub；c75 顶栏已归档。
 - 约束：AI SDK v7；禁 LangGraph/Mastra；`searchWeb` 单实现。
 
@@ -36,7 +36,7 @@
 
 ## FE 已锁、本 change 不实现
 
-U1 图=思路；E1′ 节点转化淡化；F1-CTA；UI-C1 CitationsControl；C1 语义色。见 `docs/product/deep-research-ui-proto.md` → 后续 FE change。
+U1 图=思路；E1′ 节点转化淡化；F1-CTA；UI-C1 CitationsControl；C1 语义色。见 `c77-deep-research-ui`。
 
 ## Risks
 
