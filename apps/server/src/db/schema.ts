@@ -1,4 +1,11 @@
-import type { ImportScope, JsonMetadata, Snapshot, SyncCheckResult } from '@crystalith/shared';
+import type {
+  ImportScope,
+  JsonMetadata,
+  SlideGenerationConfig,
+  SlidesOutline,
+  Snapshot,
+  SyncCheckResult,
+} from '@crystalith/shared';
 // Drizzle ORM schema for Crystalith v2 — single SQLite database.
 //
 // Maps the business tables 1:1 (incl. strategy_configs for RAG). The sqlite-vec
@@ -385,9 +392,9 @@ export const studioSlides = sqliteTable(
     engine: text('engine').notNull().default('slidev'),
     chunkIds: text('chunk_ids', { mode: 'json' }).$type<number[] | null>(),
     sourceIds: text('source_ids', { mode: 'json' }).$type<number[] | null>(),
-    outline: json('outline'),
+    outline: json<SlidesOutline | null>('outline'),
     markdown: text('markdown'),
-    generationConfig: json('generation_config'),
+    generationConfig: json<SlideGenerationConfig | null>('generation_config'),
     stage: text('stage', { enum: ['input', 'outline', 'markdown'] })
       .notNull()
       .default('input'),

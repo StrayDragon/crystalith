@@ -379,7 +379,7 @@ async function handleGenerateOutline(id: number, notebookId: number) {
     const outline = await generateOutline(slide, context);
     db()
       .update(studioSlides)
-      .set({ outline: outline as Record<string, unknown>, stage: 'outline', status: 'idle' })
+      .set({ outline, stage: 'outline', status: 'idle' })
       .where(eq(studioSlides.id, id))
       .run();
     return serializeSlide(getSlideOrThrow(id));
@@ -398,7 +398,7 @@ function handlePutOutline(id: number, notebookId: number, body: StudioOutlinePut
   db()
     .update(studioSlides)
     .set({
-      outline: body.outline as Record<string, unknown>,
+      outline: body.outline,
       stage: 'outline',
       status: 'idle',
       errorMessage: null,
@@ -476,7 +476,7 @@ function handleOutlineStream(id: number, notebookId: number) {
     emit('progress', { stage: 'outline', progress: 90, message: '大纲生成完成' });
     db()
       .update(studioSlides)
-      .set({ outline: outline as Record<string, unknown>, stage: 'outline', status: 'idle' })
+      .set({ outline, stage: 'outline', status: 'idle' })
       .where(eq(studioSlides.id, id))
       .run();
     // c51: done payload = {traceId, slideId} (v1 api.py:428)

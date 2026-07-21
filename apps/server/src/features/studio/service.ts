@@ -1,7 +1,11 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { SlidesOutlineSchema, type SlidesOutline } from '@crystalith/shared';
+import {
+  SlidesOutlineSchema,
+  type SlideGenerationConfig,
+  type SlidesOutline,
+} from '@crystalith/shared';
 // Studio service — shared generation logic + SSE helper.
 //
 // Extracted from router.ts (H5+H6 fix) to eliminate duplication between
@@ -51,27 +55,15 @@ export function applyFrontmatter(md: string, frontmatter: string): string {
  *
  * Returns a `\n\nGuidance:\n- ...` block appended to the system prompt, or ''.
  */
-export function buildConfigHints(config: Record<string, unknown> | null): string {
+export function buildConfigHints(config: SlideGenerationConfig | null): string {
   if (!config) return '';
-  const [slideMin, slideMax] = resolveQuantityRange(
-    typeof config.quantity === 'string' ? config.quantity : null,
-  );
-  const [bulletMin, bulletMax] = resolveBulletRange(
-    typeof config.density === 'string' ? config.density : null,
-  );
-  const languageHint = resolveLanguageHint(
-    typeof config.language === 'string' ? config.language : null,
-  );
-  const audienceHint = resolveAudienceHint(
-    typeof config.audience === 'string' ? config.audience : null,
-  );
-  const toneHint = resolveToneHint(typeof config.tone === 'string' ? config.tone : null);
-  const structureHint = resolveStructureHint(
-    typeof config.structure === 'string' ? config.structure : null,
-  );
-  const themePreset = resolveThemePreset(
-    typeof config.themePreset === 'string' ? config.themePreset : null,
-  );
+  const [slideMin, slideMax] = resolveQuantityRange(config.quantity ?? null);
+  const [bulletMin, bulletMax] = resolveBulletRange(config.density ?? null);
+  const languageHint = resolveLanguageHint(config.language ?? null);
+  const audienceHint = resolveAudienceHint(config.audience ?? null);
+  const toneHint = resolveToneHint(config.tone ?? null);
+  const structureHint = resolveStructureHint(config.structure ?? null);
+  const themePreset = resolveThemePreset(config.themePreset ?? null);
 
   const lines: string[] = [];
   lines.push(`请生成 ${slideMin}-${slideMax} 张幻灯片。`);
@@ -95,8 +87,7 @@ export async function getContext(slide: typeof studioSlides.$inferSelect): Promi
   }
 
   // c56: preference (quality/speed) tunes topK/minScore (v1 generation_preference.py).
-  const config = (slide.generationConfig ?? {}) as Record<string, unknown>;
-  const preference = typeof config.preference === 'string' ? config.preference : null;
+  const preference = slide.generationConfig?.preference ?? null;
   const { topK, minScore } = resolveRetrievalTuning(preference);
 
   const query = slide.prompt || slide.title || 'presentation slides';
@@ -228,8 +219,7 @@ export async function generateOutline(
   const model = withRetry(await resolveModel(modelConfig));
 
   // c56: interpret generation_config into concrete ranges (v1 _build_outline_prompt).
-  const config = (slide.generationConfig ?? null) as Record<string, unknown> | null;
-  const hintLines = buildConfigHints(config);
+  const hintLines = buildConfigHints(slide.generationConfig ?? null);
 
   const { object: outline } = await generateObject({
     model,
@@ -257,8 +247,8 @@ export async function generateMarkdown(
   if (!modelConfig) throw new Error('No chat model configured');
   const model = withRetry(await resolveModel(modelConfig));
 
-  const config = slide.generationConfig as Record<string, unknown> | null;
-  const themePreset = (config?.themePreset as string) ?? 'minimal-clean';
+  const config = slide.generationConfig ?? null;
+  const themePreset = config?.themePreset ?? 'minimal-clean';
   const frontmatterOverride =
     typeof config?.frontmatter === 'string' && config.frontmatter.trim()
       ? config.frontmatter
