@@ -19,9 +19,9 @@ E1 台 / F1 Run 大详情叠层 / G1 关详情保留 E1；深研 Tab 与直接�
 1. DeepResearchDesk：配置表单（H1′ D1 双开关 + 台内来源多选 + L1）与队列卡片态
 2. Run 详情：默认/主表面 = **可交互图**；报告为终局阅读面（无并列「研究思路」页）
 3. 剪枝 / fork：**U2a** — `running`/`awaiting_confirm` 可操作；完成后只读；改方向 → 新 Run
-4. Citation chip ↔ popover：**C1** — 复用现有 `CitationsControl` + 跳转来源
-5. Convert 菜单信息架构
-6. 待确认（M1）CTA 文案与位置
+4. Citation chip ↔ popover：**UI-C1** — 复用现有 `CitationsControl` + 跳转来源
+5. Convert：**E1′** — 节点菜单 + 报告顶栏均可「转为笔记/来源」；**节点入口须淡化**（溢出菜单/右键/「…」，非主按钮）
+6. 待确认（M1）：**F1** — 图上高亮相关节点 + 详情顶栏确认条（同一动作）
 
 ## 非目标
 

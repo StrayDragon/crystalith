@@ -130,11 +130,23 @@ type ArtifactRef =
 - 每完成一个图节点写 checkpoint。
 - 进入 `awaiting_confirm`（M1）前强制 checkpoint。
 
+## 11. graph_patch（D1）
+
+SSE `graph_patch` data：
+
+```ts
+{
+  nodes?: Node[];           // upsert by id
+  edges?: Edge[];           // upsert by id
+  removeNodeIds?: string[];
+  removeEdgeIds?: string[];
+}
+```
+
 ## 待钉（grill 主题）
 
-1. graph_patch 最小字段（节点/边 payload）
-2. 错误码表（与 AppHttpError 对齐）
-3. （ui 已定 C1）报告/节点详情复用 CitationsControl — 写入 ui-proto 即可
+1. 错误码表（与 AppHttpError 对齐）
+2. Node / Edge 持久化字段最小集（可与 D1 一并在 apply 时落 Zod）
 
 ## 非目标
 
