@@ -3,31 +3,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../../../../api/eden';
 import { t } from '../../../../../shared/i18n';
 import { toast } from '../../../../../shared/toast';
+import { useGenerationPreference } from '../../../shared/hooks/useGenerationPreference';
+import type { SlideDraft, SlideOutline, SlideOutlineItem, SlideStage } from '../../../shared/types';
 import {
-  toApiGenerationPreference,
-  useGenerationPreference,
-} from '../../../shared/hooks/useGenerationPreference';
-import type {
-  GenerationPreferenceSetting,
-  SlideDraft,
-  SlideGenerationConfig,
-  SlideOutline,
-  SlideOutlineItem,
-  SlideStage,
-} from '../../../shared/types';
-import { buildFrontmatterPreview } from '../utils/slides';
-import { consumeSlidesStageStream } from './consumeSlidesStageStream';
-import {
-  buildSlidesPreviewUrl,
   normalizeDraft,
   outlineItemsFromDraft,
   outlineTitleFromDraft,
   resolveErrorStatus,
-  resolveOptionId,
-  resolvePreviewProviderLabel,
   resolveSlidesRecoveryHint,
   resolveStatusMessage,
-  waitForSlidevPreviewReady,
 } from './slidesStudioUtils';
 import type {
   SlidesInputStageProps,
@@ -37,10 +21,9 @@ import type {
   SlidesStageContentProps,
   SlidesStudioDialogProps,
 } from './types';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+import { useSlidesConfigForm } from './useSlidesConfigForm';
+import { useSlidesPreviewSync } from './useSlidesPreviewSync';
+import { useSlidesStageGeneration } from './useSlidesStageGeneration';
 
 export function useSlidesStudioDialog({
   open,
@@ -62,38 +45,16 @@ export function useSlidesStudioDialog({
   const [activeStage, setActiveStage] = useState<SlideStage>('input');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isQueueing, setIsQueueing] = useState(false);
-  const [events, setEvents] = useState<{ type: string; message: string }[]>([]);
-  const [debugTimings, setDebugTimings] = useState<Record<string, number> | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [configPreference, setConfigPreference] = useState<GenerationPreferenceSetting>(
-    () => globalPreference,
-  );
-  const [configQuantity, setConfigQuantity] = useState('');
-  const [configAudience, setConfigAudience] = useState('');
-  const [configStructure, setConfigStructure] = useState('');
-  const [configTone, setConfigTone] = useState('');
-  const [configLanguage, setConfigLanguage] = useState('');
-  const [configDensity, setConfigDensity] = useState('');
-  const [configThemePreset, setConfigThemePreset] = useState('');
-  const [configFrontmatter, setConfigFrontmatter] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [configModelId, setConfigModelId] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
   const [prompt, setPrompt] = useState('');
   const [outlineTitle, setOutlineTitle] = useState('');
   const [outlineItems, setOutlineItems] = useState<SlideOutlineItem[]>([]);
   const [markdown, setMarkdown] = useState('');
-  const [previewMarkdown, setPreviewMarkdown] = useState('');
-  const [previewError, setPreviewError] = useState('');
-  const [previewKey, setPreviewKey] = useState(0);
-  const [isPreviewSyncing, setIsPreviewSyncing] = useState(false);
   const [showMarkdownEditor, setShowMarkdownEditor] = useState(false);
 
-  const generateAbortRef = useRef<AbortController | null>(null);
-  const autoPreviewRef = useRef<number | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const isConfigOnly = openMode === 'config';
   const isPreviewMode = openMode === 'preview';
@@ -111,6 +72,48 @@ export function useSlidesStudioDialog({
         ? '演示配置不可用。'
         : '';
 
+  const {
+    configPreference,
+    setConfigPreference,
+    configQuantity,
+    setConfigQuantity,
+    configAudience,
+    setConfigAudience,
+    configStructure,
+    setConfigStructure,
+    configTone,
+    setConfigTone,
+    configLanguage,
+    setConfigLanguage,
+    configDensity,
+    setConfigDensity,
+    configThemePreset,
+    setConfigThemePreset,
+    configFrontmatter,
+    setConfigFrontmatter,
+    showAdvanced,
+    setShowAdvanced,
+    configModelId,
+    setConfigModelId,
+    frontmatterPreview,
+    applyGenerationConfig,
+    resetConfigFields,
+    buildGenerationConfig,
+    buildGenerationConfigPayload,
+    quantityOptions,
+    structureOptions,
+    audienceOptions,
+    toneOptions,
+    languageOptions,
+    densityOptions,
+    themePresetOptions,
+  } = useSlidesConfigForm({
+    slidesConfig,
+    globalPreference,
+    open,
+    title,
+  });
+
   const selectionLabel = useMemo(() => {
     const draftSourceIds = isPreviewMode ? (draft?.sourceIds ?? []) : [];
     const activeSourceIds = draftSourceIds.length ? draftSourceIds : selectedSourceIds;
@@ -120,137 +123,100 @@ export function useSlidesStudioDialog({
     return '未选择来源，无法生成演示。';
   }, [draft?.sourceIds, isPreviewMode, selectedSourceIds]);
 
-  const selectedThemePreset = useMemo(() => {
-    const options = slidesConfig?.themePresetOptions ?? [];
-    if (!options.length) return null;
-    return options.find((option) => option.id === configThemePreset) ?? options[0] ?? null;
-  }, [configThemePreset, slidesConfig?.themePresetOptions]);
-  const configDefaults = slidesConfig?.defaults ?? null;
-
-  const frontmatterPreview = useMemo(
-    () =>
-      buildFrontmatterPreview(
-        title.trim() || '演示',
-        selectedThemePreset?.template,
-        configFrontmatter,
-      ),
-    [configFrontmatter, selectedThemePreset?.template, title],
-  );
-
-  const previewStale = useMemo(
-    () => Boolean(previewMarkdown && previewMarkdown !== markdown),
-    [previewMarkdown, markdown],
-  );
-  const previewReady = Boolean(previewMarkdown);
-  const previewDescriptor = slidesConfig?.preview ?? null;
   const slidesEngine = draft?.engine || slidesConfig?.engine || null;
-  const previewProviderLabel = useMemo(
-    () => resolvePreviewProviderLabel(previewDescriptor, slidesEngine),
-    [previewDescriptor, slidesEngine],
-  );
-  const previewUrl = useMemo(
-    () => buildSlidesPreviewUrl(previewDescriptor, previewKey),
-    [previewDescriptor, previewKey],
-  );
-  const previewSupported = Boolean(previewUrl);
-  const previewStatus = isPreviewSyncing ? '同步中' : previewReady ? '已同步' : '未同步';
   const hasSelectedSources = useMemo(() => {
     const draftSourceIds = draft?.sourceIds ?? [];
     return draftSourceIds.length > 0 || selectedSourceIds.length > 0;
   }, [draft?.sourceIds, selectedSourceIds]);
-  const previewStatusTone: 'blue' | 'green' | 'gray' = isPreviewSyncing
-    ? 'blue'
-    : previewReady
-      ? 'green'
-      : 'gray';
-
-  const closeGenerate = useCallback(() => {
-    if (generateAbortRef.current) {
-      generateAbortRef.current.abort();
-      generateAbortRef.current = null;
-    }
-  }, []);
 
   const resolveSourceIds = useCallback(async () => selectedSourceIds, [selectedSourceIds]);
 
+  // Preview + generation hooks need save/outline callbacks defined later; bridge via refs.
+  const handleSaveMarkdownRef = useRef<() => Promise<void>>(async () => {});
+  const saveInputStageRef = useRef<() => Promise<SlideDraft | null>>(async () => null);
+  const handleSaveOutlineRef = useRef<() => Promise<void>>(async () => {});
+  const refreshDraftRef = useRef<(slideId?: number) => Promise<void>>(async () => {});
+
+  const bridgedSaveMarkdown = useCallback(() => handleSaveMarkdownRef.current(), []);
+  const bridgedSaveInputStage = useCallback(() => saveInputStageRef.current(), []);
+  const bridgedSaveOutline = useCallback(() => handleSaveOutlineRef.current(), []);
+  const bridgedRefreshDraft = useCallback(
+    (slideId?: number) => refreshDraftRef.current(slideId),
+    [],
+  );
+
+  const previewSync = useSlidesPreviewSync({
+    open,
+    isPreviewMode,
+    isConnected,
+    draftId: draft?.id,
+    markdown,
+    slidesTool,
+    slidesConfig,
+    slidesConfigErrorMessage,
+    slidesEngine,
+    handleSaveMarkdown: bridgedSaveMarkdown,
+  });
+
+  const stageGeneration = useSlidesStageGeneration({
+    notebookId,
+    isConnected,
+    draft,
+    saveInputStage: bridgedSaveInputStage,
+    refreshDraft: bridgedRefreshDraft,
+    handleSaveOutline: bridgedSaveOutline,
+    onOutputsUpdated,
+    setActiveStage,
+    setError,
+  });
+
+  const {
+    resetPreviewState,
+    previewStatus,
+    previewStatusTone,
+    previewReady,
+    previewStale,
+    previewError,
+    previewSupported,
+    previewProviderLabel,
+    previewDescriptor,
+    previewUrl,
+    previewKey,
+    isPreviewSyncing,
+    handleOpenPreviewWindow,
+    handlePreview,
+    handleRefreshPreview,
+  } = previewSync;
+
+  const {
+    isGenerating,
+    setIsGenerating,
+    events,
+    debugTimings,
+    closeGenerate,
+    resetGenerationState,
+    handleGenerateOutline,
+    handleGenerateMarkdown,
+    handleGenerateAll,
+  } = stageGeneration;
+
   const resetDraftState = useCallback(() => {
-    const defaults = configDefaults;
-    const quantityOptions = slidesConfig?.quantityOptions ?? [];
-    const audienceOptions = slidesConfig?.audienceOptions ?? [];
-    const structureOptions = slidesConfig?.structureOptions ?? [];
-    const toneOptions = slidesConfig?.toneOptions ?? [];
-    const languageOptions = slidesConfig?.languageOptions ?? [];
-    const densityOptions = slidesConfig?.densityOptions ?? [];
-    const themeOptions = slidesConfig?.themePresetOptions ?? [];
     setDraft(null);
     setActiveStage('input');
     setLoading(false);
     setIsGenerating(false);
-    setConfigPreference(globalPreference);
-    setConfigQuantity(resolveOptionId(defaults?.quantity ?? null, quantityOptions));
-    setConfigAudience(resolveOptionId(defaults?.audience ?? null, audienceOptions));
-    setConfigStructure(resolveOptionId(defaults?.structure ?? null, structureOptions));
-    setConfigTone(resolveOptionId(defaults?.tone ?? null, toneOptions));
-    setConfigLanguage(resolveOptionId(defaults?.language ?? null, languageOptions));
-    setConfigDensity(resolveOptionId(defaults?.density ?? null, densityOptions));
-    setConfigThemePreset(resolveOptionId(defaults?.themePreset ?? null, themeOptions));
-    setConfigFrontmatter(defaults?.frontmatter ?? '');
-    setShowAdvanced(false);
-    setConfigModelId(null);
+    resetConfigFields();
     setTitle('');
     setPrompt('');
     setOutlineTitle('');
     setOutlineItems([]);
     setMarkdown('');
-    setEvents([]);
+    resetGenerationState();
     setError('');
-    setPreviewMarkdown('');
-    setPreviewError('');
-    setPreviewKey(0);
-    setIsPreviewSyncing(false);
+    resetPreviewState();
     setShowMarkdownEditor(false);
-    autoPreviewRef.current = null;
     setIsQueueing(false);
-  }, [configDefaults, globalPreference, slidesConfig]);
-
-  const applyGenerationConfig = useCallback(
-    (config: SlideGenerationConfig | null | undefined) => {
-      const defaults = configDefaults;
-      const quantityOptions = slidesConfig?.quantityOptions ?? [];
-      const audienceOptions = slidesConfig?.audienceOptions ?? [];
-      const structureOptions = slidesConfig?.structureOptions ?? [];
-      const toneOptions = slidesConfig?.toneOptions ?? [];
-      const languageOptions = slidesConfig?.languageOptions ?? [];
-      const densityOptions = slidesConfig?.densityOptions ?? [];
-      const themeOptions = slidesConfig?.themePresetOptions ?? [];
-      const preferenceValue =
-        config?.preference === 'quality' || config?.preference === 'speed'
-          ? config.preference
-          : globalPreference;
-      setConfigPreference(preferenceValue);
-      setConfigQuantity(
-        resolveOptionId(config?.quantity ?? defaults?.quantity ?? null, quantityOptions),
-      );
-      setConfigAudience(
-        resolveOptionId(config?.audience ?? defaults?.audience ?? null, audienceOptions),
-      );
-      setConfigStructure(
-        resolveOptionId(config?.structure ?? defaults?.structure ?? null, structureOptions),
-      );
-      setConfigTone(resolveOptionId(config?.tone ?? defaults?.tone ?? null, toneOptions));
-      setConfigLanguage(
-        resolveOptionId(config?.language ?? defaults?.language ?? null, languageOptions),
-      );
-      setConfigDensity(
-        resolveOptionId(config?.density ?? defaults?.density ?? null, densityOptions),
-      );
-      setConfigThemePreset(
-        resolveOptionId(config?.themePreset ?? defaults?.themePreset ?? null, themeOptions),
-      );
-      setConfigFrontmatter(config?.frontmatter ?? defaults?.frontmatter ?? '');
-    },
-    [configDefaults, globalPreference, slidesConfig],
-  );
+  }, [resetConfigFields, resetGenerationState, resetPreviewState, setIsGenerating]);
 
   const syncFromDraft = useCallback(
     (nextDraft: SlideDraft | null) => {
@@ -338,144 +304,6 @@ export function useSlidesStudioDialog({
     [draft?.id, isConnected, notebookId, syncFromDraft],
   );
 
-  useEffect(() => {
-    if (open) {
-      setIsFullscreen(false);
-      setIsQueueing(false);
-      setIsGenerating(false);
-      void loadDraft();
-    } else {
-      closeGenerate();
-      setIsFullscreen(false);
-      setIsQueueing(false);
-      setIsGenerating(false);
-    }
-  }, [closeGenerate, loadDraft, open]);
-
-  useEffect(() => {
-    if (!open) return;
-    if (isConfigOnly) {
-      setActiveStage('input');
-      return;
-    }
-    if (isPreviewMode) {
-      setActiveStage('markdown');
-    }
-  }, [isConfigOnly, isPreviewMode, open]);
-
-  useEffect(() => {
-    if (!open || !slidesConfig) return;
-    setConfigQuantity(
-      (prev) =>
-        prev || resolveOptionId(configDefaults?.quantity ?? null, slidesConfig.quantityOptions),
-    );
-    setConfigAudience(
-      (prev) =>
-        prev || resolveOptionId(configDefaults?.audience ?? null, slidesConfig.audienceOptions),
-    );
-    setConfigStructure(
-      (prev) =>
-        prev || resolveOptionId(configDefaults?.structure ?? null, slidesConfig.structureOptions),
-    );
-    setConfigTone(
-      (prev) => prev || resolveOptionId(configDefaults?.tone ?? null, slidesConfig.toneOptions),
-    );
-    setConfigLanguage(
-      (prev) =>
-        prev || resolveOptionId(configDefaults?.language ?? null, slidesConfig.languageOptions),
-    );
-    setConfigDensity(
-      (prev) =>
-        prev || resolveOptionId(configDefaults?.density ?? null, slidesConfig.densityOptions),
-    );
-    setConfigThemePreset(
-      (prev) =>
-        prev ||
-        resolveOptionId(configDefaults?.themePreset ?? null, slidesConfig.themePresetOptions),
-    );
-    setConfigFrontmatter((prev) => prev || configDefaults?.frontmatter || '');
-  }, [configDefaults, open, slidesConfig]);
-
-  useEffect(() => () => closeGenerate(), [closeGenerate]);
-
-  useEffect(() => {
-    if (!draft?.id) {
-      setPreviewMarkdown('');
-      setPreviewError('');
-      setPreviewKey(0);
-      setIsPreviewSyncing(false);
-      autoPreviewRef.current = null;
-      return;
-    }
-    setPreviewMarkdown('');
-    setPreviewError('');
-    setPreviewKey(0);
-    setIsPreviewSyncing(false);
-    autoPreviewRef.current = null;
-  }, [draft?.id]);
-
-  useEffect(() => {
-    if (!open || !isPreviewMode || !draft?.id || !isConnected) return;
-    if (queueStatus !== 'running') return;
-    const timer = window.setInterval(() => {
-      void refreshDraft(draft.id);
-    }, 5000);
-    return () => window.clearInterval(timer);
-  }, [draft?.id, isConnected, isPreviewMode, open, queueStatus, refreshDraft]);
-
-  useEffect(() => {
-    if (!open || !isPreviewMode || !draft?.id) return;
-    if (queueStatus !== 'done' && queueStatus !== 'cancelled') return;
-    void refreshDraft(draft.id);
-  }, [draft?.id, isPreviewMode, open, queueStatus, refreshDraft]);
-
-  useEffect(() => {
-    if (!open || !isPreviewMode) return;
-    setShowMarkdownEditor(true);
-  }, [isPreviewMode, open]);
-
-  const buildGenerationConfig = useCallback((): SlideGenerationConfig => {
-    const frontmatter = configFrontmatter.trim();
-    const apiPreference = toApiGenerationPreference(configPreference);
-    return {
-      preference: apiPreference,
-      quantity: configQuantity,
-      audience: configAudience,
-      structure: configStructure,
-      tone: configTone,
-      language: configLanguage,
-      density: configDensity,
-      themePreset: configThemePreset,
-      frontmatter: frontmatter || undefined,
-    };
-  }, [
-    configAudience,
-    configDensity,
-    configFrontmatter,
-    configLanguage,
-    configPreference,
-    configQuantity,
-    configStructure,
-    configThemePreset,
-    configTone,
-  ]);
-
-  const buildGenerationConfigPayload = useCallback(() => {
-    const config = buildGenerationConfig();
-    const apiPreference = config.preference;
-    return {
-      ...(apiPreference ? { preference: apiPreference } : {}),
-      quantity: config.quantity,
-      audience: config.audience,
-      structure: config.structure,
-      tone: config.tone,
-      language: config.language,
-      density: config.density,
-      themePreset: config.themePreset,
-      frontmatter: config.frontmatter,
-    };
-  }, [buildGenerationConfig]);
-
   const saveInputStage = useCallback(async () => {
     if (!notebookId) return null;
     if (!isConnected) {
@@ -532,6 +360,98 @@ export function useSlidesStudioDialog({
     title,
   ]);
 
+  const handleSaveOutline = useCallback(async () => {
+    if (!notebookId || !draft) return;
+    if (!isConnected) {
+      setError(t('studio.slides.connection_required'));
+      return;
+    }
+    const outline: SlideOutline = {
+      title: outlineTitle.trim() || title.trim() || '演示',
+      slides: outlineItems.map((item) => ({
+        title: item.title.trim() || '未命名幻灯片',
+        bullets: item.bullets.map((bullet) => bullet.trim()).filter(Boolean),
+      })),
+    };
+    const { data: updated, error: updateErr } = await api.v2
+      .notebooks({ nid: notebookId })
+      .studio.slides({ id: draft.id })
+      .outline.put({ outline });
+    if (updateErr)
+      throw new Error(
+        typeof updateErr === 'string' ? updateErr : typeof updateErr === 'string' ? updateErr : '',
+      );
+    syncFromDraft(normalizeDraft(updated));
+  }, [draft, isConnected, notebookId, outlineItems, outlineTitle, syncFromDraft, title]);
+
+  const handleSaveMarkdown = useCallback(async () => {
+    if (!notebookId || !draft) return;
+    if (!isConnected) {
+      setError(t('studio.slides.connection_required'));
+      return;
+    }
+    const { data: updated, error: updateErr } = await api.v2
+      .notebooks({ nid: notebookId })
+      .studio.slides({ id: draft.id })
+      .markdown.put({ markdown });
+    if (updateErr)
+      throw new Error(
+        typeof updateErr === 'string' ? updateErr : typeof updateErr === 'string' ? updateErr : '',
+      );
+    syncFromDraft(normalizeDraft(updated));
+    onOutputsUpdated();
+  }, [draft, isConnected, markdown, notebookId, onOutputsUpdated, syncFromDraft]);
+
+  handleSaveMarkdownRef.current = handleSaveMarkdown;
+  saveInputStageRef.current = saveInputStage;
+  handleSaveOutlineRef.current = handleSaveOutline;
+  refreshDraftRef.current = refreshDraft;
+
+  useEffect(() => {
+    if (open) {
+      setIsFullscreen(false);
+      setIsQueueing(false);
+      setIsGenerating(false);
+      void loadDraft();
+    } else {
+      closeGenerate();
+      setIsFullscreen(false);
+      setIsQueueing(false);
+      setIsGenerating(false);
+    }
+  }, [closeGenerate, loadDraft, open, setIsGenerating]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (isConfigOnly) {
+      setActiveStage('input');
+      return;
+    }
+    if (isPreviewMode) {
+      setActiveStage('markdown');
+    }
+  }, [isConfigOnly, isPreviewMode, open]);
+
+  useEffect(() => {
+    if (!open || !isPreviewMode || !draft?.id || !isConnected) return;
+    if (queueStatus !== 'running') return;
+    const timer = window.setInterval(() => {
+      void refreshDraft(draft.id);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [draft?.id, isConnected, isPreviewMode, open, queueStatus, refreshDraft]);
+
+  useEffect(() => {
+    if (!open || !isPreviewMode || !draft?.id) return;
+    if (queueStatus !== 'done' && queueStatus !== 'cancelled') return;
+    void refreshDraft(draft.id);
+  }, [draft?.id, isPreviewMode, open, queueStatus, refreshDraft]);
+
+  useEffect(() => {
+    if (!open || !isPreviewMode) return;
+    setShowMarkdownEditor(true);
+  }, [isPreviewMode, open]);
+
   const handleQueueSlides = useCallback(async () => {
     if (!onQueueSlides) return;
     if (isQueueing) return;
@@ -584,238 +504,6 @@ export function useSlidesStudioDialog({
     title,
   ]);
 
-  const handleSaveOutline = useCallback(async () => {
-    if (!notebookId || !draft) return;
-    if (!isConnected) {
-      setError(t('studio.slides.connection_required'));
-      return;
-    }
-    const outline: SlideOutline = {
-      title: outlineTitle.trim() || title.trim() || '演示',
-      slides: outlineItems.map((item) => ({
-        title: item.title.trim() || '未命名幻灯片',
-        bullets: item.bullets.map((bullet) => bullet.trim()).filter(Boolean),
-      })),
-    };
-    const { data: updated, error: updateErr } = await api.v2
-      .notebooks({ nid: notebookId })
-      .studio.slides({ id: draft.id })
-      .outline.put({ outline });
-    if (updateErr)
-      throw new Error(
-        typeof updateErr === 'string' ? updateErr : typeof updateErr === 'string' ? updateErr : '',
-      );
-    syncFromDraft(normalizeDraft(updated));
-  }, [draft, isConnected, notebookId, outlineItems, outlineTitle, syncFromDraft, title]);
-
-  const handleSaveMarkdown = useCallback(async () => {
-    if (!notebookId || !draft) return;
-    if (!isConnected) {
-      setError(t('studio.slides.connection_required'));
-      return;
-    }
-    const { data: updated, error: updateErr } = await api.v2
-      .notebooks({ nid: notebookId })
-      .studio.slides({ id: draft.id })
-      .markdown.put({ markdown });
-    if (updateErr)
-      throw new Error(
-        typeof updateErr === 'string' ? updateErr : typeof updateErr === 'string' ? updateErr : '',
-      );
-    syncFromDraft(normalizeDraft(updated));
-    onOutputsUpdated();
-  }, [draft, isConnected, markdown, notebookId, onOutputsUpdated, syncFromDraft]);
-
-  const runGenerateStage = useCallback(
-    async (
-      slideId: number,
-      stage: 'outline' | 'markdown',
-      handlers: { onDone?: () => Promise<void> | void; onError?: () => Promise<void> | void } = {},
-    ) => {
-      closeGenerate();
-      setIsGenerating(true);
-      setEvents([]);
-      setDebugTimings(null);
-      setError('');
-      const ac = new AbortController();
-      generateAbortRef.current = ac;
-
-      try {
-        if (!notebookId) return;
-        // c70: drive generation via GET SSE (progress + done), not POST sync.
-        await consumeSlidesStageStream(notebookId, slideId, stage, {
-          signal: ac.signal,
-          onEvent: (event) => {
-            if (event.event === 'progress' || event.event === 'toolcall') {
-              const data = isRecord(event.data) ? event.data : {};
-              const message =
-                (typeof data.message === 'string' && data.message) ||
-                (typeof data.delta === 'string' && data.delta) ||
-                (typeof data.tool === 'string' && `调用 ${data.tool}`) ||
-                (event.event === 'toolcall' ? '工具调用' : '生成中...');
-              setEvents((prev) => [...prev, { type: event.event, message }]);
-            }
-          },
-        });
-        setIsGenerating(false);
-        generateAbortRef.current = null;
-        if (handlers.onDone) await handlers.onDone();
-      } catch (error) {
-        setIsGenerating(false);
-        generateAbortRef.current = null;
-        if (error instanceof Error && error.name === 'AbortError') return;
-        setError(error instanceof Error ? error.message : '生成失败，请稍后重试。');
-        if (handlers.onError) await handlers.onError();
-      }
-    },
-    [closeGenerate, notebookId],
-  );
-
-  const handleGenerateOutline = useCallback(async () => {
-    if (!notebookId) return;
-    if (!isConnected) {
-      setError(t('studio.slides.connection_required'));
-      return;
-    }
-    const saved = await saveInputStage();
-    if (!saved) return;
-    await runGenerateStage(saved.id, 'outline', {
-      onDone: async () => {
-        await refreshDraft(saved.id);
-        setActiveStage('outline');
-      },
-    });
-  }, [isConnected, notebookId, refreshDraft, runGenerateStage, saveInputStage]);
-
-  const handleGenerateMarkdown = useCallback(async () => {
-    if (!notebookId || !draft) return;
-    if (!isConnected) {
-      setError(t('studio.slides.connection_required'));
-      return;
-    }
-    if (!draft.sourceIds || draft.sourceIds.length === 0) {
-      setError(t('studio.slides.require_sources'));
-      return;
-    }
-    await handleSaveOutline();
-    await runGenerateStage(draft.id, 'markdown', {
-      onDone: async () => {
-        await refreshDraft(draft.id);
-        setActiveStage('markdown');
-        onOutputsUpdated();
-      },
-    });
-  }, [
-    draft,
-    handleSaveOutline,
-    isConnected,
-    notebookId,
-    onOutputsUpdated,
-    refreshDraft,
-    runGenerateStage,
-  ]);
-
-  const handleGenerateAll = useCallback(async () => {
-    if (!notebookId) return;
-    if (!isConnected) {
-      setError(t('studio.slides.connection_required'));
-      return;
-    }
-    const saved = await saveInputStage();
-    if (!saved) return;
-    await runGenerateStage(saved.id, 'outline', {
-      onDone: async () => {
-        await refreshDraft(saved.id);
-        await runGenerateStage(saved.id, 'markdown', {
-          onDone: async () => {
-            await refreshDraft(saved.id);
-            setActiveStage('markdown');
-            onOutputsUpdated();
-          },
-        });
-      },
-    });
-  }, [isConnected, notebookId, onOutputsUpdated, refreshDraft, runGenerateStage, saveInputStage]);
-
-  const buildPreview = useCallback(
-    async (_force = false) => {
-      if (!isConnected) {
-        setPreviewError(t('studio.slides.connection_required'));
-        return;
-      }
-      if (!slidesTool || !slidesConfig) {
-        setPreviewError(slidesConfigErrorMessage || '演示能力当前不可用。');
-        return;
-      }
-      if (!previewDescriptor) {
-        setPreviewError('当前 slides 插件未声明预览入口。');
-        return;
-      }
-      if (!previewSupported) {
-        setPreviewError(`当前 slides 插件声明了暂不支持的预览服务：${previewProviderLabel}。`);
-        return;
-      }
-      if (!markdown.trim()) {
-        setPreviewError('请先生成 Markdown。');
-        return;
-      }
-      setPreviewError('');
-      setIsPreviewSyncing(true);
-      try {
-        await handleSaveMarkdown();
-        setPreviewMarkdown(markdown);
-        // Saving markdown restarts Slidev briefly; wait until /slidev is up
-        // before bumping the iframe key so the panel does not load a 500 page.
-        const probeUrl = buildSlidesPreviewUrl(previewDescriptor, Date.now());
-        const ready = probeUrl ? await waitForSlidevPreviewReady(probeUrl) : false;
-        if (!ready) {
-          setPreviewError('预览服务重启中，请稍后点击“强制刷新”。');
-          return;
-        }
-        setPreviewKey((prev) => prev + 1);
-      } catch {
-        setPreviewError('预览更新失败，请稍后重试。');
-      } finally {
-        setIsPreviewSyncing(false);
-      }
-    },
-    [
-      handleSaveMarkdown,
-      isConnected,
-      markdown,
-      previewDescriptor,
-      previewProviderLabel,
-      previewSupported,
-      slidesConfig,
-      slidesConfigErrorMessage,
-      slidesTool,
-    ],
-  );
-
-  const handlePreview = useCallback(() => {
-    void buildPreview(false);
-  }, [buildPreview]);
-
-  const handleRefreshPreview = useCallback(() => {
-    void buildPreview(true);
-  }, [buildPreview]);
-
-  useEffect(() => {
-    if (!open || !isPreviewMode || !draft?.id) return;
-    if (!markdown.trim()) return;
-    if (previewMarkdown) return;
-    if (autoPreviewRef.current === draft.id) return;
-    autoPreviewRef.current = draft.id;
-    void buildPreview(false);
-  }, [buildPreview, draft?.id, isPreviewMode, markdown, open, previewMarkdown]);
-
-  const handleOpenPreviewWindow = useCallback(() => {
-    if (!previewMarkdown || !previewSupported) return;
-    const url = buildSlidesPreviewUrl(previewDescriptor, previewKey || Date.now());
-    if (!url) return;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  }, [previewDescriptor, previewKey, previewMarkdown, previewSupported]);
-
   const handleAddSlide = useCallback(() => {
     setOutlineItems((prev) => [...prev, { title: '', bullets: [] }]);
   }, []);
@@ -839,14 +527,6 @@ export function useSlidesStudioDialog({
   const handleRemoveSlide = useCallback((index: number) => {
     setOutlineItems((prev) => prev.filter((_, idx) => idx !== index));
   }, []);
-
-  const quantityOptions = slidesConfig?.quantityOptions ?? [];
-  const structureOptions = slidesConfig?.structureOptions ?? [];
-  const audienceOptions = slidesConfig?.audienceOptions ?? [];
-  const toneOptions = slidesConfig?.toneOptions ?? [];
-  const languageOptions = slidesConfig?.languageOptions ?? [];
-  const densityOptions = slidesConfig?.densityOptions ?? [];
-  const themePresetOptions = slidesConfig?.themePresetOptions ?? [];
 
   const canBuildPreview = Boolean(draft?.id && markdown.trim());
   const showPreviewPanel = !isConfigOnly;

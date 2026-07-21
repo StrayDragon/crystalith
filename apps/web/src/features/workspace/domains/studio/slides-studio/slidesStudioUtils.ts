@@ -192,3 +192,18 @@ export function resolveStatusMessage(params: {
   }
   return null;
 }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Progress/toolcall message shown in the studio events list during SSE generation. */
+export function formatSlidesStageProgressMessage(event: { event: string; data: unknown }): string {
+  const data = isRecord(event.data) ? event.data : {};
+  return (
+    (typeof data.message === 'string' && data.message) ||
+    (typeof data.delta === 'string' && data.delta) ||
+    (typeof data.tool === 'string' && `调用 ${data.tool}`) ||
+    (event.event === 'toolcall' ? '工具调用' : '生成中...')
+  );
+}
