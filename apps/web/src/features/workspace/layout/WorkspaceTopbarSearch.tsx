@@ -128,6 +128,7 @@ function FastSearchBody({
   );
 }
 
+/** c75 shell — full Desk / xyflow / report UI lands in c77-deep-research-ui. */
 function DeepResearchShell() {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-10 px-4 text-center">

@@ -20,5 +20,8 @@ describe('c70 AsyncAPI stream verbs', () => {
       '/v2/notebooks/{nid}/studio/slides/{id}/markdown/stream',
     );
     expect(doc.channels.studioMarkdownStream.bindings?.http?.method).toBe('GET');
+
+    expect(doc.channels.researchStream.address).toBe('/v2/notebooks/{nid}/research/{rid}/stream');
+    expect(doc.channels.researchStream.bindings?.http?.method).toBe('GET');
   });
 });

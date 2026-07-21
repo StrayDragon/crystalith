@@ -80,6 +80,7 @@ export const notebookRelations = relations(notebooks, ({ many }) => ({
   extractorPolicy: many(notebookExtractorPolicies),
   studioSlides: many(studioSlides),
   strategyConfigs: many(strategyConfigs),
+  researchRuns: many(researchRuns),
 }));
 
 // ---------------------------------------------------------------------------
@@ -413,17 +414,126 @@ export const studioSlideRelations = relations(studioSlides, ({ one }) => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Research sessions + steps
+// Research runs + evidences (c76)
 // ---------------------------------------------------------------------------
 
-/** Row shape for research_sessions.aggregated_results JSON column. */
-export type ResearchAggregatedResultRow = {
-  title: string;
-  url: string;
-  snippet: string;
-  engine: string;
-  query: string;
+/** Graph JSON stored on research_runs. */
+export type ResearchGraphJson = {
+  nodes: Array<{
+    id: string;
+    title: string;
+    query?: string;
+    summary?: string;
+    conclusionStatus: 'clear' | 'partial' | 'missing' | 'pending' | 'pruned';
+    phase?: 'idle' | 'retrieving' | 'synthesizing';
+    evidenceIds?: string[];
+  }>;
+  edges: Array<{
+    id: string;
+    source: string;
+    target: string;
+    kind:
+      | 'decompose'
+      | 'expand'
+      | 'focus'
+      | 'filter'
+      | 'compare'
+      | 'refine'
+      | 'support'
+      | 'fork'
+      | 'merge';
+    labelNote?: string;
+  }>;
 };
+
+/** Checkpoint blob (CP1). */
+export type ResearchCheckpointJson = {
+  at: string;
+  status: string;
+  searchesUsed: number;
+  nodeCount: number;
+  reason?: string;
+};
+
+/** Report JSON on research_runs. */
+export type ResearchReportJson = {
+  title: string;
+  sections: unknown[];
+  citations: Record<string, unknown>;
+};
+
+export const researchRuns = sqliteTable(
+  'research_runs',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    notebookId: integer('notebook_id')
+      .notNull()
+      .references(() => notebooks.id, { onDelete: 'cascade' }),
+    topic: text('topic').notNull(),
+    status: text('status', {
+      enum: ['queued', 'running', 'awaiting_confirm', 'completed', 'failed', 'cancelled'],
+    })
+      .notNull()
+      .default('queued'),
+    useNotebookSources: bool('use_notebook_sources', true),
+    allowWeb: bool('allow_web', true),
+    sourceIds: text('source_ids', { mode: 'json' }).$type<number[] | null>(),
+    depth: text('depth', { enum: ['shallow', 'medium', 'deep'] })
+      .notNull()
+      .default('medium'),
+    maxSearches: integer('max_searches').notNull(),
+    maxNodes: integer('max_nodes').notNull(),
+    searchesUsed: integer('searches_used').notNull().default(0),
+    graph: json<ResearchGraphJson>('graph'),
+    checkpoint: json<ResearchCheckpointJson | null>('checkpoint'),
+    report: json<ResearchReportJson | null>('report'),
+    confirmKind: text('confirm_kind', { enum: ['budget', 'expand_branch'] }),
+    confirmBranchNodeId: text('confirm_branch_node_id'),
+    cancelRequested: bool('cancel_requested', false),
+    errorMessage: text('error_message'),
+    createdAt: ts('created_at'),
+    updatedAt: tsUpd('updated_at'),
+  },
+  (t) => [index('ix_research_runs_notebook_id_updated_at').on(t.notebookId, t.updatedAt)],
+);
+
+export const researchEvidences = sqliteTable(
+  'research_evidences',
+  {
+    id: text('id').primaryKey(),
+    runId: integer('run_id')
+      .notNull()
+      .references(() => researchRuns.id, { onDelete: 'cascade' }),
+    notebookId: integer('notebook_id')
+      .notNull()
+      .references(() => notebooks.id, { onDelete: 'cascade' }),
+    kind: text('kind', { enum: ['web', 'chunk'] }).notNull(),
+    title: text('title').notNull(),
+    snippet: text('snippet'),
+    url: text('url'),
+    sourceId: integer('source_id'),
+    chunkId: text('chunk_id'),
+    collectedAtNodeId: text('collected_at_node_id'),
+    createdAt: ts('created_at'),
+  },
+  (t) => [
+    index('ix_research_evidences_run_id').on(t.runId),
+    index('ix_research_evidences_notebook_id').on(t.notebookId),
+  ],
+);
+
+export const researchRunRelations = relations(researchRuns, ({ one, many }) => ({
+  notebook: one(notebooks, { fields: [researchRuns.notebookId], references: [notebooks.id] }),
+  evidences: many(researchEvidences),
+}));
+
+export const researchEvidenceRelations = relations(researchEvidences, ({ one }) => ({
+  run: one(researchRuns, { fields: [researchEvidences.runId], references: [researchRuns.id] }),
+  notebook: one(notebooks, {
+    fields: [researchEvidences.notebookId],
+    references: [notebooks.id],
+  }),
+}));
 
 // ---------------------------------------------------------------------------
 // Barrel — table map passed to `drizzle({ schema })` for relational queries
@@ -444,6 +554,8 @@ export const schema = {
   sourceConnectorBindings,
   outputs,
   studioSlides,
+  researchRuns,
+  researchEvidences,
 };
 
 export type Schema = typeof schema;

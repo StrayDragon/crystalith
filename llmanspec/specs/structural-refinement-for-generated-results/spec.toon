@@ -1,8 +1,8 @@
 kind: llman.sdd.spec
 name: "structural-refinement-for-generated-results"
-purpose: "本 capability 已废弃（原 research 相关约束随 Deep Research stub 移除），等待未来重写时重新定义。"
+purpose: 本 capability 已废弃（原 research 相关约束随 Deep Research stub 移除），等待未来重写时重新定义。
 valid_scope[2]: src/,tests/
 requirements[1]{req_id,title,statement}:
-  stub_placeholder,"Deep Research is stubbed (501), pending rewrite","本 capability 的原需求与场景已随 Deep Research 后端 stub 移除。在正式重写前不得再添加 MUST/SHALL 要求。"
+  stub_placeholder,"Deep Research constraints moved to deep-research-runtime","原 structural-refinement-for-generated-results 下的深研约束已迁移；本 capability MUST NOT 再承载 Deep Research Runtime MUST/SHALL；新合约以 deep-research-runtime 为准。"
 scenarios[1]{req_id,id,given,when,then,feature}:
-  stub_placeholder,stub_removed,capability 已废弃,验证不执行,无条件通过,false
+  stub_placeholder,"redirect-to-runtime","查阅旧 structural-refinement capability",验证深研行为合约归属,"以 deep-research-runtime 为准且本 capability 不再新增深研 MUST",true
