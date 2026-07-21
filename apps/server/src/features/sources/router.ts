@@ -27,6 +27,7 @@ import {
   SourceUploadQuerySchema,
   paginateItems,
   type ExtractorPolicyMode,
+  type JsonMetadata,
 } from '@crystalith/shared';
 // Sources CRUD + upload router — /v2/notebooks/:nid/sources (canonical) + flat aliases
 //
@@ -190,7 +191,7 @@ function serializeSource(row: {
   filename: string;
   mimeType: string | null;
   parserType: string;
-  metadata: unknown;
+  metadata: JsonMetadata | null;
   dedupKey: string | null;
   status: string;
   errorCode: string | null;
@@ -208,7 +209,7 @@ function serializeSource(row: {
     filename: row.filename,
     mimeType: row.mimeType,
     parserType: row.parserType,
-    metadata: row.metadata as Record<string, unknown> | null | undefined,
+    metadata: row.metadata,
     dedupKey: row.dedupKey,
     status: row.status as 'processing' | 'ready' | 'failed',
     errorCode: row.errorCode,
@@ -387,7 +388,7 @@ function enrichSources(
     filename: string;
     mimeType: string | null;
     parserType: string;
-    metadata: unknown;
+    metadata: JsonMetadata | null;
     dedupKey: string | null;
     status: string;
     errorCode: string | null;
