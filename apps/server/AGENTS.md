@@ -43,6 +43,7 @@ From repo root:
 - OpenAPI: shared Zod → `z.toJSONSchema` in `openapi.ts` (Scalar `/openapi`); `extendZodWithOpenApi` only for `.openapi()` metadata — **no** `@elysiajs/swagger` / `t.*`
 - AI: AI SDK v7 only (`generateObject`, `streamText`, ToolLoopAgent/WorkflowAgent when needed)
 - Config: `config/app.yaml` + `config/secret.env` (see `config/AGENTS.md`)
+- Research prune closure（`collectResearchPruneClosure` / product B）须与 Web Lab `fake/deriveLabState.collectPruneClosure` 同步；规格见 `llmanspec/changes/update-research-prune-cascade`
 
 ## Progress
 
