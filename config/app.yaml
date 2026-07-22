@@ -333,3 +333,11 @@ source_ingestion:
       enabled: false
       endpoint: "ws://localhost:3000"
       token: "{{ env.BROWSERLESS_TOKEN | default('') }}"
+
+# ----------------------------------------------------------------------------
+# Deep Research
+# ----------------------------------------------------------------------------
+research:
+  # After a run reaches a terminal status, truncate progress_events to the
+  # most recent N rows (by seq). In-flight runs keep the full ledger.
+  progressEventRetain: 200

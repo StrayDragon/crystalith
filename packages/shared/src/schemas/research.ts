@@ -31,6 +31,11 @@ export type ResearchConclusionStatus = z.infer<typeof ResearchConclusionStatusSc
 export const ResearchNodePhaseSchema = z.enum(['idle', 'retrieving', 'synthesizing']);
 export type ResearchNodePhase = z.infer<typeof ResearchNodePhaseSchema>;
 
+export const ResearchNodeRoleSchema = z.enum(['question', 'research', 'conclusion']).openapi({
+  description: desc('research.node_role', '研究图节点角色（question / research / conclusion）'),
+});
+export type ResearchNodeRole = z.infer<typeof ResearchNodeRoleSchema>;
+
 export const ResearchEdgeKindSchema = z.enum([
   'decompose',
   'expand',
@@ -62,6 +67,12 @@ export const ResearchNodeSchema = z
       .min(1)
       .openapi({ description: desc('research.node_id', '研究图节点 ID') }),
     title: z.string().openapi({ description: desc('research.node_title', '节点标题') }),
+    role: ResearchNodeRoleSchema.optional().openapi({
+      description: desc(
+        'research.node_role_field',
+        '节点角色；缺省时回退 id 前缀 node_root_ / node_conclusion_',
+      ),
+    }),
     query: z
       .string()
       .optional()
@@ -280,6 +291,30 @@ export const ResearchForkBodySchema = z
   .openapi({ description: desc('research.fork_body', 'fork 请求体') });
 export type ResearchForkBody = z.infer<typeof ResearchForkBodySchema>;
 
+/** PATCH …/nodes/:nodeId — live runs only; at least one field. */
+export const ResearchNodePatchBodySchema = z
+  .object({
+    title: z
+      .string()
+      .min(1)
+      .optional()
+      .openapi({ description: desc('research.patch_title', '更新节点标题') }),
+    query: z
+      .string()
+      .optional()
+      .openapi({ description: desc('research.patch_query', '更新节点查询') }),
+    conclusionStatus: ResearchConclusionStatusSchema.optional().openapi({
+      description: desc('research.patch_conclusion_status', '更新节点结论状态'),
+    }),
+  })
+  .refine(
+    (body) =>
+      body.title !== undefined || body.query !== undefined || body.conclusionStatus !== undefined,
+    { message: 'At least one of title, query, conclusionStatus is required' },
+  )
+  .openapi({ description: desc('research.node_patch_body', '研究节点字段补丁') });
+export type ResearchNodePatchBody = z.infer<typeof ResearchNodePatchBodySchema>;
+
 const ResearchCreateFieldsSchema = z.object({
   topic: z
     .string()
@@ -401,6 +436,15 @@ export const ResearchStreamErrorEventSchema = z.object({
   message: z.string(),
 });
 
+export const ResearchStreamProgressEventSchema = z.object({
+  seq: z.number().int().nonnegative(),
+  kind: z.string(),
+  at: IsoTimestampSchema,
+  nodeId: z.string().optional(),
+  headline: z.string().optional(),
+  payload: z.record(z.string(), z.unknown()).optional(),
+});
+
 export const ResearchStreamEventSchema = z.discriminatedUnion('event', [
   z.object({ event: z.literal('status'), data: ResearchStreamStatusEventSchema }),
   z.object({ event: z.literal('graph_patch'), data: ResearchGraphPatchSchema }),
@@ -408,6 +452,7 @@ export const ResearchStreamEventSchema = z.discriminatedUnion('event', [
   z.object({ event: z.literal('report_ready'), data: ResearchStreamReportReadyEventSchema }),
   z.object({ event: z.literal('log'), data: ResearchStreamLogEventSchema }),
   z.object({ event: z.literal('error'), data: ResearchStreamErrorEventSchema }),
+  z.object({ event: z.literal('progress'), data: ResearchStreamProgressEventSchema }),
 ]);
 export type ResearchStreamEvent = z.infer<typeof ResearchStreamEventSchema>;
 
@@ -427,3 +472,205 @@ export const ResearchConvertToSourceResponseSchema = z
   })
   .openapi({ description: desc('research.convert_source_response', '转化为来源响应') });
 export type ResearchConvertToSourceResponse = z.infer<typeof ResearchConvertToSourceResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// C1 — Node chat (SSE short-lived; proposals only — no auto graph mutate)
+// ---------------------------------------------------------------------------
+
+export const ResearchNodeActionKindSchema = z
+  .enum([
+    'prune_node',
+    'fork_sibling',
+    'rewrite_query',
+    'set_status',
+    'confirm_finish',
+    'confirm_continue',
+    'open_report',
+  ])
+  .openapi({
+    description: desc('research.action_kind', '节点对话 ActionProposal 种类（对齐 Lab）'),
+  });
+export type ResearchNodeActionKind = z.infer<typeof ResearchNodeActionKindSchema>;
+
+export const ResearchNodeActionStatusSchema = z.enum(['pending', 'accepted', 'dismissed']);
+export type ResearchNodeActionStatus = z.infer<typeof ResearchNodeActionStatusSchema>;
+
+export const ResearchNodeActionProposalSchema = z
+  .object({
+    id: z.string().min(1),
+    kind: ResearchNodeActionKindSchema,
+    label: z.string(),
+    rationale: z.string(),
+    status: ResearchNodeActionStatusSchema.default('pending'),
+    params: z
+      .object({
+        query: z.string().optional(),
+        title: z.string().optional(),
+        summary: z.string().optional(),
+        conclusionStatus: ResearchConclusionStatusSchema.optional(),
+      })
+      .optional(),
+  })
+  .openapi({
+    description: desc('research.action_proposal', '节点对话动作提案（需用户 accept→命令口）'),
+  });
+export type ResearchNodeActionProposal = z.infer<typeof ResearchNodeActionProposalSchema>;
+
+export const ResearchNodeChatBodySchema = z
+  .object({
+    message: z
+      .string()
+      .min(1)
+      .openapi({ description: desc('research.chat_message', '节点对话用户消息') }),
+  })
+  .openapi({ description: desc('research.node_chat_body', '节点对话请求体') });
+export type ResearchNodeChatBody = z.infer<typeof ResearchNodeChatBodySchema>;
+
+export const ResearchNodeChatChunkEventSchema = z.object({
+  text: z.string(),
+});
+
+export const ResearchNodeChatProposalEventSchema = ResearchNodeActionProposalSchema;
+
+export const ResearchNodeChatDoneEventSchema = z.object({
+  proposals: z.array(ResearchNodeActionProposalSchema).optional(),
+});
+
+export const ResearchNodeChatErrorEventSchema = z.object({
+  errorCode: z.string(),
+  message: z.string(),
+});
+
+export const ResearchNodeChatStreamEventSchema = z.discriminatedUnion('event', [
+  z.object({ event: z.literal('chunk'), data: ResearchNodeChatChunkEventSchema }),
+  z.object({ event: z.literal('proposal'), data: ResearchNodeChatProposalEventSchema }),
+  z.object({ event: z.literal('done'), data: ResearchNodeChatDoneEventSchema }),
+  z.object({ event: z.literal('error'), data: ResearchNodeChatErrorEventSchema }),
+]);
+export type ResearchNodeChatStreamEvent = z.infer<typeof ResearchNodeChatStreamEventSchema>;
+
+// ---------------------------------------------------------------------------
+// C2 — Revisions / report CoW / progress ledger
+// ---------------------------------------------------------------------------
+
+export const ResearchLlmActivitySchema = z
+  .enum(['work_unit', 'node_chat'])
+  .openapi({ description: desc('research.llm_activity', '同 Run LLM 互斥活动指针') });
+export type ResearchLlmActivity = z.infer<typeof ResearchLlmActivitySchema>;
+
+export const ResearchRevisionKindSchema = z
+  .enum(['auto_complete', 'user_save', 'restore_point'])
+  .openapi({ description: desc('research.revision_kind', '修订快照种类') });
+export type ResearchRevisionKind = z.infer<typeof ResearchRevisionKindSchema>;
+
+export const ResearchRevisionCreateBodySchema = z
+  .object({
+    label: z
+      .string()
+      .optional()
+      .openapi({ description: desc('research.revision_label', '修订标签') }),
+    from: z
+      .enum(['canonical', 'working'])
+      .optional()
+      .openapi({ description: desc('research.revision_from', '快照报告来源') }),
+  })
+  .openapi({ description: desc('research.revision_create_body', '创建修订快照') });
+export type ResearchRevisionCreateBody = z.infer<typeof ResearchRevisionCreateBodySchema>;
+
+export const ResearchRevisionSchema = z
+  .object({
+    id: z.string().min(1),
+    runId: IdSchema,
+    notebookId: IdSchema,
+    label: z.string(),
+    kind: ResearchRevisionKindSchema,
+    parentRevisionId: z.string().nullable().optional(),
+    graph: z.object({
+      nodes: z.array(ResearchNodeSchema),
+      edges: z.array(ResearchEdgeSchema),
+    }),
+    report: ResearchReportSchema.nullable().optional(),
+    searchesUsed: z.number().int().nonnegative(),
+    statusAtSave: ResearchRunStatusSchema,
+    createdAt: IsoTimestampSchema,
+  })
+  .openapi({ description: desc('research.revision', '研究修订快照') });
+export type ResearchRevision = z.infer<typeof ResearchRevisionSchema>;
+
+export const ResearchRevisionsListSchema = z.object({
+  items: z.array(ResearchRevisionSchema),
+});
+export type ResearchRevisionsList = z.infer<typeof ResearchRevisionsListSchema>;
+
+export const ResearchReportViewSchema = z
+  .object({
+    canonical: ResearchReportSchema.nullable(),
+    working: ResearchReportSchema.nullable().optional(),
+    viewing: z.enum(['canonical', 'working']).optional(),
+    reportUpdatedAt: IsoTimestampSchema.nullable().optional(),
+    workingUpdatedAt: IsoTimestampSchema.nullable().optional(),
+  })
+  .openapi({ description: desc('research.report_view', '权威 + working 报告视图') });
+export type ResearchReportView = z.infer<typeof ResearchReportViewSchema>;
+
+export const ResearchReportPutBodySchema = z
+  .object({
+    report: ResearchReportSchema,
+  })
+  .openapi({ description: desc('research.report_put_body', '写入权威报告') });
+export type ResearchReportPutBody = z.infer<typeof ResearchReportPutBodySchema>;
+
+export const ResearchProgressKindSchema = z.enum([
+  'run_queued',
+  'run_running',
+  'run_awaiting_confirm',
+  'run_completed',
+  'run_failed',
+  'run_cancelled',
+  'unit_started',
+  'unit_finished',
+  'unit_skipped_pruned',
+  'unit_aborted',
+  'node_phase',
+  'graph_seeded',
+  'graph_patched_summary',
+  'confirm_entered',
+  'confirm_resolved',
+  'budget_tick',
+  'evidence_added',
+  'revision_created',
+  'revision_restored',
+  'report_canonical_updated',
+  'report_working_updated',
+  'report_working_discarded',
+  'chat_started',
+  'chat_finished',
+  'chat_aborted',
+]);
+export type ResearchProgressKind = z.infer<typeof ResearchProgressKindSchema>;
+
+export const ResearchProgressEventSchema = z
+  .object({
+    id: z.string().min(1),
+    runId: IdSchema,
+    seq: z.number().int().nonnegative(),
+    at: IsoTimestampSchema,
+    kind: ResearchProgressKindSchema,
+    nodeId: z.string().nullable().optional(),
+    headline: z.string().nullable().optional(),
+    payload: z.record(z.string(), z.unknown()).nullable().optional(),
+  })
+  .openapi({ description: desc('research.progress_event', '进度账本事件') });
+export type ResearchProgressEvent = z.infer<typeof ResearchProgressEventSchema>;
+
+export const ResearchProgressListSchema = z.object({
+  items: z.array(ResearchProgressEventSchema),
+  nextAfterSeq: z.number().int().nonnegative().optional(),
+});
+export type ResearchProgressList = z.infer<typeof ResearchProgressListSchema>;
+
+export const ResearchProgressQuerySchema = z.object({
+  afterSeq: z.coerce.number().int().nonnegative().optional(),
+  limit: z.coerce.number().int().positive().max(500).optional(),
+});
+export type ResearchProgressQuery = z.infer<typeof ResearchProgressQuerySchema>;

@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "deep-research-runtime"
 purpose: "TBD - created by archiving change c76-deep-research-runtime. Update purpose after archive."
 valid_scope[2]: src/,tests/
-requirements[17]{req_id,title,statement}:
+requirements[24]{req_id,title,statement}:
   r300,ResearchRun is process SSOT,系统 MUST 以 notebook 作用域的 ResearchRun 作为深研过程 SSOT（图、checkpoint、权威报告与 citation map 挂在 Run 上）；MUST NOT 把长跑过程态的唯一权威塞进 Output 行。
   r301,Create replaces 501 stub,"POST /v2/notebooks/:nid/research MUST 在合法 notebook 下创建 ResearchRun 并返回可追踪 id 与初始状态；MUST NOT 再以 501 NOT_IMPLEMENTED 作为成功创建路径。"
   r302,List and get runs for desk queue,系统 MUST 提供 notebook 作用域的 listRuns 与 getRun；缺少 notebook 作用域时 MUST 拒绝全表列举。
@@ -20,7 +20,14 @@ requirements[17]{req_id,title,statement}:
   r314,"ERR-G1 AppHttpError codes","深研 HTTP 错误 MUST 走 AppHttpError/ErrorEnvelope；除既有通用 ErrorCode 外 MUST 仅新增 RESEARCH_INVALID_STATE 与 RESEARCH_BUDGET；MUST NOT 另建一整套 research-only error 命名空间。"
   r315,D1 graph_patch and node edge fields,SSE graph_patch MUST 以增量 upsert nodes/edges 与 removeNodeIds/removeEdgeIds 表达；节点 MUST 携带 conclusionStatus（clear|partial|missing|pending|pruned）与可选 phase；边 MUST 使用闭集 EdgeKind（R5）并可带可选 labelNote。
   r316,"Prune closure exclusive-parent B",剪枝 MUST 计算排他父闭包：从目标研究节点出发仅沿非 merge 边向下扩展；子节点仅当其全部非保护入边父节点已在闭包内或已为 pruned 时方可纳入；闭包 MUST NOT 包含 root/question/conclusion（或 id 前缀 node_root_/node_conclusion_）；MUST NOT 沿 merge 边级联；对保护节点的 prune 请求 MUST 拒绝（INVALID_REQUEST 或等价）；被纳入闭包的节点 MUST 标记 conclusionStatus=pruned，且其既有 merge 入结论边 MUST 保留（失败汇入），MUST NOT 仅因剪枝删除该 merge。
-scenarios[19]{req_id,id,given,when,then,feature}:
+  r317,"Single-sink DAG with node role",ResearchRun 图 MUST 维护单一 question 与单一 conclusion（role 或兼容 id 前缀）；研究支路 MUST 经非 merge 边扩展，并对结论使用 merge 边汇入；系统 MUST NOT 在同一 Run 内创建第二个 conclusion sink；新写入节点 SHOULD 携带 role（question|research|conclusion），读取时语义以 role 为准并兼容历史 node_root_/node_conclusion_ 前缀。
+  r318,"Serial work-unit kernel CP1 and abort","深研编排 MUST 以 ResearchRun 上的串行 work-unit 内核推进（种子图、节点检索/综合、结案出报告）；每完成一单元以及进入 awaiting_confirm 前 MUST 落盘 checkpoint（CP1）；开始单元前 MUST 重读图并跳过 conclusionStatus=pruned 的节点（discard-if-pruned）；cancel 与剪除当前活动节点时 MUST 中止进行中的单元（AbortSignal 或等价）并保持图 SSOT 在服务端；若存在进行中的节点 chat MUST 一并中止。"
+  r319,Fork approve merges into conclusion,当 confirmKind=expand_branch 且用户 approve_branch 时，系统 MUST 新增 research 角色节点，MUST 建立从父节点出发的 fork 或 expand 边，并 MUST 建立该节点到唯一 conclusion 的 merge 边；MUST NOT 仅添加无汇入结论的线性子节点作为唯一结果；skip_branch MUST 不新增节点并允许内核继续。
+  r320,"Command-port mutations only",研究图的权威突变 MUST 仅通过服务端命令口完成（create/confirm/cancel/prune/fork/节点 PATCH/revisions 恢复）；系统 MUST NOT 提供客户端整图上传作为 SSOT；剪枝闭包与拓扑约束 MUST 在服务端计算与强制；节点 chat MUST NOT 在未确认的情况下直接改图。
+  r321,PATCH node fields on live runs,在 running 或 awaiting_confirm 时系统 MUST 支持 PATCH 节点的 title、query、conclusionStatus（请求体至少一项）；对已 pruned 或受保护的 question/conclusion 节点 MUST 拒绝；完成后 MUST 经 graph_patch 或返回 Run 反映权威状态。
+  r322,Node chat SSE proposals only,"系统 MUST 提供 POST 节点 chat 的短轮 SSE（正文增量与可选 ActionProposal/tool-approval）；chat MUST 与 Run 进度 stream 分离；同一 Run 上 chat 与自研 work-unit MUST 互斥（拒绝或排队）；Structure 类意图 MUST 经用户确认后调用既有命令口，MUST NOT 在 tool execute 中静默改图。"
+  r323,"User-visible run revisions",系统 MUST 为 ResearchRun 提供用户可见的 revisions：至少支持列表、从当前 graph 与权威 report 创建快照、按 id 读取；恢复某 revision MUST 将对应 graph/report 写回为当前权威并通知客户端（graph_patch 或等价）；revisions MUST NOT 与内部 checkpoint 混为同一概念。
+scenarios[28]{req_id,id,given,when,then,feature}:
   r300,"run-holds-graph-and-report",用户已创建一次深研 Run,系统推进研究并生成报告,图与权威报告及 citation map 均挂在该 ResearchRun 上，而非仅存在于 Output 行,true
   r301,"create-returns-run-id",notebook 存在且请求合法,客户端 POST 创建深研,系统返回 ResearchRun id 与初始状态且不得以 501 作为成功路径,true
   r302,"list-requires-notebook",系统中存在多个 notebook 的 Run,客户端省略 notebook 作用域调用 list,系统拒绝全表列举,true
@@ -40,3 +47,12 @@ scenarios[19]{req_id,id,given,when,then,feature}:
   r316,"shared-child-stays-live",图中 libs 与 perf 均指向共享子节点 stream，且 libs 另有 merge 到 conclusion,用户对 libs 执行 prune,libs 标为 pruned；stream 因仍有活父 perf 保持未剪枝；conclusion 不被剪枝；libs→conclusion 的 merge 边仍在,true
   r316,"exclusive-child-cascades",data 仅有独占子 minimize，minimize merge 到 conclusion,用户对 data 执行 prune,data 与 minimize 均标为 pruned；minimize→conclusion 的 merge 边保留；conclusion 不被剪枝,true
   r316,"reject-protected-root",Run 处于 running 且存在 node_root_*,客户端对该 root 调用 prune,请求被拒绝且图不变,true
+  r317,"seed-has-one-conclusion",Run 刚进入 running,内核完成 seed_graph,图中恰好一个 question 与一个 conclusion（或兼容前缀），且二者可被客户端识别,true
+  r318,"skip-pruned-unit",某 research 节点已被 prune 且仍排在调度队列,调度器准备执行该节点单元,单元被跳过且不写入新摘要，SSE 可继续推进其他活节点,true
+  r318,"cancel-aborts-active",Run 正在执行某节点的检索或综合,用户调用 cancel,活动单元中止，状态进入 cancelled（或协作收尾至 cancelled）且 checkpoint 已落盘,true
+  r319,"approve-adds-merge",Run 处于 awaiting_confirm 且 confirmKind=expand_branch,用户 approve_branch,新 research 节点存在，并有指向唯一 conclusion 的 merge 边,true
+  r320,"reject-client-authored-closure",客户端试图用非命令口方式提交任意节点集合为权威剪枝结果,调用未合约化的整图写入或等价接口,请求被拒绝或不存在该接口，图仅能经 prune 等命令口变更,true
+  r321,"patch-query-on-research-node",Run 为 running 且存在可编辑 research 节点,客户端 PATCH 其 query,返回更新后的 Run 或随后 graph_patch 含新 query,true
+  r322,"chat-does-not-auto-prune",节点 chat 流提出 prune 提案,用户尚未确认,图上该节点仍未 pruned,true
+  r322,"chat-separate-from-run-stream",客户端已订阅 Run stream,发起节点 chat,chat 正文事件不出现在 Run stream 事件名集合中,true
+  r323,"create-and-list-revision",Run 已有 graph 与 report,用户创建 revision 后列表,列表含新快照且可读回 graph/report 内容,true

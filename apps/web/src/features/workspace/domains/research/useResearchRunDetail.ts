@@ -2,6 +2,12 @@ import type {
   ResearchArtifactRef,
   ResearchConfirmBody,
   ResearchGraphPatch,
+  ResearchNodeActionProposal,
+  ResearchNodePatchBody,
+  ResearchProgressEvent,
+  ResearchReport,
+  ResearchReportView,
+  ResearchRevision,
   ResearchRun,
   ResearchStreamEvent,
 } from '@crystalith/shared';
@@ -166,6 +172,15 @@ export function useResearchRunDetail({
     [applyRun],
   );
 
+  const withBusyOnly = async <T>(fn: () => Promise<T>): Promise<T> => {
+    setBusy(true);
+    try {
+      return await fn();
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const confirm = useCallback(
     async (body: ResearchConfirmBody) => {
       if (!notebookId || runId == null) return null;
@@ -238,6 +253,183 @@ export function useResearchRunDetail({
     [notebookId, runId, withBusy],
   );
 
+  const patchNode = useCallback(
+    async (nodeId: string, body: ResearchNodePatchBody) => {
+      if (!notebookId || runId == null) return null;
+      return withBusy(async () => {
+        const { data, error: apiErr } = await api.v2
+          .notebooks({ nid: notebookId })
+          .research({ rid: runId })
+          .nodes({ nodeId })
+          .patch(body);
+        if (apiErr) {
+          setError(surfaceResearchError(apiErr));
+          return null;
+        }
+        return data as ResearchRun;
+      });
+    },
+    [notebookId, runId, withBusy],
+  );
+
+  /** C1 — short-lived node chat SSE; proposals only (no auto graph mutate). */
+  const chatNode = useCallback(
+    async (
+      nodeId: string,
+      message: string,
+      opts?: {
+        signal?: AbortSignal;
+        onChunk?: (text: string) => void;
+        onProposal?: (proposal: ResearchNodeActionProposal) => void;
+      },
+    ): Promise<{ text: string; proposals: ResearchNodeActionProposal[] } | null> => {
+      if (!notebookId || runId == null) return null;
+      let text = '';
+      const proposals: ResearchNodeActionProposal[] = [];
+      try {
+        for await (const ev of streamRequest(
+          `/v2/notebooks/${notebookId}/research/${runId}/nodes/${encodeURIComponent(nodeId)}/chat`,
+          { method: 'POST', body: { message }, signal: opts?.signal },
+        )) {
+          if (ev.event === 'chunk') {
+            const chunk = (ev.data as { text?: string })?.text ?? '';
+            text += chunk;
+            opts?.onChunk?.(text);
+          } else if (ev.event === 'proposal') {
+            const proposal = ev.data as ResearchNodeActionProposal;
+            proposals.push(proposal);
+            opts?.onProposal?.(proposal);
+          } else if (ev.event === 'done') {
+            const done = ev.data as { proposals?: ResearchNodeActionProposal[] };
+            if (done.proposals?.length) {
+              proposals.length = 0;
+              proposals.push(...done.proposals);
+            }
+          } else if (ev.event === 'error') {
+            const err = ev.data as { message?: string };
+            setError(err.message ?? 'chat error');
+            return null;
+          }
+        }
+        return { text, proposals };
+      } catch (error) {
+        if ((error as Error)?.name === 'AbortError') return null;
+        setError(surfaceResearchError(error));
+        return null;
+      }
+    },
+    [notebookId, runId],
+  );
+
+  const listProgress = useCallback(
+    async (afterSeq = 0, limit = 100) => {
+      if (!notebookId || runId == null) return null;
+      const { data, error: apiErr } = await api.v2
+        .notebooks({ nid: notebookId })
+        .research({ rid: runId })
+        .progress.get({ query: { afterSeq, limit } });
+      if (apiErr) {
+        setError(surfaceResearchError(apiErr));
+        return null;
+      }
+      return data as { items: ResearchProgressEvent[]; nextAfterSeq?: number };
+    },
+    [notebookId, runId],
+  );
+
+  const listRevisions = useCallback(async () => {
+    if (!notebookId || runId == null) return null;
+    const { data, error: apiErr } = await api.v2
+      .notebooks({ nid: notebookId })
+      .research({ rid: runId })
+      .revisions.get();
+    if (apiErr) {
+      setError(surfaceResearchError(apiErr));
+      return null;
+    }
+    return data as { items: ResearchRevision[] };
+  }, [notebookId, runId]);
+
+  const createRevision = useCallback(
+    async (label?: string) => {
+      if (!notebookId || runId == null) return null;
+      return withBusyOnly(async () => {
+        const { data, error: apiErr } = await api.v2
+          .notebooks({ nid: notebookId })
+          .research({ rid: runId })
+          .revisions.post({ label, from: 'canonical' });
+        if (apiErr) {
+          setError(surfaceResearchError(apiErr));
+          return null;
+        }
+        onRunUpdatedRef.current?.();
+        return data as ResearchRevision;
+      });
+    },
+    [notebookId, runId],
+  );
+
+  const restoreRevision = useCallback(
+    async (revId: string) => {
+      if (!notebookId || runId == null) return null;
+      return withBusy(async () => {
+        const { data, error: apiErr } = await api.v2
+          .notebooks({ nid: notebookId })
+          .research({ rid: runId })
+          .revisions({ revId })
+          .restore.post();
+        if (apiErr) {
+          setError(surfaceResearchError(apiErr));
+          return null;
+        }
+        return data as ResearchRun;
+      });
+    },
+    [notebookId, runId, withBusy],
+  );
+
+  const getReportView = useCallback(async () => {
+    if (!notebookId || runId == null) return null;
+    const { data, error: apiErr } = await api.v2
+      .notebooks({ nid: notebookId })
+      .research({ rid: runId })
+      .report.get();
+    if (apiErr) {
+      setError(surfaceResearchError(apiErr));
+      return null;
+    }
+    return data as ResearchReportView;
+  }, [notebookId, runId]);
+
+  const putWorkingReport = useCallback(
+    async (report: ResearchReport) => {
+      if (!notebookId || runId == null) return null;
+      return withBusyOnly(async () => {
+        const runApi = api.v2.notebooks({ nid: notebookId }).research({ rid: runId });
+        const { data, error: apiErr } = await runApi.report.working.put({ report });
+        if (apiErr) {
+          setError(surfaceResearchError(apiErr));
+          return null as ResearchReportView | null;
+        }
+        return data as ResearchReportView;
+      });
+    },
+    [notebookId, runId],
+  );
+
+  const discardWorkingReport = useCallback(async () => {
+    if (!notebookId || runId == null) return null;
+    return withBusyOnly(async () => {
+      const runApi = api.v2.notebooks({ nid: notebookId }).research({ rid: runId });
+      const { data, error: apiErr } = await runApi.report.working.delete();
+      if (apiErr) {
+        setError(surfaceResearchError(apiErr));
+        return null as ResearchReportView | null;
+      }
+      return data as ResearchReportView;
+    });
+  }, [notebookId, runId]);
+
   const convertToNote = useCallback(
     async (artifact: ResearchArtifactRef) => {
       if (!notebookId || runId == null) return null;
@@ -295,6 +487,15 @@ export function useResearchRunDetail({
     cancel,
     prune,
     fork,
+    patchNode,
+    chatNode,
+    listProgress,
+    listRevisions,
+    createRevision,
+    restoreRevision,
+    getReportView,
+    putWorkingReport,
+    discardWorkingReport,
     convertToNote,
     convertToSource,
   };

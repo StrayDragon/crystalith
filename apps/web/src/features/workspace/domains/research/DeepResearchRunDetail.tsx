@@ -1,6 +1,13 @@
-import type { ResearchReport, ResearchRun } from '@crystalith/shared';
+import type {
+  ResearchNodeActionProposal,
+  ResearchProgressEvent,
+  ResearchReport,
+  ResearchReportView,
+  ResearchRevision,
+  ResearchRun,
+} from '@crystalith/shared';
 import { Typography } from '@material-tailwind/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { t } from '../../../../shared/i18n';
@@ -62,6 +69,113 @@ function ReportBlocks({ report }: { report: ResearchReport }) {
   );
 }
 
+/** C2 — progress / revisions / working report (terminal). */
+function ResearchDataPlane({
+  busy,
+  progress,
+  revisions,
+  reportView,
+  viewingWorking,
+  onSaveRevision,
+  onRestore,
+  onToggleWorking,
+  onDiscardWorking,
+}: {
+  busy?: boolean;
+  progress: ResearchProgressEvent[];
+  revisions: ResearchRevision[];
+  reportView: ResearchReportView | null;
+  viewingWorking: boolean;
+  onSaveRevision: () => void;
+  onRestore: (revId: string) => void;
+  onToggleWorking: (useWorking: boolean) => void;
+  onDiscardWorking: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 border-t border-gray-100 dark:border-slate-800 pt-3">
+      <div {...tid(TestIds.researchProgressPanel)}>
+        <div className="text-[11px] font-semibold text-gray-600 mb-1">
+          {t('research.plane.progress')}
+        </div>
+        <ul className="max-h-28 overflow-y-auto space-y-1 text-[11px] text-gray-600">
+          {progress.length === 0 ? <li>—</li> : null}
+          {progress.map((e) => (
+            <li key={e.id}>
+              <span className="text-gray-400">#{e.seq}</span> {e.headline ?? e.kind}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div {...tid(TestIds.researchRevisionPanel)}>
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="text-[11px] font-semibold text-gray-600">
+            {t('research.plane.revisions')}
+          </div>
+          <button
+            type="button"
+            className="h-6 px-2 rounded text-[10px] bg-slate-900 text-white disabled:opacity-40"
+            disabled={busy}
+            onClick={onSaveRevision}
+            {...tid(TestIds.researchRevisionSave)}
+          >
+            {t('research.plane.save_revision')}
+          </button>
+        </div>
+        <ul className="max-h-24 overflow-y-auto space-y-1">
+          {revisions.map((r) => (
+            <li key={r.id} className="flex items-center justify-between gap-2 text-[11px]">
+              <span className="truncate text-gray-700">{r.label}</span>
+              <button
+                type="button"
+                className="shrink-0 h-6 px-2 rounded text-[10px] border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+                disabled={busy}
+                onClick={() => onRestore(r.id)}
+                {...tid(TestIds.researchRevisionRestore)}
+              >
+                {t('research.plane.restore')}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+      {reportView ? (
+        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+          <button
+            type="button"
+            className={`h-6 px-2 rounded border ${
+              !viewingWorking ? 'bg-slate-900 text-white' : 'border-gray-200 text-gray-600'
+            }`}
+            onClick={() => onToggleWorking(false)}
+            {...tid(TestIds.researchWorkingToggle)}
+          >
+            {t('research.plane.canonical')}
+          </button>
+          <button
+            type="button"
+            className={`h-6 px-2 rounded border ${
+              viewingWorking ? 'bg-slate-900 text-white' : 'border-gray-200 text-gray-600'
+            }`}
+            disabled={!reportView.working}
+            onClick={() => onToggleWorking(true)}
+          >
+            {t('research.plane.working')}
+          </button>
+          {reportView.working ? (
+            <button
+              type="button"
+              className="h-6 px-2 rounded text-red-600 hover:bg-red-50 disabled:opacity-40"
+              disabled={busy}
+              onClick={onDiscardWorking}
+            >
+              {t('research.plane.discard_working')}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export interface DeepResearchRunDetailProps {
   open: boolean;
   notebookId: number | undefined;
@@ -82,6 +196,10 @@ export default function DeepResearchRunDetail({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [draftExpanded, setDraftExpanded] = useState(false);
   const [showGraphSecondary, setShowGraphSecondary] = useState(false);
+  const [progress, setProgress] = useState<ResearchProgressEvent[]>([]);
+  const [revisions, setRevisions] = useState<ResearchRevision[]>([]);
+  const [reportView, setReportView] = useState<ResearchReportView | null>(null);
+  const [viewingWorking, setViewingWorking] = useState(false);
 
   const {
     run,
@@ -92,6 +210,15 @@ export default function DeepResearchRunDetail({
     cancel,
     prune,
     fork,
+    patchNode,
+    chatNode,
+    listProgress,
+    listRevisions,
+    createRevision,
+    restoreRevision,
+    getReportView,
+    putWorkingReport,
+    discardWorkingReport,
     convertToNote,
     convertToSource,
   } = useResearchRunDetail({ notebookId, runId, open, onRunUpdated });
@@ -120,8 +247,55 @@ export default function DeepResearchRunDetail({
       setSelectedNodeId(null);
       setDraftExpanded(false);
       setShowGraphSecondary(false);
+      setProgress([]);
+      setRevisions([]);
+      setReportView(null);
+      setViewingWorking(false);
     }
   }, [open]);
+
+  const refreshDataPlane = useCallback(async () => {
+    if (!run || !isTerminalResearchStatus(run.status)) return;
+    const [p, r, rv] = await Promise.all([listProgress(0, 80), listRevisions(), getReportView()]);
+    if (p) setProgress(p.items);
+    if (r) setRevisions(r.items);
+    if (rv) setReportView(rv);
+  }, [run, listProgress, listRevisions, getReportView]);
+
+  useEffect(() => {
+    void refreshDataPlane();
+  }, [refreshDataPlane]);
+
+  const acceptProposal = useCallback(
+    async (nodeId: string, proposal: ResearchNodeActionProposal): Promise<boolean> => {
+      switch (proposal.kind) {
+        case 'prune_node':
+          return Boolean(await prune(nodeId));
+        case 'fork_sibling':
+          return Boolean(await fork(nodeId, proposal.params?.query));
+        case 'rewrite_query': {
+          const q = proposal.params?.query;
+          if (!q) return false;
+          return Boolean(await patchNode(nodeId, { query: q }));
+        }
+        case 'set_status': {
+          const status = proposal.params?.conclusionStatus;
+          if (!status) return false;
+          return Boolean(await patchNode(nodeId, { conclusionStatus: status }));
+        }
+        case 'confirm_finish':
+          return Boolean(await confirm({ action: 'finish_report' }));
+        case 'confirm_continue':
+          return Boolean(await confirm({ action: 'continue' }));
+        case 'open_report':
+          setDraftExpanded(true);
+          return true;
+        default:
+          return false;
+      }
+    },
+    [prune, fork, patchNode, confirm],
+  );
 
   if (!open || runId == null) return null;
 
@@ -129,6 +303,10 @@ export default function DeepResearchRunDetail({
   const readOnly = run ? isTerminalResearchStatus(run.status) : true;
   const selectedNode = run?.nodes.find((n) => n.id === selectedNodeId) ?? null;
   const highlightNodeId = run?.confirmBranchNodeId ?? null;
+  const displayReport =
+    viewingWorking && reportView?.working
+      ? reportView.working
+      : (run?.report ?? reportView?.canonical ?? null);
 
   const content = (
     <div
@@ -310,6 +488,9 @@ export default function DeepResearchRunDetail({
                 onClose={() => setSelectedNodeId(null)}
                 onPrune={(id) => void prune(id)}
                 onFork={(id, hint) => void fork(id, hint)}
+                onPatch={(id, body) => patchNode(id, body)}
+                onChat={(id, message, opts) => chatNode(id, message, opts)}
+                onAcceptProposal={acceptProposal}
                 onConvertNote={(id) => void convertToNote({ kind: 'node', nodeId: id })}
                 onConvertSource={(id) => void convertToSource({ kind: 'node', nodeId: id })}
               />
@@ -318,11 +499,38 @@ export default function DeepResearchRunDetail({
 
           {run && primary === 'report' ? (
             <div className="flex-1 min-w-0 overflow-y-auto p-4 flex flex-col gap-3">
-              {run.report ? (
-                <ReportBlocks report={run.report} />
+              {displayReport ? (
+                <ReportBlocks report={displayReport} />
               ) : (
                 <p className="text-sm text-gray-500">{t('research.detail.no_report')}</p>
               )}
+              <ResearchDataPlane
+                busy={busy}
+                progress={progress}
+                revisions={revisions}
+                reportView={reportView}
+                viewingWorking={viewingWorking}
+                onSaveRevision={() => {
+                  void createRevision().then(() => refreshDataPlane());
+                }}
+                onRestore={(revId) => {
+                  void restoreRevision(revId).then(() => refreshDataPlane());
+                }}
+                onToggleWorking={(useWorking) => {
+                  setViewingWorking(useWorking);
+                  if (useWorking && !reportView?.working && run.report) {
+                    void putWorkingReport(run.report).then((rv) => {
+                      if (rv) setReportView(rv);
+                    });
+                  }
+                }}
+                onDiscardWorking={() => {
+                  void discardWorkingReport().then((rv) => {
+                    if (rv) setReportView(rv);
+                    setViewingWorking(false);
+                  });
+                }}
+              />
               <button
                 type="button"
                 className="self-start text-xs text-indigo-600 hover:underline"
@@ -355,6 +563,28 @@ export default function DeepResearchRunDetail({
                 <p className="text-xs text-red-600 whitespace-pre-wrap">{run.errorMessage}</p>
               ) : null}
               {run.report ? <ReportBlocks report={run.report} /> : null}
+              {isTerminalResearchStatus(run.status) ? (
+                <ResearchDataPlane
+                  busy={busy}
+                  progress={progress}
+                  revisions={revisions}
+                  reportView={reportView}
+                  viewingWorking={viewingWorking}
+                  onSaveRevision={() => {
+                    void createRevision().then(() => refreshDataPlane());
+                  }}
+                  onRestore={(revId) => {
+                    void restoreRevision(revId).then(() => refreshDataPlane());
+                  }}
+                  onToggleWorking={setViewingWorking}
+                  onDiscardWorking={() => {
+                    void discardWorkingReport().then((rv) => {
+                      if (rv) setReportView(rv);
+                      setViewingWorking(false);
+                    });
+                  }}
+                />
+              ) : null}
               {run.nodes.length > 0 ? (
                 <div className="h-56 border border-gray-200 rounded-lg overflow-hidden mt-2">
                   <ResearchGraph

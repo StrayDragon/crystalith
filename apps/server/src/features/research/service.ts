@@ -14,12 +14,21 @@ import type {
   ResearchForkBody,
   ResearchGraphPatch,
   ResearchNode,
+  ResearchNodeActionProposal,
+  ResearchNodeChatBody,
+  ResearchNodePatchBody,
+  ResearchNodeRole,
+  ResearchProgressEvent,
+  ResearchProgressKind,
   ResearchReport,
+  ResearchReportView,
+  ResearchRevision,
+  ResearchRevisionCreateBody,
   ResearchRun,
   ResearchRunStatus,
 } from '@crystalith/shared';
 import { RESEARCH_DEPTH_BUDGETS } from '@crystalith/shared';
-import { and, count, desc, eq } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, sql } from 'drizzle-orm';
 import { NotFoundError } from 'elysia';
 
 import { searchWeb } from '../../ai/tools/web-search.ts';
@@ -29,13 +38,18 @@ import {
   notebooks,
   outputs,
   researchEvidences,
+  researchProgressEvents,
+  researchReportEdits,
+  researchRevisions,
   researchRuns,
   sources,
   type ResearchCheckpointJson,
   type ResearchGraphJson,
+  type ResearchReportJson,
 } from '../../db/schema.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { ragRegistry } from '../../rag/registry.ts';
+import { config, ResearchSettingsSchema } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { splitTextToChunks } from '../outputs/render.ts';
 
@@ -49,12 +63,121 @@ const runEmitters = new Map<number, Set<SseEmit>>();
 /** Runs currently executing (dedupe schedule). */
 const activeLoops = new Set<number>();
 
+/** Per-run AbortController for cancel → abort active work-unit (c78). */
+const runAbortControllers = new Map<number, AbortController>();
+
+/** Per-run node-chat AbortControllers (`${runId}:${nodeId}`). */
+const chatAbortControllers = new Map<string, AbortController>();
+
+const TERMINAL_STATUSES = new Set(['completed', 'failed', 'cancelled']);
+
 function newId(prefix: string): string {
   return `${prefix}_${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`;
 }
 
 function emptyGraph(): ResearchGraphJson {
   return { nodes: [], edges: [] };
+}
+
+function ensureRunAbortController(runId: number): AbortController {
+  let ac = runAbortControllers.get(runId);
+  if (!ac || ac.signal.aborted) {
+    ac = new AbortController();
+    runAbortControllers.set(runId, ac);
+  }
+  return ac;
+}
+
+function clearRunAbortController(runId: number): void {
+  runAbortControllers.delete(runId);
+}
+
+function abortRunWorkUnit(runId: number): void {
+  const ac = runAbortControllers.get(runId);
+  if (ac && !ac.signal.aborted) ac.abort();
+}
+
+function chatKey(runId: number, nodeId: string): string {
+  return `${runId}:${nodeId}`;
+}
+
+function abortAllChatsForRun(runId: number): void {
+  const prefix = `${runId}:`;
+  for (const [key, ac] of chatAbortControllers) {
+    if (!key.startsWith(prefix)) continue;
+    if (!ac.signal.aborted) ac.abort();
+    chatAbortControllers.delete(key);
+  }
+}
+
+function getProgressEventRetain(): number {
+  const parsed = ResearchSettingsSchema.safeParse(config().raw.research ?? {});
+  return parsed.success ? parsed.data.progressEventRetain : 200;
+}
+
+function resolveNodeRole(node: Pick<ResearchNode, 'id' | 'role'>): ResearchNodeRole {
+  if (node.role) return node.role;
+  if (node.id.startsWith('node_conclusion')) return 'conclusion';
+  if (node.id.startsWith('node_root')) return 'question';
+  return 'research';
+}
+
+function isTerminalStatus(status: string): boolean {
+  return TERMINAL_STATUSES.has(status);
+}
+
+/** Role first, then id prefix compat (node_root_ / node_conclusion_). */
+export function isPruneProtectedNode(
+  node: Pick<ResearchNode, 'id' | 'role'> | undefined,
+  nodeId?: string,
+): boolean {
+  const id = node?.id ?? nodeId ?? '';
+  if (node?.role === 'question' || node?.role === 'conclusion') return true;
+  if (node?.role === 'research') return false;
+  return id.startsWith('node_root') || id.startsWith('node_conclusion');
+}
+
+function findQuestionNode(nodes: ResearchNode[]): ResearchNode | undefined {
+  return (
+    nodes.find((n) => n.role === 'question') ?? nodes.find((n) => n.id.startsWith('node_root'))
+  );
+}
+
+function findConclusionNode(nodes: ResearchNode[]): ResearchNode | undefined {
+  return (
+    nodes.find((n) => n.role === 'conclusion') ??
+    nodes.find((n) => n.id.startsWith('node_conclusion'))
+  );
+}
+
+/** Seed single-sink DAG: one question + one empty conclusion (r317). */
+function seedSingleSinkGraph(topic: string): {
+  question: ResearchNode;
+  conclusion: ResearchNode;
+  graph: ResearchGraphJson;
+} {
+  const question: ResearchNode = {
+    id: newId('node_root'),
+    role: 'question',
+    title: topic,
+    query: topic,
+    conclusionStatus: 'pending',
+    phase: 'retrieving',
+    evidenceIds: [],
+  };
+  const conclusion: ResearchNode = {
+    id: newId('node_conclusion'),
+    role: 'conclusion',
+    title: '结论',
+    conclusionStatus: 'pending',
+    phase: 'idle',
+    evidenceIds: [],
+  };
+  return {
+    question,
+    conclusion,
+    graph: { nodes: [question, conclusion], edges: [] },
+  };
 }
 
 function getGraph(row: RunRow): ResearchGraphJson {
@@ -307,8 +430,105 @@ function emitGraphPatch(runId: number, patch: ResearchGraphPatch): void {
   broadcast(runId, 'graph_patch', patch);
 }
 
+function appendProgressEvent(
+  runId: number,
+  kind: ResearchProgressKind,
+  opts?: {
+    nodeId?: string | null;
+    headline?: string | null;
+    payload?: Record<string, unknown> | null;
+  },
+): ResearchProgressEvent {
+  const maxSeq =
+    db()
+      .select({ value: sql<number>`coalesce(max(${researchProgressEvents.seq}), 0)` })
+      .from(researchProgressEvents)
+      .where(eq(researchProgressEvents.runId, runId))
+      .get()?.value ?? 0;
+  const seq = Number(maxSeq) + 1;
+  const id = newId('pe');
+  const at = new Date();
+  db()
+    .insert(researchProgressEvents)
+    .values({
+      id,
+      runId,
+      seq,
+      at,
+      kind,
+      nodeId: opts?.nodeId ?? null,
+      headline: opts?.headline ?? null,
+      payload: opts?.payload ?? null,
+    })
+    .run();
+  const event: ResearchProgressEvent = {
+    id,
+    runId,
+    seq,
+    at: at.toISOString(),
+    kind,
+    nodeId: opts?.nodeId ?? null,
+    headline: opts?.headline ?? null,
+    payload: opts?.payload ?? null,
+  };
+  broadcast(runId, 'progress', {
+    seq: event.seq,
+    kind: event.kind,
+    at: event.at,
+    nodeId: event.nodeId ?? undefined,
+    headline: event.headline ?? undefined,
+    payload: event.payload ?? undefined,
+  });
+  return event;
+}
+
+function truncateProgressEvents(runId: number): void {
+  const retain = getProgressEventRetain();
+  const rows = db()
+    .select({ id: researchProgressEvents.id, seq: researchProgressEvents.seq })
+    .from(researchProgressEvents)
+    .where(eq(researchProgressEvents.runId, runId))
+    .orderBy(desc(researchProgressEvents.seq))
+    .all();
+  if (rows.length <= retain) return;
+  const keep = new Set(rows.slice(0, retain).map((r) => r.id));
+  for (const row of rows) {
+    if (keep.has(row.id)) continue;
+    db().delete(researchProgressEvents).where(eq(researchProgressEvents.id, row.id)).run();
+  }
+}
+
+function statusToProgressKind(status: ResearchRunStatus): ResearchProgressKind | null {
+  switch (status) {
+    case 'queued':
+      return 'run_queued';
+    case 'running':
+      return 'run_running';
+    case 'awaiting_confirm':
+      return 'run_awaiting_confirm';
+    case 'completed':
+      return 'run_completed';
+    case 'failed':
+      return 'run_failed';
+    case 'cancelled':
+      return 'run_cancelled';
+    default:
+      return null;
+  }
+}
+
 function emitStatus(runId: number, status: ResearchRunStatus, reason?: string): void {
   broadcast(runId, 'status', reason ? { status, reason } : { status });
+  const kind = statusToProgressKind(status);
+  if (kind) {
+    appendProgressEvent(runId, kind, {
+      headline: reason ?? status,
+      payload: reason ? { reason } : null,
+    });
+  }
+  if (isTerminalStatus(status)) {
+    truncateProgressEvents(runId);
+  }
 }
 
 function emitLog(runId: number, message: string): void {
@@ -317,7 +537,8 @@ function emitLog(runId: number, message: string): void {
 
 function isCancelled(runId: number): boolean {
   const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
-  return Boolean(row?.cancelRequested) || row?.status === 'cancelled';
+  if (Boolean(row?.cancelRequested) || row?.status === 'cancelled') return true;
+  return Boolean(runAbortControllers.get(runId)?.signal.aborted);
 }
 
 /** Schedule async execution (microtask). */
@@ -331,48 +552,67 @@ export function scheduleRun(runId: number): void {
 async function runLoop(runId: number): Promise<void> {
   if (activeLoops.has(runId)) return;
   activeLoops.add(runId);
+  const abort = ensureRunAbortController(runId);
   try {
     let row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
     if (!row) return;
     if (row.status !== 'queued' && row.status !== 'running') return;
 
-    row = updateRun(runId, { status: 'running' });
+    row = updateRun(runId, { status: 'running', llmActivity: 'work_unit', activeNodeId: null });
     emitStatus(runId, 'running');
     emitLog(runId, `开始研究「${row.topic}」`);
+    appendProgressEvent(runId, 'unit_started', { headline: 'work_unit' });
 
-    if (isCancelled(runId)) {
+    if (isCancelled(runId) || abort.signal.aborted) {
       finalizeCancel(runId);
       return;
     }
 
-    const graph = getGraph(row);
-    let root = graph.nodes.find((n) => n.id.startsWith('node_root'));
-    if (!root) {
-      root = {
-        id: newId('node_root'),
-        title: row.topic,
-        query: row.topic,
-        conclusionStatus: 'pending',
-        phase: 'retrieving',
-        evidenceIds: [],
-      };
-      graph.nodes.push(root);
-      row = persistGraph(runId, graph);
-      emitGraphPatch(runId, { nodes: [root as ResearchNode] });
+    // Seed single-sink DAG (question + conclusion) at start of loop (r317).
+    let graph = getGraph(row);
+    let question = findQuestionNode(graph.nodes as ResearchNode[]);
+    let conclusion = findConclusionNode(graph.nodes as ResearchNode[]);
+    if (!question || !conclusion) {
+      const seeded = seedSingleSinkGraph(row.topic);
+      question = seeded.question;
+      conclusion = seeded.conclusion;
+      graph = seeded.graph;
+      row = persistGraph(runId, graph, {
+        checkpoint: writeCheckpoint({ ...row, status: 'running' }, 'seed_graph'),
+      });
+      emitGraphPatch(runId, {
+        nodes: [question, conclusion],
+        edges: [],
+      });
+      emitLog(runId, '已种子单结论 DAG');
     }
 
-    const evidenceIds: string[] = [...(root.evidenceIds ?? [])];
+    // discard-if-pruned: question unit skipped when pruned (should not happen for protected)
+    row = requireFresh(runId);
+    graph = getGraph(row);
+    question = findQuestionNode(graph.nodes as ResearchNode[])!;
+    if (question.conclusionStatus === 'pruned') {
+      emitLog(runId, `跳过已剪枝节点 ${question.id}`);
+      await synthesizeAndComplete(runId);
+      return;
+    }
 
-    // Notebook retrieve
+    const evidenceIds: string[] = [...(question.evidenceIds ?? [])];
+
+    // Notebook retrieve (pragmatic: still on question node)
     if (row.useNotebookSources && row.sourceIds?.length) {
       try {
+        if (abort.signal.aborted || isCancelled(runId)) {
+          finalizeCancel(runId);
+          return;
+        }
         const hits = await ragRegistry.retrieveWith('embed', row.notebookId, row.topic, {
           topK: 5,
           minScore: 0,
           sourceIds: row.sourceIds,
         });
         for (const hit of hits) {
-          if (isCancelled(runId)) {
+          if (isCancelled(runId) || abort.signal.aborted) {
             finalizeCancel(runId);
             return;
           }
@@ -382,7 +622,7 @@ async function runLoop(runId: number): Promise<void> {
             snippet: hit.text.slice(0, 500),
             sourceId: hit.sourceId,
             chunkId: String(hit.chunkId),
-            collectedAtNodeId: root.id,
+            collectedAtNodeId: question.id,
           });
           evidenceIds.push(ev.id);
         }
@@ -404,6 +644,10 @@ async function runLoop(runId: number): Promise<void> {
         return;
       }
       try {
+        if (abort.signal.aborted || isCancelled(runId)) {
+          finalizeCancel(runId);
+          return;
+        }
         const results = await searchWeb(row.topic, { maxResults: 5 });
         row = updateRun(runId, { searchesUsed: row.searchesUsed + 1 });
         for (const item of results) {
@@ -412,7 +656,7 @@ async function runLoop(runId: number): Promise<void> {
             title: item.title || item.url,
             snippet: item.snippet,
             url: item.url,
-            collectedAtNodeId: root.id,
+            collectedAtNodeId: question.id,
           });
           evidenceIds.push(ev.id);
         }
@@ -423,24 +667,35 @@ async function runLoop(runId: number): Promise<void> {
       }
     }
 
-    if (isCancelled(runId)) {
+    if (isCancelled(runId) || abort.signal.aborted) {
       finalizeCancel(runId);
       return;
     }
 
-    // Complete root node + checkpoint (CP1)
-    root = {
-      ...root,
+    // Re-read graph before write (discard-if-pruned / concurrent prune)
+    row = requireFresh(runId);
+    graph = getGraph(row);
+    const liveQuestion = findQuestionNode(graph.nodes as ResearchNode[]);
+    if (!liveQuestion || liveQuestion.conclusionStatus === 'pruned') {
+      emitLog(runId, '问题节点已剪枝，跳过写回');
+      await synthesizeAndComplete(runId);
+      return;
+    }
+
+    // Complete question node + checkpoint (CP1)
+    const updatedQuestion: ResearchNode = {
+      ...liveQuestion,
+      role: liveQuestion.role ?? 'question',
       phase: 'idle',
       conclusionStatus: evidenceIds.length > 0 ? 'partial' : 'missing',
       summary: evidenceIds.length ? `已收集 ${evidenceIds.length} 条证据` : '未收集到证据',
       evidenceIds,
     };
-    const idx = graph.nodes.findIndex((n) => n.id === root!.id);
-    if (idx >= 0) graph.nodes[idx] = root;
-    else graph.nodes.push(root);
+    const idx = graph.nodes.findIndex((n) => n.id === updatedQuestion.id);
+    if (idx >= 0) graph.nodes[idx] = updatedQuestion;
+    else graph.nodes.push(updatedQuestion);
     row = persistGraph(runId, graph);
-    emitGraphPatch(runId, { nodes: [root as ResearchNode] });
+    emitGraphPatch(runId, { nodes: [updatedQuestion] });
     row = updateRun(runId, { checkpoint: writeCheckpoint(row, 'node_complete') });
 
     // Pragmatic M1: after first wave with web, pause for budget confirm when
@@ -452,6 +707,10 @@ async function runLoop(runId: number): Promise<void> {
 
     await synthesizeAndComplete(runId);
   } catch (error) {
+    if (abort.signal.aborted || isCancelled(runId)) {
+      finalizeCancel(runId);
+      return;
+    }
     const message = error instanceof Error ? error.message : String(error);
     const code = error instanceof AppHttpError ? error.code : ErrorCode.INTERNAL_ERROR;
     updateRun(runId, { status: 'failed', errorMessage: message });
@@ -459,7 +718,18 @@ async function runLoop(runId: number): Promise<void> {
     emitStatus(runId, 'failed', message);
   } finally {
     activeLoops.delete(runId);
+    clearRunAbortController(runId);
+    const latest = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+    if (latest?.llmActivity === 'work_unit') {
+      updateRun(runId, { llmActivity: null });
+    }
   }
+}
+
+function requireFresh(runId: number): RunRow {
+  const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+  if (!row) throw new NotFoundError(`Research run ${runId} not found`);
+  return row;
 }
 
 async function enterConfirm(
@@ -503,14 +773,17 @@ export function cancelRun(notebookId: number, runId: number): ResearchRun {
       `Cannot cancel run in status ${row.status}`,
     );
   }
+  abortRunWorkUnit(runId);
+  abortAllChatsForRun(runId);
   updateRun(runId, {
     cancelRequested: true,
+    llmActivity: null,
     checkpoint: writeCheckpoint(row, 'cancel_requested'),
   });
   if (row.status === 'awaiting_confirm' || row.status === 'queued') {
     finalizeCancel(runId);
   }
-  // running: loop checks cancelRequested
+  // running: loop checks cancelRequested / AbortSignal
   return serializeRun(requireRun(notebookId, runId));
 }
 
@@ -548,7 +821,7 @@ export async function confirmRun(
           const results = await searchWeb(latest.topic, { maxResults: 3 });
           updateRun(runId, { searchesUsed: latest.searchesUsed + 1 });
           const graph = getGraph(latest);
-          const root = graph.nodes[0];
+          const root = findQuestionNode(graph.nodes as ResearchNode[]) ?? graph.nodes[0];
           for (const item of results) {
             const ev = insertEvidence(runId, notebookId, {
               kind: 'web',
@@ -593,28 +866,45 @@ export async function confirmRun(
     if (body.action === 'approve_branch') {
       const latest = requireRun(notebookId, runId);
       const graph = getGraph(latest);
-      if (graph.nodes.length >= latest.maxNodes) {
+      const liveCount = graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length;
+      if (liveCount >= latest.maxNodes) {
         throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Node budget exhausted');
+      }
+      const conclusion = findConclusionNode(graph.nodes as ResearchNode[]);
+      if (!conclusion) {
+        throw new AppHttpError(
+          ErrorCode.INVALID_REQUEST,
+          'Single-sink DAG missing conclusion node',
+        );
       }
       const child: ResearchNode = {
         id: newId('node'),
+        role: 'research',
         title: `扩展：${branchNodeId}`,
         query: latest.topic,
         conclusionStatus: 'partial',
         phase: 'idle',
-        summary: '支路已批准（v1 stub）',
+        summary: '支路已批准',
         evidenceIds: [],
       };
-      const edge: ResearchEdge = {
+      const forkEdge: ResearchEdge = {
         id: newId('edge'),
         source: branchNodeId,
         target: child.id,
-        kind: 'expand',
+        kind: 'fork',
+      };
+      const mergeEdge: ResearchEdge = {
+        id: newId('edge'),
+        source: child.id,
+        target: conclusion.id,
+        kind: 'merge',
       };
       graph.nodes.push(child);
-      graph.edges.push(edge);
-      persistGraph(runId, graph);
-      emitGraphPatch(runId, { nodes: [child], edges: [edge] });
+      graph.edges.push(forkEdge, mergeEdge);
+      persistGraph(runId, graph, {
+        checkpoint: writeCheckpoint(latest, 'approve_branch'),
+      });
+      emitGraphPatch(runId, { nodes: [child], edges: [forkEdge, mergeEdge] });
     }
     await synthesizeAndComplete(runId);
   }
@@ -629,12 +919,41 @@ async function synthesizeAndComplete(runId: number): Promise<void> {
   const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
   if (!row) return;
   const report = synthesizeReport(row);
+  const now = new Date();
   updateRun(runId, {
     status: 'completed',
     report: report as unknown as typeof row.report,
+    reportUpdatedAt: now,
     confirmKind: null,
     confirmBranchNodeId: null,
+    llmActivity: null,
     checkpoint: writeCheckpoint({ ...row, status: 'completed' }, 'report'),
+  });
+  // auto_complete revision snapshot
+  const revId = newId('rev');
+  const graph = getGraph(row);
+  db()
+    .insert(researchRevisions)
+    .values({
+      id: revId,
+      runId,
+      notebookId: row.notebookId,
+      label: '自动完成',
+      kind: 'auto_complete',
+      parentRevisionId: row.activeRevisionId ?? null,
+      graph,
+      report: report as unknown as ResearchReportJson,
+      searchesUsed: row.searchesUsed,
+      statusAtSave: 'completed',
+    })
+    .run();
+  updateRun(runId, { activeRevisionId: revId });
+  appendProgressEvent(runId, 'revision_created', {
+    headline: '自动完成快照',
+    payload: { revisionId: revId, kind: 'auto_complete' },
+  });
+  appendProgressEvent(runId, 'report_canonical_updated', {
+    headline: '权威报告已生成',
   });
   emitLog(runId, '报告已生成');
   broadcast(runId, 'report_ready', { runId });
@@ -701,15 +1020,15 @@ export function synthesizeReport(row: RunRow): ResearchReport {
   };
 }
 
-function isPruneProtectedNodeId(nodeId: string): boolean {
-  // c76 graph has no role field yet — protect root (and future conclusion ids).
-  return nodeId.startsWith('node_root') || nodeId.startsWith('node_conclusion');
+function isPruneProtectedNodeId(nodeId: string, nodes: ResearchNode[] = []): boolean {
+  const node = nodes.find((n) => n.id === nodeId);
+  return isPruneProtectedNode(node, nodeId);
 }
 
 /**
  * Prune closure (r316 / update-research-prune-cascade) — keep in sync with
  * Lab `collectPruneClosure` in apps/web/.../fake/deriveLabState.ts.
- * - never includes protected sink/root nodes
+ * - never includes protected sink/root nodes (role first, then id prefix)
  * - does not walk `merge` edges (failed merges stay attached)
  * - cascades only when every non-protected inbound parent is already in the
  *   closure or already pruned (shared children with a live parent stay live)
@@ -720,7 +1039,7 @@ export function collectResearchPruneClosure(
   edges: ResearchEdge[],
 ): Set<string> {
   const byId = new Map(nodes.map((n) => [n.id, n]));
-  if (!byId.has(rootId) || isPruneProtectedNodeId(rootId)) return new Set();
+  if (!byId.has(rootId) || isPruneProtectedNodeId(rootId, nodes)) return new Set();
 
   const children = new Map<string, string[]>();
   const parents = new Map<string, string[]>();
@@ -740,10 +1059,10 @@ export function collectResearchPruneClosure(
     const id = stack.pop()!;
     for (const childId of children.get(id) ?? []) {
       if (out.has(childId)) continue;
-      if (isPruneProtectedNodeId(childId)) continue;
+      if (isPruneProtectedNodeId(childId, nodes)) continue;
       const blocking = (parents.get(childId) ?? []).some((pid) => {
         if (out.has(pid)) return false;
-        if (isPruneProtectedNodeId(pid)) return false;
+        if (isPruneProtectedNodeId(pid, nodes)) return false;
         if (byId.get(pid)?.conclusionStatus === 'pruned') return false;
         return true;
       });
@@ -759,13 +1078,18 @@ export function pruneNode(notebookId: number, runId: number, nodeId: string): Re
   const row = requireRun(notebookId, runId);
   assertLiveMutable(row.status);
   const graph = getGraph(row);
-  if (!graph.nodes.some((n) => n.id === nodeId)) {
+  const target = graph.nodes.find((n) => n.id === nodeId) as ResearchNode | undefined;
+  if (!target) {
     throw new AppHttpError(ErrorCode.NOT_FOUND, `Node ${nodeId} not found`);
   }
-  if (isPruneProtectedNodeId(nodeId)) {
+  if (isPruneProtectedNode(target, nodeId)) {
     throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Cannot prune protected node ${nodeId}`);
   }
-  const toPrune = collectResearchPruneClosure(nodeId, graph.nodes, graph.edges);
+  const toPrune = collectResearchPruneClosure(
+    nodeId,
+    graph.nodes as ResearchNode[],
+    graph.edges as ResearchEdge[],
+  );
   for (const n of graph.nodes) {
     if (toPrune.has(n.id)) {
       n.conclusionStatus = 'pruned';
@@ -779,6 +1103,38 @@ export function pruneNode(notebookId: number, runId: number, nodeId: string): Re
     nodes: graph.nodes.filter((n) => toPrune.has(n.id)) as ResearchNode[],
   });
   emitLog(runId, `已剪枝节点 ${nodeId}${toPrune.size > 1 ? `（级联 ${toPrune.size}）` : ''}`);
+  return serializeRun(requireRun(notebookId, runId));
+}
+
+export function patchNode(
+  notebookId: number,
+  runId: number,
+  nodeId: string,
+  body: ResearchNodePatchBody,
+): ResearchRun {
+  const row = requireRun(notebookId, runId);
+  assertLiveMutable(row.status);
+  const graph = getGraph(row);
+  const node = graph.nodes.find((n) => n.id === nodeId) as ResearchNode | undefined;
+  if (!node) {
+    throw new AppHttpError(ErrorCode.NOT_FOUND, `Node ${nodeId} not found`);
+  }
+  if (node.conclusionStatus === 'pruned') {
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Cannot patch pruned node ${nodeId}`);
+  }
+  if (isPruneProtectedNode(node, nodeId)) {
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      `Cannot patch protected question/conclusion node ${nodeId}`,
+    );
+  }
+  if (body.title !== undefined) node.title = body.title;
+  if (body.query !== undefined) node.query = body.query;
+  if (body.conclusionStatus !== undefined) node.conclusionStatus = body.conclusionStatus;
+  persistGraph(runId, graph, {
+    checkpoint: writeCheckpoint(row, `patch_${nodeId}`),
+  });
+  emitGraphPatch(runId, { nodes: [node] });
   return serializeRun(requireRun(notebookId, runId));
 }
 
@@ -1069,4 +1425,450 @@ export function createResearchSseResponse(notebookId: number, runId: number): Re
       'x-accel-buffering': 'no',
     },
   });
+}
+
+// ---------------------------------------------------------------------------
+// C1 — Node chat (SSE short-lived; proposals only)
+// ---------------------------------------------------------------------------
+
+/** Pragmatic stub: text + ActionProposal — never mutates graph. */
+function stubNodeChatTurn(
+  node: ResearchNode,
+  message: string,
+): { text: string; proposals: ResearchNodeActionProposal[] } {
+  const role = resolveNodeRole(node);
+  const lower = message.toLowerCase();
+  const proposals: ResearchNodeActionProposal[] = [];
+  const push = (
+    kind: ResearchNodeActionProposal['kind'],
+    label: string,
+    rationale: string,
+    params?: ResearchNodeActionProposal['params'],
+  ) => {
+    proposals.push({
+      id: newId('ap'),
+      kind,
+      label,
+      rationale,
+      status: 'pending',
+      params,
+    });
+  };
+
+  if (role === 'research') {
+    if (/prune|剪枝|丢弃|砍掉/u.test(lower)) {
+      push('prune_node', '剪枝此节点', '接受后走 POST …/prune（不会在 chat 内自动执行）');
+    }
+    if (/fork|分叉|扩展|支路/u.test(lower)) {
+      push('fork_sibling', '分叉兄弟节点', '接受后走 POST …/fork → confirm', {
+        title: `扩展：${node.title}`,
+      });
+    }
+    if (/query|查询|改问|rewrite/u.test(lower)) {
+      push('rewrite_query', '改写查询', '接受后走 PATCH …/nodes/:id', {
+        query: message.slice(0, 200),
+      });
+    }
+    if (/status|状态|结论/u.test(lower)) {
+      push('set_status', '设为 partial', '接受后走 PATCH conclusionStatus', {
+        conclusionStatus: 'partial',
+      });
+    }
+  } else if (role === 'question') {
+    if (/finish|报告|完成/u.test(lower)) {
+      push('confirm_finish', '结束并出报告', '接受后走 POST …/confirm finish_report');
+    }
+    if (/continue|继续/u.test(lower)) {
+      push('confirm_continue', '继续研究', '接受后走 POST …/confirm continue');
+    }
+    if (/query|改问/u.test(lower)) {
+      push('rewrite_query', '改写问题查询', '接受后走 PATCH', { query: message.slice(0, 200) });
+    }
+  } else {
+    if (/report|报告|打开/u.test(lower)) {
+      push('open_report', '打开报告', '纯前端导航，不改图');
+    }
+    if (/finish|完成/u.test(lower)) {
+      push('confirm_finish', '结束并出报告', '接受后走 confirm');
+    }
+    if (/status|状态/u.test(lower)) {
+      push('set_status', '设结论状态', '接受后走 PATCH', { conclusionStatus: 'partial' });
+    }
+  }
+
+  if (proposals.length === 0) {
+    // Mild default suggestions by role (still proposals only)
+    if (role === 'research') {
+      push('fork_sibling', '建议分叉', '可选：接受后走 fork 命令口');
+    } else if (role === 'conclusion') {
+      push('open_report', '查看报告', '纯前端');
+    }
+  }
+
+  const text = [
+    `关于节点「${node.title}」（${role}）：`,
+    message.trim(),
+    '',
+    proposals.length
+      ? `我准备了 ${proposals.length} 个动作提案，请在 UI 确认后才会改图（chat 不会自动剪枝/分叉）。`
+      : '暂无结构提案。',
+  ].join('\n');
+
+  return { text, proposals };
+}
+
+export function createNodeChatSseResponse(
+  notebookId: number,
+  runId: number,
+  nodeId: string,
+  body: ResearchNodeChatBody,
+  requestSignal?: AbortSignal,
+): Response {
+  const row = requireRun(notebookId, runId);
+  const graph = getGraph(row);
+  const node = graph.nodes.find((n) => n.id === nodeId) as ResearchNode | undefined;
+  if (!node) {
+    throw new AppHttpError(ErrorCode.NOT_FOUND, `Node ${nodeId} not found`);
+  }
+  if (node.conclusionStatus === 'pruned') {
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Cannot chat on pruned node ${nodeId}`);
+  }
+
+  // Mutual exclusion with work_unit (and other chat)
+  if (row.llmActivity === 'work_unit' || activeLoops.has(runId)) {
+    throw new AppHttpError(ErrorCode.RESEARCH_INVALID_STATE, '节点仍在研究中，请稍后再试对话');
+  }
+  if (row.llmActivity === 'node_chat') {
+    throw new AppHttpError(ErrorCode.RESEARCH_INVALID_STATE, '该 Run 已有节点对话进行中');
+  }
+
+  const sse = (event: string, data: unknown): string =>
+    `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+
+  const key = chatKey(runId, nodeId);
+  const ac = new AbortController();
+  chatAbortControllers.set(key, ac);
+  const onRequestAbort = () => ac.abort();
+  requestSignal?.addEventListener('abort', onRequestAbort);
+
+  updateRun(runId, { llmActivity: 'node_chat', activeNodeId: nodeId });
+  appendProgressEvent(runId, 'chat_started', {
+    nodeId,
+    headline: '节点对话开始',
+    payload: { messagePreview: body.message.slice(0, 80) },
+  });
+
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      let closed = false;
+      const emit = (event: string, data: unknown) => {
+        if (closed || ac.signal.aborted) return;
+        try {
+          controller.enqueue(encoder.encode(sse(event, data)));
+        } catch {
+          closed = true;
+        }
+      };
+      try {
+        if (ac.signal.aborted) {
+          appendProgressEvent(runId, 'chat_aborted', { nodeId, headline: '对话已中止' });
+          emit('error', { errorCode: ErrorCode.INVALID_REQUEST, message: 'aborted' });
+          return;
+        }
+        const turn = stubNodeChatTurn(node, body.message);
+        // Stream text in small chunks (still no graph mutate)
+        const chunkSize = 48;
+        for (let i = 0; i < turn.text.length; i += chunkSize) {
+          if (ac.signal.aborted) {
+            appendProgressEvent(runId, 'chat_aborted', { nodeId, headline: '对话已中止' });
+            emit('error', { errorCode: ErrorCode.INVALID_REQUEST, message: 'aborted' });
+            return;
+          }
+          emit('chunk', { text: turn.text.slice(i, i + chunkSize) });
+          await Bun.sleep(0);
+        }
+        for (const proposal of turn.proposals) {
+          if (ac.signal.aborted) break;
+          emit('proposal', proposal);
+        }
+        if (!ac.signal.aborted) {
+          emit('done', { proposals: turn.proposals });
+          appendProgressEvent(runId, 'chat_finished', {
+            nodeId,
+            headline: '节点对话结束',
+            payload: { proposalCount: turn.proposals.length },
+          });
+        } else {
+          appendProgressEvent(runId, 'chat_aborted', { nodeId, headline: '对话已中止' });
+        }
+      } catch (error) {
+        emit('error', {
+          errorCode: error instanceof AppHttpError ? error.code : ErrorCode.INTERNAL_ERROR,
+          message: String(error),
+        });
+      } finally {
+        chatAbortControllers.delete(key);
+        requestSignal?.removeEventListener('abort', onRequestAbort);
+        const latest = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+        if (latest?.llmActivity === 'node_chat') {
+          updateRun(runId, { llmActivity: null });
+        }
+        if (!closed) {
+          try {
+            controller.close();
+          } catch {
+            // already closed
+          }
+        }
+      }
+    },
+    cancel() {
+      ac.abort();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'content-type': 'text/event-stream',
+      'cache-control': 'no-cache',
+      'x-accel-buffering': 'no',
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// C2 — Progress / revisions / report CoW
+// ---------------------------------------------------------------------------
+
+function serializeRevision(row: typeof researchRevisions.$inferSelect): ResearchRevision {
+  return {
+    id: row.id,
+    runId: row.runId,
+    notebookId: row.notebookId,
+    label: row.label,
+    kind: row.kind as ResearchRevision['kind'],
+    parentRevisionId: row.parentRevisionId ?? null,
+    graph: row.graph as ResearchRevision['graph'],
+    report: (row.report as ResearchReport | null) ?? null,
+    searchesUsed: row.searchesUsed,
+    statusAtSave: row.statusAtSave as ResearchRunStatus,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+export function listProgress(
+  notebookId: number,
+  runId: number,
+  afterSeq = 0,
+  limit = 100,
+): { items: ResearchProgressEvent[]; nextAfterSeq?: number } {
+  requireRun(notebookId, runId);
+  const rows = db()
+    .select()
+    .from(researchProgressEvents)
+    .where(and(eq(researchProgressEvents.runId, runId), gt(researchProgressEvents.seq, afterSeq)))
+    .orderBy(asc(researchProgressEvents.seq))
+    .limit(limit)
+    .all();
+  const items: ResearchProgressEvent[] = rows.map((r) => ({
+    id: r.id,
+    runId: r.runId,
+    seq: r.seq,
+    at: r.at.toISOString(),
+    kind: r.kind as ResearchProgressKind,
+    nodeId: r.nodeId ?? null,
+    headline: r.headline ?? null,
+    payload: (r.payload as Record<string, unknown> | null) ?? null,
+  }));
+  const nextAfterSeq = items.length ? items.at(-1)!.seq : undefined;
+  return { items, nextAfterSeq };
+}
+
+export function listRevisions(notebookId: number, runId: number): { items: ResearchRevision[] } {
+  requireRun(notebookId, runId);
+  const rows = db()
+    .select()
+    .from(researchRevisions)
+    .where(eq(researchRevisions.runId, runId))
+    .orderBy(desc(researchRevisions.createdAt))
+    .all();
+  return { items: rows.map(serializeRevision) };
+}
+
+export function getRevision(notebookId: number, runId: number, revId: string): ResearchRevision {
+  requireRun(notebookId, runId);
+  const row = db()
+    .select()
+    .from(researchRevisions)
+    .where(and(eq(researchRevisions.runId, runId), eq(researchRevisions.id, revId)))
+    .get();
+  if (!row) throw new NotFoundError(`Revision ${revId} not found`);
+  return serializeRevision(row);
+}
+
+export function createRevision(
+  notebookId: number,
+  runId: number,
+  body: ResearchRevisionCreateBody,
+): ResearchRevision {
+  const row = requireRun(notebookId, runId);
+  const from = body.from ?? 'canonical';
+  let report: ResearchReportJson | null = (row.report as ResearchReportJson | null) ?? null;
+  if (from === 'working') {
+    const edit = db()
+      .select()
+      .from(researchReportEdits)
+      .where(eq(researchReportEdits.runId, runId))
+      .get();
+    if (!edit) {
+      throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'No working report to snapshot');
+    }
+    report = edit.report;
+  }
+  const id = newId('rev');
+  const inserted = db()
+    .insert(researchRevisions)
+    .values({
+      id,
+      runId,
+      notebookId,
+      label: body.label?.trim() || `保存 ${new Date().toISOString()}`,
+      kind: 'user_save',
+      parentRevisionId: row.activeRevisionId ?? null,
+      graph: getGraph(row),
+      report,
+      searchesUsed: row.searchesUsed,
+      statusAtSave: row.status,
+    })
+    .returning()
+    .get();
+  updateRun(runId, { activeRevisionId: id });
+  appendProgressEvent(runId, 'revision_created', {
+    headline: inserted.label,
+    payload: { revisionId: id, kind: 'user_save', from },
+  });
+  return serializeRevision(inserted);
+}
+
+export function restoreRevision(notebookId: number, runId: number, revId: string): ResearchRun {
+  const row = requireRun(notebookId, runId);
+  if (!isTerminalStatus(row.status)) {
+    throw new AppHttpError(
+      ErrorCode.RESEARCH_INVALID_STATE,
+      'Restore only allowed on terminal runs',
+    );
+  }
+  const rev = db()
+    .select()
+    .from(researchRevisions)
+    .where(and(eq(researchRevisions.runId, runId), eq(researchRevisions.id, revId)))
+    .get();
+  if (!rev) throw new NotFoundError(`Revision ${revId} not found`);
+
+  const now = new Date();
+  updateRun(runId, {
+    graph: rev.graph,
+    report: rev.report,
+    reportUpdatedAt: rev.report ? now : row.reportUpdatedAt,
+    activeRevisionId: revId,
+  });
+  // Discard stale working edit
+  db().delete(researchReportEdits).where(eq(researchReportEdits.runId, runId)).run();
+
+  emitGraphPatch(runId, {
+    nodes: (rev.graph.nodes ?? []) as ResearchNode[],
+    edges: (rev.graph.edges ?? []) as ResearchEdge[],
+  });
+  appendProgressEvent(runId, 'revision_restored', {
+    headline: `恢复 ${rev.label}`,
+    payload: { revisionId: revId },
+  });
+  if (rev.report) {
+    broadcast(runId, 'report_ready', { runId });
+  }
+  return serializeRun(requireRun(notebookId, runId));
+}
+
+function assertReportEditable(status: string, hasReport: boolean): void {
+  if (status === 'completed') return;
+  if ((status === 'failed' || status === 'cancelled') && hasReport) return;
+  throw new AppHttpError(
+    ErrorCode.RESEARCH_INVALID_STATE,
+    `Cannot edit report when status is ${status}`,
+  );
+}
+
+export function getReportView(notebookId: number, runId: number): ResearchReportView {
+  const row = requireRun(notebookId, runId);
+  const edit = db()
+    .select()
+    .from(researchReportEdits)
+    .where(eq(researchReportEdits.runId, runId))
+    .get();
+  const canonical = (row.report as ResearchReport | null) ?? null;
+  const working = edit ? (edit.report as ResearchReport) : null;
+  return {
+    canonical,
+    working: working ?? undefined,
+    viewing: working ? 'working' : 'canonical',
+    reportUpdatedAt: row.reportUpdatedAt?.toISOString() ?? null,
+    workingUpdatedAt: edit?.updatedAt.toISOString() ?? null,
+  };
+}
+
+export function putCanonicalReport(
+  notebookId: number,
+  runId: number,
+  report: ResearchReport,
+): ResearchReportView {
+  const row = requireRun(notebookId, runId);
+  assertReportEditable(row.status, Boolean(row.report));
+  const now = new Date();
+  updateRun(runId, {
+    report: report as unknown as ResearchReportJson,
+    reportUpdatedAt: now,
+  });
+  appendProgressEvent(runId, 'report_canonical_updated', { headline: '权威报告已更新' });
+  broadcast(runId, 'report_ready', { runId });
+  return getReportView(notebookId, runId);
+}
+
+export function putWorkingReport(
+  notebookId: number,
+  runId: number,
+  report: ResearchReport,
+): ResearchReportView {
+  const row = requireRun(notebookId, runId);
+  assertReportEditable(row.status, Boolean(row.report));
+  const existing = db()
+    .select()
+    .from(researchReportEdits)
+    .where(eq(researchReportEdits.runId, runId))
+    .get();
+  if (existing) {
+    db()
+      .update(researchReportEdits)
+      .set({ report: report as unknown as ResearchReportJson, updatedAt: new Date() })
+      .where(eq(researchReportEdits.runId, runId))
+      .run();
+  } else {
+    db()
+      .insert(researchReportEdits)
+      .values({
+        runId,
+        baseReportUpdatedAt: row.reportUpdatedAt ?? null,
+        report: report as unknown as ResearchReportJson,
+      })
+      .run();
+  }
+  appendProgressEvent(runId, 'report_working_updated', { headline: 'working 报告已更新' });
+  return getReportView(notebookId, runId);
+}
+
+export function deleteWorkingReport(notebookId: number, runId: number): ResearchReportView {
+  requireRun(notebookId, runId);
+  db().delete(researchReportEdits).where(eq(researchReportEdits.runId, runId)).run();
+  appendProgressEvent(runId, 'report_working_discarded', { headline: '已丢弃 working 报告' });
+  return getReportView(notebookId, runId);
 }

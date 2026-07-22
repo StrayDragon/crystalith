@@ -422,6 +422,7 @@ export type ResearchGraphJson = {
   nodes: Array<{
     id: string;
     title: string;
+    role?: 'question' | 'research' | 'conclusion';
     query?: string;
     summary?: string;
     conclusionStatus: 'clear' | 'partial' | 'missing' | 'pending' | 'pruned';
@@ -491,6 +492,14 @@ export const researchRuns = sqliteTable(
     confirmBranchNodeId: text('confirm_branch_node_id'),
     cancelRequested: bool('cancel_requested', false),
     errorMessage: text('error_message'),
+    /** C2 — active revision pointer (UI highlight). */
+    activeRevisionId: text('active_revision_id'),
+    /** C2 — scheduler / focus node. */
+    activeNodeId: text('active_node_id'),
+    /** C2 — LLM mutex: null | work_unit | node_chat. */
+    llmActivity: text('llm_activity', { enum: ['work_unit', 'node_chat'] }),
+    /** C2 — canonical report last change. */
+    reportUpdatedAt: tsNull('report_updated_at'),
     createdAt: ts('created_at'),
     updatedAt: tsUpd('updated_at'),
   },
@@ -522,9 +531,69 @@ export const researchEvidences = sqliteTable(
   ],
 );
 
+/** C2 — user-visible graph+report snapshots. */
+export const researchRevisions = sqliteTable(
+  'research_revisions',
+  {
+    id: text('id').primaryKey(),
+    runId: integer('run_id')
+      .notNull()
+      .references(() => researchRuns.id, { onDelete: 'cascade' }),
+    notebookId: integer('notebook_id')
+      .notNull()
+      .references(() => notebooks.id, { onDelete: 'cascade' }),
+    label: text('label').notNull(),
+    kind: text('kind', {
+      enum: ['auto_complete', 'user_save', 'restore_point'],
+    }).notNull(),
+    parentRevisionId: text('parent_revision_id'),
+    graph: jsonReq<ResearchGraphJson>('graph'),
+    report: json<ResearchReportJson | null>('report'),
+    searchesUsed: integer('searches_used').notNull().default(0),
+    statusAtSave: text('status_at_save').notNull(),
+    createdAt: ts('created_at'),
+  },
+  (t) => [index('ix_research_revisions_run_id_created_at').on(t.runId, t.createdAt)],
+);
+
+/** C2 — report working CoW (one row per run). */
+export const researchReportEdits = sqliteTable('research_report_edits', {
+  runId: integer('run_id')
+    .primaryKey()
+    .references(() => researchRuns.id, { onDelete: 'cascade' }),
+  baseReportUpdatedAt: tsNull('base_report_updated_at'),
+  report: jsonReq<ResearchReportJson>('report'),
+  updatedAt: tsUpd('updated_at'),
+  updatedBy: text('updated_by'),
+});
+
+/** C2 — append-only progress ledger. */
+export const researchProgressEvents = sqliteTable(
+  'research_progress_events',
+  {
+    id: text('id').primaryKey(),
+    runId: integer('run_id')
+      .notNull()
+      .references(() => researchRuns.id, { onDelete: 'cascade' }),
+    seq: integer('seq').notNull(),
+    at: ts('at'),
+    kind: text('kind').notNull(),
+    nodeId: text('node_id'),
+    headline: text('headline'),
+    payload: json<Record<string, unknown> | null>('payload'),
+  },
+  (t) => [
+    uniqueIndex('uq_research_progress_events_run_id_seq').on(t.runId, t.seq),
+    index('ix_research_progress_events_run_id_at').on(t.runId, t.at),
+  ],
+);
+
 export const researchRunRelations = relations(researchRuns, ({ one, many }) => ({
   notebook: one(notebooks, { fields: [researchRuns.notebookId], references: [notebooks.id] }),
   evidences: many(researchEvidences),
+  revisions: many(researchRevisions),
+  reportEdit: one(researchReportEdits),
+  progressEvents: many(researchProgressEvents),
 }));
 
 export const researchEvidenceRelations = relations(researchEvidences, ({ one }) => ({
@@ -532,6 +601,25 @@ export const researchEvidenceRelations = relations(researchEvidences, ({ one }) 
   notebook: one(notebooks, {
     fields: [researchEvidences.notebookId],
     references: [notebooks.id],
+  }),
+}));
+
+export const researchRevisionRelations = relations(researchRevisions, ({ one }) => ({
+  run: one(researchRuns, { fields: [researchRevisions.runId], references: [researchRuns.id] }),
+  notebook: one(notebooks, {
+    fields: [researchRevisions.notebookId],
+    references: [notebooks.id],
+  }),
+}));
+
+export const researchReportEditRelations = relations(researchReportEdits, ({ one }) => ({
+  run: one(researchRuns, { fields: [researchReportEdits.runId], references: [researchRuns.id] }),
+}));
+
+export const researchProgressEventRelations = relations(researchProgressEvents, ({ one }) => ({
+  run: one(researchRuns, {
+    fields: [researchProgressEvents.runId],
+    references: [researchRuns.id],
   }),
 }));
 
@@ -556,6 +644,9 @@ export const schema = {
   studioSlides,
   researchRuns,
   researchEvidences,
+  researchRevisions,
+  researchReportEdits,
+  researchProgressEvents,
 };
 
 export type Schema = typeof schema;

@@ -690,6 +690,16 @@ export type ProxySettings = z.infer<typeof ProxySettingsSchema>;
 // Each section carries an inline .describe() for JSON Schema doc.
 // ===========================================================================
 
+export const ResearchSettingsSchema = z.object({
+  progressEventRetain: z
+    .number()
+    .int()
+    .positive()
+    .default(200)
+    .describe(desc('research.progress_event_retain', '终态后进度账本保留最近 N 条')),
+});
+export type ResearchSettings = z.infer<typeof ResearchSettingsSchema>;
+
 export const RootConfigSchema = z.object({
   app: AppSettingsSchema.describe(
     desc('root.app', '应用层设置：CORS、auth、startup behavior、feature flags'),
@@ -814,5 +824,8 @@ export const RootConfigSchema = z.object({
   database: DatabaseSettingsSchema.describe(desc('root.database', '数据库设置（v1 兼容）')),
   plugins: PluginsSettingsSchema.describe(desc('root.plugins', '插件发现与加载配置')),
   proxy_settings: ProxySettingsSchema.describe(desc('root.proxy_settings', '出站代理设置')),
+  research: ResearchSettingsSchema.default({ progressEventRetain: 200 }).describe(
+    desc('root.research', 'Deep Research 运行时：进度账本保留条数等'),
+  ),
 });
 export type RootConfig = z.infer<typeof RootConfigSchema>;

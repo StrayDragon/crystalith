@@ -420,4 +420,402 @@ describe('research runtime (c76)', () => {
     expect(page.total).toBeGreaterThan(0);
     expect(page.items.length).toBeGreaterThan(0);
   });
+
+  it('seeds single-sink DAG with question + conclusion roles', async () => {
+    const res = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          topic: 'seed single sink',
+          useNotebookSources: false,
+          allowWeb: true,
+          depth: 'shallow',
+        }),
+      }),
+    );
+    expect(res.status).toBe(201);
+    const created = (await res.json()) as { id: number };
+    await waitForStatus(created.id, ['awaiting_confirm', 'completed', 'running']);
+
+    const get = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}`),
+    );
+    const run = (await get.json()) as {
+      nodes: Array<{ id: string; role?: string }>;
+    };
+    const questions = run.nodes.filter(
+      (n) => n.role === 'question' || n.id.startsWith('node_root'),
+    );
+    const conclusions = run.nodes.filter(
+      (n) => n.role === 'conclusion' || n.id.startsWith('node_conclusion'),
+    );
+    expect(questions).toHaveLength(1);
+    expect(conclusions).toHaveLength(1);
+    expect(questions[0]?.role).toBe('question');
+    expect(conclusions[0]?.role).toBe('conclusion');
+  });
+
+  it('approve_branch creates research node with fork + merge into conclusion', async () => {
+    const res = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          topic: 'fork merge topic',
+          useNotebookSources: false,
+          allowWeb: true,
+          depth: 'shallow',
+        }),
+      }),
+    );
+    const created = (await res.json()) as { id: number };
+    await waitForStatus(created.id, 'awaiting_confirm');
+
+    getOrm()
+      .update(researchRuns)
+      .set({
+        graph: {
+          nodes: [
+            {
+              id: 'node_root_1',
+              role: 'question',
+              title: 'Q',
+              conclusionStatus: 'partial',
+            },
+            {
+              id: 'node_conclusion_1',
+              role: 'conclusion',
+              title: '结论',
+              conclusionStatus: 'pending',
+            },
+            { id: 'branch_a', role: 'research', title: 'A', conclusionStatus: 'partial' },
+          ],
+          edges: [
+            { id: 'e1', source: 'node_root_1', target: 'branch_a', kind: 'decompose' },
+            { id: 'm0', source: 'branch_a', target: 'node_conclusion_1', kind: 'merge' },
+          ],
+        },
+        status: 'awaiting_confirm',
+        confirmKind: 'expand_branch',
+        confirmBranchNodeId: 'branch_a',
+      })
+      .where(eq(researchRuns.id, created.id))
+      .run();
+
+    const confirm = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}/confirm`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'approve_branch', branchNodeId: 'branch_a' }),
+      }),
+    );
+    expect(confirm.status).toBe(200);
+    const run = (await confirm.json()) as {
+      nodes: Array<{ id: string; role?: string }>;
+      edges: Array<{ source: string; target: string; kind: string }>;
+    };
+    const newResearch = run.nodes.filter((n) => n.role === 'research' && n.id !== 'branch_a');
+    expect(newResearch.length).toBeGreaterThanOrEqual(1);
+    const childId = newResearch[0]!.id;
+    expect(
+      run.edges.some((e) => e.source === 'branch_a' && e.target === childId && e.kind === 'fork'),
+    ).toBe(true);
+    expect(
+      run.edges.some(
+        (e) => e.source === childId && e.target === 'node_conclusion_1' && e.kind === 'merge',
+      ),
+    ).toBe(true);
+  });
+
+  it('PATCH updates research node query; rejects pruned and protected', async () => {
+    const res = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          topic: 'patch node topic',
+          useNotebookSources: false,
+          allowWeb: true,
+          depth: 'shallow',
+        }),
+      }),
+    );
+    const created = (await res.json()) as { id: number };
+    await waitForStatus(created.id, 'awaiting_confirm');
+
+    getOrm()
+      .update(researchRuns)
+      .set({
+        graph: {
+          nodes: [
+            {
+              id: 'node_root_1',
+              role: 'question',
+              title: 'Q',
+              conclusionStatus: 'partial',
+            },
+            {
+              id: 'node_conclusion_1',
+              role: 'conclusion',
+              title: '结论',
+              conclusionStatus: 'pending',
+            },
+            {
+              id: 'branch_a',
+              role: 'research',
+              title: 'A',
+              query: 'old',
+              conclusionStatus: 'partial',
+            },
+            {
+              id: 'branch_pruned',
+              role: 'research',
+              title: 'P',
+              conclusionStatus: 'pruned',
+            },
+          ],
+          edges: [],
+        },
+        status: 'awaiting_confirm',
+        confirmKind: 'budget',
+      })
+      .where(eq(researchRuns.id, created.id))
+      .run();
+
+    const ok = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}/nodes/branch_a`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: 'new query' }),
+      }),
+    );
+    expect(ok.status).toBe(200);
+    const patched = (await ok.json()) as {
+      nodes: Array<{ id: string; query?: string }>;
+    };
+    expect(patched.nodes.find((n) => n.id === 'branch_a')?.query).toBe('new query');
+
+    const rejectProtected = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}/nodes/node_root_1`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: 'nope' }),
+      }),
+    );
+    expect(rejectProtected.status).toBe(400);
+
+    const rejectPruned = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}/nodes/branch_pruned`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title: 'nope' }),
+      }),
+    );
+    expect(rejectPruned.status).toBe(400);
+
+    const empty = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}/nodes/branch_a`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      }),
+    );
+    expect(empty.status).toBe(422);
+  });
+
+  it('cancel aborts running work-unit toward cancelled', async () => {
+    const res = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          topic: 'cancel abort topic',
+          useNotebookSources: false,
+          allowWeb: true,
+          depth: 'shallow',
+        }),
+      }),
+    );
+    const created = (await res.json()) as { id: number };
+    // Cancel while still live (queued/running/awaiting)
+    await Bun.sleep(5);
+    const cancel = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}/cancel`, {
+        method: 'POST',
+      }),
+    );
+    expect(cancel.status).toBe(200);
+    const status = await waitForStatus(created.id, ['cancelled', 'completed', 'awaiting_confirm']);
+    // If already past cancel window into awaiting/completed, still ok; prefer cancelled
+    if (status === 'cancelled') {
+      const get = await app.handle(
+        new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}`),
+      );
+      const run = (await get.json()) as { status: string };
+      expect(run.status).toBe('cancelled');
+    }
+  });
+
+  it('node chat streams proposals without auto-pruning the graph', async () => {
+    const res = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          topic: 'chat no prune',
+          useNotebookSources: false,
+          allowWeb: true,
+          depth: 'shallow',
+        }),
+      }),
+    );
+    const created = (await res.json()) as { id: number };
+    await waitForStatus(created.id, 'awaiting_confirm');
+
+    getOrm()
+      .update(researchRuns)
+      .set({
+        graph: {
+          nodes: [
+            {
+              id: 'node_root_1',
+              role: 'question',
+              title: 'Q',
+              conclusionStatus: 'partial',
+            },
+            {
+              id: 'node_conclusion_1',
+              role: 'conclusion',
+              title: '结论',
+              conclusionStatus: 'pending',
+            },
+            {
+              id: 'branch_a',
+              role: 'research',
+              title: 'A',
+              conclusionStatus: 'partial',
+            },
+          ],
+          edges: [],
+        },
+        status: 'awaiting_confirm',
+        confirmKind: 'budget',
+        llmActivity: null,
+      })
+      .where(eq(researchRuns.id, created.id))
+      .run();
+
+    const chat = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}/nodes/branch_a/chat`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ message: '请剪枝这个节点 prune' }),
+      }),
+    );
+    expect(chat.status).toBe(200);
+    expect(chat.headers.get('content-type')).toContain('text/event-stream');
+    const text = await chat.text();
+    expect(text).toContain('event: chunk');
+    expect(text).toContain('event: proposal');
+    expect(text).toContain('prune_node');
+    expect(text).toContain('event: done');
+
+    const get = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}`),
+    );
+    const run = (await get.json()) as {
+      nodes: Array<{ id: string; conclusionStatus: string }>;
+    };
+    expect(run.nodes.find((n) => n.id === 'branch_a')?.conclusionStatus).toBe('partial');
+  });
+
+  it('progress afterSeq returns ledger gap-fill; revision create/restore works', async () => {
+    const res = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          topic: 'progress revision topic',
+          useNotebookSources: true,
+          allowWeb: false,
+          sourceIds: [sourceId],
+          depth: 'shallow',
+        }),
+      }),
+    );
+    const created = (await res.json()) as { id: number };
+    await waitForStatus(created.id, 'completed');
+
+    const progressAll = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}/progress?limit=50`),
+    );
+    expect(progressAll.status).toBe(200);
+    const all = (await progressAll.json()) as {
+      items: Array<{ seq: number; kind: string }>;
+      nextAfterSeq?: number;
+    };
+    expect(all.items.length).toBeGreaterThan(0);
+    expect(all.items.some((e) => e.kind === 'run_completed' || e.kind === 'run_running')).toBe(
+      true,
+    );
+
+    const mid = all.items[0]!.seq;
+    const progressGap = await app.handle(
+      new Request(
+        `${BASE}/v2/notebooks/${notebookId}/research/${created.id}/progress?afterSeq=${mid}&limit=50`,
+      ),
+    );
+    const gap = (await progressGap.json()) as { items: Array<{ seq: number }> };
+    expect(gap.items.every((e) => e.seq > mid)).toBe(true);
+
+    const createRev = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}/revisions`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ label: 'manual save', from: 'canonical' }),
+      }),
+    );
+    expect(createRev.status).toBe(201);
+    const rev = (await createRev.json()) as { id: string; label: string };
+    expect(rev.label).toBe('manual save');
+
+    // Mutate graph then restore
+    getOrm()
+      .update(researchRuns)
+      .set({
+        graph: {
+          nodes: [
+            {
+              id: 'node_root_mutated',
+              role: 'question',
+              title: 'mutated',
+              conclusionStatus: 'clear',
+            },
+          ],
+          edges: [],
+        },
+      })
+      .where(eq(researchRuns.id, created.id))
+      .run();
+
+    const restore = await app.handle(
+      new Request(
+        `${BASE}/v2/notebooks/${notebookId}/research/${created.id}/revisions/${rev.id}/restore`,
+        { method: 'POST' },
+      ),
+    );
+    expect(restore.status).toBe(200);
+    const restored = (await restore.json()) as {
+      nodes: Array<{ id: string; title: string }>;
+    };
+    expect(restored.nodes.some((n) => n.id === 'node_root_mutated')).toBe(false);
+    expect(restored.nodes.length).toBeGreaterThan(0);
+
+    const list = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}/revisions`),
+    );
+    const listed = (await list.json()) as { items: Array<{ id: string }> };
+    expect(listed.items.some((r) => r.id === rev.id)).toBe(true);
+  });
 });

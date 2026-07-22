@@ -32,7 +32,7 @@ export function previewPruneAlongEdge(
   const fadedNodeIds = [...collectPruneClosure(edge.target, derived.nodes, derived.edges)].filter(
     (id) => {
       const node = derived.nodes.find((n) => n.id === id);
-      return Boolean(node) && node.conclusionStatus !== 'pruned';
+      return Boolean(node) && node!.conclusionStatus !== 'pruned';
     },
   );
 

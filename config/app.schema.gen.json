@@ -772,6 +772,20 @@
           }
         }
       }
+    },
+    "research": {
+      "description": "Deep Research 运行时：进度账本保留条数等",
+      "default": {
+        "progressEventRetain": 200
+      },
+      "type": "object",
+      "properties": {
+        "progressEventRetain": {
+          "description": "终态后进度账本保留最近 N 条",
+          "default": 200,
+          "type": "number"
+        }
+      }
     }
   },
   "additionalProperties": true
