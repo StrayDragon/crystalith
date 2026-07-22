@@ -411,10 +411,15 @@ try {
     const hasPruneProposal = chat.proposals.some((p) => p.kind === 'prune_node');
     const mutexCleared = afterRun.llmActivity === null || afterRun.llmActivity === undefined;
     const role = after?.role ?? 'unknown';
-    // prune_node proposals only exist for research-role Structure tools
+    // prune_node proposals only exist for research-role Structure tools;
+    // agent may emit proposal+done with no text chunks.
     const expectPrune = role === 'research';
     const ok =
-      hasChunk && stillLive && hasConnected && mutexCleared && (!expectPrune || hasPruneProposal);
+      stillLive &&
+      hasConnected &&
+      mutexCleared &&
+      chat.events.includes('done') &&
+      (expectPrune ? hasPruneProposal : hasChunk);
     results.push({
       scenario: 'node_chat_proposal',
       status: ok ? 'PASS' : 'FAIL',
