@@ -235,14 +235,140 @@
   }
 }
 
-@keyframes slideUp {
+@keyframes lab-node-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+.lab-node-in {
+  animation: lab-node-in 0.38s ease-out both;
+}
+
+@keyframes lab-status-float {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+.lab-status-float {
+  animation: lab-status-float 2.2s ease-in-out infinite;
+}
+
+/* Node/edge morph only while layout-anim is armed (ELK / reshape / path preset).
+   Never leave d/transform transitions on — they lag every drag frame. */
+.lab-flow-layout-anim .react-flow__node {
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lab-flow-layout-anim .react-flow__edge path.react-flow__edge-path {
+  transition:
+    d 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    stroke 0.2s ease,
+    stroke-opacity 0.25s ease;
+}
+
+.lab-flow-reshaping .react-flow__edge path.react-flow__edge-path {
+  stroke-opacity: 0.45;
+}
+
+@keyframes lab-node-reshape {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(194 65 12 / 0);
+  }
+  40% {
+    box-shadow: 0 0 0 6px rgb(194 65 12 / 0.28);
+  }
+}
+
+.lab-node-reshape {
+  animation: lab-node-reshape 0.9s ease-out both;
+}
+
+/* Research report (Plate) — custom markers only; kill native ::marker ghosts */
+.lab-report-doc {
+  counter-reset: lab-ol;
+}
+
+.lab-report-doc .lab-report-list-wrap,
+.lab-report-doc .lab-report-list-wrap > *,
+.lab-report-doc ul,
+.lab-report-doc ol,
+.lab-report-doc li,
+.lab-report-doc .lab-report-li {
+  list-style: none !important;
+  list-style-type: none !important;
+}
+
+.lab-report-doc li::marker,
+.lab-report-doc .lab-report-li::marker,
+.lab-report-doc .lab-report-list-wrap::marker {
+  content: '' !important;
+  display: none !important;
+  font-size: 0 !important;
+}
+
+.lab-report-doc .lab-report-ordered {
+  counter-increment: lab-ol;
+}
+
+.lab-report-doc .lab-report-ordered > .lab-report-list-marker:empty::before {
+  content: counter(lab-ol) '.';
+}
+
+.lab-report-doc [data-slate-node='element'][data-slate-inline='true'].lab-report-cite {
+  position: relative !important;
+  display: inline !important;
+  vertical-align: baseline;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* Slate void leaf / zero-width spacer — must not paint a second pill */
+.lab-report-doc .lab-report-cite > span[data-slate-node='text'],
+.lab-report-doc .lab-report-cite [data-slate-zero-width],
+.lab-report-doc .lab-report-cite [data-slate-spacer] {
+  position: absolute !important;
+  left: 0;
+  top: 0;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  color: transparent !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.lab-report-doc .lab-report-list-marker {
+  user-select: none;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-node-in,
+  .lab-status-float,
+  .lab-node-reshape {
+    animation: none !important;
+  }
+
+  .lab-flow-layout-anim .react-flow__node,
+  .lab-flow-layout-anim .react-flow__edge path.react-flow__edge-path {
+    transition: none !important;
   }
 }
 

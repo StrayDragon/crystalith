@@ -5,6 +5,7 @@ import {
   LightMode as LightModeIcon,
   Lock as LockIcon,
   LockOpen as LockOpenIcon,
+  Science as ScienceIcon,
   SettingsBrightness as SystemThemeIcon,
 } from '@mui/icons-material';
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -12,6 +13,7 @@ import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import ConfirmPopover from '../../../shared/ConfirmPopover';
 import { TestIds, tid } from '../../../shared/testids';
 import type { AsyncStatus } from '../../../shared/types';
+import { navigateToResearchLab } from '../../research-lab/labRouting';
 import NotebookSwitcher, {
   type NotebookSwitcherRequest,
 } from '../domains/notebooks/NotebookSwitcher';
@@ -193,6 +195,25 @@ export default function WorkspaceHeader({
           onCreateNotebook={onCreateNotebook}
           onCreateNotebookFromTemplate={onCreateNotebookFromTemplate}
         />
+
+        <Tooltip content="深度研究试验室（实验性 Fake Demo）">
+          <button
+            type="button"
+            disabled={!activeNotebookId}
+            onClick={() => {
+              if (activeNotebookId) navigateToResearchLab(activeNotebookId);
+            }}
+            aria-label="打开深度研究试验室"
+            {...tid(TestIds.researchLabEntry)}
+            className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-colors ${
+              activeNotebookId
+                ? 'border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100'
+                : 'border-gray-200 text-gray-300 cursor-not-allowed'
+            }`}
+          >
+            <ScienceIcon sx={{ fontSize: 16 }} />
+          </button>
+        </Tooltip>
       </div>
 
       {topbarSearch ? (
