@@ -1,0 +1,9 @@
+kind: llman.sdd.delta
+ops[3]{op,req_id,title,statement,from,to,name}:
+  modify_requirement,r400,Lab route replaces E1 Desk as deep entry,"深研产品入口 MUST 为 /research-lab/:nid（及工作区烧瓶导航）；Workspace 顶栏 E1 MUST NOT 再以 DeepResearchDesk 作为深研主表面；MUST NOT 恢复「暂不可用」壳或已删除 HITL agent 作为深研路径。",null,null,null
+  modify_requirement,r411,Retire Desk and legacy deep-search dual track,"本变更 MUST 切断顶栏 deep Tab / DeepResearchDesk 与来源栏 Deep Research 模式残留（含死组件 SourcesPanelSearchSection 与 Deep SearchMode）；深研唯一主入口 MUST 为 /research-lab；来源栏 MUST NOT 再嵌深研任务队列或 Fast/Deep 模式切换作为主路径；MUST NOT 删除 ResearchRun 后端 API。",null,null,null
+  modify_requirement,r413,i18n and quality gates after Desk removal,"深研相关用户可见文案 MUST 走前端 i18n（t()）；本变更 MUST 提供/更新 Vitest 证明顶栏无 deep Desk，并至少保留一条可达 Lab 入口的回归（testid 或等价）；MUST 在不动 ResearchRun 路由的前提下通过 typecheck 与 server research 测试子集。",null,null,null
+op_scenarios[3]{req_id,id,given,when,then,feature}:
+  r400,"lab-route-is-deep-entry","用户要从工作区进入深研","打开深研","进入 /research-lab/:nid 而非顶栏 DeepResearchDesk",false
+  r411,"sources-has-no-deep-mode-toggle","用户打开来源面板","查看搜索/模式 UI","不见 Fast/Deep 深研模式切换与深研队列主入口",false
+  r413,"topbar-fast-only-and-lab-reachable","e2e 或 Vitest 进入工作区","打开顶栏搜索并检查深研入口","顶栏无 deep Desk；Lab 入口仍可发现",false
