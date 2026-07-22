@@ -1,7 +1,7 @@
 /**
- * Deep Research HTTP surface (c76 / c78).
+ * Deep Research HTTP surface.
  *
- * FE Desk/xyflow lives in c77-deep-research-ui — this router is backend-only.
+ * FE Desk/xyflow is under apps/web workspace research — this router is backend-only.
  */
 import {
   PaginationParamsSchema,

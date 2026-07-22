@@ -75,7 +75,7 @@ async function waitForStatus(
   throw new Error(`Timed out waiting for status ${targets.join('|')}; last=${last}`);
 }
 
-describe('research runtime (c76)', () => {
+describe('research runtime', () => {
   it('rejects create when both toggles are false', async () => {
     const res = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {
@@ -748,10 +748,12 @@ describe('research runtime (c76)', () => {
     );
     const run = (await get.json()) as {
       nodes: Array<{ id: string; conclusionStatus: string }>;
+      llmActivity: string | null;
+      activeNodeId: string | null;
     };
     expect(run.nodes.find((n) => n.id === 'branch_a')?.conclusionStatus).toBe('partial');
-    const row = getOrm().select().from(researchRuns).where(eq(researchRuns.id, created.id)).get();
-    expect(row?.llmActivity ?? null).toBeNull();
+    expect(run.llmActivity).toBeNull();
+    expect(run.activeNodeId).toBeNull();
   });
 
   it('progress afterSeq returns ledger gap-fill; revision create/restore works', async () => {

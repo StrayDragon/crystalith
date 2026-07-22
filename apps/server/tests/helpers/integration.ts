@@ -114,7 +114,7 @@ export function installAiMock(opts: AiMockOptions): void {
       }) {
         const prompt = typeof args?.prompt === 'string' ? args.prompt : '';
         const parts: Array<Record<string, unknown>> = [];
-        // Work-unit path: emit tool-results so kernel can collect evidence (c78)
+        // Work-unit path: emit tool-results so kernel can collect evidence
         if (args?.options?.mode === 'work_unit') {
           if (args.options.useNotebookSources) {
             parts.push({
@@ -150,7 +150,7 @@ export function installAiMock(opts: AiMockOptions): void {
         } else {
           parts.push({ type: 'text-delta', text: `agent:${text}` });
         }
-        // Structure approval path for node_chat prune intents (c78 ToolLoopAgent)
+        // Structure approval path for node_chat prune intents (ToolLoopAgent)
         if (args?.options?.mode === 'node_chat' && /prune|剪枝/iu.test(prompt)) {
           parts.push({
             type: 'tool-approval-request',

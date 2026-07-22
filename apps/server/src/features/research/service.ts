@@ -1,8 +1,9 @@
 /**
- * Deep Research runtime (c76) — ResearchRun SSOT + pragmatic orchestrator.
+ * Deep Research runtime — ResearchRun persistence + pragmatic orchestrator.
  *
  * Flow: create → queued → running → (optional awaiting_confirm) → completed.
- * FE Desk/xyflow is c77; this module is HTTP + persistence + SSE only.
+ * FE Desk/xyflow is under apps/web workspace research; this module is HTTP +
+ * persistence + SSE only.
  */
 import type {
   ResearchConfirmBody,
@@ -64,7 +65,7 @@ const runEmitters = new Map<number, Set<SseEmit>>();
 /** Runs currently executing (dedupe schedule). */
 const activeLoops = new Set<number>();
 
-/** Per-run AbortController for cancel → abort active work-unit (c78). */
+/** Per-run AbortController for cancel → abort active work-unit. */
 const runAbortControllers = new Map<number, AbortController>();
 
 /** Per-run node-chat AbortControllers (`${runId}:${nodeId}`). */
@@ -241,6 +242,8 @@ function serializeRun(row: RunRow): ResearchRun {
     confirmKind: (row.confirmKind as 'budget' | 'expand_branch' | null) ?? null,
     confirmBranchNodeId: row.confirmBranchNodeId ?? null,
     errorMessage: row.errorMessage ?? null,
+    llmActivity: (row.llmActivity as ResearchRun['llmActivity']) ?? null,
+    activeNodeId: row.activeNodeId ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -972,7 +975,7 @@ async function runLoop(runId: number): Promise<void> {
     clearRunAbortController(runId);
     const latest = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
     if (latest?.llmActivity === 'work_unit') {
-      updateRun(runId, { llmActivity: null });
+      updateRun(runId, { llmActivity: null, activeNodeId: null });
     }
   }
 }
@@ -1029,6 +1032,7 @@ export function cancelRun(notebookId: number, runId: number): ResearchRun {
   updateRun(runId, {
     cancelRequested: true,
     llmActivity: null,
+    activeNodeId: null,
     checkpoint: writeCheckpoint(row, 'cancel_requested'),
   });
   if (row.status === 'awaiting_confirm' || row.status === 'queued') {
@@ -1202,6 +1206,7 @@ async function synthesizeAndComplete(runId: number): Promise<void> {
     confirmKind: null,
     confirmBranchNodeId: null,
     llmActivity: null,
+    activeNodeId: null,
     checkpoint: writeCheckpoint({ ...row, status: 'completed' }, 'report'),
   });
   // auto_complete revision snapshot
@@ -1836,7 +1841,7 @@ export function createNodeChatSseResponse(
   const clearChatMutex = () => {
     const latest = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
     if (latest?.llmActivity === 'node_chat') {
-      updateRun(runId, { llmActivity: null });
+      updateRun(runId, { llmActivity: null, activeNodeId: null });
     }
   };
 
