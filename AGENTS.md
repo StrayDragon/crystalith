@@ -162,6 +162,18 @@ Elysia 1.4+ 原生消费 Zod v4。**禁止**用「只有 TS interface、无路�
   API-level schemas (packages/shared/src/schemas/) SHOULD use
   `.openapi({ description: desc(...), example: ... })` for richer docs.
 
+### OpenAPI / Scalar 路由文档（`registerApiDoc`）
+
+Scalar 折叠标题**故意**用 path（`openapi.ts`：`summary ← path`，人读文案进 `description`）。新接入 API 必须遵守：
+
+- **tag**：用稳定英文 slug（与 feature 对齐，如 `notebooks`）；人类可读说明写在 `OPENAPI_TAG_DESCRIPTIONS`，勿另造平行分组体系。
+- **`OpenApiRoute.summary`**：中文、干脆，写**稳定业务语义**（做什么 / 关键哪些产品概念）。高频或易混接口可多一句业务边界（如「仅提案不改图」「级联下属资源」）。
+- **不要写**：REST 通用话术、状态码百科（404/校验失败等）、空洞 CRUD 同义反复，除非真有产品特例。
+- **response.description**：短中文实体名即可（如「笔记本列表」）。
+- **扁平/兼容路径**：标 `deprecated: true`；文案可注明「扁平别名」，勿复制两套长说明。
+- Zod 字段描述仍走 `desc()`；路由级说明以 `registerApiDoc` 为 SSOT（与 handler path/method/schema 同步）。
+- AsyncAPI（`apps/server/src/asyncapi.ts`）SSE 通道与事件描述遵循同一文风（中文、业务语义）。
+
 ### AI SDK v7 First（编排依赖偏好，非永久死禁）
 
 v2 重写初期为避免「第二套编排 SSOT」与 ResearchRun/状态机打架，曾写死 Banned 列表。现放宽为：

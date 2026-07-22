@@ -32,7 +32,7 @@ const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/notebooks/:nid/sessions/:sid/messages',
     method: 'get',
-    summary: 'List messages in a session (paginated)',
+    summary: '分页列出会话消息',
     tags: ['messages'],
     request: {
       query: {
@@ -41,17 +41,17 @@ const apiDocs: OpenApiRoute[] = [
       },
     },
     responses: {
-      200: { description: 'Paginated message list', body: MessagesPageSchema },
+      200: { description: '消息列表', body: MessagesPageSchema },
     },
   },
   {
     path: '/v2/notebooks/:nid/sessions/:sid/messages',
     method: 'post',
-    summary: 'Create a user message',
+    summary: '写入一条用户消息',
     tags: ['messages'],
     request: { body: MessageCreateSchema },
     responses: {
-      201: { description: 'Created message', body: MessageSchema },
+      201: { description: '已创建的消息', body: MessageSchema },
     },
   },
 ];

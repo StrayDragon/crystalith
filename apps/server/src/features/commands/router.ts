@@ -15,9 +15,9 @@ const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/commands',
     method: 'get',
-    summary: 'List all available commands (prompt presets)',
+    summary: '列出命令面板可用命令（内置与自定义提示词预设）',
     tags: ['commands'],
-    responses: { 200: { description: 'Command list', body: CommandListSchema } },
+    responses: { 200: { description: '命令列表', body: CommandListSchema } },
   },
 ];
 

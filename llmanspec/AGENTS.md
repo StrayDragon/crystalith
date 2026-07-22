@@ -21,6 +21,7 @@ Spec-workflow-specific notes:
 
 - For v2, do NOT run `pnpm run api:sync` (v1 OpenAPI chain removed in v2).
 - OpenAPI: shared Zod → `z.toJSONSchema` assembled in `apps/server/src/openapi.ts` (Scalar); `extendZodWithOpenApi` for `.openapi()` metadata only. NOT `@elysiajs/swagger`.
+- OpenAPI 路由文案：`registerApiDoc.summary` 写中文业务说明（Scalar 标题故意用 path）；tag 说明见 `OPENAPI_TAG_DESCRIPTIONS`；详见根 `AGENTS.md`「OpenAPI / Scalar 路由文档」。
 - Stable entrypoints: `bun test`, `bun typecheck`.
 
 ## Artifact Rules

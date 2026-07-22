@@ -12,6 +12,28 @@ extendZodWithOpenApi(z);
 
 const _allTags = new Set<string>();
 
+/**
+ * Scalar sidebar tag labels (feature slug → 中文说明).
+ * Keep slug stable as `tags: ['…']` in routers; only humanize here.
+ */
+export const OPENAPI_TAG_DESCRIPTIONS: Record<string, string> = {
+  system: '系统健康与元信息',
+  notebooks: '笔记本（知识空间顶层容器）',
+  sessions: '会话',
+  messages: '会话消息',
+  qa: '笔记本问答（RAG）',
+  sources: '来源文档、摄取与单源能力',
+  'source-connectors': '外部来源连接器',
+  outputs: '产出 / 笔记生成物',
+  research: '深度研究 ResearchRun',
+  studio: '幻灯片工作室',
+  templates: '笔记本模板',
+  models: '模型与 Provider',
+  'prompt-presets': '提示词预设',
+  commands: '命令面（提示词预设）',
+  workspace: 'Workspace 工具元数据',
+};
+
 /** Accumulated path operations for document assembly (c71). */
 const _pathOps: Array<{
   path: string;
@@ -22,7 +44,12 @@ const _pathOps: Array<{
 export interface OpenApiRoute {
   path: string;
   method: 'get' | 'post' | 'patch' | 'put' | 'delete';
+  /**
+   * 中文业务说明（写入 OpenAPI `description`）。
+   * Scalar 折叠标题故意用 path（见 registerApiDoc）；勿把 REST 通用语义写进文案。
+   */
   summary?: string;
+  /** 可选补充说明；若提供则优先于 summary 写入 OpenAPI description。 */
   description?: string;
   tags?: string[];
   /** When true, marks the OpenAPI operation as deprecated (flat aliases in c69). */
@@ -178,7 +205,10 @@ export function generateOpenApiDocument(info?: {
   };
 
   if (_allTags.size > 0) {
-    doc.tags = [..._allTags].toSorted().map((name) => ({ name, description: '' }));
+    doc.tags = [..._allTags].toSorted().map((name) => ({
+      name,
+      description: OPENAPI_TAG_DESCRIPTIONS[name] ?? '',
+    }));
   }
 
   return doc;
