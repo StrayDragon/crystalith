@@ -162,11 +162,15 @@ Elysia 1.4+ 原生消费 Zod v4。**禁止**用「只有 TS interface、无路�
   API-level schemas (packages/shared/src/schemas/) SHOULD use
   `.openapi({ description: desc(...), example: ... })` for richer docs.
 
-### AI SDK v7 Only
+### AI SDK v7 First（编排依赖偏好，非永久死禁）
 
-- `generateObject({ schema: Zod })` ✅ | `streamText` / `fullStream` ✅
-- `ToolLoopAgent` — 🟡 Post-c13
-- **Banned**: Pi agent-core, Mastra, LangGraph.js, XState, Inngest, Temporal
+v2 重写初期为避免「第二套编排 SSOT」与 ResearchRun/状态机打架，曾写死 Banned 列表。现放宽为：
+
+- **默认**：`ai@7`（`generateText` / `streamText` / `ToolLoopAgent` / `Output.object`）+ 本仓库既有 tool（`searchWeb`、retrieve 等）
+- **可用**：`ToolLoopAgent`（深研节点环优先）
+- **慎用 / 需 design 点名理由**：Mastra、LangGraph.js、XState、Inngest、Temporal、Pi agent-core / `HarnessAgent`+Pi
+  — 仅当 AI SDK 原语明显不够、且不另立图/Run 权威态时，在对应 SDD change 的 design 中论证后再加依赖
+- **仍禁止**：与 ResearchRun 平行的第二套过程态 SSOT；在 tool `execute` 里绕过 HTTP 命令口静默改研究图
 
 ### Single Binary
 
