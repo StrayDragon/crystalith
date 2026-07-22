@@ -735,6 +735,8 @@ describe('research runtime (c76)', () => {
     expect(chat.status).toBe(200);
     expect(chat.headers.get('content-type')).toContain('text/event-stream');
     const text = await chat.text();
+    expect(text).toContain('event: log');
+    expect(text).toContain('connected');
     expect(text).toContain('event: chunk');
     expect(text).toContain('agent:mocked research chat');
     expect(text).toContain('event: proposal');
@@ -748,6 +750,8 @@ describe('research runtime (c76)', () => {
       nodes: Array<{ id: string; conclusionStatus: string }>;
     };
     expect(run.nodes.find((n) => n.id === 'branch_a')?.conclusionStatus).toBe('partial');
+    const row = getOrm().select().from(researchRuns).where(eq(researchRuns.id, created.id)).get();
+    expect(row?.llmActivity ?? null).toBeNull();
   });
 
   it('progress afterSeq returns ledger gap-fill; revision create/restore works', async () => {

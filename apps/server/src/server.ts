@@ -188,6 +188,10 @@ if (import.meta.main) {
   const app = createApp().listen({
     hostname: process.env.CL_SERVER_HOST ?? '127.0.0.1',
     port: process.env.CL_SERVER_PORT ? parseInt(process.env.CL_SERVER_PORT) : 8032,
+    // Bun default idleTimeout is 10s and closes quiet in-flight responses
+    // (incl. SSE waiting on LLM TTFB). Cap at Bun's max; SSE routes also call
+    // server.timeout(req, 0) for indefinite streams.
+    idleTimeout: 255,
   });
   console.log(
     `🦊 Crystalith v2 server running at http://${app.server?.hostname}:${app.server?.port}`,
