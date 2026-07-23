@@ -30,11 +30,29 @@ flowchart LR
 
 ## 硬约束
 
-- **必须与用户确认 change id 后再写文件**：不同变更的边界不能模糊。
+- **必须与用户确认 change id 后再写文件**：不同变更的边界不能模糊。**例外**：用户请求轻量 draft 路径（见下方「轻量 draft 路径」）时，MUST NOT 询问 id——由 `change new --from` 推导并告知用户。
 - **BDD-off 的 delta specs 至少含一个 op + 一个 scenario**：否则验证不通过。（BDD-on 以 feature 分支上的 live specs 为 SSOT。）
 - **不要问「要不要继续」**：在 propose 阶段内一路执行到底，生成工件并校验。
 
 - **若变更已存在**：STOP 并建议用户使用 `llman-sdd-apply`；若需补齐缺失 artifact，直接编辑 `llmanspec/changes/<id>/`（或启用 `extra_skills: [llman-sdd-continue]` 后使用 continue）。
+
+## 轻量 draft 路径（仅 draft proposal）
+
+当用户意图是**快速记一个提案**（如「draft 提案」「draft change」「记一个提案」「先把 X 记下来」）且未提供 change id 时，走此轻量路径，**不要**走完整 propose：
+
+1. **MUST NOT 询问用户 change id**。
+2. 从用户描述内容直接生成一个合法且有意义的 change id：
+   - 优先遵循该仓库 `llmanspec/AGENTS.md` 声明的命名约定（若有）。
+   - 若无显式约定，按描述语义合理命名（CLI `--from` 会做 kebab-case 清洗 + 合法性校验）。
+3. 直接调用 CLI 脚手架建 draft shell：
+   ```bash
+   llman sdd change new --from "<用户描述>"
+   ```
+   该命令仅在 `llmanspec/changes/<生成的 id>/` 下创建 `proposal.md`（draft skeleton），**不**强制 tasks/design/specs/attach。
+4. **MUST 告知用户已生成的 id**（例如「已创建草案 change `<id>`，可在 `llmanspec/changes/<id>/proposal.md` 完善」）。用户可应要求修改 id 或补全为正式 change。
+5. 完整 propose（triage + tasks + specs + attach）仅在用户**明确要求正式化**时启动。
+
+适用边界：若用户描述涉及 MUST/SHALL 行为合约变更、多文件改动、或需要 triage，应建议升级到完整 propose 而非停在 draft。
 
 ## 步骤
 
@@ -72,7 +90,8 @@ flowchart LR
 
 - 充实 `proposal.md`（Why / What Changes / Capabilities / Impact）
 - 仅在涉及权衡/迁移时创建 `design.md`
-- `tasks.md`：按顺序拆分为可勾选清单（包含校验命令）
+- **测试边界前置确认（在写 tasks.md 之前）**：列出将测试的边界（seam）并与用户确认。seam = `*.feature` 的 GWT 步骤所驱动的公共边界（CLI 子进程或 public interface）——MUST 复用已有 harness 的边界，MUST NOT 另行发明脱离 `.feature` 的边界。BDD-off 无 `.feature` 时，seam 取被测的 CLI 子命令或 public 函数边界。
+- `tasks.md`：按**垂直切片**拆分（每个 task 一刀切穿 schema→API→UI→tests 的完整窄路径，且可独立验证），支持 `[blocked-by: <task-id>]` 依赖标记。**大范围机械重构例外**（一个机械改动横扫全库、单次编辑破坏大量调用点）：按「新旧并存再切换」顺序排列（先并存 → 分批迁移 → 删旧），不强行塞进垂直切片。
 - **BDD-off**：同时创建 `specs/<capability>/spec.toon` delta（独立 TOON，每文件一份）：
   - 建议优先通过 authoring helpers：`llman sdd change delta skeleton` / `add-req` / `add-scenario`
   - 至少包含一个 `add_requirement`/`modify_requirement` op（statement 必须含 MUST/SHALL），以及至少一行匹配的 op scenario
