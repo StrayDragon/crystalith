@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { streamRequest } from '../../api/stream';
 import { applyGraphPatch } from './applyGraphPatch';
 import { confirmHighlightIds } from './confirmHighlight';
+import { deriveEdenLabPhase } from './deriveEdenLabPhase';
 import { cancelActiveEdenRun } from './edenCancelFlow';
 import {
   confirmResearchRun,
@@ -42,11 +43,7 @@ import {
   mergeProgressBySeq,
   type LabProgressLedgerItem,
 } from './labProgressLedger';
-import {
-  deriveLabStateFromRun,
-  isEdenLabPlaying,
-  researchRunStatusToLabPhase,
-} from './researchGraphAdapter';
+import { deriveLabStateFromRun, isEdenLabPlaying } from './researchGraphAdapter';
 import { refreshResearchTasks } from './researchTasksCache';
 
 const EMPTY_MUTATIONS = {
@@ -84,6 +81,7 @@ function toLedgerItem(ev: ResearchProgressEvent): LabProgressLedgerItem {
     kind: ev.kind,
     nodeId: ev.nodeId ?? null,
     headline: ev.headline ?? null,
+    payload: ev.payload ?? null,
   };
 }
 
@@ -93,6 +91,7 @@ function sseToLedgerItem(data: {
   at?: string;
   nodeId?: string;
   headline?: string;
+  payload?: Record<string, unknown>;
 }): LabProgressLedgerItem | null {
   if (typeof data.seq !== 'number' || !data.kind) return null;
   return {
@@ -102,6 +101,7 @@ function sseToLedgerItem(data: {
     kind: data.kind,
     nodeId: data.nodeId ?? null,
     headline: data.headline ?? null,
+    payload: data.payload ?? null,
   };
 }
 
@@ -248,6 +248,7 @@ export function useEdenLabController(
                 nodeId?: string;
                 headline?: string;
                 message?: string;
+                payload?: Record<string, unknown>;
               };
               const item = sseToLedgerItem(data);
               if (item) {
@@ -335,7 +336,10 @@ export function useEdenLabController(
     return () => stopStream();
   }, [initialRunId, loadRun, stopStream]);
 
-  const phase = researchRunStatusToLabPhase(run?.status ?? null);
+  const phase = deriveEdenLabPhase({
+    status: run?.status ?? null,
+    progressEvents,
+  });
   const derived = useMemo(() => deriveLabStateFromRun(run, activityLog), [run, activityLog]);
   const researchCounts = useMemo(() => countResearchNodeProgress(run?.nodes ?? []), [run?.nodes]);
   const progressPct = useMemo(

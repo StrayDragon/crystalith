@@ -14,6 +14,7 @@ import type { ResearchConclusionStatus, ResearchDepth } from '@crystalith/shared
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { confirmHighlightIds } from '../confirmHighlight';
+import { deriveEdenLabPhase, fixturePlaybackToRunStatus } from '../deriveEdenLabPhase';
 import { DEFAULT_LAB_COMPOSE_DEPTH } from '../labComposeDepth';
 import {
   appendFixturePhaseEvent,
@@ -338,6 +339,16 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     [fixtureBudget, researchCounts, phase],
   );
 
+  // I3=B: display phase from shared derive + synthetic ledger (not raw timer alone)
+  const displayPhase = useMemo(
+    () =>
+      deriveEdenLabPhase({
+        status: fixturePlaybackToRunStatus(phase),
+        progressEvents,
+      }),
+    [phase, progressEvents],
+  );
+
   const askOnInterruptRef = useRef(true);
   askOnInterruptRef.current =
     derived.nodes.find((n) => n.role === 'question' || n.id === 'root')?.askOnInterrupt !== false;
@@ -612,7 +623,7 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     scenarios: LAB_SCENARIOS,
     scenarioId,
     setScenarioId,
-    phase,
+    phase: displayPhase,
     setPhase,
     playing,
     setPlaying,

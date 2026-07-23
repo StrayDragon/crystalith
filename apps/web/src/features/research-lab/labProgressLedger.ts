@@ -10,6 +10,7 @@ export type LabProgressLedgerItem = {
   kind: string;
   nodeId?: string | null;
   headline?: string | null;
+  payload?: Record<string, unknown> | null;
 };
 
 export type LabProgressBudget = {
@@ -84,7 +85,8 @@ const FIXTURE_PHASE_KIND: Record<string, string> = {
   decompose: 'graph_patched_summary',
   explore: 'unit_started',
   evaluate: 'unit_finished',
-  integrate: 'graph_patched_summary',
+  // Distinct from decompose's graph_patched_summary (c97 I3/I4)
+  integrate: 'report_canonical_updated',
   awaiting_confirm: 'run_awaiting_confirm',
   completed: 'run_completed',
   failed: 'run_failed',
