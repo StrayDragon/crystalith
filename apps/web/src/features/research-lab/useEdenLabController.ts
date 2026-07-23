@@ -43,6 +43,7 @@ import {
   mergeProgressBySeq,
   type LabProgressLedgerItem,
 } from './labProgressLedger';
+import { consumeComposeTopicFromUrl } from './labRouting';
 import { consumeLabRunNeedsReload } from './labRunReloadGate';
 import { deriveLabStateFromRun, isEdenLabPlaying } from './researchGraphAdapter';
 import { refreshResearchTasks } from './researchTasksCache';
@@ -130,6 +131,13 @@ export function useEdenLabController(
   const [edgePathPreset, setEdgePathPreset] = useState<LabEdgePathPreset>('smoothstep');
   const [layoutAlgorithm, setLayoutAlgorithm] = useState<LabLayoutAlgorithm>('layered');
   const [reshaping, setReshaping] = useState(false);
+
+  // c99: consume ?topic= once when opening Compose without rid
+  useEffect(() => {
+    if (initialRunId && initialRunId > 0) return;
+    const topic = consumeComposeTopicFromUrl();
+    if (topic) setTopicDraft(topic);
+  }, [initialRunId]);
 
   const abortRef = useRef<AbortController | null>(null);
   const runIdRef = useRef<number | null>(null);

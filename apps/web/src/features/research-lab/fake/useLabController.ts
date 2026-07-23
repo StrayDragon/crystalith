@@ -23,6 +23,7 @@ import {
   fixtureBudgetFromSources,
   type LabProgressLedgerItem,
 } from '../labProgressLedger';
+import { consumeComposeTopicFromUrl } from '../labRouting';
 import {
   persistLabSessionSnapshot,
   readLabSessionSnapshot,
@@ -220,6 +221,12 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
   const [selectedSourceIds, setSelectedSourceIds] = useState<number[]>(
     initial.selectedSourceIds ?? [],
   );
+
+  // c99 K6=A: fixture also consumes ?topic= for Compose prefill
+  useEffect(() => {
+    const topic = consumeComposeTopicFromUrl();
+    if (topic) setTopicDraft(topic);
+  }, []);
 
   const buildSnapshot = useCallback((): LabSessionSnapshot => {
     return {

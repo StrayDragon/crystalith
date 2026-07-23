@@ -1,0 +1,8 @@
+kind: llman.sdd.delta
+ops[1]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r452,"Workspace chat deep research commands","工作区 chat 输入 MUST 支持文档化的 / slash 命令以打开 Lab Compose、预填 topic、或深链已有 Run（/research-lab/:nid 与可选 ?rid= / ?topic=）；实现 MUST 经 Eden 默认路径（fixture 下仍可导航 Lab）；命令 MUST 由 GET /v2/commands 以 kind=nav 暴露；确认执行时 MUST NOT 将深研 slash 当作普通 QA 消息发送；烧瓶与 Lab Compose 与任务抽屉 MUST 保持主要深研入口；MUST NOT 使 chat 成为唯一深研入口；MUST NOT 以 @ 提及作为本变更必达面（slash-only）。",null,null,null
+op_scenarios[4]{req_id,id,given,when,then,feature}:
+  r452,"slash-opens-lab","用户在工作区 chat","输入 /research 或 /深研 并确认发送","导航至 /research-lab/:nid Compose，且该文本未作为 QA 发出",true
+  r452,"slash-compose-prefills-topic","用户在工作区 chat","输入 /research <topic> 并确认发送","打开 Lab Compose 且 topic 预填，不立即 createResearchRun",true
+  r452,"slash-open-existing-run","notebook 存在 Run","用户输入 /research-open <rid> 并确认发送","打开 Lab 并携带对应 rid",true
+  r452,"flask-entry-still-primary","用户在工作区","查找深研主入口","烧瓶与 Lab Compose 仍可达且未因 chat 独占",true

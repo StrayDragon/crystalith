@@ -16,6 +16,7 @@ import { parseServerError } from '../../../../api/parseServerError';
 import { streamRequest } from '../../../../api/stream';
 import { t } from '../../../../shared/i18n';
 import { toast } from '../../../../shared/toast';
+import { navigateToResearchLab } from '../../../research-lab/labRouting';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { ChatMessage as WorkspaceChatMessage } from '../../shared/types';
 import {
@@ -25,6 +26,11 @@ import {
   normalizeCitation,
   normalizeMessage,
 } from '../../shared/utils';
+import {
+  executeResearchChatCommand,
+  isResearchChatCommandLine,
+  parseResearchChatCommand,
+} from './researchChatCommands';
 
 interface UseChatOptions {
   ensureSession: (title?: string | null) => Promise<number | null>;
@@ -177,12 +183,27 @@ export function useChat({
       s.setError('send', '请先创建笔记本。');
       return;
     }
+
+    const notebookId = s.activeNotebookId;
+
+    // c99 K5=A: deep-research slash commands never enter QA (nav works even if API down)
+    if (isResearchChatCommandLine(text)) {
+      const action = parseResearchChatCommand(text);
+      s.setDraft('');
+      if (!action) {
+        toast.error('用法：/research-open <rid>');
+        return;
+      }
+      const result = executeResearchChatCommand(action, notebookId, navigateToResearchLab);
+      if (result.ok) toast.info(result.message, 2800);
+      else toast.error(result.error);
+      return;
+    }
+
     if (s.connectionState !== 'live') {
       s.setError('send', '未连接到后端服务。');
       return;
     }
-
-    const notebookId = s.activeNotebookId;
 
     s.setLoading('send', true);
     s.setError('send', '');
