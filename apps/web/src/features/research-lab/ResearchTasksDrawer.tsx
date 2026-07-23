@@ -2,6 +2,7 @@
  * Unified research task list drawer — Eden listRuns (default) or fixture demo.
  */
 import { Close as CloseIcon, Assignment as AssignmentIcon } from '@mui/icons-material';
+import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useLayer } from '../../shared/layer';
@@ -43,8 +44,12 @@ export default function ResearchTasksDrawer({
   onCreateNew,
 }: ResearchTasksDrawerProps) {
   const { style: layerStyle } = useLayer('modal');
-  const { tasks, activeTaskId, loading, error } = useResearchTasks(notebookId);
+  const { tasks, activeTaskId, loading, error, refresh } = useResearchTasks(notebookId);
   const fixture = isLabFixtureMode();
+
+  useEffect(() => {
+    if (open && !fixture) refresh();
+  }, [open, fixture, refresh]);
 
   if (!open) return null;
 

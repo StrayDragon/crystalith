@@ -1,0 +1,7 @@
+kind: llman.sdd.delta
+ops[1]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r425,Lab task inbox stays fresh with Run state,"Lab 任务抽屉与 ResearchTasksTrigger badge MUST 共享 notebook 作用域 listRuns（SWR key research-tasks）；Compose 创建成功、HTTP confirm/cancel/prune/fork 成功、以及 SSE status/confirm/report_ready 之后 MUST 立即 mutate 或等效 refresh 任务列表；activeCount MUST 仅统计 status 为 queued、running 或 awaiting_confirm 的任务，completed/failed/cancelled MUST NOT 计入；打开任务抽屉时 MAY revalidate；切换 notebook MUST 丢弃旧 notebook 的 SWR 缓存。",null,null,null
+op_scenarios[3]{req_id,id,given,when,then,feature}:
+  r425,"compose-create-increments-badge",Lab 已接线 Eden 且当前 activeCount 为 0,用户 Compose 创建 Run 成功,任务列表含新 Run 且 badge activeCount 增加,true
+  r425,"run-terminal-clears-badge",列表有一项 awaiting_confirm 且 badge 为 1,用户 confirm 完成或 SSE 将 Run 变为 completed,列表 status 更新且 badge 归零,true
+  r425,"sse-status-refreshes-inbox",已订阅 Run SSE 且任务 inbox 已展示,收到 status 或 confirm 事件,任务列表经 refresh 反映最新 status,true
