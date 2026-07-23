@@ -28,7 +28,7 @@
 | `useEdenLabController` · `?rid=` 切换 Run | `useLabController` · sessionStorage |
 | 服务端 report + checkpoints（报告页待接） | `labSession` / revisions            |
 
-**闭环入口**：烧瓶 / 任务抽屉「新建」→ Compose →（Eden）创建 Run 并 stream /（fixture）xlsx-lib 回放。对话 `@`/`/` 嵌入**延后**。
+**闭环入口**：头像旁烧瓶（任务抽屉）→「新建研究」→ Compose →（Eden）创建 Run 并 stream /（fixture）xlsx-lib 回放。笔记本切换器旁**不再**放直达烧瓶。对话 `@`/`/` 嵌入**延后**。
 
 - 剪枝闭包 **B** 与 server `collectResearchPruneClosure` 对齐（`fake/deriveLabState`）；变更走 `llmanspec/changes/update-research-prune-cascade`
 - 展示层（`LabGraph`、Compose、任务抽屉）共用；数据权威由 `ResearchLabPage` 分支选择

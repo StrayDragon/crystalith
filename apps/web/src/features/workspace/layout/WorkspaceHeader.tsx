@@ -5,7 +5,6 @@ import {
   LightMode as LightModeIcon,
   Lock as LockIcon,
   LockOpen as LockOpenIcon,
-  Science as ScienceIcon,
   SettingsBrightness as SystemThemeIcon,
 } from '@mui/icons-material';
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -14,7 +13,6 @@ import ConfirmPopover from '../../../shared/ConfirmPopover';
 import { TestIds, tid } from '../../../shared/testids';
 import type { AsyncStatus } from '../../../shared/types';
 import { isLabFixtureMode } from '../../research-lab/labFixtureMode';
-import { navigateToResearchLab } from '../../research-lab/labRouting';
 import { fixtureLabSessionPort } from '../../research-lab/labSessionPort';
 import ResearchTasksDrawer from '../../research-lab/ResearchTasksDrawer';
 import ResearchTasksTrigger from '../../research-lab/ResearchTasksTrigger';
@@ -202,25 +200,6 @@ export default function WorkspaceHeader({
             onCreateNotebook={onCreateNotebook}
             onCreateNotebookFromTemplate={onCreateNotebookFromTemplate}
           />
-
-          <Tooltip content="深度研究">
-            <button
-              type="button"
-              disabled={!activeNotebookId}
-              onClick={() => {
-                if (activeNotebookId) navigateToResearchLab(activeNotebookId);
-              }}
-              aria-label="打开深度研究"
-              {...tid(TestIds.researchLabEntry)}
-              className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-colors ${
-                activeNotebookId
-                  ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
-                  : 'border-gray-200 text-gray-300 cursor-not-allowed'
-              }`}
-            >
-              <ScienceIcon sx={{ fontSize: 16 }} />
-            </button>
-          </Tooltip>
         </div>
 
         {topbarSearch ? (
