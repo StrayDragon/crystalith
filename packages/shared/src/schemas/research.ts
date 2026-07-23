@@ -1,5 +1,5 @@
-// Deep Research (ResearchRun) wire schemas — c76.
-// SSOT for HTTP / Eden / OpenAPI. FE Desk lives in c77.
+// Deep Research (ResearchRun) wire schemas.
+// SSOT for HTTP / Eden / OpenAPI. FE Desk consumes these via Eden.
 import { z } from 'zod';
 
 import { IdSchema, IsoTimestampSchema, PaginationParamsSchema } from './common.js';
@@ -35,6 +35,11 @@ export const ResearchNodeRoleSchema = z.enum(['question', 'research', 'conclusio
   description: desc('research.node_role', '研究图节点角色（question / research / conclusion）'),
 });
 export type ResearchNodeRole = z.infer<typeof ResearchNodeRoleSchema>;
+
+export const ResearchLlmActivitySchema = z
+  .enum(['work_unit', 'node_chat'])
+  .openapi({ description: desc('research.llm_activity', '同 Run LLM 互斥活动指针') });
+export type ResearchLlmActivity = z.infer<typeof ResearchLlmActivitySchema>;
 
 export const ResearchEdgeKindSchema = z.enum([
   'decompose',
@@ -372,6 +377,14 @@ export const ResearchRunSchema = z
     confirmKind: z.enum(['budget', 'expand_branch']).nullable().optional(),
     confirmBranchNodeId: z.string().nullable().optional(),
     errorMessage: z.string().nullable().optional(),
+    /** XOR mutex with work_unit / node_chat; null when idle. */
+    llmActivity: ResearchLlmActivitySchema.nullable().optional(),
+    /** Node currently holding the LLM mutex (chat or work_unit). */
+    activeNodeId: z
+      .string()
+      .nullable()
+      .optional()
+      .openapi({ description: desc('research.active_node_id', '当前占用 LLM 的节点') }),
     createdAt: IsoTimestampSchema,
     updatedAt: IsoTimestampSchema,
   })
@@ -390,6 +403,8 @@ export const ResearchRunSchema = z
       searchesUsed: 0,
       nodes: [],
       edges: [],
+      llmActivity: null,
+      activeNodeId: null,
       createdAt: '2026-07-21T12:00:00.000Z',
       updatedAt: '2026-07-21T12:00:00.000Z',
     },
@@ -541,7 +556,13 @@ export const ResearchNodeChatErrorEventSchema = z.object({
   message: z.string(),
 });
 
+export const ResearchNodeChatLogEventSchema = z.object({
+  message: z.string(),
+  nodeId: z.string().optional(),
+});
+
 export const ResearchNodeChatStreamEventSchema = z.discriminatedUnion('event', [
+  z.object({ event: z.literal('log'), data: ResearchNodeChatLogEventSchema }),
   z.object({ event: z.literal('chunk'), data: ResearchNodeChatChunkEventSchema }),
   z.object({ event: z.literal('proposal'), data: ResearchNodeChatProposalEventSchema }),
   z.object({ event: z.literal('done'), data: ResearchNodeChatDoneEventSchema }),
@@ -550,13 +571,8 @@ export const ResearchNodeChatStreamEventSchema = z.discriminatedUnion('event', [
 export type ResearchNodeChatStreamEvent = z.infer<typeof ResearchNodeChatStreamEventSchema>;
 
 // ---------------------------------------------------------------------------
-// C2 — Revisions / report CoW / progress ledger
+// Revisions / report CoW / progress ledger
 // ---------------------------------------------------------------------------
-
-export const ResearchLlmActivitySchema = z
-  .enum(['work_unit', 'node_chat'])
-  .openapi({ description: desc('research.llm_activity', '同 Run LLM 互斥活动指针') });
-export type ResearchLlmActivity = z.infer<typeof ResearchLlmActivitySchema>;
 
 export const ResearchRevisionKindSchema = z
   .enum(['auto_complete', 'user_save', 'restore_point'])

@@ -492,13 +492,13 @@ export const researchRuns = sqliteTable(
     confirmBranchNodeId: text('confirm_branch_node_id'),
     cancelRequested: bool('cancel_requested', false),
     errorMessage: text('error_message'),
-    /** C2 — active revision pointer (UI highlight). */
+    /** Active revision pointer (UI highlight). */
     activeRevisionId: text('active_revision_id'),
-    /** C2 — scheduler / focus node. */
+    /** Scheduler / focus node (also chat / work_unit subject). */
     activeNodeId: text('active_node_id'),
-    /** C2 — LLM mutex: null | work_unit | node_chat. */
+    /** LLM mutex: null | work_unit | node_chat. */
     llmActivity: text('llm_activity', { enum: ['work_unit', 'node_chat'] }),
-    /** C2 — canonical report last change. */
+    /** Canonical report last change. */
     reportUpdatedAt: tsNull('report_updated_at'),
     createdAt: ts('created_at'),
     updatedAt: tsUpd('updated_at'),
@@ -531,7 +531,7 @@ export const researchEvidences = sqliteTable(
   ],
 );
 
-/** C2 — user-visible graph+report snapshots. */
+/** User-visible graph+report snapshots. */
 export const researchRevisions = sqliteTable(
   'research_revisions',
   {
@@ -556,7 +556,7 @@ export const researchRevisions = sqliteTable(
   (t) => [index('ix_research_revisions_run_id_created_at').on(t.runId, t.createdAt)],
 );
 
-/** C2 — report working CoW (one row per run). */
+/** Report working copy (one row per run, CoW vs canonical). */
 export const researchReportEdits = sqliteTable('research_report_edits', {
   runId: integer('run_id')
     .primaryKey()
@@ -567,7 +567,7 @@ export const researchReportEdits = sqliteTable('research_report_edits', {
   updatedBy: text('updated_by'),
 });
 
-/** C2 — append-only progress ledger. */
+/** Append-only progress ledger. */
 export const researchProgressEvents = sqliteTable(
   'research_progress_events',
   {
