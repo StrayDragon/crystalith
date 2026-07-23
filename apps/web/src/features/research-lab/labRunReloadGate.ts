@@ -1,0 +1,37 @@
+/**
+ * Cross-route signal: report restore → graph Lab must force GET loadRun (c98 / J2=B).
+ */
+const KEY = 'crystalith.lab.runNeedsReload';
+
+export function markLabRunNeedsReload(notebookId: number, runId: number): void {
+  if (typeof sessionStorage === 'undefined') return;
+  sessionStorage.setItem(KEY, JSON.stringify({ notebookId, runId, at: Date.now() }));
+}
+
+export function consumeLabRunNeedsReload(notebookId: number, runId: number): boolean {
+  if (typeof sessionStorage === 'undefined') return false;
+  try {
+    const raw = sessionStorage.getItem(KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as { notebookId?: number; runId?: number };
+    if (parsed.notebookId === notebookId && parsed.runId === runId) {
+      sessionStorage.removeItem(KEY);
+      return true;
+    }
+  } catch {
+    sessionStorage.removeItem(KEY);
+  }
+  return false;
+}
+
+export function peekLabRunNeedsReload(notebookId: number, runId: number): boolean {
+  if (typeof sessionStorage === 'undefined') return false;
+  try {
+    const raw = sessionStorage.getItem(KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as { notebookId?: number; runId?: number };
+    return parsed.notebookId === notebookId && parsed.runId === runId;
+  } catch {
+    return false;
+  }
+}

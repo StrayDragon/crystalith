@@ -247,4 +247,86 @@ describe('LabReportPage eden revisions/convert (c89)', () => {
     });
     expect(getResearchRun).not.toHaveBeenCalled();
   });
+
+  it('restore revision POSTs then GET-reloads run and marks graph reload gate (c98)', async () => {
+    sessionStorage.clear();
+    const restoredReport = {
+      ...sampleReport,
+      title: '研究报告：恢复后',
+      sections: [
+        {
+          id: 'overview',
+          heading: '概述',
+          blocks: [{ type: 'paragraph' as const, text: '恢复后的正文。', citeIds: ['c1'] }],
+        },
+      ],
+    };
+    const revItems = [
+      {
+        id: 'rev_1',
+        runId: 9,
+        notebookId: 62,
+        label: '自动完成',
+        kind: 'auto_complete' as const,
+        graph: { nodes: [], edges: [] },
+        report: sampleReport,
+        searchesUsed: 0,
+        statusAtSave: 'completed' as const,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+      {
+        id: 'rev_old',
+        runId: 9,
+        notebookId: 62,
+        label: '旧快照',
+        kind: 'user_save' as const,
+        graph: {
+          nodes: [{ id: 'n1', kind: 'research', title: '节点', status: 'done' }],
+          edges: [],
+        },
+        report: restoredReport,
+        searchesUsed: 1,
+        statusAtSave: 'completed' as const,
+        createdAt: '2026-01-01T01:00:00.000Z',
+      },
+    ];
+    getResearchRun
+      .mockResolvedValueOnce({
+        id: 9,
+        notebookId: 62,
+        status: 'completed',
+        topic: '主题',
+        nodes: [],
+        edges: [],
+        report: sampleReport,
+      })
+      .mockResolvedValueOnce({
+        id: 9,
+        notebookId: 62,
+        status: 'completed',
+        topic: '主题',
+        nodes: [{ id: 'n1', kind: 'research', title: '节点', status: 'done' }],
+        edges: [],
+        report: restoredReport,
+      });
+    getResearchReportView
+      .mockResolvedValueOnce({ canonical: sampleReport, viewing: 'canonical' })
+      .mockResolvedValueOnce({ canonical: restoredReport, viewing: 'canonical' });
+    listResearchRevisions.mockResolvedValue({ items: revItems });
+    restoreResearchRevision.mockResolvedValue({ ok: true });
+
+    renderWithLayer(<LabReportPage notebookId={62} mode="eden" runId={9} />);
+    await waitFor(() => expect(screen.getByText('研究报告：主题')).toBeTruthy());
+
+    const select = screen.getByTestId('research-lab-revision-select');
+    fireEvent.change(select, { target: { value: 'rev_old' } });
+
+    await waitFor(() => {
+      expect(restoreResearchRevision).toHaveBeenCalledWith(62, 9, 'rev_old');
+      expect(getResearchRun).toHaveBeenCalledTimes(2);
+      expect(screen.getByText('研究报告：恢复后')).toBeTruthy();
+    });
+    const gate = JSON.parse(sessionStorage.getItem('crystalith.lab.runNeedsReload') ?? 'null');
+    expect(gate).toMatchObject({ notebookId: 62, runId: 9 });
+  });
 });

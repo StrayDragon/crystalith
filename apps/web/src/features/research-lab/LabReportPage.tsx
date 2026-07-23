@@ -227,6 +227,33 @@ function FixtureLabReportPage({ notebookId }: { notebookId: number }) {
     toast.success('已丢弃编辑副本', 2200);
   };
 
+  /** J4=B: fixture restore/switch writes revision graph into session (Eden isomorphic). */
+  const writeRevisionGraphToSession = (rev: LabRevision) => {
+    const session = readLabSessionSnapshot();
+    persistLabSessionSnapshot({
+      scenarioId,
+      phase: rev.graph.phase,
+      playing: false,
+      playbackMs: session?.playbackMs ?? 1400,
+      layoutDirection: session?.layoutDirection ?? ('TB' as const),
+      edgePathPreset: session?.edgePathPreset ?? ('smoothstep' as const),
+      layoutAlgorithm: session?.layoutAlgorithm ?? ('layered' as const),
+      selectedNodeId: null,
+      highlightedNodeIds: [],
+      consoleOpen: session?.consoleOpen ?? false,
+      consoleVisible: session?.consoleVisible ?? true,
+      forceStatus: rev.graph.forceStatus,
+      metricsOverride: session?.metricsOverride ?? null,
+      confirmChoice: null,
+      mutations: rev.graph.mutations,
+      topicDraft: rev.graph.topicDraft,
+      forkSeq: rev.graph.forkSeq,
+      useNotebookSources: session?.useNotebookSources ?? false,
+      allowWeb: session?.allowWeb ?? true,
+      selectedSourceIds: session?.selectedSourceIds ?? [],
+    });
+  };
+
   const switchRevision = (id: string) => {
     const rev = setActiveRevision(notebookId, scenarioId, id);
     if (!rev) return;
@@ -236,7 +263,8 @@ function FixtureLabReportPage({ notebookId }: { notebookId: number }) {
     setEditing(false);
     setViewing('canonical');
     setEditorEpoch((n) => n + 1);
-    toast.info(`已切换到「${rev.label}」`, 2200);
+    writeRevisionGraphToSession(rev);
+    toast.info(`已切换到「${rev.label}」；返回图谱将套用该版思考图`, 2800);
   };
 
   const saveRevisionRound = () => {
@@ -266,30 +294,7 @@ function FixtureLabReportPage({ notebookId }: { notebookId: number }) {
   const applyThinkingGraph = () => {
     const rev = getActiveRevision(notebookId, scenarioId);
     if (!rev) return;
-    const session = readLabSessionSnapshot();
-    const next = {
-      scenarioId,
-      phase: rev.graph.phase,
-      playing: false,
-      playbackMs: session?.playbackMs ?? 1400,
-      layoutDirection: session?.layoutDirection ?? ('TB' as const),
-      edgePathPreset: session?.edgePathPreset ?? ('smoothstep' as const),
-      layoutAlgorithm: session?.layoutAlgorithm ?? ('layered' as const),
-      selectedNodeId: null as string | null,
-      highlightedNodeIds: [] as string[],
-      consoleOpen: session?.consoleOpen ?? false,
-      consoleVisible: session?.consoleVisible ?? true,
-      forceStatus: rev.graph.forceStatus,
-      metricsOverride: session?.metricsOverride ?? null,
-      confirmChoice: null as string | null,
-      mutations: rev.graph.mutations,
-      topicDraft: rev.graph.topicDraft,
-      forkSeq: rev.graph.forkSeq,
-      useNotebookSources: session?.useNotebookSources ?? false,
-      allowWeb: session?.allowWeb ?? true,
-      selectedSourceIds: session?.selectedSourceIds ?? [],
-    };
-    persistLabSessionSnapshot(next);
+    writeRevisionGraphToSession(rev);
     toast.success(`已套用「${rev.label}」的思考图`, 2600);
     navigateToResearchLab(notebookId);
   };

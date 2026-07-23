@@ -43,6 +43,7 @@ import {
   mergeProgressBySeq,
   type LabProgressLedgerItem,
 } from './labProgressLedger';
+import { consumeLabRunNeedsReload } from './labRunReloadGate';
 import { deriveLabStateFromRun, isEdenLabPlaying } from './researchGraphAdapter';
 import { refreshResearchTasks } from './researchTasksCache';
 
@@ -331,10 +332,12 @@ export function useEdenLabController(
 
   useEffect(() => {
     if (initialRunId && initialRunId > 0) {
+      // J2=B: always loadRun on rid; consume restore gate (idempotent with load)
+      consumeLabRunNeedsReload(notebookId, initialRunId);
       void loadRun(initialRunId);
     }
     return () => stopStream();
-  }, [initialRunId, loadRun, stopStream]);
+  }, [initialRunId, loadRun, notebookId, stopStream]);
 
   const phase = deriveEdenLabPhase({
     status: run?.status ?? null,
@@ -680,7 +683,11 @@ export function useEdenLabController(
     pruneAlongEdge,
     forkAlongEdge,
     editNode,
-    restoreGraphSlice: () => undefined,
+    restoreGraphSlice: () => {
+      // Eden: never silent no-op — reload authoritative Run graph (c98 / r451)
+      const rid = runIdRef.current;
+      if (rid) void loadRun(rid);
+    },
     persistNow: () => undefined,
     derived,
     scenario: LAB_SCENARIOS[0]!,
