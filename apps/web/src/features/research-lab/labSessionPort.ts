@@ -1,6 +1,6 @@
 /**
- * Lab session port — fixture authority until c82 Eden swap.
- * UI should prefer this facade over scattering demo store calls.
+ * Lab session port — fixture-only (`VITE_LAB_FIXTURE=1`).
+ * Default Lab path uses Eden ResearchRun; UI should prefer this facade over scattering demo store calls.
  */
 import {
   createDemoResearchTask,

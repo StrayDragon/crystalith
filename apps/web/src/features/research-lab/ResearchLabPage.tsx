@@ -1,8 +1,7 @@
 /**
- * Research Lab — deep-research workbench (fixture until c82 Eden).
+ * Research Lab — deep-research workbench.
  *
- * Closed loop: flask / task-drawer「新建」→ Compose → xlsx-lib playback →
- * task inbox (avatar + Lab top-right). Chat @/ embedding deferred.
+ * Default: Eden ResearchRun + SSE. Fixture replay when VITE_LAB_FIXTURE=1.
  */
 import {
   ArrowBack as ArrowBackIcon,
@@ -18,6 +17,7 @@ import {
   demoStatusFromLabPhase,
   getActiveDemoResearchTaskId,
   getDemoTaskSwitchEpoch,
+  listDemoResearchTasks,
   subscribeDemoResearchTasks,
   updateDemoResearchTask,
 } from './demoResearchTasks';
@@ -40,9 +40,11 @@ import { findInboundEdgeForNode } from './fake/proposeNodeChatTurn';
 import { resolveDefaultExportMarkdown } from './fake/resolveDefaultExportMarkdown';
 import { resolveLabPrimaryAction, type LabPrimaryActionKind } from './fake/resolveLabPrimaryAction';
 import type { LabNode } from './fake/types';
+import type { LabController } from './fake/useLabController';
 import { useLabController } from './fake/useLabController';
 import LabComposePanel from './LabComposePanel';
 import LabControlConsole from './LabControlConsole';
+import { isLabFixtureMode } from './labFixtureMode';
 import LabGraph from './LabGraph';
 import { LabForkDialog, LabPruneDialog, useDialogEscape } from './LabMutationDialogs';
 import LabNodeDrawer from './LabNodeDrawer';
@@ -58,31 +60,48 @@ import { fixtureLabSessionPort } from './labSessionPort';
 import { bindActiveTaskSession } from './openDemoResearchTask';
 import ResearchTasksDrawer from './ResearchTasksDrawer';
 import ResearchTasksTrigger from './ResearchTasksTrigger';
+import type { ResearchTaskListItem } from './researchTaskTypes';
+import {
+  navigateLabWithRun,
+  readActiveRunIdFromUrl,
+  useEdenLabController,
+} from './useEdenLabController';
 
 export default function ResearchLabPage({ notebookId }: { notebookId: number }) {
+  if (isLabFixtureMode()) {
+    return <FixtureResearchLabPage notebookId={notebookId} />;
+  }
+  return <EdenResearchLabPage notebookId={notebookId} />;
+}
+
+function FixtureResearchLabPage({ notebookId }: { notebookId: number }) {
   const switchEpoch = useSyncExternalStore(
     subscribeDemoResearchTasks,
     getDemoTaskSwitchEpoch,
     () => 0,
   );
-  return <ResearchLabSession key={`${notebookId}:${switchEpoch}`} notebookId={notebookId} />;
+  return <FixtureResearchLabSession key={`${notebookId}:${switchEpoch}`} notebookId={notebookId} />;
 }
 
-function ResearchLabSession({ notebookId }: { notebookId: number }) {
-  const lab = useLabController(readPersistedLabScenarioId('xlsx-lib'));
-  const selected = lab.derived.nodes.find((n) => n.id === lab.selectedNodeId) ?? null;
-  const showCompose = lab.phase === 'idle';
-  const [tasksDrawerOpen, setTasksDrawerOpen] = useState(false);
+function EdenResearchLabPage({ notebookId }: { notebookId: number }) {
+  const [runId, setRunId] = useState(() => readActiveRunIdFromUrl());
 
-  const [forkEdgeId, setForkEdgeId] = useState<string | null>(null);
-  const [forkDraft, setForkDraft] = useState<ForkDraft>({ title: '', query: '', summary: '' });
-  const [prunePreview, setPrunePreview] = useState<PrunePreview | null>(null);
+  useEffect(() => {
+    const sync = () => setRunId(readActiveRunIdFromUrl());
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, []);
+
+  return <EdenResearchLabSession notebookId={notebookId} runId={runId} />;
+}
+
+function FixtureResearchLabSession({ notebookId }: { notebookId: number }) {
+  const lab = useLabController(readPersistedLabScenarioId('xlsx-lib'));
 
   useEffect(() => {
     persistLabScenarioId(lab.scenarioId);
   }, [lab.scenarioId]);
 
-  // Keep demo task status + parked session in sync with Lab phase.
   useEffect(() => {
     const taskId = getActiveDemoResearchTaskId();
     if (!taskId) return;
@@ -90,6 +109,108 @@ function ResearchLabSession({ notebookId }: { notebookId: number }) {
     if (status) updateDemoResearchTask(taskId, { status, scenarioId: lab.scenarioId });
     bindActiveTaskSession();
   }, [lab.phase, lab.scenarioId, lab.mutations, lab.topicDraft]);
+
+  const sessionLabel = lab.phase === 'idle' ? '新建任务' : lab.scenario.shortLabel;
+
+  return (
+    <LabWorkbench
+      notebookId={notebookId}
+      lab={lab}
+      mode="fixture"
+      sessionLabel={sessionLabel}
+      showConsole
+      onComposeSubmit={(topic) => {
+        fixtureLabSessionPort.createTask({
+          notebookId,
+          topic,
+          scenarioId: fixtureLabSessionPort.defaultScenarioId,
+          status: 'running',
+        });
+        lab.composeAndStart(topic);
+        bindActiveTaskSession();
+        toast.info('演示任务已加入头像旁任务列表', 3200);
+      }}
+      onSelectTask={(task) => {
+        const demo = listDemoResearchTasks().find((t) => t.id === task.id);
+        if (demo) fixtureLabSessionPort.openTask(demo);
+      }}
+      onCreateNew={() => fixtureLabSessionPort.openCompose(notebookId)}
+      openReportMode="fixture"
+    />
+  );
+}
+
+function EdenResearchLabSession({
+  notebookId,
+  runId,
+}: {
+  notebookId: number;
+  runId: number | null;
+}) {
+  const lab = useEdenLabController(notebookId, runId);
+  const lastError = (lab as { lastError?: string }).lastError ?? '';
+
+  const sessionLabel =
+    lab.phase === 'idle'
+      ? '新建任务'
+      : runId
+        ? `Run #${runId}`
+        : lab.topicDraft.trim() || lab.scenario.topic;
+
+  return (
+    <LabWorkbench
+      notebookId={notebookId}
+      lab={lab}
+      mode="eden"
+      sessionLabel={sessionLabel}
+      lastError={lastError}
+      showConsole={false}
+      onComposeSubmit={(topic) => lab.composeAndStart(topic)}
+      onSelectTask={(task) => {
+        const rid = Number(task.id);
+        if (Number.isFinite(rid) && rid > 0) navigateLabWithRun(notebookId, rid);
+      }}
+      onCreateNew={() => {
+        lab.restart();
+        navigateLabWithRun(notebookId, null);
+      }}
+      openReportMode="eden"
+    />
+  );
+}
+
+type LabWorkbenchProps = {
+  notebookId: number;
+  lab: LabController;
+  mode: 'fixture' | 'eden';
+  sessionLabel: string;
+  lastError?: string;
+  showConsole: boolean;
+  onComposeSubmit: (topic: string) => void;
+  onSelectTask: (task: ResearchTaskListItem) => void;
+  onCreateNew: () => void;
+  openReportMode: 'fixture' | 'eden';
+};
+
+function LabWorkbench({
+  notebookId,
+  lab,
+  mode,
+  sessionLabel,
+  lastError,
+  showConsole,
+  onComposeSubmit,
+  onSelectTask,
+  onCreateNew,
+  openReportMode,
+}: LabWorkbenchProps) {
+  const selected = lab.derived.nodes.find((n) => n.id === lab.selectedNodeId) ?? null;
+  const showCompose = lab.phase === 'idle';
+  const [tasksDrawerOpen, setTasksDrawerOpen] = useState(false);
+
+  const [forkEdgeId, setForkEdgeId] = useState<string | null>(null);
+  const [forkDraft, setForkDraft] = useState<ForkDraft>({ title: '', query: '', summary: '' });
+  const [prunePreview, setPrunePreview] = useState<PrunePreview | null>(null);
 
   const questionText =
     lab.derived.nodes.find((n) => n.role === 'question')?.conclusion?.trim() ||
@@ -118,6 +239,10 @@ function ResearchLabSession({ notebookId }: { notebookId: number }) {
   );
 
   const openReport = useCallback(() => {
+    if (openReportMode === 'eden') {
+      toast.info('Eden 报告页待接');
+      return;
+    }
     lab.persistNow();
     persistLabScenarioId(lab.scenarioId);
     const session = readLabSessionSnapshot();
@@ -143,9 +268,13 @@ function ResearchLabSession({ notebookId }: { notebookId: number }) {
       graph,
     });
     navigateToLabReport(notebookId);
-  }, [lab, notebookId]);
+  }, [lab, notebookId, openReportMode]);
 
   const exportSuggestedFromGraph = useCallback(() => {
+    if (openReportMode === 'eden') {
+      toast.info('Eden 报告导出待接');
+      return;
+    }
     lab.persistNow();
     const session = readLabSessionSnapshot();
     if (!session) {
@@ -165,9 +294,8 @@ function ResearchLabSession({ notebookId }: { notebookId: number }) {
       graph: graphSliceFromSession(session),
     });
     toast.success('已从当前思考图导出默认建议报告', 2800);
-  }, [lab, notebookId]);
+  }, [lab, notebookId, openReportMode]);
 
-  /** MOCK: ActionProposal ports mirror edge prune/fork + confirm; real = Eden + SSE. */
   const acceptNodeChatAction = useCallback(
     (proposal: LabNodeActionProposal, node: LabNode): boolean => {
       switch (proposal.kind) {
@@ -321,7 +449,7 @@ function ResearchLabSession({ notebookId }: { notebookId: number }) {
             <div className="truncate text-sm font-semibold text-gray-900">深度研究</div>
             <div className="truncate text-[11px] text-gray-500">
               #{notebookId}
-              {showCompose ? ' · 新建任务' : ` · ${lab.scenario.shortLabel}`}
+              {showCompose ? ' · 新建任务' : ` · ${sessionLabel}`}
             </div>
           </div>
         </div>
@@ -336,35 +464,36 @@ function ResearchLabSession({ notebookId }: { notebookId: number }) {
           <div className="min-w-0 flex-1" />
         )}
 
-        {/* Right cluster (shrink-0): progress flex-1 fills leftover; new buttons stay adaptive */}
         <div className="flex shrink-0 items-center gap-1.5">
-          <button
-            type="button"
-            title={
-              lab.consoleVisible
-                ? lab.consoleOpen
-                  ? '收起试验控制台'
-                  : '展开试验控制台'
-                : '显示试验控制台（高级）'
-            }
-            onClick={() => {
-              if (!lab.consoleVisible) {
-                lab.setConsoleVisible(true);
-                lab.setConsoleOpen(true);
-                return;
+          {showConsole ? (
+            <button
+              type="button"
+              title={
+                lab.consoleVisible
+                  ? lab.consoleOpen
+                    ? '收起试验控制台'
+                    : '展开试验控制台'
+                  : '显示试验控制台（高级）'
               }
-              lab.setConsoleOpen(!lab.consoleOpen);
-            }}
-            className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${
-              lab.consoleVisible && lab.consoleOpen
-                ? 'border-blue-200 bg-blue-50 text-blue-700'
-                : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
-            }`}
-          >
-            <TerminalIcon sx={{ fontSize: 16 }} />
-          </button>
+              onClick={() => {
+                if (!lab.consoleVisible) {
+                  lab.setConsoleVisible(true);
+                  lab.setConsoleOpen(true);
+                  return;
+                }
+                lab.setConsoleOpen(!lab.consoleOpen);
+              }}
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${
+                lab.consoleVisible && lab.consoleOpen
+                  ? 'border-blue-200 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              <TerminalIcon sx={{ fontSize: 16 }} />
+            </button>
+          ) : null}
 
-          {lab.derived.reportVisible ? (
+          {mode === 'fixture' && lab.derived.reportVisible ? (
             <div className="relative">
               <details className="group">
                 <summary className="flex h-8 list-none cursor-pointer items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 text-[11px] text-gray-600 hover:bg-gray-50 [&::-webkit-details-marker]:hidden">
@@ -413,6 +542,15 @@ function ResearchLabSession({ notebookId }: { notebookId: number }) {
         </div>
       </header>
 
+      {lastError ? (
+        <div
+          className="shrink-0 border-b border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800"
+          role="alert"
+        >
+          {lastError}
+        </div>
+      ) : null}
+
       <div className="relative min-h-0 flex-1">
         <LabGraph
           nodes={lab.derived.nodes}
@@ -455,15 +593,7 @@ function ResearchLabSession({ notebookId }: { notebookId: number }) {
             onSubmit={() => {
               const topic = lab.topicDraft.trim();
               if (!topic) return;
-              fixtureLabSessionPort.createTask({
-                notebookId,
-                topic,
-                scenarioId: fixtureLabSessionPort.defaultScenarioId,
-                status: 'running',
-              });
-              lab.composeAndStart(topic);
-              bindActiveTaskSession();
-              toast.info('演示任务已加入头像旁任务列表', 3200);
+              onComposeSubmit(topic);
             }}
           />
         ) : null}
@@ -519,7 +649,7 @@ function ResearchLabSession({ notebookId }: { notebookId: number }) {
         ) : null}
       </div>
 
-      {lab.consoleVisible ? <LabControlConsole lab={lab} /> : null}
+      {showConsole && lab.consoleVisible ? <LabControlConsole lab={lab} /> : null}
 
       <LabForkDialog
         open={forkEdgeId !== null}
@@ -551,11 +681,11 @@ function ResearchLabSession({ notebookId }: { notebookId: number }) {
         notebookId={notebookId}
         onSelectTask={(task) => {
           setTasksDrawerOpen(false);
-          fixtureLabSessionPort.openTask(task);
+          onSelectTask(task);
         }}
         onCreateNew={() => {
           setTasksDrawerOpen(false);
-          fixtureLabSessionPort.openCompose(notebookId);
+          onCreateNew();
         }}
       />
     </div>

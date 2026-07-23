@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "deep-research-ui"
 purpose: "TBD - created by archiving change c77-deep-research-ui. Update purpose after archive."
 valid_scope[2]: src/,tests/
-requirements[23]{req_id,title,statement}:
+requirements[25]{req_id,title,statement}:
   r400,Lab route replaces E1 Desk as deep entry,"深研产品入口 MUST 为 /research-lab/:nid（及工作区烧瓶导航）；Workspace 顶栏 E1 MUST NOT 再以 DeepResearchDesk 作为深研主表面；MUST NOT 恢复「暂不可用」壳或已删除 HITL agent 作为深研路径。"
   r401,H1 create form on desk,DeepResearchDesk MUST 提供显式 useNotebookSources 与 allowWeb（默认皆开）、台内 sourceIds 多选、以及浅/中/深 depth（默认中）；当 useNotebookSources 为 true 且未选来源、或两开关皆关、或 topic 为空时 MUST 禁用开始；sourceIds MUST NOT 隐式绑定工作区勾选状态。
   r402,Queue freshness without list SSE,Desk 队列 MUST 在打开时拉取 notebook 作用域 listRuns；当存在非终态 Run 时 MUST 以短间隔轮询刷新，全终态或关闭 Desk 时 MUST 停止轮询；创建成功、关闭详情返回、以及详情内导致状态变化的操作之后 MUST 立即再拉 list；MUST NOT 在本变更引入 notebook 级 list SSE。
@@ -18,7 +18,7 @@ requirements[23]{req_id,title,statement}:
   r412,No run URL deep link in v1,首发 Deep Research UI MUST NOT 依赖 URL query/path 深链打开特定 Run；打开详情 MUST 由会话内 UI 状态驱动。
   r413,i18n and quality gates after Desk removal,深研相关用户可见文案 MUST 走前端 i18n（t()）；本变更 MUST 提供/更新 Vitest 证明顶栏无 deep Desk，并至少保留一条可达 Lab 入口的回归（testid 或等价）；MUST 在不动 ResearchRun 路由的前提下通过 typecheck 与 server research 测试子集。
   r414,Pruned branch fade and failed merge retain,研究图 UI MUST 将 conclusionStatus=pruned 的节点以降透明度（或等价弱化）展示；触达 pruned 节点的边 MUST 弱化描边但仍可见；来自 pruned 节点的 merge 边 MUST 保留且标签可继续显示「汇入」（或产品等价文案），MUST NOT 因剪枝从画布移除该 merge；当存在失败汇入时，结论节点 MUST 以可见文案或脚注提示「部分汇入失败」（或等价）。
-  r415,Thin client command ports,Deep Research Desk（及正式接线后的 Lab 展示层）MUST 以 GET ResearchRun 与 SSE graph_patch/status/confirm 作为图与状态的展示权威；用户剪枝、分叉、确认、取消、转化、节点字段修改 MUST 仅调用对应 HTTP 命令口；客户端 MAY 做可丢弃的本地预览，但在命令响应或后续 graph_patch 到达后 MUST 以服务端结果为准回写；MUST NOT 将本地定时回放或伪造图作为生产 Run 的权威状态机。
+  r415,Thin client command ports for Lab,Deep Research Lab 展示层 MUST 以 GET ResearchRun 与 SSE graph_patch/status/confirm 作为图与状态的展示权威；用户剪枝、分叉、确认、取消、转化、节点字段修改 MUST 仅调用对应 HTTP 命令口；客户端 MAY 做可丢弃的本地预览，但在命令响应或后续 graph_patch 到达后 MUST 以服务端结果为准回写；默认生产路径 MUST NOT 将本地定时回放或伪造图作为 Run 的权威状态机（fixture 仅显式非生产开关）。
   r416,"Role-preferring graph render",研究图 UI MUST 优先依据节点 role（question|research|conclusion）区分交互与保护态展示；当 role 缺失时 MUST 回退到既有 id 前缀或 merge 目标启发式以保持兼容；MUST NOT 因缺少精致视觉规格而阻塞命令口接线。
   r417,Node chat UI wires proposals to commands,节点对话 UI MUST 消费独立 chat SSE 展示正文与提案；用户接受剪枝/分叉/改查询/定态/确认类提案时 MUST 调用对应 prune/fork/PATCH/confirm 命令口；MUST NOT 仅在本地改图作为权威；打开报告类动作可为纯前端导航。
   r418,Desk canvas prefs from Lab mechanisms,Desk 研究图 MUST 提供与 Lab 对齐的画布机制入口（至少布局方向或算法偏好、以及小地图可开关之一档）；这些偏好 MAY 仅存于客户端；MUST NOT 因此新增服务端编排 API 或改变图 SSOT。
@@ -26,7 +26,9 @@ requirements[23]{req_id,title,statement}:
   r420,"Lab is deep-research primary surface","/research-lab/:nid MUST 作为深研产品主表面；工作区 MUST 经烧瓶（或等价）导航进入；在 c82 接线前 Lab 会话权威 MAY 为 fixture，但 MUST 可走通既定设计面；MUST NOT 将顶栏搜索面板恢复为深研主入口。"
   r421,"xlsx-lib fixture drives Lab walkthrough","Lab 主路径 MUST 默认使用写死研究任务 scenario id=xlsx-lib；该 fixture MUST 足以演练图交互、节点抽屉与提案、报告与 cite、revisions 与画布设置等既有 Lab 设计面；MUST NOT 在本变更引入第二套并行正式 scenario 作为主路径。"
   r422,Inventory Lab versus ResearchRun,本变更 MUST 产出 inventory 文档，逐项对照 Lab 设计面与现有 ResearchRun HTTP/SSE 合约（Keep/Gap/Extra/Ambiguous）；MUST NOT 在本变更将 fixture 替换为 Eden 权威态（留待 c82）。
-scenarios[23]{req_id,id,given,when,then,feature}:
+  r423,Lab wires via Eden and shared schemas,"Lab 对接 ResearchRun MUST 使用 Eden treaty 与 @crystalith/shared research schemas（及 ErrorEnvelope）；MUST NOT 新增与 shared 同域异形的平行 wire DTO；MUST NOT 删除或绕过 /v2/notebooks/:nid/research*。"
+  r424,"xlsx-lib fixture is non-authoritative by default","在默认生产配置下，xlsx-lib fixture MUST NOT 作为研究过程权威；用户在 Lab 主路径执行的图变更 MUST 反映到服务端 Run（经 c81 合约）；fixture 模式若保留 MUST 需显式开关且不可被误认为已接线生产态。"
+scenarios[25]{req_id,id,given,when,then,feature}:
   r400,"lab-route-is-deep-entry",用户要从工作区进入深研,打开深研,"进入 /research-lab/:nid 而非顶栏 DeepResearchDesk",false
   r401,"empty-sources-disables-start",用来源开关开启且台内未选任何来源,用户尝试开始深研,开始控件保持禁用且不得发出创建请求,false
   r402,"polling-stops-when-terminal",Desk 打开且队列仅含 completed/failed/cancelled,等待超过一个轮询间隔,客户端不再为 list 发起定时轮询请求,false
@@ -42,7 +44,7 @@ scenarios[23]{req_id,id,given,when,then,feature}:
   r412,"no-query-deep-link-required",用户仅通过 Desk 卡片打开详情,不修改 URL,详情仍可打开且不依赖 researchRun query,false
   r413,"topbar-fast-only-and-lab-reachable",e2e 或 Vitest 进入工作区,打开顶栏搜索并检查深研入口,顶栏无 deep Desk；Lab 入口仍可发现,false
   r414,"prune-keeps-failed-merge-on-canvas",详情图已渲染且某研究节点有 merge 到结论,用户确认剪枝该节点后 graph_patch 到达,该节点呈 pruned 弱化态，其 merge 边仍可见且弱化，结论侧出现部分汇入失败提示,true
-  r415,"prune-uses-http-not-local-ssot",详情已订阅 SSE 且用户完成剪枝二次确认,客户端执行剪枝,发出 POST prune，并以返回 Run 或后续 graph_patch 更新画布，而非仅本地标记为权威终态,true
+  r415,"lab-prune-calls-http",Lab 已订阅 Run SSE 且用户确认剪枝,执行剪枝,发出 POST prune 并以返回或 graph_patch 更新画布,true
   r416,"role-or-prefix-protects-sink",图中 conclusion 带 role=conclusion（或 node_conclusion_ 前缀）,用户查看剪枝入口,结论节点不可作为可剪枝研究支路入口（与服务端保护一致）,true
   r417,"accept-prune-proposal-calls-api",节点 chat 展示 pending prune 提案,用户点击接受,客户端调用 POST prune（而非只改本地节点状态）,true
   r418,"canvas-pref-does-not-call-graph-api",用户切换画布布局方向或小地图,偏好生效,未因此发出修改 research graph 的命令口请求,true
@@ -50,3 +52,5 @@ scenarios[23]{req_id,id,given,when,then,feature}:
   r420,"open-lab-as-primary",用户从工作区进入深研,导航完成,"位于 /research-lab/:nid 主表面",false
   r421,"default-scenario-xlsx-lib",用户打开 Lab 主路径,查看当前 scenario,"为 xlsx-lib 且可演练主要设计面",false
   r422,"inventory-lists-gaps",c80 完成,查阅 inventory.md,含 Lab↔ResearchRun 对照表且标出 Gap,false
+  r423,"lab-uses-eden-not-parallel-dto",Lab 创建或刷新 Run,查看客户端实现,经 Eden + shared 类型，无平行 research DTO 文件,false
+  r424,"default-path-not-fixture-authority",默认配置打开 Lab 主路径并开始研究,推进图状态,"权威态来自 ResearchRun 而非 xlsx-lib timer",false

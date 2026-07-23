@@ -17,23 +17,21 @@
 - SSOT 文档：包根 [`DESIGN.md`](./DESIGN.md)（YAML tokens + 中文原则）
 - 实现侧：Tailwind / `src/app/tailwind.css`、MUI 局部组件；新表面优先对齐 DESIGN token，避免另起一套色板
 
-## Research Lab（作业台；fixture 直至 c82）
+## Research Lab（默认 Eden；fixture 可选）
 
-`/research-lab/:nid` 是深研**产品主表面**（作业台）。会话权威在 c82 Eden 接线前为 fixture（默认 `xlsx-lib`）。
+`/research-lab/:nid` 是深研**产品主表面**（作业台）。**默认**走 Eden `ResearchRun` + SSE（`useEdenLabController`）；本地 xlsx-lib 演示需 `VITE_LAB_FIXTURE=1`（`isLabFixtureMode()` → `useLabController` + `fixtureLabSessionPort`）。
 
-| Lab（本目录）                                | Real（ResearchRun，c81/c82）    |
-| -------------------------------------------- | ------------------------------- |
-| Compose 空态创建                             | `POST …/research`               |
-| 任务抽屉（头像旁 + Lab 顶栏最右）            | `GET …/research` list           |
-| `fake/*` + `deriveLabState`                  | Run 图 SSOT + SSE `graph_patch` |
-| `fixtureLabSessionPort` / `useLabController` | `EdenResearchSessionPort`       |
-| phase 定时回放                               | Run 状态机 + stream             |
-| `labSession` / revisions → sessionStorage    | 服务端 report + checkpoints     |
+| 默认（Eden）                              | Fixture（`VITE_LAB_FIXTURE=1`）     |
+| ----------------------------------------- | ----------------------------------- |
+| `POST …/research` · `GET …/research` list | `fixtureLabSessionPort` demo 列表   |
+| Run 图 SSOT + SSE `graph_patch`           | `fake/*` + phase 定时回放           |
+| `useEdenLabController` · `?rid=` 切换 Run | `useLabController` · sessionStorage |
+| 服务端 report + checkpoints（报告页待接） | `labSession` / revisions            |
 
-**闭环入口（当前）**：烧瓶 / 任务抽屉「新建」→ Compose → fixture 回放 → 任务列表切换/恢复。对话 `@`/`/` 嵌入**延后**。
+**闭环入口**：烧瓶 / 任务抽屉「新建」→ Compose →（Eden）创建 Run 并 stream /（fixture）xlsx-lib 回放。对话 `@`/`/` 嵌入**延后**。
 
 - 剪枝闭包 **B** 与 server `collectResearchPruneClosure` 对齐（`fake/deriveLabState`）；变更走 `llmanspec/changes/update-research-prune-cascade`
-- 接 Eden 时：保留 `LabGraph` / 报告 Plate 等展示层，替换 port / `fake/` controller 数据权威
+- 展示层（`LabGraph`、Compose、任务抽屉）共用；数据权威由 `ResearchLabPage` 分支选择
 - 顶栏搜索仅为 Fast 网搜；勿恢复为深研主入口
 
 ## Build, Test, and Development Commands

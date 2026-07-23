@@ -1,23 +1,24 @@
 /**
- * Unified demo task list drawer — avatar-adjacent entry (research runs).
+ * Unified research task list drawer — Eden listRuns (default) or fixture demo.
  */
 import { Close as CloseIcon, Assignment as AssignmentIcon } from '@mui/icons-material';
 import { createPortal } from 'react-dom';
 
 import { useLayer } from '../../shared/layer';
 import { TestIds, tid } from '../../shared/testids';
-import { DEMO_RESEARCH_STATUS_LABEL, type DemoResearchTask } from './demoResearchTasks';
-import { useDemoResearchTasks } from './useDemoResearchTasks';
+import { isLabFixtureMode } from './labFixtureMode';
+import { RESEARCH_TASK_STATUS_LABEL, type ResearchTaskListItem } from './researchTaskTypes';
+import { useResearchTasks } from './useResearchTasks';
 
 export interface ResearchTasksDrawerProps {
   open: boolean;
   onClose: () => void;
   notebookId: number | null;
-  onSelectTask: (task: DemoResearchTask) => void;
+  onSelectTask: (task: ResearchTaskListItem) => void;
   onCreateNew?: () => void;
 }
 
-function statusTone(status: DemoResearchTask['status']): string {
+function statusTone(status: string): string {
   switch (status) {
     case 'running':
     case 'queued':
@@ -27,6 +28,7 @@ function statusTone(status: DemoResearchTask['status']): string {
     case 'completed':
       return 'bg-emerald-50 text-emerald-800 border-emerald-100';
     case 'failed':
+    case 'cancelled':
       return 'bg-red-50 text-red-800 border-red-100';
     default:
       return 'bg-gray-50 text-gray-700 border-gray-100';
@@ -41,7 +43,8 @@ export default function ResearchTasksDrawer({
   onCreateNew,
 }: ResearchTasksDrawerProps) {
   const { style: layerStyle } = useLayer('modal');
-  const { tasks, activeTaskId } = useDemoResearchTasks(notebookId);
+  const { tasks, activeTaskId, loading, error } = useResearchTasks(notebookId);
+  const fixture = isLabFixtureMode();
 
   if (!open) return null;
 
@@ -62,7 +65,9 @@ export default function ResearchTasksDrawer({
         <div className="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
           <div>
             <h2 className="text-sm font-semibold text-gray-900">深度研究任务</h2>
-            <p className="text-[11px] text-gray-500">进行中与历史（演示列表）</p>
+            <p className="text-[11px] text-gray-500">
+              {fixture ? '进行中与历史（fixture 演示）' : '进行中与历史（ResearchRun）'}
+            </p>
           </div>
           <button
             type="button"
@@ -89,12 +94,18 @@ export default function ResearchTasksDrawer({
         </div>
 
         <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-3">
-          {tasks.length === 0 ? (
+          {loading ? (
+            <li className="px-3 py-6 text-center text-[12px] text-gray-500">加载中…</li>
+          ) : error ? (
+            <li className="rounded-lg border border-red-100 bg-red-50 px-3 py-4 text-[12px] text-red-800">
+              {error}
+            </li>
+          ) : tasks.length === 0 ? (
             <li
               className="rounded-lg border border-dashed border-gray-200 px-3 py-6 text-center text-[12px] text-gray-500"
               {...tid(TestIds.researchTasksEmpty)}
             >
-              暂无研究任务。从对话或实验室创建后会出现在这里。
+              暂无研究任务。从实验室 Compose 创建后会出现在这里。
             </li>
           ) : (
             tasks.map((task) => {
@@ -119,7 +130,7 @@ export default function ResearchTasksDrawer({
                       <span
                         className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${statusTone(task.status)}`}
                       >
-                        {DEMO_RESEARCH_STATUS_LABEL[task.status]}
+                        {RESEARCH_TASK_STATUS_LABEL[task.status] ?? task.status}
                       </span>
                     </div>
                     <p className="mt-1 font-mono text-[10px] text-gray-400">{task.id}</p>
@@ -133,7 +144,7 @@ export default function ResearchTasksDrawer({
         <div className="border-t border-gray-100 px-4 py-2 text-[10px] text-gray-400">
           <span className="inline-flex items-center gap-1">
             <AssignmentIcon sx={{ fontSize: 12 }} />
-            演示数据 · 正式环境对接 ResearchRun 列表
+            {fixture ? 'VITE_LAB_FIXTURE=1 · demo 列表' : 'Eden GET …/research'}
           </span>
         </div>
       </aside>
