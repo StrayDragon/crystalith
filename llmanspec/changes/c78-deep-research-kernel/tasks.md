@@ -36,12 +36,13 @@
 3. Desk：chat UI → SSE；accept→命令口（r417）
 4. 测：chat 不进 Run stream；提案不自动 prune
 
-### C2 — revisions
+### C2 — revisions（先确认 design §8）
 
-1. shared + DB：revision 快照模型
-2. server：list/create/get/restore
-3. Desk：列表/创建/恢复 UI（r419）
-4. 测：创建后可读；恢复刷新图
+1. 确认 design §8 恢复语义与字段
+2. shared + DB：revision 快照模型
+3. server：list/create/get/restore
+4. Desk：列表/创建/恢复 UI（r419）
+5. 测：创建后可读；恢复刷新图
 
 ### C3 — 画布机制
 
