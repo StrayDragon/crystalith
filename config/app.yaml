@@ -262,7 +262,7 @@ search:
 # ----------------------------------------------------------------------------
 # Optional service contracts (core remains available when these are unavailable)
 # ----------------------------------------------------------------------------
-optional_services:
+optional_services: {}
   # SearXNG is NOT configured here. Diagnostics + searchWeb both use
   # search.searxng.host / getSearxngHost() (CL_SEARXNG_HOST). Legacy
   # optional_services.searxng.{enabled,endpoint,timeout_s} keys are ignored.
