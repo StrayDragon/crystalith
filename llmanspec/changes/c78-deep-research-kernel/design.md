@@ -95,15 +95,16 @@ Apply 波次：**A 内核+DAG → B PATCH → C1 chat → C2 revisions → C3 �
 
 ## 5. 已锁定默认
 
-| 项                    | 锁定                                  |
-| --------------------- | ------------------------------------- |
-| 编排                  | CP1 + Abort；P0 串行；同 Run LLM 互斥 |
-| role                  | optional + 兼容                       |
-| conclusion            | 开跑即 seed                           |
-| fork                  | fork/expand + merge→conclusion        |
-| Agent                 | 单 ToolLoopAgent + prepareCall(mode)  |
-| API                   | **A+B+C 全做**                        |
-| 报告 token→Run stream | **不做**                              |
+| 项                    | 锁定                                                              |
+| --------------------- | ----------------------------------------------------------------- |
+| 编排                  | CP1 + Abort；P0 串行；同 Run LLM 互斥                             |
+| role                  | optional + 兼容                                                   |
+| conclusion            | 开跑即 seed                                                       |
+| fork                  | fork/expand + merge→conclusion                                    |
+| Agent                 | 单 ToolLoopAgent + prepareCall(mode)                              |
+| API                   | **A+B+C 全做**                                                    |
+| 数据面 §8             | **已确认**（working 落库 + progress SSE；终态账本保留最近 N=200） |
+| 报告 token→Run stream | **不做**                                                          |
 
 ## 6. 风险
 
@@ -324,76 +325,172 @@ event: error          data: ErrorEnvelope 字段子集
 
 **调研序列状态**：§7.1–7.4 已确认；§3 API **已锁 A+B+C**；按 tasks 波次 Apply。
 
-## 8. C2 Revisions 形状草案（待确认 · 对齐 Lab）
+## 8. 数据面：Revisions + Working + 进度账本（待确认）
 
-> Lab 样板：`labRevisions.ts`（graph+report 成对快照）+ `reportCow.ts`（编辑 CoW）。生产权威迁服务端。
+> 你的要求：**后端都要存**，并能**及时反馈状态**；需要较好的表设计做进度「挂历/账本」。
+> Lab 样板仅作交互参考；**sessionStorage 不再当权威**。
 
-### 8.1 与 checkpoint 的区别
-
-|        | **checkpoint**（已有）                          | **revision**（C2 新增）                                       |
-| ------ | ----------------------------------------------- | ------------------------------------------------------------- |
-| 谁可见 | 内部 / 运维恢复                                 | **用户**（Desk 列表）                                         |
-| 何时写 | CP1：节点完成、进 confirm 前、cancel            | 用户「保存版本」；可选 `completed` 时自动一条 `auto_complete` |
-| 内容   | 轻量：`at/status/searchesUsed/nodeCount/reason` | **成对全量**：graph + 权威 report                             |
-| 恢复   | 进程级尽力（P0 不保证崩溃续跑）                 | 用户显式「恢复此版本」                                        |
-
-### 8.2 存储字段（建议 wire）
-
-```ts
-ResearchRevision {
-  id: string;              // 稳定 id（如 rev_…）
-  runId: number;
-  label: string;           // 展示名
-  kind: 'auto_complete' | 'user_save';
-  createdAt: string;       // ISO
-  parentRevisionId: string | null;  // 从哪版另存；首版 null
-  // 快照体：
-  graph: { nodes: ResearchNode[]; edges: ResearchEdge[] };
-  report: ResearchReport | null;    // 结构化 SSOT（非仅 markdown）
-  // 可选元数据（便于 UI，非编排态）：
-  topic?: string;          // 冗余自 run.topic
-  searchesUsed?: number;
-  statusAtSave?: ResearchRunStatus;
-}
-```
-
-**不入库（Lab-only）**：`phase` 回放、`mutations`、`forkSeq`、`forceStatus`、scenarioId。
-
-**报告编辑 CoW**：
-
-- **Canonical** = 当前 Run 上的 `report`（服务端）。
-- **Working**：Desk 本地编辑缓冲（可 sessionStorage）；**未**单独占 revision。
-- 「保存版本」→ `POST …/revisions`：把 **当前 graph +（working 若已写回则先 PATCH/保存 report，否则用 canonical）** 打成 `user_save`。
-- 首发可不做独立 `PATCH …/report`：保存版本时可带可选 `report` 覆盖体，或要求先「应用编辑到 Run」再快照——**推荐：创建 revision 时允许 body 带 `report?`；缺省用当前 Run.report**。
-
-### 8.3 HTTP（建议）
+### 8.0 总览（一张图）
 
 ```text
-GET    …/research/:rid/revisions
-POST   …/research/:rid/revisions          body: { label?: string; report?: ResearchReport }
-GET    …/research/:rid/revisions/:revId
-POST   …/research/:rid/revisions/:revId/restore   # 无 body 或 { confirm: true }
+notebooks
+   └─ research_runs                 ← 当前权威头（status/graph/report/预算/活动指针）
+         ├─ research_evidences      ← EV1（已有）
+         ├─ research_revisions      ← 用户可见成对快照（graph+report）
+         ├─ research_report_edits   ← 报告 working CoW（服务端）
+         └─ research_progress_events← 追加写进度账本（挂历时间线 + SSE 同源）
 ```
 
-列表项可瘦身（无完整 graph/report）；详情/恢复用全量。
+及时反馈路径：
 
-### 8.4 恢复语义（建议锁定）
+```text
+写库（progress_events / graph / status） → broadcast Run SSE → Desk 立刻刷新
+（chat 仍走独立 POST SSE，见 §7.3；chat 轮次起止也写入 progress_events）
+```
 
-1. **覆盖当前权威**：把该 revision 的 `graph` + `report` 写回 Run；发 `graph_patch`（全量 upsert 或先清再 upsert）+ 若有 report 则等价于刷新（可 `report_ready` 或客户端 GET）。
-2. **历史保留**：不删其它 revision；可写 `parentRevisionId` 链表示「从哪恢复后再另存」。
-3. **何时允许**
-   - **推荐**：`completed | failed | cancelled` 可恢复（只读 Run 上改「当前展示/导出」内容）；
-   - `running | awaiting_confirm`：**拒绝**（`RESEARCH_INVALID_STATE`），避免与内核抢图。
-4. **不自动开新 Run**；不改 `topic`/预算计数除非快照里带了且产品要——**首发恢复不回滚 `searchesUsed`**。
-5. 恢复后 `active` 对用户 = 当前 Run 内容；可选 `run.activeRevisionId` 指针（方便 UI 高亮）；无指针时 UI 用「是否与某 rev 内容相等」弱提示即可。
+### 8.1 表设计（Drizzle / SQLite）
 
-### 8.5 自动快照
+#### (1) `research_runs` — 扩展头指针（不拆散现有 JSON graph）
 
-- Run 首次进入 `completed` 且有 report → 自动插入一条 `kind: auto_complete`（label 如「完成时报告」），避免用户无版本可回。
-- 不在每个 CP1 自动建 revision（避免爆炸）。
+在现有列上增加（迁移）：
 
-### 8.6 仍 defer
+| 列                   | 类型      | 含义                                                |
+| -------------------- | --------- | --------------------------------------------------- |
+| `active_revision_id` | text null | 当前内容若由某 revision 恢复/对齐，便于 UI 高亮     |
+| `active_node_id`     | text null | 当前自研/焦点节点（调度器写入）                     |
+| `llm_activity`       | enum null | `null \| work_unit \| node_chat` — 与 §7.3 互斥一致 |
+| `report_updated_at`  | ts null   | 权威 report 最后变更                                |
 
-- revision 之间 diff UI
-- 按 revision fork **新** ResearchRun
-- 把 Lab `reportCow` working 提升为服务端独立资源（首发本地 working 足够）
+`graph` / `report` / `checkpoint` / `status` 仍为**当前权威**。
+
+#### (2) `research_revisions` — 用户版本挂历（成对快照）
+
+| 列                             | 说明                                          |
+| ------------------------------ | --------------------------------------------- |
+| `id` text PK                   | `rev_…`                                       |
+| `run_id` FK cascade            |                                               |
+| `notebook_id` FK               | 冗余便于按本列举                              |
+| `label` text                   |                                               |
+| `kind`                         | `auto_complete \| user_save \| restore_point` |
+| `parent_revision_id` text null | 另存/恢复链                                   |
+| `graph` json                   | `{ nodes, edges }` 全量                       |
+| `report` json null             | 结构化 `ResearchReport`                       |
+| `searches_used` int            | 快照时预算                                    |
+| `status_at_save` text          | 快照时 Run.status                             |
+| `created_at`                   |                                               |
+
+索引：`(run_id, created_at DESC)`。
+
+#### (3) `research_report_edits` — 报告 working（服务端 CoW）
+
+一对一（或按 run 最多一行 working）：
+
+| 列                       | 说明                                    |
+| ------------------------ | --------------------------------------- |
+| `run_id` PK/FK           |                                         |
+| `base_report_updated_at` | fork 时所基于的权威 `report_updated_at` |
+| `report` json            | working 结构化正文（与权威同形）        |
+| `updated_at`             |                                         |
+| `updated_by` text null   | 预留                                    |
+
+语义：
+
+- **Canonical** = `research_runs.report`
+- **Working** = 本表行；首编创建；保存到权威用 `PUT/PATCH …/report` 或「应用编辑」；「保存版本」打 revision 时可选择 snapshot=working 或 canonical
+- 丢弃 working = DELETE 本行
+- **禁止**只活在浏览器里
+
+#### (4) `research_progress_events` — 进度账本（挂历时间线）
+
+追加写、不改历史（除 truncate 运维）：
+
+| 列                   | 说明                                                     |
+| -------------------- | -------------------------------------------------------- |
+| `id` text PK         | `pe_…`                                                   |
+| `run_id` FK          |                                                          |
+| `seq` integer        | Run 内单调序号（便于 gap 检测）                          |
+| `at` ts              |                                                          |
+| `kind`               | 见下枚举                                                 |
+| `node_id` text null  | 相关节点                                                 |
+| `severity` text null | 短文案（log 同源）                                       |
+| `payload` json null  | 结构化细节（预算、confirmKind、revisionId、chatTurnId…） |
+
+**`kind` 闭集（首发）**：
+
+```text
+run_queued | run_running | run_awaiting_confirm | run_completed | run_failed | run_cancelled
+unit_started | unit_finished | unit_skipped_pruned | unit_aborted
+node_phase          # payload: { phase }
+graph_seeded | graph_patched_summary  # 可选摘要，避免整图进账本
+confirm_entered | confirm_resolved
+budget_tick         # searchesUsed/max
+evidence_added
+revision_created | revision_restored
+report_canonical_updated | report_working_updated | report_working_discarded
+chat_started | chat_finished | chat_aborted
+```
+
+索引：`(run_id, seq)` UNIQUE；`(run_id, at)`。
+
+**与 SSE 的关系**：每次写入 progress_event 后，Run stream 发：
+
+- 既有：`status` / `graph_patch` / `confirm` / `log` / `report_ready` …
+- **新增**：`progress` 事件 `{ seq, kind, at, nodeId?, headline?, payload? }`
+
+Desk 可用 `progress` 画挂历，也可用 `log` 作降级；**以 DB 账本为 SSOT**，重连后 `GET …/progress?afterSeq=` 补洞。
+
+### 8.2 HTTP（在 §3.2 上补全）
+
+```text
+# Revisions
+GET    …/research/:rid/revisions
+POST   …/research/:rid/revisions              { label?, from?: 'canonical'|'working' }
+GET    …/research/:rid/revisions/:revId
+POST   …/research/:rid/revisions/:revId/restore
+
+# Report CoW（服务端）
+GET    …/research/:rid/report                 # { canonical, working?, viewing? }
+PUT    …/research/:rid/report                 # 写权威（或 body.mode=canonical）
+PUT    …/research/:rid/report/working         # 写/创建 working
+DELETE …/research/:rid/report/working         # 丢弃 working
+
+# 进度账本
+GET    …/research/:rid/progress?afterSeq=&limit=
+# Run SSE 增加 event: progress（及时推送；与 GET 同源）
+```
+
+### 8.3 恢复 / 保存语义（修订）
+
+| 动作           | 行为                                                                                                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 保存 revision  | 快照 **当前 graph** + 所选 report（canonical 或 working）；写 `revisions` + `progress revision_created`                                                             |
+| completed 自动 | 一条 `auto_complete`（graph+canonical report）                                                                                                                      |
+| 恢复 revision  | **仅终态**；覆盖 `runs.graph`+`runs.report`；清 working 或标记 stale；`active_revision_id=rev`；`graph_patch`+`progress revision_restored`；**不回滚 searchesUsed** |
+| 写 working     | **仅终态**；必须落库；SSE `progress report_working_updated`（可不推全文，客户端再 GET）                                                                             |
+
+### 8.4 为何拆表（而不是全塞 run JSON）
+
+| 诉求         | 做法                                                    |
+| ------------ | ------------------------------------------------------- |
+| 及时状态     | 小行追加 `progress_events` + SSE，避免每次推整图        |
+| 版本挂历     | `revisions` 独立查询/分页                               |
+| 编辑不脏权威 | `report_edits` 与 `runs.report` 分离                    |
+| 证据已独立   | 继续 `evidences`                                        |
+| 图仍 JSON    | 首发图结构变动频繁，留在 `runs.graph`；账本只记摘要事件 |
+
+### 8.5 仍 defer
+
+- progress/revision 的富 diff UI
+- 按 revision fork **新** Run
+- 把每个 `graph_patch` 全文存进账本（体积爆）
+
+### 8.6 已锁定（2026-07-23）
+
+| 项                                                       | 锁定                                                                                                                                    |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| §8 表结构 + working 落库 + SSE `progress` + GET afterSeq | **确认全套**                                                                                                                            |
+| 报告 working 编辑窗口                                    | **仅终态**（`completed`；`failed`/`cancelled` 若有 report 也可编；`running`/`awaiting_confirm` 只读权威）                               |
+| 账本保留                                                 | Run **进行中永久追加**；进入终态后裁剪为**最近 N 条**（建议默认 **N=200**，config 可调）；revisions / report_edits **不**随账本裁剪删除 |
+| 裁剪时机                                                 | 写入终态并刷完必要 progress 事件之后异步/同步 truncate（保留最大 `seq` 的 N 条）                                                        |
+
+**Apply 含义**：C2 波次按上表实现；N 进 `config/app.yaml` research 段（如 `progressEventRetain: 200`）。

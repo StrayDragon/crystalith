@@ -36,13 +36,13 @@
 3. Desk：chat UI → SSE；accept→命令口（r417）
 4. 测：chat 不进 Run stream；提案不自动 prune
 
-### C2 — revisions（先确认 design §8）
+### C2 — revisions + report CoW + 进度账本（design §8 **已确认**：全套 + 终态裁剪 N）
 
-1. 确认 design §8 恢复语义与字段
-2. shared + DB：revision 快照模型
-3. server：list/create/get/restore
-4. Desk：列表/创建/恢复 UI（r419）
-5. 测：创建后可读；恢复刷新图
+1. DB migrate：`research_revisions` · `research_report_edits` · `research_progress_events` + runs 指针列
+2. shared：revision / report-edit / progress 事件 schema；config `progressEventRetain`（默认 200）
+3. server：revisions CRUD+restore；report canonical/working（仅终态写 working）；progress 写入 + SSE `progress` + GET afterSeq；终态后 truncate 最近 N
+4. Desk：版本挂历 / 报告 CoW / 进度时间线（r419）
+5. 测：落库、补洞、恢复、working 丢弃、truncate
 
 ### C3 — 画布机制
 
