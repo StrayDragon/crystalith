@@ -257,9 +257,15 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     },
     { response: ResearchRunSchema },
   )
-  .get('/notebooks/:nid/research/:rid/stream', ({ params }) => {
+  .get('/notebooks/:nid/research/:rid/stream', ({ params, request, server }) => {
     const nid = requirePositiveIntId(params.nid, 'notebook id');
     const rid = requirePositiveIntId(params.rid, 'research run id');
+    // Bun closes quiet SSE after idleTimeout (default 10s); keep run streams alive.
+    try {
+      server?.timeout?.(request, 0);
+    } catch {
+      // app.handle / non-Bun — no-op
+    }
     return createResearchSseResponse(nid, rid);
   })
   .post(
@@ -309,9 +315,15 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   )
   .post(
     '/notebooks/:nid/research/:rid/nodes/:nodeId/chat',
-    ({ params, body, request }) => {
+    ({ params, body, request, server }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const rid = requirePositiveIntId(params.rid, 'research run id');
+      // Chat TTFB often exceeds Bun's default idleTimeout; disable per-request.
+      try {
+        server?.timeout?.(request, 0);
+      } catch {
+        // app.handle / non-Bun — no-op
+      }
       return createNodeChatSseResponse(nid, rid, params.nodeId, body, request.signal);
     },
     { body: ResearchNodeChatBodySchema },

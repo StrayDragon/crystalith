@@ -1833,6 +1833,13 @@ export function createNodeChatSseResponse(
     payload: { messagePreview: body.message.slice(0, 80) },
   });
 
+  const clearChatMutex = () => {
+    const latest = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+    if (latest?.llmActivity === 'node_chat') {
+      updateRun(runId, { llmActivity: null });
+    }
+  };
+
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const encoder = new TextEncoder();
@@ -1845,7 +1852,19 @@ export function createNodeChatSseResponse(
           closed = true;
         }
       };
+      // Bun.serve idleTimeout (default 10s) closes quiet SSE mid-flight. Emit
+      // immediately and keep comment heartbeats while waiting on LLM TTFB.
+      const heartbeat = setInterval(() => {
+        if (closed || ac.signal.aborted) return;
+        try {
+          controller.enqueue(encoder.encode(`: ping ${Date.now()}\n\n`));
+        } catch {
+          closed = true;
+        }
+      }, 8_000);
       try {
+        emit('log', { message: 'connected', nodeId });
+
         if (ac.signal.aborted) {
           appendProgressEvent(runId, 'chat_aborted', { nodeId, headline: '对话已中止' });
           emit('error', { errorCode: ErrorCode.INVALID_REQUEST, message: 'aborted' });
@@ -1965,12 +1984,10 @@ export function createNodeChatSseResponse(
           message: String(error),
         });
       } finally {
+        clearInterval(heartbeat);
         chatAbortControllers.delete(key);
         requestSignal?.removeEventListener('abort', onRequestAbort);
-        const latest = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
-        if (latest?.llmActivity === 'node_chat') {
-          updateRun(runId, { llmActivity: null });
-        }
+        clearChatMutex();
         if (!closed) {
           try {
             controller.close();
@@ -1982,6 +1999,8 @@ export function createNodeChatSseResponse(
     },
     cancel() {
       ac.abort();
+      // Eager mutex release if the client/Bun drops the socket mid-flight.
+      clearChatMutex();
     },
   });
 
