@@ -380,6 +380,12 @@ export const ResearchRunSchema = z
     searchesUsed: z.number().int().nonnegative().default(0),
     nodes: z.array(ResearchNodeSchema).default([]),
     edges: z.array(ResearchEdgeSchema).default([]),
+    /** Run-level evidence pool; node.evidenceIds index into this list (EV1). */
+    evidences: z
+      .array(ResearchEvidenceSchema)
+      .optional()
+      .default([])
+      .openapi({ description: desc('research.run_evidences', '研究 Run 证据列表') }),
     report: ResearchReportSchema.nullable().optional(),
     confirmKind: z.enum(['budget', 'expand_branch']).nullable().optional(),
     confirmBranchNodeId: z.string().nullable().optional(),
@@ -410,6 +416,7 @@ export const ResearchRunSchema = z
       searchesUsed: 0,
       nodes: [],
       edges: [],
+      evidences: [],
       llmActivity: null,
       activeNodeId: null,
       createdAt: '2026-07-21T12:00:00.000Z',

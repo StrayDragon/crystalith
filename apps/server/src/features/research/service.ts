@@ -239,6 +239,7 @@ function serializeRun(row: RunRow): ResearchRun {
     searchesUsed: row.searchesUsed,
     nodes: graph.nodes as ResearchNode[],
     edges: graph.edges as ResearchEdge[],
+    evidences: listEvidences(row.id),
     report: (row.report as ResearchReport | null) ?? null,
     confirmKind: (row.confirmKind as 'budget' | 'expand_branch' | null) ?? null,
     confirmBranchNodeId: row.confirmBranchNodeId ?? null,

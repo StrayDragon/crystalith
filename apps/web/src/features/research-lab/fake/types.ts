@@ -126,6 +126,8 @@ export interface LabNode {
    * When false, run through without asking (user can still Pause anytime).
    */
   askOnInterrupt?: boolean;
+  /** Optional footer override (e.g. Eden terminal conclusion labels). */
+  statusOverride?: string;
 }
 
 export interface LabEdge {

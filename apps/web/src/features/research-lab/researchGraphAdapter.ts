@@ -14,17 +14,56 @@ function inferRole(node: ResearchNode): LabNode['role'] {
   return 'research';
 }
 
-export function researchNodeToLabNode(node: ResearchNode): LabNode {
+const TERMINAL: ReadonlySet<ResearchRunStatus> = new Set(['completed', 'failed', 'cancelled']);
+
+/**
+ * Map wire node → Lab node; on terminal Run, settle pending/in-flight so cards
+ * do not keep 「排队…」 (r435).
+ */
+export function researchNodeToLabNode(
+  node: ResearchNode,
+  runStatus?: ResearchRunStatus | null,
+): LabNode {
+  const role = inferRole(node);
+  let conclusionStatus = node.conclusionStatus;
+  let phase = node.phase;
+  let statusOverride: string | undefined;
+
+  if (runStatus && TERMINAL.has(runStatus)) {
+    if (phase === 'retrieving' || phase === 'synthesizing') {
+      phase = 'idle';
+    }
+    if (role === 'conclusion' && conclusionStatus === 'pending') {
+      if (runStatus === 'completed') {
+        conclusionStatus = 'clear';
+        statusOverride = '综述就绪';
+      } else {
+        conclusionStatus = 'missing';
+        statusOverride = runStatus === 'failed' ? '失败' : '已取消';
+      }
+    } else if (role === 'research' && conclusionStatus === 'pending') {
+      const hasEv = (node.evidenceIds?.length ?? 0) > 0;
+      conclusionStatus = hasEv ? 'partial' : 'missing';
+    } else if (role === 'conclusion' && runStatus === 'completed') {
+      statusOverride = '综述就绪';
+    } else if (role === 'conclusion' && runStatus === 'failed') {
+      statusOverride = '失败';
+    } else if (role === 'conclusion' && runStatus === 'cancelled') {
+      statusOverride = '已取消';
+    }
+  }
+
   return {
     id: node.id,
     title: node.title,
-    role: inferRole(node),
+    role,
     query: node.query,
     summary: node.summary,
     conclusion: node.summary,
-    conclusionStatus: node.conclusionStatus,
-    phase: node.phase,
+    conclusionStatus,
+    phase,
     citationIds: node.evidenceIds ?? [],
+    statusOverride,
   };
 }
 
@@ -58,6 +97,11 @@ export function researchRunStatusToLabPhase(status: ResearchRunStatus | null): L
   }
 }
 
+/** playing MUST be true only for queued|running (r437). */
+export function isEdenLabPlaying(status: ResearchRunStatus | null | undefined): boolean {
+  return status === 'running' || status === 'queued';
+}
+
 export function deriveLabStateFromRun(
   run: ResearchRun | null,
   activityLog: string[] = [],
@@ -73,7 +117,7 @@ export function deriveLabStateFromRun(
       conclusionNodeId: null,
     };
   }
-  const nodes = run.nodes.map(researchNodeToLabNode);
+  const nodes = run.nodes.map((n) => researchNodeToLabNode(n, run.status));
   const edges = run.edges.map(researchEdgeToLabEdge);
   const conclusion =
     nodes.find((n) => n.role === 'conclusion') ??

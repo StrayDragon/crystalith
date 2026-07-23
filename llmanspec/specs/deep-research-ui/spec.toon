@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "deep-research-ui"
 purpose: "TBD - created by archiving change c77-deep-research-ui. Update purpose after archive."
 valid_scope[2]: src/,tests/
-requirements[34]{req_id,title,statement}:
+requirements[38]{req_id,title,statement}:
   r400,Lab route replaces E1 Desk as deep entry,"深研产品入口 MUST 为 /research-lab/:nid（及工作区烧瓶导航）；Workspace 顶栏 E1 MUST NOT 再以 DeepResearchDesk 作为深研主表面；MUST NOT 恢复「暂不可用」壳或已删除 HITL agent 作为深研路径。"
   r401,H1 create form on desk,DeepResearchDesk MUST 提供显式 useNotebookSources 与 allowWeb（默认皆开）、台内 sourceIds 多选、以及浅/中/深 depth（默认中）；当 useNotebookSources 为 true 且未选来源、或两开关皆关、或 topic 为空时 MUST 禁用开始；sourceIds MUST NOT 隐式绑定工作区勾选状态。
   r402,Queue freshness without list SSE,Desk 队列 MUST 在打开时拉取 notebook 作用域 listRuns；当存在非终态 Run 时 MUST 以短间隔轮询刷新，全终态或关闭 Desk 时 MUST 停止轮询；创建成功、关闭详情返回、以及详情内导致状态变化的操作之后 MUST 立即再拉 list；MUST NOT 在本变更引入 notebook 级 list SSE。
@@ -37,7 +37,11 @@ requirements[34]{req_id,title,statement}:
   r431,LabReportPage loads Run report as SSOT,"Eden 模式下的 LabReportPage MUST 通过 GET …/research/:rid 加载 ResearchRun.report 作为报告正文与 citations 的权威源；MUST 渲染结构化 sections；MUST NOT 以 labRevisions 或 sessionStorage 作为 Eden 默认权威。"
   r432,Eden report uses CitationsControl adapter,Eden 报告面 MUST 将 ResearchReport.citations 经 adapter 复用 CitationsControl 展示引用（对齐 r408）；MUST NOT 为 Eden 报告另建平行引用弹层。
   r433,Eden export reads Run report not stub toast,Eden 模式下 exportSuggestedFromGraph（或等价「从图导出建议报告」）MUST 从当前 Run 的 report 或等价结构化数据生成导出；MUST NOT toast「Eden 报告导出待接」；无 report 时 MUST 展示可见错误。
-scenarios[44]{req_id,id,given,when,then,feature}:
+  r434,Eden node drawer shows Run evidence citations,Eden 模式下 LabNodeDrawer 的引用列表 MUST 由当前 ResearchRun 上节点 evidenceIds 映射而来（标题与 snippet 至少其一）；当 evidenceIds 非空且 Run 已返回对应证据时 MUST NOT 显示「暂无引用」；MUST NOT 以 fixture scenario.citations 作为 Eden 默认引用源。
+  r435,Terminal Run node labels reflect server state,当 ResearchRun status 为 completed、failed 或 cancelled 时，研究图与节点抽屉中的节点状态文案 MUST 反映服务端终态；结论节点在 completed 后 MUST NOT 长期显示「排队…」或等价进行中文案。
+  r436,SSE and terminal GET refresh align node fields,Eden Lab 在收到 SSE graph_patch 后 MUST 合并节点与边；在 status 进入 completed、failed 或 cancelled 以及 report_ready 后 MUST getResearchRun 或等效全量刷新以对齐 node.phase、conclusionStatus 与 evidenceIds。
+  r437,awaiting_confirm progress does not contradict playing,当 Run status 为 awaiting_confirm 时，Lab MUST NOT 同时展示「多源探索」playing 横幅与「已暂停」类矛盾文案；playing 推导 MUST 仅对 queued 或 running 为 true；进度条 phase MUST 为 awaiting_confirm。
+scenarios[52]{req_id,id,given,when,then,feature}:
   r400,"lab-route-is-deep-entry",用户要从工作区进入深研,打开深研,"进入 /research-lab/:nid 而非顶栏 DeepResearchDesk",false
   r401,"empty-sources-disables-start",用来源开关开启且台内未选任何来源,用户尝试开始深研,开始控件保持禁用且不得发出创建请求,false
   r402,"polling-stops-when-terminal",Desk 打开且队列仅含 completed/failed/cancelled,等待超过一个轮询间隔,客户端不再为 list 发起定时轮询请求,false
@@ -82,3 +86,11 @@ scenarios[44]{req_id,id,given,when,then,feature}:
   r432,"eden-citations-control",Eden 报告含 citation map,用户打开引用入口,CitationsControl 展示适配后的引用,true
   r433,"eden-export-from-report",Eden Run 已有 report,用户触发从图导出,生成 markdown 且无「待接」toast,true
   r433,"eden-export-no-report-error",Eden Run 无 report,用户触发导出,可见错误提示且无 fixture revision 写入,true
+  r434,"drawer-shows-evidence-when-ids-present",Eden Run completed 且某节点 evidenceIds 非空,用户打开该节点抽屉,引用列表展示至少一条证据摘要,true
+  r434,"eden-not-scenario-citations",Eden Lab 已加载 Run,查看 LabNodeDrawer citations 来源,来自 Run 证据映射而非 scenario.citations,true
+  r435,"conclusion-not-queued-after-complete",Run 已 completed,用户查看结论节点卡片,非「排队…」终态文案,true
+  r435,"failed-run-readonly-labels",Run status 为 failed,用户查看图节点,展示失败/终态语义,true
+  r436,"terminal-status-triggers-full-refresh",SSE 将 Run 变为 completed,客户端处理事件,经 GET run 对齐节点 phase 与 evidenceIds,true
+  r436,"graph-patch-merges-evidence-ids",SSE graph_patch 更新节点 evidenceIds,合并后打开抽屉,引用列表反映新 ids,true
+  r437,"awaiting-confirm-no-playing-banner",Run 为 awaiting_confirm,用户查看作业台横幅,示等待确认且无探索 playing 横幅,true
+  r437,"running-shows-playing",Run 为 running,用户查看 playing 状态,playing 为 true 且无「已暂停」横幅,true
