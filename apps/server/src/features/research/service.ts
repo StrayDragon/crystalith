@@ -56,6 +56,7 @@ import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { splitTextToChunks } from '../outputs/render.ts';
 import { applyDecomposePlanToGraph, planTopicDecomposition } from './decompose.ts';
 import { createResearchNodeAgent, proposalFromStructureToolCall } from './node-agent.ts';
+import { hasLiveResearchBranches, orderResearchNodesForWork } from './research-work-queue.ts';
 
 export type SseEmit = (event: string, data: unknown) => void;
 
@@ -803,6 +804,24 @@ async function runNodeWorkUnit(opts: {
   return { evidenceIds, searchesUsed, via };
 }
 
+function patchNodePhase(
+  runId: number,
+  nodeId: string,
+  phase: ResearchNode['phase'],
+): ResearchNode | null {
+  const row = requireFresh(runId);
+  const graph = getGraph(row);
+  const live = graph.nodes.find((n) => n.id === nodeId) as ResearchNode | undefined;
+  if (!live || live.conclusionStatus === 'pruned') return null;
+  const updated: ResearchNode = { ...live, phase };
+  const idx = graph.nodes.findIndex((n) => n.id === updated.id);
+  if (idx >= 0) graph.nodes[idx] = updated;
+  else graph.nodes.push(updated);
+  persistGraph(runId, graph);
+  emitGraphPatch(runId, { nodes: [updated] });
+  return updated;
+}
+
 /** Persist work-unit results onto a live node (discard-if-pruned). */
 function writeBackNodeWork(
   runId: number,
@@ -831,43 +850,59 @@ function writeBackNodeWork(
   return updated;
 }
 
-function researchNodesNeedingWork(nodes: ResearchNode[]): ResearchNode[] {
-  return nodes.filter((n) => {
-    if (resolveNodeRole(n) !== 'research') return false;
-    if (n.conclusionStatus === 'pruned') return false;
-    return !n.evidenceIds?.length || n.phase === 'retrieving';
-  });
-}
-
-/** Serial work units for live research nodes (fork children, etc.). */
+/** Serial work units for live research nodes (c93 branches + fork children). */
 async function drainResearchWorkUnits(runId: number, abortSignal: AbortSignal): Promise<void> {
   while (!abortSignal.aborted && !isCancelled(runId)) {
     const row = requireFresh(runId);
     const graph = getGraph(row);
-    const pending = researchNodesNeedingWork(graph.nodes as ResearchNode[]);
+    // F2=B: stable insertion-order queue (orderResearchNodesForWork)
+    const pending = orderResearchNodesForWork(graph.nodes as ResearchNode[]);
     if (pending.length === 0) return;
     const node = pending[0]!;
+
+    // F4=A: budget exhausted → mark missing and continue (no hard stop here)
     if (row.allowWeb && row.searchesUsed >= row.maxSearches) {
       emitLog(runId, `跳过研究节点 ${node.id}：搜索预算已尽`);
+      appendProgressEvent(runId, 'unit_aborted', {
+        nodeId: node.id,
+        headline: '预算已尽，跳过节点',
+      });
       writeBackNodeWork(runId, node.id, node.evidenceIds ?? []);
       continue;
     }
+
+    patchNodePhase(runId, node.id, 'retrieving');
+    appendProgressEvent(runId, 'node_phase', {
+      nodeId: node.id,
+      headline: 'retrieving',
+      payload: { phase: 'retrieving' },
+    });
+    // unit_started emitted inside runNodeWorkUnit (single ledger entry per unit)
+
+    const fresh = requireFresh(runId);
     const work = await runNodeWorkUnit({
       runId,
-      notebookId: row.notebookId,
+      notebookId: fresh.notebookId,
       node,
-      topic: node.query?.trim() || row.topic,
-      allowWeb: row.allowWeb && row.searchesUsed < row.maxSearches,
-      useNotebookSources: row.useNotebookSources,
-      sourceIds: row.sourceIds ?? null,
-      searchesUsed: row.searchesUsed,
-      maxSearches: row.maxSearches,
+      topic: node.query?.trim() || fresh.topic,
+      allowWeb: fresh.allowWeb && fresh.searchesUsed < fresh.maxSearches,
+      useNotebookSources: fresh.useNotebookSources,
+      sourceIds: fresh.sourceIds ?? null,
+      searchesUsed: fresh.searchesUsed,
+      maxSearches: fresh.maxSearches,
       abortSignal,
     });
     if (abortSignal.aborted || isCancelled(runId)) return;
     const written = writeBackNodeWork(runId, node.id, work.evidenceIds);
     if (!written) {
       emitLog(runId, `研究节点 ${node.id} 已剪枝，跳过写回`);
+      appendProgressEvent(runId, 'unit_skipped_pruned', { nodeId: node.id });
+    } else {
+      appendProgressEvent(runId, 'unit_finished', {
+        nodeId: node.id,
+        headline: written.summary ?? '支路完成',
+        payload: { evidenceCount: work.evidenceIds.length },
+      });
     }
   }
 }
@@ -962,7 +997,8 @@ async function runLoop(runId: number): Promise<void> {
       }
     }
 
-    // discard-if-pruned: question unit skipped when pruned (should not happen for protected)
+    // F1=A: live research branches → skip question work-unit; drain branches only.
+    // No branches → keep question → drain (fork children / empty decompose fallback).
     row = requireFresh(runId);
     graph = getGraph(row);
     question = findQuestionNode(graph.nodes as ResearchNode[])!;
@@ -972,55 +1008,63 @@ async function runLoop(runId: number): Promise<void> {
       return;
     }
 
-    const evidenceIds: string[] = [...(question.evidenceIds ?? [])];
+    const skipQuestionUnit = hasLiveResearchBranches(graph.nodes as ResearchNode[]);
+    if (!skipQuestionUnit) {
+      const evidenceIds: string[] = [...(question.evidenceIds ?? [])];
 
-    // Budget gate before spending search (same semantics as before)
-    if (row.allowWeb) {
-      if (row.searchesUsed >= row.maxSearches) {
-        throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Web search budget exhausted');
+      // Budget gate before spending search (question-only path)
+      if (row.allowWeb) {
+        if (row.searchesUsed >= row.maxSearches) {
+          throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Web search budget exhausted');
+        }
+        const approaching = row.searchesUsed >= Math.max(1, row.maxSearches - 1);
+        if (approaching && row.searchesUsed > 0) {
+          await enterConfirm(runId, 'budget');
+          return;
+        }
       }
-      const approaching = row.searchesUsed >= Math.max(1, row.maxSearches - 1);
-      if (approaching && row.searchesUsed > 0) {
-        await enterConfirm(runId, 'budget');
+
+      const work = await runNodeWorkUnit({
+        runId,
+        notebookId: row.notebookId,
+        node: question,
+        topic: row.topic,
+        allowWeb: row.allowWeb,
+        useNotebookSources: row.useNotebookSources,
+        sourceIds: row.sourceIds ?? null,
+        searchesUsed: row.searchesUsed,
+        maxSearches: row.maxSearches,
+        abortSignal: abort.signal,
+      });
+      evidenceIds.length = 0;
+      evidenceIds.push(...work.evidenceIds);
+      row = requireFresh(runId);
+
+      if (isCancelled(runId) || abort.signal.aborted) {
+        finalizeCancel(runId);
         return;
       }
+
+      row = requireFresh(runId);
+      graph = getGraph(row);
+      const liveQuestion = findQuestionNode(graph.nodes as ResearchNode[]);
+      if (!liveQuestion || liveQuestion.conclusionStatus === 'pruned') {
+        emitLog(runId, '问题节点已剪枝，跳过写回');
+        await synthesizeAndComplete(runId);
+        return;
+      }
+
+      writeBackNodeWork(runId, liveQuestion.id, evidenceIds);
+      row = requireFresh(runId);
+    } else {
+      emitLog(runId, '已有研究支路，跳过问题节点检索，直接调度支路');
+      appendProgressEvent(runId, 'unit_finished', {
+        headline: '跳过问题节点，进入支路调度',
+        payload: { skipQuestion: true },
+      });
     }
 
-    const work = await runNodeWorkUnit({
-      runId,
-      notebookId: row.notebookId,
-      node: question,
-      topic: row.topic,
-      allowWeb: row.allowWeb,
-      useNotebookSources: row.useNotebookSources,
-      sourceIds: row.sourceIds ?? null,
-      searchesUsed: row.searchesUsed,
-      maxSearches: row.maxSearches,
-      abortSignal: abort.signal,
-    });
-    evidenceIds.length = 0;
-    evidenceIds.push(...work.evidenceIds);
-    row = requireFresh(runId);
-
-    if (isCancelled(runId) || abort.signal.aborted) {
-      finalizeCancel(runId);
-      return;
-    }
-
-    // Re-read graph before write (discard-if-pruned / concurrent prune)
-    row = requireFresh(runId);
-    graph = getGraph(row);
-    const liveQuestion = findQuestionNode(graph.nodes as ResearchNode[]);
-    if (!liveQuestion || liveQuestion.conclusionStatus === 'pruned') {
-      emitLog(runId, '问题节点已剪枝，跳过写回');
-      await synthesizeAndComplete(runId);
-      return;
-    }
-
-    writeBackNodeWork(runId, liveQuestion.id, evidenceIds);
-    row = requireFresh(runId);
-
-    // Serial work units for any pending research nodes (e.g. prior forks)
+    // Serial work units for live research nodes (c93 branches + fork children)
     await drainResearchWorkUnits(runId, abort.signal);
     if (isCancelled(runId) || abort.signal.aborted) {
       finalizeCancel(runId);

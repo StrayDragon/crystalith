@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "deep-research-runtime"
 purpose: ResearchRun HTTP/SSE 运行时：创建/列表/图命令口/报告/revisions 与编排约束（对齐 Lab Compose 外网优先默认）
 valid_scope[2]: src/,tests/
-requirements[27]{req_id,title,statement}:
+requirements[28]{req_id,title,statement}:
   r300,ResearchRun is process SSOT,系统 MUST 以 notebook 作用域的 ResearchRun 作为深研过程 SSOT（图、checkpoint、权威报告与 citation map 挂在 Run 上）；MUST NOT 把长跑过程态的唯一权威塞进 Output 行。
   r301,Create replaces 501 stub,"POST /v2/notebooks/:nid/research MUST 在合法 notebook 下创建 ResearchRun 并返回可追踪 id 与初始状态；MUST NOT 再以 501 NOT_IMPLEMENTED 作为成功创建路径。"
   r302,List and get runs for task inbox,系统 MUST 提供 notebook 作用域的 listRuns 与 getRun；缺少 notebook 作用域时 MUST 拒绝全表列举。
@@ -30,7 +30,8 @@ requirements[27]{req_id,title,statement}:
   r324,Align ResearchRun contract to Lab inventory,"系统 MUST 根据 c80 inventory 中标为 fix-api 的项修正 ResearchRun Zod 与 HTTP/SSE 行为，使命令口与 Lab 设计语义一致；MUST 在本变更内使 apps/server/tests/research 全绿；MUST NOT 删除 /v2/notebooks/:nid/research* 主路由面。"
   r325,"Lab-only extras stay documented not silent","对 inventory 标为 lab-only/no-api 的能力，系统 MUST 在合约或 inventory 中显式记录为非 API 权威，MUST NOT 用未文档化的 501 或静默丢字段冒充已支持；标为 defer 的项 MUST 列出后续 change。"
   r326,"Topic auto-decompose after seed","seed 单结论 DAG 完成后，系统 MUST 通过结构化 LLM 规划将主题自动拆解为 research 角色节点：自 question 以 decompose/refine 边扩展，各活研究节点 MUST 以 merge 边汇入唯一 conclusion；节点总数 MUST 受 Run.maxNodes（depth→r305）约束；规划失败或输出非法时 MUST 回退为仅 question work-unit 路径且 MUST NOT 伪造多支路拓扑；拓扑权威 MUST 来自服务端 graph_patch 与 progress ledger，MUST NOT 以前端 timer/phase 为 SSOT；LLM MUST NOT 直接 mutate 图，仅允许经内核规划写回后 emit graph_patch。"
-scenarios[34]{req_id,id,given,when,then,feature}:
+  r327,"Serial branch work-units","系统 MUST 对图中全部非 pruned 的 research 角色节点（不仅 question）串行执行 work-unit：检索/综合、经 writeBackNodeWork 写回 evidence 与 phase，并经 graph_patch 推送增量；调度 MUST 跳过 conclusionStatus=pruned 节点；完成分支波次后 MUST 按既有 M1 语义进入 budget confirm 与 synthesize 收束；MUST NOT 为收束便利删除 research→conclusion 的 merge 边；每单元 MUST 写入 progress ledger（unit_started/unit_finished/unit_skipped_pruned）。"
+scenarios[38]{req_id,id,given,when,then,feature}:
   r300,"run-holds-graph-and-report",用户已创建一次深研 Run,系统推进研究并生成报告,图与权威报告及 citation map 均挂在该 ResearchRun 上，而非仅存在于 Output 行,true
   r301,"create-returns-run-id",notebook 存在且请求合法,客户端 POST 创建深研,系统返回 ResearchRun id 与初始状态且不得以 501 作为成功路径,true
   r302,"list-requires-notebook",系统中存在多个 notebook 的 Run,客户端省略 notebook 作用域调用 list,系统拒绝全表列举,true
@@ -65,3 +66,7 @@ scenarios[34]{req_id,id,given,when,then,feature}:
   r326,"decompose-emits-branches-and-merges",Run 已 seed 且 planner 成功,内核完成拆解,graph 含多个 research 节点、question 发出 decompose 边且各活节点有 merge 至 conclusion,true
   r326,"planner-failure-falls-back-question-only",planner 返回非法或解析失败,runLoop 继续,仅 question 路径执行工作单元且不得假装多分支已成功,true
   r326,"max-nodes-respected",Run depth=shallow 且 maxNodes=12,planner 提议超限支路,服务端裁剪或拒绝扩展且节点数不超过预算,true
+  r327,"drain-all-research-nodes",Run 经拆解含三个活 research 节点,runLoop 执行 drain,"每个节点均完成 work-unit 且 evidenceIds 写回",true
+  r327,"skip-question-when-branches",Run 已拆解出活 research 节点,runLoop 调度,"跳过 question work-unit 且各 research 完成写回",true
+  r327,"skip-pruned-branch-unit",其中一支已被 prune,调度器 drain,pruned 节点被跳过且其余节点仍执行,true
+  r327,"merge-edges-survive-synthesize",各支路已写回证据,Run 进入 synthesize 并完成,所有活 research 至 conclusion 的 merge 边仍存在,true

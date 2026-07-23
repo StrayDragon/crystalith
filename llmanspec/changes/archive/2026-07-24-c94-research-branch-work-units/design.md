@@ -1,23 +1,28 @@
 # Design: c94 Research branch work-units
 
-> **状态**：规划锁定 · Apply 在 `feat/c94-research-branch-work-units`
+> **状态**：规划锁定 · Apply 全程 **main**
+>
+> **Locked 2026-07-24**：F1=A（有支路跳过 question 单元）· F2=B（`graph.nodes` 插入序稳定队列）· F3=A · F4=A
+> **延后**：per-research-node 预算配额；全局 `maxSearches` 加高（另 change）。本变更主线 **先保证支路 work-unit 跑完**，不强化预算回退策略。
 
 ## 1. 调度顺序
 
 ```text
 seed + decompose (c93)
-  → [optional] question work-unit if still pending
-  → drainResearchWorkUnits (extended)
-       for each pending research node (FIFO by graph stable order):
-         skip if pruned
-         skip if budget exhausted (writeBack empty/partial)
-         runNodeWorkUnit → writeBackNodeWork
-         emit progress unit_started / unit_finished
-  → enterConfirm(budget) if web budget semantics hit
-  → synthesizeAndComplete (merge 边保留，报告汇聚)
+  → if live research branches (F1=A): skip question work-unit
+    else: question work-unit → writeBack
+  → drainResearchWorkUnits
+       for each pending research node (insertion-order FIFO):
+         phase=retrieving graph_patch
+         skip if pruned / budget exhausted (writeBack missing; continue)
+         runNodeWorkUnit → writeBackNodeWork (phase=idle)
+         progress unit_started / unit_finished
+  → enterConfirm(budget) if pragmatic M1 still applies
+  → synthesizeAndComplete (merge 边保留)
 ```
 
-**FIFO 键**：优先 `id` 字典序（或 seed 时赋予 `order`）；fork 新增节点追加在队列末尾（与 r318 串行语义一致）。
+**FIFO 键**：`orderResearchNodesForWork(nodes)` — **仅 filter、保 `graph.nodes` 插入序**（decompose/fork 追加顺序）；禁止按 id/title 重排。
+**延后**：per-node 预算配额；全局预算加高。
 
 ## 2. `drainResearchWorkUnits` 交互
 
