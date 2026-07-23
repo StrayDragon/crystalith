@@ -522,9 +522,16 @@ describe('research runtime (c76)', () => {
     );
     expect(confirm.status).toBe(200);
     const run = (await confirm.json()) as {
-      nodes: Array<{ id: string; role?: string }>;
+      status: string;
+      nodes: Array<{
+        id: string;
+        role?: string;
+        evidenceIds?: string[];
+        summary?: string;
+      }>;
       edges: Array<{ source: string; target: string; kind: string }>;
     };
+    expect(run.status).toBe('completed');
     const newResearch = run.nodes.filter((n) => n.role === 'research' && n.id !== 'branch_a');
     expect(newResearch.length).toBeGreaterThanOrEqual(1);
     const childId = newResearch[0]!.id;
@@ -536,6 +543,8 @@ describe('research runtime (c76)', () => {
         (e) => e.source === childId && e.target === 'node_conclusion_1' && e.kind === 'merge',
       ),
     ).toBe(true);
+    const child = run.nodes.find((n) => n.id === childId)!;
+    expect((child.evidenceIds?.length ?? 0) > 0 || child.summary?.includes('已收集')).toBe(true);
   });
 
   it('PATCH updates research node query; rejects pruned and protected', async () => {
