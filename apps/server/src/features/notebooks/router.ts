@@ -30,11 +30,11 @@ const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/notebooks',
     method: 'get',
-    summary: 'List all notebooks',
+    summary: '列出全部笔记本',
     tags: ['notebooks'],
     responses: {
       200: {
-        description: 'List of notebooks',
+        description: '笔记本列表',
         body: NotebookSchema.array(),
         example: [
           {
@@ -50,12 +50,12 @@ const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/notebooks',
     method: 'post',
-    summary: 'Create a notebook',
+    summary: '创建笔记本；可带 templateId 预置会话与来源标签',
     tags: ['notebooks'],
     request: { body: NotebookCreateSchema },
     responses: {
       201: {
-        description: 'Created notebook',
+        description: '已创建的笔记本',
         body: NotebookSchema,
         example: {
           id: 1,
@@ -69,12 +69,12 @@ const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/notebooks/:nid',
     method: 'get',
-    summary: 'Get a notebook by ID',
+    summary: '按 id 获取笔记本',
     tags: ['notebooks'],
     request: { params: { nid: IdSchema.describe(i18nDesc('notebook.id')) } },
     responses: {
       200: {
-        description: 'Notebook',
+        description: '笔记本',
         body: NotebookSchema,
         example: {
           id: 1,
@@ -88,21 +88,21 @@ const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/notebooks/:nid',
     method: 'patch',
-    summary: 'Update a notebook name',
+    summary: '更新笔记本名称',
     tags: ['notebooks'],
     request: {
       params: { nid: IdSchema.describe(i18nDesc('notebook.id')) },
       body: NotebookUpdateSchema,
     },
-    responses: { 200: { description: 'Updated notebook', body: NotebookSchema } },
+    responses: { 200: { description: '已更新的笔记本', body: NotebookSchema } },
   },
   {
     path: '/v2/notebooks/:nid',
     method: 'delete',
-    summary: 'Delete a notebook (cascades)',
+    summary: '删除笔记本及其下属会话、消息、来源等',
     tags: ['notebooks'],
     request: { params: { nid: IdSchema.describe(i18nDesc('notebook.id')) } },
-    responses: { 204: { description: 'Deleted' } },
+    responses: { 204: { description: '已删除' } },
   },
 ];
 

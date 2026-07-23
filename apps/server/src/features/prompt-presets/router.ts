@@ -47,30 +47,30 @@ const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/prompt-presets',
     method: 'get',
-    summary: 'List all prompt presets',
+    summary: '列出提示词预设（/prompt:trigger）',
     tags: ['prompt-presets'],
-    responses: { 200: { description: 'Preset list' } },
+    responses: { 200: { description: '预设列表' } },
   },
   {
     path: '/v2/prompt-presets',
     method: 'post',
-    summary: 'Create a prompt preset',
+    summary: '创建提示词预设',
     tags: ['prompt-presets'],
-    responses: { 201: { description: 'Created preset' } },
+    responses: { 201: { description: '已创建的预设' } },
   },
   {
     path: '/v2/prompt-presets/:id',
     method: 'patch',
-    summary: 'Update a prompt preset',
+    summary: '更新提示词预设',
     tags: ['prompt-presets'],
-    responses: { 200: { description: 'Updated preset' } },
+    responses: { 200: { description: '已更新的预设' } },
   },
   {
     path: '/v2/prompt-presets/:id',
     method: 'delete',
-    summary: 'Delete a prompt preset',
+    summary: '删除提示词预设',
     tags: ['prompt-presets'],
-    responses: { 204: { description: 'Deleted' } },
+    responses: { 204: { description: '已删除' } },
   },
 ];
 

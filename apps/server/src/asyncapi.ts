@@ -4,6 +4,8 @@
 //   - QA interactive generation → POST (large body)
 //   - Research / studio progress on existing resources → GET
 // Paths are notebook-nested after c69.
+//
+// 文案约定与 OpenAPI 一致：中文、干脆，写稳定业务语义；不写 REST/状态码废话。
 export interface AsyncApiChannel {
   name: string;
   description: string;
@@ -19,14 +21,13 @@ export interface AsyncApiChannel {
 
 const QA_STREAM_CHANNEL: AsyncApiChannel = {
   name: 'qaStream',
-  description:
-    'SSE stream of QA response events (chunk, state_snapshot, done, error). POST with JSON body.',
+  description: '笔记本问答 SSE（chunk / state_snapshot / done / error）；POST JSON body',
   address: '/v2/notebooks/{nid}/qa/stream',
   method: 'POST',
   events: [
     {
       name: 'chunk',
-      description: 'A text delta chunk of the streaming answer.',
+      description: '答案文本增量',
       payload: {
         type: 'object',
         properties: { text: { type: 'string' } },
@@ -35,7 +36,7 @@ const QA_STREAM_CHANNEL: AsyncApiChannel = {
     },
     {
       name: 'state_snapshot',
-      description: 'Snapshot of the session state (includes the stable message id).',
+      description: '会话状态快照（含稳定 messageId）',
       payload: {
         type: 'object',
         properties: {
@@ -46,7 +47,7 @@ const QA_STREAM_CHANNEL: AsyncApiChannel = {
     },
     {
       name: 'done',
-      description: 'Final event with citations and the completed message id.',
+      description: '结束事件（引用与完成的 messageId）',
       payload: {
         type: 'object',
         properties: {
@@ -58,7 +59,7 @@ const QA_STREAM_CHANNEL: AsyncApiChannel = {
     },
     {
       name: 'error',
-      description: 'Error event with a human-readable message.',
+      description: '错误（可读 message）',
       payload: {
         type: 'object',
         properties: { message: { type: 'string' }, errorCode: { type: 'string' } },
@@ -70,23 +71,23 @@ const QA_STREAM_CHANNEL: AsyncApiChannel = {
 
 const STUDIO_OUTLINE_STREAM_CHANNEL: AsyncApiChannel = {
   name: 'studioOutlineStream',
-  description: 'SSE stream for slide outline generation on an existing draft. GET subscribe.',
+  description: '幻灯片大纲生成 SSE；对已有草稿 GET 订阅',
   address: '/v2/notebooks/{nid}/studio/slides/{id}/outline/stream',
   method: 'GET',
   events: [
     {
       name: 'chunk',
-      description: 'Outline generation progress / text delta (implementation-defined).',
+      description: '大纲生成进度 / 文本增量',
       payload: { type: 'object' },
     },
     {
       name: 'done',
-      description: 'Outline stream completed.',
+      description: '大纲流结束',
       payload: { type: 'object' },
     },
     {
       name: 'error',
-      description: 'Outline stream error.',
+      description: '大纲流错误',
       payload: {
         type: 'object',
         properties: { message: { type: 'string' } },
@@ -97,23 +98,23 @@ const STUDIO_OUTLINE_STREAM_CHANNEL: AsyncApiChannel = {
 
 const STUDIO_MARKDOWN_STREAM_CHANNEL: AsyncApiChannel = {
   name: 'studioMarkdownStream',
-  description: 'SSE stream for slide markdown generation on an existing draft. GET subscribe.',
+  description: '幻灯片 markdown 生成 SSE；对已有草稿 GET 订阅',
   address: '/v2/notebooks/{nid}/studio/slides/{id}/markdown/stream',
   method: 'GET',
   events: [
     {
       name: 'chunk',
-      description: 'Markdown generation progress / text delta (implementation-defined).',
+      description: 'markdown 生成进度 / 文本增量',
       payload: { type: 'object' },
     },
     {
       name: 'done',
-      description: 'Markdown stream completed.',
+      description: 'markdown 流结束',
       payload: { type: 'object' },
     },
     {
       name: 'error',
-      description: 'Markdown stream error.',
+      description: 'markdown 流错误',
       payload: {
         type: 'object',
         properties: { message: { type: 'string' } },
@@ -124,13 +125,13 @@ const STUDIO_MARKDOWN_STREAM_CHANNEL: AsyncApiChannel = {
 
 const RESEARCH_STREAM_CHANNEL: AsyncApiChannel = {
   name: 'researchStream',
-  description: 'SSE stream for ResearchRun progress (R3b). GET subscribe.',
+  description: 'ResearchRun 进度 SSE；GET 订阅',
   address: '/v2/notebooks/{nid}/research/{rid}/stream',
   method: 'GET',
   events: [
     {
       name: 'status',
-      description: 'ResearchRun status transition.',
+      description: 'ResearchRun 状态迁移',
       payload: {
         type: 'object',
         properties: { status: { type: 'string' }, reason: { type: 'string' } },
@@ -139,17 +140,17 @@ const RESEARCH_STREAM_CHANNEL: AsyncApiChannel = {
     },
     {
       name: 'graph_patch',
-      description: 'Incremental graph upsert/remove (D1).',
+      description: '研究图增量 upsert/remove',
       payload: { type: 'object' },
     },
     {
       name: 'confirm',
-      description: 'M1 hard-stop awaiting user confirm (budget | expand_branch).',
+      description: '硬停待确认（预算 / 扩支）',
       payload: { type: 'object' },
     },
     {
       name: 'report_ready',
-      description: 'Structured report is available on the run.',
+      description: '结构化报告已就绪',
       payload: {
         type: 'object',
         properties: { runId: { type: 'integer' } },
@@ -158,7 +159,7 @@ const RESEARCH_STREAM_CHANNEL: AsyncApiChannel = {
     },
     {
       name: 'log',
-      description: 'Human-readable progress log line.',
+      description: '进度日志行',
       payload: {
         type: 'object',
         properties: { message: { type: 'string' }, at: { type: 'string' } },
@@ -167,7 +168,7 @@ const RESEARCH_STREAM_CHANNEL: AsyncApiChannel = {
     },
     {
       name: 'error',
-      description: 'Error aligned with ErrorEnvelope.',
+      description: '错误（对齐 ErrorEnvelope）',
       payload: {
         type: 'object',
         properties: { errorCode: { type: 'string' }, message: { type: 'string' } },
@@ -193,7 +194,7 @@ export function generateAsyncApiDocument(info?: {
   const {
     title = 'Crystalith v2 Streaming API',
     version = '2.0.0-dev',
-    description = 'SSE streaming channels for QA and studio (c70 verb conventions).',
+    description = 'QA / Studio / Research 的 SSE 通道（c70 动词约定）',
   } = info ?? {};
   const channels: Record<string, unknown> = {};
   for (const ch of ALL_CHANNELS) {

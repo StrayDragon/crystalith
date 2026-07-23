@@ -25,7 +25,7 @@ import { sourceExtrasRouter } from './features/sources/source-extras.router.ts';
 import { studioRouter } from './features/studio/router.ts';
 import { templatesRouter } from './features/templates/router.ts';
 import { workspaceRouter } from './features/workspace/router.ts';
-import { generateOpenApiDocument, registerApiDoc, type OpenApiRoute } from './openapi.ts';
+import { generateOpenApiDocument, registerApiDoc } from './openapi.ts';
 import { getOptionalServices } from './shared/config.ts';
 import { ErrorCode, sendError, AppHttpError } from './shared/errors.ts';
 
@@ -33,16 +33,15 @@ import { ErrorCode, sendError, AppHttpError } from './shared/errors.ts';
 // Scaffold OpenAPI docs
 // ---------------------------------------------------------------------------
 
-const apiDocs: OpenApiRoute[] = [];
-registerApiDoc(apiDocs);
-
-apiDocs.push({
-  path: '/v2/health',
-  method: 'get',
-  summary: 'Health check',
-  tags: ['system'],
-  responses: { 200: { description: 'Server health status' } },
-});
+registerApiDoc([
+  {
+    path: '/v2/health',
+    method: 'get',
+    summary: '服务健康检查',
+    tags: ['system'],
+    responses: { 200: { description: '健康状态' } },
+  },
+]);
 
 // ---------------------------------------------------------------------------
 // App — 16 feature routers

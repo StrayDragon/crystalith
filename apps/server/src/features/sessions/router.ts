@@ -47,7 +47,7 @@ const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/notebooks/:nid/sessions',
     method: 'get',
-    summary: 'List sessions for a notebook',
+    summary: '分页列出笔记本下的会话',
     tags: ['sessions'],
     request: {
       query: {
@@ -55,39 +55,39 @@ const apiDocs: OpenApiRoute[] = [
         limit: PaginationParamsSchema.shape.limit,
       },
     },
-    responses: { 200: { description: 'Paginated session list', body: SessionsPageSchema } },
+    responses: { 200: { description: '会话列表', body: SessionsPageSchema } },
   },
   {
     path: '/v2/notebooks/:nid/sessions',
     method: 'post',
-    summary: 'Create a session in a notebook',
+    summary: '在笔记本下创建会话',
     tags: ['sessions'],
     request: { body: SessionCreateSchema },
-    responses: { 201: { description: 'Created session', body: SessionSchema } },
+    responses: { 201: { description: '已创建的会话', body: SessionSchema } },
   },
   {
     path: '/v2/notebooks/:nid/sessions/:sid',
     method: 'patch',
-    summary: 'Update a session title/state',
+    summary: '更新会话标题或状态',
     tags: ['sessions'],
     request: { body: SessionUpdateSchema },
-    responses: { 200: { description: 'Updated session', body: SessionSchema } },
+    responses: { 200: { description: '已更新的会话', body: SessionSchema } },
   },
   {
     path: '/v2/notebooks/:nid/sessions/:sid',
     method: 'delete',
-    summary: 'Delete a session (cascades messages)',
+    summary: '删除会话及其消息',
     tags: ['sessions'],
-    responses: { 204: { description: 'Deleted' } },
+    responses: { 204: { description: '已删除' } },
   },
   {
     path: '/v2/notebooks/:nid/sessions/:sid/convert-to-source',
     method: 'post',
-    summary: 'Convert session messages to a source with chunking + embedding',
+    summary: '将会话消息转为来源并分块向量化',
     tags: ['sessions'],
     responses: {
       201: {
-        description: 'Created source from session',
+        description: '由会话生成的来源',
         body: SessionConvertToSourceResponseSchema,
       },
     },
@@ -95,9 +95,9 @@ const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/notebooks/:nid/sessions/:sid/convert-to-output',
     method: 'post',
-    summary: 'Convert session messages to an output (paragraph/bullets/structured)',
+    summary: '将会话消息整理为产出（段落/要点/结构化）',
     tags: ['sessions'],
-    responses: { 201: { description: 'Created output from session' } },
+    responses: { 201: { description: '由会话生成的产出' } },
   },
 ];
 

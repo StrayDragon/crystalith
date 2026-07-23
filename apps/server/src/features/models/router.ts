@@ -19,18 +19,18 @@ const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/models',
     method: 'get',
-    summary: 'List available models and defaults',
+    summary: '列出可用模型与默认项（来自配置）',
     tags: ['models'],
     responses: {
-      200: { description: 'Available model configurations', body: ModelListSchema },
+      200: { description: '模型列表', body: ModelListSchema },
     },
   },
   {
     path: '/v2/models/providers',
     method: 'get',
-    summary: 'List supported AI providers',
+    summary: '列出已支持的 AI Provider',
     tags: ['models'],
-    responses: { 200: { description: 'Provider list', body: ModelProvidersResponseSchema } },
+    responses: { 200: { description: 'Provider 列表', body: ModelProvidersResponseSchema } },
   },
 ];
 

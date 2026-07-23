@@ -24,19 +24,19 @@ const apiDocs: OpenApiRoute[] = [
   {
     path: '/v2/workspace/tools',
     method: 'get',
-    summary: 'List workspace tools (output types as tools)',
+    summary: '列出 Workspace 工具（产出类型即工具）',
     tags: ['workspace'],
     responses: {
-      200: { description: 'Tool list with metadata', body: WorkspaceToolsListResponseSchema },
+      200: { description: '工具列表', body: WorkspaceToolsListResponseSchema },
     },
   },
   {
     path: '/v2/workspace/tools/:id/config',
     method: 'get',
-    summary: 'Get tool config by ID',
+    summary: '按 id 获取工具配置 schema',
     tags: ['workspace'],
     responses: {
-      200: { description: 'Tool config', body: WorkspaceToolConfigResponseSchema },
+      200: { description: '工具配置', body: WorkspaceToolConfigResponseSchema },
     },
   },
 ];
