@@ -1,0 +1,9 @@
+kind: llman.sdd.delta
+ops[3]{op,req_id,title,statement,from,to,name}:
+  modify_requirement,r415,Thin client command ports for Lab,"Deep Research Lab 展示层 MUST 以 GET ResearchRun 与 SSE graph_patch/status/confirm 作为图与状态的展示权威；用户剪枝、分叉、确认、取消、转化、节点字段修改 MUST 仅调用对应 HTTP 命令口；客户端 MAY 做可丢弃的本地预览，但在命令响应或后续 graph_patch 到达后 MUST 以服务端结果为准回写；默认生产路径 MUST NOT 将本地定时回放或伪造图作为 Run 的权威状态机（fixture 仅显式非生产开关）。",null,null,null
+  add_requirement,r423,Lab wires via Eden and shared schemas,"Lab 对接 ResearchRun MUST 使用 Eden treaty 与 @crystalith/shared research schemas（及 ErrorEnvelope）；MUST NOT 新增与 shared 同域异形的平行 wire DTO；MUST NOT 删除或绕过 /v2/notebooks/:nid/research*。",null,null,null
+  add_requirement,r424,xlsx-lib fixture is non-authoritative by default,"在默认生产配置下，xlsx-lib fixture MUST NOT 作为研究过程权威；用户在 Lab 主路径执行的图变更 MUST 反映到服务端 Run（经 c81 合约）；fixture 模式若保留 MUST 需显式开关且不可被误认为已接线生产态。",null,null,null
+op_scenarios[3]{req_id,id,given,when,then,feature}:
+  r415,"lab-prune-calls-http","Lab 已订阅 Run SSE 且用户确认剪枝","执行剪枝","发出 POST prune 并以返回或 graph_patch 更新画布",true
+  r423,"lab-uses-eden-not-parallel-dto","Lab 创建或刷新 Run","查看客户端实现","经 Eden + shared 类型，无平行 research DTO 文件",false
+  r424,"default-path-not-fixture-authority","默认配置打开 Lab 主路径并开始研究","推进图状态","权威态来自 ResearchRun 而非 xlsx-lib timer",false
