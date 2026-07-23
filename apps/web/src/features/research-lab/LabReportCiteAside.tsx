@@ -65,7 +65,7 @@ export default function LabReportCiteAside({
       const n = occ.get(citationId) ?? 0;
       occ.set(citationId, n + 1);
       const host = pill.closest('[data-lab-block-id]') as HTMLElement | null;
-      const blockId = host.dataset.labBlockId ?? null;
+      const blockId = host?.dataset.labBlockId ?? null;
       const rect = pill.getBoundingClientRect();
       next.push({
         key: `${citationId}#${n}`,

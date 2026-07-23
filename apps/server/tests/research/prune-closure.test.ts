@@ -2,10 +2,17 @@ import { describe, expect, it } from 'bun:test';
 
 import type { ResearchEdge, ResearchNode } from '@crystalith/shared';
 
-import { collectResearchPruneClosure } from '../../src/features/research/service.ts';
+import {
+  collectResearchPruneClosure,
+  isPruneProtectedNode,
+} from '../../src/features/research/service.ts';
 
-function node(id: string, status: ResearchNode['conclusionStatus'] = 'partial'): ResearchNode {
-  return { id, title: id, conclusionStatus: status };
+function node(
+  id: string,
+  status: ResearchNode['conclusionStatus'] = 'partial',
+  role?: ResearchNode['role'],
+): ResearchNode {
+  return { id, title: id, conclusionStatus: status, ...(role ? { role } : {}) };
 }
 
 function edge(
@@ -61,5 +68,23 @@ describe('collectResearchPruneClosure', () => {
     const nodes = [node('node_root_1'), node('a')];
     const edges = [edge('e1', 'node_root_1', 'a', 'decompose')];
     expect(collectResearchPruneClosure('node_root_1', nodes, edges).size).toBe(0);
+  });
+
+  it('protects role=question/conclusion over non-prefix ids', () => {
+    const q = node('q1', 'partial', 'question');
+    const c = node('sink', 'pending', 'conclusion');
+    const r = node('branch', 'partial', 'research');
+    expect(isPruneProtectedNode(q)).toBe(true);
+    expect(isPruneProtectedNode(c)).toBe(true);
+    expect(isPruneProtectedNode(r)).toBe(false);
+    expect(
+      collectResearchPruneClosure('q1', [q, r, c], [edge('e1', 'q1', 'branch', 'decompose')]).size,
+    ).toBe(0);
+    expect(collectResearchPruneClosure('sink', [q, r, c], []).size).toBe(0);
+  });
+
+  it('role=research wins over misleading conclusion-like id', () => {
+    const n = node('node_conclusion_fake', 'partial', 'research');
+    expect(isPruneProtectedNode(n)).toBe(false);
   });
 });

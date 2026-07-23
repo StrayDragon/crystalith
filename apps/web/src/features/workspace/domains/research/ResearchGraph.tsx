@@ -3,6 +3,8 @@ import {
   Background,
   Controls,
   Handle,
+  MiniMap,
+  Panel,
   Position,
   ReactFlow,
   ReactFlowProvider,
@@ -11,7 +13,7 @@ import {
   type Node,
   type NodeProps,
 } from '@xyflow/react';
-import { useEffect, useMemo, type MouseEvent } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 
 import { TestIds, tid } from '../../../../shared/testids';
 
@@ -19,6 +21,55 @@ import '@xyflow/react/dist/style.css';
 
 /** r414 — shown on conclusion when pruned research still merges in. */
 export const FAILED_MERGE_HINT = '部分汇入失败';
+
+export type ResearchCanvasDirection = 'TB' | 'LR';
+
+export const RESEARCH_CANVAS_PREFS_KEY = 'crystalith.research.canvasPrefs';
+
+export type ResearchCanvasPrefs = {
+  direction: ResearchCanvasDirection;
+  showMiniMap: boolean;
+};
+
+export const DEFAULT_RESEARCH_CANVAS_PREFS: ResearchCanvasPrefs = {
+  direction: 'TB',
+  showMiniMap: true,
+};
+
+/** Pure helper — load canvas prefs from localStorage (C3; no graph API). */
+export function loadResearchCanvasPrefs(
+  storage: Pick<Storage, 'getItem'> | null = typeof localStorage !== 'undefined'
+    ? localStorage
+    : null,
+): ResearchCanvasPrefs {
+  if (!storage) return { ...DEFAULT_RESEARCH_CANVAS_PREFS };
+  try {
+    const raw = storage.getItem(RESEARCH_CANVAS_PREFS_KEY);
+    if (!raw) return { ...DEFAULT_RESEARCH_CANVAS_PREFS };
+    const parsed = JSON.parse(raw) as Partial<ResearchCanvasPrefs>;
+    return {
+      direction: parsed.direction === 'LR' ? 'LR' : 'TB',
+      showMiniMap: parsed.showMiniMap !== false,
+    };
+  } catch {
+    return { ...DEFAULT_RESEARCH_CANVAS_PREFS };
+  }
+}
+
+/** Pure helper — persist canvas prefs (C3; no graph API). */
+export function saveResearchCanvasPrefs(
+  prefs: ResearchCanvasPrefs,
+  storage: Pick<Storage, 'setItem'> | null = typeof localStorage !== 'undefined'
+    ? localStorage
+    : null,
+): void {
+  if (!storage) return;
+  try {
+    storage.setItem(RESEARCH_CANVAS_PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    // quota / private mode — ignore
+  }
+}
 
 const STATUS_STYLE: Record<
   ResearchConclusionStatus,
@@ -39,12 +90,22 @@ type ResearchRfNodeData = {
   highlight?: boolean;
   /** r414 failed-merge footnote on conclusion sink */
   failedMergeHint?: boolean;
+  direction: ResearchCanvasDirection;
 };
 
-/** Conclusion sink: id prefix (c76) or merge-edge target. */
-export function isResearchConclusionNode(nodeId: string, edges: ResearchEdge[]): boolean {
-  if (nodeId.startsWith('node_conclusion')) return true;
-  return edges.some((e) => e.kind === 'merge' && e.target === nodeId);
+/** Conclusion sink: role first, then id prefix (c76) or merge-edge target. */
+export function isResearchConclusionNode(
+  nodeOrId: Pick<ResearchNode, 'id' | 'role'> | string,
+  edges: ResearchEdge[],
+): boolean {
+  if (typeof nodeOrId === 'string') {
+    if (nodeOrId.startsWith('node_conclusion')) return true;
+    return edges.some((e) => e.kind === 'merge' && e.target === nodeOrId);
+  }
+  if (nodeOrId.role === 'conclusion') return true;
+  if (nodeOrId.role === 'question' || nodeOrId.role === 'research') return false;
+  if (nodeOrId.id.startsWith('node_conclusion')) return true;
+  return edges.some((e) => e.kind === 'merge' && e.target === nodeOrId.id);
 }
 
 /**
@@ -61,7 +122,12 @@ export function collectFailedMergeConclusionIds(
     if (e.kind !== 'merge') continue;
     const src = byId.get(e.source);
     if (!src || src.conclusionStatus !== 'pruned') continue;
-    if (!isResearchConclusionNode(e.target, edges)) continue;
+    const target = byId.get(e.target);
+    if (
+      target ? !isResearchConclusionNode(target, edges) : !isResearchConclusionNode(e.target, edges)
+    ) {
+      continue;
+    }
     out.add(e.target);
   }
   return out;
@@ -76,6 +142,7 @@ function edgeLabel(e: ResearchEdge): string {
 function ResearchFlowNode({ data }: NodeProps) {
   const d = data as ResearchRfNodeData;
   const style = STATUS_STYLE[d.conclusionStatus] ?? STATUS_STYLE.pending;
+  const tb = d.direction !== 'LR';
   return (
     <div
       className="rounded-lg border-2 px-3 py-2 text-xs shadow-sm min-w-[120px] max-w-[180px]"
@@ -86,13 +153,21 @@ function ResearchFlowNode({ data }: NodeProps) {
         boxShadow: d.selected ? '0 0 0 2px #6366f1' : undefined,
       }}
     >
-      <Handle type="target" position={Position.Top} className="!bg-slate-400" />
+      <Handle
+        type="target"
+        position={tb ? Position.Top : Position.Left}
+        className="!bg-slate-400"
+      />
       <div className="font-medium text-slate-800 truncate">{d.title}</div>
       {d.failedMergeHint ? (
         <div className="text-[10px] text-amber-700 mt-0.5">{FAILED_MERGE_HINT}</div>
       ) : null}
       {d.phase ? <div className="text-[10px] text-slate-500 mt-0.5">{d.phase}</div> : null}
-      <Handle type="source" position={Position.Bottom} className="!bg-slate-400" />
+      <Handle
+        type="source"
+        position={tb ? Position.Bottom : Position.Right}
+        className="!bg-slate-400"
+      />
     </div>
   );
 }
@@ -102,6 +177,7 @@ const nodeTypes = { research: ResearchFlowNode };
 function layoutNodes(
   researchNodes: ResearchNode[],
   researchEdges: ResearchEdge[],
+  direction: ResearchCanvasDirection,
 ): { nodes: Node[]; edges: Edge[] } {
   const children = new Map<string, string[]>();
   const hasParent = new Set<string>();
@@ -136,23 +212,28 @@ function layoutNodes(
   const failedMergeConclusions = collectFailedMergeConclusionIds(researchNodes, researchEdges);
   const byId = new Map(researchNodes.map((n) => [n.id, n]));
 
-  const X_GAP = 200;
-  const Y_GAP = 110;
+  const PRIMARY_GAP = 200;
+  const DEPTH_GAP = 110;
   const nodes: Node[] = researchNodes.map((n) => {
     const d = depth.get(n.id) ?? 0;
     const siblings = byDepth.get(d) ?? [n.id];
     const idx = siblings.indexOf(n.id);
-    const x = (idx - (siblings.length - 1) / 2) * X_GAP;
-    const y = d * Y_GAP;
+    const along = (idx - (siblings.length - 1) / 2) * PRIMARY_GAP;
+    const across = d * DEPTH_GAP;
+    const x = direction === 'TB' ? along : across;
+    const y = direction === 'TB' ? across : along;
     return {
       id: n.id,
       type: 'research',
       position: { x, y },
+      sourcePosition: direction === 'TB' ? Position.Bottom : Position.Right,
+      targetPosition: direction === 'TB' ? Position.Top : Position.Left,
       data: {
         title: n.title,
         conclusionStatus: n.conclusionStatus,
         phase: n.phase,
         failedMergeHint: failedMergeConclusions.has(n.id),
+        direction,
       } satisfies ResearchRfNodeData,
     };
   });
@@ -179,6 +260,55 @@ function layoutNodes(
   return { nodes, edges };
 }
 
+function CanvasPrefsPanel({
+  prefs,
+  onChange,
+}: {
+  prefs: ResearchCanvasPrefs;
+  onChange: (next: ResearchCanvasPrefs) => void;
+}) {
+  return (
+    <div
+      className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white/95 p-1 shadow-sm"
+      {...tid(TestIds.researchCanvasSettings)}
+    >
+      <button
+        type="button"
+        title="上下布局（TB）"
+        className={`h-7 rounded-md px-2 text-[10px] font-medium ${
+          prefs.direction === 'TB' ? 'bg-slate-900 text-white' : 'text-gray-500 hover:bg-gray-50'
+        }`}
+        onClick={() => onChange({ ...prefs, direction: 'TB' })}
+        {...tid(TestIds.researchCanvasLayoutTb)}
+      >
+        TB
+      </button>
+      <button
+        type="button"
+        title="左右布局（LR）"
+        className={`h-7 rounded-md px-2 text-[10px] font-medium ${
+          prefs.direction === 'LR' ? 'bg-slate-900 text-white' : 'text-gray-500 hover:bg-gray-50'
+        }`}
+        onClick={() => onChange({ ...prefs, direction: 'LR' })}
+        {...tid(TestIds.researchCanvasLayoutLr)}
+      >
+        LR
+      </button>
+      <button
+        type="button"
+        title={prefs.showMiniMap ? '隐藏小地图' : '显示小地图'}
+        className={`h-7 rounded-md px-2 text-[10px] font-medium ${
+          prefs.showMiniMap ? 'bg-slate-900 text-white' : 'text-gray-500 hover:bg-gray-50'
+        }`}
+        onClick={() => onChange({ ...prefs, showMiniMap: !prefs.showMiniMap })}
+        {...tid(TestIds.researchCanvasMinimap)}
+      >
+        小地图
+      </button>
+    </div>
+  );
+}
+
 function InnerGraph({
   researchNodes,
   researchEdges,
@@ -186,6 +316,8 @@ function InnerGraph({
   highlightNodeId,
   readOnly,
   onSelectNode,
+  prefs,
+  onPrefsChange,
 }: {
   researchNodes: ResearchNode[];
   researchEdges: ResearchEdge[];
@@ -193,11 +325,13 @@ function InnerGraph({
   highlightNodeId?: string | null;
   readOnly: boolean;
   onSelectNode: (nodeId: string | null) => void;
+  prefs: ResearchCanvasPrefs;
+  onPrefsChange: (next: ResearchCanvasPrefs) => void;
 }) {
   const { fitView } = useReactFlow();
   const { nodes: baseNodes, edges } = useMemo(
-    () => layoutNodes(researchNodes, researchEdges),
-    [researchNodes, researchEdges],
+    () => layoutNodes(researchNodes, researchEdges, prefs.direction),
+    [researchNodes, researchEdges, prefs.direction],
   );
 
   const nodes = useMemo(
@@ -208,9 +342,10 @@ function InnerGraph({
           ...(n.data as ResearchRfNodeData),
           selected: n.id === selectedNodeId,
           highlight: n.id === highlightNodeId,
+          direction: prefs.direction,
         },
       })),
-    [baseNodes, selectedNodeId, highlightNodeId],
+    [baseNodes, selectedNodeId, highlightNodeId, prefs.direction],
   );
 
   useEffect(() => {
@@ -218,7 +353,7 @@ function InnerGraph({
       void fitView({ padding: 0.2 });
     }, 80);
     return () => window.clearTimeout(t);
-  }, [nodes.length, edges.length, fitView]);
+  }, [nodes.length, edges.length, prefs.direction, fitView]);
 
   const onNodeClick = (_: MouseEvent, node: Node) => {
     onSelectNode(node.id);
@@ -244,6 +379,12 @@ function InnerGraph({
     >
       <Background gap={16} size={1} />
       <Controls showInteractive={false} />
+      {prefs.showMiniMap ? (
+        <MiniMap pannable zoomable className="!bg-white/90 !border !border-gray-200 !rounded-lg" />
+      ) : null}
+      <Panel position="bottom-left" className="mb-1 ml-1">
+        <CanvasPrefsPanel prefs={prefs} onChange={onPrefsChange} />
+      </Panel>
     </ReactFlow>
   );
 }
@@ -267,6 +408,13 @@ export default function ResearchGraph({
   onSelectNode,
   className,
 }: ResearchGraphProps) {
+  const [prefs, setPrefs] = useState<ResearchCanvasPrefs>(() => loadResearchCanvasPrefs());
+
+  const onPrefsChange = (next: ResearchCanvasPrefs) => {
+    setPrefs(next);
+    saveResearchCanvasPrefs(next);
+  };
+
   return (
     <div className={className ?? 'h-full w-full min-h-[280px]'} {...tid(TestIds.researchGraph)}>
       <ReactFlowProvider>
@@ -277,6 +425,8 @@ export default function ResearchGraph({
           highlightNodeId={highlightNodeId}
           readOnly={readOnly}
           onSelectNode={onSelectNode}
+          prefs={prefs}
+          onPrefsChange={onPrefsChange}
         />
       </ReactFlowProvider>
     </div>

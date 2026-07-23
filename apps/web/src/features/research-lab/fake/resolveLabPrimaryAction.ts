@@ -34,7 +34,7 @@ export interface LabPrimaryAction {
   };
 }
 
-const RUNNING_PHASES: LabPhase[] = new Set(['decompose', 'explore', 'evaluate', 'integrate']);
+const RUNNING_PHASES = new Set<LabPhase>(['decompose', 'explore', 'evaluate', 'integrate']);
 
 export function resolveLabPrimaryAction(input: LabPrimaryActionInput): LabPrimaryAction {
   const { phase, playing, reshaping, hasTopic, conclusionNodeId, selectedNodeId, selectedRole } =
