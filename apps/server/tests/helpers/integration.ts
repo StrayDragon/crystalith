@@ -104,11 +104,52 @@ export function installAiMock(opts: AiMockOptions): void {
       async generate(_args?: { prompt?: string }) {
         return { text };
       }
-      async stream(args?: { prompt?: string; options?: { mode?: string } }) {
+      async stream(args?: {
+        prompt?: string;
+        options?: {
+          mode?: string;
+          allowWeb?: boolean;
+          useNotebookSources?: boolean;
+        };
+      }) {
         const prompt = typeof args?.prompt === 'string' ? args.prompt : '';
-        const parts: Array<Record<string, unknown>> = [
-          { type: 'text-delta', text: `agent:${text}` },
-        ];
+        const parts: Array<Record<string, unknown>> = [];
+        // Work-unit path: emit tool-results so kernel can collect evidence (c78)
+        if (args?.options?.mode === 'work_unit') {
+          if (args.options.useNotebookSources) {
+            parts.push({
+              type: 'tool-result',
+              toolName: 'retrieveSources',
+              output: [
+                {
+                  chunkId: 1,
+                  chunkIndex: 0,
+                  sourceId: 1,
+                  sourceName: 'seed.md',
+                  text: 'Mock notebook chunk about the topic.',
+                  score: 0.9,
+                },
+              ],
+            });
+          }
+          if (args.options.allowWeb) {
+            parts.push({
+              type: 'tool-result',
+              toolName: 'webSearch',
+              output: [
+                {
+                  title: 'Mock Web Result',
+                  url: 'https://example.com/mock',
+                  snippet: 'Mock snippet about the topic.',
+                  source: 'mock',
+                },
+              ],
+            });
+          }
+          parts.push({ type: 'text-delta', text: `agent-work:${text}` });
+        } else {
+          parts.push({ type: 'text-delta', text: `agent:${text}` });
+        }
         // Structure approval path for node_chat prune intents (c78 ToolLoopAgent)
         if (args?.options?.mode === 'node_chat' && /prune|剪枝/iu.test(prompt)) {
           parts.push({
@@ -129,7 +170,7 @@ export function installAiMock(opts: AiMockOptions): void {
           stream: make(),
           fullStream: make(),
           textStream: (async function* () {
-            yield `agent:${text}`;
+            yield parts.find((p) => p.type === 'text-delta')?.text ?? text;
           })(),
         };
       }

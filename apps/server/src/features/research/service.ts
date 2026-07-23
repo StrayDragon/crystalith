@@ -550,6 +550,232 @@ export function scheduleRun(runId: number): void {
   });
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Apply a Work tool result into research_evidences; returns new evidence ids + search delta. */
+function ingestWorkToolResult(
+  runId: number,
+  notebookId: number,
+  nodeId: string,
+  toolName: string,
+  output: unknown,
+): { evidenceIds: string[]; searchesDelta: number } {
+  const evidenceIds: string[] = [];
+  let searchesDelta = 0;
+  if (toolName === 'webSearch' && Array.isArray(output)) {
+    searchesDelta = 1;
+    for (const item of output) {
+      if (!isRecord(item)) continue;
+      const ev = insertEvidence(runId, notebookId, {
+        kind: 'web',
+        title: typeof item.title === 'string' ? item.title : String(item.url ?? 'web'),
+        snippet: typeof item.snippet === 'string' ? item.snippet : undefined,
+        url: typeof item.url === 'string' ? item.url : undefined,
+        collectedAtNodeId: nodeId,
+      });
+      evidenceIds.push(ev.id);
+    }
+  } else if (toolName === 'retrieveSources' && Array.isArray(output)) {
+    for (const item of output) {
+      if (!isRecord(item)) continue;
+      const sourceId = typeof item.sourceId === 'number' ? item.sourceId : undefined;
+      const chunkId =
+        typeof item.chunkId === 'number' || typeof item.chunkId === 'string'
+          ? String(item.chunkId)
+          : undefined;
+      const chunkIndex = typeof item.chunkIndex === 'number' ? item.chunkIndex : 0;
+      const text = typeof item.text === 'string' ? item.text : '';
+      const ev = insertEvidence(runId, notebookId, {
+        kind: 'chunk',
+        title: `来源 ${sourceId ?? '?'} · chunk ${chunkIndex}`,
+        snippet: text.slice(0, 500),
+        sourceId,
+        chunkId,
+        collectedAtNodeId: nodeId,
+      });
+      evidenceIds.push(ev.id);
+    }
+  }
+  return { evidenceIds, searchesDelta };
+}
+
+/**
+ * Node work-unit via ToolLoopAgent (mode=work_unit). Falls back to pragmatic
+ * RAG/searchWeb when no model / agent fails / no tool results collected.
+ */
+async function runNodeWorkUnit(opts: {
+  runId: number;
+  notebookId: number;
+  node: ResearchNode;
+  topic: string;
+  allowWeb: boolean;
+  useNotebookSources: boolean;
+  sourceIds: number[] | null;
+  searchesUsed: number;
+  maxSearches: number;
+  abortSignal: AbortSignal;
+}): Promise<{ evidenceIds: string[]; searchesUsed: number; via: 'agent' | 'pragmatic' }> {
+  const {
+    runId,
+    notebookId,
+    node,
+    topic,
+    allowWeb,
+    useNotebookSources,
+    sourceIds,
+    maxSearches,
+    abortSignal,
+  } = opts;
+  let searchesUsed = opts.searchesUsed;
+  const evidenceIds: string[] = [...(node.evidenceIds ?? [])];
+  const role = resolveNodeRole(node);
+
+  updateRun(runId, { llmActivity: 'work_unit', activeNodeId: node.id });
+  appendProgressEvent(runId, 'unit_started', {
+    nodeId: node.id,
+    headline: `work_unit:${node.id}`,
+  });
+
+  const agent = await createResearchNodeAgent(notebookId);
+  let via: 'agent' | 'pragmatic' = 'pragmatic';
+  let toolHits = 0;
+
+  if (agent) {
+    try {
+      const result = await agent.stream({
+        prompt: [
+          `研究主题：${topic}`,
+          `节点：${node.title}`,
+          node.query ? `查询：${node.query}` : '',
+          '请使用可用工具收集证据，然后用一两句话总结。',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+        abortSignal,
+        options: {
+          mode: 'work_unit',
+          role,
+          nodeId: node.id,
+          nodeTitle: node.title,
+          nodeQuery: node.query,
+          allowWeb,
+          useNotebookSources: useNotebookSources && Boolean(sourceIds?.length),
+        } as never,
+      });
+
+      for await (const part of result.stream) {
+        if (abortSignal.aborted || isCancelled(runId)) break;
+        if (part.type === 'tool-result') {
+          const toolName = 'toolName' in part ? String(part.toolName) : '';
+          const output = 'output' in part ? part.output : undefined;
+          if (toolName === 'webSearch') {
+            if (searchesUsed >= maxSearches) {
+              throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Web search budget exhausted');
+            }
+          }
+          const ingested = ingestWorkToolResult(runId, notebookId, node.id, toolName, output);
+          evidenceIds.push(...ingested.evidenceIds);
+          if (ingested.searchesDelta > 0) {
+            searchesUsed += ingested.searchesDelta;
+            updateRun(runId, { searchesUsed });
+          }
+          if (ingested.evidenceIds.length) toolHits += 1;
+          emitLog(
+            runId,
+            toolName === 'webSearch'
+              ? `外网检索：${ingested.evidenceIds.length} 条`
+              : toolName === 'retrieveSources'
+                ? `检索笔记本：${ingested.evidenceIds.length} 条`
+                : `工具 ${toolName} 完成`,
+          );
+        } else if (part.type === 'text-delta') {
+          // work-unit text is logged lightly; report synthesis stays deterministic
+        } else if (part.type === 'error') {
+          throw new Error(
+            'error' in part && part.error instanceof Error
+              ? part.error.message
+              : 'work_unit generation error',
+          );
+        }
+      }
+      via = 'agent';
+    } catch (error) {
+      if (abortSignal.aborted || isCancelled(runId)) throw error;
+      console.warn('[research] work_unit agent failed; using pragmatic path:', error);
+      via = 'pragmatic';
+      toolHits = 0;
+    }
+  }
+
+  const needsPragmatic =
+    via === 'pragmatic' ||
+    (toolHits === 0 && (allowWeb || (useNotebookSources && Boolean(sourceIds?.length))));
+
+  if (needsPragmatic && !abortSignal.aborted && !isCancelled(runId)) {
+    via = 'pragmatic';
+    // Notebook retrieve
+    if (useNotebookSources && sourceIds?.length) {
+      try {
+        const hits = await ragRegistry.retrieveWith('embed', notebookId, topic, {
+          topK: 5,
+          minScore: 0,
+          sourceIds,
+        });
+        for (const hit of hits) {
+          if (isCancelled(runId) || abortSignal.aborted) break;
+          const ev = insertEvidence(runId, notebookId, {
+            kind: 'chunk',
+            title: `来源 ${hit.sourceId} · chunk ${hit.chunkIndex}`,
+            snippet: hit.text.slice(0, 500),
+            sourceId: hit.sourceId,
+            chunkId: String(hit.chunkId),
+            collectedAtNodeId: node.id,
+          });
+          evidenceIds.push(ev.id);
+        }
+        emitLog(runId, `检索笔记本：${hits.length} 条`);
+      } catch (error) {
+        emitLog(runId, `笔记本检索失败：${String(error)}`);
+      }
+    }
+
+    if (allowWeb) {
+      if (searchesUsed >= maxSearches) {
+        throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Web search budget exhausted');
+      }
+      try {
+        const results = await searchWeb(topic, { maxResults: 5 });
+        searchesUsed += 1;
+        updateRun(runId, { searchesUsed });
+        for (const item of results) {
+          const ev = insertEvidence(runId, notebookId, {
+            kind: 'web',
+            title: item.title || item.url,
+            snippet: item.snippet,
+            url: item.url,
+            collectedAtNodeId: node.id,
+          });
+          evidenceIds.push(ev.id);
+        }
+        emitLog(runId, `外网检索：${results.length} 条`);
+      } catch (error) {
+        if (error instanceof AppHttpError) throw error;
+        emitLog(runId, `外网检索失败：${String(error)}`);
+      }
+    }
+  }
+
+  appendProgressEvent(runId, 'unit_finished', {
+    nodeId: node.id,
+    headline: `work_unit done (${via})`,
+    payload: { evidenceCount: evidenceIds.length, via },
+  });
+
+  return { evidenceIds, searchesUsed, via };
+}
+
 async function runLoop(runId: number): Promise<void> {
   if (activeLoops.has(runId)) return;
   activeLoops.add(runId);
@@ -600,73 +826,33 @@ async function runLoop(runId: number): Promise<void> {
 
     const evidenceIds: string[] = [...(question.evidenceIds ?? [])];
 
-    // Notebook retrieve (pragmatic: still on question node)
-    if (row.useNotebookSources && row.sourceIds?.length) {
-      try {
-        if (abort.signal.aborted || isCancelled(runId)) {
-          finalizeCancel(runId);
-          return;
-        }
-        const hits = await ragRegistry.retrieveWith('embed', row.notebookId, row.topic, {
-          topK: 5,
-          minScore: 0,
-          sourceIds: row.sourceIds,
-        });
-        for (const hit of hits) {
-          if (isCancelled(runId) || abort.signal.aborted) {
-            finalizeCancel(runId);
-            return;
-          }
-          const ev = insertEvidence(runId, row.notebookId, {
-            kind: 'chunk',
-            title: `来源 ${hit.sourceId} · chunk ${hit.chunkIndex}`,
-            snippet: hit.text.slice(0, 500),
-            sourceId: hit.sourceId,
-            chunkId: String(hit.chunkId),
-            collectedAtNodeId: question.id,
-          });
-          evidenceIds.push(ev.id);
-        }
-        emitLog(runId, `检索笔记本：${hits.length} 条`);
-      } catch (error) {
-        emitLog(runId, `笔记本检索失败：${String(error)}`);
-      }
-    }
-
-    // Web search (reuse searchWeb)
+    // Budget gate before spending search (same semantics as before)
     if (row.allowWeb) {
       if (row.searchesUsed >= row.maxSearches) {
         throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Web search budget exhausted');
       }
-      // Approaching budget: pause for M1 before spending the last search slots
       const approaching = row.searchesUsed >= Math.max(1, row.maxSearches - 1);
       if (approaching && row.searchesUsed > 0) {
         await enterConfirm(runId, 'budget');
         return;
       }
-      try {
-        if (abort.signal.aborted || isCancelled(runId)) {
-          finalizeCancel(runId);
-          return;
-        }
-        const results = await searchWeb(row.topic, { maxResults: 5 });
-        row = updateRun(runId, { searchesUsed: row.searchesUsed + 1 });
-        for (const item of results) {
-          const ev = insertEvidence(runId, row.notebookId, {
-            kind: 'web',
-            title: item.title || item.url,
-            snippet: item.snippet,
-            url: item.url,
-            collectedAtNodeId: question.id,
-          });
-          evidenceIds.push(ev.id);
-        }
-        emitLog(runId, `外网检索：${results.length} 条`);
-      } catch (error) {
-        if (error instanceof AppHttpError) throw error;
-        emitLog(runId, `外网检索失败：${String(error)}`);
-      }
     }
+
+    const work = await runNodeWorkUnit({
+      runId,
+      notebookId: row.notebookId,
+      node: question,
+      topic: row.topic,
+      allowWeb: row.allowWeb,
+      useNotebookSources: row.useNotebookSources,
+      sourceIds: row.sourceIds ?? null,
+      searchesUsed: row.searchesUsed,
+      maxSearches: row.maxSearches,
+      abortSignal: abort.signal,
+    });
+    evidenceIds.length = 0;
+    evidenceIds.push(...work.evidenceIds);
+    row = requireFresh(runId);
 
     if (isCancelled(runId) || abort.signal.aborted) {
       finalizeCancel(runId);
@@ -815,33 +1001,45 @@ export async function confirmRun(
     });
     emitStatus(runId, 'running', body.action);
     if (body.action === 'continue') {
-      // One more optional search then report (stay under budget)
+      // One more work-unit then report (stay under budget)
       const latest = requireRun(notebookId, runId);
-      if (latest.allowWeb && latest.searchesUsed < latest.maxSearches) {
+      const graph = getGraph(latest);
+      const root =
+        findQuestionNode(graph.nodes as ResearchNode[]) ??
+        (graph.nodes[0] as ResearchNode | undefined);
+      if (root && (latest.allowWeb || latest.useNotebookSources)) {
+        const abort = ensureRunAbortController(runId);
         try {
-          const results = await searchWeb(latest.topic, { maxResults: 3 });
-          updateRun(runId, { searchesUsed: latest.searchesUsed + 1 });
-          const graph = getGraph(latest);
-          const root = findQuestionNode(graph.nodes as ResearchNode[]) ?? graph.nodes[0];
-          for (const item of results) {
-            const ev = insertEvidence(runId, notebookId, {
-              kind: 'web',
-              title: item.title || item.url,
-              snippet: item.snippet,
-              url: item.url,
-              collectedAtNodeId: root?.id,
-            });
-            if (root) {
-              root.evidenceIds = [...(root.evidenceIds ?? []), ev.id];
-            }
+          const work = await runNodeWorkUnit({
+            runId,
+            notebookId,
+            node: root,
+            topic: latest.topic,
+            allowWeb: latest.allowWeb && latest.searchesUsed < latest.maxSearches,
+            useNotebookSources: latest.useNotebookSources,
+            sourceIds: latest.sourceIds ?? null,
+            searchesUsed: latest.searchesUsed,
+            maxSearches: latest.maxSearches,
+            abortSignal: abort.signal,
+          });
+          const fresh = getGraph(requireFresh(runId));
+          const live =
+            findQuestionNode(fresh.nodes as ResearchNode[]) ??
+            fresh.nodes.find((n) => n.id === root.id);
+          if (live) {
+            live.evidenceIds = work.evidenceIds;
+            live.summary = work.evidenceIds.length
+              ? `已收集 ${work.evidenceIds.length} 条证据`
+              : live.summary;
+            persistGraph(runId, fresh);
+            emitGraphPatch(runId, { nodes: [live] });
           }
-          if (root) {
-            persistGraph(runId, graph);
-            emitGraphPatch(runId, { nodes: [root as ResearchNode] });
-          }
-          emitLog(runId, `继续检索：${results.length} 条`);
         } catch (error) {
-          emitLog(runId, `继续检索失败：${String(error)}`);
+          if (error instanceof AppHttpError && error.code === ErrorCode.RESEARCH_BUDGET) {
+            emitLog(runId, '继续检索跳过：预算已尽');
+          } else {
+            emitLog(runId, `继续检索失败：${String(error)}`);
+          }
         }
       }
     }
