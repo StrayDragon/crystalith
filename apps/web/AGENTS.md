@@ -30,7 +30,7 @@
 
 - 剪枝闭包 **B** 与 server `collectResearchPruneClosure` 对齐（`fake/deriveLabState`）；变更走 `llmanspec/changes/update-research-prune-cascade`
 - 接 Eden 时：保留 `LabGraph` / 报告 Plate 等展示层，替换 `fake/` 下 controller / data 端口
-- 顶栏搜索仅为 Fast 网搜；勿再挂载已退役的 DeepResearchDesk
+- 顶栏搜索仅为 Fast 网搜；深研走烧瓶 → Lab 空态 Compose →（演示）xlsx-lib 回放
 
 ## Build, Test, and Development Commands
 

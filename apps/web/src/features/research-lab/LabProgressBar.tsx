@@ -49,7 +49,7 @@ export default function LabProgressBar({
   return (
     <div
       ref={rootRef}
-      className="relative mx-2 min-w-0 max-w-xl flex-1"
+      className="relative mx-2 min-w-0 flex-1"
       {...tid(TestIds.researchLabProgress)}
     >
       <button

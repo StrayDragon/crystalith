@@ -122,7 +122,7 @@ export default function LabControlConsole({ lab }: { lab: LabController }) {
         <DragIndicatorIcon sx={{ fontSize: 14, color: '#9ca3af' }} />
         <div className="min-w-0 flex-1 text-[11px] font-semibold text-gray-800">
           试验控制台
-          <span className="ml-1 font-normal text-gray-400">· Fake</span>
+          <span className="ml-1 font-normal text-gray-400">· 高级</span>
         </div>
         <button
           type="button"
@@ -141,7 +141,7 @@ export default function LabControlConsole({ lab }: { lab: LabController }) {
         <div className="space-y-3 overflow-y-auto px-3 py-2 text-xs">
           <section>
             <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-              场景
+              Fixture 场景（演示）
             </div>
             <div className="flex flex-col gap-1">
               {lab.scenarios.map((s) => (

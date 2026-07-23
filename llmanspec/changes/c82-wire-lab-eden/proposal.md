@@ -4,29 +4,35 @@ depends_on: [c81-align-lab-research-api]
 
 ## Why
 
-c81 已把 ResearchRun 合约与测试对齐 Lab 盘点。需要把 Lab 的 `LabSessionPort` 从 **xlsx-lib fixture 权威**切换为 **Eden + shared 校验后的 ResearchRun 权威**，完成「按 Lab 设计实现、与现有后端结合」。
+c81 已把 ResearchRun 合约与测试对齐 Lab 盘点（含任务列表 list/create）。需要把 Lab 的 `LabSessionPort` 从 **xlsx-lib / demoResearchTasks 权威**切换为 **Eden + shared 校验后的 ResearchRun 权威**，打通闭环：Compose 真创建 → 任务抽屉真 list → Lab 真图流。
 
 ## What Changes
 
-1. **Eden 接线**：Lab 展示层经 port 调用 `…/research*`（create/list/get/stream/prune/fork/PATCH/chat/confirm/revisions/report/progress/convert）；以 SSE `graph_patch`/status/confirm 为图与状态权威。
-2. **shared validate**：请求/关键以 `@crystalith/shared` research schemas 为准；FE 不平行第二套 DTO；Eden 推断类型 + 必要的运行时错误信封处理。
-3. **Fixture 降级**：xlsx-lib 可保留为 demo/离线，但生产主路径 MUST NOT 以 timer/本地伪造为权威（对齐 r415）。
-4. **质量**：Lab Vitest + 定向 e2e；`just qa` 相关子集；可选 smoke 脚本（慢模型不阻塞出门，但合约测必须绿）。
+1. **Eden 接线**：
+   - Compose → `POST …/research`
+   - 任务抽屉（工作区头像旁 **与 Lab 顶栏最右**）→ `GET …/research`（+ 可选 status 过滤/摘要）
+   - 切换任务 → `GET …/:rid` + `stream`
+   - 图表面 → prune/fork/PATCH/chat/confirm/revisions/report/progress/convert
+2. **shared validate**：`@crystalith/shared` research schemas；无平行 wire DTO。
+3. **Fixture 降级**：xlsx-lib / demoResearchTasks 仅 `CL_LAB_FIXTURE=1`（或等价）；默认 MUST NOT timer/本地伪造为权威。
+4. **入口**：Compose + 烧瓶/抽屉；**不含**对话 `@`/`/`（明确延后另 change）。
+5. **质量**：Lab Vitest + 定向 e2e（任务抽屉打开/切换；Compose 创建后 badge）；server research 回归绿。
 
 ## Capabilities
 
-- `deep-research-ui` — Lab ↔ Eden 薄客户端
-- `frontend-eden-migration` — 若需补充 Eden 使用约束则最小 delta
+- `deep-research-ui` — Lab ↔ Eden（Compose + 任务队列 + 作业台）
+- `frontend-eden-migration` — 若需补充 Eden 约束则最小 delta
 
 ## Impact
 
 - depends_on `c81-align-lab-research-api`
-- 深研主路径：Lab UI + 真 ResearchRun
-- BREAKING：依赖后端与模型可用；fixture-only 演示需显式开关
+- 深研主路径：真 ResearchRun + Lab UI + 统一任务列表
+- BREAKING：依赖后端与模型；fixture-only 需显式开关
 
 ## Seams
 
-- Eden treaty research 路径
-- SSE 解析与 `applyGraphPatch`
+- Eden treaty research 路径（create/list/get/stream/…）
+- 任务抽屉数据源切换 demo → listRuns
+- SSE / `applyGraphPatch`
 - shared `Research*` 类型
-- 不含：sources.search Deep mode（已废）
+- 不含：sources.search Deep mode（已废）；对话 `@`/`/` 嵌入

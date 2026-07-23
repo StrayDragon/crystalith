@@ -35,6 +35,10 @@ export interface LabSessionSnapshot {
   mutations: LabGraphMutations;
   topicDraft: string;
   forkSeq: number;
+  /** Compose: mirror ResearchCreate channels (demo until Eden create). */
+  useNotebookSources: boolean;
+  allowWeb: boolean;
+  selectedSourceIds: number[];
 }
 
 export function persistLabScenarioId(scenarioId: string): void {
@@ -73,9 +77,13 @@ export function readLabSessionSnapshot(): LabSessionSnapshot | null {
       mutations: parsed.mutations ?? EMPTY_MUTATIONS,
       edgePathPreset: parsed.edgePathPreset ?? 'smoothstep',
       layoutAlgorithm: parsed.layoutAlgorithm ?? 'layered',
-      consoleVisible: parsed.consoleVisible ?? true,
+      consoleVisible: parsed.consoleVisible ?? false,
       highlightedNodeIds: parsed.highlightedNodeIds ?? [],
-      playing: false, // never auto-resume playback on restore
+      useNotebookSources: parsed.useNotebookSources ?? false,
+      allowWeb: parsed.allowWeb ?? true,
+      selectedSourceIds: Array.isArray(parsed.selectedSourceIds) ? parsed.selectedSourceIds : [],
+      // never auto-resume playback on restore
+      playing: false,
     };
   } catch {
     return null;
