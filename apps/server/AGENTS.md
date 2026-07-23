@@ -41,7 +41,7 @@ From repo root:
 
 - One Elysia router per feature under `features/*/router.ts`
 - OpenAPI: shared Zod → `z.toJSONSchema` in `openapi.ts` (Scalar `/openapi`); `extendZodWithOpenApi` only for `.openapi()` metadata — **no** `@elysiajs/swagger` / `t.*`
-- AI: AI SDK v7 only (`generateObject`, `streamText`, ToolLoopAgent/WorkflowAgent when needed)
+- AI: AI SDK v7 first（`generateText`/`streamText`/`ToolLoopAgent`/`Output`）；其它编排框架须在 SDD design 论证后引入，且不得另立 ResearchRun 平行过程态
 - Config: `config/app.yaml` + `config/secret.env` (see `config/AGENTS.md`)
 - Research prune closure（`collectResearchPruneClosure` / product B）须与 Web Lab `fake/deriveLabState.collectPruneClosure` 同步；规格见 `llmanspec/changes/update-research-prune-cascade`
 
