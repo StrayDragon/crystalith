@@ -421,14 +421,72 @@ describe('research runtime', () => {
     expect(src?.metadata).toMatchObject({ source: 'research_conversion' });
   });
 
-  it('lists runs scoped to notebook', async () => {
+  it('lists runs scoped to notebook as summaries without graph', async () => {
     const res = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research?offset=0&limit=50`),
     );
     expect(res.status).toBe(200);
-    const page = (await res.json()) as { items: unknown[]; total: number };
+    const page = (await res.json()) as {
+      items: Array<Record<string, unknown>>;
+      total: number;
+    };
     expect(page.total).toBeGreaterThan(0);
     expect(page.items.length).toBeGreaterThan(0);
+    const first = page.items[0]!;
+    expect(first).toHaveProperty('id');
+    expect(first).toHaveProperty('topic');
+    expect(first).toHaveProperty('status');
+    expect(first).not.toHaveProperty('nodes');
+    expect(first).not.toHaveProperty('edges');
+    expect(first).not.toHaveProperty('report');
+  });
+
+  it('filters list by status query', async () => {
+    const create = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          topic: 'list status filter',
+          useNotebookSources: false,
+          allowWeb: true,
+          depth: 'shallow',
+        }),
+      }),
+    );
+    expect(create.status).toBe(201);
+    const created = (await create.json()) as { id: number };
+    await waitForStatus(created.id, ['awaiting_confirm', 'completed', 'running', 'failed']);
+
+    const filtered = await app.handle(
+      new Request(
+        `${BASE}/v2/notebooks/${notebookId}/research?offset=0&limit=50&status=completed,cancelled`,
+      ),
+    );
+    expect(filtered.status).toBe(200);
+    const page = (await filtered.json()) as {
+      items: Array<{ id: number; status: string }>;
+    };
+    for (const item of page.items) {
+      expect(['completed', 'cancelled']).toContain(item.status);
+    }
+  });
+
+  it('creates web-only run when topic-only body omits channel flags', async () => {
+    const res = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ topic: 'topic only defaults' }),
+      }),
+    );
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as {
+      useNotebookSources: boolean;
+      allowWeb: boolean;
+    };
+    expect(body.useNotebookSources).toBe(false);
+    expect(body.allowWeb).toBe(true);
   });
 
   it('seeds single-sink DAG with question + conclusion roles', async () => {

@@ -4,13 +4,13 @@
  * FE Desk/xyflow is under apps/web workspace research — this router is backend-only.
  */
 import {
-  PaginationParamsSchema,
   ResearchConfirmBodySchema,
   ResearchConvertBodySchema,
   ResearchConvertToNoteResponseSchema,
   ResearchConvertToSourceResponseSchema,
   ResearchCreateNestedRequestSchema,
   ResearchForkBodySchema,
+  ResearchListQuerySchema,
   ResearchNodeChatBodySchema,
   ResearchNodePatchBodySchema,
   ResearchProgressListSchema,
@@ -24,6 +24,7 @@ import {
   ResearchRunsPageSchema,
 } from '@crystalith/shared';
 import { Elysia } from 'elysia';
+import { z } from 'zod';
 
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
@@ -52,6 +53,12 @@ import {
   restoreRevision,
 } from './service.ts';
 
+/** OpenAPI-only query docs (runtime validation uses ResearchListQuerySchema). */
+const ResearchListStatusQueryDocSchema = z.string().optional().openapi({
+  description: '按状态过滤，逗号分隔（如 running,queued）；亦接受重复 status query',
+  example: 'running,awaiting_confirm',
+});
+
 registerApiDoc([
   {
     path: '/v2/notebooks/:nid/research',
@@ -64,15 +71,16 @@ registerApiDoc([
   {
     path: '/v2/notebooks/:nid/research',
     method: 'get',
-    summary: '分页列出笔记本下的 ResearchRun',
+    summary: '分页列出笔记本下的 ResearchRun（摘要，不含图）',
     tags: ['research'],
     request: {
       query: {
-        offset: PaginationParamsSchema.shape.offset,
-        limit: PaginationParamsSchema.shape.limit,
+        offset: ResearchListQuerySchema.shape.offset,
+        limit: ResearchListQuerySchema.shape.limit,
+        status: ResearchListStatusQueryDocSchema,
       },
     },
-    responses: { 200: { description: 'ResearchRun 列表', body: ResearchRunsPageSchema } },
+    responses: { 200: { description: 'ResearchRun 摘要列表', body: ResearchRunsPageSchema } },
   },
   {
     path: '/v2/notebooks/:nid/research/:rid',
@@ -244,9 +252,9 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     '/notebooks/:nid/research',
     ({ params, query }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
-      return listRuns(nid, query.offset ?? 0, query.limit ?? 20);
+      return listRuns(nid, query.offset ?? 0, query.limit ?? 20, query.status);
     },
-    { query: PaginationParamsSchema, response: ResearchRunsPageSchema },
+    { query: ResearchListQuerySchema, response: ResearchRunsPageSchema },
   )
   .get(
     '/notebooks/:nid/research/:rid',

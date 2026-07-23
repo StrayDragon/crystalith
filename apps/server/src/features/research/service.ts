@@ -27,9 +27,10 @@ import type {
   ResearchRevisionCreateBody,
   ResearchRun,
   ResearchRunStatus,
+  ResearchRunSummary,
 } from '@crystalith/shared';
 import { RESEARCH_DEPTH_BUDGETS } from '@crystalith/shared';
-import { and, asc, count, desc, eq, gt, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, sql } from 'drizzle-orm';
 import { NotFoundError } from 'elysia';
 
 import { searchWeb } from '../../ai/tools/web-search.ts';
@@ -249,6 +250,26 @@ function serializeRun(row: RunRow): ResearchRun {
   };
 }
 
+function serializeRunSummary(row: RunRow): ResearchRunSummary {
+  return {
+    id: row.id,
+    notebookId: row.notebookId,
+    topic: row.topic,
+    status: row.status as ResearchRunStatus,
+    useNotebookSources: row.useNotebookSources,
+    allowWeb: row.allowWeb,
+    sourceIds: row.sourceIds ?? null,
+    depth: row.depth as ResearchDepth,
+    maxSearches: row.maxSearches,
+    maxNodes: row.maxNodes,
+    searchesUsed: row.searchesUsed,
+    confirmKind: (row.confirmKind as 'budget' | 'expand_branch' | null) ?? null,
+    errorMessage: row.errorMessage ?? null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
 function requireNotebook(notebookId: number): void {
   const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
   if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
@@ -287,7 +308,7 @@ export function validateCreateBody(body: ResearchCreateBody): {
   if (!topic) {
     throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'topic is required');
   }
-  const useNotebookSources = body.useNotebookSources ?? true;
+  const useNotebookSources = body.useNotebookSources ?? false;
   const allowWeb = body.allowWeb ?? true;
   if (!useNotebookSources && !allowWeb) {
     throw new AppHttpError(
@@ -350,23 +371,24 @@ export function listRuns(
   notebookId: number,
   offset: number,
   limit: number,
-): { items: ResearchRun[]; total: number; offset: number; limit: number } {
+  statusFilter?: ResearchRunStatus[],
+): { items: ResearchRunSummary[]; total: number; offset: number; limit: number } {
   requireNotebook(notebookId);
+  const whereClause =
+    statusFilter && statusFilter.length > 0
+      ? and(eq(researchRuns.notebookId, notebookId), inArray(researchRuns.status, statusFilter))
+      : eq(researchRuns.notebookId, notebookId);
   const total =
-    db()
-      .select({ value: count() })
-      .from(researchRuns)
-      .where(eq(researchRuns.notebookId, notebookId))
-      .get()?.value ?? 0;
+    db().select({ value: count() }).from(researchRuns).where(whereClause).get()?.value ?? 0;
   const rows = db()
     .select()
     .from(researchRuns)
-    .where(eq(researchRuns.notebookId, notebookId))
+    .where(whereClause)
     .orderBy(desc(researchRuns.updatedAt))
     .limit(limit)
     .offset(offset)
     .all();
-  return { items: rows.map(serializeRun), total, offset, limit };
+  return { items: rows.map(serializeRunSummary), total, offset, limit };
 }
 
 export function getRun(notebookId: number, runId: number): ResearchRun {
