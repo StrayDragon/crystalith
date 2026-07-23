@@ -41,15 +41,41 @@ describe('resolveLabPrimaryAction', () => {
     expect(a).toMatchObject({ kind: 'resume', label: '继续研究' });
   });
 
-  it('awaiting_confirm → finish + secondary continue', () => {
-    const a = resolveLabPrimaryAction({ ...base, phase: 'awaiting_confirm' });
+  it('awaiting_confirm budget → finish + continue (no skip/approve)', () => {
+    const a = resolveLabPrimaryAction({
+      ...base,
+      phase: 'awaiting_confirm',
+      confirmKind: 'budget',
+    });
     expect(a.kind).toBe('finish_report');
     expect(a.label).toBe('生成结论');
+    expect(a.confirmHint).toContain('预算');
     expect(a.secondary).toEqual({
       kind: 'continue_dig',
       label: '继续深挖',
       disabled: false,
     });
+    expect(a.tertiary).toBeUndefined();
+  });
+
+  it('awaiting_confirm expand_branch → approve + skip + finish', () => {
+    const a = resolveLabPrimaryAction({
+      ...base,
+      phase: 'awaiting_confirm',
+      confirmKind: 'expand_branch',
+    });
+    expect(a.kind).toBe('approve_branch');
+    expect(a.secondary).toEqual({
+      kind: 'skip_branch',
+      label: '跳过支路',
+      disabled: false,
+    });
+    expect(a.tertiary).toEqual({
+      kind: 'finish_report',
+      label: '生成结论',
+      disabled: false,
+    });
+    expect(a.confirmHint).toContain('扩展');
   });
 
   it('completed without selecting conclusion → view_conclusion', () => {
@@ -95,16 +121,15 @@ describe('applyEdenPrimaryActionOverlay', () => {
     expect(eden).toMatchObject({ kind: 'cancel', label: '取消研究', disabled: false });
   });
 
-  it('keeps awaiting_confirm finish + continue dig', () => {
-    const a = resolveLabPrimaryAction({ ...base, phase: 'awaiting_confirm' });
-    const eden = applyEdenPrimaryActionOverlay(a);
-    expect(eden.kind).toBe('finish_report');
-    expect(eden.label).toBe('生成结论');
-    expect(eden.secondary).toEqual({
-      kind: 'continue_dig',
-      label: '继续深挖',
-      disabled: false,
+  it('keeps expand_branch approve + skip', () => {
+    const a = resolveLabPrimaryAction({
+      ...base,
+      phase: 'awaiting_confirm',
+      confirmKind: 'expand_branch',
     });
+    const eden = applyEdenPrimaryActionOverlay(a);
+    expect(eden.kind).toBe('approve_branch');
+    expect(eden.secondary?.kind).toBe('skip_branch');
   });
 
   it('does not remap resume', () => {

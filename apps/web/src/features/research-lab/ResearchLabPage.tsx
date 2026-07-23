@@ -248,6 +248,7 @@ function LabWorkbench({
       conclusionNodeId: lab.derived.conclusionNodeId,
       selectedNodeId: lab.selectedNodeId,
       selectedRole: selected?.role ?? null,
+      confirmKind: lab.confirmKind,
     });
     return mode === 'eden' ? applyEdenPrimaryActionOverlay(base) : base;
   }, [
@@ -259,6 +260,7 @@ function LabWorkbench({
     lab.derived.conclusionNodeId,
     lab.selectedNodeId,
     selected?.role,
+    lab.confirmKind,
   ]);
 
   const openReport = useCallback(() => {
@@ -381,6 +383,12 @@ function LabWorkbench({
         break;
       case 'continue_dig':
         lab.continueDig();
+        break;
+      case 'approve_branch':
+        lab.approveBranch();
+        break;
+      case 'skip_branch':
+        lab.skipBranch();
         break;
       case 'view_conclusion':
         openReport();
@@ -550,6 +558,20 @@ function LabWorkbench({
             </div>
           ) : null}
 
+          {!showCompose && primary.tertiary ? (
+            <button
+              type="button"
+              disabled={primary.tertiary.disabled}
+              title={primary.title}
+              onClick={() => runPrimary(primary.tertiary!.kind)}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-40"
+              {...(primary.tertiary.kind === 'finish_report'
+                ? tid(TestIds.researchLabConfirmFinish)
+                : {})}
+            >
+              {primary.tertiary.label}
+            </button>
+          ) : null}
           {!showCompose && primary.secondary ? (
             <button
               type="button"
@@ -557,6 +579,11 @@ function LabWorkbench({
               title={primary.title}
               onClick={() => runPrimary(primary.secondary!.kind)}
               className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-40"
+              {...(primary.secondary.kind === 'continue_dig'
+                ? tid(TestIds.researchLabConfirmContinue)
+                : primary.secondary.kind === 'skip_branch'
+                  ? tid(TestIds.researchLabConfirmSkip)
+                  : {})}
             >
               {primary.secondary.label}
             </button>
@@ -568,7 +595,11 @@ function LabWorkbench({
               title={primary.title}
               onClick={() => runPrimary(primary.kind)}
               className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:pointer-events-none disabled:opacity-40"
-              {...tid(TestIds.researchLabStart)}
+              {...(primary.kind === 'approve_branch'
+                ? tid(TestIds.researchLabConfirmApprove)
+                : primary.kind === 'finish_report'
+                  ? tid(TestIds.researchLabConfirmFinish)
+                  : tid(TestIds.researchLabStart))}
             >
               {lab.reshaping ? '重塑中…' : primary.label}
             </button>
@@ -657,7 +688,7 @@ function LabWorkbench({
           phase: lab.phase,
         }) ? (
           <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-full border border-blue-200 bg-blue-50/95 px-3 py-1.5 text-[11px] font-medium text-blue-900 shadow-md backdrop-blur">
-            {labPausedBannerText(lab.phase)}
+            {labPausedBannerText(lab.phase, lab.confirmKind)}
           </div>
         ) : null}
         {shouldShowLabPlayingTip({ showCompose, playing: lab.playing }) ? (
