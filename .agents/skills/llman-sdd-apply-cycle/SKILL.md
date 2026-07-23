@@ -56,12 +56,17 @@ git add -A && git commit -m "<前缀>: <描述>"
 
 使用常规提交前缀（feat:/fix:/refactor:）。
 
+### 5) 本地合回默认分支（BDD-on，不默认 push/PR）
+
+BDD-off 无 feature 分支收尾步骤（commit 即闭环）。
+
 ## 硬约束
 
 - **不要问**"要不要继续"——直到做完或遇到 blocker。
 - **不要切换**到其他变更，直到当前变更归档并提交。
 - **重试上限**：每步最多 3 次失败后报告 blocker。
 - **SSOT**：以 `llman sdd status` 输出为唯一事实来源。不要直接读 tasks.md/proposal.md/spec 文件。
+- **禁止默认 push/PR**：未获用户明确要求时，禁止执行 `git push` 或 `gh pr create|merge`。BDD-on 收尾默认是本地 merge 进默认分支。
 
 ## Ethics Governance
 
