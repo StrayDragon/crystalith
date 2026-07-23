@@ -165,6 +165,24 @@ function serializeOutputListItem(row: typeof outputs.$inferSelect) {
     title = row.prompt.trim().slice(0, 120);
   }
 
+  let researchLab:
+    | { notebookId: number; runId: number; artifactKind?: 'report' | 'node' | 'evidence' }
+    | undefined;
+  if (content && isRecord(content.researchLab)) {
+    const notebookId = Number(content.researchLab.notebookId);
+    const runId = Number(content.researchLab.runId);
+    if (notebookId > 0 && runId > 0) {
+      const kind = content.researchLab.artifactKind;
+      researchLab = {
+        notebookId,
+        runId,
+        ...(kind === 'report' || kind === 'node' || kind === 'evidence'
+          ? { artifactKind: kind as 'report' | 'node' | 'evidence' }
+          : {}),
+      };
+    }
+  }
+
   return {
     id: row.id,
     notebookId: row.notebookId,
@@ -174,6 +192,7 @@ function serializeOutputListItem(row: typeof outputs.$inferSelect) {
     preview,
     slideId,
     chunkIds: row.chunkIds,
+    ...(researchLab ? { researchLab } : {}),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

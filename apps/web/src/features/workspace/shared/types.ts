@@ -244,6 +244,12 @@ export interface OutputItem {
   preview?: string | null;
   /** SLIDES draft id from list projection (c72). */
   slideId?: number | null;
+  /** Deep Research convert origin (list projection / content stamp). */
+  researchLab?: {
+    notebookId: number;
+    runId: number;
+    artifactKind?: 'report' | 'node' | 'evidence';
+  } | null;
   createdAt: string;
   updatedAt: string;
   createdAtRaw?: string;
