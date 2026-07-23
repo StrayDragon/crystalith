@@ -101,8 +101,37 @@ export function installAiMock(opts: AiMockOptions): void {
     tool: (def: unknown) => def,
     ToolLoopAgent: class {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      async generate() {
+      async generate(_args?: { prompt?: string }) {
         return { text };
+      }
+      async stream(args?: { prompt?: string; options?: { mode?: string } }) {
+        const prompt = typeof args?.prompt === 'string' ? args.prompt : '';
+        const parts: Array<Record<string, unknown>> = [
+          { type: 'text-delta', text: `agent:${text}` },
+        ];
+        // Structure approval path for node_chat prune intents (c78 ToolLoopAgent)
+        if (args?.options?.mode === 'node_chat' && /prune|剪枝/iu.test(prompt)) {
+          parts.push({
+            type: 'tool-approval-request',
+            approvalId: 'mock-approval-1',
+            toolCall: {
+              type: 'tool-call',
+              toolCallId: 'mock-tc-prune',
+              toolName: 'propose_prune',
+              input: { rationale: 'mock prune proposal' },
+            },
+          });
+        }
+        const make = async function* () {
+          for (const p of parts) yield p;
+        };
+        return {
+          stream: make(),
+          fullStream: make(),
+          textStream: (async function* () {
+            yield `agent:${text}`;
+          })(),
+        };
       }
     },
     isStepCount: () => ({ stopWhen: 'stepCount' }),

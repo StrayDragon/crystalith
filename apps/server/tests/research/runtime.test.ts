@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it, mock } from 'bun:test';
 
 import { eq } from 'drizzle-orm';
 
-// Must mock before createApp pulls research service → searchWeb.
+// Must mock before createApp pulls research service → searchWeb / ai.
 mock.module('../../src/ai/tools/web-search.ts', () => ({
   searchWeb: async () => [
     {
@@ -16,9 +16,19 @@ mock.module('../../src/ai/tools/web-search.ts', () => ({
   webSearchTool: () => ({}),
 }));
 
+import {
+  getOrm,
+  installAiMock,
+  seedChatModel,
+  setupIntegrationEnv,
+  teardownIntegrationEnv,
+} from '../helpers/integration.ts';
+
+installAiMock({ text: 'mocked research chat' });
+seedChatModel();
+
 import { notebooks, outputs, researchRuns, sources } from '../../src/db/schema.ts';
 import { createApp } from '../../src/server.ts';
-import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from '../helpers/integration.ts';
 
 const BASE = 'http://test.local';
 let app: InstanceType<typeof createApp>;
@@ -717,6 +727,7 @@ describe('research runtime (c76)', () => {
     expect(chat.headers.get('content-type')).toContain('text/event-stream');
     const text = await chat.text();
     expect(text).toContain('event: chunk');
+    expect(text).toContain('agent:mocked research chat');
     expect(text).toContain('event: proposal');
     expect(text).toContain('prune_node');
     expect(text).toContain('event: done');

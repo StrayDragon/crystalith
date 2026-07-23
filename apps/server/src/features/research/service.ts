@@ -52,6 +52,7 @@ import { ragRegistry } from '../../rag/registry.ts';
 import { config, ResearchSettingsSchema } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { splitTextToChunks } from '../outputs/render.ts';
+import { createResearchNodeAgent, proposalFromStructureToolCall } from './node-agent.ts';
 
 export type SseEmit = (event: string, data: unknown) => void;
 
@@ -1576,32 +1577,114 @@ export function createNodeChatSseResponse(
           emit('error', { errorCode: ErrorCode.INVALID_REQUEST, message: 'aborted' });
           return;
         }
-        const turn = stubNodeChatTurn(node, body.message);
-        // Stream text in small chunks (still no graph mutate)
-        const chunkSize = 48;
-        for (let i = 0; i < turn.text.length; i += chunkSize) {
-          if (ac.signal.aborted) {
-            appendProgressEvent(runId, 'chat_aborted', { nodeId, headline: '对话已中止' });
-            emit('error', { errorCode: ErrorCode.INVALID_REQUEST, message: 'aborted' });
-            return;
+
+        const role = resolveNodeRole(node);
+        const agent = await createResearchNodeAgent(notebookId);
+        let proposals: ResearchNodeActionProposal[] = [];
+        let usedAgent = false;
+
+        if (agent) {
+          try {
+            usedAgent = true;
+            const result = await agent.stream({
+              prompt: body.message,
+              abortSignal: ac.signal,
+              options: {
+                mode: 'node_chat' as const,
+                role,
+                nodeId: node.id,
+                nodeTitle: node.title,
+                nodeQuery: node.query,
+                allowWeb: row.allowWeb,
+                useNotebookSources: row.useNotebookSources,
+                // ToolLoopAgent constructed with loosely typed settings
+              } as never,
+            });
+
+            for await (const part of result.stream) {
+              if (ac.signal.aborted) break;
+              if (part.type === 'text-delta') {
+                const text = 'text' in part ? String(part.text ?? '') : '';
+                if (text) emit('chunk', { text });
+              } else if (part.type === 'tool-approval-request') {
+                const toolCall = (
+                  part as {
+                    toolCall?: { toolName?: string; toolCallId?: string; input?: unknown };
+                  }
+                ).toolCall;
+                const proposal = proposalFromStructureToolCall({
+                  toolName: toolCall?.toolName ?? '',
+                  toolCallId: toolCall?.toolCallId,
+                  args: toolCall?.input,
+                });
+                if (proposal) {
+                  proposals.push(proposal);
+                  emit('proposal', proposal);
+                }
+              } else if (part.type === 'tool-call') {
+                // Fallback if a Structure tool somehow streams without approval
+                const tc = part as {
+                  toolName?: string;
+                  toolCallId?: string;
+                  input?: unknown;
+                };
+                const proposal = proposalFromStructureToolCall({
+                  toolName: tc.toolName ?? '',
+                  toolCallId: tc.toolCallId,
+                  args: tc.input,
+                });
+                if (proposal && !proposals.some((p) => p.id === proposal.id)) {
+                  proposals.push(proposal);
+                  emit('proposal', proposal);
+                }
+              } else if (part.type === 'error') {
+                const message =
+                  'error' in part && part.error instanceof Error
+                    ? part.error.message
+                    : 'Generation error';
+                emit('error', { errorCode: ErrorCode.INTERNAL_ERROR, message });
+                return;
+              }
+            }
+          } catch (agentError) {
+            // Fall back to deterministic stub when model/mock is unavailable
+            usedAgent = false;
+            if (ac.signal.aborted) throw agentError;
+            console.warn('[research] node chat agent failed; using stub:', agentError);
           }
-          emit('chunk', { text: turn.text.slice(i, i + chunkSize) });
-          await Bun.sleep(0);
         }
-        for (const proposal of turn.proposals) {
-          if (ac.signal.aborted) break;
-          emit('proposal', proposal);
+
+        if (!usedAgent) {
+          const turn = stubNodeChatTurn(node, body.message);
+          proposals = turn.proposals;
+          const chunkSize = 48;
+          for (let i = 0; i < turn.text.length; i += chunkSize) {
+            if (ac.signal.aborted) {
+              appendProgressEvent(runId, 'chat_aborted', { nodeId, headline: '对话已中止' });
+              emit('error', { errorCode: ErrorCode.INVALID_REQUEST, message: 'aborted' });
+              return;
+            }
+            emit('chunk', { text: turn.text.slice(i, i + chunkSize) });
+            await Bun.sleep(0);
+          }
+          for (const proposal of proposals) {
+            if (ac.signal.aborted) break;
+            emit('proposal', proposal);
+          }
         }
-        if (!ac.signal.aborted) {
-          emit('done', { proposals: turn.proposals });
-          appendProgressEvent(runId, 'chat_finished', {
-            nodeId,
-            headline: '节点对话结束',
-            payload: { proposalCount: turn.proposals.length },
-          });
-        } else {
+
+        if (ac.signal.aborted) {
           appendProgressEvent(runId, 'chat_aborted', { nodeId, headline: '对话已中止' });
+          emit('error', { errorCode: ErrorCode.INVALID_REQUEST, message: 'aborted' });
+          return;
         }
+
+        emit('done', { proposals });
+        appendProgressEvent(runId, 'chat_finished', {
+          nodeId,
+          headline: '节点对话结束',
+          payload: { proposalCount: proposals.length, via: usedAgent ? 'agent' : 'stub' },
+        });
       } catch (error) {
         emit('error', {
           errorCode: error instanceof AppHttpError ? error.code : ErrorCode.INTERNAL_ERROR,
