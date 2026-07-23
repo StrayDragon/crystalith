@@ -17,6 +17,9 @@ import { TestIds, tid } from '../../../../shared/testids';
 
 import '@xyflow/react/dist/style.css';
 
+/** r414 — shown on conclusion when pruned research still merges in. */
+export const FAILED_MERGE_HINT = '部分汇入失败';
+
 const STATUS_STYLE: Record<
   ResearchConclusionStatus,
   { border: string; bg: string; opacity?: number }
@@ -34,7 +37,41 @@ type ResearchRfNodeData = {
   phase?: string;
   selected?: boolean;
   highlight?: boolean;
+  /** r414 failed-merge footnote on conclusion sink */
+  failedMergeHint?: boolean;
 };
+
+/** Conclusion sink: id prefix (c76) or merge-edge target. */
+export function isResearchConclusionNode(nodeId: string, edges: ResearchEdge[]): boolean {
+  if (nodeId.startsWith('node_conclusion')) return true;
+  return edges.some((e) => e.kind === 'merge' && e.target === nodeId);
+}
+
+/**
+ * Conclusion nodes that still receive merge edges from pruned research (r414).
+ * Shared with Lab intent: keep topology, surface「部分汇入失败」.
+ */
+export function collectFailedMergeConclusionIds(
+  nodes: ResearchNode[],
+  edges: ResearchEdge[],
+): Set<string> {
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const out = new Set<string>();
+  for (const e of edges) {
+    if (e.kind !== 'merge') continue;
+    const src = byId.get(e.source);
+    if (!src || src.conclusionStatus !== 'pruned') continue;
+    if (!isResearchConclusionNode(e.target, edges)) continue;
+    out.add(e.target);
+  }
+  return out;
+}
+
+function edgeLabel(e: ResearchEdge): string {
+  if (e.labelNote) return e.labelNote;
+  if (e.kind === 'merge') return '汇入';
+  return e.kind;
+}
 
 function ResearchFlowNode({ data }: NodeProps) {
   const d = data as ResearchRfNodeData;
@@ -51,6 +88,9 @@ function ResearchFlowNode({ data }: NodeProps) {
     >
       <Handle type="target" position={Position.Top} className="!bg-slate-400" />
       <div className="font-medium text-slate-800 truncate">{d.title}</div>
+      {d.failedMergeHint ? (
+        <div className="text-[10px] text-amber-700 mt-0.5">{FAILED_MERGE_HINT}</div>
+      ) : null}
       {d.phase ? <div className="text-[10px] text-slate-500 mt-0.5">{d.phase}</div> : null}
       <Handle type="source" position={Position.Bottom} className="!bg-slate-400" />
     </div>
@@ -93,6 +133,9 @@ function layoutNodes(
     byDepth.set(d, list);
   }
 
+  const failedMergeConclusions = collectFailedMergeConclusionIds(researchNodes, researchEdges);
+  const byId = new Map(researchNodes.map((n) => [n.id, n]));
+
   const X_GAP = 200;
   const Y_GAP = 110;
   const nodes: Node[] = researchNodes.map((n) => {
@@ -109,17 +152,29 @@ function layoutNodes(
         title: n.title,
         conclusionStatus: n.conclusionStatus,
         phase: n.phase,
+        failedMergeHint: failedMergeConclusions.has(n.id),
       } satisfies ResearchRfNodeData,
     };
   });
 
-  const edges: Edge[] = researchEdges.map((e) => ({
-    id: e.id,
-    source: e.source,
-    target: e.target,
-    label: e.labelNote || e.kind,
-    style: { stroke: '#94a3b8' },
-  }));
+  // r414: mute edges that touch pruned nodes; keep merge edges +「汇入」label.
+  const edges: Edge[] = researchEdges.map((e) => {
+    const source = byId.get(e.source);
+    const target = byId.get(e.target);
+    const faded = source?.conclusionStatus === 'pruned' || target?.conclusionStatus === 'pruned';
+    return {
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      label: edgeLabel(e),
+      style: {
+        stroke: faded ? '#cbd5e1' : '#94a3b8',
+        strokeWidth: faded ? 1.25 : 1.5,
+        opacity: faded ? 0.55 : 1,
+      },
+      labelStyle: faded ? { fill: '#94a3b8', fontSize: 10 } : { fill: '#64748b', fontSize: 10 },
+    };
+  });
 
   return { nodes, edges };
 }

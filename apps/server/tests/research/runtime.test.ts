@@ -16,7 +16,7 @@ mock.module('../../src/ai/tools/web-search.ts', () => ({
   webSearchTool: () => ({}),
 }));
 
-import { notebooks, outputs, sources } from '../../src/db/schema.ts';
+import { notebooks, outputs, researchRuns, sources } from '../../src/db/schema.ts';
 import { createApp } from '../../src/server.ts';
 import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from '../helpers/integration.ts';
 
@@ -199,6 +199,105 @@ describe('research runtime (c76)', () => {
     );
     expect(confirm.status).toBe(200);
     await waitForStatus(created.id, 'completed');
+  });
+
+  it('rejects prune on protected root with INVALID_REQUEST', async () => {
+    const res = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          topic: 'protect root prune',
+          useNotebookSources: false,
+          allowWeb: true,
+          depth: 'shallow',
+        }),
+      }),
+    );
+    expect(res.status).toBe(201);
+    const created = (await res.json()) as { id: number };
+    await waitForStatus(created.id, ['awaiting_confirm', 'running', 'completed']);
+
+    getOrm()
+      .update(researchRuns)
+      .set({
+        graph: {
+          nodes: [
+            { id: 'node_root_1', title: 'Q', conclusionStatus: 'partial' },
+            { id: 'branch_a', title: 'A', conclusionStatus: 'partial' },
+          ],
+          edges: [{ id: 'e1', source: 'node_root_1', target: 'branch_a', kind: 'decompose' }],
+        },
+        status: 'awaiting_confirm',
+        confirmKind: 'budget',
+      })
+      .where(eq(researchRuns.id, created.id))
+      .run();
+
+    const prune = await app.handle(
+      new Request(
+        `${BASE}/v2/notebooks/${notebookId}/research/${created.id}/nodes/node_root_1/prune`,
+        { method: 'POST' },
+      ),
+    );
+    expect(prune.status).toBe(400);
+    const body = (await prune.json()) as { errorCode?: string };
+    expect(body.errorCode).toBe('INVALID_REQUEST');
+  });
+
+  it('prune keeps merge edges into conclusion (failed contribution)', async () => {
+    const res = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          topic: 'merge retain prune',
+          useNotebookSources: false,
+          allowWeb: true,
+          depth: 'shallow',
+        }),
+      }),
+    );
+    expect(res.status).toBe(201);
+    const created = (await res.json()) as { id: number };
+    await waitForStatus(created.id, 'awaiting_confirm');
+
+    getOrm()
+      .update(researchRuns)
+      .set({
+        graph: {
+          nodes: [
+            { id: 'node_root_1', title: 'Q', conclusionStatus: 'partial' },
+            { id: 'branch_a', title: 'A', conclusionStatus: 'partial' },
+            { id: 'node_conclusion_1', title: '结论', conclusionStatus: 'pending' },
+          ],
+          edges: [
+            { id: 'e1', source: 'node_root_1', target: 'branch_a', kind: 'decompose' },
+            { id: 'm1', source: 'branch_a', target: 'node_conclusion_1', kind: 'merge' },
+          ],
+        },
+        status: 'awaiting_confirm',
+        confirmKind: 'budget',
+      })
+      .where(eq(researchRuns.id, created.id))
+      .run();
+
+    const prune = await app.handle(
+      new Request(
+        `${BASE}/v2/notebooks/${notebookId}/research/${created.id}/nodes/branch_a/prune`,
+        { method: 'POST' },
+      ),
+    );
+    expect(prune.status).toBe(200);
+    const pruned = (await prune.json()) as {
+      nodes: Array<{ id: string; conclusionStatus: string }>;
+      edges: Array<{ id: string; kind: string }>;
+    };
+    expect(pruned.nodes.find((n) => n.id === 'branch_a')?.conclusionStatus).toBe('pruned');
+    expect(pruned.nodes.find((n) => n.id === 'node_conclusion_1')?.conclusionStatus).not.toBe(
+      'pruned',
+    );
+    expect(pruned.edges.some((e) => e.id === 'm1' && e.kind === 'merge')).toBe(true);
   });
 
   it('prune on completed returns RESEARCH_INVALID_STATE', async () => {
