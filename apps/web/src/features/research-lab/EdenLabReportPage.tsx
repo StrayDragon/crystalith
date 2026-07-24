@@ -37,6 +37,7 @@ import {
 import { researchCitationToLabCitation } from './evidenceAdapter';
 import LabReportPlateEditor from './LabReportPlateEditor';
 import { navigateToResearchLab } from './labRouting';
+import { markLabRunNeedsReload } from './labRunReloadGate';
 import { markdownToResearchReport } from './markdownToResearchReport';
 import { adaptResearchCitationsToUi } from './researchCitationsAdapter';
 import { researchReportToMarkdown } from './researchReportToMarkdown';
@@ -113,6 +114,7 @@ export default function EdenLabReportPage({
   const [editorEpoch, setEditorEpoch] = useState(0);
   const [draftMarkdown, setDraftMarkdown] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState('');
 
   const reload = async (rid: number) => {
     const [run, view, revList] = await Promise.all([
@@ -278,21 +280,36 @@ export default function EdenLabReportPage({
       toast.success(`已保存版本「${rev.label}」`, 3200);
     });
 
-  const restoreRevision = (revId: string) =>
-    void withBusy(async () => {
-      if (!runId || !revId) return;
-      const run = await restoreResearchRevision(notebookId, runId, revId);
-      const viewNext = await getResearchReportView(notebookId, runId);
-      const list = await listResearchRevisions(notebookId, runId);
-      setState({ status: 'ready', run, view: viewNext });
-      setRevisions(list.items);
-      setActiveRevId(revId);
-      setEditing(false);
-      setViewing('canonical');
-      setDraftMarkdown(null);
-      setEditorEpoch((n) => n + 1);
-      toast.success('已恢复版本；返回图谱可看到更新后的思考图', 3600);
-    });
+  const restoreRevision = (revId: string) => {
+    if (busy || !runId || !revId) return;
+    setBusy(true);
+    setActionError('');
+    void (async () => {
+      try {
+        await restoreResearchRevision(notebookId, runId, revId);
+        // J1=A: always full GET after restore (do not trust POST body alone)
+        const [run, viewNext, list] = await Promise.all([
+          getResearchRun(notebookId, runId),
+          getResearchReportView(notebookId, runId),
+          listResearchRevisions(notebookId, runId),
+        ]);
+        markLabRunNeedsReload(notebookId, runId);
+        setState({ status: 'ready', run, view: viewNext });
+        setRevisions(list.items);
+        setActiveRevId(revId);
+        setEditing(false);
+        setViewing('canonical');
+        setDraftMarkdown(null);
+        setEditorEpoch((n) => n + 1);
+        toast.success('已恢复版本；返回图谱将重载思考图', 3600);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setActionError(message);
+      } finally {
+        setBusy(false);
+      }
+    })();
+  };
 
   const convertNote = () =>
     void withBusy(async () => {
@@ -368,7 +385,7 @@ export default function EdenLabReportPage({
                 setActiveRevId(id);
                 void restoreRevision(id);
               }}
-              title="选择并恢复服务端修订快照"
+              title={busy ? '正在恢复修订…' : '选择并恢复服务端修订快照'}
               {...tid(TestIds.researchLabRevisionSelect)}
             >
               {revisions.length === 0 ? (
@@ -499,6 +516,15 @@ export default function EdenLabReportPage({
           <CitationsControl citations={uiCitations} elevated triggerLabel="查看报告引用" />
         ) : null}
       </header>
+
+      {actionError ? (
+        <div
+          className="shrink-0 border-b border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800"
+          role="alert"
+        >
+          恢复修订失败：{actionError}
+        </div>
+      ) : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto" {...tid(TestIds.researchLabReport)}>
         {state.status === 'loading' || state.status === 'idle' ? (

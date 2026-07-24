@@ -29,3 +29,9 @@ c92 compose depth
  → c99 workspace chat embed
  → c100 Eden e2e production path
 ```
+
+## Per-change locks（本会话）
+
+| Change | Locks                                                                                                                                                                                             |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| c98    | **J1=A** restore 后必 GET 全量 · **J2=B** 回图 `?rid=` 强制 `loadRun` + `markLabRunNeedsReload` · **J3=A** busy+内联错误 · **J4=B** fixture 同构写 session graph · **J5=A** loadRun 再拉 progress |
