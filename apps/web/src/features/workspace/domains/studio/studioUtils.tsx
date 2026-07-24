@@ -10,6 +10,7 @@ import {
 } from '@mui/icons-material';
 
 import { getOutputTitle } from '../../shared/outputPayload';
+import { readResearchLabOrigin } from '../../shared/researchLabOrigin';
 import type { OutputItem, OutputTypeId } from '../../shared/types';
 import { formatRelativeTime } from '../../shared/utils';
 
@@ -43,12 +44,16 @@ export function resolveOutputTitle(output: OutputItem): string {
 }
 
 export function resolveNoteMeta(output: OutputItem): string {
-  const count = output.chunkIds?.length ?? 0;
   const relative =
     formatRelativeTime(output.createdAtRaw ?? output.updatedAtRaw) ||
     output.createdAt ||
     output.updatedAt ||
     '刚刚';
+  const origin = readResearchLabOrigin(output, output.researchLab);
+  if (origin) {
+    return `深度研究 Run #${origin.runId} · ${relative}`;
+  }
+  const count = output.chunkIds?.length ?? 0;
   if (count > 0) {
     return `${count} 个来源 · ${relative}`;
   }

@@ -11,11 +11,13 @@ import {
   MoreVert as MoreVertIcon,
   Delete as DeleteIcon,
   FileDownload as DownloadIcon,
+  Science as ScienceIcon,
 } from '@mui/icons-material';
 import { useMemo, useState, useCallback, useEffect } from 'react';
 
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { useLayer } from '../../../../shared/layer';
+import { navigateToLabReport } from '../../../research-lab/labRouting';
 import CitationsControl from '../../shared/components/citations/CitationsControl';
 import { EmptyHint } from '../../shared/components/EmptyHint';
 import {
@@ -23,6 +25,7 @@ import {
   exportOutputMarkdownDownload,
 } from '../../shared/evidenceExport';
 import { getOutputTitle } from '../../shared/outputPayload';
+import { readResearchLabOrigin } from '../../shared/researchLabOrigin';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { Citation, OutputItem } from '../../shared/types';
 import { collectOutputCitations, formatRelativeTime } from '../../shared/utils';
@@ -46,12 +49,16 @@ interface StudioOutputViewerProps {
 }
 
 function resolveOutputMeta(output: OutputItem): string {
-  const count = output.chunkIds?.length ?? 0;
+  const origin = readResearchLabOrigin(output, output.researchLab);
   const relative =
     formatRelativeTime(output.createdAtRaw ?? output.updatedAtRaw) ||
     output.createdAt ||
     output.updatedAt ||
     '刚刚';
+  if (origin) {
+    return `深度研究 Run #${origin.runId} · ${relative}`;
+  }
+  const count = output.chunkIds?.length ?? 0;
   if (count > 0) {
     return `基于 ${count} 个来源 · ${relative}`;
   }
@@ -80,6 +87,12 @@ export default function StudioOutputViewer({
     if (!selectedOutputId) return outputs[0] ?? null;
     return outputs.find((item) => item.id === selectedOutputId) ?? outputs[0] ?? null;
   }, [outputs, selectedOutputId]);
+
+  const researchLabOrigin = useMemo(
+    () =>
+      selectedOutput ? readResearchLabOrigin(selectedOutput, selectedOutput.researchLab) : null,
+    [selectedOutput],
+  );
 
   useEffect(() => {
     if (!isOpen || !selectedOutput || selectedOutput.contentLoaded) return;
@@ -152,6 +165,22 @@ export default function StudioOutputViewer({
             </Typography>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            {researchLabOrigin ? (
+              <Tooltip content="打开深度研究报告（临时入口）">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-800 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-200"
+                  onClick={() => {
+                    onClose();
+                    navigateToLabReport(researchLabOrigin.notebookId, researchLabOrigin.runId);
+                  }}
+                  aria-label="打开深度研究报告"
+                >
+                  <ScienceIcon sx={{ fontSize: 16 }} />
+                  研究报告
+                </button>
+              </Tooltip>
+            ) : null}
             {selectedOutput && notebookId ? (
               <Menu placement="bottom-end">
                 <MenuHandler>

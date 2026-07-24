@@ -190,6 +190,17 @@ export function useEdenLabController(
           const msg = error instanceof Error ? error.message : String(error);
           setLastError(msg);
           pushLog(`SSE：${msg}`);
+        } finally {
+          // Stream may end without a terminal status event — reconcile UI with GET.
+          if (!ac.signal.aborted) {
+            try {
+              const fresh = await getResearchRun(notebookId, rid);
+              applyRun(fresh);
+              refreshResearchTasks(notebookId);
+            } catch {
+              /* ignore */
+            }
+          }
         }
       })();
     },
@@ -395,15 +406,16 @@ export function useEdenLabController(
 
   const cancel = useCallback(() => {
     const rid = runIdRef.current;
-    if (!rid || busy) return;
+    if (!rid) return;
     const status = run?.status;
     if (status !== 'queued' && status !== 'running' && status !== 'awaiting_confirm') return;
+    // Stop SSE first so late status/graph events cannot overwrite cancelled.
+    stopStream();
     void (async () => {
       setBusy(true);
       setLastError('');
       try {
         const next = await cancelActiveEdenRun(notebookId, rid);
-        stopStream();
         applyRun(next, '已取消研究');
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
@@ -413,7 +425,7 @@ export function useEdenLabController(
         setBusy(false);
       }
     })();
-  }, [applyRun, busy, notebookId, pushLog, run?.status, stopStream]);
+  }, [applyRun, notebookId, pushLog, run?.status, stopStream]);
 
   const focusNodes = useCallback((primaryId: string, highlightIds: string[]) => {
     setSelectedNodeId(primaryId);

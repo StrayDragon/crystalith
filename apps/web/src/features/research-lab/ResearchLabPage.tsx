@@ -220,7 +220,10 @@ function LabWorkbench({
   openReportMode,
 }: LabWorkbenchProps) {
   const selected = lab.derived.nodes.find((n) => n.id === lab.selectedNodeId) ?? null;
-  const showCompose = lab.phase === 'idle';
+  // Avoid Compose flash while Eden loads `?rid=` (phase is idle until GET returns).
+  const urlRid = mode === 'eden' ? readActiveRunIdFromUrl() : null;
+  const loadingExistingRun = Boolean(urlRid && lab.phase === 'idle');
+  const showCompose = lab.phase === 'idle' && !loadingExistingRun;
   const [tasksDrawerOpen, setTasksDrawerOpen] = useState(false);
 
   const [forkEdgeId, setForkEdgeId] = useState<string | null>(null);
@@ -625,6 +628,14 @@ function LabWorkbench({
               onComposeSubmit(topic);
             }}
           />
+        ) : null}
+
+        {loadingExistingRun ? (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-gray-50/80 backdrop-blur-[1px]">
+            <p className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm">
+              正在加载 Run #{urlRid}…
+            </p>
+          </div>
         ) : null}
 
         {!showCompose && lab.reshaping ? (

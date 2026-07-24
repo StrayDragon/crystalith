@@ -170,8 +170,19 @@ export const SlidesContentSchema = OutputContentBaseSchema.extend({
 });
 export type SlidesContent = z.infer<typeof SlidesContentSchema>;
 
+/** Optional origin for notes converted from Deep Research (兜底跳转 Lab 报告). */
+export const ResearchLabOriginSchema = z
+  .object({
+    notebookId: z.number().int().positive(),
+    runId: z.number().int().positive(),
+    artifactKind: z.enum(['report', 'node', 'evidence']).optional(),
+  })
+  .openapi({ description: desc('output.research_lab_origin', '深度研究转化来源（可选）') });
+export type ResearchLabOrigin = z.infer<typeof ResearchLabOriginSchema>;
+
 export const ParagraphContentSchema = OutputContentBaseSchema.extend({
   text: z.string(),
+  researchLab: ResearchLabOriginSchema.optional(),
 });
 export type ParagraphContent = z.infer<typeof ParagraphContentSchema>;
 
@@ -309,6 +320,9 @@ export const OutputListItemSchema = z
       .optional()
       .describe(desc('output.slide_id', 'SLIDES 类型关联的草稿 ID（列表用）')),
     chunkIds: z.array(IdSchema).nullable().optional(),
+    researchLab: ResearchLabOriginSchema.optional().describe(
+      desc('output.list_research_lab', '深度研究转化来源（列表兜底跳转）'),
+    ),
     createdAt: IsoTimestampSchema.describe(desc('output.created_at')),
     updatedAt: IsoTimestampSchema,
   })

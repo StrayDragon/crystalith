@@ -1557,7 +1557,16 @@ export function convertToNote(
       type: 'PARAGRAPH',
       prompt: title,
       chunkIds: [],
-      content: { title, text: markdown },
+      content: {
+        title,
+        text: markdown,
+        // 兜底：笔记栏可跳回 Lab 报告页（正式产品导航另案设计）
+        researchLab: {
+          notebookId,
+          runId,
+          artifactKind: body.artifact.kind,
+        },
+      },
     })
     .returning()
     .get();

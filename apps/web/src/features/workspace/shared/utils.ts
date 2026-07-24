@@ -353,6 +353,14 @@ export function normalizeOutput(
     title: 'title' in row ? (row.title ?? null) : null,
     preview: 'preview' in row ? (row.preview ?? null) : null,
     slideId: 'slideId' in row ? (row.slideId ?? null) : null,
+    researchLab:
+      'researchLab' in row && row.researchLab
+        ? {
+            notebookId: Number(row.researchLab.notebookId),
+            runId: Number(row.researchLab.runId),
+            ...(row.researchLab.artifactKind ? { artifactKind: row.researchLab.artifactKind } : {}),
+          }
+        : null,
     createdAt: formatTimestamp(row.createdAt ?? undefined),
     updatedAt: formatTimestamp(row.updatedAt ?? undefined),
     createdAtRaw: toTimestampRaw(row.createdAt),
