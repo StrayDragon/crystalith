@@ -5,7 +5,7 @@ import type { LabGraphMutations, LabPhase } from './types';
 
 /**
  * Paired revision: thinking-graph snapshot + report result.
- * Demo storage → future POST …/revisions.
+ * Fixture-only sessionStorage demo (VITE_LAB_FIXTURE=1) — MUST NOT be Eden SSOT (c89 / r444).
  */
 export interface LabRevisionGraphSlice {
   phase: LabPhase;

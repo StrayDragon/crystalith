@@ -1,21 +1,52 @@
-import type { ResearchReport, ResearchRun } from '@crystalith/shared';
 /**
- * Eden Lab report surface — ResearchRun.report is SSOT (c85).
- * Fixture CoW / revisions remain on LabReportPage fixture branch (c89).
+ * Eden Lab report surface — ResearchRun revisions / CoW / convert (c85 + c89).
+ * Fixture CoW / revisions remain on LabReportPage fixture branch only.
  */
-import { ArrowBack as ArrowBackIcon, Science as ScienceIcon } from '@mui/icons-material';
+import type {
+  ResearchReport,
+  ResearchReportView,
+  ResearchRevision,
+  ResearchRun,
+} from '@crystalith/shared';
+import {
+  ArrowBack as ArrowBackIcon,
+  Check as CheckIcon,
+  Edit as EditIcon,
+  NoteAlt as NoteAltIcon,
+  Save as SaveIcon,
+  Science as ScienceIcon,
+  Source as SourceIcon,
+  Undo as UndoIcon,
+} from '@mui/icons-material';
 import { useEffect, useMemo, useState } from 'react';
 
 import { TestIds, tid } from '../../shared/testids';
+import { toast } from '../../shared/toast';
 import CitationsControl from '../workspace/shared/components/citations/CitationsControl';
-import { getResearchRun } from './edenResearchApi';
+import { runConvertToNote, runConvertToSource } from './edenConvertActions';
+import {
+  createResearchRevision,
+  discardResearchWorkingReport,
+  getResearchReportView,
+  getResearchRun,
+  listResearchRevisions,
+  putResearchCanonicalReport,
+  putResearchWorkingReport,
+  restoreResearchRevision,
+} from './edenResearchApi';
+import { researchCitationToLabCitation } from './evidenceAdapter';
+import LabReportPlateEditor from './LabReportPlateEditor';
 import { navigateToResearchLab } from './labRouting';
+import { markdownToResearchReport } from './markdownToResearchReport';
 import { adaptResearchCitationsToUi } from './researchCitationsAdapter';
+import { researchReportToMarkdown } from './researchReportToMarkdown';
 
 type LoadState =
   | { status: 'idle' | 'loading' }
   | { status: 'error'; message: string }
-  | { status: 'ready'; run: ResearchRun };
+  | { status: 'ready'; run: ResearchRun; view: ResearchReportView };
+
+type ViewSource = 'canonical' | 'working';
 
 function CiteMarks({ ids }: { ids: string[] }) {
   if (!ids.length) return null;
@@ -62,6 +93,11 @@ function EdenReportBody({ report }: { report: ResearchReport }) {
   );
 }
 
+function activeReport(view: ResearchReportView, viewing: ViewSource): ResearchReport | null {
+  if (viewing === 'working' && view.working) return view.working;
+  return view.canonical ?? view.working ?? null;
+}
+
 export default function EdenLabReportPage({
   notebookId,
   runId,
@@ -70,6 +106,28 @@ export default function EdenLabReportPage({
   runId: number | null;
 }) {
   const [state, setState] = useState<LoadState>({ status: 'idle' });
+  const [revisions, setRevisions] = useState<ResearchRevision[]>([]);
+  const [activeRevId, setActiveRevId] = useState<string>('');
+  const [viewing, setViewing] = useState<ViewSource>('canonical');
+  const [editing, setEditing] = useState(false);
+  const [editorEpoch, setEditorEpoch] = useState(0);
+  const [draftMarkdown, setDraftMarkdown] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const reload = async (rid: number) => {
+    const [run, view, revList] = await Promise.all([
+      getResearchRun(notebookId, rid),
+      getResearchReportView(notebookId, rid),
+      listResearchRevisions(notebookId, rid),
+    ]);
+    setState({ status: 'ready', run, view });
+    setRevisions(revList.items);
+    setActiveRevId(revList.items[0]?.id ?? '');
+    setViewing(view.working ? 'working' : 'canonical');
+    setEditing(false);
+    setDraftMarkdown(null);
+    setEditorEpoch((n) => n + 1);
+  };
 
   useEffect(() => {
     if (runId === null || runId === undefined || !Number.isFinite(runId) || runId <= 0) {
@@ -80,9 +138,8 @@ export default function EdenLabReportPage({
     setState({ status: 'loading' });
     void (async () => {
       try {
-        const run = await getResearchRun(notebookId, runId);
+        await reload(runId);
         if (cancelled) return;
-        setState({ status: 'ready', run });
       } catch (error) {
         if (cancelled) return;
         const message = error instanceof Error ? error.message : String(error);
@@ -92,13 +149,168 @@ export default function EdenLabReportPage({
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload on notebook/run only
   }, [notebookId, runId]);
 
-  const report = state.status === 'ready' ? (state.run.report ?? null) : null;
+  const view = state.status === 'ready' ? state.view : null;
+  const report = view ? activeReport(view, viewing) : null;
+  const hasWorking = Boolean(view?.working);
   const uiCitations = useMemo(
     () => adaptResearchCitationsToUi(report?.citations),
     [report?.citations],
   );
+  const labCitations = useMemo(() => {
+    const map: Record<string, ReturnType<typeof researchCitationToLabCitation>> = {};
+    if (!report?.citations) return map;
+    for (const [id, c] of Object.entries(report.citations)) {
+      map[id] = researchCitationToLabCitation(id, c);
+    }
+    return map;
+  }, [report?.citations]);
+
+  const displayMarkdown = useMemo(() => {
+    if (draftMarkdown !== null) return draftMarkdown;
+    if (!report) return '';
+    return researchReportToMarkdown(report);
+  }, [draftMarkdown, report]);
+
+  const documentKey = `eden-report-${runId}-${activeRevId}-${editorEpoch}-${editing ? 'edit' : 'view'}`;
+
+  const withBusy = async (fn: () => Promise<void>) => {
+    if (busy || runId === null || !runId) return;
+    setBusy(true);
+    try {
+      await fn();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(message, 5000);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startEditing = () =>
+    void withBusy(async () => {
+      if (!view || !runId) return;
+      const base = view.canonical ?? view.working;
+      if (!base) {
+        toast.error('当前无报告可编辑');
+        return;
+      }
+      if (!view.working) {
+        const next = await putResearchWorkingReport(notebookId, runId, base);
+        setState((prev) => (prev.status === 'ready' ? { ...prev, view: next } : prev));
+        toast.info('已创建编辑副本（working）', 2200);
+      }
+      setViewing('working');
+      setEditing(true);
+      setDraftMarkdown(null);
+      setEditorEpoch((n) => n + 1);
+    });
+
+  const finishEditing = () =>
+    void withBusy(async () => {
+      if (!view || !runId || draftMarkdown === null) {
+        setEditing(false);
+        return;
+      }
+      const base = view.working ?? view.canonical;
+      const reportBody = markdownToResearchReport(draftMarkdown, base);
+      const next = await putResearchWorkingReport(notebookId, runId, reportBody);
+      setState((prev) => (prev.status === 'ready' ? { ...prev, view: next } : prev));
+      setEditing(false);
+      setViewing('working');
+      setDraftMarkdown(null);
+      setEditorEpoch((n) => n + 1);
+      toast.success('已保存编辑副本', 2200);
+    });
+
+  const commitCanonical = () =>
+    void withBusy(async () => {
+      if (!view?.working || !runId) {
+        toast.error('没有可提交的编辑副本');
+        return;
+      }
+      let working = view.working;
+      if (draftMarkdown !== null) {
+        working = markdownToResearchReport(draftMarkdown, working);
+      }
+      await putResearchCanonicalReport(notebookId, runId, working);
+      const next = await discardResearchWorkingReport(notebookId, runId);
+      const run = await getResearchRun(notebookId, runId);
+      setState({ status: 'ready', run, view: next });
+      setEditing(false);
+      setViewing('canonical');
+      setDraftMarkdown(null);
+      setEditorEpoch((n) => n + 1);
+      toast.success('已提交权威报告', 2800);
+    });
+
+  const discardWorking = () =>
+    void withBusy(async () => {
+      if (!runId || !hasWorking) return;
+      if (!window.confirm('丢弃编辑副本并恢复权威报告？此操作不可撤销。')) return;
+      const next = await discardResearchWorkingReport(notebookId, runId);
+      setState((prev) => (prev.status === 'ready' ? { ...prev, view: next } : prev));
+      setEditing(false);
+      setViewing('canonical');
+      setDraftMarkdown(null);
+      setEditorEpoch((n) => n + 1);
+      toast.success('已丢弃编辑副本', 2200);
+    });
+
+  const saveRevision = () =>
+    void withBusy(async () => {
+      if (!runId) return;
+      if (editing && draftMarkdown !== null && view) {
+        const base = view.working ?? view.canonical;
+        await putResearchWorkingReport(
+          notebookId,
+          runId,
+          markdownToResearchReport(draftMarkdown, base),
+        );
+      }
+      const from = hasWorking || viewing === 'working' ? 'working' : 'canonical';
+      const rev = await createResearchRevision(notebookId, runId, { from });
+      const list = await listResearchRevisions(notebookId, runId);
+      setRevisions(list.items);
+      setActiveRevId(rev.id);
+      toast.success(`已保存版本「${rev.label}」`, 3200);
+    });
+
+  const restoreRevision = (revId: string) =>
+    void withBusy(async () => {
+      if (!runId || !revId) return;
+      const run = await restoreResearchRevision(notebookId, runId, revId);
+      const viewNext = await getResearchReportView(notebookId, runId);
+      const list = await listResearchRevisions(notebookId, runId);
+      setState({ status: 'ready', run, view: viewNext });
+      setRevisions(list.items);
+      setActiveRevId(revId);
+      setEditing(false);
+      setViewing('canonical');
+      setDraftMarkdown(null);
+      setEditorEpoch((n) => n + 1);
+      toast.success('已恢复版本；返回图谱可看到更新后的思考图', 3600);
+    });
+
+  const convertNote = () =>
+    void withBusy(async () => {
+      if (!runId) return;
+      await runConvertToNote(notebookId, runId, { kind: 'report' });
+    });
+
+  const convertSource = () =>
+    void withBusy(async () => {
+      if (!runId) return;
+      await runConvertToSource(notebookId, runId, { kind: 'report' });
+    });
+
+  const modeBadge = editing
+    ? '编辑中'
+    : viewing === 'working' && hasWorking
+      ? '编辑副本 · 浏览'
+      : '权威 · 浏览';
 
   return (
     <div
@@ -120,15 +332,170 @@ export default function EdenLabReportPage({
             <ScienceIcon sx={{ fontSize: 16 }} />
           </span>
           <div className="min-w-0">
-            <div className="truncate text-sm font-semibold">研究报告</div>
+            <div className="flex items-center gap-2 truncate text-sm font-semibold">
+              研究报告
+              {state.status === 'ready' && report ? (
+                <span
+                  className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                    editing
+                      ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-200'
+                      : viewing === 'working' && hasWorking
+                        ? 'bg-blue-50 text-blue-800 ring-1 ring-blue-100'
+                        : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  {modeBadge}
+                </span>
+              ) : null}
+            </div>
             <div className="truncate text-[11px] text-gray-500">
               #{notebookId}
               {runId ? ` · Run #${runId}` : ''}
               {report ? ` · ${report.title}` : ''}
+              {hasWorking ? ' · 未提交编辑副本' : ''}
             </div>
           </div>
         </div>
-        {uiCitations.length > 0 ? (
+
+        {state.status === 'ready' && report ? (
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+            <select
+              className="max-w-[160px] rounded-md border border-gray-200 bg-white px-2 py-1.5 text-[11px] text-gray-700"
+              value={activeRevId}
+              disabled={busy || revisions.length === 0}
+              onChange={(e) => {
+                const id = e.target.value;
+                setActiveRevId(id);
+                void restoreRevision(id);
+              }}
+              title="选择并恢复服务端修订快照"
+              {...tid(TestIds.researchLabRevisionSelect)}
+            >
+              {revisions.length === 0 ? (
+                <option value="">暂无版本</option>
+              ) : (
+                revisions.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label}
+                    {r.kind === 'auto_complete' ? ' · 自动' : ''}
+                  </option>
+                ))
+              )}
+            </select>
+
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void saveRevision()}
+              className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[11px] text-blue-900 hover:bg-blue-100 disabled:opacity-40"
+              title="创建当前快照（服务端 revisions）"
+              {...tid(TestIds.researchLabRevisionSave)}
+            >
+              <SaveIcon sx={{ fontSize: 14 }} />
+              保存版本
+            </button>
+
+            {editing ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void finishEditing()}
+                className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[11px] text-blue-800 hover:bg-blue-100 disabled:opacity-40"
+                {...tid(TestIds.researchLabReportDoneEdit)}
+              >
+                <CheckIcon sx={{ fontSize: 14 }} />
+                完成编辑
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void startEditing()}
+                className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+                title="编辑报告（服务端 working CoW）"
+                {...tid(TestIds.researchLabReportEdit)}
+              >
+                <EditIcon sx={{ fontSize: 14 }} />
+                编辑
+              </button>
+            )}
+
+            {!editing && viewing === 'working' && hasWorking ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setViewing('canonical');
+                  setDraftMarkdown(null);
+                  setEditorEpoch((n) => n + 1);
+                }}
+                className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50"
+                {...tid(TestIds.researchLabReportViewCanonical)}
+              >
+                查看权威原文
+              </button>
+            ) : null}
+            {!editing && viewing === 'canonical' && hasWorking ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setViewing('working');
+                  setDraftMarkdown(null);
+                  setEditorEpoch((n) => n + 1);
+                }}
+                className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[11px] text-blue-800 hover:bg-blue-100"
+              >
+                浏览编辑副本
+              </button>
+            ) : null}
+            {hasWorking ? (
+              <>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void commitCanonical()}
+                  className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[11px] text-emerald-900 hover:bg-emerald-100 disabled:opacity-40"
+                >
+                  提交权威
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void discardWorking()}
+                  className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] text-gray-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:opacity-40"
+                  {...tid(TestIds.researchLabReportDiscard)}
+                >
+                  <UndoIcon sx={{ fontSize: 14 }} />
+                  丢弃编辑
+                </button>
+              </>
+            ) : null}
+
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void convertSource()}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+            >
+              <SourceIcon sx={{ fontSize: 14 }} />
+              转为来源
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void convertNote()}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+            >
+              <NoteAltIcon sx={{ fontSize: 14 }} />
+              转为笔记
+            </button>
+
+            {uiCitations.length > 0 && !editing ? (
+              <CitationsControl citations={uiCitations} elevated triggerLabel="查看报告引用" />
+            ) : null}
+          </div>
+        ) : uiCitations.length > 0 ? (
           <CitationsControl citations={uiCitations} elevated triggerLabel="查看报告引用" />
         ) : null}
       </header>
@@ -161,7 +528,25 @@ export default function EdenLabReportPage({
             </button>
           </div>
         ) : null}
-        {state.status === 'ready' && report ? <EdenReportBody report={report} /> : null}
+        {state.status === 'ready' && report && editing ? (
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="mb-0 px-10 pt-3">
+              <div className="mx-auto max-w-3xl rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+                编辑副本经 PUT …/report/working 持久化；「提交权威」写入 PUT …/report。
+              </div>
+            </div>
+            <LabReportPlateEditor
+              documentKey={documentKey}
+              markdown={displayMarkdown}
+              citations={labCitations}
+              orphanIds={new Set()}
+              showCitations={false}
+              readOnly={false}
+              onMarkdownChange={(md) => setDraftMarkdown(md)}
+            />
+          </div>
+        ) : null}
+        {state.status === 'ready' && report && !editing ? <EdenReportBody report={report} /> : null}
       </div>
     </div>
   );

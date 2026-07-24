@@ -2,6 +2,8 @@ import type { ResearchNodeActionProposal } from '@crystalith/shared';
 import { useEffect, useRef, useState } from 'react';
 
 import { TestIds, tid } from '../../shared/testids';
+import { toast } from '../../shared/toast';
+import { runConvertToNote, runConvertToSource } from './edenConvertActions';
 import { streamNodeChat } from './edenResearchApi';
 import { resolveNodeCitations } from './evidenceAdapter';
 import type { LabNodeActionProposal } from './fake/nodeChatTypes';
@@ -740,6 +742,50 @@ export default function LabNodeDrawer({
               </button>
             </section>
           ) : null}
+
+          {/* Convert entry — faded (r406); Eden calls convert APIs (r443); fixture stub toast. */}
+          <section className="rounded-md border border-dashed border-gray-100 bg-gray-50/50 px-3 py-2 opacity-70">
+            <h3 className="mb-1 text-[10px] uppercase tracking-wider text-gray-400">转化</h3>
+            <p className="mb-2 text-[10px] leading-snug text-gray-400">
+              将本节点写入笔记本（无强制确认）
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                className="rounded border border-gray-200 bg-white/80 px-2 py-0.5 text-[10px] text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                data-testid="research-lab-node-convert-note"
+                onClick={() => {
+                  if (mode === 'eden' && notebookId && runId) {
+                    void runConvertToNote(notebookId, runId, {
+                      kind: 'node',
+                      nodeId: node.id,
+                    });
+                    return;
+                  }
+                  toast.info(`演示：节点「${node.title}」转为笔记（fixture）`, 3200);
+                }}
+              >
+                转为笔记
+              </button>
+              <button
+                type="button"
+                className="rounded border border-gray-200 bg-white/80 px-2 py-0.5 text-[10px] text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                data-testid="research-lab-node-convert-source"
+                onClick={() => {
+                  if (mode === 'eden' && notebookId && runId) {
+                    void runConvertToSource(notebookId, runId, {
+                      kind: 'node',
+                      nodeId: node.id,
+                    });
+                    return;
+                  }
+                  toast.success(`演示：节点「${node.title}」转为来源（fixture）`, 3200);
+                }}
+              >
+                转为来源
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </aside>
