@@ -80,7 +80,7 @@ describe('LabNodeDrawer chat mode (c88)', () => {
   });
 
   it('fixture send may call proposeNodeChatTurn', async () => {
-    render(
+    const { unmount } = render(
       <LabNodeDrawer
         node={{ ...researchNode, id: 'fixture-branch' }}
         citations={{}}
@@ -100,6 +100,11 @@ describe('LabNodeDrawer chat mode (c88)', () => {
       expect(proposeNodeChatTurn).toHaveBeenCalled();
     });
     expect(streamNodeChat).not.toHaveBeenCalled();
+    // Wait for fixture streamInto to finish before teardown (avoids window-after-unmount).
+    await waitFor(() => {
+      expect(screen.getByText('fixture reply')).toBeTruthy();
+    });
+    unmount();
   });
 
   it('llmBusy disables send', () => {

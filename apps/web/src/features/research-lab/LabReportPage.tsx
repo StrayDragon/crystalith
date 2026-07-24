@@ -1,8 +1,8 @@
 /**
  * Lab report surface.
  *
- * Fixture (`VITE_LAB_FIXTURE=1`): MOCK revisions in sessionStorage + CoW.
- * Eden: ResearchRun.report SSOT via EdenLabReportPage (c85).
+ * Fixture (`VITE_LAB_FIXTURE=1` / mode=fixture): sessionStorage labRevisions + reportCow.
+ * Eden: ResearchRun revisions / CoW / convert via server APIs (c85 + c89).
  */
 import {
   ArrowBack as ArrowBackIcon,
