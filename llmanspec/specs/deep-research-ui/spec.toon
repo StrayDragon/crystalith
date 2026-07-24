@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "deep-research-ui"
 purpose: "TBD - created by archiving change c77-deep-research-ui. Update purpose after archive."
 valid_scope[2]: src/,tests/
-requirements[50]{req_id,title,statement}:
+requirements[51]{req_id,title,statement}:
   r400,Lab route replaces E1 Desk as deep entry,"深研产品入口 MUST 为 /research-lab/:nid（及工作区烧瓶导航）；Workspace 顶栏 E1 MUST NOT 再以 DeepResearchDesk 作为深研主表面；MUST NOT 恢复「暂不可用」壳或已删除 HITL agent 作为深研路径。"
   r401,H1 create form on desk,DeepResearchDesk MUST 提供显式 useNotebookSources 与 allowWeb（默认皆开）、台内 sourceIds 多选、以及浅/中/深 depth（默认中）；当 useNotebookSources 为 true 且未选来源、或两开关皆关、或 topic 为空时 MUST 禁用开始；sourceIds MUST NOT 隐式绑定工作区勾选状态。
   r402,Queue freshness without list SSE,Desk 队列 MUST 在打开时拉取 notebook 作用域 listRuns；当存在非终态 Run 时 MUST 以短间隔轮询刷新，全终态或关闭 Desk 时 MUST 停止轮询；创建成功、关闭详情返回、以及详情内导致状态变化的操作之后 MUST 立即再拉 list；MUST NOT 在本变更引入 notebook 级 list SSE。
@@ -53,7 +53,8 @@ requirements[50]{req_id,title,statement}:
   r447,Lab Compose depth tier,Lab Compose（LabComposePanel）MUST 暴露浅/中/深三档研究深度且默认 MUST 为中；用户提交创建时 Eden 路径 MUST 在 POST …/research body 中发送所选 depth（对齐 r305 预算映射与 r401 Desk 创建语义）；MUST NOT 隐式省略 depth 导致与 UI 选择不一致。
   r448,Lab progress ledger panel,"Eden 模式下 Lab MUST 将 GET …/research/:rid/progress 账本与/或 SSE progress 事件 surfaced 为可见的 timeline 或 metrics 面板（非仅 activity log）；面板 MUST 展示结构化进度事件（至少 kind、headline、时间戳，可选 nodeId）；加载 Run 时 MUST 拉取 progress  gap-fill，流式追加 MUST 与 ledger seq 对齐；MUST NOT 以 fixture LabPhase 定时百分比或前端 timer 作为 Eden Run 的权威进度来源。"
   r449,Eden M1 confirm surface by confirmKind,当 Run status 为 awaiting_confirm 时，Lab MUST 按 confirmKind（budget 与 expand_branch）展示分化文案；MUST 高亮 confirmBranchNodeId 对应图区域；MUST 暴露 continue、finish_report、approve_branch 与 skip_branch 并经 Eden confirm 命令口执行；RESEARCH_BUDGET 与 RESEARCH_INVALID_STATE MUST 映射为可见错误（对齐 r410）；MUST NOT 恢复逐步计划审批 UI。
-scenarios[83]{req_id,id,given,when,then,feature}:
+  r450,Eden Lab phase labels from progress and graph,Eden 模式下 Lab 相位标签 MUST 在 queued/running/completed 之外，经 progress 事件与节点 phase/图状态富化为与 fixture 可比的 evaluate/integrate 等相位；顶栏与 progress ledger MUST 共用同一推导；Eden 路径 MUST NOT 以 fixture timer 回放作为相位权威态。
+scenarios[87]{req_id,id,given,when,then,feature}:
   r400,"lab-route-is-deep-entry",用户要从工作区进入深研,打开深研,"进入 /research-lab/:nid 而非顶栏 DeepResearchDesk",false
   r401,"empty-sources-disables-start",用来源开关开启且台内未选任何来源,用户尝试开始深研,开始控件保持禁用且不得发出创建请求,false
   r402,"polling-stops-when-terminal",Desk 打开且队列仅含 completed/failed/cancelled,等待超过一个轮询间隔,客户端不再为 list 发起定时轮询请求,false
@@ -137,3 +138,7 @@ scenarios[83]{req_id,id,given,when,then,feature}:
   r449,"skip-branch-calls-confirm",Eden Run 为 expand_branch 待确认,用户点 skip_branch,发出 POST confirm action=skip_branch 且带 branchNodeId,true
   r449,"confirm-budget-error-visible",Eden confirm 返回 RESEARCH_BUDGET,用户操作确认条,界面展示可见错误而非静默失败,true
   r449,"no-step-plan-approval-ui",Eden Lab 处于 awaiting_confirm,用户浏览作业台,不出现逐步计划审批 UI,true
+  r450,"eden-progress-maps-evaluate",Eden Run 进行中且 SSE progress 上报 evaluate 类 unit_finished,用户查看顶栏相位,展示 evaluate 或产品等价标签而非仅 running,true
+  r450,"eden-no-progress-stays-explore",Eden Run 为 running 且尚无 progress 事件,用户查看顶栏相位,展示 explore（不按节点 phase 众数猜测）,true
+  r450,"eden-not-timer-playback",Lab 为 eden 模式且 VITE_LAB_FIXTURE 未设,推进 Run 状态,相位变化来自 progress/GET 而非 advanceLabPlayback,true
+  r450,"awaiting-confirm-phase-unchanged",Eden Run 进入 awaiting_confirm,用户查看相位,labPhase 为 awaiting_confirm 且 playing 为 false,true

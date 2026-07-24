@@ -1,8 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,r450,"Eden Lab phase labels from progress and graph","Eden 模式下 Lab 相位标签 MUST 在 queued/running/completed 之外，经 progress 事件与节点 phase/图状态富化为与 fixture 可比的 evaluate/integrate 等相位；顶栏与 progress ledger MUST 共用同一推导；Eden 路径 MUST NOT 以 fixture timer 回放作为相位权威态。",null,null,null
-op_scenarios[4]{req_id,id,given,when,then,feature}:
-  r450,"eden-progress-maps-evaluate","Eden Run 进行中且 SSE progress 上报 evaluate 类 node_phase","用户查看顶栏相位","展示 evaluate 或产品等价标签而非仅 running",true
-  r450,"eden-integrate-from-graph","Eden Run 多数 research 节点 phase 为 integrate","用户查看 progress ledger","ledger 与顶栏均示 integrate 类相位",true
-  r450,"eden-not-timer-playback","Lab 为 eden 模式且 VITE_LAB_FIXTURE 未设","推进 Run 状态","相位变化来自 progress/GET 而非 advanceLabPlayback",true
-  r450,"awaiting-confirm-phase-unchanged","Eden Run 进入 awaiting_confirm","用户查看相位","labPhase 为 awaiting_confirm 且 playing 为 false",true
