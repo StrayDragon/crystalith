@@ -2,13 +2,21 @@ import type { ResearchArtifactRef } from '@crystalith/shared';
 
 import { toast } from '../../shared/toast';
 import { convertResearchToNote, convertResearchToSource } from './edenResearchApi';
+import { navigateToWorkspace } from './labRouting';
 
 export type EdenConvertResult =
   | { ok: true; kind: 'note'; outputId: number }
   | { ok: true; kind: 'source'; sourceId: number; filename: string; chunkCount: number }
   | { ok: false; error: string };
 
-/** Convert artifact → note with toast feedback (r409 / r443). No confirm dialog. */
+const OPEN_WORKSPACE_ACTION = {
+  label: '打开工作区',
+  onClick: () => {
+    navigateToWorkspace();
+  },
+} as const;
+
+/** Convert artifact → note with toast feedback (r409 / r443 / r446). No confirm dialog. */
 export async function runConvertToNote(
   notebookId: number,
   runId: number,
@@ -16,8 +24,10 @@ export async function runConvertToNote(
 ): Promise<EdenConvertResult> {
   try {
     const res = await convertResearchToNote(notebookId, runId, artifact);
-    // Weak link hint: id in toast; workspace opens notes from studio/outputs.
-    toast.success(`已转为笔记 #${res.outputId}（可在工作区打开）`, 4500);
+    toast.success(`已转为笔记 #${res.outputId}`, {
+      duration: 4500,
+      action: OPEN_WORKSPACE_ACTION,
+    });
     return { ok: true, kind: 'note', outputId: res.outputId };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -26,7 +36,7 @@ export async function runConvertToNote(
   }
 }
 
-/** Convert artifact → source with toast feedback (r409 / r443). No confirm dialog. */
+/** Convert artifact → source with toast feedback (r409 / r443 / r446). No confirm dialog. */
 export async function runConvertToSource(
   notebookId: number,
   runId: number,
@@ -34,10 +44,10 @@ export async function runConvertToSource(
 ): Promise<EdenConvertResult> {
   try {
     const res = await convertResearchToSource(notebookId, runId, artifact);
-    toast.success(
-      `已转为来源 #${res.sourceId}：${res.filename}（${res.chunkCount} 块，可在工作区打开）`,
-      4500,
-    );
+    toast.success(`已转为来源 #${res.sourceId}：${res.filename}（${res.chunkCount} 块）`, {
+      duration: 4500,
+      action: OPEN_WORKSPACE_ACTION,
+    });
     return {
       ok: true,
       kind: 'source',

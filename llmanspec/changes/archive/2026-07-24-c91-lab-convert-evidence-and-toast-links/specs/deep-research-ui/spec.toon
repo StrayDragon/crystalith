@@ -1,0 +1,10 @@
+kind: llman.sdd.delta
+ops[2]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r445,"Lab drawer converts listed evidence via artifact ref","当 LabNodeDrawer 信息引用源列表非空时，每条证据 MUST 提供转为笔记与转为来源入口；Eden 模式下 MUST 调用 POST …/convert-to-note 或 convert-to-source，body 使用 ResearchArtifactRef kind=evidence 与对应 evidenceId；成功或失败 MUST 以 toast 反馈且 MUST NOT 弹出强制转化确认对话框（对齐 r409/r443）；fixture 模式 MUST 仅 stub toast 且 MUST NOT 调用 Eden convert。",null,null,null
+  add_requirement,r446,"Convert success toast offers workspace action link","共享 toast 组件 MUST 支持可选 action（label 与 onClick）；Eden convert 成功 toast MUST 提供可点击弱链接/动作以打开工作区（navigateToWorkspace 或等价）；既有仅传 duration 的 toast 调用 MUST 保持兼容；MUST NOT 引入强制确认对话框或平行 toast 实现。",null,null,null
+op_scenarios[5]{req_id,id,given,when,then,feature}:
+  r445,"evidence-convert-note-calls-api","Eden 节点抽屉已列出至少一条证据","用户点该证据转为笔记","请求体含 kind=evidence 与 evidenceId 且出现成功或失败 toast",true
+  r445,"evidence-convert-source-calls-api","Eden 节点抽屉已列出证据","用户点该证据转为来源","请求体含 kind=evidence 与 evidenceId",true
+  r445,"fixture-evidence-convert-stubs","Lab 抽屉为 fixture 模式且有引用列表","用户点证据转为笔记","仅 stub toast 且不调用 Eden convert API",true
+  r446,"toast-action-clickable","toast 以 success 与 action 展示","用户点击 action 标签","执行 onClick（如打开工作区）",true
+  r446,"convert-success-includes-workspace-action","Eden convertToNote 成功","观察成功 toast","含打开工作区类可点击动作",true
