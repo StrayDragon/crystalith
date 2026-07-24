@@ -718,6 +718,43 @@ export default function LabNodeDrawer({
                       {c.title}
                     </a>
                     <p className="mt-1 text-[11px] leading-snug text-gray-600">{c.snippet}</p>
+                    {/* Per-evidence convert (c91 / r445); faded like node convert (r406). */}
+                    <div className="mt-1.5 flex flex-wrap gap-1 opacity-70">
+                      <button
+                        type="button"
+                        className="rounded border border-gray-200 bg-white/80 px-1.5 py-0.5 text-[10px] text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                        data-testid={`research-lab-evidence-convert-note-${c.id}`}
+                        onClick={() => {
+                          if (mode === 'eden' && notebookId && runId) {
+                            void runConvertToNote(notebookId, runId, {
+                              kind: 'evidence',
+                              evidenceId: c.id,
+                            });
+                            return;
+                          }
+                          toast.info(`演示：证据「${c.title}」转为笔记（fixture）`, 3200);
+                        }}
+                      >
+                        转为笔记
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded border border-gray-200 bg-white/80 px-1.5 py-0.5 text-[10px] text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                        data-testid={`research-lab-evidence-convert-source-${c.id}`}
+                        onClick={() => {
+                          if (mode === 'eden' && notebookId && runId) {
+                            void runConvertToSource(notebookId, runId, {
+                              kind: 'evidence',
+                              evidenceId: c.id,
+                            });
+                            return;
+                          }
+                          toast.success(`演示：证据「${c.title}」转为来源（fixture）`, 3200);
+                        }}
+                      >
+                        转为来源
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>

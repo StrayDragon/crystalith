@@ -9,16 +9,28 @@ import { useLayer } from './layer';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
+/** Optional weak link / button on a toast (c91 / r446). */
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
+export interface ToastOptions {
+  duration?: number;
+  action?: ToastAction;
+}
+
 export interface Toast {
   id: string;
   message: string;
   type: ToastType;
   duration?: number;
+  action?: ToastAction;
 }
 
 interface ToastStore {
   toasts: Toast[];
-  addToast: (message: string, type?: ToastType, duration?: number) => void;
+  addToast: (message: string, type?: ToastType, durationOrOptions?: number | ToastOptions) => void;
   removeToast: (id: string) => void;
 }
 
@@ -29,13 +41,30 @@ const DEFAULT_TOAST_DURATION: Record<ToastType, number> = {
   warning: 4000,
 };
 
+function resolveToastOptions(durationOrOptions?: number | ToastOptions): {
+  duration?: number;
+  action?: ToastAction;
+} {
+  if (durationOrOptions === undefined) return {};
+  if (typeof durationOrOptions === 'number') return { duration: durationOrOptions };
+  return {
+    duration: durationOrOptions.duration,
+    action: durationOrOptions.action,
+  };
+}
+
 export const useToastStore = create<ToastStore>((set) => ({
   toasts: [],
-  addToast: (message: string, type: ToastType = 'info', duration?: number) => {
+  addToast: (
+    message: string,
+    type: ToastType = 'info',
+    durationOrOptions?: number | ToastOptions,
+  ) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+    const { duration, action } = resolveToastOptions(durationOrOptions);
     const resolvedDuration = duration ?? DEFAULT_TOAST_DURATION[type];
     set((state) => ({
-      toasts: [...state.toasts, { id, message, type, duration: resolvedDuration }],
+      toasts: [...state.toasts, { id, message, type, duration: resolvedDuration, action }],
     }));
 
     if (resolvedDuration > 0) {
@@ -53,18 +82,22 @@ export const useToastStore = create<ToastStore>((set) => ({
   },
 }));
 
+function pushToast(type: ToastType, message: string, durationOrOptions?: number | ToastOptions) {
+  useToastStore.getState().addToast(message, type, durationOrOptions);
+}
+
 export const toast = {
-  success: (message: string, duration?: number) => {
-    useToastStore.getState().addToast(message, 'success', duration);
+  success: (message: string, durationOrOptions?: number | ToastOptions) => {
+    pushToast('success', message, durationOrOptions);
   },
-  error: (message: string, duration?: number) => {
-    useToastStore.getState().addToast(message, 'error', duration);
+  error: (message: string, durationOrOptions?: number | ToastOptions) => {
+    pushToast('error', message, durationOrOptions);
   },
-  info: (message: string, duration?: number) => {
-    useToastStore.getState().addToast(message, 'info', duration);
+  info: (message: string, durationOrOptions?: number | ToastOptions) => {
+    pushToast('info', message, durationOrOptions);
   },
-  warning: (message: string, duration?: number) => {
-    useToastStore.getState().addToast(message, 'warning', duration);
+  warning: (message: string, durationOrOptions?: number | ToastOptions) => {
+    pushToast('warning', message, durationOrOptions);
   },
 };
 
@@ -91,7 +124,22 @@ function ToastItem({ toast: toastItem, onClose }: { toast: Toast; onClose: () =>
       role="alert"
     >
       <Icon className="h-5 w-5 flex-shrink-0" />
-      <span className="flex-1 text-sm font-medium">{toastItem.message}</span>
+      <div className="flex-1 min-w-0">
+        <span className="text-sm font-medium">{toastItem.message}</span>
+        {toastItem.action ? (
+          <button
+            type="button"
+            className="mt-1 block text-left text-sm font-medium underline underline-offset-2 decoration-white/70 hover:decoration-white"
+            data-testid="toast-action"
+            onClick={() => {
+              toastItem.action?.onClick();
+              onClose();
+            }}
+          >
+            {toastItem.action.label}
+          </button>
+        ) : null}
+      </div>
       <button
         onClick={onClose}
         className="p-1 rounded-full hover:bg-white/20 dark:hover:bg-slate-700/40 transition-colors"
