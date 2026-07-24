@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "deep-research-runtime"
 purpose: "TBD - created by archiving change c76-deep-research-runtime. Update purpose after archive."
 valid_scope[2]: src/,tests/
-requirements[24]{req_id,title,statement}:
+requirements[26]{req_id,title,statement}:
   r300,ResearchRun is process SSOT,系统 MUST 以 notebook 作用域的 ResearchRun 作为深研过程 SSOT（图、checkpoint、权威报告与 citation map 挂在 Run 上）；MUST NOT 把长跑过程态的唯一权威塞进 Output 行。
   r301,Create replaces 501 stub,"POST /v2/notebooks/:nid/research MUST 在合法 notebook 下创建 ResearchRun 并返回可追踪 id 与初始状态；MUST NOT 再以 501 NOT_IMPLEMENTED 作为成功创建路径。"
   r302,List and get runs for desk queue,系统 MUST 提供 notebook 作用域的 listRuns 与 getRun；缺少 notebook 作用域时 MUST 拒绝全表列举。
@@ -27,7 +27,9 @@ requirements[24]{req_id,title,statement}:
   r321,PATCH node fields on live runs,在 running 或 awaiting_confirm 时系统 MUST 支持 PATCH 节点的 title、query、conclusionStatus（请求体至少一项）；对已 pruned 或受保护的 question/conclusion 节点 MUST 拒绝；完成后 MUST 经 graph_patch 或返回 Run 反映权威状态。
   r322,Node chat SSE proposals only,"系统 MUST 提供 POST 节点 chat 的短轮 SSE（正文增量与可选 ActionProposal/tool-approval）；chat MUST 与 Run 进度 stream 分离；同一 Run 上 chat 与自研 work-unit MUST 互斥（拒绝或排队）；Structure 类意图 MUST 经用户确认后调用既有命令口，MUST NOT 在 tool execute 中静默改图。"
   r323,"User-visible run revisions",系统 MUST 为 ResearchRun 提供用户可见的 revisions：至少支持列表、从当前 graph 与权威 report 创建快照、按 id 读取；恢复某 revision MUST 将对应 graph/report 写回为当前权威并通知客户端（graph_patch 或等价）；revisions MUST NOT 与内部 checkpoint 混为同一概念。
-scenarios[28]{req_id,id,given,when,then,feature}:
+  r324,Align ResearchRun contract to Lab inventory,"系统 MUST 根据 c80 inventory 中标为 fix-api 的项修正 ResearchRun Zod 与 HTTP/SSE 行为，使命令口与 Lab 设计语义一致；MUST 在本变更内使 apps/server/tests/research 全绿；MUST NOT 删除 /v2/notebooks/:nid/research* 主路由面。"
+  r325,"Lab-only extras stay documented not silent","对 inventory 标为 lab-only/no-api 的能力，系统 MUST 在合约或 inventory 中显式记录为非 API 权威，MUST NOT 用未文档化的 501 或静默丢字段冒充已支持；标为 defer 的项 MUST 列出后续 change。"
+scenarios[30]{req_id,id,given,when,then,feature}:
   r300,"run-holds-graph-and-report",用户已创建一次深研 Run,系统推进研究并生成报告,图与权威报告及 citation map 均挂在该 ResearchRun 上，而非仅存在于 Output 行,true
   r301,"create-returns-run-id",notebook 存在且请求合法,客户端 POST 创建深研,系统返回 ResearchRun id 与初始状态且不得以 501 作为成功路径,true
   r302,"list-requires-notebook",系统中存在多个 notebook 的 Run,客户端省略 notebook 作用域调用 list,系统拒绝全表列举,true
@@ -56,3 +58,5 @@ scenarios[28]{req_id,id,given,when,then,feature}:
   r322,"chat-does-not-auto-prune",节点 chat 流提出 prune 提案,用户尚未确认,图上该节点仍未 pruned,true
   r322,"chat-separate-from-run-stream",客户端已订阅 Run stream,发起节点 chat,chat 正文事件不出现在 Run stream 事件名集合中,true
   r323,"create-and-list-revision",Run 已有 graph 与 report,用户创建 revision 后列表,列表含新快照且可读回 graph/report 内容,true
+  r324,"research-tests-green-after-align",c81 合约修正完成,运行 server research 测试套件,全部通过且 research 路由仍可创建 Run,true
+  r325,"lab-only-capability-documented",某 Lab 能力不进 API,查阅 inventory/合约,"该能力被标为 lab-only 或 defer，而非伪装成功",false

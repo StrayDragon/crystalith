@@ -328,7 +328,12 @@ const ResearchCreateFieldsSchema = z.object({
   useNotebookSources: z
     .boolean()
     .optional()
-    .openapi({ description: desc('research.use_notebook_sources', '是否使用笔记本来源') }),
+    .openapi({
+      description: desc(
+        'research.use_notebook_sources',
+        '是否使用笔记本来源（省略时默认 false，与 Compose 外网优先一致）',
+      ),
+    }),
   sourceIds: z
     .array(IdSchema)
     .optional()
@@ -336,7 +341,9 @@ const ResearchCreateFieldsSchema = z.object({
   allowWeb: z
     .boolean()
     .optional()
-    .openapi({ description: desc('research.allow_web', '是否允许外网检索') }),
+    .openapi({
+      description: desc('research.allow_web', '是否允许外网检索（省略时默认 true）'),
+    }),
   depth: ResearchDepthSchema.optional(),
 });
 
@@ -411,15 +418,58 @@ export const ResearchRunSchema = z
   });
 export type ResearchRun = z.infer<typeof ResearchRunSchema>;
 
+/** List/inbox row — no graph or report payload (task drawer SSOT). */
+export const ResearchRunSummarySchema = z
+  .object({
+    id: IdSchema.openapi({ description: desc('research.id', '研究任务唯一标识') }),
+    notebookId: IdSchema,
+    topic: z.string().openapi({ description: desc('research.topic', '研究主题') }),
+    status: ResearchRunStatusSchema,
+    useNotebookSources: z.boolean(),
+    allowWeb: z.boolean(),
+    sourceIds: z.array(IdSchema).nullable().optional(),
+    depth: ResearchDepthSchema,
+    maxSearches: z.number().int().positive(),
+    maxNodes: z.number().int().positive(),
+    searchesUsed: z.number().int().nonnegative().default(0),
+    confirmKind: z.enum(['budget', 'expand_branch']).nullable().optional(),
+    errorMessage: z.string().nullable().optional(),
+    createdAt: IsoTimestampSchema,
+    updatedAt: IsoTimestampSchema,
+  })
+  .openapi({
+    description: desc('research.run_summary', '深研 Run 列表摘要（不含图与报告）'),
+  });
+export type ResearchRunSummary = z.infer<typeof ResearchRunSummarySchema>;
+
 export const ResearchRunsPageSchema = z.object({
-  items: z.array(ResearchRunSchema),
+  items: z.array(ResearchRunSummarySchema),
   total: z.number().int().nonnegative(),
   offset: z.number().int().nonnegative(),
   limit: z.number().int().positive(),
 });
 export type ResearchRunsPage = z.infer<typeof ResearchRunsPageSchema>;
 
-export const ResearchListQuerySchema = PaginationParamsSchema;
+const ResearchStatusListQuerySchema = z.preprocess((value) => {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+  return value;
+}, z.array(ResearchRunStatusSchema).min(1).optional());
+
+export const ResearchListQuerySchema = PaginationParamsSchema.extend({
+  status: ResearchStatusListQuerySchema.openapi({
+    description: desc(
+      'research.list_status',
+      '按状态过滤（可重复 query 或逗号分隔，如 running,queued）',
+    ),
+  }),
+});
 export type ResearchListQuery = z.infer<typeof ResearchListQuerySchema>;
 
 // ---------------------------------------------------------------------------
