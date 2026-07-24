@@ -1742,8 +1742,18 @@ export async function convertToSource(
     await strategy.indexSource(sourceRow.id, sourceRow.notebookId);
     db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)).run();
     bumpSourcesEpoch(sourceRow.notebookId);
-  } catch {
-    db().update(sources).set({ status: 'failed' }).where(eq(sources.id, sourceRow.id)).run();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[research] convertToSource embed failed for source ${sourceRow.id}:`, message);
+    db()
+      .update(sources)
+      .set({
+        status: 'failed',
+        errorMessage: message.slice(0, 2000),
+        errorCode: 'EMBEDDING_FAILED',
+      })
+      .where(eq(sources.id, sourceRow.id))
+      .run();
     bumpSourcesEpoch(sourceRow.notebookId);
   }
 
