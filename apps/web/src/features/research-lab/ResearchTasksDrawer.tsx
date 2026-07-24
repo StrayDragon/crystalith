@@ -8,7 +8,11 @@ import { createPortal } from 'react-dom';
 import { useLayer } from '../../shared/layer';
 import { TestIds, tid } from '../../shared/testids';
 import { isLabFixtureMode } from './labFixtureMode';
-import { RESEARCH_TASK_STATUS_LABEL, type ResearchTaskListItem } from './researchTaskTypes';
+import {
+  isActiveResearchStatus,
+  RESEARCH_TASK_STATUS_LABEL,
+  type ResearchTaskListItem,
+} from './researchTaskTypes';
 import { useResearchTasks } from './useResearchTasks';
 
 export interface ResearchTasksDrawerProps {
@@ -17,6 +21,8 @@ export interface ResearchTasksDrawerProps {
   notebookId: number | null;
   onSelectTask: (task: ResearchTaskListItem) => void;
   onCreateNew?: () => void;
+  /** Eden: cancel active run from a list row. */
+  onCancelTask?: (task: ResearchTaskListItem) => void;
 }
 
 function statusTone(status: string): string {
@@ -42,6 +48,7 @@ export default function ResearchTasksDrawer({
   notebookId,
   onSelectTask,
   onCreateNew,
+  onCancelTask,
 }: ResearchTasksDrawerProps) {
   const { style: layerStyle } = useLayer('modal');
   const { tasks, activeTaskId, loading, error, refresh } = useResearchTasks(notebookId);
@@ -115,31 +122,51 @@ export default function ResearchTasksDrawer({
           ) : (
             tasks.map((task) => {
               const active = task.id === activeTaskId;
+              const canCancel =
+                Boolean(onCancelTask) && !fixture && isActiveResearchStatus(task.status);
               return (
                 <li key={task.id}>
-                  <button
-                    type="button"
-                    className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                  <div
+                    className={`rounded-xl border px-3 py-2.5 transition-colors ${
                       active
                         ? 'border-blue-300 bg-blue-50/80'
                         : 'border-gray-100 bg-white hover:bg-gray-50'
                     }`}
-                    onClick={() => onSelectTask(task)}
-                    {...tid(TestIds.researchTasksItem)}
-                    data-task-id={task.id}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="line-clamp-2 text-[12px] font-medium text-gray-900">
-                        {task.topic}
-                      </p>
-                      <span
-                        className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${statusTone(task.status)}`}
-                      >
-                        {RESEARCH_TASK_STATUS_LABEL[task.status] ?? task.status}
-                      </span>
-                    </div>
-                    <p className="mt-1 font-mono text-[10px] text-gray-400">{task.id}</p>
-                  </button>
+                    <button
+                      type="button"
+                      className="w-full text-left"
+                      onClick={() => onSelectTask(task)}
+                      {...tid(TestIds.researchTasksItem)}
+                      data-task-id={task.id}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="line-clamp-2 text-[12px] font-medium text-gray-900">
+                          {task.topic}
+                        </p>
+                        <span
+                          className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${statusTone(task.status)}`}
+                        >
+                          {RESEARCH_TASK_STATUS_LABEL[task.status] ?? task.status}
+                        </span>
+                      </div>
+                      <p className="mt-1 font-mono text-[10px] text-gray-400">{task.id}</p>
+                    </button>
+                    {canCancel ? (
+                      <div className="mt-2 flex justify-end">
+                        <button
+                          type="button"
+                          className="rounded-md border border-red-100 bg-white px-2 py-1 text-[10px] font-medium text-red-700 hover:bg-red-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onCancelTask?.(task);
+                          }}
+                        >
+                          取消研究
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
                 </li>
               );
             })

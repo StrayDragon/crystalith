@@ -21,6 +21,7 @@ import {
   subscribeDemoResearchTasks,
   updateDemoResearchTask,
 } from './demoResearchTasks';
+import { cancelActiveEdenRun } from './edenCancelFlow';
 import { buildSuggestedReportFromNodes } from './fake/buildSuggestedReport';
 import {
   defaultForkDraft,
@@ -38,11 +39,15 @@ import { formatStatusChangeNote, mockEnrichAfterStatus } from './fake/mockNodeEn
 import type { LabNodeActionProposal } from './fake/nodeChatTypes';
 import { findInboundEdgeForNode } from './fake/proposeNodeChatTurn';
 import { resolveDefaultExportMarkdown } from './fake/resolveDefaultExportMarkdown';
-import { resolveLabPrimaryAction, type LabPrimaryActionKind } from './fake/resolveLabPrimaryAction';
+import {
+  resolveLabPrimaryAction,
+  applyEdenPrimaryActionOverlay,
+  type LabPrimaryActionKind,
+} from './fake/resolveLabPrimaryAction';
 import type { LabNode } from './fake/types';
 import type { LabController } from './fake/useLabController';
 import { useLabController } from './fake/useLabController';
-import LabComposePanel from './LabComposePanel';
+import LabComposePanel, { EDEN_EXAMPLE_TOPIC } from './LabComposePanel';
 import LabControlConsole from './LabControlConsole';
 import { isLabFixtureMode } from './labFixtureMode';
 import LabGraph from './LabGraph';
@@ -60,7 +65,7 @@ import { fixtureLabSessionPort } from './labSessionPort';
 import { bindActiveTaskSession } from './openDemoResearchTask';
 import ResearchTasksDrawer from './ResearchTasksDrawer';
 import ResearchTasksTrigger from './ResearchTasksTrigger';
-import type { ResearchTaskListItem } from './researchTaskTypes';
+import { isActiveResearchStatus, type ResearchTaskListItem } from './researchTaskTypes';
 import {
   navigateLabWithRun,
   readActiveRunIdFromUrl,
@@ -216,27 +221,27 @@ function LabWorkbench({
     lab.derived.nodes.find((n) => n.role === 'question')?.conclusion?.trim() ||
     lab.topicDraft.trim();
 
-  const primary = useMemo(
-    () =>
-      resolveLabPrimaryAction({
-        phase: lab.phase,
-        playing: lab.playing,
-        reshaping: lab.reshaping,
-        hasTopic: questionText.length > 0,
-        conclusionNodeId: lab.derived.conclusionNodeId,
-        selectedNodeId: lab.selectedNodeId,
-        selectedRole: selected?.role ?? null,
-      }),
-    [
-      lab.phase,
-      lab.playing,
-      lab.reshaping,
-      questionText,
-      lab.derived.conclusionNodeId,
-      lab.selectedNodeId,
-      selected?.role,
-    ],
-  );
+  const primary = useMemo(() => {
+    const base = resolveLabPrimaryAction({
+      phase: lab.phase,
+      playing: lab.playing,
+      reshaping: lab.reshaping,
+      hasTopic: questionText.length > 0,
+      conclusionNodeId: lab.derived.conclusionNodeId,
+      selectedNodeId: lab.selectedNodeId,
+      selectedRole: selected?.role ?? null,
+    });
+    return mode === 'eden' ? applyEdenPrimaryActionOverlay(base) : base;
+  }, [
+    mode,
+    lab.phase,
+    lab.playing,
+    lab.reshaping,
+    questionText,
+    lab.derived.conclusionNodeId,
+    lab.selectedNodeId,
+    selected?.role,
+  ]);
 
   const openReport = useCallback(() => {
     if (openReportMode === 'eden') {
@@ -363,6 +368,9 @@ function LabWorkbench({
       case 'pause':
         lab.pause();
         break;
+      case 'cancel':
+        lab.cancel();
+        break;
       case 'resume':
         lab.resume();
         break;
@@ -388,6 +396,30 @@ function LabWorkbench({
         break;
     }
   };
+
+  const onCancelTask = useCallback(
+    (task: ResearchTaskListItem) => {
+      if (mode !== 'eden') return;
+      if (!isActiveResearchStatus(task.status)) return;
+      const rid = Number(task.id);
+      if (!Number.isFinite(rid) || rid <= 0) return;
+      // Current session run: use controller (stopStream + local cancelled + refresh).
+      const urlRid = readActiveRunIdFromUrl();
+      if (urlRid === rid) {
+        lab.cancel();
+        return;
+      }
+      void (async () => {
+        try {
+          await cancelActiveEdenRun(notebookId, rid);
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          toast.error(msg);
+        }
+      })();
+    },
+    [lab, mode, notebookId],
+  );
 
   const onSelectNode = useCallback(
     (id: string | null) => {
@@ -573,7 +605,8 @@ function LabWorkbench({
         {showCompose ? (
           <LabComposePanel
             notebookId={notebookId}
-            exampleTopic={lab.scenario.topic}
+            mode={mode}
+            exampleTopic={mode === 'eden' ? EDEN_EXAMPLE_TOPIC : lab.scenario.topic}
             draft={{
               topic: lab.topicDraft,
               useNotebookSources: lab.useNotebookSources,
@@ -687,6 +720,7 @@ function LabWorkbench({
           setTasksDrawerOpen(false);
           onCreateNew();
         }}
+        onCancelTask={mode === 'eden' ? onCancelTask : undefined}
       />
     </div>
   );

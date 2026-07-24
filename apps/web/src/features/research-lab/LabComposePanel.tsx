@@ -1,5 +1,5 @@
 /**
- * Lab idle Compose — create a deep-research task (demo: fixture playback).
+ * Lab idle Compose — create a deep-research task (Eden ResearchRun or fixture playback).
  * Field shape mirrors ResearchCreate (topic + channels + sourceIds).
  */
 import { Spinner } from '@material-tailwind/react';
@@ -14,6 +14,8 @@ import {
   type LabComposeDraft,
 } from './labComposeGate';
 
+export type LabComposeMode = 'eden' | 'fixture';
+
 export interface LabComposeSourceOption {
   id: number;
   filename: string;
@@ -22,6 +24,7 @@ export interface LabComposeSourceOption {
 
 export interface LabComposePanelProps {
   notebookId: number;
+  mode: LabComposeMode;
   exampleTopic: string;
   draft: LabComposeDraft;
   onChange: (patch: Partial<LabComposeDraft>) => void;
@@ -29,8 +32,34 @@ export interface LabComposePanelProps {
   submitting?: boolean;
 }
 
+/** Neutral Eden example topic (no fixture / xlsx authority). */
+export const EDEN_EXAMPLE_TOPIC =
+  '请对比主流方案在延迟、召回与运维成本上的权衡，并给出可落地建议。';
+
+export function labComposeDescription(mode: LabComposeMode): string {
+  if (mode === 'eden') {
+    return '填写主题与检索通道后开始。将创建真实 ResearchRun，并进入研究图与实时进度。';
+  }
+  return '填写主题与检索通道后开始。当前为演示回放（xlsx 选型 fixture）；接线后将创建真实 ResearchRun。';
+}
+
+export function labComposeHint(mode: LabComposeMode): string {
+  if (mode === 'eden') {
+    return '创建后进入研究图与 SSE 进度。';
+  }
+  return '演示：开始后将进入研究图回放；正式环境将创建 ResearchRun 任务。';
+}
+
+export function labComposeExampleLabel(mode: LabComposeMode): string {
+  if (mode === 'eden') {
+    return '填入示例主题';
+  }
+  return '填入示例主题（xlsx 选型）';
+}
+
 export default function LabComposePanel({
   notebookId,
+  mode,
   exampleTopic,
   draft,
   onChange,
@@ -79,6 +108,9 @@ export default function LabComposePanel({
 
   const block = resolveLabComposeBlockReason(draft);
   const canSubmit = block === null && !submitting;
+  const description = labComposeDescription(mode);
+  const hint = labComposeHint(mode);
+  const exampleLabel = labComposeExampleLabel(mode);
 
   const toggleSource = (id: number) => {
     const set = new Set(draft.selectedSourceIds);
@@ -95,10 +127,7 @@ export default function LabComposePanel({
       <div className="my-auto w-full max-w-xl rounded-xl border border-gray-200 bg-white p-5 shadow-lg">
         <div className="space-y-1">
           <h1 className="text-base font-semibold text-gray-900">新建深度研究</h1>
-          <p className="text-[12px] leading-relaxed text-gray-500">
-            填写主题与检索通道后开始。当前为演示回放（xlsx 选型 fixture）；接线后将创建真实
-            ResearchRun。
-          </p>
+          <p className="text-[12px] leading-relaxed text-gray-500">{description}</p>
         </div>
 
         <label className="mt-4 block space-y-1.5">
@@ -117,7 +146,7 @@ export default function LabComposePanel({
             onClick={() => onChange({ topic: exampleTopic })}
             {...tid(TestIds.researchLabComposeExample)}
           >
-            填入示例主题（xlsx 选型）
+            {exampleLabel}
           </button>
         </label>
 
@@ -151,7 +180,8 @@ export default function LabComposePanel({
             </div>
             {sourcesError ? (
               <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
-                无法加载来源：{sourcesError}。可改用外网检索继续演示。
+                无法加载来源：{sourcesError}。可改用外网检索继续
+                {mode === 'fixture' ? '演示' : ''}。
               </p>
             ) : null}
             {!sourcesLoading && !sourcesError && readySources.length === 0 ? (
@@ -186,7 +216,7 @@ export default function LabComposePanel({
           </p>
         ) : (
           <p className="mt-3 text-[11px] text-gray-400" {...tid(TestIds.researchLabComposeHint)}>
-            演示：开始后将进入研究图回放；正式环境将创建 ResearchRun 任务。
+            {hint}
           </p>
         )}
 
