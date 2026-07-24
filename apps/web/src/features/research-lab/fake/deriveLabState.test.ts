@@ -18,6 +18,7 @@ describe('research lab routing', () => {
     expect(parseResearchLabPath('/')).toBeNull();
     expect(researchLabPath(7)).toBe('/research-lab/7');
     expect(researchLabReportPath(7)).toBe('/research-lab/7/report');
+    expect(researchLabReportPath(7, 9)).toBe('/research-lab/7/report?rid=9');
   });
 });
 

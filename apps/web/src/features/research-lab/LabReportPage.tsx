@@ -1,8 +1,8 @@
 /**
- * Lab report surface (MOCK revisions in sessionStorage).
+ * Lab report surface.
  *
- * Real: Run report SSOT + convertToNote/Source; cite locate → graph_patch selection.
- * Block anchors `[^@nodeId]` are Lab demo — promote to shared report schema when wiring.
+ * Fixture (`VITE_LAB_FIXTURE=1`): MOCK revisions in sessionStorage + CoW.
+ * Eden: ResearchRun.report SSOT via EdenLabReportPage (c85).
  */
 import {
   ArrowBack as ArrowBackIcon,
@@ -20,6 +20,7 @@ import { useMemo, useState } from 'react';
 
 import { TestIds, tid } from '../../shared/testids';
 import { toast } from '../../shared/toast';
+import EdenLabReportPage from './EdenLabReportPage';
 import { deriveLabState } from './fake/deriveLabState';
 import { findNodesByCitation, pickPreferredCiteNode } from './fake/findNodesByCitation';
 import {
@@ -48,6 +49,12 @@ import { getLabScenario } from './fake/scenarios';
 import LabReportPlateEditor from './LabReportPlateEditor';
 import { navigateToResearchLab, readPersistedLabScenarioId } from './labRouting';
 import { persistLabSessionSnapshot, readLabSessionSnapshot } from './labSession';
+
+export type LabReportPageProps = {
+  notebookId: number;
+  mode?: 'fixture' | 'eden';
+  runId?: number | null;
+};
 
 function bootstrapRevisions(notebookId: number, scenarioId: string): LabRevision {
   const scenario = getLabScenario(scenarioId);
@@ -92,7 +99,19 @@ function bootstrapRevisions(notebookId: number, scenarioId: string): LabRevision
   });
 }
 
-export default function LabReportPage({ notebookId }: { notebookId: number }) {
+export default function LabReportPage({
+  notebookId,
+  mode = 'fixture',
+  runId = null,
+}: LabReportPageProps) {
+  if (mode === 'eden') {
+    return <EdenLabReportPage notebookId={notebookId} runId={runId} />;
+  }
+
+  return <FixtureLabReportPage notebookId={notebookId} />;
+}
+
+function FixtureLabReportPage({ notebookId }: { notebookId: number }) {
   const scenarioId = readPersistedLabScenarioId();
   const scenario = useMemo(() => getLabScenario(scenarioId), [scenarioId]);
 
