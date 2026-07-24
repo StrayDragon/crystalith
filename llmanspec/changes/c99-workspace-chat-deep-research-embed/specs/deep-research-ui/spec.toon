@@ -1,8 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,r452,"Workspace chat deep research commands","工作区 chat 输入 MUST 支持 @ 或 /（或文档化 slash）以创建 ResearchRun、深链已有 Run 或打开 Lab（/research-lab/:nid）；实现 MUST 经 Eden 默认路径；烧瓶与 Lab Compose 与任务抽屉 MUST 保持主要深研入口；MUST NOT 使 chat 成为唯一深研入口（落实 c80 inventory G6）。",null,null,null
-op_scenarios[4]{req_id,id,given,when,then,feature}:
-  r452,"slash-opens-lab","用户在工作区 chat","输入打开 Lab 的 slash 命令并确认","导航至 /research-lab/:nid",true
-  r452,"slash-create-research-run","用户在工作区 chat","输入创建深研 slash 并确认","经 Eden 创建 Run 或打开 Compose 预填",true
-  r452,"at-link-existing-run","notebook 存在进行中 Run","用户 @ 提及或选择该 Run","打开 Lab 并携带对应 rid",true
-  r452,"flask-entry-still-primary","用户在工作区","查找深研主入口","烧瓶与 Lab Compose 仍可达且未因 chat 独占",true

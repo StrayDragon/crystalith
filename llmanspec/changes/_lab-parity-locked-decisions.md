@@ -32,6 +32,7 @@ c92 compose depth
 
 ## Per-change locks（本会话）
 
-| Change | Locks                                                                                                                                                                                             |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| c98    | **J1=A** restore 后必 GET 全量 · **J2=B** 回图 `?rid=` 强制 `loadRun` + `markLabRunNeedsReload` · **J3=A** busy+内联错误 · **J4=B** fixture 同构写 session graph · **J5=A** loadRun 再拉 progress |
+| Change | Locks                                                                                                                                                                                                             |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| c98    | **J1=A** restore 后必 GET 全量 · **J2=B** 回图 `?rid=` 强制 `loadRun` + `markLabRunNeedsReload` · **J3=A** busy+内联错误 · **J4=B** fixture 同构写 session graph · **J5=A** loadRun 再拉 progress                 |
+| c99    | **K1=B** commands `kind:nav` · **K2=A** 无 topic 只开 Compose · **K3=A** 有 topic 预填不 create · **K4=slash-only** `/research-open <rid>`（无 `@`）· **K5=A** 发送吞掉 · **K6=A+C** fixture 可导航 + AGENTS 文档 |

@@ -32,21 +32,45 @@ export function researchLabReportPath(notebookId: number, runId?: number | null)
   return `${base}?rid=${runId}`;
 }
 
-export function navigateToResearchLab(notebookId: number, runId?: number | null): void {
+export function navigateToResearchLab(
+  notebookId: number,
+  runId?: number | null,
+  opts?: { topic?: string },
+): void {
   const path = researchLabPath(notebookId);
   const url = new URL(path, window.location.origin);
   if (runId !== null && runId !== undefined && Number.isFinite(runId) && runId > 0) {
     url.searchParams.set('rid', String(runId));
+  } else if (opts?.topic?.trim()) {
+    url.searchParams.set('topic', opts.topic.trim());
   }
   const next = `${url.pathname}${url.search}`;
   const current = `${window.location.pathname}${window.location.search}`;
   if (current === next) return;
   window.history.pushState(
-    { researchLab: true, notebookId, view: 'graph', rid: runId ?? null },
+    {
+      researchLab: true,
+      notebookId,
+      view: 'graph',
+      rid: runId ?? null,
+      topic: opts?.topic?.trim() || null,
+    },
     '',
     next,
   );
   window.dispatchEvent(new PopStateEvent('popstate'));
+}
+
+/** Read one-shot Compose topic from `?topic=` (cleared after read). */
+export function consumeComposeTopicFromUrl(): string | null {
+  if (typeof window === 'undefined') return null;
+  const url = new URL(window.location.href);
+  const topic = url.searchParams.get('topic')?.trim() ?? '';
+  if (!topic) return null;
+  url.searchParams.delete('topic');
+  const next = `${url.pathname}${url.search}`;
+  window.history.replaceState(window.history.state, '', next);
+  return topic;
 }
 
 /** Navigate to Lab report page; optional runId writes `?rid=` (same query as graph). */

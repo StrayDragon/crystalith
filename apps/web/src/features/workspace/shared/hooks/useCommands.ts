@@ -9,9 +9,8 @@ interface CommandItem {
   id: string;
   trigger: string;
   description: string | null;
-  systemPrompt: string;
   enabled: boolean;
-  kind?: string;
+  kind?: 'prompt_preset' | 'nav' | string;
   source?: 'builtin' | 'custom';
 }
 
@@ -22,12 +21,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function toCommandItem(value: unknown): CommandItem | null {
   if (!isRecord(value)) return null;
   if (typeof value.id !== 'string' || typeof value.trigger !== 'string') return null;
-  if (typeof value.systemPrompt !== 'string') return null;
+  if (typeof value.enabled !== 'boolean' && value.enabled !== undefined) return null;
+  if (
+    typeof value.description !== 'string' &&
+    value.description !== null &&
+    value.description !== undefined
+  ) {
+    return null;
+  }
   return {
     id: value.id,
     trigger: value.trigger,
     description: typeof value.description === 'string' ? value.description : null,
-    systemPrompt: value.systemPrompt,
     enabled: typeof value.enabled === 'boolean' ? value.enabled : true,
     kind: typeof value.kind === 'string' ? value.kind : undefined,
     source: value.source === 'builtin' || value.source === 'custom' ? value.source : undefined,

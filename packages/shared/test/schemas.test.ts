@@ -116,7 +116,27 @@ describe('domain schemas', () => {
     ).toEqual(['notes']);
   });
 
-  it('command list schema accepts empty array', () => {
+  it('command list schema accepts nav and prompt_preset', () => {
     expect(S.CommandListSchema.parse([]).length).toBe(0);
+    expect(
+      S.CommandListSchema.parse([
+        {
+          id: 'nav.research',
+          kind: 'nav',
+          trigger: '/research',
+          description: '打开深研',
+          enabled: true,
+          source: 'builtin',
+        },
+        {
+          id: 'eli5',
+          kind: 'prompt_preset',
+          trigger: '/prompt:eli5',
+          description: 'ELI5',
+          enabled: true,
+          source: 'builtin',
+        },
+      ]).length,
+    ).toBe(2);
   });
 });

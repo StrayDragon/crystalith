@@ -103,6 +103,43 @@ beforeEach(() => {
   );
 });
 
+test('sendMessage swallows /research slash and does not call QA (c99)', async () => {
+  const qaSpy = vi.fn();
+  server.use(
+    http.post('*/v2/notebooks/*/qa', async () => {
+      qaSpy();
+      return HttpResponse.json({ answer: 'nope' });
+    }),
+  );
+  const pushState = vi.spyOn(window.history, 'pushState');
+  const ensureSession = vi.fn().mockResolvedValue(123);
+  const { result } = renderHook(() => useChat({ ensureSession, enableStreaming: false }), {
+    wrapper: wrapSWR,
+  });
+
+  act(() => {
+    const s = useWorkspaceStore.getState();
+    s.setConnectionState('live');
+    s.setActiveNotebook(62);
+    s.setActiveSession(123);
+    s.setDraft('/research xlsx');
+  });
+
+  await act(async () => {
+    await result.current.sendMessage();
+  });
+
+  expect(qaSpy).not.toHaveBeenCalled();
+  expect(ensureSession).not.toHaveBeenCalled();
+  expect(result.current.messages).toHaveLength(0);
+  expect(result.current.draft).toBe('');
+  expect(pushState).toHaveBeenCalled();
+  const urlArg = String(pushState.mock.calls.at(-1)?.[2] ?? '');
+  expect(urlArg).toContain('/research-lab/62');
+  expect(urlArg).toContain('topic=');
+  pushState.mockRestore();
+});
+
 test('sendMessage returns error when no notebook is active', async () => {
   const ensureSession = vi.fn().mockResolvedValue(1);
   const { result } = renderHook(() => useChat({ ensureSession, enableStreaming: false }), {

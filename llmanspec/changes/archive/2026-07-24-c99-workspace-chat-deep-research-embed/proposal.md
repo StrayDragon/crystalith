@@ -20,6 +20,7 @@ c80 inventory **G6** 将工作区对话 `@` / `/` 创建或引用深研 Run **de
 - Fixture 保留至 c100；产品默认 Eden
 - **c99 本波保留**（U9）；MUST NOT 再 defer
 - Lab Compose + 烧瓶仍为 **primary** 深研入口
+- **K1=B** `GET /v2/commands` + `kind:nav` · **K2=A** · **K3=A** · **K4=slash-only** · **K5=A** · **K6=A+C**
 - **本波 MUST NOT 再延后**
 
 ## Capabilities
