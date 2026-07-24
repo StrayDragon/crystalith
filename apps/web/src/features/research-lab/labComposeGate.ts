@@ -1,10 +1,14 @@
 /** Compose gate for Lab empty-state create (mirrors ResearchCreate server rules). */
 
+import type { ResearchDepth } from '@crystalith/shared';
+
 export interface LabComposeDraft {
   topic: string;
   useNotebookSources: boolean;
   allowWeb: boolean;
   selectedSourceIds: number[];
+  /** L1 depth tier (r305/r447); gate does not depend on this field. */
+  depth: ResearchDepth;
 }
 
 export type LabComposeBlockReason = 'topic' | 'no_channel' | 'need_sources';

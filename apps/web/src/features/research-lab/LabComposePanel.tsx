@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../api/eden';
 import { parseServerError } from '../../api/parseServerError';
 import { TestIds, tid } from '../../shared/testids';
+import { LAB_COMPOSE_DEPTH_OPTIONS, labComposeDepthBudgetHint } from './labComposeDepth';
 import {
   LAB_COMPOSE_BLOCK_MESSAGES,
   resolveLabComposeBlockReason,
@@ -170,6 +171,38 @@ export default function LabComposePanel({
             />
             允许外网检索
           </label>
+        </div>
+
+        <div className="mt-4 space-y-2" {...tid(TestIds.researchLabComposeDepth)}>
+          <span className="text-[11px] font-medium text-gray-700">研究深度</span>
+          <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50/80 p-1">
+            {LAB_COMPOSE_DEPTH_OPTIONS.map((opt) => {
+              const active = draft.depth === opt.value;
+              const depthTid =
+                opt.value === 'shallow'
+                  ? TestIds.researchLabComposeDepthShallow
+                  : opt.value === 'medium'
+                    ? TestIds.researchLabComposeDepthMedium
+                    : TestIds.researchLabComposeDepthDeep;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => onChange({ depth: opt.value })}
+                  className={`flex-1 rounded-md px-2 py-1.5 text-[12px] font-medium transition-colors ${
+                    active
+                      ? 'bg-white text-blue-700 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  {...tid(depthTid)}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-gray-500">{labComposeDepthBudgetHint(draft.depth)}</p>
         </div>
 
         {draft.useNotebookSources ? (

@@ -1,0 +1,7 @@
+kind: llman.sdd.delta
+ops[1]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r453,"Eden Lab production e2e gate","仓库 MUST 提供 @p0（或等价）Playwright 路径，在 VITE_LAB_FIXTURE 未设时演练 Eden Lab：Compose 创建 → 图含 nodes/edges → M1 confirm → 报告页 → convert；该门禁 MUST 作为生产默认深研路径对拍证明；MUST NOT 仅以 fixture 回放 smoke 充当生产 parity 门禁。",null,null,null
+op_scenarios[3]{req_id,id,given,when,then,feature}:
+  r453,"eden-e2e-compose-to-convert","e2e 环境 VITE_LAB_FIXTURE 未设且 server 可用","执行 @p0 Eden Lab 用例","走完 Compose→图→confirm→报告→convert 且无 fixture 权威态",true
+  r453,"eden-graph-has-nodes-edges","Eden Run 由 e2e Compose 创建","等待图稳定","research-lab-graph 可见且含至少一条边与一个研究节点",true
+  r453,"fixture-smoke-not-p0-parity","仅 VITE_LAB_FIXTURE=1 的 Lab smoke","查阅 @p0 门禁定义","生产 parity 门禁仍要求 Eden 路径用例",true

@@ -10,9 +10,10 @@
  *
  * Prune semantics MUST match server `collectResearchPruneClosure` (r316).
  */
-import type { ResearchConclusionStatus } from '@crystalith/shared';
+import type { ResearchConclusionStatus, ResearchDepth } from '@crystalith/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { DEFAULT_LAB_COMPOSE_DEPTH } from '../labComposeDepth';
 import {
   persistLabSessionSnapshot,
   readLabSessionSnapshot,
@@ -71,6 +72,8 @@ export interface LabController {
   setUseNotebookSources: (v: boolean) => void;
   allowWeb: boolean;
   setAllowWeb: (v: boolean) => void;
+  depth: ResearchDepth;
+  setDepth: (v: ResearchDepth) => void;
   selectedSourceIds: number[];
   setSelectedSourceIds: (ids: number[]) => void;
   confirmChoice: string | null;
@@ -186,6 +189,7 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
   const [topicDraft, setTopicDraft] = useState(initial.topicDraft ?? '');
   const [useNotebookSources, setUseNotebookSources] = useState(initial.useNotebookSources ?? false);
   const [allowWeb, setAllowWeb] = useState(initial.allowWeb ?? true);
+  const [depth, setDepth] = useState<ResearchDepth>(DEFAULT_LAB_COMPOSE_DEPTH);
   const [selectedSourceIds, setSelectedSourceIds] = useState<number[]>(
     initial.selectedSourceIds ?? [],
   );
@@ -556,6 +560,8 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     setUseNotebookSources,
     allowWeb,
     setAllowWeb,
+    depth,
+    setDepth,
     selectedSourceIds,
     setSelectedSourceIds,
     confirmChoice,
