@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { streamRequest } from '../../api/stream';
 import { applyGraphPatch } from './applyGraphPatch';
+import { cancelActiveEdenRun } from './edenCancelFlow';
 import {
   confirmResearchRun,
   createResearchRun,
@@ -349,6 +350,28 @@ export function useEdenLabController(
     window.dispatchEvent(new PopStateEvent('popstate'));
   }, [notebookId, stopStream]);
 
+  const cancel = useCallback(() => {
+    const rid = runIdRef.current;
+    if (!rid || busy) return;
+    const status = run?.status;
+    if (status !== 'queued' && status !== 'running' && status !== 'awaiting_confirm') return;
+    void (async () => {
+      setBusy(true);
+      setLastError('');
+      try {
+        const next = await cancelActiveEdenRun(notebookId, rid);
+        stopStream();
+        applyRun(next, '已取消研究');
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        setLastError(msg);
+        pushLog(msg);
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }, [applyRun, busy, notebookId, pushLog, run?.status, stopStream]);
+
   const focusNodes = useCallback((primaryId: string, highlightIds: string[]) => {
     setSelectedNodeId(primaryId);
     setHighlightedNodeIds(highlightIds);
@@ -404,6 +427,7 @@ export function useEdenLabController(
       const rid = runIdRef.current;
       if (rid) startStream(rid);
     },
+    cancel,
     finishReport,
     continueDig,
     retry: () => {

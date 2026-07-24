@@ -4,6 +4,7 @@ export type LabPrimaryActionKind =
   | 'start'
   | 'pause'
   | 'resume'
+  | 'cancel'
   | 'finish_report'
   | 'continue_dig'
   | 'view_conclusion'
@@ -120,4 +121,16 @@ export function resolveLabPrimaryAction(input: LabPrimaryActionInput): LabPrimar
     label: '开始深度研究',
     disabled: !hasTopic,
   });
+}
+
+/** Eden overlay: queued/running primary maps to cancel, not fixture pause. */
+export function applyEdenPrimaryActionOverlay(action: LabPrimaryAction): LabPrimaryAction {
+  if (action.kind === 'pause') {
+    return {
+      ...action,
+      kind: 'cancel',
+      label: '取消研究',
+    };
+  }
+  return action;
 }

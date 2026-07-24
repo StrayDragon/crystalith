@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveLabPrimaryAction } from './resolveLabPrimaryAction';
+import { applyEdenPrimaryActionOverlay, resolveLabPrimaryAction } from './resolveLabPrimaryAction';
 
 const base = {
   playing: false,
@@ -81,5 +81,38 @@ describe('resolveLabPrimaryAction', () => {
     });
     expect(a.disabled).toBe(true);
     expect(a.kind).toBe('pause');
+  });
+});
+
+describe('applyEdenPrimaryActionOverlay', () => {
+  it('maps pause → cancel (取消研究)', () => {
+    const a = resolveLabPrimaryAction({
+      ...base,
+      phase: 'explore',
+      playing: true,
+    });
+    const eden = applyEdenPrimaryActionOverlay(a);
+    expect(eden).toMatchObject({ kind: 'cancel', label: '取消研究', disabled: false });
+  });
+
+  it('keeps awaiting_confirm finish + continue dig', () => {
+    const a = resolveLabPrimaryAction({ ...base, phase: 'awaiting_confirm' });
+    const eden = applyEdenPrimaryActionOverlay(a);
+    expect(eden.kind).toBe('finish_report');
+    expect(eden.label).toBe('生成结论');
+    expect(eden.secondary).toEqual({
+      kind: 'continue_dig',
+      label: '继续深挖',
+      disabled: false,
+    });
+  });
+
+  it('does not remap resume', () => {
+    const a = resolveLabPrimaryAction({
+      ...base,
+      phase: 'evaluate',
+      playing: false,
+    });
+    expect(applyEdenPrimaryActionOverlay(a).kind).toBe('resume');
   });
 });

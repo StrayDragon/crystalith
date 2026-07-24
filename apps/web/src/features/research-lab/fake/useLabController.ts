@@ -99,6 +99,8 @@ export interface LabController {
   startFromIdle: () => void;
   pause: () => void;
   resume: () => void;
+  /** Eden: POST cancel; fixture: no-op. */
+  cancel: () => void;
   finishReport: () => void;
   continueDig: () => void;
   retry: () => void;
@@ -571,6 +573,7 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     startFromIdle,
     pause,
     resume,
+    cancel: () => undefined,
     finishReport,
     continueDig,
     retry,
