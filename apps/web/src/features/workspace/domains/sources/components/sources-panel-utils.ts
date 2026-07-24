@@ -2,15 +2,6 @@ import {
   SOURCE_UPLOAD_SUPPORTED_EXTENSIONS,
   SOURCE_UPLOAD_SUPPORTED_MIME_TYPES,
 } from '../../../shared/uploadTypes';
-import { SEARCH_MODES, type SearchMode } from './sources-panel-types';
-
-export function normalizeSearchMode(value: string | null): SearchMode {
-  if (!value) return 'Fast Research';
-  for (const mode of SEARCH_MODES) {
-    if (mode === value) return mode;
-  }
-  return 'Fast Research';
-}
 
 export function splitUploadFiles(files: File[]) {
   const supported: File[] = [];

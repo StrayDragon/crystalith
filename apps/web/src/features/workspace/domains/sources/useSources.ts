@@ -378,7 +378,7 @@ export function useSources() {
   }, [mutate, store]);
 
   const handleSearch = useCallback(
-    async ({ query, engine, mode }: { query: string; engine: string; mode: string }) => {
+    async ({ query, engine, mode: _mode }: { query: string; engine: string; mode: string }) => {
       if (!isConnected) {
         toast.warning('未连接到后端服务，暂无法搜索。');
         return;
@@ -392,6 +392,9 @@ export function useSources() {
         toast.warning('请输入搜索关键词。');
         return;
       }
+
+      // sources.search mode is web-search channel metadata only (always Fast).
+      const mode = 'Fast Research';
 
       searchIdRef.current += 1;
       const searchId = `search-${searchIdRef.current}-${Date.now()}`;

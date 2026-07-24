@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 
 import LabReportPage from '../features/research-lab/LabReportPage';
 import { parseResearchLabPath } from '../features/research-lab/labRouting';
-// MOCK entry: `/research-lab/:nid` prototype. Production deep research stays on
-// workspace E1 DeepResearchDesk (c77); do not conflate the two routes.
+// Deep Research UX surface: `/research-lab/:nid` (Lab). Production ResearchRun API remains server-side.
 import ResearchLabPage from '../features/research-lab/ResearchLabPage';
 import WorkspacePage from '../features/workspace/app/WorkspacePage';
 import ErrorBoundary from '../features/workspace/shared/components/ErrorBoundary';

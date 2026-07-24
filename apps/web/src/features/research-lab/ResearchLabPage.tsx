@@ -1,15 +1,15 @@
 /**
- * Research Lab — UX prototype for Deep Research (NOT the production Desk).
+ * Research Lab — Deep Research UX surface (fake runtime until Eden wire-up).
  *
  * ## Mock vs Real
- * | Lab (this feature)                         | Real (c76 / c77)                                      |
+ * | Lab (this feature)                         | Real (server ResearchRun)                             |
  * | ------------------------------------------ | ----------------------------------------------------- |
  * | `fake/*` scenarios + `deriveLabState`      | ResearchRun graph SSOT + SSE `graph_patch`            |
  * | `useLabController` local mutations         | Eden `POST …/research/:rid/nodes/:id/{prune,fork}`    |
  * | phase playback timer                       | Run status machine + stream events                    |
  * | `proposeNodeChatTurn` / mock enrichment    | node chat / agent turns (shape in `nodeChatTypes`)    |
  * | `labSession` / `labRevisions` sessionStorage | Run report + checkpoints (server)                   |
- * | `/research-lab/:nid` SPA route             | Workspace E1 DeepResearchDesk + Run detail layer      |
+ * | `/research-lab/:nid` SPA route             | ResearchRun HTTP + future wired Lab UI                |
  *
  * Wiring change: `llmanspec/changes/update-research-prune-cascade`
  * (prune closure B + failed merge retain — Lab mirrors server helper).

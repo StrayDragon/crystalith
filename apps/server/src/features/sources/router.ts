@@ -881,11 +881,14 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         console.error('[sources/search] web search failed:', error);
       }
 
+      // mode is web-search channel metadata (echo); not Deep Research / ResearchRun.
+      const searchMode = mode && mode !== 'Deep Research' ? mode : 'Fast Research';
+
       return {
         status: results.length > 0 ? 'ok' : 'no_results',
         query,
         engine: engine ?? 'searxng',
-        mode,
+        mode: searchMode,
         createdAt: new Date().toISOString(),
         results,
       };

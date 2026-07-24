@@ -885,8 +885,6 @@ export default function WorkspaceLayout() {
               open={topbarSearchOpen}
               onOpenChange={setTopbarSearchOpen}
               openRequestToken={topbarSearchOpenToken}
-              isConnected={sources.isConnected}
-              notebookId={activeNotebookId ?? undefined}
               searchState={sources.searchState}
               searchQueue={sources.searchQueue}
               onSearch={(...args) => {
