@@ -1,31 +1,39 @@
 import { useEffect, useState } from 'react';
 
+import { isLabFixtureMode } from '../features/research-lab/labFixtureMode';
 import LabReportPage from '../features/research-lab/LabReportPage';
 import { parseResearchLabPath } from '../features/research-lab/labRouting';
 // Deep Research UX surface: `/research-lab/:nid` (Lab). Production ResearchRun API remains server-side.
 import ResearchLabPage from '../features/research-lab/ResearchLabPage';
+import { readActiveRunIdFromUrl } from '../features/research-lab/useEdenLabController';
 import WorkspacePage from '../features/workspace/app/WorkspacePage';
 import ErrorBoundary from '../features/workspace/shared/components/ErrorBoundary';
 import { LayerProvider } from '../shared/layer';
 import { ToastContainer } from '../shared/toast';
 
-function usePathname(): string {
-  const [pathname, setPathname] = useState(() => window.location.pathname);
+function useLocationKey(): string {
+  const [key, setKey] = useState(() => `${window.location.pathname}${window.location.search}`);
   useEffect(() => {
-    const sync = () => setPathname(window.location.pathname);
+    const sync = () => setKey(`${window.location.pathname}${window.location.search}`);
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
   }, []);
-  return pathname;
+  return key;
 }
 
 function AppRoutes() {
-  const pathname = usePathname();
+  const locationKey = useLocationKey();
+  const pathname = locationKey.split('?')[0] ?? locationKey;
   const lab = parseResearchLabPath(pathname);
   if (lab?.view === 'report') {
+    const fixture = isLabFixtureMode();
     return (
       <ErrorBoundary title="报告页异常" description="研究报告页加载失败，请返回图谱重试。">
-        <LabReportPage notebookId={lab.notebookId} />
+        <LabReportPage
+          notebookId={lab.notebookId}
+          mode={fixture ? 'fixture' : 'eden'}
+          runId={fixture ? null : readActiveRunIdFromUrl()}
+        />
       </ErrorBoundary>
     );
   }

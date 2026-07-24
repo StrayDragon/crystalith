@@ -26,21 +26,39 @@ export function researchLabPath(notebookId: number): string {
   return `${LAB_PREFIX}/${notebookId}`;
 }
 
-export function researchLabReportPath(notebookId: number): string {
-  return `${LAB_PREFIX}/${notebookId}/report`;
+export function researchLabReportPath(notebookId: number, runId?: number | null): string {
+  const base = `${LAB_PREFIX}/${notebookId}/report`;
+  if (runId === null || runId === undefined || !Number.isFinite(runId) || runId <= 0) return base;
+  return `${base}?rid=${runId}`;
 }
 
-export function navigateToResearchLab(notebookId: number): void {
+export function navigateToResearchLab(notebookId: number, runId?: number | null): void {
   const path = researchLabPath(notebookId);
-  if (window.location.pathname === path) return;
-  window.history.pushState({ researchLab: true, notebookId, view: 'graph' }, '', path);
+  const url = new URL(path, window.location.origin);
+  if (runId !== null && runId !== undefined && Number.isFinite(runId) && runId > 0) {
+    url.searchParams.set('rid', String(runId));
+  }
+  const next = `${url.pathname}${url.search}`;
+  const current = `${window.location.pathname}${window.location.search}`;
+  if (current === next) return;
+  window.history.pushState(
+    { researchLab: true, notebookId, view: 'graph', rid: runId ?? null },
+    '',
+    next,
+  );
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
-export function navigateToLabReport(notebookId: number): void {
-  const path = researchLabReportPath(notebookId);
-  if (window.location.pathname === path) return;
-  window.history.pushState({ researchLab: true, notebookId, view: 'report' }, '', path);
+/** Navigate to Lab report page; optional runId writes `?rid=` (same query as graph). */
+export function navigateToLabReport(notebookId: number, runId?: number | null): void {
+  const next = researchLabReportPath(notebookId, runId);
+  const current = `${window.location.pathname}${window.location.search}`;
+  if (current === next) return;
+  window.history.pushState(
+    { researchLab: true, notebookId, view: 'report', rid: runId ?? null },
+    '',
+    next,
+  );
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
 

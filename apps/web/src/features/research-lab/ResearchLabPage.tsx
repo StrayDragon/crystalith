@@ -22,6 +22,12 @@ import {
   updateDemoResearchTask,
 } from './demoResearchTasks';
 import { cancelActiveEdenRun } from './edenCancelFlow';
+import {
+  downloadResearchReportMarkdown,
+  resolveEdenExportFromReport,
+  resolveEdenOpenReport,
+} from './edenReportActions';
+import { getResearchRun } from './edenResearchApi';
 import { buildSuggestedReportFromNodes } from './fake/buildSuggestedReport';
 import {
   defaultForkDraft,
@@ -245,7 +251,12 @@ function LabWorkbench({
 
   const openReport = useCallback(() => {
     if (openReportMode === 'eden') {
-      toast.info('Eden 报告页待接');
+      const resolved = resolveEdenOpenReport(notebookId, readActiveRunIdFromUrl());
+      if (!resolved.ok) {
+        toast.error(resolved.error);
+        return;
+      }
+      navigateToLabReport(resolved.notebookId, resolved.runId);
       return;
     }
     lab.persistNow();
@@ -277,7 +288,26 @@ function LabWorkbench({
 
   const exportSuggestedFromGraph = useCallback(() => {
     if (openReportMode === 'eden') {
-      toast.info('Eden 报告导出待接');
+      const rid = readActiveRunIdFromUrl();
+      if (rid === null) {
+        toast.error('缺少有效的 ResearchRun id，无法导出');
+        return;
+      }
+      void (async () => {
+        try {
+          const run = await getResearchRun(notebookId, rid);
+          const resolved = resolveEdenExportFromReport(run.report);
+          if (!resolved.ok) {
+            toast.error(resolved.error);
+            return;
+          }
+          downloadResearchReportMarkdown(resolved.markdown, resolved.title);
+          toast.success('已导出研究报告 Markdown', 2800);
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          toast.error(msg);
+        }
+      })();
       return;
     }
     lab.persistNow();
@@ -525,7 +555,7 @@ function LabWorkbench({
             </button>
           ) : null}
 
-          {mode === 'fixture' && lab.derived.reportVisible ? (
+          {lab.derived.reportVisible ? (
             <div className="relative">
               <details className="group">
                 <summary className="flex h-8 list-none cursor-pointer items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 text-[11px] text-gray-600 hover:bg-gray-50 [&::-webkit-details-marker]:hidden">
