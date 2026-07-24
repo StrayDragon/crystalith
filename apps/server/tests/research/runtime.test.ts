@@ -178,9 +178,11 @@ describe('research runtime', () => {
     const run = (await get.json()) as {
       report: { title: string; citations: Record<string, unknown> } | null;
       nodes: unknown[];
+      evidences: unknown[];
     };
     expect(run.report?.title).toContain('notebook only topic');
     expect(run.report?.citations).toBeDefined();
+    expect(Array.isArray(run.evidences)).toBe(true);
   });
 
   it('web run pauses at awaiting_confirm; finish_report completes', async () => {

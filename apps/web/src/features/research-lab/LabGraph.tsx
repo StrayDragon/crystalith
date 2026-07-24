@@ -26,7 +26,7 @@ import {
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 
 import { TestIds, tid } from '../../shared/testids';
-import { layoutWithElk, type LabEdgeData, type LabRfData } from './fake/labLayout';
+import { layoutWithElk, nodeProgress, type LabEdgeData, type LabRfData } from './fake/labLayout';
 import type {
   LabEdge,
   LabEdgePathPreset,
@@ -475,7 +475,7 @@ function Inner({
     return () => window.clearTimeout(t);
   }, [edgePathPreset, fitView, pulseLayoutAnim]);
 
-  // Patch live fields without resetting positions.
+  // Patch live fields without resetting positions (incl. progress / terminal labels).
   useEffect(() => {
     setRfNodes((prev) => {
       if (prev.length === 0) return prev;
@@ -483,6 +483,8 @@ function Inner({
         const lab = labNodes.find((l) => l.id === n.id);
         if (!lab) return n;
         const d = n.data as LabRfData;
+        const prog = nodeProgress(lab);
+        const isConclusion = lab.role === 'conclusion';
         return {
           ...n,
           draggable: true,
@@ -497,6 +499,14 @@ function Inner({
                 ? lab.conclusion || lab.summary
                 : undefined,
             askOnInterrupt: lab.askOnInterrupt,
+            progressPct: prog.pct,
+            statusHint: prog.hint,
+            showProgress: prog.show,
+            statusOverride: isConclusion
+              ? d.statusOverride === '部分汇入失败'
+                ? d.statusOverride
+                : lab.statusOverride
+              : undefined,
             selected: n.id === selectedNodeId,
             highlighted: n.id !== selectedNodeId && highlightedNodeIds.includes(n.id),
             reshaping: reshaping && lab.role === 'conclusion',

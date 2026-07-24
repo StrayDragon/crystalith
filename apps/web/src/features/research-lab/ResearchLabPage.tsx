@@ -53,6 +53,11 @@ import {
 import type { LabNode } from './fake/types';
 import type { LabController } from './fake/useLabController';
 import { useLabController } from './fake/useLabController';
+import {
+  labPausedBannerText,
+  shouldShowLabPausedBanner,
+  shouldShowLabPlayingTip,
+} from './labBannerState';
 import LabComposePanel, { EDEN_EXAMPLE_TOPIC } from './LabComposePanel';
 import LabControlConsole from './LabControlConsole';
 import { isLabFixtureMode } from './labFixtureMode';
@@ -76,6 +81,7 @@ import {
   navigateLabWithRun,
   readActiveRunIdFromUrl,
   useEdenLabController,
+  type EdenLabController,
 } from './useEdenLabController';
 
 export default function ResearchLabPage({ notebookId }: { notebookId: number }) {
@@ -159,7 +165,6 @@ function EdenResearchLabSession({
   runId: number | null;
 }) {
   const lab = useEdenLabController(notebookId, runId);
-  const lastError = (lab as { lastError?: string }).lastError ?? '';
 
   const sessionLabel =
     lab.phase === 'idle'
@@ -174,7 +179,7 @@ function EdenResearchLabSession({
       lab={lab}
       mode="eden"
       sessionLabel={sessionLabel}
-      lastError={lastError}
+      lastError={lab.lastError}
       showConsole={false}
       onComposeSubmit={(topic) => lab.composeAndStart(topic)}
       onSelectTask={(task) => {
@@ -192,7 +197,7 @@ function EdenResearchLabSession({
 
 type LabWorkbenchProps = {
   notebookId: number;
-  lab: LabController;
+  lab: LabController | EdenLabController;
   mode: 'fixture' | 'eden';
   sessionLabel: string;
   lastError?: string;
@@ -222,6 +227,11 @@ function LabWorkbench({
   const [forkEdgeId, setForkEdgeId] = useState<string | null>(null);
   const [forkDraft, setForkDraft] = useState<ForkDraft>({ title: '', query: '', summary: '' });
   const [prunePreview, setPrunePreview] = useState<PrunePreview | null>(null);
+
+  const drawerCitations =
+    mode === 'eden' && 'citations' in lab
+      ? (lab as EdenLabController).citations
+      : lab.scenario.citations;
 
   const questionText =
     lab.derived.nodes.find((n) => n.role === 'question')?.conclusion?.trim() ||
@@ -666,18 +676,17 @@ function LabWorkbench({
             流程重塑中 · 重算布局
           </div>
         ) : null}
-        {!showCompose &&
-        !lab.reshaping &&
-        !lab.playing &&
-        lab.phase !== 'completed' &&
-        lab.phase !== 'failed' ? (
+        {shouldShowLabPausedBanner({
+          showCompose,
+          reshaping: lab.reshaping,
+          playing: lab.playing,
+          phase: lab.phase,
+        }) ? (
           <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-full border border-blue-200 bg-blue-50/95 px-3 py-1.5 text-[11px] font-medium text-blue-900 shadow-md backdrop-blur">
-            {lab.phase === 'awaiting_confirm'
-              ? '等待确认 · 可拖动节点 / 分叉剪枝，或点顶栏收束'
-              : '已暂停 · 可拖动节点 / 分叉剪枝，再点顶栏继续'}
+            {labPausedBannerText(lab.phase)}
           </div>
         ) : null}
-        {!showCompose && lab.playing ? (
+        {shouldShowLabPlayingTip({ showCompose, playing: lab.playing }) ? (
           <div className="pointer-events-none absolute left-3 top-3 z-10 max-w-[240px] rounded-lg border border-gray-200 bg-white/90 px-2.5 py-1.5 text-[10px] text-gray-500 shadow-sm">
             点节点打开会话 · 边上分叉/剪枝 · 左下角画布设置
           </div>
@@ -688,7 +697,7 @@ function LabWorkbench({
             overlay
             node={selected}
             phase={lab.phase}
-            citations={lab.scenario.citations}
+            citations={drawerCitations}
             reportAvailable={selected?.role === 'conclusion' && lab.derived.reportVisible}
             onOpenReport={openReport}
             constraintsNote={selected?.role === 'question' ? lab.scenario.constraintsNote : null}

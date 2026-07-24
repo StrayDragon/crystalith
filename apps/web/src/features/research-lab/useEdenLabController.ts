@@ -15,8 +15,10 @@ import {
   patchResearchNode,
   pruneResearchNode,
 } from './edenResearchApi';
+import { buildEdenCitationsMap } from './evidenceAdapter';
 import { LAB_SCENARIOS } from './fake/scenarios';
 import type {
+  LabCitation,
   LabEdgePathPreset,
   LabLayoutAlgorithm,
   LabLayoutDirection,
@@ -24,7 +26,11 @@ import type {
   LabViewMode,
 } from './fake/types';
 import type { LabController } from './fake/useLabController';
-import { deriveLabStateFromRun, researchRunStatusToLabPhase } from './researchGraphAdapter';
+import {
+  deriveLabStateFromRun,
+  isEdenLabPlaying,
+  researchRunStatusToLabPhase,
+} from './researchGraphAdapter';
 import { refreshResearchTasks } from './researchTasksCache';
 
 const EMPTY_MUTATIONS = {
@@ -35,14 +41,26 @@ const EMPTY_MUTATIONS = {
   activityNotes: [] as string[],
 };
 
-function mergeRunGraph(prev: ResearchRun | null, next: ResearchRun): ResearchRun {
+const TERMINAL_STATUSES: ReadonlySet<ResearchRunStatus> = new Set([
+  'completed',
+  'failed',
+  'cancelled',
+]);
+
+function mergeRunGraph(_prev: ResearchRun | null, next: ResearchRun): ResearchRun {
   return next;
 }
+
+export type EdenLabController = LabController & {
+  lastError: string;
+  /** Eden evidence → LabCitation map (r434); not scenario.citations. */
+  citations: Record<string, LabCitation>;
+};
 
 export function useEdenLabController(
   notebookId: number,
   initialRunId?: number | null,
-): LabController & { lastError: string } {
+): EdenLabController {
   const [run, setRun] = useState<ResearchRun | null>(null);
   const [activityLog, setActivityLog] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -97,10 +115,24 @@ export function useEdenLabController(
             if (ac.signal.aborted) break;
             if (ev.event === 'status') {
               const data = ev.data as { status?: ResearchRunStatus; reason?: string };
-              setRun((prev) => (prev ? { ...prev, status: data.status ?? prev.status } : prev));
-              if (data.reason) pushLog(data.reason);
-              else if (data.status) pushLog(`状态 → ${data.status}`);
-              refreshResearchTasks(notebookId);
+              const nextStatus = data.status;
+              if (nextStatus && TERMINAL_STATUSES.has(nextStatus)) {
+                if (data.reason) pushLog(data.reason);
+                else pushLog(`状态 → ${nextStatus}`);
+                try {
+                  const fresh = await getResearchRun(notebookId, rid);
+                  applyRun(fresh);
+                } catch {
+                  setRun((prev) => (prev ? { ...prev, status: nextStatus } : prev));
+                }
+                stopStream();
+                refreshResearchTasks(notebookId);
+              } else {
+                setRun((prev) => (prev ? { ...prev, status: nextStatus ?? prev.status } : prev));
+                if (data.reason) pushLog(data.reason);
+                else if (nextStatus) pushLog(`状态 → ${nextStatus}`);
+                refreshResearchTasks(notebookId);
+              }
             } else if (ev.event === 'graph_patch') {
               const patch = ev.data as ResearchGraphPatch;
               setRun((prev) => {
@@ -201,6 +233,14 @@ export function useEdenLabController(
 
   const phase = researchRunStatusToLabPhase(run?.status ?? null);
   const derived = useMemo(() => deriveLabStateFromRun(run, activityLog), [run, activityLog]);
+  const citations = useMemo(() => {
+    const evidenceIds = run?.nodes.flatMap((n) => n.evidenceIds ?? []) ?? [];
+    return buildEdenCitationsMap({
+      evidences: run?.evidences,
+      report: run?.report,
+      evidenceIds,
+    });
+  }, [run]);
 
   const withBusy = useCallback(
     async (fn: () => Promise<ResearchRun>, note: string) => {
@@ -384,7 +424,7 @@ export function useEdenLabController(
     setScenarioId: () => undefined,
     phase,
     setPhase: () => undefined,
-    playing: run?.status === 'running' || run?.status === 'queued',
+    playing: isEdenLabPlaying(run?.status),
     setPlaying: () => undefined,
     playbackMs: 1400,
     setPlaybackMs: () => undefined,
@@ -444,6 +484,7 @@ export function useEdenLabController(
     derived,
     scenario: LAB_SCENARIOS[0]!,
     lastError,
+    citations,
   };
 }
 

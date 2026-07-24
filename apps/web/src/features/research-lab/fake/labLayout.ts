@@ -47,7 +47,8 @@ export type LabEdgeData = {
   pathPreset: LabEdgePathPreset;
 };
 
-function nodeProgress(n: LabNode): { pct: number; hint?: string; show: boolean } {
+/** Node card progress / status hint (exported for live LabGraph patches). */
+export function nodeProgress(n: LabNode): { pct: number; hint?: string; show: boolean } {
   if (n.role === 'question') return { pct: 0, show: false };
   if (n.conclusionStatus === 'pruned') return { pct: 0, hint: '已剪枝', show: false };
   if (n.conclusionStatus === 'clear') return { pct: 100, hint: '明确', show: false };
@@ -189,7 +190,12 @@ export async function layoutWithElk(
         animDelayMs: opts?.reshaping ? 0 : Math.min(p.layer * 70, 420),
         reshaping: Boolean(opts?.reshaping && n.role === 'conclusion'),
         askOnInterrupt: n.askOnInterrupt,
-        statusOverride: isConclusion && failedMerge ? '部分汇入失败' : undefined,
+        statusOverride:
+          isConclusion && failedMerge
+            ? '部分汇入失败'
+            : isConclusion
+              ? n.statusOverride
+              : undefined,
       } satisfies LabRfData,
     };
   });

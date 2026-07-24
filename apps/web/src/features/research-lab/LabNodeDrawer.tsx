@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { TestIds, tid } from '../../shared/testids';
+import { resolveNodeCitations } from './evidenceAdapter';
 import type { LabNodeActionProposal } from './fake/nodeChatTypes';
 import {
   buildNodeQuickActionGroups,
@@ -121,9 +122,8 @@ export default function LabNodeDrawer({
   if (!node) return null;
 
   const style = LAB_STATUS_LEGEND[node.conclusionStatus];
-  const cites = node.citationIds
-    .map((id) => citations[id])
-    .filter((c): c is LabCitation => Boolean(c));
+  const cites =
+    node.citationIds.length === 0 ? [] : resolveNodeCitations(node.citationIds, citations);
   const isConclusion = node.role === 'conclusion';
   const isQuestion = node.role === 'question';
   const showConfirm =

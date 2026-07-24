@@ -1,0 +1,15 @@
+kind: llman.sdd.delta
+ops[4]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r434,"Eden node drawer shows Run evidence citations","Eden 模式下 LabNodeDrawer 的引用列表 MUST 由当前 ResearchRun 上节点 evidenceIds 映射而来（标题与 snippet 至少其一）；当 evidenceIds 非空且 Run 已返回对应证据时 MUST NOT 显示「暂无引用」；MUST NOT 以 fixture scenario.citations 作为 Eden 默认引用源。",null,null,null
+  add_requirement,r435,"Terminal Run node labels reflect server state","当 ResearchRun status 为 completed、failed 或 cancelled 时，研究图与节点抽屉中的节点状态文案 MUST 反映服务端终态；结论节点在 completed 后 MUST NOT 长期显示「排队…」或等价进行中文案。",null,null,null
+  add_requirement,r436,"SSE and terminal GET refresh align node fields","Eden Lab 在收到 SSE graph_patch 后 MUST 合并节点与边；在 status 进入 completed、failed 或 cancelled 以及 report_ready 后 MUST getResearchRun 或等效全量刷新以对齐 node.phase、conclusionStatus 与 evidenceIds。",null,null,null
+  add_requirement,r437,"awaiting_confirm progress does not contradict playing","当 Run status 为 awaiting_confirm 时，Lab MUST NOT 同时展示「多源探索」playing 横幅与「已暂停」类矛盾文案；playing 推导 MUST 仅对 queued 或 running 为 true；进度条 phase MUST 为 awaiting_confirm。",null,null,null
+op_scenarios[8]{req_id,id,given,when,then,feature}:
+  r434,"drawer-shows-evidence-when-ids-present",Eden Run completed 且某节点 evidenceIds 非空,用户打开该节点抽屉,引用列表展示至少一条证据摘要,true
+  r434,"eden-not-scenario-citations",Eden Lab 已加载 Run,查看 LabNodeDrawer citations 来源,来自 Run 证据映射而非 scenario.citations,true
+  r435,"conclusion-not-queued-after-complete",Run 已 completed,用户查看结论节点卡片,非「排队…」终态文案,true
+  r435,"failed-run-readonly-labels",Run status 为 failed,用户查看图节点,展示失败/终态语义,true
+  r436,"terminal-status-triggers-full-refresh",SSE 将 Run 变为 completed,客户端处理事件,经 GET run 对齐节点 phase 与 evidenceIds,true
+  r436,"graph-patch-merges-evidence-ids",SSE graph_patch 更新节点 evidenceIds,合并后打开抽屉,引用列表反映新 ids,true
+  r437,"awaiting-confirm-no-playing-banner",Run 为 awaiting_confirm,用户查看作业台横幅,示等待确认且无探索 playing 横幅,true
+  r437,"running-shows-playing",Run 为 running,用户查看 playing 状态,playing 为 true 且无「已暂停」横幅,true
