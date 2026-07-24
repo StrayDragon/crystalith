@@ -17,20 +17,24 @@
 - SSOT 文档：包根 [`DESIGN.md`](./DESIGN.md)（YAML tokens + 中文原则）
 - 实现侧：Tailwind / `src/app/tailwind.css`、MUI 局部组件；新表面优先对齐 DESIGN token，避免另起一套色板
 
-## Research Lab（mock vs real）
+## Research Lab（作业台；fixture 直至 c82）
 
-`/research-lab` 是交互原型与当前深研主表面入口；生产 ResearchRun API 在 server，Lab 接 Eden 见后续 c80+。
+`/research-lab/:nid` 是深研**产品主表面**（作业台）。会话权威在 c82 Eden 接线前为 fixture（默认 `xlsx-lib`）。
 
-| Lab（本目录）                             | Real（ResearchRun）             |
-| ----------------------------------------- | ------------------------------- |
-| `fake/*` + `deriveLabState`               | Run 图 SSOT + SSE `graph_patch` |
-| `useLabController` 本地突变               | Eden `…/nodes/:id/{prune,fork}` |
-| phase 定时回放                            | Run 状态机 + stream             |
-| `labSession` / revisions → sessionStorage | 服务端 report + checkpoints     |
+| Lab（本目录）                                | Real（ResearchRun，c81/c82）    |
+| -------------------------------------------- | ------------------------------- |
+| Compose 空态创建                             | `POST …/research`               |
+| 任务抽屉（头像旁 + Lab 顶栏最右）            | `GET …/research` list           |
+| `fake/*` + `deriveLabState`                  | Run 图 SSOT + SSE `graph_patch` |
+| `fixtureLabSessionPort` / `useLabController` | `EdenResearchSessionPort`       |
+| phase 定时回放                               | Run 状态机 + stream             |
+| `labSession` / revisions → sessionStorage    | 服务端 report + checkpoints     |
+
+**闭环入口（当前）**：烧瓶 / 任务抽屉「新建」→ Compose → fixture 回放 → 任务列表切换/恢复。对话 `@`/`/` 嵌入**延后**。
 
 - 剪枝闭包 **B** 与 server `collectResearchPruneClosure` 对齐（`fake/deriveLabState`）；变更走 `llmanspec/changes/update-research-prune-cascade`
-- 接 Eden 时：保留 `LabGraph` / 报告 Plate 等展示层，替换 `fake/` 下 controller / data 端口
-- 顶栏搜索仅为 Fast 网搜；深研走烧瓶 → Lab 空态 Compose →（演示）xlsx-lib 回放
+- 接 Eden 时：保留 `LabGraph` / 报告 Plate 等展示层，替换 port / `fake/` controller 数据权威
+- 顶栏搜索仅为 Fast 网搜；勿恢复为深研主入口
 
 ## Build, Test, and Development Commands
 
