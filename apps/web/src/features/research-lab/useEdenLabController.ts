@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { streamRequest } from '../../api/stream';
 import { applyGraphPatch } from './applyGraphPatch';
+import { confirmHighlightIds } from './confirmHighlight';
 import { cancelActiveEdenRun } from './edenCancelFlow';
 import {
   confirmResearchRun,
@@ -348,6 +349,14 @@ export function useEdenLabController(
       }),
     [run?.searchesUsed, run?.maxSearches, run?.status, researchCounts],
   );
+
+  // H2=B: highlight confirm branch + neighbors while awaiting_confirm
+  useEffect(() => {
+    if (run?.status !== 'awaiting_confirm') return;
+    const branchId = run.confirmBranchNodeId ?? null;
+    setHighlightedNodeIds(confirmHighlightIds(branchId, run.edges ?? []));
+  }, [run?.status, run?.confirmBranchNodeId, run?.edges]);
+
   const citations = useMemo(() => {
     const evidenceIds = run?.nodes.flatMap((n) => n.evidenceIds ?? []) ?? [];
     return buildEdenCitationsMap({
@@ -367,7 +376,15 @@ export function useEdenLabController(
         refreshResearchTasks(notebookId);
         return next;
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
+        const err = error as Error & { errorCode?: string };
+        const base = err instanceof Error ? err.message : String(error);
+        const code = typeof err.errorCode === 'string' ? err.errorCode : undefined;
+        const msg =
+          code === 'RESEARCH_BUDGET' || code === 'RESEARCH_INVALID_STATE'
+            ? `[${code}] ${base}`
+            : code
+              ? `[${code}] ${base}`
+              : base;
         setLastError(msg);
         pushLog(msg);
         throw error;
@@ -482,23 +499,59 @@ export function useEdenLabController(
     void withBusy(
       () => confirmResearchRun(notebookId, rid, { action: 'finish_report' }),
       '确认出报告',
-    );
+    )
+      .then(() => setHighlightedNodeIds([]))
+      .catch(() => undefined);
   }, [notebookId, withBusy]);
 
   const continueDig = useCallback(() => {
     const rid = runIdRef.current;
     if (!rid) return;
     setConfirmChoice('continue');
-    const action = run?.confirmKind === 'expand_branch' ? 'approve_branch' : 'continue';
     void withBusy(
       () =>
         confirmResearchRun(notebookId, rid, {
-          action,
-          branchNodeId: run?.confirmBranchNodeId ?? undefined,
+          action: 'continue',
         }),
-      action === 'approve_branch' ? '批准扩支' : '继续研究',
-    );
-  }, [notebookId, run?.confirmBranchNodeId, run?.confirmKind, withBusy]);
+      '继续研究',
+    )
+      .then(() => setHighlightedNodeIds([]))
+      .catch(() => undefined);
+  }, [notebookId, withBusy]);
+
+  const approveBranch = useCallback(() => {
+    const rid = runIdRef.current;
+    if (!rid) return;
+    const branchNodeId = run?.confirmBranchNodeId ?? undefined;
+    setConfirmChoice('approve_branch');
+    void withBusy(
+      () =>
+        confirmResearchRun(notebookId, rid, {
+          action: 'approve_branch',
+          branchNodeId,
+        }),
+      '批准扩支',
+    )
+      .then(() => setHighlightedNodeIds([]))
+      .catch(() => undefined);
+  }, [notebookId, run?.confirmBranchNodeId, withBusy]);
+
+  const skipBranch = useCallback(() => {
+    const rid = runIdRef.current;
+    if (!rid) return;
+    const branchNodeId = run?.confirmBranchNodeId ?? undefined;
+    setConfirmChoice('skip_branch');
+    void withBusy(
+      () =>
+        confirmResearchRun(notebookId, rid, {
+          action: 'skip_branch',
+          branchNodeId,
+        }),
+      '跳过支路',
+    )
+      .then(() => setHighlightedNodeIds([]))
+      .catch(() => undefined);
+  }, [notebookId, run?.confirmBranchNodeId, withBusy]);
 
   const restart = useCallback(() => {
     stopStream();
@@ -612,6 +665,8 @@ export function useEdenLabController(
     cancel,
     finishReport,
     continueDig,
+    approveBranch,
+    skipBranch,
     retry: () => {
       const rid = runIdRef.current;
       if (rid) void loadRun(rid);
@@ -636,6 +691,9 @@ export function useEdenLabController(
     maxSearches: run?.maxSearches ?? 0,
     researchDone: researchCounts.researchDone,
     researchTotal: researchCounts.researchTotal,
+    confirmKind: run?.status === 'awaiting_confirm' ? (run.confirmKind ?? 'budget') : null,
+    confirmBranchNodeId:
+      run?.status === 'awaiting_confirm' ? (run.confirmBranchNodeId ?? null) : null,
   };
 }
 

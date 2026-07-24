@@ -1,3 +1,4 @@
+import type { LabConfirmKind } from './fake/resolveLabPrimaryAction';
 import type { LabPhase } from './fake/types';
 
 /** Top paused/awaiting banner: never pair explore playing with「已暂停」 (r437). */
@@ -13,8 +14,14 @@ export function shouldShowLabPausedBanner(input: {
   return true;
 }
 
-export function labPausedBannerText(phase: LabPhase): string {
+export function labPausedBannerText(phase: LabPhase, confirmKind?: LabConfirmKind | null): string {
   if (phase === 'awaiting_confirm') {
+    if (confirmKind === 'expand_branch') {
+      return '等待确认 · 提议扩展支路，可批准 / 跳过 / 生成结论';
+    }
+    if (confirmKind === 'budget') {
+      return '等待确认 · 预算将尽，可继续深挖或生成结论';
+    }
     return '等待确认 · 可拖动节点 / 分叉剪枝，或点顶栏收束';
   }
   return '已暂停 · 可拖动节点 / 分叉剪枝，再点顶栏继续';

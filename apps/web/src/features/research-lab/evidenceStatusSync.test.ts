@@ -160,6 +160,7 @@ describe('awaiting_confirm banner / playing (r437)', () => {
       conclusionNodeId: 'c',
       selectedNodeId: null,
       selectedRole: null,
+      confirmKind: 'budget',
     });
     expect(primary.kind).toBe('finish_report');
     expect(primary.label).not.toBe('暂停');

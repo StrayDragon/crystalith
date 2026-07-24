@@ -13,6 +13,7 @@
 import type { ResearchConclusionStatus, ResearchDepth } from '@crystalith/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { confirmHighlightIds } from '../confirmHighlight';
 import { DEFAULT_LAB_COMPOSE_DEPTH } from '../labComposeDepth';
 import {
   appendFixturePhaseEvent,
@@ -28,6 +29,7 @@ import {
 } from '../labSession';
 import { advanceLabPlayback, deriveLabState, EMPTY_MUTATIONS } from './deriveLabState';
 import { mockForkSeed } from './mockNodeEnrichment';
+import type { LabConfirmKind } from './resolveLabPrimaryAction';
 import { getLabScenario, LAB_SCENARIOS } from './scenarios';
 import type {
   LabEdge,
@@ -114,6 +116,9 @@ export interface LabController {
   cancel: () => void;
   finishReport: () => void;
   continueDig: () => void;
+  /** M1 expand_branch (c96). */
+  approveBranch: () => void;
+  skipBranch: () => void;
   retry: () => void;
   restart: () => void;
   /** Flush current state to sessionStorage (call before navigating to report). */
@@ -125,6 +130,9 @@ export interface LabController {
   maxSearches: number;
   researchDone: number;
   researchTotal: number;
+  /** M1 confirm kind (c96); null when not awaiting. */
+  confirmKind: LabConfirmKind | null;
+  confirmBranchNodeId: string | null;
 }
 
 let forkSeq = 0;
@@ -200,6 +208,8 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
   const [mutations, setMutations] = useState<LabGraphMutations>(initial.mutations);
   const [reshaping, setReshaping] = useState(false);
   const [progressEvents, setProgressEvents] = useState<LabProgressLedgerItem[]>([]);
+  const [confirmKind, setConfirmKind] = useState<LabConfirmKind | null>(null);
+  const [confirmBranchNodeId, setConfirmBranchNodeId] = useState<string | null>(null);
 
   const scenario = useMemo(() => getLabScenario(scenarioId), [scenarioId]);
   const [topicDraft, setTopicDraft] = useState(initial.topicDraft ?? '');
@@ -293,6 +303,26 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     setProgressEvents((prev) => appendFixturePhaseEvent(prev, phase, LAB_PHASE_LABELS[phase]));
   }, [phase]);
 
+  useEffect(() => {
+    if (phase !== 'awaiting_confirm') {
+      setConfirmKind(null);
+      setConfirmBranchNodeId(null);
+      return;
+    }
+    const research = derived.nodes.find(
+      (n) => n.role === 'research' && n.conclusionStatus !== 'pruned',
+    );
+    if (research) {
+      setConfirmKind('expand_branch');
+      setConfirmBranchNodeId(research.id);
+      setHighlightedNodeIds(confirmHighlightIds(research.id, derived.edges));
+    } else {
+      setConfirmKind('budget');
+      setConfirmBranchNodeId(null);
+      setHighlightedNodeIds([]);
+    }
+  }, [phase, derived.nodes, derived.edges]);
+
   const researchCounts = useMemo(() => countResearchNodeProgress(derived.nodes), [derived.nodes]);
   const fixtureBudget = useMemo(
     () => fixtureBudgetFromSources(derived.metrics.sourcesRetrieved),
@@ -385,11 +415,27 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
   const finishReport = useCallback(() => {
     setConfirmChoice('finish_report');
     setPlaying(false);
+    setHighlightedNodeIds([]);
     setPhase('completed');
   }, []);
 
   const continueDig = useCallback(() => {
     setConfirmChoice('continue');
+    setHighlightedNodeIds([]);
+    setPhase('integrate');
+    setPlaying(true);
+  }, []);
+
+  const approveBranch = useCallback(() => {
+    setConfirmChoice('approve_branch');
+    setHighlightedNodeIds([]);
+    setPhase('integrate');
+    setPlaying(true);
+  }, []);
+
+  const skipBranch = useCallback(() => {
+    setConfirmChoice('skip_branch');
+    setHighlightedNodeIds([]);
     setPhase('integrate');
     setPlaying(true);
   }, []);
@@ -620,6 +666,8 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     cancel: () => undefined,
     finishReport,
     continueDig,
+    approveBranch,
+    skipBranch,
     retry,
     restart,
     persistNow,
@@ -629,5 +677,7 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     maxSearches: fixtureBudget.maxSearches,
     researchDone: researchCounts.researchDone,
     researchTotal: researchCounts.researchTotal,
+    confirmKind,
+    confirmBranchNodeId,
   };
 }
