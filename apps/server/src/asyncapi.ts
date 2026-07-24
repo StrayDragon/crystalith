@@ -167,6 +167,19 @@ const RESEARCH_STREAM_CHANNEL: AsyncApiChannel = {
       },
     },
     {
+      name: 'progress',
+      description: '进度账本增量（与 GET …/progress 同源语义）',
+      payload: {
+        type: 'object',
+        properties: {
+          seq: { type: 'integer' },
+          kind: { type: 'string' },
+          message: { type: 'string' },
+          at: { type: 'string' },
+        },
+      },
+    },
+    {
       name: 'error',
       description: '错误（对齐 ErrorEnvelope）',
       payload: {

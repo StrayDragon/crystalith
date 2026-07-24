@@ -1,7 +1,7 @@
 /**
- * Deep Research HTTP surface.
+ * Deep Research HTTP surface (`/v2/notebooks/:nid/research*`).
  *
- * FE Desk/xyflow is under apps/web workspace research — this router is backend-only.
+ * Lab (apps/web research-lab) is the product UI; this router is ResearchRun SSOT.
  */
 import {
   ResearchConfirmBodySchema,
