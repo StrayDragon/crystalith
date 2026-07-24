@@ -147,7 +147,7 @@ export function useEdenLabController(
           }
         } catch (error) {
           if (ac.signal.aborted) return;
-          const msg = error instanceof Error ? err.message : String(error);
+          const msg = error instanceof Error ? error.message : String(error);
           setLastError(msg);
           pushLog(`SSE：${msg}`);
         }
@@ -177,7 +177,7 @@ export function useEdenLabController(
           stopStream();
         }
       } catch (error) {
-        const msg = error instanceof Error ? err.message : String(error);
+        const msg = error instanceof Error ? error.message : String(error);
         setLastError(msg);
         pushLog(msg);
       } finally {
@@ -206,10 +206,10 @@ export function useEdenLabController(
         applyRun(mergeRunGraph(run, next), note);
         return next;
       } catch (error) {
-        const msg = error instanceof Error ? err.message : String(error);
+        const msg = error instanceof Error ? error.message : String(error);
         setLastError(msg);
         pushLog(msg);
-        throw err;
+        throw error;
       } finally {
         setBusy(false);
       }
@@ -243,7 +243,7 @@ export function useEdenLabController(
           );
           window.dispatchEvent(new PopStateEvent('popstate'));
         } catch (error) {
-          const msg = error instanceof Error ? err.message : String(error);
+          const msg = error instanceof Error ? error.message : String(error);
           setLastError(msg);
           pushLog(msg);
         } finally {
