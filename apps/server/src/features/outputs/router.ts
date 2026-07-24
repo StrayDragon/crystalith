@@ -1,12 +1,9 @@
 import {
   Empty204Schema,
-  NotebookIdQuerySchema,
   OutputConvertToSourceResponseSchema,
   OutputExportFormatQuerySchema,
   OutputExportJsonResponseSchema,
-  OutputExportQuerySchema,
   OutputGenerateNestedRequestSchema,
-  OutputGenerateRequestSchema,
   OutputSchema,
   OutputsPageSchema,
   PaginationParamsSchema,
@@ -17,17 +14,16 @@ import {
   type OutputGenerateBody,
 } from '@crystalith/shared';
 import { NoSuchModelError, TypeValidationError, APICallError, NoObjectGeneratedError } from 'ai';
-// Outputs router — nested canonical + flat deprecated aliases (c69).
+// Outputs router — nested canonical (c69/c90).
 //
-// Canonical:
 //   POST   /v2/notebooks/:nid/outputs
 //   GET    /v2/notebooks/:nid/outputs
 //   GET    /v2/notebooks/:nid/outputs/:id
 //   DELETE /v2/notebooks/:nid/outputs/:id
 //   GET    /v2/notebooks/:nid/outputs/:id/export
 //   POST   /v2/notebooks/:nid/outputs/:id/convert-to-source
-// Flat aliases (deprecated): /v2/outputs{,/:id,/export,/convert-to-source}
 // (c73: GET /v2/outputs/types removed — FE uses GET /v2/workspace/tools)
+// (c90: flat /v2/outputs* aliases removed)
 import { count, desc, eq, inArray } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 import { z } from 'zod';
@@ -62,8 +58,6 @@ function requireOutputInNotebook(id: number, notebookId: number): typeof outputs
 // ---------------------------------------------------------------------------
 // OpenAPI docs
 // ---------------------------------------------------------------------------
-
-const OutputsListQuerySchema = NotebookIdQuerySchema.extend(PaginationParamsSchema.shape);
 
 const apiDocs: OpenApiRoute[] = [
   {
@@ -113,62 +107,6 @@ const apiDocs: OpenApiRoute[] = [
     method: 'post',
     summary: '将产出转为来源并摄取',
     tags: ['outputs'],
-    responses: { 201: { description: '已创建的来源' } },
-  },
-  {
-    path: '/v2/outputs',
-    method: 'post',
-    summary: '按类型生成产出（扁平别名）',
-    tags: ['outputs'],
-    deprecated: true,
-    request: { body: OutputGenerateRequestSchema },
-    responses: { 201: { description: '已生成的产出' } },
-  },
-  {
-    path: '/v2/outputs',
-    method: 'get',
-    summary: '分页列出产出（扁平别名）',
-    tags: ['outputs'],
-    deprecated: true,
-    request: {
-      query: {
-        notebookId: NotebookIdQuerySchema.shape.notebookId,
-        offset: PaginationParamsSchema.shape.offset,
-        limit: PaginationParamsSchema.shape.limit,
-      },
-    },
-    responses: { 200: { description: '产出列表', body: OutputsPageSchema } },
-  },
-  {
-    path: '/v2/outputs/:id',
-    method: 'get',
-    summary: '按 id 获取产出（扁平别名）',
-    tags: ['outputs'],
-    deprecated: true,
-    responses: { 200: { description: '产出', body: OutputSchema } },
-  },
-  {
-    path: '/v2/outputs/:id',
-    method: 'delete',
-    summary: '删除产出（扁平别名）',
-    tags: ['outputs'],
-    deprecated: true,
-    responses: { 204: { description: '已删除' } },
-  },
-  {
-    path: '/v2/outputs/:id/export',
-    method: 'get',
-    summary: '导出产出（扁平别名）',
-    tags: ['outputs'],
-    deprecated: true,
-    responses: { 200: { description: '导出内容' } },
-  },
-  {
-    path: '/v2/outputs/:id/convert-to-source',
-    method: 'post',
-    summary: '将产出转为来源（扁平别名）',
-    tags: ['outputs'],
-    deprecated: true,
     responses: { 201: { description: '已创建的来源' } },
   },
 ];
@@ -648,50 +586,6 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
       return handleConvertOutputToSource(id, nid, set);
     },
     { response: OutputConvertToSourceResponseSchema },
-  )
-
-  // ---- Flat aliases (deprecated; c67 notebookId still required) ----
-  .post(
-    '/outputs',
-    async ({ body, set, request }) => handleGenerateOutput(body.notebookId, body, set, request),
-    { body: OutputGenerateRequestSchema, response: OutputSchema },
-  )
-  .get(
-    '/outputs',
-    ({ query }) => handleListOutputs(query.notebookId, query.offset ?? 0, query.limit ?? 20),
-    { query: OutputsListQuerySchema, response: OutputsPageSchema },
-  )
-  .get(
-    '/outputs/:id',
-    ({ params, query }) => {
-      const id = requirePositiveIntId(params.id, 'output id');
-      return handleGetOutput(id, query.notebookId);
-    },
-    { query: NotebookIdQuerySchema, response: OutputSchema },
-  )
-  .delete(
-    '/outputs/:id',
-    ({ params, query, set }) => {
-      const id = requirePositiveIntId(params.id, 'output id');
-      return handleDeleteOutput(id, query.notebookId, set);
-    },
-    { query: NotebookIdQuerySchema, response: { 204: Empty204Schema } },
-  )
-  .get(
-    '/outputs/:id/export',
-    ({ params, query }) => {
-      const id = requirePositiveIntId(params.id, 'output id');
-      return handleExportOutput(id, query.notebookId, query.format);
-    },
-    { query: OutputExportQuerySchema, response: OutputExportResponseSchema },
-  )
-  .post(
-    '/outputs/:id/convert-to-source',
-    async ({ params, query, set }) => {
-      const id = requirePositiveIntId(params.id, 'output id');
-      return handleConvertOutputToSource(id, query.notebookId, set);
-    },
-    { query: NotebookIdQuerySchema, response: OutputConvertToSourceResponseSchema },
   );
 
 registerApiDoc(apiDocs);

@@ -1,4 +1,4 @@
-// QA streaming event schemas — SSE events for the /v2/qa/stream endpoint.
+// QA streaming event schemas — SSE events for nested /v2/notebooks/:nid/qa/stream.
 //
 // The event contract is backward-compatible with the v1 frontend chat consumer
 // (`useChat.ts`): `chunk` | `state_snapshot` | `done` | `error`.
@@ -68,7 +68,7 @@ export const QaStreamErrorEventSchema = z
     description: desc('qa.stream_error', 'QA SSE error 事件'),
   });
 
-/** Request body for POST /v2/qa and POST /v2/qa/stream. */
+/** Request body fields for POST …/qa and POST …/qa/stream. */
 export const QaDirectiveSchema = z.enum(['Sources_only', 'Knowledge_only', 'Mixed']);
 export type QaDirective = z.infer<typeof QaDirectiveSchema>;
 
@@ -88,17 +88,6 @@ const QaRequestFieldsSchema = z.object({
   modelId: z.string().optional(),
 });
 
-/** Flat alias POST /v2/qa — notebookId required. */
-export const QaRequestSchema = QaRequestFieldsSchema.extend({
-  notebookId: IdSchema,
-})
-  .openapi({
-    description: desc('qa.request', 'QA 请求（flat）'),
-    example: { notebookId: 1, question: '这篇讲了什么？', sessionId: 1 },
-  })
-  .refine((b) => !!(b.question ?? b.content), { message: 'question is required' });
-export type QaRequest = z.infer<typeof QaRequestSchema>;
-
 /** Nested POST /v2/notebooks/:nid/qa — optional body notebookId must match path. */
 export const QaNestedRequestSchema = QaRequestFieldsSchema.extend({
   notebookId: IdSchema.optional(),
@@ -110,11 +99,15 @@ export const QaNestedRequestSchema = QaRequestFieldsSchema.extend({
   .refine((b) => !!(b.question ?? b.content), { message: 'question is required' });
 export type QaNestedRequest = z.infer<typeof QaNestedRequestSchema>;
 
-/** @deprecated Prefer QaRequestSchema — kept as alias for older imports. */
-export const QaStreamRequestSchema = QaRequestSchema;
-export type QaStreamRequest = QaRequest;
+/** @deprecated Prefer QaNestedRequestSchema. */
+export const QaRequestSchema = QaNestedRequestSchema;
+export type QaRequest = QaNestedRequest;
 
-/** Non-streaming QA response (POST /v2/qa). */
+/** @deprecated Prefer QaNestedRequestSchema. */
+export const QaStreamRequestSchema = QaNestedRequestSchema;
+export type QaStreamRequest = QaNestedRequest;
+
+/** Non-streaming QA response (POST …/qa). */
 export const QaAnswerSchema = z
   .object({
     answer: z.string(),

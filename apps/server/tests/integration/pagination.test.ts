@@ -125,12 +125,6 @@ describe('c68 paginated list envelope', () => {
     expectPage(body, { maxItems: 2, minTotal: 5, offset: 0, limit: 2 });
   });
 
-  it('GET flat outputs alias still returns PaginatedSchema (c69 deprecated)', async () => {
-    const { status, body } = await get(`/v2/outputs?notebookId=${notebookId}&offset=0&limit=2`);
-    expect(status).toBe(200);
-    expectPage(body, { maxItems: 2, minTotal: 5, offset: 0, limit: 2 });
-  });
-
   it('GET nested studio slides returns PaginatedSchema', async () => {
     const { status, body } = await get(
       `/v2/notebooks/${notebookId}/studio/slides?offset=0&limit=2`,

@@ -696,11 +696,10 @@ export function useSources() {
       }
       try {
         const { data: result, error: coErr } = await api.v2
+          .notebooks({ nid: activeNotebookId })
           .outputs({ id: outputId })
           // eslint-disable-next-line no-unexpected-multiline
-          ['convert-to-source'].post(undefined, {
-            query: { notebookId: activeNotebookId },
-          });
+          ['convert-to-source'].post();
         if (coErr) throw new Error(parseServerError(coErr).message);
         await mutate();
         toast.success(`已转换为来源：${result?.filename}（${result?.chunkCount} 个分块）`);

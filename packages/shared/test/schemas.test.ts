@@ -86,18 +86,17 @@ describe('domain schemas', () => {
     expect(S.SourceFromUrlRequestSchema.safeParse({ url: 'ftp://x' }).success).toBe(false);
   });
 
-  it('qa request requires notebookId + question/content', () => {
-    const r = S.QaRequestSchema.parse({
-      notebookId: 1,
+  it('qa nested request requires question/content; notebookId optional', () => {
+    const r = S.QaNestedRequestSchema.parse({
       question: 'hi',
       sessionId: 2,
     });
     expect(r.question).toBe('hi');
-    expect(r.notebookId).toBe(1);
-    expect(S.QaRequestSchema.safeParse({ notebookId: 1 }).success).toBe(false);
-    expect(
-      S.QaRequestSchema.safeParse({ notebookId: 1, content: 'via content alias' }).success,
-    ).toBe(true);
+    expect(S.QaNestedRequestSchema.safeParse({}).success).toBe(false);
+    expect(S.QaNestedRequestSchema.safeParse({ content: 'via content alias' }).success).toBe(true);
+    expect(S.QaNestedRequestSchema.safeParse({ notebookId: 1, question: 'with nb' }).success).toBe(
+      true,
+    );
   });
 
   it('source connector write requests validate shapes', () => {
