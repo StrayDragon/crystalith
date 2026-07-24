@@ -159,7 +159,8 @@ models:
 
     # -------------------- OpenAI-compatible gateways (env-driven) --------------------
     - id: "gateway-embedding"
-      provider: "openai"
+      # Local/OpenAI-compatible gateways (OMLX, llamacpp --embeddings, etc.)
+      provider: "openai-compatible"
       model: "{{ env.CL_EMBEDDING_MODEL | default('bge-m3-mlx-8bit') }}"
       displayName: "Gateway Embedding"
       description: "Embedding via OpenAI-compatible gateway"

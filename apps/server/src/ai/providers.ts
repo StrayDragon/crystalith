@@ -63,15 +63,32 @@ function resolveChatModel(provider: unknown, modelId: string, sdk: string): Lang
   throw new Error(`Provider from '${sdk}' is neither callable nor has .chat()/.languageModel()`);
 }
 
+/**
+ * Resolve an embedding model from a provider instance.
+ *
+ * `@ai-sdk/openai` `createOpenAI()` returns a *callable function* with
+ * `.embedding` / `.embeddingModel` attached. `typeof fn === 'function'`, so
+ * a plain `isRecord` check misses those accessors (openai-compatible exposes
+ * `.embeddingModel` / `.textEmbeddingModel` only).
+ */
 function resolveEmbeddingAccessor(
   provider: unknown,
   modelId: string,
   sdk: string,
 ): EmbeddingModelV4 {
-  if (isRecord(provider) && typeof provider.embedding === 'function') {
-    return (provider.embedding as (id: string) => EmbeddingModelV4)(modelId);
+  const accessors = ['embedding', 'embeddingModel', 'textEmbeddingModel'] as const;
+  for (const key of accessors) {
+    const candidate =
+      typeof provider === 'function' || isRecord(provider)
+        ? (provider as Record<string, unknown>)[key]
+        : undefined;
+    if (typeof candidate === 'function') {
+      return (candidate as (id: string) => EmbeddingModelV4)(modelId);
+    }
   }
-  throw new Error(`Provider from '${sdk}' has no .embedding() accessor`);
+  throw new Error(
+    `Provider from '${sdk}' has no .embedding()/.embeddingModel()/.textEmbeddingModel() accessor`,
+  );
 }
 
 function buildProviderOpts(config: ModelConfig, includeHeaders: boolean): Record<string, unknown> {
