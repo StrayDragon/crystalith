@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 
 import { TestIds, tid } from '../../shared/testids';
 import { toast } from '../../shared/toast';
+import { acceptNodeChatAction as applyNodeChatAction } from './acceptNodeChatAction';
 import {
   demoStatusFromLabPhase,
   getActiveDemoResearchTaskId,
@@ -41,9 +42,7 @@ import {
   graphSliceFromSession,
   updateDefaultRevision,
 } from './fake/labRevisions';
-import { formatStatusChangeNote, mockEnrichAfterStatus } from './fake/mockNodeEnrichment';
 import type { LabNodeActionProposal } from './fake/nodeChatTypes';
-import { findInboundEdgeForNode } from './fake/proposeNodeChatTurn';
 import { resolveDefaultExportMarkdown } from './fake/resolveDefaultExportMarkdown';
 import {
   resolveLabPrimaryAction,
@@ -343,61 +342,18 @@ function LabWorkbench({
 
   const acceptNodeChatAction = useCallback(
     (proposal: LabNodeActionProposal, node: LabNode): boolean => {
-      switch (proposal.kind) {
-        case 'prune_node': {
-          const edge = findInboundEdgeForNode(node.id, lab.derived.edges, lab.derived.nodes);
-          if (!edge) return false;
-          lab.pruneAlongEdge(edge.id);
-          return true;
-        }
-        case 'fork_sibling': {
-          const edge = findInboundEdgeForNode(node.id, lab.derived.edges, lab.derived.nodes);
-          if (!edge) return false;
-          lab.forkAlongEdge(edge.id, {
-            title: proposal.params?.title ?? `对照：${node.title}`,
-            query: proposal.params?.query ?? node.query,
-            summary: proposal.params?.summary,
-          });
-          return true;
-        }
-        case 'rewrite_query': {
-          const q = proposal.params?.query?.trim();
-          if (!q) return false;
-          if (node.role === 'question' || node.id === 'root') {
-            lab.setTopicDraft(q);
-            lab.editNode(node.id, { query: q, conclusion: q });
-          } else {
-            lab.editNode(node.id, { query: q });
-          }
-          return true;
-        }
-        case 'set_status': {
-          const status = proposal.params?.conclusionStatus;
-          if (!status || status === 'pruned') return false;
-          const enriched = mockEnrichAfterStatus(node, status);
-          lab.editNode(node.id, enriched);
-          toast.info(formatStatusChangeNote(node.title, node.conclusionStatus, status), 2400);
-          return true;
-        }
-        case 'confirm_finish': {
-          lab.finishReport();
-          lab.setConfirmChoice('finish_report');
-          return true;
-        }
-        case 'confirm_continue': {
-          lab.continueDig();
-          lab.setConfirmChoice('continue_dig');
-          return true;
-        }
-        case 'open_report': {
-          openReport();
-          return true;
-        }
-        default:
-          return false;
-      }
+      return applyNodeChatAction({
+        proposal,
+        node,
+        edges: lab.derived.edges,
+        nodes: lab.derived.nodes,
+        mode,
+        lab,
+        openReport,
+        onStatusNote: (message) => toast.info(message, 2400),
+      });
     },
-    [lab, openReport],
+    [lab, mode, openReport],
   );
 
   const runPrimary = (kind: LabPrimaryActionKind) => {
@@ -695,6 +651,25 @@ function LabWorkbench({
         {!showCompose ? (
           <LabNodeDrawer
             overlay
+            mode={mode}
+            notebookId={notebookId}
+            runId={
+              mode === 'eden' && 'runId' in lab
+                ? (lab as EdenLabController).runId
+                : mode === 'eden'
+                  ? readActiveRunIdFromUrl()
+                  : null
+            }
+            llmBusy={
+              mode === 'eden' && 'llmActivity' in lab
+                ? Boolean((lab as EdenLabController).llmActivity)
+                : false
+            }
+            onChatError={
+              mode === 'eden' && 'reportError' in lab
+                ? (msg) => (lab as EdenLabController).reportError(msg)
+                : undefined
+            }
             node={selected}
             phase={lab.phase}
             citations={drawerCitations}

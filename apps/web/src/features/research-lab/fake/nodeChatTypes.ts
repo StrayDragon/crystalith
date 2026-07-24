@@ -5,8 +5,8 @@ import type { LabNodeRole } from './types';
 /**
  * Node-scoped chat ↔ graph mutation contract (product-shaped).
  *
- * Swap path when backend lands:
- *   Fake `proposeNodeChatTurn`  →  POST …/nodes/:id/chat (SSE)
+ *   Fixture (`VITE_LAB_FIXTURE=1`): `proposeNodeChatTurn` local mock
+ *   Eden (default): `streamNodeChat` → POST …/nodes/:id/chat (SSE)
  *   FE still only renders text + ActionProposal cards
  *   Accept → existing REST: prune / fork / confirm / patch node / set status
  *

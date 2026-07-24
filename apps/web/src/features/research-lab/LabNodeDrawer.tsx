@@ -1,6 +1,8 @@
+import type { ResearchNodeActionProposal } from '@crystalith/shared';
 import { useEffect, useRef, useState } from 'react';
 
 import { TestIds, tid } from '../../shared/testids';
+import { streamNodeChat } from './edenResearchApi';
 import { resolveNodeCitations } from './evidenceAdapter';
 import type { LabNodeActionProposal } from './fake/nodeChatTypes';
 import {
@@ -59,6 +61,26 @@ async function streamInto(
   onUpdate(acc, true);
 }
 
+function toLabProposal(p: ResearchNodeActionProposal): LabNodeActionProposal {
+  return {
+    id: p.id,
+    kind: p.kind,
+    label: p.label,
+    rationale: p.rationale,
+    status: p.status ?? 'pending',
+    params: p.params,
+  };
+}
+
+function mergeProposals(
+  existing: LabNodeActionProposal[],
+  incoming: LabNodeActionProposal[],
+): LabNodeActionProposal[] {
+  const byId = new Map(existing.map((p) => [p.id, p]));
+  for (const p of incoming) byId.set(p.id, p);
+  return [...byId.values()];
+}
+
 export default function LabNodeDrawer({
   node,
   citations,
@@ -72,6 +94,11 @@ export default function LabNodeDrawer({
   onConfirmFinish,
   onConfirmContinue,
   onAcceptAction,
+  mode = 'fixture',
+  notebookId,
+  runId,
+  llmBusy = false,
+  onChatError,
 }: {
   node: LabNode | null;
   citations: Record<string, LabCitation>;
@@ -89,24 +116,43 @@ export default function LabNodeDrawer({
    * Return false if the host could not apply (e.g. missing inbound edge).
    */
   onAcceptAction?: (proposal: LabNodeActionProposal, node: LabNode) => boolean | void;
+  /** Eden vs fixture — fixture alone may call proposeNodeChatTurn (r440). */
+  mode?: 'fixture' | 'eden';
+  notebookId?: number;
+  runId?: number | null;
+  /** Run llmActivity non-null (work_unit / node_chat) — disables resend. */
+  llmBusy?: boolean;
+  onChatError?: (message: string) => void;
 }) {
   const [tab, setTab] = useState<LabNodePanelTab>('meta');
   const [messages, setMessages] = useState<NodeChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const nodeIdRef = useRef<string | null>(null);
+  const chatAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!node) return;
     nodeIdRef.current = node.id;
+    chatAbortRef.current?.abort();
+    chatAbortRef.current = null;
     const existing = chatByNodeId.get(node.id);
     setMessages(existing ?? seedMessages(node));
     // Only re-pick default tab on selection change — not when status updates live.
     setTab(resolveDefaultNodePanelTab(node));
     setInput('');
     setStreaming(false);
+    setChatError(null);
   }, [node?.id]);
+
+  useEffect(() => {
+    return () => {
+      chatAbortRef.current?.abort();
+      chatAbortRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (!node) return;
@@ -181,10 +227,20 @@ export default function LabNodeDrawer({
     reportAvailable,
   });
 
+  const sendBusy = streaming || llmBusy;
+  const sendDisabled = sendBusy || !input.trim() || (mode === 'eden' && (!notebookId || !runId));
+
   const send = async () => {
     const text = input.trim();
-    if (!text || streaming) return;
+    if (!text || sendBusy) return;
+    if (mode === 'eden' && (!notebookId || !runId)) {
+      const msg = '无法发送：缺少 ResearchRun';
+      setChatError(msg);
+      onChatError?.(msg);
+      return;
+    }
     setInput('');
+    setChatError(null);
     const userMsg: NodeChatMessage = {
       id: `${node.id}-u-${Date.now()}`,
       role: 'user',
@@ -198,33 +254,102 @@ export default function LabNodeDrawer({
     ]);
     setStreaming(true);
 
-    const turn = proposeNodeChatTurn({
-      nodeId: node.id,
-      role: node.role ?? 'research',
-      title: node.title,
-      query: node.query,
-      userText: text,
-      phase,
-      reportAvailable,
-      conclusionStatus: node.conclusionStatus,
-    });
+    if (mode === 'fixture') {
+      const turn = proposeNodeChatTurn({
+        nodeId: node.id,
+        role: node.role ?? 'research',
+        title: node.title,
+        query: node.query,
+        userText: text,
+        phase,
+        reportAvailable,
+        conclusionStatus: node.conclusionStatus,
+      });
 
-    await streamInto(turn.assistantText, (partial, done) => {
-      if (nodeIdRef.current !== node.id) return;
+      await streamInto(turn.assistantText, (partial, done) => {
+        if (nodeIdRef.current !== node.id) return;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === asstId
+              ? {
+                  ...m,
+                  text: partial,
+                  streaming: !done,
+                  proposals: done ? turn.proposals : m.proposals,
+                }
+              : m,
+          ),
+        );
+        if (done) setStreaming(false);
+      });
+      return;
+    }
+
+    // Eden: POST …/nodes/:nodeId/chat SSE (MUST NOT proposeNodeChatTurn).
+    chatAbortRef.current?.abort();
+    const ac = new AbortController();
+    chatAbortRef.current = ac;
+    let acc = '';
+    let proposals: LabNodeActionProposal[] = [];
+    try {
+      for await (const ev of streamNodeChat(
+        notebookId!,
+        runId!,
+        node.id,
+        { message: text },
+        {
+          signal: ac.signal,
+        },
+      )) {
+        if (ac.signal.aborted || nodeIdRef.current !== node.id) break;
+        if (ev.event === 'chunk') {
+          acc += ev.data.text;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === asstId ? { ...m, text: acc, streaming: true, proposals } : m,
+            ),
+          );
+        } else if (ev.event === 'proposal') {
+          proposals = mergeProposals(proposals, [toLabProposal(ev.data)]);
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === asstId ? { ...m, text: acc, streaming: true, proposals } : m,
+            ),
+          );
+        } else if (ev.event === 'done') {
+          if (ev.data.proposals?.length) {
+            proposals = mergeProposals(proposals, ev.data.proposals.map(toLabProposal));
+          }
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === asstId ? { ...m, text: acc, streaming: false, proposals } : m,
+            ),
+          );
+        } else if (ev.event === 'error') {
+          const msg = ev.data.message || ev.data.errorCode || '节点对话失败';
+          setChatError(msg);
+          onChatError?.(msg);
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === asstId ? { ...m, text: acc || msg, streaming: false, proposals } : m,
+            ),
+          );
+        }
+      }
+    } catch (error) {
+      if (ac.signal.aborted) return;
+      const msg = error instanceof Error ? error.message : String(error);
+      setChatError(msg);
+      onChatError?.(msg);
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === asstId
-            ? {
-                ...m,
-                text: partial,
-                streaming: !done,
-                proposals: done ? turn.proposals : m.proposals,
-              }
-            : m,
+          m.id === asstId ? { ...m, text: acc || msg, streaming: false, proposals } : m,
         ),
       );
-      if (done) setStreaming(false);
-    });
+    } finally {
+      if (chatAbortRef.current === ac) chatAbortRef.current = null;
+      if (nodeIdRef.current === node.id) setStreaming(false);
+    }
   };
 
   return (
@@ -409,7 +534,7 @@ export default function LabNodeDrawer({
                           key={a.id}
                           type="button"
                           title={a.title}
-                          disabled={streaming || a.disabled}
+                          disabled={sendBusy || a.disabled}
                           onClick={() => runAction(a.proposal, 'badge')}
                           className={`rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-45 ${QUICK_ACTION_TONE_CLASS[a.tone]} ${
                             a.active ? QUICK_ACTION_ACTIVE_CLASS : ''
@@ -424,6 +549,19 @@ export default function LabNodeDrawer({
                 ))}
               </div>
             ) : null}
+            {chatError ? (
+              <p
+                className="mb-2 rounded-md border border-red-200 bg-red-50 px-2 py-1.5 text-[11px] text-red-800"
+                role="alert"
+              >
+                {chatError}
+              </p>
+            ) : null}
+            {llmBusy && !streaming ? (
+              <p className="mb-2 text-[10px] text-amber-800">
+                研究或节点对话进行中，请稍后再发送。
+              </p>
+            ) : null}
             <div className="flex gap-1.5">
               <textarea
                 value={input}
@@ -435,18 +573,19 @@ export default function LabNodeDrawer({
                   }
                 }}
                 rows={2}
+                disabled={sendBusy}
                 placeholder="对本节点提问…或点上方「定态 / 结构」徽章"
-                className="min-h-[56px] flex-1 resize-none rounded-md border border-gray-200 px-2.5 py-2 text-[12px] outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-200"
+                className="min-h-[56px] flex-1 resize-none rounded-md border border-gray-200 px-2.5 py-2 text-[12px] outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-200 disabled:opacity-50"
                 {...tid(TestIds.researchLabChatInput)}
               />
               <button
                 type="button"
-                disabled={streaming || !input.trim()}
+                disabled={sendDisabled}
                 onClick={() => void send()}
                 className="self-end rounded-md bg-blue-600 px-3 py-2 text-[11px] font-medium text-white hover:bg-blue-700 disabled:opacity-40"
                 {...tid(TestIds.researchLabChatSend)}
               >
-                发送
+                {sendBusy ? '…' : '发送'}
               </button>
             </div>
             <p className="mt-1.5 text-[10px] text-gray-400">

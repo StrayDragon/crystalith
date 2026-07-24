@@ -2,6 +2,9 @@ import type {
   ResearchConfirmBody,
   ResearchCreateBody,
   ResearchForkBody,
+  ResearchNodeActionProposal,
+  ResearchNodeChatBody,
+  ResearchNodeChatStreamEvent,
   ResearchNodePatchBody,
   ResearchRun,
   ResearchRunStatus,
@@ -11,6 +14,7 @@ import type {
 
 import { api } from '../../api/eden';
 import { parseServerError } from '../../api/parseServerError';
+import { streamRequest } from '../../api/stream';
 
 function throwEdenError(error: unknown): never {
   const parsed = parseServerError(error);
@@ -139,4 +143,49 @@ export function summaryToTaskItem(s: ResearchRunSummary): {
     topic: s.topic,
     status: s.status,
   };
+}
+
+/**
+ * Short-lived node chat SSE (c78 / c88) — independent of Run `GET …/stream`.
+ * Yields typed chunk / proposal / done / error / log events.
+ */
+export async function* streamNodeChat(
+  notebookId: number,
+  runId: number,
+  nodeId: string,
+  body: ResearchNodeChatBody,
+  options?: { signal?: AbortSignal },
+): AsyncGenerator<ResearchNodeChatStreamEvent> {
+  const path = `/v2/notebooks/${notebookId}/research/${runId}/nodes/${encodeURIComponent(nodeId)}/chat`;
+  for await (const ev of streamRequest(path, {
+    method: 'POST',
+    body,
+    signal: options?.signal,
+  })) {
+    if (ev.event === 'chunk') {
+      const data = ev.data as { text?: string };
+      yield { event: 'chunk', data: { text: data.text ?? '' } };
+    } else if (ev.event === 'proposal') {
+      yield { event: 'proposal', data: ev.data as ResearchNodeActionProposal };
+    } else if (ev.event === 'done') {
+      const data = ev.data as { proposals?: ResearchNodeActionProposal[] };
+      yield { event: 'done', data: { proposals: data.proposals } };
+    } else if (ev.event === 'error') {
+      const data = ev.data as { errorCode?: string; message?: string };
+      yield {
+        event: 'error',
+        data: {
+          errorCode: data.errorCode ?? 'UNKNOWN',
+          message: data.message ?? '节点对话失败',
+        },
+      };
+    } else if (ev.event === 'log') {
+      const data = ev.data as { message?: string; nodeId?: string };
+      yield {
+        event: 'log',
+        data: { message: data.message ?? '', nodeId: data.nodeId },
+      };
+    }
+    // Unknown event names are ignored (must not mix into Run stream handlers).
+  }
 }
