@@ -494,6 +494,7 @@ export default function EdenLabReportPage({
               disabled={busy}
               onClick={() => void convertSource()}
               className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+              {...tid(TestIds.researchLabConvertSource)}
             >
               <SourceIcon sx={{ fontSize: 14 }} />
               转为来源
@@ -503,6 +504,7 @@ export default function EdenLabReportPage({
               disabled={busy}
               onClick={() => void convertNote()}
               className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+              {...tid(TestIds.researchLabConvertNote)}
             >
               <NoteAltIcon sx={{ fontSize: 14 }} />
               转为笔记

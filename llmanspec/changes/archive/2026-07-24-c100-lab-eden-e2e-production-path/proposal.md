@@ -22,8 +22,9 @@ Lab Eden 接线已分散落地（c82–c98），但 CI 仍可能仅依赖 `VITE_
 ## Locked decisions
 
 - **BDD-off**；Apply：**全程 main**（本 change archive+commit 后才开下一条）
-- Fixture **保留至本变更门禁绿**；之后另议删除
-- 产品默认 Eden；本门禁验证 Eden 非 fixture
+- Fixture **保留至本变更门禁绿**；之后另议删除（L5=D）
+- 产品默认 Eden；本门禁验证 Eden 非 fixture（L5=A）
+- **L1=A+B** · **L2=A** · **L3=C** · **L4=A+B** · **L5=A+B+D** · **L6** 截图+run JSON
 - depends_on c96（M1 UI）、c94（branch 图）、c91（convert toast）
 - **本波 MUST NOT 再延后**
 

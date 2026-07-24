@@ -50,7 +50,21 @@ export async function searchWeb(
   opts?: { maxResults?: number; host?: string; timeoutMs?: number },
 ): Promise<WebSearchResultItem[]> {
   const host = opts?.host ?? getSearxngHost();
-  if (!host) return [];
+  if (!host) {
+    // c100 L1=A: CL_RESEARCH_E2E_STUB still yields hits so budget confirm can fire offline
+    const stub = process.env.CL_RESEARCH_E2E_STUB?.trim().toLowerCase();
+    if (stub === '1' || stub === 'true' || stub === 'yes') {
+      return [
+        {
+          title: `E2E stub · ${query.slice(0, 48)}`,
+          url: 'https://example.com/e2e-research-stub',
+          snippet: `Deterministic web hit for e2e research stub (${query}).`,
+          source: 'e2e-stub',
+        },
+      ];
+    }
+    return [];
+  }
   const maxResults =
     opts?.maxResults ?? getSearchSettings().searxng.max_results ?? DEFAULT_CONFIG.maxResults;
   const timeoutMs =

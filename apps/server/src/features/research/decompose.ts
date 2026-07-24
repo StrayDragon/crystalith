@@ -14,6 +14,7 @@ import { generateObject } from 'ai';
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
 import { getResearchDecomposeModelConfig } from '../../shared/config.ts';
+import { e2eStubDecomposePlan, isResearchE2eStub } from './e2e-stub.ts';
 
 export type ResearchGraphJson = { nodes: ResearchNode[]; edges: ResearchEdge[] };
 
@@ -125,13 +126,22 @@ export async function planTopicDecomposition(input: {
   occupiedNodes: number;
   abortSignal?: AbortSignal;
 }): Promise<ResearchDecomposePlan | null> {
-  const modelConfig = getResearchDecomposeModelConfig();
-  if (!modelConfig) return null;
-
   const soft = suggestedMaxResearchLeaves(input.depth);
   const room = Math.max(0, input.maxNodes - input.occupiedNodes);
   const target = Math.min(soft, room);
   if (target <= 0) return { branches: [] };
+
+  // c100 L1=A: deterministic plan without live LLM
+  if (isResearchE2eStub()) {
+    return clampDecomposePlan(e2eStubDecomposePlan(input.topic), {
+      maxNodes: input.maxNodes,
+      occupiedNodes: input.occupiedNodes,
+      depth: input.depth,
+    });
+  }
+
+  const modelConfig = getResearchDecomposeModelConfig();
+  if (!modelConfig) return null;
 
   try {
     const model = withRetry(await resolveModel(modelConfig));
