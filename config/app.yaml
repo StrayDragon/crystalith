@@ -81,10 +81,12 @@ providers:
     baseUrl: "{{ env.CL_EMBEDDING_API_BASE | default('http://127.0.0.1:50256/v1') }}"
 
   # OpenAI-compatible primary chat gateway (routed via CL_CHAT_API_BASE by default)
+  # llamacpp / many local gateways reject AI SDK grammar constrained decoding
+  # ("failed to parse grammar") — keep false so generateObject uses JSON prompt mode.
   chat_gateway: &chat_gateway
     apiKey: "{{ secret.CL_CHAT_API_KEY | default(env.CL_CHAT_API_KEY | default('sk-local')) }}"
     baseUrl: "{{ env.CL_CHAT_API_BASE | default('http://127.0.0.1:50256/v1') }}"
-    supportsStructuredOutputs: true
+    supportsStructuredOutputs: false
 
 # ----------------------------------------------------------------------------
 # Models (required)
@@ -180,7 +182,7 @@ models:
 
     - id: "gateway-chat-primary"
       provider: "openai-compatible"
-      model: "{{ env.CL_CHAT_MODEL | default('Qwen3.6-35B-A3B/UD-Q5_K_XL-think-coding') }}"
+      model: "{{ env.CL_CHAT_MODEL | default('Qwen3.6-35B-A3B/UD-Q4_K_M-think-general') }}"
       displayName: "Gateway Chat (primary)"
       description: "Primary chat via OpenAI-compatible gateway"
       roles: [chat, edit]

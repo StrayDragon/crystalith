@@ -13,6 +13,7 @@ import { describe, expect, it } from 'bun:test';
 import {
   applyDecomposePlanToGraph,
   clampDecomposePlan,
+  repairDecomposePlanText,
   suggestedMaxResearchLeaves,
   type ResearchGraphJson,
 } from '../../src/features/research/decompose.ts';
@@ -53,6 +54,22 @@ describe('research decompose (c93)', () => {
     expect(suggestedMaxResearchLeaves('shallow')).toBe(4);
     expect(suggestedMaxResearchLeaves('medium')).toBe(8);
     expect(suggestedMaxResearchLeaves('deep')).toBe(16);
+  });
+
+  it('repairDecomposePlanText wraps bare branch arrays', () => {
+    const repaired = repairDecomposePlanText(
+      JSON.stringify([{ title: 'A', query: 'qa', edgeKind: 'decompose' }]),
+    );
+    expect(repaired).toBe(
+      JSON.stringify({
+        branches: [{ title: 'A', query: 'qa', edgeKind: 'decompose' }],
+      }),
+    );
+    expect(repairDecomposePlanText('{"branches":[]}')).toBe('{"branches":[]}');
+    expect(repairDecomposePlanText('```json\n{"branches":[{"title":"T","query":"q"}]}\n```')).toBe(
+      '{"branches":[{"title":"T","query":"q"}]}',
+    );
+    expect(repairDecomposePlanText('not-json')).toBeNull();
   });
 
   it('clampDecomposePlan prefers decompose and respects room', () => {
