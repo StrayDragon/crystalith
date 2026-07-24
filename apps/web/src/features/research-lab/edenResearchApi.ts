@@ -9,6 +9,7 @@ import type {
   ResearchNodeChatBody,
   ResearchNodeChatStreamEvent,
   ResearchNodePatchBody,
+  ResearchProgressList,
   ResearchReport,
   ResearchReportView,
   ResearchRevision,
@@ -66,6 +67,25 @@ export async function getResearchRun(notebookId: number, runId: number): Promise
   if (error) throwEdenError(error);
   if (!data) throw new Error('获取 ResearchRun 失败：空响应');
   return data as ResearchRun;
+}
+
+export async function listProgress(
+  notebookId: number,
+  runId: number,
+  opts?: { afterSeq?: number; limit?: number },
+): Promise<ResearchProgressList> {
+  const { data, error } = await api.v2
+    .notebooks({ nid: notebookId })
+    .research({ rid: runId })
+    .progress.get({
+      query: {
+        afterSeq: opts?.afterSeq ?? 0,
+        limit: opts?.limit ?? 100,
+      },
+    });
+  if (error) throwEdenError(error);
+  if (!data) throw new Error('获取进度账本失败：空响应');
+  return data as ResearchProgressList;
 }
 
 export async function cancelResearchRun(notebookId: number, runId: number): Promise<ResearchRun> {
