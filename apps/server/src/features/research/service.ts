@@ -700,7 +700,9 @@ async function runNodeWorkUnit(opts: {
           const output = 'output' in part ? part.output : undefined;
           if (toolName === 'webSearch') {
             if (searchesUsed >= maxSearches) {
-              throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Web search budget exhausted');
+              // Soft-stop: do not fail the whole Run; caller may enter budget confirm.
+              emitLog(runId, '外网检索跳过：搜索预算已尽');
+              break;
             }
           }
           const ingested = ingestWorkToolResult(runId, notebookId, node.id, toolName, output);
@@ -771,26 +773,26 @@ async function runNodeWorkUnit(opts: {
 
     if (allowWeb) {
       if (searchesUsed >= maxSearches) {
-        throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Web search budget exhausted');
-      }
-      try {
-        const results = await searchWeb(topic, { maxResults: 5 });
-        searchesUsed += 1;
-        updateRun(runId, { searchesUsed });
-        for (const item of results) {
-          const ev = insertEvidence(runId, notebookId, {
-            kind: 'web',
-            title: item.title || item.url,
-            snippet: item.snippet,
-            url: item.url,
-            collectedAtNodeId: node.id,
-          });
-          evidenceIds.push(ev.id);
+        emitLog(runId, '外网检索跳过：搜索预算已尽');
+      } else {
+        try {
+          const results = await searchWeb(topic, { maxResults: 5 });
+          searchesUsed += 1;
+          updateRun(runId, { searchesUsed });
+          for (const item of results) {
+            const ev = insertEvidence(runId, notebookId, {
+              kind: 'web',
+              title: item.title || item.url,
+              snippet: item.snippet,
+              url: item.url,
+              collectedAtNodeId: node.id,
+            });
+            evidenceIds.push(ev.id);
+          }
+          emitLog(runId, `外网检索：${results.length} 条`);
+        } catch (error) {
+          emitLog(runId, `外网检索失败：${String(error)}`);
         }
-        emitLog(runId, `外网检索：${results.length} 条`);
-      } catch (error) {
-        if (error instanceof AppHttpError) throw error;
-        emitLog(runId, `外网检索失败：${String(error)}`);
       }
     }
   }
@@ -1015,7 +1017,8 @@ async function runLoop(runId: number): Promise<void> {
       // Budget gate before spending search (question-only path)
       if (row.allowWeb) {
         if (row.searchesUsed >= row.maxSearches) {
-          throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Web search budget exhausted');
+          await enterConfirm(runId, 'budget');
+          return;
         }
         const approaching = row.searchesUsed >= Math.max(1, row.maxSearches - 1);
         if (approaching && row.searchesUsed > 0) {
@@ -1065,7 +1068,16 @@ async function runLoop(runId: number): Promise<void> {
     }
 
     // Serial work units for live research nodes (c93 branches + fork children)
-    await drainResearchWorkUnits(runId, abort.signal);
+    try {
+      await drainResearchWorkUnits(runId, abort.signal);
+    } catch (error) {
+      if (error instanceof AppHttpError && error.code === ErrorCode.RESEARCH_BUDGET) {
+        emitLog(runId, '搜索预算已尽，进入预算确认');
+        await enterConfirm(runId, 'budget');
+        return;
+      }
+      throw error;
+    }
     if (isCancelled(runId) || abort.signal.aborted) {
       finalizeCancel(runId);
       return;
@@ -1078,11 +1090,21 @@ async function runLoop(runId: number): Promise<void> {
       await enterConfirm(runId, 'budget');
       return;
     }
+    // Fully exhausted after work → still pause so user can finish_report
+    if (row.allowWeb && row.searchesUsed >= row.maxSearches) {
+      await enterConfirm(runId, 'budget');
+      return;
+    }
 
     await synthesizeAndComplete(runId);
   } catch (error) {
     if (abort.signal.aborted || isCancelled(runId)) {
       finalizeCancel(runId);
+      return;
+    }
+    if (error instanceof AppHttpError && error.code === ErrorCode.RESEARCH_BUDGET) {
+      emitLog(runId, '搜索预算已尽，进入预算确认');
+      await enterConfirm(runId, 'budget');
       return;
     }
     const message = error instanceof Error ? error.message : String(error);

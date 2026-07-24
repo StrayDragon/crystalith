@@ -43,7 +43,7 @@ export function clampDecomposePlan(
     return { branches: [] };
   }
   // Prefer decompose over refine; stable order otherwise.
-  const ranked = [...plan.branches].sort((a, b) => {
+  const ranked = plan.branches.toSorted((a, b) => {
     const ak = a.edgeKind === 'decompose' ? 0 : 1;
     const bk = b.edgeKind === 'decompose' ? 0 : 1;
     if (ak !== bk) return ak - bk;
@@ -119,6 +119,34 @@ export function applyDecomposePlanToGraph(
   };
 }
 
+/**
+ * Local / think models often emit a bare branches array or markdown-fenced JSON
+ * instead of a raw `{ branches }` object. Used by generateObject repair + unit tests.
+ */
+export function repairDecomposePlanText(text: string): string | null {
+  let trimmed = text.trim();
+  if (!trimmed) return null;
+
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/iu);
+  if (fenced) trimmed = fenced[1]!.trim();
+
+  try {
+    const raw: unknown = JSON.parse(trimmed);
+    if (Array.isArray(raw)) {
+      return JSON.stringify({ branches: raw });
+    }
+    if (raw && typeof raw === 'object' && Array.isArray((raw as { branches?: unknown }).branches)) {
+      return JSON.stringify(raw);
+    }
+  } catch {
+    // fall through
+  }
+  if (trimmed.startsWith('[')) {
+    return `{"branches":${trimmed}}`;
+  }
+  return null;
+}
+
 export async function planTopicDecomposition(input: {
   topic: string;
   depth: ResearchDepth;
@@ -143,12 +171,19 @@ export async function planTopicDecomposition(input: {
   const modelConfig = getResearchDecomposeModelConfig();
   if (!modelConfig) return null;
 
+  // Think models (e.g. Qwen *-think-*) burn output tokens on reasoning before JSON.
+  // Without an explicit budget, generateObject often truncates mid-object → empty plan.
+  const maxOutputTokens = modelConfig.completionOptions?.maxTokens ?? 8192;
+
   try {
     const model = withRetry(await resolveModel(modelConfig));
     const { object } = await generateObject({
       model,
       schema: ResearchDecomposePlanSchema,
       abortSignal: input.abortSignal,
+      maxOutputTokens,
+      temperature: modelConfig.completionOptions?.temperature ?? 0.2,
+      experimental_repairText: async ({ text }) => repairDecomposePlanText(text),
       prompt: [
         '你是深度研究规划器。把研究主题拆成若干并行「研究支路」。',
         `主题：${input.topic}`,
@@ -157,6 +192,8 @@ export async function planTopicDecomposition(input: {
         'edgeKind 默认 decompose（从总问题拆出）；仅当明显是细化子问题时用 refine。',
         '不要输出结论节点；汇入结论由系统自动加 merge 边。',
         '若主题过窄无法拆解，返回空 branches 数组。',
+        '最终只输出一个 JSON 对象，形状必须是 {"branches":[...]}，不要只返回数组。',
+        '推理尽量短。',
       ].join('\n'),
     });
     const parsed = ResearchDecomposePlanSchema.safeParse(object);
@@ -166,7 +203,8 @@ export async function planTopicDecomposition(input: {
       occupiedNodes: input.occupiedNodes,
       depth: input.depth,
     });
-  } catch {
+  } catch (error) {
+    console.warn('[research] planTopicDecomposition failed:', error);
     return null;
   }
 }
