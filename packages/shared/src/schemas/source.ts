@@ -509,11 +509,21 @@ export const SourceSearchRequestSchema = z
   .object({
     query: z.string().min(1),
     engine: z.string().default('Web'),
-    mode: z.string().default('Fast Research'),
+    /** Web-search channel metadata only — MUST NOT mean Deep Research / ResearchRun. */
+    mode: z
+      .string()
+      .default('Fast Research')
+      .openapi({
+        description: desc(
+          'source.search_mode',
+          '网搜通道元数据（默认 Fast Research）；不是深度研究 / ResearchRun',
+        ),
+        example: 'Fast Research',
+      }),
   })
   .openapi({
-    description: desc('source.search_request', '网页搜索请求'),
-    example: { query: 'RAG evaluation', engine: 'Web' },
+    description: desc('source.search_request', '网页搜索请求（与 Deep Research 无关）'),
+    example: { query: 'RAG evaluation', engine: 'Web', mode: 'Fast Research' },
   });
 
 export const SourceSearchResultSchema = z.object({

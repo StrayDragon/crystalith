@@ -8,7 +8,7 @@
 - `src/features/workspace/` — main workspace feature
   - `domains/` — business domains (notebooks, sessions, messages, sources, outputs, refine, studio, research)
   - `layout/`, `shared/`, `app/` — workspace scaffolding
-- `src/features/research-lab/` — Deep Research **UX Lab**（fake 运行时；非生产 Desk）
+- `src/features/research-lab/` — Deep Research **UX Lab**（fake 运行时；深研主表面入口）
 - `src/api/` — API client：**Eden** `treaty<App>`（`eden.ts`）一等
 - `src/shared/` — shared utilities, Layer system, types
 
@@ -19,9 +19,9 @@
 
 ## Research Lab（mock vs real）
 
-`/research-lab` 是交互原型，用来锁定图剪枝/分叉、报告与 cite UX，再经 SDD 接到 c76/c77。
+`/research-lab` 是交互原型与当前深研主表面入口；生产 ResearchRun API 在 server，Lab 接 Eden 见后续 c80+。
 
-| Lab（本目录）                             | Real（Desk / ResearchRun）      |
+| Lab（本目录）                             | Real（ResearchRun）             |
 | ----------------------------------------- | ------------------------------- |
 | `fake/*` + `deriveLabState`               | Run 图 SSOT + SSE `graph_patch` |
 | `useLabController` 本地突变               | Eden `…/nodes/:id/{prune,fork}` |
@@ -30,7 +30,7 @@
 
 - 剪枝闭包 **B** 与 server `collectResearchPruneClosure` 对齐（`fake/deriveLabState`）；变更走 `llmanspec/changes/update-research-prune-cascade`
 - 接 Eden 时：保留 `LabGraph` / 报告 Plate 等展示层，替换 `fake/` 下 controller / data 端口
-- **不要**把 Lab 路由当成生产 E1 DeepResearchDesk
+- 顶栏搜索仅为 Fast 网搜；勿再挂载已退役的 DeepResearchDesk
 
 ## Build, Test, and Development Commands
 

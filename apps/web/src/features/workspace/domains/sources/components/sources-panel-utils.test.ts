@@ -1,18 +1,7 @@
 import { expect, test } from 'vitest';
 
 import { formatSnapshotTimestamp } from './source-connector-utils';
-import { normalizeSearchMode, splitUploadFiles } from './sources-panel-utils';
-
-test('normalizeSearchMode returns Fast Research for null or invalid values', () => {
-  expect(normalizeSearchMode(null)).toBe('Fast Research');
-  expect(normalizeSearchMode('')).toBe('Fast Research');
-  expect(normalizeSearchMode('Unknown')).toBe('Fast Research');
-});
-
-test('normalizeSearchMode preserves valid search modes', () => {
-  expect(normalizeSearchMode('Fast Research')).toBe('Fast Research');
-  expect(normalizeSearchMode('Deep Research')).toBe('Deep Research');
-});
+import { splitUploadFiles } from './sources-panel-utils';
 
 test('splitUploadFiles separates supported and unsupported files', () => {
   const supportedFile = new File(['content'], 'notes.pdf', { type: 'application/pdf' });

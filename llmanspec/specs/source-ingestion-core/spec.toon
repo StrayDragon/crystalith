@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "source-ingestion-core"
 purpose: 定义 Source 摄取生命周期不变量：状态机、ready 语义、删除语义与 epoch 失效规则。该规范用于保证摄取与检索之间的因果一致性，避免出现“状态 ready 但不可检索”的漂移。
 valid_scope[2]: src/,tests/
-requirements[9]{req_id,title,statement}:
+requirements[10]{req_id,title,statement}:
   r47,Source status machine is fixed,Source 状态 MUST 仅使用 `processing|ready|failed`，并保持对外稳定。
   r105,Ready source guarantees retrievability,`ready` 来源 MUST 已持久化 chunks 且对应向量可被检索命中。
   r142,Source and vector mutations bump epochs,影响来源集合或向量集合的操作 MUST bump `sources_epoch` 与/或 `vector_epoch`。
@@ -12,7 +12,8 @@ requirements[9]{req_id,title,statement}:
   r255,"Core-only ingestion profile is minimal and explicit","在 core-only 安装形态下，系统 MUST 至少支持 txt/md/markdown/csv 的 ingestion；其他格式 MUST 被视为不可用增强能力（需通过插件安装/启用提供）。"
   r2_sync,Ready MUST follow synchronous embedding,"系统 MUST 在标记来源 ready 之前同步完成向量写入 不得使用 fire-and-forget embedding embedding 失败时 MUST 将来源标记为 failed 而非 ready"
   "csv-parser-markdown-table","CSV parser MUST produce markdown-table chunks with row metadata","CSV 解析 MUST 使用专用 CSVParser 产出 markdown-table 格式分块（50 rows/chunk，200 char cell 截断），并在 chunk metadata 中记录 csv_row_start/csv_row_end，MUST NOT 把 CSV 当纯文本 pass-through"
-scenarios[11]{req_id,id,given,when,then,feature}:
+  r260,Web search mode is not Deep Research,"POST …/sources/search 的 mode 字段 MUST 仅表示网搜通道元数据（默认 Fast Research 或等价）；MUST NOT 用 mode=Deep Research（或同义）触发或冒充 ResearchRun 深研编排；本约束 MUST NOT 删除或削弱 /v2/notebooks/:nid/research* ResearchRun API。"
+scenarios[12]{req_id,id,given,when,then,feature}:
   r47,"source-transitions-remain-in-allowed-set","",系统创建或更新一个来源的摄取状态,状态 SHALL 仅在 `processing|ready|failed` 集合内变化,true
   r105,"ready-implies-retrievable","",来源被标记为 `ready`,系统 SHALL 保证其 chunks 已持久化且向量可被检索命中,true
   r142,"mutations-invalidate-caches","",发生影响来源集合或向量集合的变更操作,系统 SHALL bump `sources_epoch` 与/或 `vector_epoch` 以触发缓存失效,true
@@ -24,3 +25,4 @@ scenarios[11]{req_id,id,given,when,then,feature}:
   r2_sync,"embedding-failure-marks-failed",embedding API 抛出异常,ingestSource 处理 embedding,系统 SHALL 将来源标记为 failed 而非 ready,true
   r2_sync,"document-parse-embeds-before-ready",document_parse 任务重新索引一个来源,worker 执行 handleDocumentParse,系统 SHALL 在标记 ready 前完成向量写入,true
   "csv-parser-markdown-table","csv-upload",客户端上传 .csv 文件,解析阶段,"系统 SHALL 产出 markdown-table 格式分块并记录 csv_row_start/csv_row_end metadata",true
+  r260,"search-mode-not-researchrun",客户端发起 sources.search,传入任意 mode,服务仅执行网搜/回传结果，不得创建 ResearchRun；ResearchRun 仍仅由 /research 创建口提供,true

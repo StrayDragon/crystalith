@@ -96,14 +96,14 @@ test('handleSearch updates queue status and notice on success', async () => {
     await result.current.handleSearch({
       query: 'hello',
       engine: 'bing',
-      mode: 'web',
+      mode: 'Deep Research',
     });
   });
 
   expect(capturedBody).toEqual({
     query: 'hello',
     engine: 'bing',
-    mode: 'web',
+    mode: 'Fast Research',
   });
 
   await waitFor(() => {

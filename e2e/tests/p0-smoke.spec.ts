@@ -140,25 +140,21 @@ test.describe('@p0 workspace smoke', () => {
     await expect(page.getByTestId(TestIds.sourcesUploadInput)).toBeAttached();
   });
 
-  test('S06: topbar search opens E1 panel with fast search', async ({ page }) => {
+  test('S06: topbar search opens Fast-only panel', async ({ page }) => {
     await expect(page.getByTestId(TestIds.topbarSearchTrigger)).toBeVisible();
     await page.getByTestId(TestIds.topbarSearchTrigger).click();
     await expect(page.getByTestId(TestIds.topbarSearchPanel)).toBeVisible();
     await expect(page.getByTestId(TestIds.sourcesSearchInput)).toBeVisible();
     await expect(page.getByTestId(TestIds.sourcesSearchSubmit)).toBeVisible();
-    await expect(page.getByTestId(TestIds.sourcesModeToggle)).toBeVisible();
-    await expect(page.getByTestId(TestIds.topbarSearchTabFast)).toBeVisible();
-    await expect(page.getByTestId(TestIds.topbarSearchTabDeep)).toBeVisible();
+    await expect(page.getByTestId('topbar-search-tab-deep')).toHaveCount(0);
+    await expect(page.getByTestId('deep-research-desk')).toHaveCount(0);
   });
 
-  test('S06b: deep tab shows DeepResearchDesk', async ({ page }) => {
-    await page.getByTestId(TestIds.topbarSearchTrigger).click();
-    await expect(page.getByTestId(TestIds.topbarSearchPanel)).toBeVisible();
-    await page.getByTestId(TestIds.topbarSearchTabDeep).click();
-    await expect(page.getByTestId(TestIds.deepResearchDesk)).toBeVisible();
-    await expect(page.getByTestId(TestIds.researchTopicInput)).toBeVisible();
-    await expect(page.getByTestId(TestIds.researchStartButton)).toBeVisible();
-    await expect(page.getByTestId(TestIds.researchRunQueue)).toBeVisible();
+  test('S06b: Lab flask entry remains reachable', async ({ page }) => {
+    await expect(page.getByTestId(TestIds.researchLabEntry)).toBeVisible();
+    await page.getByTestId(TestIds.researchLabEntry).click();
+    await expect(page.getByTestId(TestIds.researchLabPage)).toBeVisible();
+    await expect(page).toHaveURL(/\/research-lab\//);
   });
 
   test('S07: sort menu opens', async ({ page }) => {

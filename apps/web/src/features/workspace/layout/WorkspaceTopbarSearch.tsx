@@ -1,7 +1,6 @@
 /**
- * Workspace top-bar search (c75/c77) — E1 anchored panel.
- * Fast Search: reuse useSources.handleSearch + SearchResultsQueue.
- * Deep Research: DeepResearchDesk (c77).
+ * Workspace top-bar search — E1 anchored panel (Fast web search only).
+ * Deep Research entry is the flask → `/research-lab/:nid` (Lab), not this panel.
  */
 import type { ExtractorInfo, SourceFromUrlMode } from '@crystalith/shared';
 import { IconButton, Spinner } from '@material-tailwind/react';
@@ -18,7 +17,6 @@ import { useLayer } from '../../../shared/layer';
 import { TestIds, tid } from '../../../shared/testids';
 import { toast } from '../../../shared/toast';
 import type { AsyncStatus } from '../../../shared/types';
-import DeepResearchDesk from '../domains/research/DeepResearchDesk';
 import AddSearchResultDialog from '../domains/sources/AddSearchResultDialog';
 import type { ExtractorType } from '../domains/sources/components/sources-panel-types';
 import { useSourcesPanelAddFromSearch } from '../domains/sources/components/useSourcesPanelAddFromSearch';
@@ -26,13 +24,12 @@ import type { SearchResultItem } from '../domains/sources/SearchResultCard';
 import SearchResultsQueue from '../domains/sources/SearchResultsQueue';
 import type { SearchQueueItem } from '../domains/sources/useSources';
 
-export type TopbarSearchTab = 'fast' | 'deep';
+/** Wire value for sources.search — channel metadata, not ResearchRun. */
+export const FAST_SEARCH_MODE = 'Fast Research' as const;
 
 export interface WorkspaceTopbarSearchProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  isConnected: boolean;
-  notebookId?: number;
   searchState: AsyncStatus;
   searchQueue: SearchQueueItem[];
   onSearch: (payload: { query: string; engine: string; mode: string }) => void;
@@ -156,8 +153,6 @@ function FastSearchBody({
 export default function WorkspaceTopbarSearch({
   open,
   onOpenChange,
-  isConnected,
-  notebookId,
   searchState,
   searchQueue,
   onSearch,
@@ -168,9 +163,7 @@ export default function WorkspaceTopbarSearch({
   defaultExtractor,
   openRequestToken = 0,
 }: WorkspaceTopbarSearchProps) {
-  const [tab, setTab] = useState<TopbarSearchTab>('fast');
   const [searchQuery, setSearchQuery] = useState('');
-  const [detailOpen, setDetailOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null!);
   const { style: layerStyle } = useLayer('popover');
 
@@ -195,17 +188,16 @@ export default function WorkspaceTopbarSearch({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      // Run detail (modal) owns Escape first; keep E1 mounted while detail is open.
-      if (e.key === 'Escape' && !detailOpen) onOpenChange(false);
+      if (e.key === 'Escape') onOpenChange(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onOpenChange, detailOpen]);
+  }, [open, onOpenChange]);
 
   useEffect(() => {
-    if (!open || tab !== 'fast') return;
+    if (!open) return;
     window.requestAnimationFrame(() => searchInputRef.current?.focus());
-  }, [open, tab]);
+  }, [open]);
 
   const submitFastSearch = useCallback(() => {
     if (searchState === 'loading') return;
@@ -214,7 +206,7 @@ export default function WorkspaceTopbarSearch({
       toast.warning('请输入搜索关键词。');
       return;
     }
-    onSearch({ query: trimmed, engine: 'Web', mode: 'Fast Research' });
+    onSearch({ query: trimmed, engine: 'Web', mode: FAST_SEARCH_MODE });
   }, [onSearch, searchQuery, searchState]);
 
   const triggerClass =
@@ -241,7 +233,7 @@ export default function WorkspaceTopbarSearch({
               style={layerStyle}
               role="dialog"
               aria-modal="true"
-              aria-label="搜索与调研"
+              aria-label="网络搜索"
               {...tid(TestIds.topbarSearchPanel)}
             >
               <button
@@ -250,49 +242,11 @@ export default function WorkspaceTopbarSearch({
                 onClick={() => onOpenChange(false)}
                 aria-label="关闭搜索面板"
               />
-              <div
-                className={
-                  tab === 'deep'
-                    ? 'absolute top-16 left-1/2 z-10 w-[min(1100px,calc(100%-2rem))] -translate-x-1/2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl'
-                    : 'absolute top-16 left-1/2 z-10 w-[min(960px,calc(100%-2rem))] -translate-x-1/2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl'
-                }
-              >
+              <div className="absolute top-16 left-1/2 z-10 w-[min(960px,calc(100%-2rem))] -translate-x-1/2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl">
                 <div className="flex items-center justify-between gap-2 px-3 pt-3 pb-2 border-b border-gray-100 dark:border-slate-700">
-                  <div
-                    role="tablist"
-                    aria-label="搜索模式"
-                    className="flex items-center gap-1 rounded-lg bg-gray-100 dark:bg-slate-800 p-0.5"
-                    {...tid(TestIds.sourcesModeToggle)}
-                  >
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={tab === 'fast'}
-                      {...tid(TestIds.topbarSearchTabFast)}
-                      className={
-                        tab === 'fast'
-                          ? 'px-3 py-1.5 rounded-md text-xs font-medium bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
-                          : 'px-3 py-1.5 rounded-md text-xs font-medium text-gray-500'
-                      }
-                      onClick={() => setTab('fast')}
-                    >
-                      {t('sources.search.mode.fast')}
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={tab === 'deep'}
-                      {...tid(TestIds.topbarSearchTabDeep)}
-                      className={
-                        tab === 'deep'
-                          ? 'px-3 py-1.5 rounded-md text-xs font-medium bg-white dark:bg-slate-700 text-indigo-600 shadow-sm'
-                          : 'px-3 py-1.5 rounded-md text-xs font-medium text-gray-500'
-                      }
-                      onClick={() => setTab('deep')}
-                    >
-                      {t('sources.search.mode.deep')}
-                    </button>
-                  </div>
+                  <p className="text-sm font-medium text-gray-700 dark:text-slate-200">
+                    {t('sources.search.action.fast')}
+                  </p>
                   <button
                     type="button"
                     className="w-8 h-8 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 flex items-center justify-center"
@@ -303,27 +257,19 @@ export default function WorkspaceTopbarSearch({
                   </button>
                 </div>
                 <div className="p-3">
-                  {tab === 'fast' ? (
-                    <FastSearchBody
-                      searchQuery={searchQuery}
-                      onSearchQueryChange={setSearchQuery}
-                      onSubmit={submitFastSearch}
-                      searchInputRef={searchInputRef}
-                      isSearching={searchState === 'loading'}
-                      searchQueue={searchQueue}
-                      onAddToSources={handleAddToSources}
-                      isAddingFromUrl={isAddingFromUrl}
-                      onRemoveSearchQueueItem={onRemoveSearchQueueItem}
-                      availableExtractors={availableExtractors}
-                      defaultExtractor={defaultExtractor}
-                    />
-                  ) : (
-                    <DeepResearchDesk
-                      notebookId={notebookId}
-                      isConnected={isConnected}
-                      onDetailOpenChange={setDetailOpen}
-                    />
-                  )}
+                  <FastSearchBody
+                    searchQuery={searchQuery}
+                    onSearchQueryChange={setSearchQuery}
+                    onSubmit={submitFastSearch}
+                    searchInputRef={searchInputRef}
+                    isSearching={searchState === 'loading'}
+                    searchQueue={searchQueue}
+                    onAddToSources={handleAddToSources}
+                    isAddingFromUrl={isAddingFromUrl}
+                    onRemoveSearchQueueItem={onRemoveSearchQueueItem}
+                    availableExtractors={availableExtractors}
+                    defaultExtractor={defaultExtractor}
+                  />
                 </div>
               </div>
             </div>,

@@ -21,9 +21,6 @@ export type ExtractorType = ExtractorInfo['type'];
 export const SEARCH_ENGINE_WEB = 'Web' as const;
 export type SearchEngine = typeof SEARCH_ENGINE_WEB;
 
-export const SEARCH_MODES = ['Fast Research', 'Deep Research'] as const;
-export type SearchMode = (typeof SEARCH_MODES)[number];
-
 export interface SourcesPanelProps {
   sources: SourceItem[];
   onUpload: (input: File | File[] | FileList | null) => void;
@@ -87,7 +84,7 @@ export interface SourcesPanelProps {
   onConvertSourceQAToSource?: (sourceId: number, messages: QaMessage[]) => Promise<unknown>;
   /** 重新嵌入失败来源 */
   onReembedSource?: (sourceId: number) => Promise<unknown>;
-  /** 当前 notebook ID，用于深度研究功能 */
+  /** 当前 notebook ID */
   notebookId?: number;
   onSelectedSourceIdsChange?: (selected: Record<number, boolean>) => void;
 }
