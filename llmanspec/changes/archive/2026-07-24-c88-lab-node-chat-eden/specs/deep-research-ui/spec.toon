@@ -1,0 +1,13 @@
+kind: llman.sdd.delta
+ops[3]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r438,"Eden node chat uses HTTP SSE not fixture propose","Eden 模式下 LabNodeDrawer 发送对话 MUST 调用 POST …/research/:rid/nodes/:nodeId/chat 并消费独立 chat SSE（chunk、proposal、done、error）；MUST NOT 以 proposeNodeChatTurn 作为默认权威；chat 事件 MUST NOT 混入 Run progress stream 处理器。",null,null,null
+  add_requirement,r439,"Eden chat accept maps proposals to command ports","Eden 模式下用户接受节点 chat 中的 ActionProposal 时 MUST 调用对应 HTTP 命令口（prune、fork、PATCH、confirm、open_report 导航）；MUST NOT 仅在本地 mutate 图作为权威（对齐 r417）。",null,null,null
+  add_requirement,r440,"Fixture node chat mock only under explicit switch","proposeNodeChatTurn 与本地 mock stream MUST 仅在 fixture 模式（VITE_LAB_FIXTURE=1 或 LabWorkbench mode=fixture）可用；Eden 默认生产路径 MUST NOT 回退到 fixture chat。",null,null,null
+op_scenarios[7]{req_id,id,given,when,then,feature}:
+  r438,"eden-send-calls-chat-api",Eden Lab 已加载 Run 且节点抽屉打开,用户发送一条消息,发出 POST chat 且 SSE 增量展示助手回复,true
+  r438,"eden-not-propose-node-chat",Eden 模式默认配置,用户发送消息,MUST NOT 调用 proposeNodeChatTurn,true
+  r438,"chat-busy-disables-resend",Run llmActivity 为 node_chat,用户尝试再次发送,输入禁用或可见 busy,true
+  r439,"accept-prune-via-http",Eden chat 展示 prune 提案,用户确认接受,调用 POST prune 而非仅本地改图,true
+  r439,"accept-patch-via-http",Eden chat 展示 rewrite_query 提案,用户接受,调用 PATCH node,true
+  r440,"fixture-keeps-propose",Lab 以 fixture 模式打开,用户发送消息,MAY 使用 proposeNodeChatTurn,true
+  r438,"chat-error-visible",chat SSE 返回 error,用户查看抽屉,展示可见错误信息,true

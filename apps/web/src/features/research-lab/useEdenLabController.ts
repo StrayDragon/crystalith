@@ -55,6 +55,9 @@ export type EdenLabController = LabController & {
   lastError: string;
   /** Eden evidence → LabCitation map (r434); not scenario.citations. */
   citations: Record<string, LabCitation>;
+  runId: number | null;
+  llmActivity: ResearchRun['llmActivity'];
+  reportError: (message: string) => void;
 };
 
 export function useEdenLabController(
@@ -417,6 +420,14 @@ export function useEdenLabController(
     setHighlightedNodeIds(highlightIds);
   }, []);
 
+  const reportError = useCallback(
+    (message: string) => {
+      setLastError(message);
+      pushLog(message);
+    },
+    [pushLog],
+  );
+
   // LabController-compatible surface (fixture knobs no-op / stubbed).
   return {
     scenarios: LAB_SCENARIOS,
@@ -485,6 +496,9 @@ export function useEdenLabController(
     scenario: LAB_SCENARIOS[0]!,
     lastError,
     citations,
+    runId: run?.id ?? runIdRef.current,
+    llmActivity: run?.llmActivity ?? null,
+    reportError,
   };
 }
 
