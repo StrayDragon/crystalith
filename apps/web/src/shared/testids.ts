@@ -152,6 +152,8 @@ export const TestIds = {
   researchLabConfirmFinish: 'research-lab-confirm-finish',
   researchLabConfirmApprove: 'research-lab-confirm-approve',
   researchLabConfirmSkip: 'research-lab-confirm-skip',
+  researchLabConvertNote: 'research-lab-convert-note',
+  researchLabConvertSource: 'research-lab-convert-source',
   researchTasksTrigger: 'research-tasks-trigger',
   researchTasksBadge: 'research-tasks-badge',
   researchTasksDrawer: 'research-tasks-drawer',

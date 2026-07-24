@@ -8,9 +8,10 @@ import { defineConfig, devices } from '@playwright/test';
  *
  * - Isolated ports so `just e2e` can run beside `just dev` (8032/3000).
  * - Fresh SQLite via CL_DB_PATH under e2e/.tmp/
- * - Live chat/embedding gateways are stubbed offline so shell `CL_*` from
- *   `just dev` / ~/.bashrc cannot leak into P0 (no LLM required).
+ * - Live chat/embedding gateways → local mock OpenAI gateway (c100 L1=B)
+ *   plus CL_RESEARCH_E2E_STUB=1 deterministic research kernel (c100 L1=A).
  * - Prefer data-testid (apps/web/src/shared/testids.ts) over visible text.
+ * - Failure artifacts: screenshot + trace + video + attached run JSON (c100 L6).
  */
 
 const ROOT = resolve(import.meta.dirname, '..');
@@ -21,17 +22,16 @@ mkdirSync(TMP, { recursive: true });
 
 const SERVER_PORT = process.env.CL_E2E_SERVER_PORT ?? '18032';
 const WEB_PORT = process.env.CL_E2E_WEB_PORT ?? '13000';
+const MOCK_GATEWAY_PORT = process.env.CL_E2E_MOCK_GATEWAY_PORT ?? '18039';
 const SERVER_URL = `http://127.0.0.1:${SERVER_PORT}`;
 const WEB_URL = `http://127.0.0.1:${WEB_PORT}`;
+const MOCK_GATEWAY_URL = `http://127.0.0.1:${MOCK_GATEWAY_PORT}/v1`;
 
 const reuse = !process.env.CI && process.env.CL_E2E_REUSE === '1';
 
-/** Closed local port — connection fails fast; P0 never needs a live gateway. */
-const E2E_OFFLINE_GATEWAY = 'http://127.0.0.1:9/v1';
-
 /**
  * Strip live model/gateway vars inherited from the parent shell, then pin
- * offline stubs + isolated DB/ports. Keeps `just e2e` independent of `just dev`.
+ * mock gateway + research stub + isolated DB/ports.
  */
 function e2eServerEnv(): NodeJS.ProcessEnv {
   const env = { ...process.env };
@@ -49,6 +49,7 @@ function e2eServerEnv(): NodeJS.ProcessEnv {
     'OPENAI_API_KEY',
     'ANTHROPIC_API_KEY',
     'GOOGLE_GENERATIVE_AI_API_KEY',
+    'VITE_LAB_FIXTURE',
   ] as const;
 
   for (const key of liveKeys) {
@@ -60,10 +61,11 @@ function e2eServerEnv(): NodeJS.ProcessEnv {
     CL_DB_PATH: DB,
     CL_SERVER_HOST: '127.0.0.1',
     CL_SERVER_PORT: SERVER_PORT,
-    CL_CHAT_API_BASE: E2E_OFFLINE_GATEWAY,
-    CL_EMBEDDING_API_BASE: E2E_OFFLINE_GATEWAY,
-    CL_CHAT_API_KEY: 'e2e-offline',
-    CL_EMBEDDING_API_KEY: 'e2e-offline',
+    CL_CHAT_API_BASE: MOCK_GATEWAY_URL,
+    CL_EMBEDDING_API_BASE: MOCK_GATEWAY_URL,
+    CL_CHAT_API_KEY: 'e2e-mock',
+    CL_EMBEDDING_API_KEY: 'e2e-mock',
+    CL_RESEARCH_E2E_STUB: '1',
   };
 }
 
@@ -74,15 +76,15 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: 1,
-  timeout: 60_000,
-  expect: { timeout: 15_000 },
+  timeout: 120_000,
+  expect: { timeout: 20_000 },
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   outputDir: 'test-results',
   use: {
     baseURL: WEB_URL,
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'off',
+    video: 'retain-on-failure',
     locale: 'zh-CN',
   },
   projects: [
@@ -90,13 +92,22 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        // Local: system Chrome (avoids blocked playwright CDN downloads).
-        // CI: set CL_E2E_USE_SYSTEM_CHROME=0 and run `just e2e-install`.
         ...(process.env.CL_E2E_USE_SYSTEM_CHROME === '0' ? {} : { channel: 'chrome' as const }),
       },
     },
   ],
   webServer: [
+    {
+      command: `bun ${resolve(import.meta.dirname, 'mock-openai-gateway.ts')}`,
+      url: `http://127.0.0.1:${MOCK_GATEWAY_PORT}/health`,
+      reuseExistingServer: reuse,
+      timeout: 60_000,
+      cwd: import.meta.dirname,
+      env: {
+        ...process.env,
+        CL_E2E_MOCK_GATEWAY_PORT: MOCK_GATEWAY_PORT,
+      },
+    },
     {
       command: `bun ${resolve(ROOT, 'apps/server/src/server.ts')}`,
       url: `${SERVER_URL}/v2/health`,
@@ -114,6 +125,8 @@ export default defineConfig({
       env: {
         ...process.env,
         VITE_API_PROXY_TARGET: SERVER_URL,
+        // c100 L5=A: production Eden path — never enable fixture Lab
+        VITE_LAB_FIXTURE: '',
       },
     },
   ],
