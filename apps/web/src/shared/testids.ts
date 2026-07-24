@@ -102,6 +102,7 @@ export const TestIds = {
   researchLabEntry: 'research-lab-entry',
   researchLabBack: 'research-lab-back',
   researchLabProgress: 'research-lab-progress',
+  researchLabProgressLedger: 'research-lab-progress-ledger',
   researchLabTopic: 'research-lab-topic',
   researchLabStart: 'research-lab-start',
   researchLabGraph: 'research-lab-graph',

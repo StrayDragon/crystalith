@@ -15,6 +15,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { DEFAULT_LAB_COMPOSE_DEPTH } from '../labComposeDepth';
 import {
+  appendFixturePhaseEvent,
+  computeLabProgressPct,
+  countResearchNodeProgress,
+  fixtureBudgetFromSources,
+  type LabProgressLedgerItem,
+} from '../labProgressLedger';
+import {
   persistLabSessionSnapshot,
   readLabSessionSnapshot,
   type LabSessionSnapshot,
@@ -33,6 +40,7 @@ import type {
   LabPhase,
   LabViewMode,
 } from './types';
+import { LAB_PHASE_LABELS } from './types';
 
 export interface LabController {
   scenarios: typeof LAB_SCENARIOS;
@@ -110,6 +118,13 @@ export interface LabController {
   restart: () => void;
   /** Flush current state to sessionStorage (call before navigating to report). */
   persistNow: () => void;
+  /** Progress ledger (Eden HTTP/SSE or fixture synthetic) — c95. */
+  progressEvents: LabProgressLedgerItem[];
+  progressPct: number;
+  searchesUsed: number;
+  maxSearches: number;
+  researchDone: number;
+  researchTotal: number;
 }
 
 let forkSeq = 0;
@@ -184,6 +199,7 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
   const [confirmChoice, setConfirmChoice] = useState<string | null>(initial.confirmChoice);
   const [mutations, setMutations] = useState<LabGraphMutations>(initial.mutations);
   const [reshaping, setReshaping] = useState(false);
+  const [progressEvents, setProgressEvents] = useState<LabProgressLedgerItem[]>([]);
 
   const scenario = useMemo(() => getLabScenario(scenarioId), [scenarioId]);
   const [topicDraft, setTopicDraft] = useState(initial.topicDraft ?? '');
@@ -264,12 +280,32 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     setMutations(EMPTY_MUTATIONS);
     setViewMode('graph');
     setSelectedSourceIds([]);
+    setProgressEvents([]);
     forkSeq = 0;
   }, []);
 
   const derived = useMemo(
     () => deriveLabState(scenario, phase, { forceStatus, metricsOverride, mutations }),
     [scenario, phase, forceStatus, metricsOverride, mutations],
+  );
+
+  useEffect(() => {
+    setProgressEvents((prev) => appendFixturePhaseEvent(prev, phase, LAB_PHASE_LABELS[phase]));
+  }, [phase]);
+
+  const researchCounts = useMemo(() => countResearchNodeProgress(derived.nodes), [derived.nodes]);
+  const fixtureBudget = useMemo(
+    () => fixtureBudgetFromSources(derived.metrics.sourcesRetrieved),
+    [derived.metrics.sourcesRetrieved],
+  );
+  const progressPct = useMemo(
+    () =>
+      computeLabProgressPct({
+        ...fixtureBudget,
+        ...researchCounts,
+        terminal: phase === 'completed' || phase === 'failed',
+      }),
+    [fixtureBudget, researchCounts, phase],
   );
 
   const askOnInterruptRef = useRef(true);
@@ -300,6 +336,7 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     setConfirmChoice(null);
     setMutations(EMPTY_MUTATIONS);
     setTopicDraft('');
+    setProgressEvents([]);
   }, []);
 
   const startFromIdle = useCallback(() => {
@@ -332,6 +369,7 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
       },
       activityNotes: [`创建演示任务：${trimmed.slice(0, 64)}${trimmed.length > 64 ? '…' : ''}`],
     });
+    setProgressEvents([]);
     setPhase('decompose');
     setPlaying(true);
   }, []);
@@ -585,5 +623,11 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     retry,
     restart,
     persistNow,
+    progressEvents,
+    progressPct,
+    searchesUsed: fixtureBudget.searchesUsed,
+    maxSearches: fixtureBudget.maxSearches,
+    researchDone: researchCounts.researchDone,
+    researchTotal: researchCounts.researchTotal,
   };
 }

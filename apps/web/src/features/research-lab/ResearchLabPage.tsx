@@ -488,8 +488,13 @@ function LabWorkbench({
         {!showCompose ? (
           <LabProgressBar
             phase={lab.phase}
-            metrics={lab.derived.metrics}
-            activityLog={lab.derived.activityLog}
+            progressPct={lab.progressPct}
+            searchesUsed={lab.searchesUsed}
+            maxSearches={lab.maxSearches}
+            researchDone={lab.researchDone}
+            researchTotal={lab.researchTotal}
+            events={lab.progressEvents}
+            onSelectNodeId={(nodeId) => lab.setSelectedNodeId(nodeId)}
           />
         ) : (
           <div className="min-w-0 flex-1" />

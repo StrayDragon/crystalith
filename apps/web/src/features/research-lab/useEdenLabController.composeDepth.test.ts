@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createResearchRun = vi.fn();
 
+// Mock reason: isolate compose→create body; no live SSE.
 vi.mock('../../api/stream', () => ({
   streamRequest: vi.fn(async function* () {
     /* no events */
   }),
 }));
 
+// Mock reason: assert createResearchRun payload without HTTP.
 vi.mock('./edenResearchApi', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./edenResearchApi')>();
   return {
@@ -34,6 +36,7 @@ vi.mock('./edenResearchApi', async (importOriginal) => {
   };
 });
 
+// Mock reason: avoid task-cache side effects in unit test.
 vi.mock('./researchTasksCache', () => ({
   refreshResearchTasks: vi.fn(),
 }));

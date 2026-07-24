@@ -4,6 +4,7 @@
 import type {
   ResearchDepth,
   ResearchGraphPatch,
+  ResearchProgressEvent,
   ResearchRun,
   ResearchRunStatus,
 } from '@crystalith/shared';
@@ -17,6 +18,7 @@ import {
   createResearchRun,
   forkResearchNode,
   getResearchRun,
+  listProgress,
   patchResearchNode,
   pruneResearchNode,
 } from './edenResearchApi';
@@ -32,6 +34,13 @@ import type {
 } from './fake/types';
 import type { LabController } from './fake/useLabController';
 import { DEFAULT_LAB_COMPOSE_DEPTH } from './labComposeDepth';
+import {
+  computeLabProgressPct,
+  countResearchNodeProgress,
+  lastProgressSeq,
+  mergeProgressBySeq,
+  type LabProgressLedgerItem,
+} from './labProgressLedger';
 import {
   deriveLabStateFromRun,
   isEdenLabPlaying,
@@ -66,12 +75,42 @@ export type EdenLabController = LabController & {
   reportError: (message: string) => void;
 };
 
+function toLedgerItem(ev: ResearchProgressEvent): LabProgressLedgerItem {
+  return {
+    id: ev.id,
+    seq: ev.seq,
+    at: ev.at,
+    kind: ev.kind,
+    nodeId: ev.nodeId ?? null,
+    headline: ev.headline ?? null,
+  };
+}
+
+function sseToLedgerItem(data: {
+  seq?: number;
+  kind?: string;
+  at?: string;
+  nodeId?: string;
+  headline?: string;
+}): LabProgressLedgerItem | null {
+  if (typeof data.seq !== 'number' || !data.kind) return null;
+  return {
+    id: `sse_${data.seq}`,
+    seq: data.seq,
+    at: data.at ?? new Date().toISOString(),
+    kind: data.kind,
+    nodeId: data.nodeId ?? null,
+    headline: data.headline ?? null,
+  };
+}
+
 export function useEdenLabController(
   notebookId: number,
   initialRunId?: number | null,
 ): EdenLabController {
   const [run, setRun] = useState<ResearchRun | null>(null);
   const [activityLog, setActivityLog] = useState<string[]>([]);
+  const [progressEvents, setProgressEvents] = useState<LabProgressLedgerItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [lastError, setLastError] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -92,6 +131,7 @@ export function useEdenLabController(
 
   const abortRef = useRef<AbortController | null>(null);
   const runIdRef = useRef<number | null>(null);
+  const progressSeqRef = useRef(0);
 
   const pushLog = useCallback((message: string) => {
     setActivityLog((prev) => [...prev.slice(-80), message]);
@@ -110,6 +150,23 @@ export function useEdenLabController(
     abortRef.current?.abort();
     abortRef.current = null;
   }, []);
+
+  const pullProgress = useCallback(
+    async (rid: number, afterSeq = 0) => {
+      try {
+        const page = await listProgress(notebookId, rid, { afterSeq, limit: 100 });
+        const items = page.items.map(toLedgerItem);
+        setProgressEvents((prev) => {
+          const next = mergeProgressBySeq(afterSeq === 0 ? [] : prev, items);
+          progressSeqRef.current = lastProgressSeq(next);
+          return next;
+        });
+      } catch {
+        /* progress is best-effort; run graph still works */
+      }
+    },
+    [notebookId],
+  );
 
   const startStream = useCallback(
     (rid: number) => {
@@ -137,6 +194,7 @@ export function useEdenLabController(
                 }
                 stopStream();
                 refreshResearchTasks(notebookId);
+                void pullProgress(rid, progressSeqRef.current);
               } else {
                 setRun((prev) => (prev ? { ...prev, status: nextStatus ?? prev.status } : prev));
                 if (data.reason) pushLog(data.reason);
@@ -182,9 +240,28 @@ export function useEdenLabController(
               const data = ev.data as { message?: string };
               if (data.message) pushLog(data.message);
             } else if (ev.event === 'progress') {
-              const data = ev.data as { message?: string; kind?: string };
-              if (data.message) pushLog(data.message);
-              else if (data.kind) pushLog(`进度：${data.kind}`);
+              const data = ev.data as {
+                seq?: number;
+                kind?: string;
+                at?: string;
+                nodeId?: string;
+                headline?: string;
+                message?: string;
+              };
+              const item = sseToLedgerItem(data);
+              if (item) {
+                setProgressEvents((prev) => {
+                  const next = mergeProgressBySeq(prev, [item]);
+                  progressSeqRef.current = lastProgressSeq(next);
+                  return next;
+                });
+                if (item.headline) pushLog(item.headline);
+                else pushLog(`进度：${item.kind}`);
+              } else if (data.message) {
+                pushLog(data.message);
+              } else if (data.kind) {
+                pushLog(`进度：${data.kind}`);
+              }
             } else if (ev.event === 'error') {
               const data = ev.data as { message?: string; errorCode?: string };
               const msg = data.message ?? data.errorCode ?? '流错误';
@@ -204,6 +281,7 @@ export function useEdenLabController(
               const fresh = await getResearchRun(notebookId, rid);
               applyRun(fresh);
               refreshResearchTasks(notebookId);
+              void pullProgress(rid, progressSeqRef.current);
             } catch {
               /* ignore */
             }
@@ -211,7 +289,7 @@ export function useEdenLabController(
         }
       })();
     },
-    [applyRun, notebookId, pushLog, stopStream],
+    [applyRun, notebookId, pullProgress, pushLog, stopStream],
   );
 
   const loadRun = useCallback(
@@ -226,6 +304,9 @@ export function useEdenLabController(
         setAllowWeb(fresh.allowWeb);
         setDepth(fresh.depth ?? DEFAULT_LAB_COMPOSE_DEPTH);
         setSelectedSourceIds(fresh.sourceIds ?? []);
+        progressSeqRef.current = 0;
+        setProgressEvents([]);
+        await pullProgress(rid, 0);
         if (
           fresh.status === 'queued' ||
           fresh.status === 'running' ||
@@ -243,7 +324,7 @@ export function useEdenLabController(
         setBusy(false);
       }
     },
-    [applyRun, notebookId, pushLog, startStream, stopStream],
+    [applyRun, notebookId, pullProgress, pushLog, startStream, stopStream],
   );
 
   useEffect(() => {
@@ -255,6 +336,18 @@ export function useEdenLabController(
 
   const phase = researchRunStatusToLabPhase(run?.status ?? null);
   const derived = useMemo(() => deriveLabStateFromRun(run, activityLog), [run, activityLog]);
+  const researchCounts = useMemo(() => countResearchNodeProgress(run?.nodes ?? []), [run?.nodes]);
+  const progressPct = useMemo(
+    () =>
+      computeLabProgressPct({
+        searchesUsed: run?.searchesUsed ?? 0,
+        maxSearches: run?.maxSearches ?? 1,
+        researchDone: researchCounts.researchDone,
+        researchTotal: researchCounts.researchTotal,
+        terminal: run?.status === 'completed' || run?.status === 'failed',
+      }),
+    [run?.searchesUsed, run?.maxSearches, run?.status, researchCounts],
+  );
   const citations = useMemo(() => {
     const evidenceIds = run?.nodes.flatMap((n) => n.evidenceIds ?? []) ?? [];
     return buildEdenCitationsMap({
@@ -293,6 +386,8 @@ export function useEdenLabController(
         setBusy(true);
         setLastError('');
         try {
+          progressSeqRef.current = 0;
+          setProgressEvents([]);
           const created = await createResearchRun(notebookId, {
             topic: trimmed,
             useNotebookSources,
@@ -303,6 +398,7 @@ export function useEdenLabController(
           applyRun(created, `已创建 Run #${created.id}`);
           refreshResearchTasks(notebookId);
           setTopicDraft(trimmed);
+          await pullProgress(created.id, 0);
           startStream(created.id);
           const url = new URL(window.location.href);
           url.searchParams.set('rid', String(created.id));
@@ -326,6 +422,7 @@ export function useEdenLabController(
       applyRun,
       depth,
       notebookId,
+      pullProgress,
       pushLog,
       selectedSourceIds,
       startStream,
@@ -408,6 +505,8 @@ export function useEdenLabController(
     setRun(null);
     runIdRef.current = null;
     setActivityLog([]);
+    setProgressEvents([]);
+    progressSeqRef.current = 0;
     setTopicDraft('');
     setSelectedNodeId(null);
     setConfirmChoice(null);
@@ -531,6 +630,12 @@ export function useEdenLabController(
     runId: run?.id ?? runIdRef.current,
     llmActivity: run?.llmActivity ?? null,
     reportError,
+    progressEvents,
+    progressPct,
+    searchesUsed: run?.searchesUsed ?? 0,
+    maxSearches: run?.maxSearches ?? 0,
+    researchDone: researchCounts.researchDone,
+    researchTotal: researchCounts.researchTotal,
   };
 }
 
