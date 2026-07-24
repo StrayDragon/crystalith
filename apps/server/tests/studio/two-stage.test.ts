@@ -1,10 +1,10 @@
 // Studio two-stage generation integration test.
 //
 // Exercises the full outline → markdown flow via the in-process Elysia app:
-//   1. POST /v2/studio/slides            → create draft (stage='input')
-//   2. POST /v2/studio/slides/:id/outline → generateText+Output (mocked) → stage='outline'
+//   1. POST /v2/notebooks/:nid/studio/slides            → create draft (stage='input')
+//   2. POST /v2/notebooks/:nid/studio/slides/:id/outline → generateText+Output (mocked) → stage='outline'
 //   3. (review) ORM update of outline column
-//   4. POST /v2/studio/slides/:id/markdown → streamText (mocked) → stage='markdown'
+//   4. POST /v2/notebooks/:nid/studio/slides/:id/markdown → streamText (mocked) → stage='markdown'
 //
 // generateText+Output returns a canned outline; streamText yields Slidev markdown
 // text-deltas. Both are distinguished by the router's call site (not prompt
@@ -88,17 +88,13 @@ afterAll(() => {
   teardownIntegrationEnv();
 });
 
-function withNotebookScope(path: string): string {
-  if (/^\/v2\/studio\/slides\/\d+/.test(path)) {
-    const sep = path.includes('?') ? '&' : '?';
-    return `${path}${sep}notebookId=${notebookId}`;
-  }
-  return path;
+function slidesBase(): string {
+  return `/v2/notebooks/${notebookId}/studio/slides`;
 }
 
 async function post(path: string, body?: unknown): Promise<{ status: number; body: unknown }> {
   const res = await app.handle(
-    new Request(`${BASE}${withNotebookScope(path)}`, {
+    new Request(`${BASE}${path}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -118,8 +114,7 @@ async function post(path: string, body?: unknown): Promise<{ status: number; bod
 
 describe('studio two-stage generation', () => {
   it('creates a slide draft in the input stage', async () => {
-    const { status, body } = await post('/v2/studio/slides', {
-      notebookId: notebookId,
+    const { status, body } = await post(slidesBase(), {
       title: 'My Deck',
       prompt: 'Focus on clarity',
       sourceIds: [sourceId],
@@ -139,7 +134,7 @@ describe('studio two-stage generation', () => {
       .where(eq(studioSlides.notebookId, notebookId))
       .all()[0];
 
-    const { status, body } = await post(`/v2/studio/slides/${draft.id}/outline`);
+    const { status, body } = await post(`${slidesBase()}/${draft.id}/outline`);
     expect(status).toBe(200);
     const slide = body as { stage: string; outline: { title: string; slides: unknown[] } };
     expect(slide.stage).toBe('outline');
@@ -155,7 +150,7 @@ describe('studio two-stage generation', () => {
       .where(eq(studioSlides.notebookId, notebookId))
       .all()[0];
 
-    const { status, body } = await post(`/v2/studio/slides/${draft.id}/markdown`);
+    const { status, body } = await post(`${slidesBase()}/${draft.id}/markdown`);
     expect(status).toBe(200);
     const slide = body as { stage: string; markdown: string };
     expect(slide.stage).toBe('markdown');
@@ -170,13 +165,12 @@ describe('studio two-stage generation', () => {
     // Create a fresh draft, generate outline, then edit the outline via ORM
     // (no PATCH endpoint exists) to simulate a user review, and confirm the
     // stored value changes.
-    const created = await post('/v2/studio/slides', {
-      notebookId: notebookId,
+    const created = await post(slidesBase(), {
       title: 'Review Deck',
       sourceIds: [sourceId],
     });
     const id = (created.body as { id: number }).id;
-    await post(`/v2/studio/slides/${id}/outline`);
+    await post(`${slidesBase()}/${id}/outline`);
 
     const edited = { title: 'Edited', slides: [{ title: 'Only Slide', bullets: ['revised'] }] };
     getOrm().update(studioSlides).set({ outline: edited }).where(eq(studioSlides.id, id)).run();
@@ -187,14 +181,13 @@ describe('studio two-stage generation', () => {
   });
 
   it('returns 404 when generating markdown before an outline exists', async () => {
-    const created = await post('/v2/studio/slides', {
-      notebookId: notebookId,
+    const created = await post(slidesBase(), {
       title: 'No Outline Deck',
       sourceIds: [sourceId],
     });
     const id = (created.body as { id: number }).id;
 
-    const { status } = await post(`/v2/studio/slides/${id}/markdown`);
+    const { status } = await post(`${slidesBase()}/${id}/markdown`);
     expect(status).toBe(404);
   });
 });

@@ -90,34 +90,23 @@ async function post(path: string, body: unknown) {
   return { status: res.status, body: parsed };
 }
 
-describe('c67 notebook isolation', () => {
-  it('GET /v2/sources/:id cross-notebook → 404 ErrorEnvelope', async () => {
-    const { status, body } = await get(`/v2/sources/${sourceId}?notebookId=${notebookB}`);
+describe('c67/c69 notebook isolation (nested paths)', () => {
+  it('GET nested source cross-notebook → 404 ErrorEnvelope', async () => {
+    const { status, body } = await get(`/v2/notebooks/${notebookB}/sources/${sourceId}`);
     expect(status).toBe(404);
     expect((body as { errorCode: string }).errorCode).toBe('NOT_FOUND');
   });
 
-  it('GET /v2/sources/:id missing notebookId → validation reject', async () => {
-    const { status, body } = await get(`/v2/sources/${sourceId}`);
-    expect(status).toBe(422);
-    expect((body as { errorCode: string }).errorCode).toBe('SCHEMA_VALIDATION_FAILED');
-  });
-
-  it('GET /v2/sources/:id same notebook → 200', async () => {
-    const { status, body } = await get(`/v2/sources/${sourceId}?notebookId=${notebookA}`);
+  it('GET nested source same notebook → 200', async () => {
+    const { status, body } = await get(`/v2/notebooks/${notebookA}/sources/${sourceId}`);
     expect(status).toBe(200);
     expect((body as { id: number }).id).toBe(sourceId);
   });
 
-  it('GET /v2/outputs/:id cross-notebook → 404 ErrorEnvelope', async () => {
-    const { status, body } = await get(`/v2/outputs/${outputId}?notebookId=${notebookB}`);
+  it('GET nested output cross-notebook → 404 ErrorEnvelope', async () => {
+    const { status, body } = await get(`/v2/notebooks/${notebookB}/outputs/${outputId}`);
     expect(status).toBe(404);
     expect((body as { errorCode: string }).errorCode).toBe('NOT_FOUND');
-  });
-
-  it('GET /v2/outputs/:id missing notebookId → validation reject', async () => {
-    const { status } = await get(`/v2/outputs/${outputId}`);
-    expect(status).toBe(422);
   });
 
   it('session optimistic lock conflict → 409 CONFLICT', async () => {
@@ -161,10 +150,8 @@ describe('c69 nested notebook paths', () => {
     expect((body as { errorCode: string }).errorCode).toBe('INVALID_REQUEST');
   });
 
-  it('GET flat outputs alias still works while nested is canonical', async () => {
-    const { status, body } = await get(`/v2/outputs?notebookId=${notebookA}`);
-    expect(status).toBe(200);
-    const page = body as { items: Array<{ id: number }> };
-    expect(page.items.some((o) => o.id === outputId)).toBe(true);
+  it('GET flat outputs alias is gone (c90)', async () => {
+    const { status } = await get(`/v2/outputs?notebookId=${notebookA}`);
+    expect(status).toBe(404);
   });
 });

@@ -3,15 +3,13 @@ import {
   QaExportJsonResponseSchema,
   QaExportQuerySchema,
   QaNestedRequestSchema,
-  QaRequestSchema,
   CitationSchema,
   type QaNestedRequest,
-  type QaRequest,
 } from '@crystalith/shared';
-// QA router — nested canonical + flat deprecated aliases (c69).
+// QA router — nested canonical (c69/c90).
 //
 // Canonical: /v2/notebooks/:nid/qa{,/stream,/export}
-// Flat aliases: /v2/qa{,/stream,/export} (c67 body/query notebookId)
+// (c90: flat /v2/qa* aliases removed)
 // Mirrors v1 `features/qa/api.py` on Elysia + AI SDK streamText.
 // c36: deterministic retrieval (retrieveAndJudge) + evidence short-circuit.
 import { and, eq, inArray } from 'drizzle-orm';
@@ -61,32 +59,6 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: '导出问答结果为 markdown 或 json',
     tags: ['qa'],
-    responses: { 200: { description: '导出内容' } },
-  },
-  {
-    path: '/v2/qa',
-    method: 'post',
-    summary: '笔记本问答（一次性返回；扁平别名）',
-    tags: ['qa'],
-    deprecated: true,
-    request: { body: QaRequestSchema },
-    responses: { 200: { description: '问答结果' } },
-  },
-  {
-    path: '/v2/qa/stream',
-    method: 'post',
-    summary: '笔记本问答（SSE 流式；扁平别名）',
-    tags: ['qa'],
-    deprecated: true,
-    request: { body: QaRequestSchema },
-    responses: { 200: { description: 'SSE 流', contentType: 'text/event-stream' } },
-  },
-  {
-    path: '/v2/qa/export',
-    method: 'get',
-    summary: '导出问答结果（扁平别名）',
-    tags: ['qa'],
-    deprecated: true,
     responses: { 200: { description: '导出内容' } },
   },
 ];
@@ -154,7 +126,7 @@ function assertQaOwnership(opts: {
   }
 }
 
-type QaBody = QaRequest | (QaNestedRequest & { notebookId: number });
+type QaBody = QaNestedRequest & { notebookId: number };
 
 async function handleQaPost(body: QaBody) {
   const {
@@ -324,15 +296,14 @@ type QaExportQuery = {
   format: 'markdown' | 'json';
 };
 
-/** Export QA answer. When `pathNotebookId` is set (nested), session must belong to it. */
-function handleQaExport(query: QaExportQuery, pathNotebookId?: number) {
+/** Export QA answer; session must belong to `pathNotebookId`. */
+function handleQaExport(query: QaExportQuery, pathNotebookId: number) {
   const sessionId = query.sessionId;
   const messageId = query.messageId;
   const format = query.format;
 
   const sessionRow = db().select().from(sessions).where(eq(sessions.id, sessionId)).get();
-  if (!sessionRow) throw new NotFoundError('Session not found');
-  if (pathNotebookId !== undefined && sessionRow.notebookId !== pathNotebookId) {
+  if (!sessionRow || sessionRow.notebookId !== pathNotebookId) {
     throw new NotFoundError('Session not found');
   }
 
@@ -514,17 +485,6 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       return handleQaExport(query, nid);
     },
     { query: QaExportQuerySchema, response: QaExportResponseSchema },
-  )
-
-  // ---- Flat deprecated aliases (c67 notebookId required on body) ----
-  .post('/qa', async ({ body }) => handleQaPost(body), {
-    body: QaRequestSchema,
-    response: { 200: QaAnswerSchema },
-  })
-  .post('/qa/stream', async ({ body }) => handleQaStream(body), { body: QaRequestSchema })
-  .get('/qa/export', ({ query }) => handleQaExport(query), {
-    query: QaExportQuerySchema,
-    response: QaExportResponseSchema,
-  });
+  );
 
 registerApiDoc(apiDocs);

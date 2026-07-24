@@ -1,0 +1,11 @@
+kind: llman.sdd.delta
+ops[4]{op,req_id,title,statement,from,to,name}:
+  remove_requirement,"flat-notebook-scoped-paths-are-deprecated-aliases",null,null,null,null,null
+  modify_requirement,"nested-path-nid-is-ownership-ssot","Nested path :nid is ownership SSOT","嵌套 canonical 路由上，path :nid MUST 为归属唯一真源；请求 body MUST NOT 再要求必填 notebookId。若 body 携带 notebookId：等于 :nid 时 MUST 忽略；不等于时 MUST 返回 400。响应实体 MAY/SHOULD 继续包含 notebookId 字段。笔记本作用域资源 MUST NOT 再提供扁平 query/body notebookId 平行面。",null,null,null
+  modify_requirement,"qa-export-endpoint","API MUST provide QA export endpoint","系统 MUST 提供 QA 导出端点支持 markdown 和 json 两种格式",null,null,null
+  modify_requirement,"error-envelope-actually-emitted-by-routes","Server routes MUST emit the ErrorEnvelope shape not ad-hoc error objects","All non-SSE error responses MUST return the ErrorEnvelope shape defined in packages/shared (errorCode plus message plus optional details plus optional retryAfter). MUST NOT return ad-hoc shapes such as {error: string}.",null,null,null
+op_scenarios[4]{req_id,id,given,when,then,feature}:
+  "nested-path-nid-is-ownership-ssot","flat-outputs-gone","嵌套 outputs 已挂载且扁平 alias 已删除","客户端请求 GET /v2/outputs?notebookId=N","系统 SHALL 不命中业务 handler（404 或等价未挂载）",false
+  "qa-export-endpoint","markdown-export","一个 session 有 assistant 回答","客户端请求 GET /v2/notebooks/:nid/qa/export?sessionId=X&format=markdown","系统 SHALL 返回 text/markdown 内容含 question/answer/citations 三段结构及 Content-Disposition header",false
+  "error-envelope-actually-emitted-by-routes","non-sse-error-shape","a feature router such as POST /v2/notebooks/:nid/outputs hits a predictable error (sourceId out of scope or SLIDES guard or schema validation failure)","the system returns an error response","the body MUST match ErrorEnvelopeSchema (with errorCode and message) and MUST NOT be {error: string} or any other ad-hoc shape",false
+  "nested-path-nid-is-ownership-ssot","nested-post-without-body-notebook-id","存在 notebook N","客户端 POST /v2/notebooks/N/outputs 且 body 省略 notebookId","请求 SHALL 被接受（其余字段合法时）并以 N 为归属",false

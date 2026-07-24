@@ -1,7 +1,7 @@
-// Studio slides router — nested canonical + flat deprecated aliases (c69).
+// Studio slides router — nested canonical (c69/c90).
 //
 // Canonical: /v2/notebooks/:nid/studio/slides*
-// Flat aliases: /v2/studio/slides* (c67 ?notebookId=)
+// (c90: flat /v2/studio/slides* aliases removed)
 //
 // Two-stage generation with HITL review/edit:
 //   1. POST /slides/:id/outline   → generateText+Output → stage=outline
@@ -16,16 +16,13 @@
 //
 // H5+H6: generation logic + SSE helper extracted to service.ts
 import {
-  NotebookIdQuerySchema,
   PaginatedSchema,
   PaginationParamsSchema,
   SlideDraftCreateNestedRequestSchema,
-  SlideDraftCreateRequestSchema,
   SlideDraftUpdateSchema,
   StudioMarkdownPutSchema,
   StudioOutlinePutSchema,
   StudioSlideSchema,
-  StudioSlidesListQuerySchema,
   type SlideDraftCreateBody,
   type SlideDraftUpdate,
   type StudioMarkdownPut,
@@ -143,106 +140,6 @@ const apiDocs: OpenApiRoute[] = [
     method: 'get',
     summary: 'markdown 生成 SSE',
     tags: ['studio'],
-    responses: { 200: { description: 'SSE 流', contentType: 'text/event-stream' } },
-  },
-  // Flat deprecated aliases
-  {
-    path: '/v2/studio/slides',
-    method: 'post',
-    summary: '创建幻灯片草稿（扁平别名）',
-    tags: ['studio'],
-    deprecated: true,
-    request: { body: SlideDraftCreateRequestSchema },
-    responses: { 201: { description: '已创建的草稿' } },
-  },
-  {
-    path: '/v2/studio/slides',
-    method: 'get',
-    summary: '分页列出幻灯片草稿（扁平别名）',
-    tags: ['studio'],
-    deprecated: true,
-    request: {
-      query: {
-        notebookId: StudioSlidesListQuerySchema.shape.notebookId,
-        offset: PaginationParamsSchema.shape.offset,
-        limit: PaginationParamsSchema.shape.limit,
-      },
-    },
-    responses: { 200: { description: '草稿列表', body: SlidesPageSchema } },
-  },
-  {
-    path: '/v2/studio/slides/latest',
-    method: 'get',
-    summary: '获取最新幻灯片草稿（扁平别名）',
-    tags: ['studio'],
-    deprecated: true,
-    responses: { 200: { description: '最新草稿' } },
-  },
-  {
-    path: '/v2/studio/slides/:id',
-    method: 'get',
-    summary: '按 id 获取幻灯片草稿（扁平别名）',
-    tags: ['studio'],
-    deprecated: true,
-    responses: { 200: { description: '草稿' } },
-  },
-  {
-    path: '/v2/studio/slides/:id',
-    method: 'patch',
-    summary: '更新草稿字段（扁平别名）',
-    tags: ['studio'],
-    deprecated: true,
-    request: { body: SlideDraftUpdateSchema },
-    responses: { 200: { description: '已更新的草稿' } },
-  },
-  {
-    path: '/v2/studio/slides/:id/outline',
-    method: 'post',
-    summary: 'AI 生成大纲（扁平别名）',
-    tags: ['studio'],
-    deprecated: true,
-    responses: { 200: { description: '大纲' } },
-  },
-  {
-    path: '/v2/studio/slides/:id/outline',
-    method: 'put',
-    summary: '人工编辑大纲（扁平别名）',
-    tags: ['studio'],
-    deprecated: true,
-    request: { body: StudioOutlinePutSchema },
-    responses: { 200: { description: '已更新的大纲' } },
-  },
-  {
-    path: '/v2/studio/slides/:id/markdown',
-    method: 'post',
-    summary: '由大纲生成 markdown（扁平别名）',
-    tags: ['studio'],
-    deprecated: true,
-    responses: { 200: { description: 'markdown' } },
-  },
-  {
-    path: '/v2/studio/slides/:id/markdown',
-    method: 'put',
-    summary: '人工编辑 markdown（扁平别名）',
-    tags: ['studio'],
-    deprecated: true,
-    request: { body: StudioMarkdownPutSchema },
-    responses: { 200: { description: '已更新并持久化的 markdown' } },
-  },
-  {
-    path: '/v2/studio/slides/:id/outline/stream',
-    method: 'get',
-    summary: '大纲生成 SSE（扁平别名）',
-    tags: ['studio'],
-    deprecated: true,
-    responses: { 200: { description: 'SSE 流', contentType: 'text/event-stream' } },
-  },
-  {
-    path: '/v2/studio/slides/:id/markdown/stream',
-    method: 'get',
-    summary: 'markdown 生成 SSE（扁平别名）',
-    tags: ['studio'],
-    deprecated: true,
     responses: { 200: { description: 'SSE 流', contentType: 'text/event-stream' } },
   },
 ];
@@ -611,82 +508,6 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     const nid = requirePositiveIntId(params.nid, 'notebook id');
     const id = requirePositiveIntId(params.id, 'slide id');
     return handleMarkdownStream(id, nid);
-  })
-
-  // ---- Flat deprecated aliases (c67 notebookId required on query/body) ----
-  .post(
-    '/studio/slides',
-    ({ body, set }) => {
-      set.status = 201;
-      return handleCreateSlide(body.notebookId, body);
-    },
-    { body: SlideDraftCreateRequestSchema, response: StudioSlideSchema },
-  )
-  .get(
-    '/studio/slides',
-    ({ query }) => handleListSlides(query.notebookId, query.offset ?? 0, query.limit ?? 20),
-    { query: StudioSlidesListQuerySchema, response: SlidesPageSchema },
-  )
-  // Static /latest before /:id
-  .get('/studio/slides/latest', ({ query }) => handleLatestSlide(query.notebookId), {
-    query: StudioSlidesListQuerySchema,
-    response: StudioSlideSchema,
-  })
-  .get(
-    '/studio/slides/:id',
-    ({ params, query }) =>
-      handleGetSlide(requirePositiveIntId(params.id, 'slide id'), query.notebookId),
-    { query: NotebookIdQuerySchema, response: StudioSlideSchema },
-  )
-  .patch(
-    '/studio/slides/:id',
-    ({ params, query, body }) =>
-      handlePatchSlide(requirePositiveIntId(params.id, 'slide id'), query.notebookId, body),
-    { query: NotebookIdQuerySchema, body: SlideDraftUpdateSchema, response: StudioSlideSchema },
-  )
-  .post(
-    '/studio/slides/:id/outline',
-    async ({ params, query }) =>
-      handleGenerateOutline(requirePositiveIntId(params.id, 'slide id'), query.notebookId),
-    { query: NotebookIdQuerySchema, response: StudioSlideSchema },
-  )
-  .put(
-    '/studio/slides/:id/outline',
-    ({ params, query, body }) =>
-      handlePutOutline(requirePositiveIntId(params.id, 'slide id'), query.notebookId, body),
-    {
-      query: NotebookIdQuerySchema,
-      body: StudioOutlinePutSchema,
-      response: StudioSlideSchema,
-    },
-  )
-  .post(
-    '/studio/slides/:id/markdown',
-    async ({ params, query }) =>
-      handleGenerateMarkdown(requirePositiveIntId(params.id, 'slide id'), query.notebookId),
-    { query: NotebookIdQuerySchema, response: StudioSlideSchema },
-  )
-  .put(
-    '/studio/slides/:id/markdown',
-    ({ params, query, body }) =>
-      handlePutMarkdown(requirePositiveIntId(params.id, 'slide id'), query.notebookId, body),
-    {
-      query: NotebookIdQuerySchema,
-      body: StudioMarkdownPutSchema,
-      response: StudioSlideSchema,
-    },
-  )
-  .get(
-    '/studio/slides/:id/outline/stream',
-    ({ params, query }) =>
-      handleOutlineStream(requirePositiveIntId(params.id, 'slide id'), query.notebookId),
-    { query: NotebookIdQuerySchema },
-  )
-  .get(
-    '/studio/slides/:id/markdown/stream',
-    ({ params, query }) =>
-      handleMarkdownStream(requirePositiveIntId(params.id, 'slide id'), query.notebookId),
-    { query: NotebookIdQuerySchema },
-  );
+  });
 
 registerApiDoc(apiDocs);

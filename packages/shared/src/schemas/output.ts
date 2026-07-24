@@ -341,14 +341,6 @@ export const OutputGenerateBodySchema = z
   });
 export type OutputGenerateBody = z.infer<typeof OutputGenerateBodySchema>;
 
-/** Flat alias POST /v2/outputs — notebookId required (c67). */
-export const OutputGenerateRequestSchema = OutputGenerateBodySchema.extend({
-  notebookId: IdSchema,
-}).openapi({
-  description: desc('output.generate_request', '生成输出请求（flat，含 notebookId）'),
-});
-export type OutputGenerateRequest = z.infer<typeof OutputGenerateRequestSchema>;
-
 /**
  * Nested POST /v2/notebooks/:nid/outputs — path `:nid` is SSOT;
  * optional body notebookId must match when present (c69).
@@ -376,13 +368,6 @@ export type OutputConvertToSourceResponse = z.infer<typeof OutputConvertToSource
 export const OutputListSchema = z.object({
   outputs: z.array(OutputListItemSchema),
 });
-
-/** Query for flat GET /v2/outputs/:id/export — notebook scope + format (c67). */
-export const OutputExportQuerySchema = z.object({
-  notebookId: z.coerce.number().int().positive(),
-  format: z.enum(['markdown', 'json']).default('markdown'),
-});
-export type OutputExportQuery = z.infer<typeof OutputExportQuerySchema>;
 
 /**
  * Nested GET /v2/notebooks/:nid/outputs/:id/export — format only;

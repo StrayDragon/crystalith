@@ -7,7 +7,6 @@ import {
   IsoTimestampSchema,
   JsonMetadataSchema,
   OptionalTimestampSchema,
-  PaginationParamsSchema,
 } from './common.js';
 import { desc } from './i18n.js';
 import { SlidesOutlineSchema } from './output.js';
@@ -81,14 +80,6 @@ export const SlideDraftCreateBodySchema = z
   });
 export type SlideDraftCreateBody = z.infer<typeof SlideDraftCreateBodySchema>;
 
-/** Flat alias POST /v2/studio/slides — notebookId required. */
-export const SlideDraftCreateRequestSchema = SlideDraftCreateBodySchema.extend({
-  notebookId: IdSchema,
-}).openapi({
-  description: desc('studio.slide_create_request', '创建幻灯片草稿（flat）'),
-});
-export type SlideDraftCreateRequest = z.infer<typeof SlideDraftCreateRequestSchema>;
-
 /** Nested POST /v2/notebooks/:nid/studio/slides — optional body notebookId must match path. */
 export const SlideDraftCreateNestedRequestSchema = SlideDraftCreateBodySchema.extend({
   notebookId: IdSchema.optional(),
@@ -116,11 +107,6 @@ export type SlideDraftUpdate = z.infer<typeof SlideDraftUpdateSchema>;
 export const StudioSlideListSchema = z.object({
   slides: z.array(StudioSlideSchema),
 });
-
-export const StudioSlidesListQuerySchema = PaginationParamsSchema.extend({
-  notebookId: z.coerce.number().int().positive(),
-});
-export type StudioSlidesListQuery = z.infer<typeof StudioSlidesListQuerySchema>;
 
 export const StudioOutlinePutSchema = z.object({
   outline: SlidesOutlineSchema,

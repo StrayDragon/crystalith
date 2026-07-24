@@ -1,6 +1,6 @@
 // Sources ingest + dedup + SSRF integration tests.
 //
-// Exercises the real sources router (POST /v2/sources/upload +
+// Exercises the real sources router (POST /v2/notebooks/:nid/sources/upload +
 // /notebooks/:nid/sources/from-url) via the in-process Elysia app, against a
 // temp DB with AI + embedding stubbed.
 import { afterAll, beforeAll, describe, expect, it, mock } from 'bun:test';
@@ -60,9 +60,9 @@ async function uploadFile(
 ): Promise<{ status: number; body: unknown }> {
   const fd = new FormData();
   fd.append('file', new File([content], filename, { type: 'text/plain' }));
-  const qs = dedupAction ? `&dedupAction=${dedupAction}` : '';
+  const qs = dedupAction ? `?dedupAction=${dedupAction}` : '';
   const res = await app.handle(
-    new Request(`${BASE}/v2/sources/upload?notebookId=${notebookId}${qs}`, {
+    new Request(`${BASE}/v2/notebooks/${notebookId}/sources/upload${qs}`, {
       method: 'POST',
       body: fd,
     }),

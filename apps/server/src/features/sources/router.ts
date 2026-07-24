@@ -1,5 +1,4 @@
 import {
-  NotebookIdQuerySchema,
   PaginatedSchema,
   PaginationParamsSchema,
   PatchNotebookExtractorPolicySchema,
@@ -24,13 +23,14 @@ import {
   SourceTagCreateSchema,
   SourceTagSchema,
   SourceUploadNestedQuerySchema,
-  SourceUploadQuerySchema,
   SourceStatusSchema,
   paginateItems,
   type ExtractorPolicyMode,
   type JsonMetadata,
 } from '@crystalith/shared';
-// Sources CRUD + upload router — /v2/notebooks/:nid/sources (canonical) + flat aliases
+// Sources CRUD + upload router — /v2/notebooks/:nid/sources (canonical).
+// GET /v2/sources/parsers remains global flat (process registry).
+// (c90: flat notebook-scoped /v2/sources/:id* and /upload aliases removed)
 //
 // Mirrors v1 `features/sources/api.py` + `features/sources/api_ingest.py`.
 import { and, eq, sql } from 'drizzle-orm';
@@ -128,26 +128,10 @@ const apiDocs: OpenApiRoute[] = [
     responses: { 201: { description: '摄取结果' } },
   },
   {
-    path: '/v2/sources/upload',
-    method: 'post',
-    summary: '上传摄取（扁平别名）',
-    tags: ['sources'],
-    deprecated: true,
-    responses: { 201: { description: '摄取结果' } },
-  },
-  {
     path: '/v2/notebooks/:nid/sources/:sid',
     method: 'get',
     summary: '按 id 获取来源',
     tags: ['sources'],
-    responses: { 200: { description: '来源', body: SourceSchema } },
-  },
-  {
-    path: '/v2/sources/:id',
-    method: 'get',
-    summary: '按 id 获取来源（扁平别名）',
-    tags: ['sources'],
-    deprecated: true,
     responses: { 200: { description: '来源', body: SourceSchema } },
   },
   {
@@ -158,14 +142,6 @@ const apiDocs: OpenApiRoute[] = [
     responses: { 204: { description: '已删除' } },
   },
   {
-    path: '/v2/sources/:id',
-    method: 'delete',
-    summary: '删除来源及其分块与向量（扁平别名）',
-    tags: ['sources'],
-    deprecated: true,
-    responses: { 204: { description: '已删除' } },
-  },
-  {
     path: '/v2/notebooks/:nid/sources/:sid/chunks',
     method: 'get',
     summary: '列出某来源的分块',
@@ -173,26 +149,10 @@ const apiDocs: OpenApiRoute[] = [
     responses: { 200: { description: '分块列表' } },
   },
   {
-    path: '/v2/sources/:id/chunks',
-    method: 'get',
-    summary: '列出某来源的分块（扁平别名）',
-    tags: ['sources'],
-    deprecated: true,
-    responses: { 200: { description: '分块列表' } },
-  },
-  {
     path: '/v2/notebooks/:nid/sources/:sid/re-embed',
     method: 'post',
     summary: '对失败来源重新向量化',
     tags: ['sources'],
-    responses: { 200: { description: '重嵌结果' } },
-  },
-  {
-    path: '/v2/sources/:id/re-embed',
-    method: 'post',
-    summary: '对失败来源重新向量化（扁平别名）',
-    tags: ['sources'],
-    deprecated: true,
     responses: { 200: { description: '重嵌结果' } },
   },
   {
@@ -527,15 +487,6 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     { query: SourceUploadNestedQuerySchema, response: SourceUploadResponseSchema },
   )
 
-  // Upload + ingest a file (flat alias — c67 notebookId required)
-  .post(
-    '/sources/upload',
-    async ({ body, query }) => {
-      return handleSourceUpload(query.notebookId, body, query.dedupAction);
-    },
-    { query: SourceUploadQuerySchema, response: SourceUploadResponseSchema },
-  )
-
   // Get a source by ID (nested canonical)
   .get(
     '/notebooks/:nid/sources/:sid',
@@ -547,16 +498,6 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     { response: SourceSchema },
   )
 
-  // Get a source by ID (flat alias — c67 notebookId required)
-  .get(
-    '/sources/:id',
-    ({ params, query }) => {
-      const id = requirePositiveIntId(params.id, 'source id');
-      return handleGetSource(id, query.notebookId);
-    },
-    { query: NotebookIdQuerySchema, response: SourceSchema },
-  )
-
   // Delete a source (nested canonical)
   .delete(
     '/notebooks/:nid/sources/:sid',
@@ -566,16 +507,6 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       return handleDeleteSource(sid, nid, set);
     },
     { response: { 204: Empty204Schema } },
-  )
-
-  // Delete a source (flat alias — c67 notebookId required)
-  .delete(
-    '/sources/:id',
-    ({ params, query, set }) => {
-      const id = requirePositiveIntId(params.id, 'source id');
-      return handleDeleteSource(id, query.notebookId, set);
-    },
-    { query: NotebookIdQuerySchema, response: { 204: Empty204Schema } },
   )
 
   // List available parsers (global flat — do not nest)
@@ -822,16 +753,6 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     { response: ChunkListSchema },
   )
 
-  // Get source chunks (flat alias — c67 notebookId required)
-  .get(
-    '/sources/:id/chunks',
-    ({ params, query }) => {
-      const id = requirePositiveIntId(params.id, 'source id');
-      return handleGetSourceChunks(id, query.notebookId);
-    },
-    { query: NotebookIdQuerySchema, response: ChunkListSchema },
-  )
-
   // Re-embed a source (nested canonical)
   .post(
     '/notebooks/:nid/sources/:sid/re-embed',
@@ -841,16 +762,6 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       return handleReEmbedSource(sid, nid);
     },
     { response: SourceReembedResponseSchema },
-  )
-
-  // Re-embed a source (flat alias — c67 notebookId required)
-  .post(
-    '/sources/:id/re-embed',
-    async ({ params, query }) => {
-      const id = requirePositiveIntId(params.id, 'source id');
-      return handleReEmbedSource(id, query.notebookId);
-    },
-    { query: NotebookIdQuerySchema, response: SourceReembedResponseSchema },
   )
 
   // c44: Search sources via real web search (v1 run_search_graph + SearXNG)
