@@ -747,3 +747,16 @@ export const ResearchProgressQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(500).optional(),
 });
 export type ResearchProgressQuery = z.infer<typeof ResearchProgressQuerySchema>;
+
+/** Structured LLM plan for topic auto-decompose (c93 / r326). Not an HTTP body. */
+export const ResearchDecomposeBranchSchema = z.object({
+  title: z.string().min(1).max(200),
+  query: z.string().min(1).max(2000),
+  edgeKind: z.enum(['decompose', 'refine']).default('decompose'),
+});
+export type ResearchDecomposeBranch = z.infer<typeof ResearchDecomposeBranchSchema>;
+
+export const ResearchDecomposePlanSchema = z.object({
+  branches: z.array(ResearchDecomposeBranchSchema).default([]),
+});
+export type ResearchDecomposePlan = z.infer<typeof ResearchDecomposePlanSchema>;

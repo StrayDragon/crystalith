@@ -341,3 +341,6 @@ research:
   # After a run reaches a terminal status, truncate progress_events to the
   # most recent N rows (by seq). In-flight runs keep the full ledger.
   progressEventRetain: 200
+  # Optional model id for topic auto-decompose (c93). Omit or leave empty to
+  # inherit models.defaults.chat.
+  # decomposeModelId: ""

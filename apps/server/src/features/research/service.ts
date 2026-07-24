@@ -54,6 +54,7 @@ import { ragRegistry } from '../../rag/registry.ts';
 import { config, ResearchSettingsSchema } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { splitTextToChunks } from '../outputs/render.ts';
+import { applyDecomposePlanToGraph, planTopicDecomposition } from './decompose.ts';
 import { createResearchNodeAgent, proposalFromStructureToolCall } from './node-agent.ts';
 
 export type SseEmit = (event: string, data: unknown) => void;
@@ -907,6 +908,58 @@ async function runLoop(runId: number): Promise<void> {
         edges: [],
       });
       emitLog(runId, '已种子单结论 DAG');
+    }
+
+    // c93 / r326: auto-decompose topic into research nodes (topology only; c94 runs units).
+    if (isCancelled(runId) || abort.signal.aborted) {
+      finalizeCancel(runId);
+      return;
+    }
+    row = requireFresh(runId);
+    graph = getGraph(row);
+    {
+      const occupied = graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length;
+      try {
+        const plan = await planTopicDecomposition({
+          topic: row.topic,
+          depth: (row.depth ?? 'medium') as ResearchDepth,
+          maxNodes: row.maxNodes,
+          occupiedNodes: occupied,
+          abortSignal: abort.signal,
+        });
+        if (plan && plan.branches.length > 0) {
+          const applied = applyDecomposePlanToGraph(graph, plan, newId);
+          if (applied.addedNodes.length > 0) {
+            row = persistGraph(runId, applied.graph, {
+              checkpoint: writeCheckpoint({ ...row, status: 'running' }, 'decompose'),
+            });
+            emitGraphPatch(runId, {
+              nodes: applied.addedNodes,
+              edges: applied.addedEdges,
+            });
+            appendProgressEvent(runId, 'graph_patched_summary', {
+              headline: `已拆解 ${applied.addedNodes.length} 个研究支路`,
+              payload: { researchNodes: applied.addedNodes.length },
+            });
+            emitLog(runId, `已拆解 ${applied.addedNodes.length} 个研究支路`);
+          } else {
+            appendProgressEvent(runId, 'unit_aborted', {
+              headline: '拆解结果未写入，改走单路径',
+            });
+            emitLog(runId, '主题拆解未写入节点，改走单路径');
+          }
+        } else {
+          appendProgressEvent(runId, 'unit_aborted', {
+            headline: '拆解跳过或为空，改走单路径',
+          });
+          emitLog(runId, '主题拆解为空或不可用，改走单路径');
+        }
+      } catch (error) {
+        appendProgressEvent(runId, 'unit_aborted', {
+          headline: '拆解失败，改走单路径',
+        });
+        emitLog(runId, `主题拆解失败：${String(error)}，改走单路径`);
+      }
     }
 
     // discard-if-pruned: question unit skipped when pruned (should not happen for protected)

@@ -1,6 +1,6 @@
 # Design: c93 Research topic decompose kernel
 
-> **状态**：规划锁定 · Apply 在 `feat/c93-research-topic-decompose-kernel`
+> **状态**：规划锁定 · Apply 全程 **main**（archive+commit 后才开下一条）
 > **参照**：`apps/web/src/features/research-lab/fake/scenarios.ts` `xlsx-lib` 拓扑（非权威，parity checklist）
 
 ## 1. 插入点（runLoop）
@@ -18,7 +18,9 @@ seedSingleSinkGraph (question + conclusion)
 
 ## 2. Planner 输出形状（结构化 LLM）
 
-使用 AI SDK `generateObject` + shared Zod（与 HTTP 同域，禁止异形副本）：
+使用 AI SDK `generateObject` + shared Zod `ResearchDecomposePlanSchema`。
+
+**模型（E1 锁定）**：支持配置 `research.decomposeModelId`；**省略/空字符串时继承 `models.defaults.chat`**（`getResearchDecomposeModelConfig`）。
 
 ```ts
 // 概念形状 — 实现时落 packages/shared 或 server 局部（不得与路由合约同名异形）

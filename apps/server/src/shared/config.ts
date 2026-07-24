@@ -270,6 +270,22 @@ export function getDefaultChatModel(): ModelConfig | undefined {
   return models.available.find((m) => m.roles.includes('chat'));
 }
 
+/** Parsed `research:` section from app.yaml (defaults applied). */
+export function getResearchSettings(): ResearchSettings {
+  const parsed = ResearchSettingsSchema.safeParse(config().raw.research ?? {});
+  return parsed.success ? parsed.data : { progressEventRetain: 200 };
+}
+
+/**
+ * Model for topic auto-decompose planner.
+ * Uses `research.decomposeModelId` when set; otherwise inherits default chat.
+ */
+export function getResearchDecomposeModelConfig(): ModelConfig | undefined {
+  const id = getResearchSettings().decomposeModelId?.trim();
+  if (id) return getModelById(id) ?? getDefaultChatModel();
+  return getDefaultChatModel();
+}
+
 export function getDefaultEmbeddingModel(): ModelConfig | undefined {
   const { models } = config();
   const id = models.defaults.embedding;
@@ -697,6 +713,16 @@ export const ResearchSettingsSchema = z.object({
     .positive()
     .default(200)
     .describe(desc('research.progress_event_retain', '终态后进度账本保留最近 N 条')),
+  /** Optional model id for topic decompose planner; omit/empty inherits models.defaults.chat. */
+  decomposeModelId: z
+    .string()
+    .optional()
+    .describe(
+      desc(
+        'research.decompose_model_id',
+        '主题自动拆解所用模型 id；省略或空字符串时继承 models.defaults.chat',
+      ),
+    ),
 });
 export type ResearchSettings = z.infer<typeof ResearchSettingsSchema>;
 
@@ -825,7 +851,10 @@ export const RootConfigSchema = z.object({
   plugins: PluginsSettingsSchema.describe(desc('root.plugins', '插件发现与加载配置')),
   proxy_settings: ProxySettingsSchema.describe(desc('root.proxy_settings', '出站代理设置')),
   research: ResearchSettingsSchema.default({ progressEventRetain: 200 }).describe(
-    desc('root.research', 'Deep Research 运行时：进度账本保留条数等'),
+    desc(
+      'root.research',
+      'Deep Research 运行时：进度账本保留条数、可选拆解模型（默认继承 chat）等',
+    ),
   ),
 });
 export type RootConfig = z.infer<typeof RootConfigSchema>;
