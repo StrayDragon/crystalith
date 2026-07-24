@@ -1,8 +1,8 @@
 /**
- * Research Lab — Deep Research UX surface (fixture until Eden wire-up).
+ * Research Lab — deep-research workbench (fixture until c82 Eden).
  *
- * Demo product path: flask → Compose → fixture playback (xlsx-lib) → report.
- * Real path (later): Compose → POST ResearchRun → SSE graph_patch.
+ * Closed loop: flask / task-drawer「新建」→ Compose → xlsx-lib playback →
+ * task inbox (avatar + Lab top-right). Chat @/ embedding deferred.
  */
 import {
   ArrowBack as ArrowBackIcon,
@@ -15,7 +15,6 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { TestIds, tid } from '../../shared/testids';
 import { toast } from '../../shared/toast';
 import {
-  createDemoResearchTask,
   demoStatusFromLabPhase,
   getActiveDemoResearchTaskId,
   getDemoTaskSwitchEpoch,
@@ -55,11 +54,8 @@ import {
   readPersistedLabScenarioId,
 } from './labRouting';
 import { readLabSessionSnapshot } from './labSession';
-import {
-  bindActiveTaskSession,
-  openDemoResearchTask,
-  openNewDemoResearchCompose,
-} from './openDemoResearchTask';
+import { fixtureLabSessionPort } from './labSessionPort';
+import { bindActiveTaskSession } from './openDemoResearchTask';
 import ResearchTasksDrawer from './ResearchTasksDrawer';
 import ResearchTasksTrigger from './ResearchTasksTrigger';
 
@@ -459,10 +455,10 @@ function ResearchLabSession({ notebookId }: { notebookId: number }) {
             onSubmit={() => {
               const topic = lab.topicDraft.trim();
               if (!topic) return;
-              createDemoResearchTask({
+              fixtureLabSessionPort.createTask({
                 notebookId,
                 topic,
-                scenarioId: 'xlsx-lib',
+                scenarioId: fixtureLabSessionPort.defaultScenarioId,
                 status: 'running',
               });
               lab.composeAndStart(topic);
@@ -555,11 +551,11 @@ function ResearchLabSession({ notebookId }: { notebookId: number }) {
         notebookId={notebookId}
         onSelectTask={(task) => {
           setTasksDrawerOpen(false);
-          openDemoResearchTask(task);
+          fixtureLabSessionPort.openTask(task);
         }}
         onCreateNew={() => {
           setTasksDrawerOpen(false);
-          openNewDemoResearchCompose(notebookId);
+          fixtureLabSessionPort.openCompose(notebookId);
         }}
       />
     </div>

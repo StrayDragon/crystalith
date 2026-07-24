@@ -9,14 +9,14 @@ requirements[16]{req_id,title,statement}:
   r183,"Busy and stale-running handling is explicit",draft `running` 时 MUST 防并发重复；stale running MUST 先清理再继续。
   r215,Markdown generation requires existing outline,未有 outline 时 markdown stream MUST 返回可读错误并结束连接。
   r242,Successful generation persists draft before done,生成成功 MUST 先持久化 draft（含 chunkIds/stage/status），再发 `done`。
-  r260,Preview always uses latest saved markdown,预览前端流程 MUST 先保存 markdown，再刷新当前 active slides workflow plugin 声明的预览目标；宿主与客户端 MUST NOT 硬编码 Slidev 作为唯一预览实现。
+  r9,Preview always uses latest saved markdown,预览前端流程 MUST 先保存 markdown，再刷新当前 active slides workflow plugin 声明的预览目标；宿主与客户端 MUST NOT 硬编码 Slidev 作为唯一预览实现。
   r272,Slides UI availability follows tools contract,Studio slides 相关 UI（工具卡片、dialog、入口动作）MUST 以 `/v2/workspace/tools` 返回的 `SLIDES` tool 作为可用性唯一来源，不得依赖硬编码假设 slides 默认存在。
   "studio-sse-streaming",Outline and markdown generation MUST stream via SSE,"studio outline 和 markdown 生成 MUST 通过 SSE 端点流式返回 progress/toolcall/busy/done/error 事件，MUST NOT 返回同步 JSON（对齐 v1 /drafts/:id/outline/stream 与 /markdown/stream）"
   "studio-latest-draft",Studio MUST provide drafts/latest endpoint,studio MUST 提供 GET 端点返回 notebook 下按 updatedAt desc 的最新 draft，MUST NOT 缺失该端点
   "studio-stale-running-guard",Studio MUST clear stale RUNNING status and guard concurrent generation,studio MUST 清理超过阈值（10min）的 RUNNING 状态 draft，并发生成时 MUST 返回 busy 事件而非覆盖
-  "studio-serialize-must-include-output-id-and-config",Studio slide serialization MUST include outputId and generationConfig,"studio slide 序列化（serializeSlide）MUST 返回 outputId 与 generationConfig 字段（camelCase wire）；前端读 outputId 做 slide→output 跳转、读 generationConfig 复用配置"
+  "studio-serialize-must-include-output-id-and-config",Studio slide serialization MUST include outputId and generationConfig,studio slide 序列化（serializeSlide）MUST 返回 outputId 与 generationConfig 字段（camelCase wire）；前端读 outputId 做 slide→output 跳转、读 generationConfig 复用配置
   "studio-sse-done-payload-must-carry-trace-id",Studio SSE done event MUST carry traceId and slideId (not full slide),"studio SSE 的 done 事件 payload MUST 为 {traceId, slideId}（camelCase），MUST NOT 直接序列化整个 slide；且所有 SSE 事件 SHALL 携带 traceId 以支持关联/可观测性"
-  "studio-sse-must-emit-toolcall-event",Studio SSE MUST emit toolcall event before each generation stage,"studio SSE SHALL 在 outline/markdown 各生成阶段前发 toolcall 事件（对齐 v1 slides_generate_outline / slides_generate_markdown）"
+  "studio-sse-must-emit-toolcall-event",Studio SSE MUST emit toolcall event before each generation stage,studio SSE SHALL 在 outline/markdown 各生成阶段前发 toolcall 事件（对齐 v1 slides_generate_outline / slides_generate_markdown）
   "studio-generation-config-must-expand-to-ranges",Studio generation MUST interpret generationConfig with concrete ranges not raw tokens,"studio outline 与 markdown 生成 MUST 解读 slide.generationConfig 的 quantity/density/audience/tone/structure/language/themePreset 字段并展开为具体区间与本地化提示。quantity MUST 映射为 slide 数量区间（short=6-8/standard=8-12/detailed=12-18），density MUST 映射为要点区间（sparse=2-3/standard=3-5/dense=5-7）。generationConfig.preference (quality/speed) MUST 影响检索参数（topK/minScore）。MUST NOT 把原始字段 id（如 'standard'）直接拼进 prompt 而不做展开。"
   "studio-frontmatter-must-align-v1-six-key-shape","Studio frontmatter MUST use the v1 six-key template shape with override support","studio 生成的 markdown frontmatter MUST 对齐 v1 THEME_PRESET_TEMPLATES 的 6-key 结构（theme 恒为 default、colorSchema、fonts{sans,serif,mono}、transition、background、class）。当 generationConfig.frontmatter 非空时，MUST 以该字符串作为 frontmatter body 绕过 preset，仅在缺 title: 且存在标题时补一行。MUST NOT 使用与 v1 不同的 slidev 主题名（如 seriph/bricks）或省略 colorSchema/class/serif/mono 字段。"
 scenarios[20]{req_id,id,given,when,then,feature}:
@@ -27,8 +27,8 @@ scenarios[20]{req_id,id,given,when,then,feature}:
   r183,"busy-requests-are-rejected-and-stale-is-cleared","",draft 处于 `running` 且用户再次发起生成,系统 SHALL 明确拒绝并发重复；若检测到 stale running，则先清理再允许继续,true
   r215,"markdown-requires-outline","",用户在未生成/保存 outline 的情况下请求 markdown stream,系统 SHALL 返回可读错误并结束连接,true
   r242,"draft-is-persisted-before-done","",生成成功并准备发送 `done`,系统 SHALL 先持久化 draft（含 chunkIds/stage/status）再发送 `done`,true
-  r260,"preview-uses-latest-markdown","",用户触发预览刷新,系统 SHALL 先保存 markdown 再刷新当前 active plugin 声明的预览目标以确保一致性,true
-  r260,"preview-uses-plugin-declared-renderer","",用户触发预览刷新且当前 active slides workflow plugin 已声明 preview contract,系统 SHALL 先保存 markdown,true
+  r9,"preview-uses-latest-markdown","",用户触发预览刷新,系统 SHALL 先保存 markdown 再刷新当前 active plugin 声明的预览目标以确保一致性,true
+  r9,"preview-uses-plugin-declared-renderer","",用户触发预览刷新且当前 active slides workflow plugin 已声明 preview contract,系统 SHALL 先保存 markdown,true
   r272,"slides-dialog-is-gated-by-tools-availability","",`/v2/workspace/tools` 未返回 `SLIDES`,客户端 SHALL 不把 slides 视为可直接打开的可用能力,true
   "studio-sse-streaming","client-requests-stream",客户端请求 outline/markdown stream 端点,生成进行中,系统 SHALL 通过 SSE 逐个发送 progress/toolcall/done/error 事件,true
   "studio-latest-draft","notebook-has-drafts",notebook 下存在多个 draft,客户端请求 drafts/latest,系统 SHALL 返回 updatedAt 最新的 draft,true

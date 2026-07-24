@@ -14,10 +14,7 @@ import ConfirmPopover from '../../../shared/ConfirmPopover';
 import { TestIds, tid } from '../../../shared/testids';
 import type { AsyncStatus } from '../../../shared/types';
 import { navigateToResearchLab } from '../../research-lab/labRouting';
-import {
-  openDemoResearchTask,
-  openNewDemoResearchCompose,
-} from '../../research-lab/openDemoResearchTask';
+import { fixtureLabSessionPort } from '../../research-lab/labSessionPort';
 import ResearchTasksDrawer from '../../research-lab/ResearchTasksDrawer';
 import ResearchTasksTrigger from '../../research-lab/ResearchTasksTrigger';
 import NotebookSwitcher, {
@@ -442,12 +439,12 @@ export default function WorkspaceHeader({
         notebookId={activeNotebookId}
         onSelectTask={(task) => {
           setTasksDrawerOpen(false);
-          openDemoResearchTask(task);
+          fixtureLabSessionPort.openTask(task);
         }}
         onCreateNew={() => {
           if (!activeNotebookId) return;
           setTasksDrawerOpen(false);
-          openNewDemoResearchCompose(activeNotebookId);
+          fixtureLabSessionPort.openCompose(activeNotebookId);
         }}
       />
     </>
