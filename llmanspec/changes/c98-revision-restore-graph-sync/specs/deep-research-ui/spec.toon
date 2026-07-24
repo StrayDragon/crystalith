@@ -1,0 +1,7 @@
+kind: llman.sdd.delta
+ops[1]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r451,"Eden revision restore reloads graph on return","Eden 模式下用户经 revisions API 恢复快照后，返回图作业台时 MUST 经 GET ResearchRun 重载并应用 nodes/edges，使画布与 restored 快照一致；恢复成功时 MUST 刷新本地 Run 图态；MUST NOT 在报告已恢复而图仍显示旧态的情况下将 restoreGraphSlice 作为 Eden 默认静默 no-op。",null,null,null
+op_scenarios[3]{req_id,id,given,when,then,feature}:
+  r451,"restore-then-graph-reloads-run","Eden 报告页已恢复某 revision 且用户持有 rid","用户返回 /research-lab 图视图","画布节点/边与 GET run 返回的 restored 图一致",true
+  r451,"restore-triggers-get","Eden restore API 成功","客户端处理响应","调用 loadRun 或等效 GET 全量刷新",true
+  r451,"eden-not-silent-restore-slice","Eden LabReportPage 执行 restore","检查 restoreGraphSlice 路径","经 GET 刷新而非空操作仅更新报告",true

@@ -1,7 +1,12 @@
 /**
  * Eden-backed Lab session — ResearchRun + SSE is authority (default path).
  */
-import type { ResearchGraphPatch, ResearchRun, ResearchRunStatus } from '@crystalith/shared';
+import type {
+  ResearchDepth,
+  ResearchGraphPatch,
+  ResearchRun,
+  ResearchRunStatus,
+} from '@crystalith/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { streamRequest } from '../../api/stream';
@@ -26,6 +31,7 @@ import type {
   LabViewMode,
 } from './fake/types';
 import type { LabController } from './fake/useLabController';
+import { DEFAULT_LAB_COMPOSE_DEPTH } from './labComposeDepth';
 import {
   deriveLabStateFromRun,
   isEdenLabPlaying,
@@ -73,6 +79,7 @@ export function useEdenLabController(
   const [topicDraft, setTopicDraft] = useState('');
   const [useNotebookSources, setUseNotebookSources] = useState(false);
   const [allowWeb, setAllowWeb] = useState(true);
+  const [depth, setDepth] = useState<ResearchDepth>(DEFAULT_LAB_COMPOSE_DEPTH);
   const [selectedSourceIds, setSelectedSourceIds] = useState<number[]>([]);
   const [confirmChoice, setConfirmChoice] = useState<string | null>(null);
   const [consoleOpen, setConsoleOpen] = useState(false);
@@ -217,6 +224,7 @@ export function useEdenLabController(
         setTopicDraft(fresh.topic);
         setUseNotebookSources(fresh.useNotebookSources);
         setAllowWeb(fresh.allowWeb);
+        setDepth(fresh.depth ?? DEFAULT_LAB_COMPOSE_DEPTH);
         setSelectedSourceIds(fresh.sourceIds ?? []);
         if (
           fresh.status === 'queued' ||
@@ -289,6 +297,7 @@ export function useEdenLabController(
             topic: trimmed,
             useNotebookSources,
             allowWeb,
+            depth,
             sourceIds: useNotebookSources ? selectedSourceIds : undefined,
           });
           applyRun(created, `已创建 Run #${created.id}`);
@@ -312,7 +321,16 @@ export function useEdenLabController(
         }
       })();
     },
-    [allowWeb, applyRun, notebookId, pushLog, selectedSourceIds, startStream, useNotebookSources],
+    [
+      allowWeb,
+      applyRun,
+      depth,
+      notebookId,
+      pushLog,
+      selectedSourceIds,
+      startStream,
+      useNotebookSources,
+    ],
   );
 
   const pruneAlongEdge = useCallback(
@@ -477,6 +495,8 @@ export function useEdenLabController(
     setUseNotebookSources,
     allowWeb,
     setAllowWeb,
+    depth,
+    setDepth,
     selectedSourceIds,
     setSelectedSourceIds,
     confirmChoice,

@@ -1,0 +1,7 @@
+kind: llman.sdd.delta
+ops[1]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r447,"Lab Compose depth tier","Lab Compose（LabComposePanel）MUST 暴露浅/中/深三档研究深度且默认 MUST 为中；用户提交创建时 Eden 路径 MUST 在 POST …/research body 中发送所选 depth（对齐 r305 预算映射与 r401 Desk 创建语义）；MUST NOT 隐式省略 depth 导致与 UI 选择不一致。",null,null,null
+op_scenarios[3]{req_id,id,given,when,then,feature}:
+  r447,"compose-default-medium-depth",Lab Compose 以 eden 模式打开且用户未改深度,查看深度控件,默认选中中档,true
+  r447,"compose-create-sends-depth",用户将深度设为深并提交合法 Compose,Eden 创建 ResearchRun,POST body 含 depth=deep,true
+  r447,"compose-depth-aligns-r305",用户选择浅档并成功创建,服务端持久化 Run,Run.maxNodes 与 maxSearches 映射为浅档预算（8/12）,false

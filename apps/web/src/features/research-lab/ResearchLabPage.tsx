@@ -611,6 +611,7 @@ function LabWorkbench({
               useNotebookSources: lab.useNotebookSources,
               allowWeb: lab.allowWeb,
               selectedSourceIds: lab.selectedSourceIds,
+              depth: lab.depth,
             }}
             onChange={(patch) => {
               if (patch.topic !== undefined) lab.setTopicDraft(patch.topic);
@@ -618,6 +619,7 @@ function LabWorkbench({
                 lab.setUseNotebookSources(patch.useNotebookSources);
               }
               if (patch.allowWeb !== undefined) lab.setAllowWeb(patch.allowWeb);
+              if (patch.depth !== undefined) lab.setDepth(patch.depth);
               if (patch.selectedSourceIds !== undefined) {
                 lab.setSelectedSourceIds(patch.selectedSourceIds);
               }
