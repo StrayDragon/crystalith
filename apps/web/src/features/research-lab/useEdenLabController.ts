@@ -24,6 +24,7 @@ import type {
 } from './fake/types';
 import type { LabController } from './fake/useLabController';
 import { deriveLabStateFromRun, researchRunStatusToLabPhase } from './researchGraphAdapter';
+import { refreshResearchTasks } from './researchTasksCache';
 
 const EMPTY_MUTATIONS = {
   prunedNodeIds: [] as string[],
@@ -98,6 +99,7 @@ export function useEdenLabController(
               setRun((prev) => (prev ? { ...prev, status: data.status ?? prev.status } : prev));
               if (data.reason) pushLog(data.reason);
               else if (data.status) pushLog(`状态 → ${data.status}`);
+              refreshResearchTasks(notebookId);
             } else if (ev.event === 'graph_patch') {
               const patch = ev.data as ResearchGraphPatch;
               setRun((prev) => {
@@ -123,6 +125,7 @@ export function useEdenLabController(
                   : prev,
               );
               pushLog(`等待确认：${data.kind ?? 'confirm'}`);
+              refreshResearchTasks(notebookId);
             } else if (ev.event === 'report_ready') {
               pushLog('报告已就绪');
               try {
@@ -131,6 +134,7 @@ export function useEdenLabController(
               } catch {
                 /* ignore refresh errors */
               }
+              refreshResearchTasks(notebookId);
             } else if (ev.event === 'log') {
               const data = ev.data as { message?: string };
               if (data.message) pushLog(data.message);
@@ -204,6 +208,7 @@ export function useEdenLabController(
       try {
         const next = await fn();
         applyRun(mergeRunGraph(run, next), note);
+        refreshResearchTasks(notebookId);
         return next;
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
@@ -214,7 +219,7 @@ export function useEdenLabController(
         setBusy(false);
       }
     },
-    [applyRun, pushLog, run],
+    [applyRun, notebookId, pushLog, run],
   );
 
   const composeAndStart = useCallback(
@@ -232,6 +237,7 @@ export function useEdenLabController(
             sourceIds: useNotebookSources ? selectedSourceIds : undefined,
           });
           applyRun(created, `已创建 Run #${created.id}`);
+          refreshResearchTasks(notebookId);
           setTopicDraft(trimmed);
           startStream(created.id);
           const url = new URL(window.location.href);
