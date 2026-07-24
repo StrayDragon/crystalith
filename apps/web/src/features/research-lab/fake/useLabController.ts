@@ -67,10 +67,18 @@ export interface LabController {
   setMetricsOverride: (m: Partial<LabMetrics> | null) => void;
   topicDraft: string;
   setTopicDraft: (v: string) => void;
+  useNotebookSources: boolean;
+  setUseNotebookSources: (v: boolean) => void;
+  allowWeb: boolean;
+  setAllowWeb: (v: boolean) => void;
+  selectedSourceIds: number[];
+  setSelectedSourceIds: (ids: number[]) => void;
   confirmChoice: string | null;
   setConfirmChoice: (v: string | null) => void;
   mutations: LabGraphMutations;
   reshaping: boolean;
+  /** Idle compose → apply topic to root and start fixture playback. */
+  composeAndStart: (topic: string) => void;
   pruneAlongEdge: (edgeId: string) => void;
   forkAlongEdge: (
     edgeId: string,
@@ -107,7 +115,6 @@ function loadInitial(fallbackScenarioId: string): LabSessionSnapshot {
     forkSeq = Math.max(forkSeq, snap.forkSeq ?? 0);
     return snap;
   }
-  const scenario = getLabScenario(fallbackScenarioId);
   return {
     scenarioId: fallbackScenarioId,
     phase: 'idle',
@@ -119,13 +126,16 @@ function loadInitial(fallbackScenarioId: string): LabSessionSnapshot {
     selectedNodeId: null,
     highlightedNodeIds: [],
     consoleOpen: false,
-    consoleVisible: true,
+    consoleVisible: false,
     forceStatus: null,
     metricsOverride: null,
     confirmChoice: null,
     mutations: EMPTY_MUTATIONS,
-    topicDraft: scenario.topic,
+    topicDraft: '',
     forkSeq: 0,
+    useNotebookSources: false,
+    allowWeb: true,
+    selectedSourceIds: [],
   };
 }
 
@@ -159,7 +169,7 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     setHighlightedNodeIds(highlightIds);
   }, []);
   const [consoleOpen, setConsoleOpen] = useState(initial.consoleOpen);
-  const [consoleVisible, setConsoleVisible] = useState(initial.consoleVisible ?? true);
+  const [consoleVisible, setConsoleVisible] = useState(initial.consoleVisible ?? false);
   const [forceStatus, setForceStatus] = useState<ResearchConclusionStatus | null>(
     initial.forceStatus,
   );
@@ -171,7 +181,12 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
   const [reshaping, setReshaping] = useState(false);
 
   const scenario = useMemo(() => getLabScenario(scenarioId), [scenarioId]);
-  const [topicDraft, setTopicDraft] = useState(initial.topicDraft || scenario.topic);
+  const [topicDraft, setTopicDraft] = useState(initial.topicDraft ?? '');
+  const [useNotebookSources, setUseNotebookSources] = useState(initial.useNotebookSources ?? false);
+  const [allowWeb, setAllowWeb] = useState(initial.allowWeb ?? true);
+  const [selectedSourceIds, setSelectedSourceIds] = useState<number[]>(
+    initial.selectedSourceIds ?? [],
+  );
 
   const buildSnapshot = useCallback((): LabSessionSnapshot => {
     return {
@@ -192,6 +207,9 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
       mutations,
       topicDraft,
       forkSeq,
+      useNotebookSources,
+      allowWeb,
+      selectedSourceIds,
     };
   }, [
     scenarioId,
@@ -209,6 +227,9 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     confirmChoice,
     mutations,
     topicDraft,
+    useNotebookSources,
+    allowWeb,
+    selectedSourceIds,
   ]);
 
   const persistNow = useCallback(() => {
@@ -227,8 +248,7 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
 
   const setScenarioId = useCallback((id: string) => {
     setScenarioIdState(id);
-    const next = getLabScenario(id);
-    setTopicDraft(next.topic);
+    setTopicDraft('');
     setPhase('idle');
     setPlaying(false);
     setSelectedNodeId(null);
@@ -237,6 +257,7 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     setConfirmChoice(null);
     setMutations(EMPTY_MUTATIONS);
     setViewMode('graph');
+    setSelectedSourceIds([]);
     forkSeq = 0;
   }, []);
 
@@ -272,15 +293,39 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     setMetricsOverride(null);
     setConfirmChoice(null);
     setMutations(EMPTY_MUTATIONS);
-    setTopicDraft(scenario.topic);
-  }, [scenario.topic]);
+    setTopicDraft('');
+  }, []);
 
   const startFromIdle = useCallback(() => {
     setForceStatus(null);
     setMetricsOverride(null);
     setConfirmChoice(null);
     setSelectedNodeId(null);
-    setMutations(EMPTY_MUTATIONS);
+    setPhase('decompose');
+    setPlaying(true);
+  }, []);
+
+  const composeAndStart = useCallback((topic: string) => {
+    const trimmed = topic.trim();
+    if (!trimmed) return;
+    // Demo main path: lock fixture to xlsx-lib until Eden create (c82).
+    setScenarioIdState('xlsx-lib');
+    setTopicDraft(trimmed);
+    setForceStatus(null);
+    setMetricsOverride(null);
+    setConfirmChoice(null);
+    setSelectedNodeId(null);
+    setMutations({
+      ...EMPTY_MUTATIONS,
+      nodeEdits: {
+        root: {
+          title: trimmed.slice(0, 48),
+          query: trimmed,
+          conclusion: trimmed,
+        },
+      },
+      activityNotes: [`创建演示任务：${trimmed.slice(0, 64)}${trimmed.length > 64 ? '…' : ''}`],
+    });
     setPhase('decompose');
     setPlaying(true);
   }, []);
@@ -310,11 +355,19 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     setMetricsOverride(null);
     setConfirmChoice(null);
     setSelectedNodeId(null);
-    setMutations(EMPTY_MUTATIONS);
-    setTopicDraft(scenario.topic);
+    setMutations((prev) => {
+      const next: LabGraphMutations = {
+        ...EMPTY_MUTATIONS,
+        activityNotes: ['重试演示回放'],
+      };
+      if (prev.nodeEdits.root) {
+        next.nodeEdits = { root: prev.nodeEdits.root };
+      }
+      return next;
+    });
     setPhase('decompose');
     setPlaying(true);
-  }, [scenario.topic]);
+  }, []);
 
   const restart = useCallback(() => {
     setForceStatus(null);
@@ -322,10 +375,9 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     setConfirmChoice(null);
     setSelectedNodeId(null);
     setMutations(EMPTY_MUTATIONS);
-    setTopicDraft(scenario.topic);
     setPhase('idle');
     setPlaying(false);
-  }, [scenario.topic]);
+  }, []);
 
   const pruneAlongEdge = useCallback(
     (edgeId: string) => {
@@ -498,10 +550,17 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     setMetricsOverride,
     topicDraft,
     setTopicDraft,
+    useNotebookSources,
+    setUseNotebookSources,
+    allowWeb,
+    setAllowWeb,
+    selectedSourceIds,
+    setSelectedSourceIds,
     confirmChoice,
     setConfirmChoice,
     mutations,
     reshaping,
+    composeAndStart,
     pruneAlongEdge,
     forkAlongEdge,
     editNode,

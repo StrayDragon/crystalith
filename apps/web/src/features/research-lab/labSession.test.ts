@@ -31,6 +31,9 @@ describe('labSession', () => {
       },
       topicDraft: 'hello',
       forkSeq: 3,
+      useNotebookSources: true,
+      allowWeb: true,
+      selectedSourceIds: [1, 2],
     };
     persistLabSessionSnapshot(snap);
     const loaded = readLabSessionSnapshot();
@@ -43,5 +46,7 @@ describe('labSession', () => {
     expect(loaded!.edgePathPreset).toBe('bezier');
     expect(loaded!.selectedNodeId).toBe('conclusion');
     expect(loaded!.forkSeq).toBe(3);
+    expect(loaded!.useNotebookSources).toBe(true);
+    expect(loaded!.selectedSourceIds).toEqual([1, 2]);
   });
 });

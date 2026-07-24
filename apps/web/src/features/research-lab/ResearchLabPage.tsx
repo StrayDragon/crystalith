@@ -1,21 +1,8 @@
 /**
- * Research Lab — Deep Research UX surface (fake runtime until Eden wire-up).
+ * Research Lab — Deep Research UX surface (fixture until Eden wire-up).
  *
- * ## Mock vs Real
- * | Lab (this feature)                         | Real (server ResearchRun)                             |
- * | ------------------------------------------ | ----------------------------------------------------- |
- * | `fake/*` scenarios + `deriveLabState`      | ResearchRun graph SSOT + SSE `graph_patch`            |
- * | `useLabController` local mutations         | Eden `POST …/research/:rid/nodes/:id/{prune,fork}`    |
- * | phase playback timer                       | Run status machine + stream events                    |
- * | `proposeNodeChatTurn` / mock enrichment    | node chat / agent turns (shape in `nodeChatTypes`)    |
- * | `labSession` / `labRevisions` sessionStorage | Run report + checkpoints (server)                   |
- * | `/research-lab/:nid` SPA route             | ResearchRun HTTP + future wired Lab UI                |
- *
- * Wiring change: `llmanspec/changes/update-research-prune-cascade`
- * (prune closure B + failed merge retain — Lab mirrors server helper).
- *
- * Keep presentation (LabGraph, report Plate) reusable; swap controller/data
- * ports under `fake/` when connecting Eden.
+ * Demo product path: flask → Compose → fixture playback (xlsx-lib) → report.
+ * Real path (later): Compose → POST ResearchRun → SSE graph_patch.
  */
 import {
   ArrowBack as ArrowBackIcon,
@@ -23,10 +10,18 @@ import {
   Science as ScienceIcon,
   Terminal as TerminalIcon,
 } from '@mui/icons-material';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
 import { TestIds, tid } from '../../shared/testids';
 import { toast } from '../../shared/toast';
+import {
+  createDemoResearchTask,
+  demoStatusFromLabPhase,
+  getActiveDemoResearchTaskId,
+  getDemoTaskSwitchEpoch,
+  subscribeDemoResearchTasks,
+  updateDemoResearchTask,
+} from './demoResearchTasks';
 import { buildSuggestedReportFromNodes } from './fake/buildSuggestedReport';
 import {
   defaultForkDraft,
@@ -47,6 +42,7 @@ import { resolveDefaultExportMarkdown } from './fake/resolveDefaultExportMarkdow
 import { resolveLabPrimaryAction, type LabPrimaryActionKind } from './fake/resolveLabPrimaryAction';
 import type { LabNode } from './fake/types';
 import { useLabController } from './fake/useLabController';
+import LabComposePanel from './LabComposePanel';
 import LabControlConsole from './LabControlConsole';
 import LabGraph from './LabGraph';
 import { LabForkDialog, LabPruneDialog, useDialogEscape } from './LabMutationDialogs';
@@ -59,10 +55,28 @@ import {
   readPersistedLabScenarioId,
 } from './labRouting';
 import { readLabSessionSnapshot } from './labSession';
+import {
+  bindActiveTaskSession,
+  openDemoResearchTask,
+  openNewDemoResearchCompose,
+} from './openDemoResearchTask';
+import ResearchTasksDrawer from './ResearchTasksDrawer';
+import ResearchTasksTrigger from './ResearchTasksTrigger';
 
 export default function ResearchLabPage({ notebookId }: { notebookId: number }) {
-  const lab = useLabController(readPersistedLabScenarioId());
+  const switchEpoch = useSyncExternalStore(
+    subscribeDemoResearchTasks,
+    getDemoTaskSwitchEpoch,
+    () => 0,
+  );
+  return <ResearchLabSession key={`${notebookId}:${switchEpoch}`} notebookId={notebookId} />;
+}
+
+function ResearchLabSession({ notebookId }: { notebookId: number }) {
+  const lab = useLabController(readPersistedLabScenarioId('xlsx-lib'));
   const selected = lab.derived.nodes.find((n) => n.id === lab.selectedNodeId) ?? null;
+  const showCompose = lab.phase === 'idle';
+  const [tasksDrawerOpen, setTasksDrawerOpen] = useState(false);
 
   const [forkEdgeId, setForkEdgeId] = useState<string | null>(null);
   const [forkDraft, setForkDraft] = useState<ForkDraft>({ title: '', query: '', summary: '' });
@@ -71,6 +85,15 @@ export default function ResearchLabPage({ notebookId }: { notebookId: number }) 
   useEffect(() => {
     persistLabScenarioId(lab.scenarioId);
   }, [lab.scenarioId]);
+
+  // Keep demo task status + parked session in sync with Lab phase.
+  useEffect(() => {
+    const taskId = getActiveDemoResearchTaskId();
+    if (!taskId) return;
+    const status = demoStatusFromLabPhase(lab.phase);
+    if (status) updateDemoResearchTask(taskId, { status, scenarioId: lab.scenarioId });
+    bindActiveTaskSession();
+  }, [lab.phase, lab.scenarioId, lab.mutations, lab.topicDraft]);
 
   const questionText =
     lab.derived.nodes.find((n) => n.role === 'question')?.conclusion?.trim() ||
@@ -134,7 +157,7 @@ export default function ResearchLabPage({ notebookId }: { notebookId: number }) 
       return;
     }
     const fromNodes = buildSuggestedReportFromNodes({
-      topic: lab.scenario.topic,
+      topic: lab.topicDraft || lab.scenario.topic,
       nodes: lab.derived.nodes,
       citations: lab.scenario.citations,
       edges: lab.derived.edges,
@@ -211,7 +234,7 @@ export default function ResearchLabPage({ notebookId }: { notebookId: number }) 
   const runPrimary = (kind: LabPrimaryActionKind) => {
     switch (kind) {
       case 'start':
-        lab.startFromIdle();
+        lab.composeAndStart(lab.topicDraft || questionText);
         break;
       case 'pause':
         lab.pause();
@@ -295,23 +318,29 @@ export default function ResearchLabPage({ notebookId }: { notebookId: number }) 
           返回
         </button>
         <div className="flex min-w-0 shrink-0 items-center gap-2">
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-gray-100 bg-blue-50 text-blue-700 shadow-sm">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-blue-700 shadow-sm">
             <ScienceIcon sx={{ fontSize: 16 }} />
           </span>
           <div className="hidden min-w-0 md:block">
-            <div className="truncate text-sm font-semibold text-gray-900">深度研究实验室</div>
+            <div className="truncate text-sm font-semibold text-gray-900">深度研究</div>
             <div className="truncate text-[11px] text-gray-500">
-              #{notebookId} · {lab.scenario.shortLabel}
+              #{notebookId}
+              {showCompose ? ' · 新建任务' : ` · ${lab.scenario.shortLabel}`}
             </div>
           </div>
         </div>
 
-        <LabProgressBar
-          phase={lab.phase}
-          metrics={lab.derived.metrics}
-          activityLog={lab.derived.activityLog}
-        />
+        {!showCompose ? (
+          <LabProgressBar
+            phase={lab.phase}
+            metrics={lab.derived.metrics}
+            activityLog={lab.derived.activityLog}
+          />
+        ) : (
+          <div className="min-w-0 flex-1" />
+        )}
 
+        {/* Right cluster (shrink-0): progress flex-1 fills leftover; new buttons stay adaptive */}
         <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
@@ -320,7 +349,7 @@ export default function ResearchLabPage({ notebookId }: { notebookId: number }) 
                 ? lab.consoleOpen
                   ? '收起试验控制台'
                   : '展开试验控制台'
-                : '显示试验控制台'
+                : '显示试验控制台（高级）'
             }
             onClick={() => {
               if (!lab.consoleVisible) {
@@ -360,7 +389,7 @@ export default function ResearchLabPage({ notebookId }: { notebookId: number }) 
             </div>
           ) : null}
 
-          {primary.secondary ? (
+          {!showCompose && primary.secondary ? (
             <button
               type="button"
               disabled={primary.secondary.disabled}
@@ -371,16 +400,20 @@ export default function ResearchLabPage({ notebookId }: { notebookId: number }) 
               {primary.secondary.label}
             </button>
           ) : null}
-          <button
-            type="button"
-            disabled={primary.disabled}
-            title={primary.title}
-            onClick={() => runPrimary(primary.kind)}
-            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:pointer-events-none disabled:opacity-40"
-            {...tid(TestIds.researchLabStart)}
-          >
-            {lab.reshaping ? '重塑中…' : primary.label}
-          </button>
+          {!showCompose ? (
+            <button
+              type="button"
+              disabled={primary.disabled}
+              title={primary.title}
+              onClick={() => runPrimary(primary.kind)}
+              className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:pointer-events-none disabled:opacity-40"
+              {...tid(TestIds.researchLabStart)}
+            >
+              {lab.reshaping ? '重塑中…' : primary.label}
+            </button>
+          ) : null}
+
+          <ResearchTasksTrigger notebookId={notebookId} onOpen={() => setTasksDrawerOpen(true)} />
         </div>
       </header>
 
@@ -403,50 +436,91 @@ export default function ResearchLabPage({ notebookId }: { notebookId: number }) 
           className="h-full w-full"
         />
 
-        {lab.reshaping ? (
+        {showCompose ? (
+          <LabComposePanel
+            notebookId={notebookId}
+            exampleTopic={lab.scenario.topic}
+            draft={{
+              topic: lab.topicDraft,
+              useNotebookSources: lab.useNotebookSources,
+              allowWeb: lab.allowWeb,
+              selectedSourceIds: lab.selectedSourceIds,
+            }}
+            onChange={(patch) => {
+              if (patch.topic !== undefined) lab.setTopicDraft(patch.topic);
+              if (patch.useNotebookSources !== undefined) {
+                lab.setUseNotebookSources(patch.useNotebookSources);
+              }
+              if (patch.allowWeb !== undefined) lab.setAllowWeb(patch.allowWeb);
+              if (patch.selectedSourceIds !== undefined) {
+                lab.setSelectedSourceIds(patch.selectedSourceIds);
+              }
+            }}
+            onSubmit={() => {
+              const topic = lab.topicDraft.trim();
+              if (!topic) return;
+              createDemoResearchTask({
+                notebookId,
+                topic,
+                scenarioId: 'xlsx-lib',
+                status: 'running',
+              });
+              lab.composeAndStart(topic);
+              bindActiveTaskSession();
+              toast.info('演示任务已加入头像旁任务列表', 3200);
+            }}
+          />
+        ) : null}
+
+        {!showCompose && lab.reshaping ? (
           <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-[11px] font-medium text-amber-900 shadow-md backdrop-blur">
             流程重塑中 · 重算布局
           </div>
-        ) : !lab.playing &&
-          lab.phase !== 'idle' &&
-          lab.phase !== 'completed' &&
-          lab.phase !== 'failed' ? (
+        ) : null}
+        {!showCompose &&
+        !lab.reshaping &&
+        !lab.playing &&
+        lab.phase !== 'completed' &&
+        lab.phase !== 'failed' ? (
           <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-full border border-blue-200 bg-blue-50/95 px-3 py-1.5 text-[11px] font-medium text-blue-900 shadow-md backdrop-blur">
             {lab.phase === 'awaiting_confirm'
               ? '等待确认 · 可拖动节点 / 分叉剪枝，或点顶栏收束'
               : '已暂停 · 可拖动节点 / 分叉剪枝，再点顶栏继续'}
           </div>
-        ) : (
+        ) : null}
+        {!showCompose && lab.playing ? (
           <div className="pointer-events-none absolute left-3 top-3 z-10 max-w-[240px] rounded-lg border border-gray-200 bg-white/90 px-2.5 py-1.5 text-[10px] text-gray-500 shadow-sm">
             点节点打开会话 · 边上分叉/剪枝 · 左下角画布设置
           </div>
-        )}
+        ) : null}
 
-        <LabNodeDrawer
-          overlay
-          node={selected}
-          phase={lab.phase}
-          citations={lab.scenario.citations}
-          reportAvailable={selected?.role === 'conclusion' && lab.derived.reportVisible}
-          onOpenReport={openReport}
-          constraintsNote={selected?.role === 'question' ? lab.scenario.constraintsNote : null}
-          onClose={() => lab.setSelectedNodeId(null)}
-          onConfirmFinish={() => {
-            lab.finishReport();
-            lab.setConfirmChoice('finish_report');
-          }}
-          onConfirmContinue={() => {
-            lab.continueDig();
-            lab.setConfirmChoice('continue_dig');
-          }}
-          onAcceptAction={acceptNodeChatAction}
-          onEdit={(id, patch) => {
-            lab.editNode(id, patch);
-            if (id === 'root' && patch.conclusion) {
-              lab.setTopicDraft(patch.conclusion);
-            }
-          }}
-        />
+        {!showCompose ? (
+          <LabNodeDrawer
+            overlay
+            node={selected}
+            phase={lab.phase}
+            citations={lab.scenario.citations}
+            reportAvailable={selected?.role === 'conclusion' && lab.derived.reportVisible}
+            onOpenReport={openReport}
+            constraintsNote={selected?.role === 'question' ? lab.scenario.constraintsNote : null}
+            onClose={() => lab.setSelectedNodeId(null)}
+            onConfirmFinish={() => {
+              lab.finishReport();
+              lab.setConfirmChoice('finish_report');
+            }}
+            onConfirmContinue={() => {
+              lab.continueDig();
+              lab.setConfirmChoice('continue_dig');
+            }}
+            onAcceptAction={acceptNodeChatAction}
+            onEdit={(id, patch) => {
+              lab.editNode(id, patch);
+              if (id === 'root' && patch.conclusion) {
+                lab.setTopicDraft(patch.conclusion);
+              }
+            }}
+          />
+        ) : null}
       </div>
 
       {lab.consoleVisible ? <LabControlConsole lab={lab} /> : null}
@@ -472,6 +546,20 @@ export default function ResearchLabPage({ notebookId }: { notebookId: number }) 
           if (!prunePreview) return;
           lab.pruneAlongEdge(prunePreview.edgeId);
           setPrunePreview(null);
+        }}
+      />
+
+      <ResearchTasksDrawer
+        open={tasksDrawerOpen}
+        onClose={() => setTasksDrawerOpen(false)}
+        notebookId={notebookId}
+        onSelectTask={(task) => {
+          setTasksDrawerOpen(false);
+          openDemoResearchTask(task);
+        }}
+        onCreateNew={() => {
+          setTasksDrawerOpen(false);
+          openNewDemoResearchCompose(notebookId);
         }}
       />
     </div>

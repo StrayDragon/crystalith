@@ -14,7 +14,7 @@ const base = {
 describe('resolveLabPrimaryAction', () => {
   it('idle with topic → start', () => {
     const a = resolveLabPrimaryAction({ ...base, phase: 'idle' });
-    expect(a).toMatchObject({ kind: 'start', label: '开始研究', disabled: false });
+    expect(a).toMatchObject({ kind: 'start', label: '开始深度研究', disabled: false });
   });
 
   it('idle without topic → start disabled', () => {

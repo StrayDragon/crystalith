@@ -150,11 +150,14 @@ test.describe('@p0 workspace smoke', () => {
     await expect(page.getByTestId('deep-research-desk')).toHaveCount(0);
   });
 
-  test('S06b: Lab flask entry remains reachable', async ({ page }) => {
+  test('S06b: Lab flask entry opens compose', async ({ page }) => {
     await expect(page.getByTestId(TestIds.researchLabEntry)).toBeVisible();
     await page.getByTestId(TestIds.researchLabEntry).click();
     await expect(page.getByTestId(TestIds.researchLabPage)).toBeVisible();
     await expect(page).toHaveURL(/\/research-lab\//);
+    await expect(page.getByTestId(TestIds.researchLabCompose)).toBeVisible();
+    await expect(page.getByTestId(TestIds.researchLabComposeTopic)).toBeVisible();
+    await expect(page.getByTestId(TestIds.researchLabComposeSubmit)).toBeVisible();
   });
 
   test('S07: sort menu opens', async ({ page }) => {

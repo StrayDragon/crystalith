@@ -266,6 +266,9 @@ export default function LabReportPage({ notebookId }: { notebookId: number }) {
       mutations: rev.graph.mutations,
       topicDraft: rev.graph.topicDraft,
       forkSeq: rev.graph.forkSeq,
+      useNotebookSources: session?.useNotebookSources ?? false,
+      allowWeb: session?.allowWeb ?? true,
+      selectedSourceIds: session?.selectedSourceIds ?? [],
     };
     persistLabSessionSnapshot(next);
     toast.success(`已套用「${rev.label}」的思考图`, 2600);
@@ -308,6 +311,9 @@ export default function LabReportPage({ notebookId }: { notebookId: number }) {
       mutations: rev.graph.mutations,
       topicDraft: rev.graph.topicDraft,
       forkSeq: rev.graph.forkSeq,
+      useNotebookSources: session?.useNotebookSources ?? false,
+      allowWeb: session?.allowWeb ?? true,
+      selectedSourceIds: session?.selectedSourceIds ?? [],
     });
     const citeLabel = scenario.citations[citationId]?.title ?? citationId;
     toast.success(
@@ -354,6 +360,9 @@ export default function LabReportPage({ notebookId }: { notebookId: number }) {
       mutations: rev.graph.mutations,
       topicDraft: rev.graph.topicDraft,
       forkSeq: rev.graph.forkSeq,
+      useNotebookSources: session?.useNotebookSources ?? false,
+      allowWeb: session?.allowWeb ?? true,
+      selectedSourceIds: session?.selectedSourceIds ?? [],
     });
     toast.success(`已定位到节点「${node.title}」`, 3200);
     navigateToResearchLab(notebookId);

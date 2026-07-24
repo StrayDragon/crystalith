@@ -53,9 +53,9 @@ export function resolveLabPrimaryAction(input: LabPrimaryActionInput): LabPrimar
   if (phase === 'idle') {
     return disableForReshape({
       kind: 'start',
-      label: '开始研究',
+      label: '开始深度研究',
       disabled: !hasTopic,
-      title: hasTopic ? undefined : '请先在提问节点填写问题',
+      title: hasTopic ? undefined : '请先填写研究主题',
     });
   }
 
@@ -117,7 +117,7 @@ export function resolveLabPrimaryAction(input: LabPrimaryActionInput): LabPrimar
   // Fallback (should not hit)
   return disableForReshape({
     kind: 'start',
-    label: '开始研究',
+    label: '开始深度研究',
     disabled: !hasTopic,
   });
 }
