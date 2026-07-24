@@ -1,16 +1,16 @@
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 
 import { TestIds, tid } from '../../shared/testids';
-import { useDemoResearchTasks } from './useDemoResearchTasks';
+import { useResearchTasks } from './useResearchTasks';
 
 export interface ResearchTasksTriggerProps {
   notebookId: number | null;
   onOpen: () => void;
 }
 
-/** Avatar-adjacent task inbox trigger with active badge. */
+/** Avatar-adjacent / Lab top-right task inbox trigger with active badge. */
 export default function ResearchTasksTrigger({ notebookId, onOpen }: ResearchTasksTriggerProps) {
-  const { activeCount } = useDemoResearchTasks(notebookId);
+  const { activeCount } = useResearchTasks(notebookId);
 
   return (
     <button

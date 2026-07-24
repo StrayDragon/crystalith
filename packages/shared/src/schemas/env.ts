@@ -82,6 +82,7 @@ export const BuildRunEnvSchema = z
       .string()
       .default('http://127.0.0.1:8032')
       .describe(desc('env.VITE_API_PROXY_TARGET')),
+    VITE_LAB_FIXTURE: z.string().default('').describe(desc('env.VITE_LAB_FIXTURE')),
   })
   .openapi({
     description: desc('env.build_run', '构建/运行环境变量（→ .env）'),
