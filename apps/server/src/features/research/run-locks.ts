@@ -1,14 +1,82 @@
 /**
  * Per-ResearchRun mutual exclusion (c106).
- * - LLM lock: at most one in-flight model call per runId
+ * - LLM lock: at most one in-flight **model** step per runId; tool IO MAY
+ *   release via `withRunLlmLockReleased` so parallel work-units overlap search.
  * - Write lock: serialize persistGraph / evidence / writeBack critical sections
  * Different runs never share these locks.
  */
+import { AsyncLocalStorage } from 'node:async_hooks';
 
 type AsyncFn<T> = () => T | Promise<T>;
 
-const llmTails = new Map<number, Promise<unknown>>();
+type MutexState = {
+  locked: boolean;
+  waiters: Array<() => void>;
+};
+
+const llmMutex = new Map<number, MutexState>();
 const writeTails = new Map<number, Promise<unknown>>();
+
+const llmAls = new AsyncLocalStorage<{ runId: number; released: boolean }>();
+
+function getMutex(map: Map<number, MutexState>, runId: number): MutexState {
+  let state = map.get(runId);
+  if (!state) {
+    state = { locked: false, waiters: [] };
+    map.set(runId, state);
+  }
+  return state;
+}
+
+export async function acquireRunLlmLock(runId: number): Promise<void> {
+  const state = getMutex(llmMutex, runId);
+  if (!state.locked) {
+    state.locked = true;
+    return;
+  }
+  await new Promise<void>((resolve) => {
+    state.waiters.push(resolve);
+  });
+}
+
+export function releaseRunLlmLock(runId: number): void {
+  const state = llmMutex.get(runId);
+  if (!state) return;
+  const next = state.waiters.shift();
+  if (next) {
+    // Transfer hold to the next waiter (stay locked).
+    next();
+  } else {
+    state.locked = false;
+  }
+}
+
+/** Serialize LLM model steps for one ResearchRun (different runs may overlap). */
+export async function withRunLlmLock<T>(runId: number, fn: AsyncFn<T>): Promise<T> {
+  await acquireRunLlmLock(runId);
+  try {
+    return await llmAls.run({ runId, released: false }, fn);
+  } finally {
+    releaseRunLlmLock(runId);
+  }
+}
+
+/**
+ * Temporarily release the current Run's LLM lock (e.g. during tool IO).
+ * No-op when not inside `withRunLlmLock` or already released. Re-acquires before returning.
+ */
+export async function withRunLlmLockReleased<T>(fn: AsyncFn<T>): Promise<T> {
+  const ctx = llmAls.getStore();
+  if (!ctx || ctx.released) return await fn();
+  ctx.released = true;
+  releaseRunLlmLock(ctx.runId);
+  try {
+    return await fn();
+  } finally {
+    await acquireRunLlmLock(ctx.runId);
+    ctx.released = false;
+  }
+}
 
 function withRunQueue<T>(
   tails: Map<number, Promise<unknown>>,
@@ -20,7 +88,6 @@ function withRunQueue<T>(
     () => fn(),
     () => fn(),
   );
-  // Keep the chain alive for waiters; swallow so one failure does not poison the queue.
   tails.set(
     runId,
     run.then(
@@ -31,11 +98,6 @@ function withRunQueue<T>(
   return run;
 }
 
-/** Serialize LLM work for one ResearchRun (different runs may overlap). */
-export function withRunLlmLock<T>(runId: number, fn: AsyncFn<T>): Promise<T> {
-  return withRunQueue(llmTails, runId, fn);
-}
-
 /** Serialize graph/evidence write-backs for one ResearchRun. */
 export function withRunWriteLock<T>(runId: number, fn: AsyncFn<T>): Promise<T> {
   return withRunQueue(writeTails, runId, fn);
@@ -44,10 +106,10 @@ export function withRunWriteLock<T>(runId: number, fn: AsyncFn<T>): Promise<T> {
 /** Test / teardown helper — drop idle queue tails. */
 export function clearRunLocks(runId?: number): void {
   if (runId === undefined) {
-    llmTails.clear();
+    llmMutex.clear();
     writeTails.clear();
     return;
   }
-  llmTails.delete(runId);
+  llmMutex.delete(runId);
   writeTails.delete(runId);
 }

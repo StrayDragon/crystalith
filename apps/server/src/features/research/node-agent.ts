@@ -20,7 +20,18 @@ import { webSearchTool } from '../../ai/tools/web-search.ts';
 import { db } from '../../db/index.ts';
 import { embedSingle } from '../../rag/embedder.ts';
 import { getDefaultChatModel, getSearxngHost } from '../../shared/config.ts';
+import { withRunLlmLockReleased } from './run-locks.ts';
 
+/** Release per-run LLM lock while tool IO runs so parallel work-units can overlap search. */
+function wrapToolIoOutsideLlmLock<T extends { execute?: (...args: never[]) => unknown }>(t: T): T {
+  const execute = t.execute;
+  if (typeof execute !== 'function') return t;
+  return {
+    ...t,
+    execute: async (...args: never[]) =>
+      withRunLlmLockReleased(() => execute(...args) as ReturnType<typeof execute>),
+  };
+}
 export type ResearchAgentMode = 'work_unit' | 'node_chat';
 
 export const ResearchNodeAgentCallOptionsSchema = z.object({
@@ -162,9 +173,11 @@ function structureTools() {
 function workTools(opts: { notebookId: number; allowWeb: boolean; useNotebookSources: boolean }) {
   return {
     webSearch: opts.allowWeb
-      ? webSearchTool({ host: getSearxngHost() || '' })
-      : webSearchTool({ host: '' }),
-    retrieveSources: retrieveSourcesTool(db(), opts.notebookId, embedSingle),
+      ? wrapToolIoOutsideLlmLock(webSearchTool({ host: getSearxngHost() || '' }))
+      : wrapToolIoOutsideLlmLock(webSearchTool({ host: '' })),
+    retrieveSources: wrapToolIoOutsideLlmLock(
+      retrieveSourcesTool(db(), opts.notebookId, embedSingle),
+    ),
   };
 }
 
