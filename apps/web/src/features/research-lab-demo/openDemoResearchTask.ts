@@ -9,7 +9,7 @@ import {
   bumpDemoTaskSwitchEpoch,
   type DemoResearchTask,
 } from './demoResearchTasks';
-import { navigateToResearchLab } from './labRouting';
+import { navigateToDemoResearchLab } from './demoRouting';
 import {
   persistLabSessionSnapshot,
   readLabSessionSnapshot,
@@ -82,8 +82,7 @@ export function openDemoResearchTask(task: DemoResearchTask): void {
   setActiveDemoResearchTaskId(task.id);
   restoreTaskSession(task);
   bumpDemoTaskSwitchEpoch();
-  navigateToResearchLab(task.notebookId);
-  window.dispatchEvent(new PopStateEvent('popstate'));
+  navigateToDemoResearchLab(task.notebookId);
 }
 
 /** Open Lab compose for a new demo task (does not create a run until submit). */
@@ -119,8 +118,7 @@ export function openNewDemoResearchCompose(notebookId: number): void {
     selectedSourceIds: [],
   });
   bumpDemoTaskSwitchEpoch();
-  navigateToResearchLab(notebookId);
-  window.dispatchEvent(new PopStateEvent('popstate'));
+  navigateToDemoResearchLab(notebookId);
 }
 
 /** After compose creates a run — park current main session under the new task id. */

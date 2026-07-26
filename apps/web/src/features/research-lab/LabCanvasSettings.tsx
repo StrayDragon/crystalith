@@ -15,7 +15,7 @@ import {
   type LabEdgePathPreset,
   type LabLayoutAlgorithm,
   type LabLayoutDirection,
-} from './fake/types';
+} from '../research-lab-demo/fake/types';
 
 /**
  * Canvas settings chip — rendered beside xyflow Controls (same Panel row).

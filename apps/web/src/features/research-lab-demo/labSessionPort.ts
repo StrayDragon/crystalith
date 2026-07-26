@@ -1,6 +1,6 @@
 /**
- * Lab session port — fixture-only (`VITE_LAB_FIXTURE=1`).
- * Default Lab path uses Eden ResearchRun; UI should prefer this facade over scattering demo store calls.
+ * Lab session port — Demo Lab only (`/demo/research-lab`, DEV || VITE_LAB_DEMO=1).
+ * Product `/research-lab` uses Eden ResearchRun; MUST NOT use this port.
  */
 import {
   createDemoResearchTask,
@@ -14,7 +14,7 @@ export const LAB_DEFAULT_FIXTURE_SCENARIO_ID = 'xlsx-lib' as const;
 
 export interface LabSessionPort {
   readonly kind: 'fixture';
-  /** Product-path fixture id (MUST stay xlsx-lib on c80 main path). */
+  /** Demo-path fixture scenario id (xlsx-lib walkthrough). */
   readonly defaultScenarioId: typeof LAB_DEFAULT_FIXTURE_SCENARIO_ID;
   listTasks(notebookId?: number | null): DemoResearchTask[];
   createTask(input: {

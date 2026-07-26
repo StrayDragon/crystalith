@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
+import { nodeProgress } from '../research-lab-demo/fake/labLayout';
+import { resolveLabPrimaryAction } from '../research-lab-demo/fake/resolveLabPrimaryAction';
+import type { LabNode } from '../research-lab-demo/fake/types';
 import {
   buildEdenCitationsMap,
   evidenceToLabCitation,
   resolveNodeCitations,
   unknownEvidenceCitation,
 } from './evidenceAdapter';
-import { nodeProgress } from './fake/labLayout';
-import { resolveLabPrimaryAction } from './fake/resolveLabPrimaryAction';
-import type { LabNode } from './fake/types';
 import {
   labPausedBannerText,
   shouldShowLabPausedBanner,

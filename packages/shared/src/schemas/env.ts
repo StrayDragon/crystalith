@@ -82,6 +82,8 @@ export const BuildRunEnvSchema = z
       .string()
       .default('http://127.0.0.1:8032')
       .describe(desc('env.VITE_API_PROXY_TARGET')),
+    VITE_LAB_DEMO: z.string().default('').describe(desc('env.VITE_LAB_DEMO')),
+    /** @deprecated Ignored for product `/research-lab`; use `/demo/research-lab` + VITE_LAB_DEMO. */
     VITE_LAB_FIXTURE: z.string().default('').describe(desc('env.VITE_LAB_FIXTURE')),
   })
   .openapi({

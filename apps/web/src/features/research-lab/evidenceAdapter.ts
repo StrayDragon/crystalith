@@ -1,6 +1,6 @@
 import type { ResearchCitation, ResearchEvidence, ResearchReport } from '@crystalith/shared';
 
-import type { LabCitation } from './fake/types';
+import type { LabCitation } from '../research-lab-demo/fake/types';
 
 /** Map ResearchEvidence → Lab drawer citation (r434). */
 export function evidenceToLabCitation(ev: ResearchEvidence): LabCitation {

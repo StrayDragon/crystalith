@@ -1,112 +1,127 @@
 /**
- * Research Lab — deep-research workbench (Eden ResearchRun + SSE only).
+ * Demo Research Lab — xlsx-lib fixture playback under `/demo/research-lab/:nid`.
+ * Product Eden Lab lives at `/research-lab/:nid` (c103).
  */
 import {
   ArrowBack as ArrowBackIcon,
   MoreHoriz as MoreHorizIcon,
   Science as ScienceIcon,
+  Terminal as TerminalIcon,
 } from '@mui/icons-material';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
 import { TestIds, tid } from '../../shared/testids';
 import { toast } from '../../shared/toast';
+import { acceptNodeChatAction as applyNodeChatAction } from '../research-lab/acceptNodeChatAction';
+import {
+  labPausedBannerText,
+  shouldShowLabPausedBanner,
+  shouldShowLabPlayingTip,
+} from '../research-lab/labBannerState';
+import LabComposePanel from '../research-lab/LabComposePanel';
+import LabGraph from '../research-lab/LabGraph';
+import { LabForkDialog, LabPruneDialog, useDialogEscape } from '../research-lab/LabMutationDialogs';
+import LabNodeDrawer from '../research-lab/LabNodeDrawer';
+import LabProgressBar from '../research-lab/LabProgressBar';
+import { navigateToWorkspace } from '../research-lab/labRouting';
+import ResearchTasksDrawer from '../research-lab/ResearchTasksDrawer';
+import ResearchTasksTrigger from '../research-lab/ResearchTasksTrigger';
+import type { ResearchTaskListItem } from '../research-lab/researchTaskTypes';
+import {
+  demoStatusFromLabPhase,
+  getActiveDemoResearchTaskId,
+  getDemoTaskSwitchEpoch,
+  listDemoResearchTasks,
+  subscribeDemoResearchTasks,
+  updateDemoResearchTask,
+} from './demoResearchTasks';
+import {
+  navigateToDemoLabReport,
+  persistLabScenarioId,
+  readLabSessionSnapshot,
+  readPersistedLabScenarioId,
+} from './demoRouting';
+import { buildSuggestedReportFromNodes } from './fake/buildSuggestedReport';
 import {
   defaultForkDraft,
   findForkContext,
   previewPruneAlongEdge,
   type ForkDraft,
   type PrunePreview,
-} from '../research-lab-demo/fake/graphMutations';
-import type { LabNodeActionProposal } from '../research-lab-demo/fake/nodeChatTypes';
+} from './fake/graphMutations';
 import {
-  applyEdenPrimaryActionOverlay,
-  resolveLabPrimaryAction,
-  type LabPrimaryActionKind,
-} from '../research-lab-demo/fake/resolveLabPrimaryAction';
-import type { LabNode } from '../research-lab-demo/fake/types';
-import { acceptNodeChatAction as applyNodeChatAction } from './acceptNodeChatAction';
-import { cancelActiveEdenRun } from './edenCancelFlow';
-import {
-  downloadResearchReportMarkdown,
-  resolveEdenExportFromReport,
-  resolveEdenOpenReport,
-} from './edenReportActions';
-import { getResearchRun } from './edenResearchApi';
-import {
-  labPausedBannerText,
-  shouldShowLabPausedBanner,
-  shouldShowLabPlayingTip,
-} from './labBannerState';
-import { LabChatModelSelect } from './LabChatModelSelect';
-import LabComposePanel, { EDEN_EXAMPLE_TOPIC } from './LabComposePanel';
-import LabGraph from './LabGraph';
-import { LabForkDialog, LabPruneDialog, useDialogEscape } from './LabMutationDialogs';
-import LabNodeDrawer from './LabNodeDrawer';
-import LabProgressBar from './LabProgressBar';
-import { navigateToLabReport, navigateToWorkspace } from './labRouting';
-import ResearchTasksDrawer from './ResearchTasksDrawer';
-import ResearchTasksTrigger from './ResearchTasksTrigger';
-import { isActiveResearchStatus, type ResearchTaskListItem } from './researchTaskTypes';
-import { isSynthesizeFailureReason } from './synthesizeFailure';
-import {
-  navigateLabWithRun,
-  readActiveRunIdFromUrl,
-  useEdenLabController,
-  type EdenLabController,
-} from './useEdenLabController';
+  ensureDefaultRevision,
+  graphSliceFromSession,
+  updateDefaultRevision,
+} from './fake/labRevisions';
+import type { LabNodeActionProposal } from './fake/nodeChatTypes';
+import { resolveDefaultExportMarkdown } from './fake/resolveDefaultExportMarkdown';
+import { resolveLabPrimaryAction, type LabPrimaryActionKind } from './fake/resolveLabPrimaryAction';
+import type { LabNode } from './fake/types';
+import type { LabController } from './fake/useLabController';
+import { useLabController } from './fake/useLabController';
+import LabControlConsole from './LabControlConsole';
+import { fixtureLabSessionPort } from './labSessionPort';
+import { bindActiveTaskSession } from './openDemoResearchTask';
+import { useDemoResearchTasks } from './useDemoResearchTasks';
 
-export default function ResearchLabPage({ notebookId }: { notebookId: number }) {
-  const [runId, setRunId] = useState(() => readActiveRunIdFromUrl());
-
-  useEffect(() => {
-    const sync = () => setRunId(readActiveRunIdFromUrl());
-    window.addEventListener('popstate', sync);
-    return () => window.removeEventListener('popstate', sync);
-  }, []);
-
-  return <EdenResearchLabSession notebookId={notebookId} runId={runId} />;
+export default function DemoResearchLabPage({ notebookId }: { notebookId: number }) {
+  const switchEpoch = useSyncExternalStore(
+    subscribeDemoResearchTasks,
+    getDemoTaskSwitchEpoch,
+    () => 0,
+  );
+  return <DemoResearchLabSession key={`${notebookId}:${switchEpoch}`} notebookId={notebookId} />;
 }
 
-function EdenResearchLabSession({
-  notebookId,
-  runId,
-}: {
-  notebookId: number;
-  runId: number | null;
-}) {
-  const lab = useEdenLabController(notebookId, runId);
+function DemoResearchLabSession({ notebookId }: { notebookId: number }) {
+  const lab = useLabController(readPersistedLabScenarioId('xlsx-lib'));
 
-  const sessionLabel =
-    lab.phase === 'idle'
-      ? '新建任务'
-      : runId
-        ? `Run #${runId}`
-        : lab.topicDraft.trim() || lab.scenario.topic;
+  useEffect(() => {
+    persistLabScenarioId(lab.scenarioId);
+  }, [lab.scenarioId]);
+
+  useEffect(() => {
+    const taskId = getActiveDemoResearchTaskId();
+    if (!taskId) return;
+    const status = demoStatusFromLabPhase(lab.phase);
+    if (status) updateDemoResearchTask(taskId, { status, scenarioId: lab.scenarioId });
+    bindActiveTaskSession();
+  }, [lab.phase, lab.scenarioId, lab.mutations, lab.topicDraft]);
+
+  const sessionLabel = lab.phase === 'idle' ? '新建任务' : lab.scenario.shortLabel;
 
   return (
     <LabWorkbench
       notebookId={notebookId}
       lab={lab}
       sessionLabel={sessionLabel}
-      lastError={lab.lastError}
-      onComposeSubmit={(topic) => lab.composeAndStart(topic)}
+      showConsole
+      onComposeSubmit={(topic) => {
+        fixtureLabSessionPort.createTask({
+          notebookId,
+          topic,
+          scenarioId: fixtureLabSessionPort.defaultScenarioId,
+          status: 'running',
+        });
+        lab.composeAndStart(topic);
+        bindActiveTaskSession();
+        toast.info('演示任务已加入头像旁任务列表', 3200);
+      }}
       onSelectTask={(task) => {
-        const rid = Number(task.id);
-        if (Number.isFinite(rid) && rid > 0) navigateLabWithRun(notebookId, rid);
+        const demo = listDemoResearchTasks().find((t) => t.id === task.id);
+        if (demo) fixtureLabSessionPort.openTask(demo);
       }}
-      onCreateNew={() => {
-        lab.restart();
-        navigateLabWithRun(notebookId, null);
-      }}
+      onCreateNew={() => fixtureLabSessionPort.openCompose(notebookId)}
     />
   );
 }
 
 type LabWorkbenchProps = {
   notebookId: number;
-  lab: EdenLabController;
+  lab: LabController;
   sessionLabel: string;
-  lastError?: string;
+  showConsole: boolean;
   onComposeSubmit: (topic: string) => void;
   onSelectTask: (task: ResearchTaskListItem) => void;
   onCreateNew: () => void;
@@ -116,30 +131,28 @@ function LabWorkbench({
   notebookId,
   lab,
   sessionLabel,
-  lastError,
+  showConsole,
   onComposeSubmit,
   onSelectTask,
   onCreateNew,
 }: LabWorkbenchProps) {
   const selected = lab.derived.nodes.find((n) => n.id === lab.selectedNodeId) ?? null;
-  // Avoid Compose flash while Eden loads `?rid=` (phase is idle until GET returns).
-  const urlRid = readActiveRunIdFromUrl();
-  const loadingExistingRun = Boolean(urlRid && lab.phase === 'idle');
-  const showCompose = lab.phase === 'idle' && !loadingExistingRun;
+  const showCompose = lab.phase === 'idle';
+  const demoTasks = useDemoResearchTasks(notebookId);
   const [tasksDrawerOpen, setTasksDrawerOpen] = useState(false);
 
   const [forkEdgeId, setForkEdgeId] = useState<string | null>(null);
   const [forkDraft, setForkDraft] = useState<ForkDraft>({ title: '', query: '', summary: '' });
   const [prunePreview, setPrunePreview] = useState<PrunePreview | null>(null);
 
-  const drawerCitations = lab.citations;
+  const drawerCitations = lab.scenario.citations;
 
   const questionText =
     lab.derived.nodes.find((n) => n.role === 'question')?.conclusion?.trim() ||
     lab.topicDraft.trim();
 
   const primary = useMemo(() => {
-    const base = resolveLabPrimaryAction({
+    return resolveLabPrimaryAction({
       phase: lab.phase,
       playing: lab.playing,
       reshaping: lab.reshaping,
@@ -149,7 +162,6 @@ function LabWorkbench({
       selectedRole: selected?.role ?? null,
       confirmKind: lab.confirmKind,
     });
-    return applyEdenPrimaryActionOverlay(base);
   }, [
     lab.phase,
     lab.playing,
@@ -162,36 +174,54 @@ function LabWorkbench({
   ]);
 
   const openReport = useCallback(() => {
-    const resolved = resolveEdenOpenReport(notebookId, readActiveRunIdFromUrl());
-    if (!resolved.ok) {
-      toast.error(resolved.error);
-      return;
-    }
-    navigateToLabReport(resolved.notebookId, resolved.runId);
-  }, [notebookId]);
+    lab.persistNow();
+    persistLabScenarioId(lab.scenarioId);
+    const session = readLabSessionSnapshot();
+    const graph = session
+      ? graphSliceFromSession(session)
+      : {
+          phase: lab.phase,
+          mutations: lab.mutations,
+          topicDraft: lab.topicDraft,
+          forkSeq: 0,
+          forceStatus: lab.forceStatus,
+        };
+    const markdown = resolveDefaultExportMarkdown({
+      scenario: lab.scenario,
+      nodes: lab.derived.nodes,
+      mutations: lab.mutations,
+      edges: lab.derived.edges,
+    });
+    ensureDefaultRevision({
+      notebookId,
+      scenarioId: lab.scenarioId,
+      reportMarkdown: markdown,
+      graph,
+    });
+    navigateToDemoLabReport(notebookId);
+  }, [lab, notebookId]);
 
   const exportSuggestedFromGraph = useCallback(() => {
-    const rid = readActiveRunIdFromUrl();
-    if (rid === null) {
-      toast.error('缺少有效的 ResearchRun id，无法导出');
+    lab.persistNow();
+    const session = readLabSessionSnapshot();
+    if (!session) {
+      toast.error('无法读取当前图谱会话');
       return;
     }
-    void (async () => {
-      try {
-        const run = await getResearchRun(notebookId, rid);
-        const resolved = resolveEdenExportFromReport(run.report);
-        if (!resolved.ok) {
-          toast.error(resolved.error);
-          return;
-        }
-        downloadResearchReportMarkdown(resolved.markdown, resolved.title);
-        toast.success('已导出研究报告 Markdown', 2800);
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        toast.error(msg);
-      }
-    })();
-  }, [notebookId]);
+    const fromNodes = buildSuggestedReportFromNodes({
+      topic: lab.topicDraft || lab.scenario.topic,
+      nodes: lab.derived.nodes,
+      citations: lab.scenario.citations,
+      edges: lab.derived.edges,
+    });
+    updateDefaultRevision({
+      notebookId,
+      scenarioId: lab.scenarioId,
+      reportMarkdown: fromNodes,
+      graph: graphSliceFromSession(session),
+    });
+    toast.success('已从当前思考图导出默认建议报告', 2800);
+  }, [lab, notebookId]);
 
   const acceptNodeChatAction = useCallback(
     (proposal: LabNodeActionProposal, node: LabNode): boolean => {
@@ -200,7 +230,7 @@ function LabWorkbench({
         node,
         edges: lab.derived.edges,
         nodes: lab.derived.nodes,
-        mode: 'eden',
+        mode: 'fixture',
         lab,
         openReport,
         onStatusNote: (message) => toast.info(message, 2400),
@@ -251,28 +281,6 @@ function LabWorkbench({
         break;
     }
   };
-
-  const onCancelTask = useCallback(
-    (task: ResearchTaskListItem) => {
-      if (!isActiveResearchStatus(task.status)) return;
-      const rid = Number(task.id);
-      if (!Number.isFinite(rid) || rid <= 0) return;
-      const currentRid = readActiveRunIdFromUrl();
-      if (currentRid === rid) {
-        lab.cancel();
-        return;
-      }
-      void (async () => {
-        try {
-          await cancelActiveEdenRun(notebookId, rid);
-        } catch (error) {
-          const msg = error instanceof Error ? error.message : String(error);
-          toast.error(msg);
-        }
-      })();
-    },
-    [lab, notebookId],
-  );
 
   const onSelectNode = useCallback(
     (id: string | null) => {
@@ -355,6 +363,34 @@ function LabWorkbench({
         )}
 
         <div className="flex shrink-0 items-center gap-1.5">
+          {showConsole ? (
+            <button
+              type="button"
+              title={
+                lab.consoleVisible
+                  ? lab.consoleOpen
+                    ? '收起试验控制台'
+                    : '展开试验控制台'
+                  : '显示试验控制台（高级）'
+              }
+              onClick={() => {
+                if (!lab.consoleVisible) {
+                  lab.setConsoleVisible(true);
+                  lab.setConsoleOpen(true);
+                  return;
+                }
+                lab.setConsoleOpen(!lab.consoleOpen);
+              }}
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${
+                lab.consoleVisible && lab.consoleOpen
+                  ? 'border-blue-200 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              <TerminalIcon sx={{ fontSize: 16 }} />
+            </button>
+          ) : null}
+
           {lab.derived.reportVisible ? (
             <div className="relative">
               <details className="group">
@@ -427,45 +463,6 @@ function LabWorkbench({
         </div>
       </header>
 
-      {lastError ? (
-        <div
-          className="shrink-0 border-b border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800"
-          role="alert"
-        >
-          {lastError}
-        </div>
-      ) : null}
-
-      {lab.phase === 'failed' && isSynthesizeFailureReason(lab.failureReason) ? (
-        <div
-          className="shrink-0 border-b border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950"
-          role="alert"
-          {...tid(TestIds.researchLabSynthesizeFailBanner)}
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="min-w-0 flex-1">结案失败：{lab.failureReason}</span>
-            <label className="flex items-center gap-1.5">
-              <span className="text-[10px] text-amber-800">换模</span>
-              <LabChatModelSelect
-                value={lab.modelId}
-                onChange={(modelId) => lab.setModelId(modelId)}
-                className="rounded border border-amber-300 bg-white px-1.5 py-1 text-[11px]"
-                data-testid={TestIds.researchLabRetrySynthesizeModel}
-              />
-            </label>
-            <button
-              type="button"
-              disabled={lab.reshaping}
-              onClick={() => lab.retrySynthesize()}
-              className="rounded-lg border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-950 hover:bg-amber-100 disabled:opacity-40"
-              {...tid(TestIds.researchLabRetrySynthesize)}
-            >
-              重试结案
-            </button>
-          </div>
-        </div>
-      ) : null}
-
       <div className="relative min-h-0 flex-1">
         <LabGraph
           nodes={lab.derived.nodes}
@@ -488,8 +485,8 @@ function LabWorkbench({
         {showCompose ? (
           <LabComposePanel
             notebookId={notebookId}
-            mode="eden"
-            exampleTopic={EDEN_EXAMPLE_TOPIC}
+            mode="fixture"
+            exampleTopic={lab.scenario.topic}
             draft={{
               topic: lab.topicDraft,
               useNotebookSources: lab.useNotebookSources,
@@ -518,14 +515,6 @@ function LabWorkbench({
           />
         ) : null}
 
-        {loadingExistingRun ? (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-gray-50/80 backdrop-blur-[1px]">
-            <p className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm">
-              正在加载 Run #{urlRid}…
-            </p>
-          </div>
-        ) : null}
-
         {!showCompose && lab.reshaping ? (
           <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-[11px] font-medium text-amber-900 shadow-md backdrop-blur">
             流程重塑中 · 重算布局
@@ -550,11 +539,10 @@ function LabWorkbench({
         {!showCompose ? (
           <LabNodeDrawer
             overlay
-            mode="eden"
+            mode="fixture"
             notebookId={notebookId}
-            runId={lab.runId ?? readActiveRunIdFromUrl()}
-            llmBusy={Boolean(lab.llmActivity)}
-            onChatError={(msg) => lab.reportError(msg)}
+            runId={null}
+            llmBusy={false}
             node={selected}
             phase={lab.phase}
             citations={drawerCitations}
@@ -580,6 +568,8 @@ function LabWorkbench({
           />
         ) : null}
       </div>
+
+      {showConsole && lab.consoleVisible ? <LabControlConsole lab={lab} /> : null}
 
       <LabForkDialog
         open={forkEdgeId !== null}
@@ -609,6 +599,15 @@ function LabWorkbench({
         open={tasksDrawerOpen}
         onClose={() => setTasksDrawerOpen(false)}
         notebookId={notebookId}
+        tasks={demoTasks.tasks.map((t) => ({
+          id: t.id,
+          notebookId: t.notebookId,
+          topic: t.topic,
+          status: t.status,
+        }))}
+        activeTaskId={demoTasks.activeTaskId}
+        loading={false}
+        error=""
         onSelectTask={(task) => {
           setTasksDrawerOpen(false);
           onSelectTask(task);
@@ -617,7 +616,6 @@ function LabWorkbench({
           setTasksDrawerOpen(false);
           onCreateNew();
         }}
-        onCancelTask={onCancelTask}
       />
     </div>
   );

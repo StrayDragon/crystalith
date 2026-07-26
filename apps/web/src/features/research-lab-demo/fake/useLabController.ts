@@ -13,17 +13,20 @@
 import type { ResearchConclusionStatus, ResearchDepth } from '@crystalith/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { confirmHighlightIds } from '../confirmHighlight';
-import { deriveEdenLabPhase, fixturePlaybackToRunStatus } from '../deriveEdenLabPhase';
-import { DEFAULT_LAB_COMPOSE_DEPTH } from '../labComposeDepth';
+import { confirmHighlightIds } from '../../research-lab/confirmHighlight';
+import {
+  deriveEdenLabPhase,
+  fixturePlaybackToRunStatus,
+} from '../../research-lab/deriveEdenLabPhase';
+import { DEFAULT_LAB_COMPOSE_DEPTH } from '../../research-lab/labComposeDepth';
 import {
   appendFixturePhaseEvent,
   computeLabProgressPct,
   countResearchNodeProgress,
   fixtureBudgetFromSources,
   type LabProgressLedgerItem,
-} from '../labProgressLedger';
-import { consumeComposeTopicFromUrl } from '../labRouting';
+} from '../../research-lab/labProgressLedger';
+import { consumeComposeTopicFromUrl } from '../../research-lab/labRouting';
 import {
   persistLabSessionSnapshot,
   readLabSessionSnapshot,

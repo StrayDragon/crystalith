@@ -1,5 +1,6 @@
 /**
- * Unified research task list drawer — Eden listRuns (default) or fixture demo.
+ * Unified research task list drawer — Eden listRuns (product).
+ * Demo pages MAY inject `tasks` / `activeTaskId` to reuse this shell without fixture env gates.
  */
 import { Close as CloseIcon, Assignment as AssignmentIcon } from '@mui/icons-material';
 import { useEffect } from 'react';
@@ -7,7 +8,6 @@ import { createPortal } from 'react-dom';
 
 import { useLayer } from '../../shared/layer';
 import { TestIds, tid } from '../../shared/testids';
-import { isLabFixtureMode } from './labFixtureMode';
 import {
   isActiveResearchStatus,
   RESEARCH_TASK_STATUS_LABEL,
@@ -23,6 +23,11 @@ export interface ResearchTasksDrawerProps {
   onCreateNew?: () => void;
   /** Eden: cancel active run from a list row. */
   onCancelTask?: (task: ResearchTaskListItem) => void;
+  /** Demo inject — when set, skip Eden SWR list. */
+  tasks?: ResearchTaskListItem[];
+  activeTaskId?: string | null;
+  loading?: boolean;
+  error?: string;
 }
 
 function statusTone(status: string): string {
@@ -49,14 +54,23 @@ export default function ResearchTasksDrawer({
   onSelectTask,
   onCreateNew,
   onCancelTask,
+  tasks: tasksOverride,
+  activeTaskId: activeTaskIdOverride,
+  loading: loadingOverride,
+  error: errorOverride,
 }: ResearchTasksDrawerProps) {
   const { style: layerStyle } = useLayer('modal');
-  const { tasks, activeTaskId, loading, error, refresh } = useResearchTasks(notebookId);
-  const fixture = isLabFixtureMode();
+  const eden = useResearchTasks(tasksOverride === undefined ? notebookId : null);
+  const injected = tasksOverride !== undefined;
+  const tasks = injected ? (tasksOverride ?? []) : eden.tasks;
+  const activeTaskId = injected ? (activeTaskIdOverride ?? null) : eden.activeTaskId;
+  const loading = injected ? Boolean(loadingOverride) : eden.loading;
+  const error = injected ? (errorOverride ?? '') : eden.error;
+  const refresh = eden.refresh;
 
   useEffect(() => {
-    if (open && !fixture) refresh();
-  }, [open, fixture, refresh]);
+    if (open && !injected) refresh();
+  }, [open, injected, refresh]);
 
   if (!open) return null;
 
@@ -78,7 +92,7 @@ export default function ResearchTasksDrawer({
           <div>
             <h2 className="text-sm font-semibold text-gray-900">深度研究任务</h2>
             <p className="text-[11px] text-gray-500">
-              {fixture ? '进行中与历史（fixture 演示）' : '进行中与历史（ResearchRun）'}
+              {injected ? '进行中与历史（demo 列表）' : '进行中与历史（ResearchRun）'}
             </p>
           </div>
           <button
@@ -123,7 +137,7 @@ export default function ResearchTasksDrawer({
             tasks.map((task) => {
               const active = task.id === activeTaskId;
               const canCancel =
-                Boolean(onCancelTask) && !fixture && isActiveResearchStatus(task.status);
+                Boolean(onCancelTask) && !injected && isActiveResearchStatus(task.status);
               return (
                 <li key={task.id}>
                   <div
@@ -176,7 +190,7 @@ export default function ResearchTasksDrawer({
         <div className="border-t border-gray-100 px-4 py-2 text-[10px] text-gray-400">
           <span className="inline-flex items-center gap-1">
             <AssignmentIcon sx={{ fontSize: 12 }} />
-            {fixture ? 'VITE_LAB_FIXTURE=1 · demo 列表' : 'Eden GET …/research'}
+            {injected ? 'Demo · sessionStorage 列表' : 'Eden GET …/research'}
           </span>
         </div>
       </aside>

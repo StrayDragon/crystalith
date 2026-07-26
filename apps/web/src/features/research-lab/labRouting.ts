@@ -98,12 +98,3 @@ export function navigateToWorkspace(): void {
 export function isResearchLabPath(pathname: string): boolean {
   return parseResearchLabPath(pathname) !== null;
 }
-
-export {
-  clearLabSessionSnapshot,
-  persistLabScenarioId,
-  persistLabSessionSnapshot,
-  readLabSessionSnapshot,
-  readPersistedLabScenarioId,
-  type LabSessionSnapshot,
-} from './labSession';

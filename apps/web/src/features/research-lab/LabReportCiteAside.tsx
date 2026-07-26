@@ -1,7 +1,7 @@
 import { Description as DescriptionIcon } from '@mui/icons-material';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { citationPillLabel } from './fake/reportDocument';
+import { citationPillLabel } from '../research-lab-demo/fake/reportDocument';
 import { useLabReportCite } from './reportCiteContext';
 
 /** One gutter card per inline cite pill (not per paragraph). */
