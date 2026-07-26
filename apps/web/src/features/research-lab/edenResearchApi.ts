@@ -98,6 +98,20 @@ export async function cancelResearchRun(notebookId: number, runId: number): Prom
   return data as ResearchRun;
 }
 
+export async function retrySynthesizeResearchRun(
+  notebookId: number,
+  runId: number,
+  body?: { modelId?: string },
+): Promise<ResearchRun> {
+  const { data, error } = await api.v2
+    .notebooks({ nid: notebookId })
+    .research({ rid: runId })
+    ['retry-synthesize'].post(body ?? {});
+  if (error) throwEdenError(error);
+  if (!data) throw new Error('重试结案失败：空响应');
+  return data as ResearchRun;
+}
+
 export async function confirmResearchRun(
   notebookId: number,
   runId: number,

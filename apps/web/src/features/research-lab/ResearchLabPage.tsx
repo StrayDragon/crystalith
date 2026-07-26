@@ -57,6 +57,7 @@ import {
   shouldShowLabPausedBanner,
   shouldShowLabPlayingTip,
 } from './labBannerState';
+import { LabChatModelSelect } from './LabChatModelSelect';
 import LabComposePanel, { EDEN_EXAMPLE_TOPIC } from './LabComposePanel';
 import LabControlConsole from './LabControlConsole';
 import { isLabFixtureMode } from './labFixtureMode';
@@ -76,6 +77,7 @@ import { bindActiveTaskSession } from './openDemoResearchTask';
 import ResearchTasksDrawer from './ResearchTasksDrawer';
 import ResearchTasksTrigger from './ResearchTasksTrigger';
 import { isActiveResearchStatus, type ResearchTaskListItem } from './researchTaskTypes';
+import { isSynthesizeFailureReason } from './synthesizeFailure';
 import {
   navigateLabWithRun,
   readActiveRunIdFromUrl,
@@ -618,6 +620,41 @@ function LabWorkbench({
         </div>
       ) : null}
 
+      {mode === 'eden' &&
+      lab.phase === 'failed' &&
+      'failureReason' in lab &&
+      isSynthesizeFailureReason((lab as EdenLabController).failureReason) ? (
+        <div
+          className="shrink-0 border-b border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950"
+          role="alert"
+          {...tid(TestIds.researchLabSynthesizeFailBanner)}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="min-w-0 flex-1">
+              结案失败：{(lab as EdenLabController).failureReason}
+            </span>
+            <label className="flex items-center gap-1.5">
+              <span className="text-[10px] text-amber-800">换模</span>
+              <LabChatModelSelect
+                value={(lab as EdenLabController).modelId}
+                onChange={(modelId) => (lab as EdenLabController).setModelId(modelId)}
+                className="rounded border border-amber-300 bg-white px-1.5 py-1 text-[11px]"
+                data-testid={TestIds.researchLabRetrySynthesizeModel}
+              />
+            </label>
+            <button
+              type="button"
+              disabled={lab.reshaping}
+              onClick={() => (lab as EdenLabController).retrySynthesize()}
+              className="rounded-md bg-amber-800 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-amber-900 disabled:opacity-40"
+              {...tid(TestIds.researchLabRetrySynthesize)}
+            >
+              重试结案
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="relative min-h-0 flex-1">
         <LabGraph
           nodes={lab.derived.nodes}
@@ -648,6 +685,7 @@ function LabWorkbench({
               allowWeb: lab.allowWeb,
               selectedSourceIds: lab.selectedSourceIds,
               depth: lab.depth,
+              modelId: lab.modelId,
             }}
             onChange={(patch) => {
               if (patch.topic !== undefined) lab.setTopicDraft(patch.topic);
@@ -659,6 +697,7 @@ function LabWorkbench({
               if (patch.selectedSourceIds !== undefined) {
                 lab.setSelectedSourceIds(patch.selectedSourceIds);
               }
+              if (patch.modelId !== undefined) lab.setModelId(patch.modelId);
             }}
             onSubmit={() => {
               const topic = lab.topicDraft.trim();

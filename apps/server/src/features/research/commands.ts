@@ -61,6 +61,7 @@ export function validateCreateBody(body: ResearchCreateBody): {
   depth: ResearchDepth;
   maxSearches: number;
   maxNodes: number;
+  modelId: string | null;
 } {
   const topic = body.topic.trim();
   if (!topic) {
@@ -87,6 +88,7 @@ export function validateCreateBody(body: ResearchCreateBody): {
     }
     sourceIds = ids;
   }
+  const modelId = body.modelId?.trim() || null;
   return {
     topic,
     useNotebookSources,
@@ -95,6 +97,7 @@ export function validateCreateBody(body: ResearchCreateBody): {
     depth,
     maxSearches: budget.maxSearches,
     maxNodes: budget.maxNodes,
+    modelId,
   };
 }
 
@@ -114,6 +117,7 @@ export function createRun(notebookId: number, body: ResearchCreateBody): Researc
       maxSearches: fields.maxSearches,
       maxNodes: fields.maxNodes,
       searchesUsed: 0,
+      modelId: fields.modelId,
       graph: emptyGraph(),
       checkpoint: null,
       report: null,
@@ -230,9 +234,8 @@ export async function confirmRun(
             fresh.nodes.find((n) => n.id === root.id);
           if (live) {
             live.evidenceIds = work.evidenceIds;
-            live.summary = work.evidenceIds.length
-              ? `已收集 ${work.evidenceIds.length} 条证据`
-              : live.summary;
+            live.summary = work.summary;
+            live.conclusionStatus = work.conclusionStatus;
             persistGraph(runId, fresh);
             emitGraphPatch(runId, { nodes: [live] });
           }

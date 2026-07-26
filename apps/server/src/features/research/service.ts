@@ -6,6 +6,7 @@ export { isPruneProtectedNode, subscribeRun } from './research-core.ts';
 export { scheduleRun } from './run-loop.ts';
 export {
   synthesizeReport,
+  retrySynthesize,
   listProgress,
   listRevisions,
   getRevision,

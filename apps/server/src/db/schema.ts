@@ -492,6 +492,8 @@ export const researchRuns = sqliteTable(
     confirmBranchNodeId: text('confirm_branch_node_id'),
     cancelRequested: bool('cancel_requested', false),
     errorMessage: text('error_message'),
+    /** Optional chat model id for synthesize / node short synthesis. */
+    modelId: text('model_id'),
     /** Active revision pointer (UI highlight). */
     activeRevisionId: text('active_revision_id'),
     /** Scheduler / focus node (also chat / work_unit subject). */

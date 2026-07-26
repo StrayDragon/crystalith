@@ -17,6 +17,7 @@ import {
   ResearchProgressQuerySchema,
   ResearchReportPutBodySchema,
   ResearchReportViewSchema,
+  ResearchRetrySynthesizeBodySchema,
   ResearchRevisionCreateBodySchema,
   ResearchRevisionSchema,
   ResearchRevisionsListSchema,
@@ -51,6 +52,7 @@ import {
   putCanonicalReport,
   putWorkingReport,
   restoreRevision,
+  retrySynthesize,
 } from './service.ts';
 
 /** OpenAPI-only query docs (runtime validation uses ResearchListQuerySchema). */
@@ -112,6 +114,14 @@ registerApiDoc([
     responses: {
       200: { description: '已取消/取消中的 ResearchRun', body: ResearchRunSchema },
     },
+  },
+  {
+    path: '/v2/notebooks/:nid/research/:rid/retry-synthesize',
+    method: 'post',
+    summary: '结案失败后同 Run 换模重试成稿（不重跑检索）',
+    tags: ['research'],
+    request: { body: ResearchRetrySynthesizeBodySchema },
+    responses: { 200: { description: '重试后的 ResearchRun', body: ResearchRunSchema } },
   },
   {
     path: '/v2/notebooks/:nid/research/:rid/nodes/:nodeId/prune',
@@ -293,6 +303,15 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       return cancelRun(nid, rid);
     },
     { response: ResearchRunSchema },
+  )
+  .post(
+    '/notebooks/:nid/research/:rid/retry-synthesize',
+    async ({ params, body }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const rid = requirePositiveIntId(params.rid, 'research run id');
+      return retrySynthesize(nid, rid, body);
+    },
+    { body: ResearchRetrySynthesizeBodySchema, response: ResearchRunSchema },
   )
   .post(
     '/notebooks/:nid/research/:rid/nodes/:nodeId/prune',
