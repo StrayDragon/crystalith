@@ -35,6 +35,7 @@ import {
   pruneResearchNode,
   requestReexpand,
   retrySynthesizeResearchRun,
+  scheduleResearchRun,
 } from './edenResearchApi';
 import { buildEdenCitationsMap } from './evidenceAdapter';
 import { DEFAULT_LAB_COMPOSE_DEPTH } from './labComposeDepth';
@@ -86,6 +87,8 @@ export type EdenLabController = LabController & {
   approveReexpand: () => void;
   skipReexpand: () => void;
   requestReexpand: (hint?: string) => void;
+  /** ResearchRun.status for Eden primary overlay (c105 schedule). */
+  runStatus: ResearchRunStatus | null;
 };
 
 function toLedgerItem(ev: ResearchProgressEvent): LabProgressLedgerItem {
@@ -742,7 +745,18 @@ export function useEdenLabController(
     pause: () => undefined,
     resume: () => {
       const rid = runIdRef.current;
-      if (rid) startStream(rid);
+      if (!rid) return;
+      if (run?.status === 'queued') {
+        void withBusy(async () => {
+          const next = await scheduleResearchRun(notebookId, rid);
+          applyRun(next);
+          startStream(next.id);
+          void pullProgress(next.id, progressSeqRef.current);
+          return next;
+        }, '启动研究');
+        return;
+      }
+      startStream(rid);
     },
     cancel,
     finishReport,
@@ -799,6 +813,7 @@ export function useEdenLabController(
     confirmKind: run?.status === 'awaiting_confirm' ? (run.confirmKind ?? 'budget') : null,
     confirmBranchNodeId:
       run?.status === 'awaiting_confirm' ? (run.confirmBranchNodeId ?? null) : null,
+    runStatus: run?.status ?? null,
   };
 }
 
