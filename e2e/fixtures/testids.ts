@@ -135,6 +135,7 @@ export const TestIds = {
   researchLabRevisionSelect: 'research-lab-revision-select',
   researchLabRevisionSave: 'research-lab-revision-save',
   researchLabRevisionApplyGraph: 'research-lab-revision-apply-graph',
+  researchLabRevisionForkRun: 'research-lab-revision-fork-run',
   researchLabForkDialog: 'research-lab-fork-dialog',
   researchLabPruneDialog: 'research-lab-prune-dialog',
   researchLabPruneCancel: 'research-lab-prune-cancel',

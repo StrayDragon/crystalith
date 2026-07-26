@@ -5,6 +5,7 @@ import type {
   ResearchConvertToSourceResponse,
   ResearchCreateBody,
   ResearchForkBody,
+  ResearchForkRunBody,
   ResearchNodeActionProposal,
   ResearchNodeChatBody,
   ResearchNodeChatStreamEvent,
@@ -252,6 +253,29 @@ export async function restoreResearchRevision(
     .restore.post();
   if (error) throwEdenError(error);
   if (!data) throw new Error('恢复版本失败：空响应');
+  return data as ResearchRun;
+}
+
+/** POST …/revisions/:revId/fork-run — new ResearchRun from revision snapshot (c105). */
+export async function forkResearchRunFromRevision(
+  notebookId: number,
+  runId: number,
+  revId: string,
+  body?: ResearchForkRunBody,
+): Promise<ResearchRun> {
+  const { data, error } = await researchRunPath(notebookId, runId)
+    .revisions({ revId })
+    ['fork-run'].post(body ?? {});
+  if (error) throwEdenError(error);
+  if (!data) throw new Error('派生新研究失败：空响应');
+  return data as ResearchRun;
+}
+
+/** POST …/schedule — start kernel for queued Run only. */
+export async function scheduleResearchRun(notebookId: number, runId: number): Promise<ResearchRun> {
+  const { data, error } = await researchRunPath(notebookId, runId).schedule.post();
+  if (error) throwEdenError(error);
+  if (!data) throw new Error('启动研究失败：空响应');
   return data as ResearchRun;
 }
 

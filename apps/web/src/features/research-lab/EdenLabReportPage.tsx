@@ -27,6 +27,7 @@ import { runConvertToNote, runConvertToSource } from './edenConvertActions';
 import {
   createResearchRevision,
   discardResearchWorkingReport,
+  forkResearchRunFromRevision,
   getResearchReportView,
   getResearchRun,
   listResearchRevisions,
@@ -311,6 +312,27 @@ export default function EdenLabReportPage({
     })();
   };
 
+  const forkFromRevision = () => {
+    if (busy || !runId || !activeRevId) return;
+    setBusy(true);
+    setActionError('');
+    void (async () => {
+      try {
+        const created = await forkResearchRunFromRevision(notebookId, runId, activeRevId, {
+          schedule: false,
+        });
+        toast.success(`已新开研究 #${created.id}`, 2800);
+        navigateToResearchLab(notebookId, created.id);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setActionError(message);
+        toast.error(message, 5000);
+      } finally {
+        setBusy(false);
+      }
+    })();
+  };
+
   const convertNote = () =>
     void withBusy(async () => {
       if (!runId) return;
@@ -410,6 +432,17 @@ export default function EdenLabReportPage({
             >
               <SaveIcon sx={{ fontSize: 14 }} />
               保存版本
+            </button>
+
+            <button
+              type="button"
+              disabled={busy || !activeRevId}
+              onClick={() => void forkFromRevision()}
+              className="inline-flex items-center gap-1 rounded-md border border-teal-200 bg-teal-50 px-2.5 py-1.5 text-[11px] text-teal-900 hover:bg-teal-100 disabled:opacity-40"
+              title="基于当前选中修订快照派生新 ResearchRun（不污染原 Run）"
+              {...tid(TestIds.researchLabRevisionForkRun)}
+            >
+              基于此快照新开研究
             </button>
 
             {editing ? (

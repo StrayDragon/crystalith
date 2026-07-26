@@ -1,5 +1,10 @@
 ---
-depends_on: [c104-research-confirm-reexpand]
+depends_on:
+  - c104-research-confirm-reexpand
+branch: sdd/c105-research-revision-fork-run
+base_sha: abe7329fa2970a80300ad2b8460d9d111aa32d38
+checkpointed: true
+checkpoint_sha: abe7329fa2970a80300ad2b8460d9d111aa32d38
 ---
 
 ## Why
@@ -15,7 +20,8 @@ revisions 今日支持同 Run restore。用户常需「基于某快照另开一�
 
 ## Locked decisions
 
-- 拷 graph+report；原 Run 不变；新 Run 可从 queued 续跑
+- 拷 graph+report（+ 证据 remap）；原 Run 不变；新 Run `queued`，默认不自动 schedule
+- 续跑：`schedule:true` 或 `POST …/schedule`（仅 queued）
 - BDD-off；独立分支；排在 C1 之后、C3 之前
 
 ## Capabilities

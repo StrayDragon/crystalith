@@ -122,6 +122,8 @@
   "research.convert_body": "转化请求体",
   "research.fork_hint": "fork 提示",
   "research.fork_body": "fork 请求体",
+  "research.fork_run_schedule": "是否立即启动内核（默认 false，保持 queued）",
+  "research.fork_run_body": "从修订快照派生新 ResearchRun",
   "research.create_body": "创建深研 Run 请求体",
   "research.create_nested": "创建深研 Run（nested）",
   "research.run": "深研 ResearchRun",

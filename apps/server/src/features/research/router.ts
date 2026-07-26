@@ -10,6 +10,7 @@ import {
   ResearchConvertToSourceResponseSchema,
   ResearchCreateNestedRequestSchema,
   ResearchForkBodySchema,
+  ResearchForkRunBodySchema,
   ResearchListQuerySchema,
   ResearchNodeChatBodySchema,
   ResearchNodePatchBodySchema,
@@ -42,6 +43,7 @@ import {
   createRun,
   deleteWorkingReport,
   forkNode,
+  forkRunFromRevision,
   getReportView,
   getRevision,
   getRun,
@@ -55,6 +57,8 @@ import {
   requestReexpand,
   restoreRevision,
   retrySynthesize,
+  scheduleQueuedRun,
+  scheduleRun,
 } from './service.ts';
 
 /** OpenAPI-only query docs (runtime validation uses ResearchListQuerySchema). */
@@ -200,6 +204,21 @@ registerApiDoc([
     summary: '恢复版本（仅终态 run）',
     tags: ['research'],
     responses: { 200: { description: '已更新的 ResearchRun', body: ResearchRunSchema } },
+  },
+  {
+    path: '/v2/notebooks/:nid/research/:rid/revisions/:revId/fork-run',
+    method: 'post',
+    summary: '基于修订快照派生新 ResearchRun（默认不启动内核）',
+    tags: ['research'],
+    request: { body: ResearchForkRunBodySchema },
+    responses: { 201: { description: '新创建的 ResearchRun', body: ResearchRunSchema } },
+  },
+  {
+    path: '/v2/notebooks/:nid/research/:rid/schedule',
+    method: 'post',
+    summary: '启动排队中的 ResearchRun 内核（仅 queued）',
+    tags: ['research'],
+    responses: { 200: { description: '已调度的 ResearchRun', body: ResearchRunSchema } },
   },
   {
     path: '/v2/notebooks/:nid/research/:rid/report',
@@ -418,6 +437,29 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const rid = requirePositiveIntId(params.rid, 'research run id');
       return restoreRevision(nid, rid, params.revId);
+    },
+    { response: ResearchRunSchema },
+  )
+  .post(
+    '/notebooks/:nid/research/:rid/revisions/:revId/fork-run',
+    ({ params, body, set }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const run = forkRunFromRevision(nid, rid, params.revId);
+      if (body.schedule) {
+        scheduleRun(run.id);
+      }
+      set.status = 201;
+      return run;
+    },
+    { body: ResearchForkRunBodySchema, response: ResearchRunSchema },
+  )
+  .post(
+    '/notebooks/:nid/research/:rid/schedule',
+    ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const rid = requirePositiveIntId(params.rid, 'research run id');
+      return scheduleQueuedRun(nid, rid);
     },
     { response: ResearchRunSchema },
   )

@@ -129,6 +129,8 @@ export type Translation = {
   'research.convert_body': string;
   'research.fork_hint': string;
   'research.fork_body': string;
+  'research.fork_run_schedule': string;
+  'research.fork_run_body': string;
   'research.create_body': string;
   'research.create_nested': string;
   'research.run': string;

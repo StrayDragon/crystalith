@@ -166,6 +166,19 @@ export function getRun(notebookId: number, runId: number): ResearchRun {
   return serializeRun(requireRun(notebookId, runId));
 }
 
+/** POST …/schedule — start kernel for a queued Run only (c105 / r335 Lab 续跑). */
+export function scheduleQueuedRun(notebookId: number, runId: number): ResearchRun {
+  const row = requireRun(notebookId, runId);
+  if (row.status !== 'queued') {
+    throw new AppHttpError(
+      ErrorCode.RESEARCH_INVALID_STATE,
+      `Cannot schedule run in status ${row.status}`,
+    );
+  }
+  scheduleRun(runId);
+  return serializeRun(requireRun(notebookId, runId));
+}
+
 export function cancelRun(notebookId: number, runId: number): ResearchRun {
   const row = requireRun(notebookId, runId);
   if (row.status === 'completed' || row.status === 'failed' || row.status === 'cancelled') {

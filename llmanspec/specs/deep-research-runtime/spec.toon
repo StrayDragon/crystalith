@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "deep-research-runtime"
 purpose: ResearchRun HTTP/SSE 运行时：创建/列表/图命令口/报告/revisions 与编排约束（对齐 Lab Compose 外网优先默认）
 valid_scope[2]: src/,tests/
-requirements[35]{req_id,title,statement}:
+requirements[36]{req_id,title,statement}:
   r300,ResearchRun is process SSOT,系统 MUST 以 notebook 作用域的 ResearchRun 作为深研过程 SSOT（图、checkpoint、权威报告与 citation map 挂在 Run 上）；MUST NOT 把长跑过程态的唯一权威塞进 Output 行。
   r301,Create replaces 501 stub,"POST /v2/notebooks/:nid/research MUST 在合法 notebook 下创建 ResearchRun 并返回可追踪 id 与初始状态；MUST NOT 再以 501 NOT_IMPLEMENTED 作为成功创建路径。"
   r302,List and get runs for task inbox,系统 MUST 提供 notebook 作用域的 listRuns 与 getRun；缺少 notebook 作用域时 MUST 拒绝全表列举。
@@ -38,7 +38,8 @@ requirements[35]{req_id,title,statement}:
   r332,"Node short synthesis no fake hits","支路 work-unit MUST 在检索后经 LLM 短综合写回节点摘要；空证据列表 MUST 合法；MUST NOT 使用 pragmatic 假命中回退冒充检索结果；当节点模型彻底失败无法产出结论时 MUST 标记该节点 conclusionStatus=missing（或等价）并继续其它支路，MUST NOT 仅因此将整 Run 立即 failed。"
   r333,"No automatic secondary decompose","在无用户显式请求或 confirm 批准的情况下，内核 MUST NOT 在同一 ResearchRun 上自动执行第二次 topic decompose；首次 seed 后拆解（r326）不受本条禁止。"
   r334,"Confirm-gated request-reexpand","系统 MUST 提供 request-reexpand 命令口（POST …/request-reexpand 或等价），使 Run 进入 awaiting_confirm 且 confirmKind=reexpand；用户 approve_reexpand MUST 经结构化规划追加 research 节点（受 maxNodes）并 graph_patch，skip_reexpand MUST 不新增支路并允许继续收束；规划失败 MUST NOT 伪造多支路；MUST NOT 在 tool execute 中静默改图。"
-scenarios[53]{req_id,id,given,when,then,feature}:
+  r335,"Revision fork creates new Run","系统 MUST 提供从某 revision 派生新 ResearchRun 的命令口（POST …/revisions/:revId/fork-run 或等价）；新 Run MUST 拷贝该 revision 快照的 graph 与 report（若有）以及源 Run 的 topic/预算/modelId 等创建配置，searchesUsed MUST 重置为 0 且初始 status MUST 为 queued；源 Run 的图/报告/revisions MUST 保持不变；默认 MUST NOT 自动 schedule；可选 schedule 或独立 schedule 口 MAY 仅对 queued Run 启动内核；图中 evidence 引用 MUST 在新 Run 作用域内可用（拷贝并 remap 或等价）。"
+scenarios[57]{req_id,id,given,when,then,feature}:
   r300,"run-holds-graph-and-report",用户已创建一次深研 Run,系统推进研究并生成报告,图与权威报告及 citation map 均挂在该 ResearchRun 上，而非仅存在于 Output 行,true
   r301,"create-returns-run-id",notebook 存在且请求合法,客户端 POST 创建深研,系统返回 ResearchRun id 与初始状态且不得以 501 作为成功路径,true
   r302,"list-requires-notebook",系统中存在多个 notebook 的 Run,客户端省略 notebook 作用域调用 list,系统拒绝全表列举,true
@@ -92,3 +93,7 @@ scenarios[53]{req_id,id,given,when,then,feature}:
   r334,"approve-reexpand-adds-branches",confirmKind=reexpand,用户 approve_reexpand 且 planner 成功,图新增 research 节点与 merge 边,true
   r334,"skip-reexpand-no-nodes",confirmKind=reexpand,用户 skip_reexpand,research 节点数不增加,true
   r334,"reexpand-planner-failure",confirmKind=reexpand 且 planner 失败,approve 处理完成,不得伪造多支路拓扑,true
+  r335,"fork-creates-new-run-id",源 Run 已有 revision 快照,客户端 POST fork-run,返回新 ResearchRun id 且 status=queued,true
+  r335,"fork-copies-graph-report",revision 含 graph 与 report,fork 成功,新 Run 的 graph/report 与该 revision 快照一致,true
+  r335,"fork-leaves-source-unchanged",fork 完成后,再次 GET 源 Run 与其 revisions 列表,与 fork 前一致,true
+  r335,"fork-default-no-schedule",客户端 fork 且省略 schedule 或 schedule=false,观察新 Run,保持 queued 且不因 fork 立刻进入 running,true
