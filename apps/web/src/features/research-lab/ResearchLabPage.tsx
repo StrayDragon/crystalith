@@ -449,9 +449,9 @@ function LabWorkbench({
                         ? tid(TestIds.researchLabCancel)
                         : tid(TestIds.researchLabStart))}
             >
-              {lab.reshaping
+              {lab.reshaping && primary.kind !== 'resume' && primary.kind !== 'cancel'
                 ? '重塑中…'
-                : lab.busy && primary.kind !== 'cancel'
+                : lab.busy && primary.kind !== 'cancel' && primary.kind !== 'resume'
                   ? '处理中…'
                   : primary.label}
             </button>
