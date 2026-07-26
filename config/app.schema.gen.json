@@ -774,15 +774,21 @@
       }
     },
     "research": {
-      "description": "Deep Research 运行时：进度账本保留条数、可选拆解模型（默认继承 chat）等",
+      "description": "Deep Research 运行时：进度账本保留、支路并行度、可选拆解模型（默认继承 chat）等",
       "default": {
-        "progressEventRetain": 200
+        "progressEventRetain": 200,
+        "parallelBranchUnits": 2
       },
       "type": "object",
       "properties": {
         "progressEventRetain": {
           "description": "终态后进度账本保留最近 N 条",
           "default": 200,
+          "type": "number"
+        },
+        "parallelBranchUnits": {
+          "description": "同一 Run 同时推进的支路 work-unit 上限（1=串行，默认 2，最大 8）",
+          "default": 2,
           "type": "number"
         },
         "decomposeModelId": {

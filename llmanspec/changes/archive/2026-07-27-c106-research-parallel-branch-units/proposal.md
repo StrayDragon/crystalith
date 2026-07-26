@@ -1,5 +1,10 @@
 ---
-depends_on: [c105-research-revision-fork-run]
+depends_on:
+  - c105-research-revision-fork-run
+branch: sdd/c106-research-parallel-branch-units
+base_sha: 144f951397182d38cb004404690d6abeff0efef0
+checkpointed: true
+checkpoint_sha: 144f951397182d38cb004404690d6abeff0efef0
 ---
 
 ## Why
@@ -16,7 +21,8 @@ depends_on: [c105-research-revision-fork-run]
 
 ## Locked decisions
 
-- 调度并行 + LLM 串行队列 + 写回加锁（非真多 LLM 并行）
+- 调度并行（默认 N=2，config `parallelBranchUnits`）+ 同 Run LLM 串行队列 + 写回加锁
+- `N=1` 保持串行等价；无新 HTTP 命令口
 - BDD-off；独立分支；本波 C 最后一项
 
 ## Capabilities

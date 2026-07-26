@@ -344,6 +344,9 @@ research:
   # After a run reaches a terminal status, truncate progress_events to the
   # most recent N rows (by seq). In-flight runs keep the full ledger.
   progressEventRetain: 200
+  # Max concurrent research-node work-units per Run (c106). 1 = serial drain;
+  # default 2; Zod clamps to 1..8. Same-Run LLM calls stay serialized via queue.
+  parallelBranchUnits: 2
   # Optional model id for topic auto-decompose (c93). Omit or leave empty to
   # inherit models.defaults.chat.
   # decomposeModelId: ""

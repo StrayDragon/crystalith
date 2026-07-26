@@ -9,7 +9,7 @@ import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';
 import { researchRuns } from '../../db/schema.ts';
-import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
+import { getDefaultChatModel, getModelById, getParallelBranchUnits } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { applyDecomposePlanToGraph, planTopicDecomposition } from './decompose.ts';
 import { e2eStubNodeSummary, e2eStubWebHits, isResearchE2eStub } from './e2e-stub.ts';
@@ -40,6 +40,7 @@ import {
   writeCheckpoint,
 } from './research-core.ts';
 import { hasLiveResearchBranches, orderResearchNodesForWork } from './research-work-queue.ts';
+import { withRunLlmLock, withRunWriteLock } from './run-locks.ts';
 
 /** Cooperative pause: awaiting_confirm must not be treated as cancel (c104 reexpand). */
 function shouldFinalizeCancelOnAbort(runId: number): boolean {
@@ -177,24 +178,26 @@ async function shortSynthesizeNodeSummary(opts: {
 
   try {
     const model = withRetry(await resolveModel(modelConfig));
-    const { text } = await generateText({
-      model,
-      abortSignal,
-      maxOutputTokens: modelConfig.completionOptions?.maxTokens ?? 512,
-      temperature: modelConfig.completionOptions?.temperature ?? 0.2,
-      prompt: [
-        '请用一两句中文总结本节点的研究发现（短综合）。',
-        `研究主题：${topic}`,
-        `节点：${node.title}`,
-        node.query ? `查询：${node.query}` : '',
-        evidenceIds.length === 0
-          ? '证据：无。请诚实说明检索无命中，不要编造来源。'
-          : `证据：\n${evidenceLines}`,
-        '不要输出 JSON；只要纯文本摘要。',
-      ]
-        .filter(Boolean)
-        .join('\n'),
-    });
+    const { text } = await withRunLlmLock(runId, () =>
+      generateText({
+        model,
+        abortSignal,
+        maxOutputTokens: modelConfig.completionOptions?.maxTokens ?? 512,
+        temperature: modelConfig.completionOptions?.temperature ?? 0.2,
+        prompt: [
+          '请用一两句中文总结本节点的研究发现（短综合）。',
+          `研究主题：${topic}`,
+          `节点：${node.title}`,
+          node.query ? `查询：${node.query}` : '',
+          evidenceIds.length === 0
+            ? '证据：无。请诚实说明检索无命中，不要编造来源。'
+            : `证据：\n${evidenceLines}`,
+          '不要输出 JSON；只要纯文本摘要。',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      }),
+    );
     const summary = text.trim();
     if (!summary) {
       return {
@@ -265,19 +268,22 @@ export async function runNodeWorkUnit(opts: {
   if (isResearchE2eStub()) {
     if (allowWeb && searchesUsed < maxSearches) {
       const query = node.query?.trim() || node.title || topic;
-      const ingested = ingestWorkToolResult(
-        runId,
-        notebookId,
-        node.id,
-        'webSearch',
-        e2eStubWebHits(query),
-      );
-      evidenceIds.push(...ingested.evidenceIds);
-      if (ingested.searchesDelta > 0) {
-        searchesUsed += ingested.searchesDelta;
-        updateRun(runId, { searchesUsed });
-      }
-      emitLog(runId, `外网检索（e2e stub）：${ingested.evidenceIds.length} 条`);
+      await withRunWriteLock(runId, () => {
+        const ingested = ingestWorkToolResult(
+          runId,
+          notebookId,
+          node.id,
+          'webSearch',
+          e2eStubWebHits(query),
+        );
+        evidenceIds.push(...ingested.evidenceIds);
+        if (ingested.searchesDelta > 0) {
+          const fresh = requireFresh(runId);
+          searchesUsed = fresh.searchesUsed + ingested.searchesDelta;
+          updateRun(runId, { searchesUsed });
+        }
+      });
+      emitLog(runId, `外网检索（e2e stub）：${evidenceIds.length} 条`);
     }
     const synth = await shortSynthesizeNodeSummary({
       runId,
@@ -310,60 +316,69 @@ export async function runNodeWorkUnit(opts: {
 
   if (agent) {
     try {
-      const result = await agent.stream({
-        prompt: [
-          `研究主题：${topic}`,
-          `节点：${node.title}`,
-          node.query ? `查询：${node.query}` : '',
-          '请使用可用工具收集证据。无命中时保持空列表，不要编造。',
-        ]
-          .filter(Boolean)
-          .join('\n'),
-        abortSignal,
-        options: {
-          mode: 'work_unit',
-          role,
-          nodeId: node.id,
-          nodeTitle: node.title,
-          nodeQuery: node.query,
-          allowWeb,
-          useNotebookSources: useNotebookSources && Boolean(sourceIds?.length),
-        } as never,
-      });
+      // Hold per-run LLM lock for the whole tool-loop stream (model steps).
+      // Tool IO inside the stream is also serialized; cross-unit IO overlap comes
+      // from stub/search paths that run outside this lock.
+      await withRunLlmLock(runId, async () => {
+        const result = await agent.stream({
+          prompt: [
+            `研究主题：${topic}`,
+            `节点：${node.title}`,
+            node.query ? `查询：${node.query}` : '',
+            '请使用可用工具收集证据。无命中时保持空列表，不要编造。',
+          ]
+            .filter(Boolean)
+            .join('\n'),
+          abortSignal,
+          options: {
+            mode: 'work_unit',
+            role,
+            nodeId: node.id,
+            nodeTitle: node.title,
+            nodeQuery: node.query,
+            allowWeb,
+            useNotebookSources: useNotebookSources && Boolean(sourceIds?.length),
+          } as never,
+        });
 
-      for await (const part of result.stream) {
-        if (abortSignal.aborted || isCancelled(runId)) break;
-        if (part.type === 'tool-result') {
-          const toolName = 'toolName' in part ? String(part.toolName) : '';
-          const output = 'output' in part ? part.output : undefined;
-          if (toolName === 'webSearch') {
-            if (searchesUsed >= maxSearches) {
-              emitLog(runId, '外网检索跳过：搜索预算已尽');
-              break;
+        for await (const part of result.stream) {
+          if (abortSignal.aborted || isCancelled(runId)) break;
+          if (part.type === 'tool-result') {
+            const toolName = 'toolName' in part ? String(part.toolName) : '';
+            const output = 'output' in part ? part.output : undefined;
+            if (toolName === 'webSearch') {
+              const freshBudget = requireFresh(runId);
+              if (freshBudget.searchesUsed >= maxSearches) {
+                emitLog(runId, '外网检索跳过：搜索预算已尽');
+                break;
+              }
             }
+            await withRunWriteLock(runId, () => {
+              const ingested = ingestWorkToolResult(runId, notebookId, node.id, toolName, output);
+              evidenceIds.push(...ingested.evidenceIds);
+              if (ingested.searchesDelta > 0) {
+                const fresh = requireFresh(runId);
+                searchesUsed = fresh.searchesUsed + ingested.searchesDelta;
+                updateRun(runId, { searchesUsed });
+              }
+              emitLog(
+                runId,
+                toolName === 'webSearch'
+                  ? `外网检索：${ingested.evidenceIds.length} 条`
+                  : toolName === 'retrieveSources'
+                    ? `检索笔记本：${ingested.evidenceIds.length} 条`
+                    : `工具 ${toolName} 完成`,
+              );
+            });
+          } else if (part.type === 'error') {
+            throw new Error(
+              'error' in part && part.error instanceof Error
+                ? part.error.message
+                : 'work_unit generation error',
+            );
           }
-          const ingested = ingestWorkToolResult(runId, notebookId, node.id, toolName, output);
-          evidenceIds.push(...ingested.evidenceIds);
-          if (ingested.searchesDelta > 0) {
-            searchesUsed += ingested.searchesDelta;
-            updateRun(runId, { searchesUsed });
-          }
-          emitLog(
-            runId,
-            toolName === 'webSearch'
-              ? `外网检索：${ingested.evidenceIds.length} 条`
-              : toolName === 'retrieveSources'
-                ? `检索笔记本：${ingested.evidenceIds.length} 条`
-                : `工具 ${toolName} 完成`,
-          );
-        } else if (part.type === 'error') {
-          throw new Error(
-            'error' in part && part.error instanceof Error
-              ? part.error.message
-              : 'work_unit generation error',
-          );
         }
-      }
+      });
       via = 'agent';
     } catch (error) {
       if (abortSignal.aborted || isCancelled(runId)) throw error;
@@ -458,67 +473,93 @@ export function writeBackNodeWork(
   return updated;
 }
 
-/** Serial work units for live research nodes (c93 branches + fork children). */
+/** Parallel-capable work units for live research nodes (c106; N=1 ≡ serial). */
 export async function drainResearchWorkUnits(
   runId: number,
   abortSignal: AbortSignal,
 ): Promise<void> {
+  const parallelN = getParallelBranchUnits();
+
   while (!abortSignal.aborted && !isCancelled(runId)) {
     const row = requireFresh(runId);
     const graph = getGraph(row);
-    // F2=B: stable insertion-order queue (orderResearchNodesForWork)
+    // F2=B: stable insertion-order queue (orderResearchNodesForWork); re-read each wave
     const pending = orderResearchNodesForWork(graph.nodes as ResearchNode[]);
     if (pending.length === 0) return;
-    const node = pending[0]!;
+    const batch = pending.slice(0, parallelN);
 
     // F4=A: budget exhausted → mark missing and continue (no hard stop here)
     if (row.allowWeb && row.searchesUsed >= row.maxSearches) {
-      emitLog(runId, `跳过研究节点 ${node.id}：搜索预算已尽`);
-      appendProgressEvent(runId, 'unit_aborted', {
-        nodeId: node.id,
-        headline: '预算已尽，跳过节点',
-      });
-      writeBackNodeWork(runId, node.id, node.evidenceIds ?? []);
+      for (const node of batch) {
+        emitLog(runId, `跳过研究节点 ${node.id}：搜索预算已尽`);
+        appendProgressEvent(runId, 'unit_aborted', {
+          nodeId: node.id,
+          headline: '预算已尽，跳过节点',
+        });
+        await withRunWriteLock(runId, () => {
+          writeBackNodeWork(runId, node.id, node.evidenceIds ?? []);
+        });
+      }
       continue;
     }
 
-    patchNodePhase(runId, node.id, 'retrieving');
-    appendProgressEvent(runId, 'node_phase', {
-      nodeId: node.id,
-      headline: 'retrieving',
-      payload: { phase: 'retrieving' },
-    });
-    // unit_started emitted inside runNodeWorkUnit (single ledger entry per unit)
-
-    const fresh = requireFresh(runId);
-    const work = await runNodeWorkUnit({
-      runId,
-      notebookId: fresh.notebookId,
-      node,
-      topic: node.query?.trim() || fresh.topic,
-      allowWeb: fresh.allowWeb && fresh.searchesUsed < fresh.maxSearches,
-      useNotebookSources: fresh.useNotebookSources,
-      sourceIds: fresh.sourceIds ?? null,
-      searchesUsed: fresh.searchesUsed,
-      maxSearches: fresh.maxSearches,
-      abortSignal,
-    });
-    if (abortSignal.aborted || isCancelled(runId)) return;
-    const written = writeBackNodeWork(runId, node.id, work.evidenceIds, {
-      summary: work.summary,
-      conclusionStatus: work.conclusionStatus,
-    });
-    if (!written) {
-      emitLog(runId, `研究节点 ${node.id} 已剪枝，跳过写回`);
-      appendProgressEvent(runId, 'unit_skipped_pruned', { nodeId: node.id });
-    } else {
-      appendProgressEvent(runId, 'unit_finished', {
+    for (const node of batch) {
+      await withRunWriteLock(runId, () => {
+        patchNodePhase(runId, node.id, 'retrieving');
+      });
+      appendProgressEvent(runId, 'node_phase', {
         nodeId: node.id,
-        headline: written.summary ?? '支路完成',
-        payload: {
-          evidenceCount: work.evidenceIds.length,
+        headline: 'retrieving',
+        payload: { phase: 'retrieving' },
+      });
+    }
+
+    const settled = await Promise.allSettled(
+      batch.map(async (node) => {
+        const fresh = requireFresh(runId);
+        const work = await runNodeWorkUnit({
+          runId,
+          notebookId: fresh.notebookId,
+          node,
+          topic: node.query?.trim() || fresh.topic,
+          allowWeb: fresh.allowWeb && fresh.searchesUsed < fresh.maxSearches,
+          useNotebookSources: fresh.useNotebookSources,
+          sourceIds: fresh.sourceIds ?? null,
+          searchesUsed: fresh.searchesUsed,
+          maxSearches: fresh.maxSearches,
+          abortSignal,
+        });
+        return { node, work };
+      }),
+    );
+
+    if (abortSignal.aborted || isCancelled(runId)) return;
+
+    for (const result of settled) {
+      if (result.status === 'rejected') {
+        if (abortSignal.aborted || isCancelled(runId)) return;
+        console.warn('[research] parallel work-unit rejected:', result.reason);
+        continue;
+      }
+      const { node, work } = result.value;
+      await withRunWriteLock(runId, () => {
+        const written = writeBackNodeWork(runId, node.id, work.evidenceIds, {
+          summary: work.summary,
           conclusionStatus: work.conclusionStatus,
-        },
+        });
+        if (!written) {
+          emitLog(runId, `研究节点 ${node.id} 已剪枝，跳过写回`);
+          appendProgressEvent(runId, 'unit_skipped_pruned', { nodeId: node.id });
+        } else {
+          appendProgressEvent(runId, 'unit_finished', {
+            nodeId: node.id,
+            headline: written.summary ?? '支路完成',
+            payload: {
+              evidenceCount: work.evidenceIds.length,
+              conclusionStatus: work.conclusionStatus,
+            },
+          });
+        }
       });
     }
   }
@@ -687,7 +728,7 @@ export async function runLoop(runId: number): Promise<void> {
       });
     }
 
-    // Serial work units for live research nodes (c93 branches + fork children)
+    // Parallel-capable work units for live research nodes (c106; N=1 ≡ serial)
     if (isCancelled(runId) || abort.signal.aborted) {
       if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
       return;
