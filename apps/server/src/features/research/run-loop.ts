@@ -316,9 +316,8 @@ export async function runNodeWorkUnit(opts: {
 
   if (agent) {
     try {
-      // Hold per-run LLM lock for the whole tool-loop stream (model steps).
-      // Tool IO inside the stream is also serialized; cross-unit IO overlap comes
-      // from stub/search paths that run outside this lock.
+      // Hold per-run LLM lock for the tool-loop stream; Work tools release the
+      // lock during execute so parallel units can overlap search/retrieve IO.
       await withRunLlmLock(runId, async () => {
         const result = await agent.stream({
           prompt: [

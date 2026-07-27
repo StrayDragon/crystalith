@@ -164,7 +164,11 @@ import { resetConfig, config, getParallelBranchUnits } from '../../src/shared/co
 }
 
 import { notebooks } from '../../src/db/schema.ts';
-import { clearRunLocks, withRunLlmLock } from '../../src/features/research/run-locks.ts';
+import {
+  clearRunLocks,
+  withRunLlmLock,
+  withRunLlmLockReleased,
+} from '../../src/features/research/run-locks.ts';
 import { createApp } from '../../src/server.ts';
 
 const BASE = 'http://test.local';
@@ -231,6 +235,25 @@ describe('c106 parallel branch units', () => {
     expect(max).toBe(2);
     clearRunLocks(9101);
     clearRunLocks(9102);
+  });
+
+  it('withRunLlmLockReleased overlaps tool IO under same-run outer locks', async () => {
+    let ioInFlight = 0;
+    let ioMax = 0;
+    const unit = () =>
+      withRunLlmLock(9201, async () => {
+        await Bun.sleep(5);
+        await withRunLlmLockReleased(async () => {
+          ioInFlight++;
+          ioMax = Math.max(ioMax, ioInFlight);
+          await Bun.sleep(40);
+          ioInFlight--;
+        });
+        await Bun.sleep(5);
+      });
+    await Promise.all([unit(), unit()]);
+    expect(ioMax).toBe(2);
+    clearRunLocks(9201);
   });
 
   it('parallel drain completes all research nodes; merge edges remain', async () => {
