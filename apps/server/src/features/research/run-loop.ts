@@ -54,6 +54,9 @@ export async function finishWaveOrSynthesize(runId: number): Promise<void> {
     await drainResearchWorkUnits(runId, abort.signal);
   } catch (error) {
     if (error instanceof AppHttpError && error.code === ErrorCode.RESEARCH_BUDGET) {
+      // User-gated reexpand pause wins over automatic budget confirm (c104).
+      const paused = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+      if (paused?.status === 'awaiting_confirm') return;
       emitLog(runId, '搜索预算已尽，进入预算确认');
       await enterConfirm(runId, 'budget');
       return;
@@ -65,6 +68,8 @@ export async function finishWaveOrSynthesize(runId: number): Promise<void> {
     return;
   }
   const row = requireFresh(runId);
+  // Cooperative pause (request-reexpand) already owns the confirm gate.
+  if (row.status === 'awaiting_confirm') return;
   if (row.allowWeb && row.searchesUsed > 0 && row.searchesUsed < row.maxSearches) {
     await enterConfirm(runId, 'budget');
     return;
@@ -683,6 +688,10 @@ export async function runLoop(runId: number): Promise<void> {
     }
 
     // Serial work units for live research nodes (c93 branches + fork children)
+    if (isCancelled(runId) || abort.signal.aborted) {
+      if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
+      return;
+    }
     await finishWaveOrSynthesize(runId);
   } catch (error) {
     if (abort.signal.aborted || isCancelled(runId)) {
@@ -716,6 +725,10 @@ export async function enterConfirm(
 ): Promise<void> {
   let row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
   if (!row) return;
+  // Do not clobber a live user-gated reexpand confirm with automatic budget (c104).
+  if (kind === 'budget' && row.status === 'awaiting_confirm' && row.confirmKind === 'reexpand') {
+    return;
+  }
   row = updateRun(runId, {
     status: 'awaiting_confirm',
     confirmKind: kind,
