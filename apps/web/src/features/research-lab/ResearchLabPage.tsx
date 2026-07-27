@@ -409,7 +409,9 @@ function LabWorkbench({
           {!showCompose && primary.secondary ? (
             <button
               type="button"
-              disabled={primary.secondary.disabled}
+              disabled={
+                primary.secondary.disabled || (lab.busy && primary.secondary.kind !== 'cancel')
+              }
               title={primary.title}
               onClick={() => runPrimary(primary.secondary!.kind)}
               className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-40"
@@ -431,7 +433,7 @@ function LabWorkbench({
           {!showCompose ? (
             <button
               type="button"
-              disabled={primary.disabled}
+              disabled={primary.disabled || (lab.busy && primary.kind !== 'cancel')}
               title={primary.title}
               onClick={() => runPrimary(primary.kind)}
               className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:pointer-events-none disabled:opacity-40"
@@ -447,7 +449,11 @@ function LabWorkbench({
                         ? tid(TestIds.researchLabCancel)
                         : tid(TestIds.researchLabStart))}
             >
-              {lab.reshaping ? '重塑中…' : primary.label}
+              {lab.reshaping
+                ? '重塑中…'
+                : lab.busy && primary.kind !== 'cancel'
+                  ? '处理中…'
+                  : primary.label}
             </button>
           ) : null}
 
