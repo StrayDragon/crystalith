@@ -273,7 +273,17 @@ export function getDefaultChatModel(): ModelConfig | undefined {
 /** Parsed `research:` section from app.yaml (defaults applied). */
 export function getResearchSettings(): ResearchSettings {
   const parsed = ResearchSettingsSchema.safeParse(config().raw.research ?? {});
-  return parsed.success ? parsed.data : { progressEventRetain: 200 };
+  return parsed.success ? parsed.data : { progressEventRetain: 200, parallelBranchUnits: 2 };
+}
+
+/**
+ * Concurrent research-node work-units per Run (c106).
+ * Always clamped to 1..8 even if callers bypass Zod.
+ */
+export function getParallelBranchUnits(): number {
+  const n = getResearchSettings().parallelBranchUnits ?? 2;
+  if (!Number.isFinite(n)) return 2;
+  return Math.min(8, Math.max(1, Math.trunc(n)));
 }
 
 /**
@@ -713,6 +723,22 @@ export const ResearchSettingsSchema = z.object({
     .positive()
     .default(200)
     .describe(desc('research.progress_event_retain', '终态后进度账本保留最近 N 条')),
+  /**
+   * Max concurrent research-node work-units per Run (c106).
+   * 1 = serial (behavioral parity with pre-c106 drain); default 2; clamp 1..8.
+   */
+  parallelBranchUnits: z
+    .number()
+    .int()
+    .min(1)
+    .max(8)
+    .default(2)
+    .describe(
+      desc(
+        'research.parallel_branch_units',
+        '同一 Run 同时推进的支路 work-unit 上限（1=串行，默认 2，最大 8）',
+      ),
+    ),
   /** Optional model id for topic decompose planner; omit/empty inherits models.defaults.chat. */
   decomposeModelId: z
     .string()
@@ -850,10 +876,13 @@ export const RootConfigSchema = z.object({
   database: DatabaseSettingsSchema.describe(desc('root.database', '数据库设置（v1 兼容）')),
   plugins: PluginsSettingsSchema.describe(desc('root.plugins', '插件发现与加载配置')),
   proxy_settings: ProxySettingsSchema.describe(desc('root.proxy_settings', '出站代理设置')),
-  research: ResearchSettingsSchema.default({ progressEventRetain: 200 }).describe(
+  research: ResearchSettingsSchema.default({
+    progressEventRetain: 200,
+    parallelBranchUnits: 2,
+  }).describe(
     desc(
       'root.research',
-      'Deep Research 运行时：进度账本保留条数、可选拆解模型（默认继承 chat）等',
+      'Deep Research 运行时：进度账本保留、支路并行度、可选拆解模型（默认继承 chat）等',
     ),
   ),
 });

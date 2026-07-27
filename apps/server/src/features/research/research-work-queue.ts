@@ -1,6 +1,7 @@
 /**
- * Serial research-node work queue (c94 / r327).
+ * Parallel-capable research-node work queue (c94 / c106 / r327).
  * Stable order = graph.nodes insertion order (decompose/fork append order).
+ * Drain may take up to parallelBranchUnits pending nodes per wave.
  */
 import type { ResearchNode } from '@crystalith/shared';
 
