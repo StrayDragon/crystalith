@@ -128,6 +128,16 @@ export async function confirmResearchRun(
   return data as ResearchRun;
 }
 
+export async function addResearchBudget(notebookId: number, runId: number): Promise<ResearchRun> {
+  const { data, error } = await api.v2
+    .notebooks({ nid: notebookId })
+    .research({ rid: runId })
+    ['add-budget'].post({});
+  if (error) throwEdenError(error);
+  if (!data) throw new Error('加购检索预算失败：空响应');
+  return data as ResearchRun;
+}
+
 export async function requestReexpand(
   notebookId: number,
   runId: number,

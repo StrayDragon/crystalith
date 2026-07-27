@@ -774,14 +774,17 @@
       }
     },
     "research": {
-      "description": "Deep Research 运行时：进度账本保留、支路并行度、读页预算比、work_unit 步数、token 预算、可选拆解模型等",
+      "description": "Deep Research 运行时：进度账本保留、支路并行度、读页预算比、加购公式、work_unit 步数、token 预算、可选拆解模型等",
       "default": {
         "progressEventRetain": 200,
         "parallelBranchUnits": 2,
         "pageRatio": 1.5,
         "workUnitMaxSteps": 12,
         "nodeContentTokenBudget": 32768,
-        "nodeSummaryTokenBudget": 65536
+        "nodeSummaryTokenBudget": 65536,
+        "addOnRatio": 0.25,
+        "addOnMinK": 5,
+        "addOnMaxK": 50
       },
       "type": "object",
       "properties": {
@@ -817,6 +820,21 @@
         "nodeSummaryTokenBudget": {
           "description": "节点短综合证据上下文 token 上限",
           "default": 65536,
+          "type": "number"
+        },
+        "addOnRatio": {
+          "description": "检索加购比例：K=ceil(maxSearches×ratio)",
+          "default": 0.25,
+          "type": "number"
+        },
+        "addOnMinK": {
+          "description": "检索加购块下限",
+          "default": 5,
+          "type": "number"
+        },
+        "addOnMaxK": {
+          "description": "检索加购块上限",
+          "default": 50,
           "type": "number"
         }
       }

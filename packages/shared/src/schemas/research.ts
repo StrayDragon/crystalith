@@ -54,11 +54,11 @@ export const ResearchEdgeKindSchema = z.enum([
 ]);
 export type ResearchEdgeKind = z.infer<typeof ResearchEdgeKindSchema>;
 
-/** L1 depth → budget mapping (design §14). */
+/** L1 depth → budget mapping (r305 / c108). */
 export const RESEARCH_DEPTH_BUDGETS = {
-  shallow: { maxSearches: 8, maxNodes: 12 },
-  medium: { maxSearches: 20, maxNodes: 30 },
-  deep: { maxSearches: 40, maxNodes: 60 },
+  shallow: { maxSearches: 20, maxNodes: 24 },
+  medium: { maxSearches: 50, maxNodes: 60 },
+  deep: { maxSearches: 100, maxNodes: 120 },
 } as const satisfies Record<ResearchDepth, { maxSearches: number; maxNodes: number }>;
 
 // ---------------------------------------------------------------------------
@@ -291,6 +291,13 @@ export const ResearchConfirmBodySchema = z
   .openapi({ description: desc('research.confirm_body', '待确认响应体') });
 export type ResearchConfirmBody = z.infer<typeof ResearchConfirmBodySchema>;
 
+/** POST …/add-budget — proactive search budget add-on (c108 / r343). */
+export const ResearchAddBudgetBodySchema = z
+  .object({})
+  .default({})
+  .openapi({ description: desc('research.add_budget_body', '主动加购检索预算（空体）') });
+export type ResearchAddBudgetBody = z.infer<typeof ResearchAddBudgetBodySchema>;
+
 /** POST …/request-reexpand — user-gated secondary decompose (c104 / r334). */
 export const ResearchRequestReexpandBodySchema = z
   .object({
@@ -496,10 +503,10 @@ export const ResearchRunSchema = z
       useNotebookSources: false,
       allowWeb: true,
       depth: 'medium',
-      maxSearches: 20,
-      maxNodes: 30,
+      maxSearches: 50,
+      maxNodes: 60,
       searchesUsed: 0,
-      maxPageFetches: 30,
+      maxPageFetches: 75,
       pagesUsed: 0,
       nodes: [],
       edges: [],

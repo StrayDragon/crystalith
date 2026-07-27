@@ -10,7 +10,9 @@ import {
   unknownEvidenceCitation,
 } from './evidenceAdapter';
 import {
+  LAB_PARTIAL_COMPLETION_BANNER,
   labPausedBannerText,
+  shouldShowLabPartialCompletionBanner,
   shouldShowLabPausedBanner,
   shouldShowLabPlayingTip,
 } from './labBannerState';
@@ -150,8 +152,9 @@ describe('awaiting_confirm banner / playing (r437)', () => {
         phase,
       }),
     ).toBe(true);
-    expect(labPausedBannerText(phase)).toContain('等待确认');
-    expect(labPausedBannerText(phase)).not.toContain('已暂停');
+    expect(labPausedBannerText(phase, 'budget')).toContain('触顶');
+    expect(labPausedBannerText(phase, 'budget')).toContain('加购');
+    expect(labPausedBannerText(phase, 'budget')).not.toContain('继续深挖');
     expect(shouldShowLabPlayingTip({ showCompose: false, playing })).toBe(false);
 
     const primary = resolveLabPrimaryAction({
@@ -165,7 +168,24 @@ describe('awaiting_confirm banner / playing (r437)', () => {
       confirmKind: 'budget',
     });
     expect(primary.kind).toBe('finish_report');
+    expect(primary.secondary?.label).toBe('加购继续');
     expect(primary.label).not.toBe('暂停');
+  });
+
+  it('partial completion banner when completed with missing research', () => {
+    expect(
+      shouldShowLabPartialCompletionBanner({
+        phase: 'completed',
+        nodes: [{ role: 'research', conclusionStatus: 'missing' }],
+      }),
+    ).toBe(true);
+    expect(LAB_PARTIAL_COMPLETION_BANNER).toContain('部分完成');
+    expect(
+      shouldShowLabPartialCompletionBanner({
+        phase: 'completed',
+        nodes: [{ role: 'research', conclusionStatus: 'clear' }],
+      }),
+    ).toBe(false);
   });
 
   it('running shows playing tip and no 已暂停 banner', () => {

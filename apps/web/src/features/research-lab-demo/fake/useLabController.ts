@@ -124,6 +124,8 @@ export interface LabController {
   cancel: () => void;
   finishReport: () => void;
   continueDig: () => void;
+  /** Proactive search budget add-on (c108); fixture demo is local-only. */
+  addBudget: () => void;
   /** M1 expand_branch (c96). */
   approveBranch: () => void;
   skipBranch: () => void;
@@ -451,6 +453,12 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     setPlaying(true);
   }, []);
 
+  const addBudget = useCallback(() => {
+    setConfirmChoice('add_budget');
+    setHighlightedNodeIds([]);
+    setPlaying(true);
+  }, []);
+
   const approveBranch = useCallback(() => {
     setConfirmChoice('approve_branch');
     setHighlightedNodeIds([]);
@@ -693,6 +701,7 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     cancel: () => undefined,
     finishReport,
     continueDig,
+    addBudget,
     approveBranch,
     skipBranch,
     retry,

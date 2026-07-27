@@ -23,7 +23,7 @@ export function labPausedBannerText(phase: LabPhase, confirmKind?: LabConfirmKin
       return '等待确认 · 再扩展，可批准结构化再拆或跳过并收束';
     }
     if (confirmKind === 'budget') {
-      return '等待确认 · 预算将尽，可继续深挖、再扩展或生成结论';
+      return '等待确认 · 检索预算触顶，可加购继续或生成结论';
     }
     return '等待确认 · 可拖动节点 / 分叉剪枝，或点顶栏收束';
   }
@@ -37,3 +37,14 @@ export function shouldShowLabPlayingTip(input: {
 }): boolean {
   return !input.showCompose && input.playing;
 }
+
+/** Completed with uncovered research nodes after budget finish (c108 / r462). */
+export function shouldShowLabPartialCompletionBanner(input: {
+  phase: LabPhase;
+  nodes: ReadonlyArray<{ role?: string | null; conclusionStatus?: string | null }>;
+}): boolean {
+  if (input.phase !== 'completed') return false;
+  return input.nodes.some((n) => n.role === 'research' && n.conclusionStatus === 'missing');
+}
+
+export const LAB_PARTIAL_COMPLETION_BANNER = '预算用尽·部分完成 — 仍有未覆盖的研究支路';

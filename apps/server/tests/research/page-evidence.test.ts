@@ -229,7 +229,7 @@ describe('ingest fetchPage same-URL upgrade + truncate', () => {
 });
 
 describe('create run sets maxPageFetches', () => {
-  it('medium depth → maxSearches=20 → maxPageFetches=30', async () => {
+  it('medium depth → maxSearches=50 → maxPageFetches=75', async () => {
     const res = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {
         method: 'POST',
@@ -249,12 +249,12 @@ describe('create run sets maxPageFetches', () => {
       maxPageFetches: number;
       pagesUsed: number;
     };
-    expect(body.maxSearches).toBe(20);
-    expect(body.maxPageFetches).toBe(30);
+    expect(body.maxSearches).toBe(50);
+    expect(body.maxPageFetches).toBe(75);
     expect(body.pagesUsed).toBe(0);
 
     const row = getOrm().select().from(researchRuns).where(eq(researchRuns.id, body.id)).get();
-    expect(row?.maxPageFetches).toBe(30);
+    expect(row?.maxPageFetches).toBe(75);
     expect(row?.pagesUsed).toBe(0);
   });
 });

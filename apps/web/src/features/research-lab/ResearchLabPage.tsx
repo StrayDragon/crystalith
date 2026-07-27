@@ -33,7 +33,9 @@ import {
 } from './edenReportActions';
 import { getResearchRun } from './edenResearchApi';
 import {
+  LAB_PARTIAL_COMPLETION_BANNER,
   labPausedBannerText,
+  shouldShowLabPartialCompletionBanner,
   shouldShowLabPausedBanner,
   shouldShowLabPlayingTip,
 } from './labBannerState';
@@ -368,6 +370,19 @@ function LabWorkbench({
           <div className="min-w-0 flex-1" />
         )}
 
+        {!showCompose &&
+        (lab.runStatus === 'running' ||
+          (lab.runStatus === 'awaiting_confirm' && lab.confirmKind === 'budget')) ? (
+          <button
+            type="button"
+            onClick={() => lab.addBudget()}
+            className="shrink-0 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] font-medium text-amber-900 hover:bg-amber-100"
+            {...tid(TestIds.researchLabAddBudget)}
+          >
+            增加检索预算
+          </button>
+        ) : null}
+
         <div className="flex shrink-0 items-center gap-1.5">
           {lab.derived.reportVisible ? (
             <div className="relative">
@@ -573,6 +588,17 @@ function LabWorkbench({
         }) ? (
           <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-full border border-blue-200 bg-blue-50/95 px-3 py-1.5 text-[11px] font-medium text-blue-900 shadow-md backdrop-blur">
             {labPausedBannerText(lab.phase, lab.confirmKind)}
+          </div>
+        ) : null}
+        {shouldShowLabPartialCompletionBanner({
+          phase: lab.phase,
+          nodes: lab.derived.nodes,
+        }) ? (
+          <div
+            className="absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-[11px] font-medium text-amber-950 shadow-md backdrop-blur"
+            {...tid(TestIds.researchLabPartialCompletionBanner)}
+          >
+            {LAB_PARTIAL_COMPLETION_BANNER}
           </div>
         ) : null}
         {shouldShowLabPlayingTip({ showCompose, playing: lab.playing }) ? (

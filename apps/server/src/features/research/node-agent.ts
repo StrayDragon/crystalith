@@ -49,6 +49,8 @@ export const ResearchNodeAgentCallOptionsSchema = z.object({
   pageSoft: z.number().int().positive().optional(),
   /** Remaining web searches for the Run. */
   searchesRemaining: z.number().int().nonnegative().optional(),
+  /** Per-node soft search cap for this work-unit (c108). */
+  searchSoft: z.number().int().positive().optional(),
 });
 export type ResearchNodeAgentCallOptions = z.infer<typeof ResearchNodeAgentCallOptionsSchema>;
 
@@ -80,7 +82,7 @@ const STRUCTURE_LABEL: Record<StructureToolName, string> = {
   propose_rewrite_query: '改写查询',
   propose_set_status: '设置结论状态',
   propose_confirm_finish: '结束并出报告',
-  propose_confirm_continue: '继续研究',
+  propose_confirm_continue: '加购并继续研究',
   propose_open_report: '打开报告',
 };
 
@@ -165,7 +167,8 @@ function structureTools() {
       execute: async () => ({ ok: false, reason: 'requires_user_confirm' }),
     }),
     propose_confirm_continue: tool({
-      description: '提议在预算确认处继续深挖（须用户确认）',
+      description:
+        '提议加购检索预算并继续研究（须用户确认；接受后走 add-budget 或 budget continue）',
       inputSchema: z.object({ rationale }),
       execute: async () => ({ ok: false, reason: 'requires_user_confirm' }),
     }),
@@ -209,6 +212,7 @@ function chatInstructions(
 function workInstructions(options: ResearchNodeAgentCallOptions): string {
   const budgetBits = [
     typeof options.searchesRemaining === 'number' ? `剩余搜索 ${options.searchesRemaining}` : null,
+    typeof options.searchSoft === 'number' ? `本节点搜索软上限 ${options.searchSoft}` : null,
     typeof options.pagesRemaining === 'number' ? `剩余读页 ${options.pagesRemaining}` : null,
     typeof options.pageSoft === 'number' ? `本节点读页软上限 ${options.pageSoft}` : null,
   ].filter(Boolean);

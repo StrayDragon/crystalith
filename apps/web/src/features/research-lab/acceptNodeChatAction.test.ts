@@ -43,6 +43,7 @@ describe('acceptNodeChatAction (r439)', () => {
         setTopicDraft: vi.fn(),
         finishReport: vi.fn(),
         continueDig: vi.fn(),
+        addBudget: vi.fn(),
         setConfirmChoice: vi.fn(),
       },
       openReport: vi.fn(),
@@ -74,6 +75,7 @@ describe('acceptNodeChatAction (r439)', () => {
         setTopicDraft: vi.fn(),
         finishReport: vi.fn(),
         continueDig: vi.fn(),
+        addBudget: vi.fn(),
         setConfirmChoice: vi.fn(),
       },
       openReport: vi.fn(),
@@ -105,6 +107,7 @@ describe('acceptNodeChatAction (r439)', () => {
         setTopicDraft: vi.fn(),
         finishReport: vi.fn(),
         continueDig: vi.fn(),
+        addBudget: vi.fn(),
         setConfirmChoice: vi.fn(),
       },
       openReport: vi.fn(),
@@ -134,11 +137,45 @@ describe('acceptNodeChatAction (r439)', () => {
         setTopicDraft: vi.fn(),
         finishReport: vi.fn(),
         continueDig: vi.fn(),
+        addBudget: vi.fn(),
         setConfirmChoice: vi.fn(),
       },
       openReport,
     });
     expect(ok).toBe(true);
     expect(openReport).toHaveBeenCalled();
+  });
+
+  it('confirm_continue while running calls addBudget (c108)', () => {
+    const addBudget = vi.fn();
+    const continueDig = vi.fn();
+    const ok = acceptNodeChatAction({
+      proposal: {
+        id: 'p5',
+        kind: 'confirm_continue',
+        label: '加购',
+        rationale: 'r',
+        status: 'pending',
+      },
+      node: nodes[0]!,
+      edges,
+      nodes,
+      mode: 'eden',
+      lab: {
+        pruneAlongEdge: vi.fn(),
+        forkAlongEdge: vi.fn(),
+        editNode: vi.fn(),
+        setTopicDraft: vi.fn(),
+        finishReport: vi.fn(),
+        continueDig,
+        addBudget,
+        setConfirmChoice: vi.fn(),
+        runStatus: 'running',
+      },
+      openReport: vi.fn(),
+    });
+    expect(ok).toBe(true);
+    expect(addBudget).toHaveBeenCalled();
+    expect(continueDig).not.toHaveBeenCalled();
   });
 });

@@ -277,6 +277,9 @@ const RESEARCH_SETTINGS_FALLBACK: ResearchSettings = {
   workUnitMaxSteps: 12,
   nodeContentTokenBudget: 32768,
   nodeSummaryTokenBudget: 65536,
+  addOnRatio: 0.25,
+  addOnMinK: 5,
+  addOnMaxK: 50,
 };
 
 /** Parsed `research:` section from app.yaml (defaults applied). */
@@ -813,8 +816,40 @@ export const ResearchSettingsSchema = z.object({
     .positive()
     .default(65536)
     .describe(desc('research.node_summary_token_budget', '节点短综合证据上下文 token 上限')),
+  /** Search budget add-on: K = clamp(ceil(maxSearches × ratio), minK, maxK) (c108). */
+  addOnRatio: z
+    .number()
+    .positive()
+    .default(0.25)
+    .describe(desc('research.add_on_ratio', '检索加购比例：K=ceil(maxSearches×ratio)')),
+  addOnMinK: z
+    .number()
+    .int()
+    .positive()
+    .default(5)
+    .describe(desc('research.add_on_min_k', '检索加购块下限')),
+  addOnMaxK: z
+    .number()
+    .int()
+    .positive()
+    .default(50)
+    .describe(desc('research.add_on_max_k', '检索加购块上限')),
 });
 export type ResearchSettings = z.infer<typeof ResearchSettingsSchema>;
+
+/** Search add-on knobs from config (c108). */
+export function getSearchAddOnSettings(): {
+  addOnRatio: number;
+  addOnMinK: number;
+  addOnMaxK: number;
+} {
+  const s = getResearchSettings();
+  return {
+    addOnRatio: s.addOnRatio ?? 0.25,
+    addOnMinK: s.addOnMinK ?? 5,
+    addOnMaxK: s.addOnMaxK ?? 50,
+  };
+}
 
 export const RootConfigSchema = z.object({
   app: AppSettingsSchema.describe(
@@ -947,10 +982,13 @@ export const RootConfigSchema = z.object({
     workUnitMaxSteps: 12,
     nodeContentTokenBudget: 32768,
     nodeSummaryTokenBudget: 65536,
+    addOnRatio: 0.25,
+    addOnMinK: 5,
+    addOnMaxK: 50,
   }).describe(
     desc(
       'root.research',
-      'Deep Research 运行时：进度账本保留、支路并行度、读页预算比、work_unit 步数、token 预算、可选拆解模型等',
+      'Deep Research 运行时：进度账本保留、支路并行度、读页预算比、加购公式、work_unit 步数、token 预算、可选拆解模型等',
     ),
   ),
 });

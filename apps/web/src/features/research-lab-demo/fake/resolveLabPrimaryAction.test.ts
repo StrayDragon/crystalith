@@ -52,7 +52,7 @@ describe('resolveLabPrimaryAction', () => {
     expect(a.confirmHint).toContain('预算');
     expect(a.secondary).toEqual({
       kind: 'continue_dig',
-      label: '继续深挖',
+      label: '加购继续',
       disabled: false,
     });
     expect(a.tertiary).toEqual({

@@ -22,7 +22,7 @@ import { applyDecomposePlanToGraph, planTopicDecomposition } from './decompose.t
 import { e2eStubNodeSummary, e2eStubWebHits, isResearchE2eStub } from './e2e-stub.ts';
 import { createResearchNodeAgent } from './node-agent.ts';
 import { synthesizeAndComplete } from './report.ts';
-import { computePageSoftCap } from './research-budget.ts';
+import { computePageSoftCap, computeSearchSoftCap } from './research-budget.ts';
 import {
   activeLoops,
   appendProgressEvent,
@@ -61,7 +61,7 @@ function shouldFinalizeCancelOnAbort(runId: number): boolean {
   return row?.status !== 'awaiting_confirm';
 }
 
-/** After drain: budget M1 confirm when web budget remains/exhausted, else synthesize. */
+/** After drain: budget confirm only when truly exhausted and still need search; else synthesize. */
 export async function finishWaveOrSynthesize(runId: number): Promise<void> {
   const abort = ensureRunAbortController(runId);
   try {
@@ -84,13 +84,13 @@ export async function finishWaveOrSynthesize(runId: number): Promise<void> {
   const row = requireFresh(runId);
   // Cooperative pause (request-reexpand) already owns the confirm gate.
   if (row.status === 'awaiting_confirm') return;
-  if (row.allowWeb && row.searchesUsed > 0 && row.searchesUsed < row.maxSearches) {
-    await enterConfirm(runId, 'budget');
-    return;
-  }
+  // c108: no mid-wave remaining-budget confirm; only true exhaustion with work left.
   if (row.allowWeb && row.searchesUsed >= row.maxSearches) {
-    await enterConfirm(runId, 'budget');
-    return;
+    const pending = orderResearchNodesForWork(getGraph(row).nodes as ResearchNode[]);
+    if (pending.length > 0) {
+      await enterConfirm(runId, 'budget');
+      return;
+    }
   }
   await synthesizeAndComplete(runId);
 }
@@ -301,6 +301,7 @@ export async function runNodeWorkUnit(opts: {
   } = opts;
   let searchesUsed = opts.searchesUsed;
   let nodePagesUsed = 0;
+  let nodeSearchesUsed = 0;
   const evidenceIds: string[] = [...(node.evidenceIds ?? [])];
   const role = resolveNodeRole(node);
 
@@ -311,6 +312,7 @@ export async function runNodeWorkUnit(opts: {
   ).length;
   const pageSoft = computePageSoftCap(remainingPages, liveResearchCount);
   const searchesRemaining = Math.max(0, maxSearches - searchesUsed);
+  const searchSoft = computeSearchSoftCap(searchesRemaining, liveResearchCount);
 
   updateRun(runId, { llmActivity: 'work_unit', activeNodeId: node.id });
   appendProgressEvent(runId, 'unit_started', {
@@ -379,7 +381,7 @@ export async function runNodeWorkUnit(opts: {
             `研究主题：${topic}`,
             `节点：${node.title}`,
             node.query ? `查询：${node.query}` : '',
-            `预算：剩余搜索 ${searchesRemaining}；剩余读页 ${remainingPages}；本节点读页软上限 ${pageSoft}。`,
+            `预算：剩余搜索 ${searchesRemaining}；本节点搜索软上限 ${searchSoft}；剩余读页 ${remainingPages}；本节点读页软上限 ${pageSoft}。`,
             '请使用可用工具收集证据：webSearch 后自选 URL 读页（fetchPage）。无命中时保持空列表，不要编造。',
           ]
             .filter(Boolean)
@@ -396,6 +398,7 @@ export async function runNodeWorkUnit(opts: {
             pagesRemaining: remainingPages,
             pageSoft,
             searchesRemaining,
+            searchSoft,
           } as never,
         });
 
@@ -406,8 +409,13 @@ export async function runNodeWorkUnit(opts: {
             const output = 'output' in part ? part.output : undefined;
             if (toolName === 'webSearch') {
               const freshBudget = requireFresh(runId);
-              if (freshBudget.searchesUsed >= maxSearches) {
-                emitLog(runId, '外网检索跳过：搜索预算已尽');
+              if (freshBudget.searchesUsed >= maxSearches || nodeSearchesUsed >= searchSoft) {
+                emitLog(
+                  runId,
+                  nodeSearchesUsed >= searchSoft
+                    ? '外网检索跳过：本节点搜索软上限已尽'
+                    : '外网检索跳过：搜索预算已尽',
+                );
                 break;
               }
             }
@@ -429,6 +437,7 @@ export async function runNodeWorkUnit(opts: {
               if (ingested.searchesDelta > 0) {
                 const fresh = requireFresh(runId);
                 searchesUsed = fresh.searchesUsed + ingested.searchesDelta;
+                nodeSearchesUsed += ingested.searchesDelta;
                 updateRun(runId, { searchesUsed });
               }
               if (ingested.pagesDelta > 0) {
@@ -569,19 +578,9 @@ export async function drainResearchWorkUnits(
     if (pending.length === 0) return;
     const batch = pending.slice(0, parallelN);
 
-    // F4=A: budget exhausted → mark missing and continue (no hard stop here)
+    // F4=A / c108: budget exhausted with work left → hard stop (do NOT mark missing; resume after add-on)
     if (row.allowWeb && row.searchesUsed >= row.maxSearches) {
-      for (const node of batch) {
-        emitLog(runId, `跳过研究节点 ${node.id}：搜索预算已尽`);
-        appendProgressEvent(runId, 'unit_aborted', {
-          nodeId: node.id,
-          headline: '预算已尽，跳过节点',
-        });
-        await withRunWriteLock(runId, () => {
-          writeBackNodeWork(runId, node.id, node.evidenceIds ?? []);
-        });
-      }
-      continue;
+      throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Search budget exhausted');
     }
 
     for (const node of batch) {
@@ -753,14 +752,9 @@ export async function runLoop(runId: number): Promise<void> {
     if (!skipQuestionUnit) {
       const evidenceIds: string[] = [...(question.evidenceIds ?? [])];
 
-      // Budget gate before spending search (question-only path)
+      // Budget gate before spending search (question-only path) — true exhaustion only (c108)
       if (row.allowWeb) {
         if (row.searchesUsed >= row.maxSearches) {
-          await enterConfirm(runId, 'budget');
-          return;
-        }
-        const approaching = row.searchesUsed >= Math.max(1, row.maxSearches - 1);
-        if (approaching && row.searchesUsed > 0) {
           await enterConfirm(runId, 'budget');
           return;
         }

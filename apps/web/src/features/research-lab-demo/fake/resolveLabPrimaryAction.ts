@@ -118,16 +118,16 @@ export function resolveLabPrimaryAction(input: LabPrimaryActionInput): LabPrimar
         },
       });
     }
-    // Default / budget (H3=A): only continue + finish_report; 再扩展 as tertiary
+    // Default / budget (c108): finish + add-on continue; 再扩展 as tertiary
     return disableForReshape({
       kind: 'finish_report',
       label: '生成结论',
       disabled: false,
-      confirmHint: '预算将尽 · 可继续深挖、再扩展或生成结论',
+      confirmHint: '检索预算触顶 · 可加购继续、再扩展或生成结论',
       title: '结束并生成研究报告',
       secondary: {
         kind: 'continue_dig',
-        label: '继续深挖',
+        label: '加购继续',
         disabled: false,
       },
       tertiary: {
