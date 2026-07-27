@@ -70,6 +70,7 @@ import { notebooks, researchRuns, sources } from '../../src/db/schema.ts';
 import {
   collectClaimedCiteIds,
   isSynthesizeFailureReason,
+  repairResearchReportText,
   SYNTHESIZE_FAILED_PREFIX,
   SYNTHESIZE_MODEL_ERROR_PREFIX,
   validateAndBindCitations,
@@ -114,6 +115,59 @@ async function waitForStatus(runId: number, wanted: string[], timeoutMs = 5000):
   }
   throw new Error(`timeout status; last=${last}`);
 }
+
+describe('repairResearchReportText (unit)', () => {
+  it('unwraps fenced JSON and fills missing citations', () => {
+    const repaired = repairResearchReportText(`\`\`\`json
+{"title":"T","sections":[{"id":"s1","heading":"H","blocks":[{"type":"paragraph","text":"hi"}]}]}
+\`\`\``);
+    expect(repaired).toBeTruthy();
+    const obj = JSON.parse(repaired!) as {
+      citations: Record<string, unknown>;
+      sections: Array<{ blocks: Array<{ citeIds: string[] }> }>;
+    };
+    expect(obj.citations).toEqual({});
+    expect(obj.sections[0]!.blocks[0]!.citeIds).toEqual([]);
+  });
+
+  it('strips think tags and preamble before object', () => {
+    const repaired = repairResearchReportText(
+      '<think>reasoning</think>\nHere is the report:\n{"title":"T","sections":[{"id":"s1","heading":"H","blocks":[{"type":"paragraph","text":"x","citeIds":[]}]}],"citations":{}}',
+    );
+    expect(repaired).toBeTruthy();
+    expect(JSON.parse(repaired!).title).toBe('T');
+  });
+
+  it('normalizes incomplete citation objects', () => {
+    const repaired = repairResearchReportText(
+      JSON.stringify({
+        title: 'T',
+        sections: [
+          {
+            id: 's1',
+            heading: 'H',
+            blocks: [{ type: 'paragraph', text: 'x', citeIds: ['ev1'] }],
+          },
+        ],
+        citations: {
+          ev1: { url: 'https://example.com', sourceId: 'bad' },
+        },
+      }),
+    );
+    expect(repaired).toBeTruthy();
+    const obj = JSON.parse(repaired!) as {
+      citations: Record<
+        string,
+        { sourceName: string; snippet: string; url?: string; sourceId?: number }
+      >;
+    };
+    expect(obj.citations.ev1).toEqual({
+      sourceName: 'ev1',
+      snippet: '',
+      url: 'https://example.com',
+    });
+  });
+});
 
 describe('validateAndBindCitations (unit)', () => {
   it('strips illegal keys and keeps legal', () => {

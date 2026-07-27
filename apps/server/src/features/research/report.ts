@@ -17,7 +17,7 @@ import type {
   ResearchRunStatus,
 } from '@crystalith/shared';
 import { ResearchReportSchema } from '@crystalith/shared';
-import { generateObject } from 'ai';
+import { generateObject, generateText } from 'ai';
 import { and, asc, desc, eq, gt } from 'drizzle-orm';
 import { NotFoundError } from 'elysia';
 
@@ -182,6 +182,141 @@ function buildNodeSummaries(row: RunRow): string {
   return lines.length ? lines.join('\n') : '（无节点摘要）';
 }
 
+/**
+ * Local / think models often emit fenced JSON, preamble, or omit `citations`.
+ * Used by generateObject repair + unit tests (mirrors repairDecomposePlanText).
+ */
+export function repairResearchReportText(text: string): string | null {
+  let trimmed = text.trim();
+  if (!trimmed) return null;
+
+  trimmed = trimmed.replaceAll(/<think>[\s\S]*?<\/think>/giu, '').trim();
+
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/iu);
+  if (fenced) trimmed = fenced[1]!.trim();
+
+  const start = trimmed.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0;
+  let end = -1;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < trimmed.length; i++) {
+    const ch = trimmed[i]!;
+    if (inString) {
+      if (escape) escape = false;
+      else if (ch === '\\') escape = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  if (end < 0) return null;
+
+  try {
+    const raw: unknown = JSON.parse(trimmed.slice(start, end + 1));
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const obj = raw as Record<string, unknown>;
+    if (typeof obj.title !== 'string') return null;
+    if (!Array.isArray(obj.sections)) return null;
+    if (
+      obj.citations === null ||
+      obj.citations === undefined ||
+      typeof obj.citations !== 'object' ||
+      Array.isArray(obj.citations)
+    ) {
+      obj.citations = {};
+    }
+
+    const citationsIn = obj.citations as Record<string, unknown>;
+    const citationsOut: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(citationsIn)) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        citationsOut[key] = { sourceName: key, snippet: '' };
+        continue;
+      }
+      const c = value as Record<string, unknown>;
+      const repaired: Record<string, unknown> = {
+        sourceName: typeof c.sourceName === 'string' && c.sourceName ? c.sourceName : key,
+        snippet: typeof c.snippet === 'string' ? c.snippet : '',
+      };
+      if (typeof c.url === 'string') repaired.url = c.url;
+      if (typeof c.sourceId === 'number' && Number.isInteger(c.sourceId) && c.sourceId > 0) {
+        repaired.sourceId = c.sourceId;
+      }
+      if (typeof c.chunkId === 'number' || typeof c.chunkId === 'string') {
+        repaired.chunkId = c.chunkId;
+      }
+      if (typeof c.chunkIndex === 'number' && Number.isInteger(c.chunkIndex)) {
+        repaired.chunkIndex = c.chunkIndex;
+      }
+      citationsOut[key] = repaired;
+    }
+    obj.citations = citationsOut;
+
+    obj.sections = (obj.sections as unknown[]).map((section, idx) => {
+      if (!section || typeof section !== 'object' || Array.isArray(section)) {
+        return {
+          id: `s${idx + 1}`,
+          heading: '节',
+          blocks: [{ type: 'paragraph', text: String(section ?? ''), citeIds: [] }],
+        };
+      }
+      const s = section as Record<string, unknown>;
+      const id = typeof s.id === 'string' && s.id.trim() ? s.id : `s${idx + 1}`;
+      const heading = typeof s.heading === 'string' ? s.heading : '节';
+      const blocksRaw = Array.isArray(s.blocks) ? s.blocks : [];
+      const blocks = blocksRaw.map((block) => {
+        if (!block || typeof block !== 'object' || Array.isArray(block)) {
+          return { type: 'paragraph', text: String(block ?? ''), citeIds: [] };
+        }
+        const b = block as Record<string, unknown>;
+        if (b.type === 'bullets') {
+          const items = Array.isArray(b.items) ? b.items : [];
+          return {
+            type: 'bullets',
+            items: items.map((item) => {
+              if (!item || typeof item !== 'object' || Array.isArray(item)) {
+                return { text: String(item ?? ''), citeIds: [] };
+              }
+              const it = item as Record<string, unknown>;
+              return {
+                text: typeof it.text === 'string' ? it.text : String(it.text ?? ''),
+                citeIds: Array.isArray(it.citeIds)
+                  ? it.citeIds.filter((x): x is string => typeof x === 'string')
+                  : [],
+              };
+            }),
+          };
+        }
+        return {
+          type: 'paragraph',
+          text: typeof b.text === 'string' ? b.text : String(b.text ?? ''),
+          citeIds: Array.isArray(b.citeIds)
+            ? b.citeIds.filter((x): x is string => typeof x === 'string')
+            : [],
+        };
+      });
+      return { id, heading, blocks };
+    });
+
+    return JSON.stringify(obj);
+  } catch {
+    return null;
+  }
+}
+
 /** LLM structured ResearchReport (or e2e stub). Throws on model/schema failure. */
 export async function generateLlmResearchReport(
   row: RunRow,
@@ -201,38 +336,57 @@ export async function generateLlmResearchReport(
   const maxOutputTokens = modelConfig.completionOptions?.maxTokens ?? 8192;
   const catalog = buildEvidenceCatalog(evidences);
   const nodeSummaries = buildNodeSummaries(row);
+  const prompt = [
+    '你是深度研究结案写作者。请输出同形 ResearchReport JSON（title、sections、citations）。',
+    `研究主题：${row.topic}`,
+    '',
+    '节点摘要：',
+    nodeSummaries,
+    '',
+    '可用证据（cite key MUST 使用下列 id；禁止虚构 id）：',
+    catalog,
+    '',
+    '规则：',
+    '- sections 为正文；blocks 为 paragraph 或 bullets；每处 citeIds 只能引用证据 id。',
+    '- citations 为全局 map；key 必须是证据 id；无引用时用空对象 {}。',
+    '- 引用是充分不必要条件：可以 0 cite 仍有结论；有证据可不引用。',
+    '- 0 证据时写诚实不足说明，citeIds/citations 为空。',
+    '- 禁止把证据清单当研究报告正文。',
+    '- 最终只输出一个 JSON 对象，形状必须是 {"title":"...","sections":[...],"citations":{}}。',
+    '- 不要 markdown 代码围栏；推理尽量短。',
+  ].join('\n');
 
-  const { object } = await generateObject({
-    model,
-    schema: ResearchReportSchema,
-    abortSignal,
-    maxOutputTokens,
-    temperature: modelConfig.completionOptions?.temperature ?? 0.3,
-    prompt: [
-      '你是深度研究结案写作者。请输出同形 ResearchReport JSON（title、sections、citations）。',
-      `研究主题：${row.topic}`,
-      '',
-      '节点摘要：',
-      nodeSummaries,
-      '',
-      '可用证据（cite key MUST 使用下列 id；禁止虚构 id）：',
-      catalog,
-      '',
-      '规则：',
-      '- sections 为正文；blocks 为 paragraph 或 bullets；每处 citeIds 只能引用证据 id。',
-      '- citations 为全局 map；key 必须是证据 id。',
-      '- 引用是充分不必要条件：可以 0 cite 仍有结论；有证据可不引用。',
-      '- 0 证据时写诚实不足说明，citeIds/citations 为空。',
-      '- 禁止把证据清单当研究报告正文。',
-      '- 推理尽量短；只输出符合 schema 的对象。',
-    ].join('\n'),
-  });
+  try {
+    const { object } = await generateObject({
+      model,
+      schema: ResearchReportSchema,
+      abortSignal,
+      maxOutputTokens,
+      temperature: modelConfig.completionOptions?.temperature ?? 0.3,
+      experimental_repairText: async ({ text }) => repairResearchReportText(text),
+      prompt,
+    });
 
-  const parsed = ResearchReportSchema.safeParse(object);
-  if (!parsed.success) {
-    throw new Error(`Invalid ResearchReport from model: ${parsed.error.message}`);
+    const parsed = ResearchReportSchema.safeParse(object);
+    if (!parsed.success) {
+      throw new Error(`Invalid ResearchReport from model: ${parsed.error.message}`);
+    }
+    return parsed.data;
+  } catch (error) {
+    // Think models often fail schema mode; free-text + local repair is the recovery path.
+    const { text } = await generateText({
+      model,
+      abortSignal,
+      maxOutputTokens,
+      temperature: modelConfig.completionOptions?.temperature ?? 0.3,
+      prompt,
+    });
+    const repaired = repairResearchReportText(text);
+    if (!repaired) throw error;
+    const parsed = ResearchReportSchema.safeParse(JSON.parse(repaired) as unknown);
+    if (!parsed.success) throw error;
+    return parsed.data;
   }
-  return parsed.data;
 }
 
 function failSynthesize(runId: number, reason: string): void {
