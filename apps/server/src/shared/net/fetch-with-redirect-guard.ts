@@ -10,6 +10,7 @@
 // URL on their own infra, so per-hop validation on the crystalith server would
 // not apply. Only extractors that fetch the user URL directly on this process
 // (readability, raw router fallback) should use this.
+import { outboundFetch } from './outbound-fetch.ts';
 import { validateUrlForFetch, type SsrfPolicy, SsrfBlockedError } from './url-safety.ts';
 
 const DEFAULT_MAX_REDIRECTS = 5;
@@ -25,6 +26,8 @@ export interface FetchWithRedirectGuardOptions extends RequestInit {
  * the SSRF policy. Throws SsrfBlockedError if the initial URL or any redirect
  * target violates the policy; throws Error on too many redirects or a missing
  * Location header. Returns the final (non-redirect) Response.
+ *
+ * Network hops use outboundFetch so global proxy_settings apply (c109).
  */
 export async function fetchWithRedirectGuard(
   url: string,
@@ -38,7 +41,7 @@ export async function fetchWithRedirectGuard(
   let currentUrl = url;
   // Up to maxRedirects+1 hops: the +1 covers the final non-redirect response.
   for (let hop = 0; hop <= maxRedirects; hop++) {
-    const res = await fetch(currentUrl, { ...init, redirect: 'manual' });
+    const res = await outboundFetch(currentUrl, { ...init, redirect: 'manual' });
 
     if (!REDIRECT_STATUSES.has(res.status)) return res;
 

@@ -8,6 +8,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 
 import { getSearxngHost, getSearchSettings } from '../../shared/config.ts';
+import { outboundFetch } from '../../shared/net/outbound-fetch.ts';
 
 export const WebSearchArgs = z.object({
   query: z.string().min(1).describe('The web search query.'),
@@ -82,7 +83,7 @@ export async function searchWeb(
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const resp = await fetch(url, { signal: controller.signal });
+    const resp = await outboundFetch(url, { signal: controller.signal });
     if (!resp.ok) return [];
     const raw: unknown = await resp.json();
     const results = isRecord(raw) && Array.isArray(raw.results) ? raw.results : [];

@@ -1,3 +1,4 @@
+import { outboundFetch } from '../net/outbound-fetch.ts';
 // Firecrawl extractor — mirrors v1 shared/extraction/firecrawl_extractor.py.
 // Calls the Firecrawl REST API (POST {base}/v2/scrape) without the SDK.
 // base defaults to https://api.firecrawl.dev; override via CL_FIRECRAWL_API_BASE.
@@ -24,7 +25,7 @@ export const firecrawlExtractor: Extractor = {
     if (!apiKey) throw new Error('Firecrawl API key required');
 
     const scrapeUrl = resolveFirecrawlScrapeUrl(config);
-    const res = await fetch(scrapeUrl, {
+    const res = await outboundFetch(scrapeUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,

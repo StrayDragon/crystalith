@@ -28,6 +28,7 @@ import { workspaceRouter } from './features/workspace/router.ts';
 import { generateOpenApiDocument, registerApiDoc } from './openapi.ts';
 import { getOptionalServices } from './shared/config.ts';
 import { ErrorCode, sendError, AppHttpError } from './shared/errors.ts';
+import { outboundFetch } from './shared/net/outbound-fetch.ts';
 
 // ---------------------------------------------------------------------------
 // Scaffold OpenAPI docs
@@ -105,7 +106,7 @@ export function createApp() {
         let searxngHealthy: boolean | null;
         if (opt.searxng.enabled && opt.searxng.endpoint) {
           try {
-            const res = await fetch(opt.searxng.endpoint, {
+            const res = await outboundFetch(opt.searxng.endpoint, {
               method: 'GET',
               signal: AbortSignal.timeout((opt.searxng.timeout_s ?? 3) * 1000),
             });

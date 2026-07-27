@@ -596,6 +596,11 @@ export function getSearxngHost(): string {
   return host || process.env.CL_SEARXNG_HOST || process.env.SEARXNG_HOST || '';
 }
 
+/** Global outbound proxy (`proxy_settings`). socks5_url is ignored by outboundFetch (c109). */
+export function getProxySettings(): ProxySettings {
+  return parseSection(ProxySettingsSchema, config().raw.proxy_settings);
+}
+
 /** Completion options from `completion_options` config section (optional fields). */
 export function getCompletionOptions(): CompletionOptions {
   return parseSection(CompletionOptionsSchema, config().raw.completion_options);

@@ -45,6 +45,7 @@ From repo root:
 - AsyncAPI（`asyncapi.ts`）SSE 通道/事件描述同样用中文业务说明，与上条同一文风
 - AI: AI SDK v7 first（`generateText`/`streamText`/`ToolLoopAgent`/`Output`）；其它编排框架须在 SDD design 论证后引入，且不得另立 ResearchRun 平行过程态
 - Config: `config/app.yaml` + `config/secret.env` (see `config/AGENTS.md`)
+- **Outbound HTTP (non-LLM)**: use `shared/net/outbound-fetch.ts` (`outboundFetch`) — or helpers that wrap it (`fetchWithRedirectGuard`). Do **not** bare-`fetch` search / URL fetch / web extractors. AI SDK providers stay direct unless a future per-provider proxy lands. Global switch: `proxy_settings` in `config/app.yaml`.
 - Research prune closure（`collectResearchPruneClosure` / product B）须与 Web Lab `fake/deriveLabState.collectPruneClosure` 同步；规格见 `llmanspec/changes/update-research-prune-cascade`
 
 ## Progress

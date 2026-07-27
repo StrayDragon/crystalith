@@ -1,3 +1,4 @@
+import { outboundFetch } from '../net/outbound-fetch.ts';
 // Jina Reader extractor — mirrors v1 shared/extraction/jina_extractor.py.
 // Calls the r.jina.ai API (GET) with optional auth key and markdown format.
 import { isWebExtractorEnabled, resolveJinaApiKey } from './config.ts';
@@ -20,7 +21,7 @@ export const jinaExtractor: Extractor = {
       headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
-    const res = await fetch(`https://r.jina.ai/${url}`, { headers });
+    const res = await outboundFetch(`https://r.jina.ai/${url}`, { headers });
     if (res.status === 429) {
       throw new Error('Jina rate limit (429). Try again later.');
     }
