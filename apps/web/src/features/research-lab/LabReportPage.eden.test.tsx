@@ -9,11 +9,13 @@ const getResearchReportView = vi.hoisted(() => vi.fn());
 const listResearchRevisions = vi.hoisted(() => vi.fn());
 const createResearchRevision = vi.hoisted(() => vi.fn());
 const restoreResearchRevision = vi.hoisted(() => vi.fn());
+const forkResearchRunFromRevision = vi.hoisted(() => vi.fn());
 const putResearchWorkingReport = vi.hoisted(() => vi.fn());
 const putResearchCanonicalReport = vi.hoisted(() => vi.fn());
 const discardResearchWorkingReport = vi.hoisted(() => vi.fn());
 const convertResearchToNote = vi.hoisted(() => vi.fn());
 const convertResearchToSource = vi.hoisted(() => vi.fn());
+const navigateToResearchLab = vi.hoisted(() => vi.fn());
 
 // Mock reason: stub ResearchRun report/revisions/convert APIs for Eden LabReportPage unit tests.
 vi.mock('./edenResearchApi', () => ({
@@ -22,12 +24,21 @@ vi.mock('./edenResearchApi', () => ({
   listResearchRevisions,
   createResearchRevision,
   restoreResearchRevision,
+  forkResearchRunFromRevision,
   putResearchWorkingReport,
   putResearchCanonicalReport,
   discardResearchWorkingReport,
   convertResearchToNote,
   convertResearchToSource,
 }));
+
+vi.mock('./labRouting', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./labRouting')>();
+  return {
+    ...actual,
+    navigateToResearchLab: (...args: unknown[]) => navigateToResearchLab(...args),
+  };
+});
 
 vi.mock('../../shared/toast', () => ({
   toast: {
@@ -99,11 +110,13 @@ describe('LabReportPage eden revisions/convert (c89)', () => {
     listResearchRevisions.mockReset();
     createResearchRevision.mockReset();
     restoreResearchRevision.mockReset();
+    forkResearchRunFromRevision.mockReset();
     putResearchWorkingReport.mockReset();
     putResearchCanonicalReport.mockReset();
     discardResearchWorkingReport.mockReset();
     convertResearchToNote.mockReset();
     convertResearchToSource.mockReset();
+    navigateToResearchLab.mockReset();
     vi.mocked(toast.success).mockReset();
     vi.mocked(toast.error).mockReset();
     vi.mocked(toast.info).mockReset();
@@ -328,5 +341,29 @@ describe('LabReportPage eden revisions/convert (c89)', () => {
     });
     const gate = JSON.parse(sessionStorage.getItem('crystalith.lab.runNeedsReload') ?? 'null');
     expect(gate).toMatchObject({ notebookId: 62, runId: 9 });
+  });
+
+  it('fork-run button posts fork-run and navigates to new rid (c105 / r460)', async () => {
+    stubReady();
+    forkResearchRunFromRevision.mockResolvedValue({
+      id: 42,
+      notebookId: 62,
+      status: 'queued',
+      topic: '主题',
+      nodes: [],
+      edges: [],
+      report: sampleReport,
+    });
+
+    renderWithLayer(<LabReportPage notebookId={62} runId={9} />);
+    await waitFor(() => expect(screen.getByText('研究报告：主题')).toBeTruthy());
+
+    fireEvent.click(screen.getByTestId('research-lab-revision-fork-run'));
+    await waitFor(() => {
+      expect(forkResearchRunFromRevision).toHaveBeenCalledWith(62, 9, 'rev_1', {
+        schedule: false,
+      });
+      expect(navigateToResearchLab).toHaveBeenCalledWith(62, 42);
+    });
   });
 });

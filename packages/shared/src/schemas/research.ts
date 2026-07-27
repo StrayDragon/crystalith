@@ -720,6 +720,22 @@ export const ResearchRevisionCreateBodySchema = z
   .openapi({ description: desc('research.revision_create_body', '创建修订快照') });
 export type ResearchRevisionCreateBody = z.infer<typeof ResearchRevisionCreateBodySchema>;
 
+/** POST …/revisions/:revId/fork-run — derive a new ResearchRun from a revision snapshot (c105 / r335). */
+export const ResearchForkRunBodySchema = z
+  .object({
+    schedule: z
+      .boolean()
+      .optional()
+      .openapi({
+        description: desc(
+          'research.fork_run_schedule',
+          '是否立即启动内核（默认 false，保持 queued）',
+        ),
+      }),
+  })
+  .openapi({ description: desc('research.fork_run_body', '从修订快照派生新 ResearchRun') });
+export type ResearchForkRunBody = z.infer<typeof ResearchForkRunBodySchema>;
+
 export const ResearchRevisionSchema = z
   .object({
     id: z.string().min(1),

@@ -42,6 +42,7 @@ import {
   emitStatus,
   finalizeCancel,
   getGraph,
+  insertEvidence,
   isCancelled,
   isTerminalStatus,
   listEvidences,
@@ -591,6 +592,152 @@ export function restoreRevision(notebookId: number, runId: number, revId: string
     broadcast(runId, 'report_ready', { runId });
   }
   return serializeRun(requireRun(notebookId, runId));
+}
+
+function collectReferencedEvidenceIds(
+  graph: { nodes?: ResearchNode[] },
+  report: ResearchReport | null,
+): Set<string> {
+  const ids = new Set<string>();
+  for (const node of graph.nodes ?? []) {
+    for (const eid of node.evidenceIds ?? []) ids.add(eid);
+  }
+  if (report) {
+    for (const id of collectClaimedCiteIds(report)) ids.add(id);
+  }
+  return ids;
+}
+
+function remapEvidenceId(id: string, idMap: Map<string, string>): string {
+  return idMap.get(id) ?? id;
+}
+
+function remapGraphEvidenceIds(
+  graph: { nodes: ResearchNode[]; edges: ResearchEdge[] },
+  idMap: Map<string, string>,
+): { nodes: ResearchNode[]; edges: ResearchEdge[] } {
+  return {
+    nodes: graph.nodes.map((node) => ({
+      ...node,
+      evidenceIds: (node.evidenceIds ?? []).map((id) => remapEvidenceId(id, idMap)),
+    })),
+    edges: graph.edges.map((e) => ({ ...e })),
+  };
+}
+
+function remapReportEvidenceIds(
+  report: ResearchReport,
+  idMap: Map<string, string>,
+): ResearchReport {
+  const citations: ResearchReport['citations'] = {};
+  for (const [key, value] of Object.entries(report.citations ?? {})) {
+    citations[remapEvidenceId(key, idMap)] = value;
+  }
+  const sections = report.sections.map((section) => ({
+    ...section,
+    blocks: section.blocks.map((block) => {
+      if (block.type === 'paragraph') {
+        return {
+          ...block,
+          citeIds: block.citeIds.map((id) => remapEvidenceId(id, idMap)),
+        };
+      }
+      return {
+        ...block,
+        items: block.items.map((item) => ({
+          ...item,
+          citeIds: item.citeIds.map((id) => remapEvidenceId(id, idMap)),
+        })),
+      };
+    }),
+  }));
+  return { title: report.title, sections, citations };
+}
+
+/**
+ * POST …/revisions/:revId/fork-run — create a new ResearchRun from a revision snapshot.
+ * Does NOT schedule; caller may call scheduleRun when body.schedule is true.
+ * Source Run is never mutated.
+ */
+export function forkRunFromRevision(notebookId: number, runId: number, revId: string): ResearchRun {
+  const source = requireRun(notebookId, runId);
+  const rev = db()
+    .select()
+    .from(researchRevisions)
+    .where(and(eq(researchRevisions.runId, runId), eq(researchRevisions.id, revId)))
+    .get();
+  if (!rev) throw new NotFoundError(`Revision ${revId} not found`);
+
+  const snapshotGraph = structuredClone(rev.graph) as {
+    nodes: ResearchNode[];
+    edges: ResearchEdge[];
+  };
+  const snapshotReport = rev.report ? (structuredClone(rev.report) as ResearchReport) : null;
+
+  const referenced = collectReferencedEvidenceIds(snapshotGraph, snapshotReport);
+  const sourceEvidences = listEvidences(runId);
+  const idMap = new Map<string, string>();
+  for (const ev of sourceEvidences) {
+    if (!referenced.has(ev.id)) continue;
+    idMap.set(ev.id, newId('ev'));
+  }
+
+  const remappedGraph = remapGraphEvidenceIds(snapshotGraph, idMap);
+  const remappedReport = snapshotReport ? remapReportEvidenceIds(snapshotReport, idMap) : null;
+
+  const inserted = db()
+    .insert(researchRuns)
+    .values({
+      notebookId,
+      topic: source.topic,
+      status: 'queued',
+      useNotebookSources: source.useNotebookSources,
+      allowWeb: source.allowWeb,
+      sourceIds: source.sourceIds,
+      depth: source.depth,
+      maxSearches: source.maxSearches,
+      maxNodes: source.maxNodes,
+      searchesUsed: 0,
+      modelId: source.modelId,
+      graph: remappedGraph,
+      checkpoint: null,
+      report: remappedReport,
+      confirmKind: null,
+      confirmBranchNodeId: null,
+      cancelRequested: false,
+      errorMessage: null,
+      activeRevisionId: null,
+      activeNodeId: null,
+      llmActivity: null,
+      reportUpdatedAt: remappedReport ? new Date() : null,
+    })
+    .returning()
+    .get();
+
+  for (const ev of sourceEvidences) {
+    const newIdValue = idMap.get(ev.id);
+    if (!newIdValue) continue;
+    insertEvidence(inserted.id, notebookId, {
+      id: newIdValue,
+      kind: ev.kind,
+      title: ev.title,
+      snippet: ev.snippet,
+      url: ev.url,
+      sourceId: ev.sourceId,
+      chunkId: ev.chunkId,
+      collectedAtNodeId: ev.collectedAtNodeId,
+    });
+  }
+
+  appendProgressEvent(inserted.id, 'run_queued', {
+    headline: `从修订「${rev.label}」派生`,
+    payload: {
+      forkedFromRunId: runId,
+      forkedFromRevisionId: revId,
+    },
+  });
+
+  return serializeRun(inserted);
 }
 
 export function assertReportEditable(status: string, hasReport: boolean): void {
