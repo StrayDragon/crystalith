@@ -1,0 +1,682 @@
+/**
+ * Deep Research HTTP command surface — create/list/get/cancel/confirm/prune/fork/patch/convert + SSE.
+ */
+import type {
+  ResearchConfirmBody,
+  ResearchConvertBody,
+  ResearchCreateBody,
+  ResearchDepth,
+  ResearchEdge,
+  ResearchForkBody,
+  ResearchGraphPatch,
+  ResearchNode,
+  ResearchNodePatchBody,
+  ResearchRun,
+  ResearchRunStatus,
+  ResearchRunSummary,
+} from '@crystalith/shared';
+import { RESEARCH_DEPTH_BUDGETS } from '@crystalith/shared';
+import { and, count, desc, eq, inArray } from 'drizzle-orm';
+
+import { db } from '../../db/index.ts';
+import { chunks, outputs, researchRuns, sources } from '../../db/schema.ts';
+import { bumpSourcesEpoch } from '../../rag/cache.ts';
+import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
+import { splitTextToChunks } from '../outputs/render.ts';
+import { resolveArtifactMarkdown, synthesizeAndComplete } from './report.ts';
+import {
+  abortAllChatsForRun,
+  abortRunWorkUnit,
+  assertLiveMutable,
+  broadcast,
+  emptyGraph,
+  emitGraphPatch,
+  emitLog,
+  emitStatus,
+  ensureRunAbortController,
+  findConclusionNode,
+  findQuestionNode,
+  finalizeCancel,
+  getGraph,
+  isPruneProtectedNode,
+  newId,
+  persistGraph,
+  requireFresh,
+  requireNotebook,
+  requireRun,
+  serializeRun,
+  serializeRunSummary,
+  subscribeRun,
+  updateRun,
+  writeCheckpoint,
+  type SseEmit,
+} from './research-core.ts';
+import { drainResearchWorkUnits, runNodeWorkUnit, scheduleRun } from './run-loop.ts';
+
+export function validateCreateBody(body: ResearchCreateBody): {
+  topic: string;
+  useNotebookSources: boolean;
+  allowWeb: boolean;
+  sourceIds: number[] | null;
+  depth: ResearchDepth;
+  maxSearches: number;
+  maxNodes: number;
+} {
+  const topic = body.topic.trim();
+  if (!topic) {
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'topic is required');
+  }
+  const useNotebookSources = body.useNotebookSources ?? false;
+  const allowWeb = body.allowWeb ?? true;
+  if (!useNotebookSources && !allowWeb) {
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      'useNotebookSources or allowWeb must be true',
+    );
+  }
+  const depth: ResearchDepth = body.depth ?? 'medium';
+  const budget = RESEARCH_DEPTH_BUDGETS[depth];
+  let sourceIds: number[] | null = null;
+  if (useNotebookSources) {
+    const ids = body.sourceIds ?? [];
+    if (ids.length === 0) {
+      throw new AppHttpError(
+        ErrorCode.INVALID_REQUEST,
+        'sourceIds must not be empty when useNotebookSources is true',
+      );
+    }
+    sourceIds = ids;
+  }
+  return {
+    topic,
+    useNotebookSources,
+    allowWeb,
+    sourceIds,
+    depth,
+    maxSearches: budget.maxSearches,
+    maxNodes: budget.maxNodes,
+  };
+}
+
+export function createRun(notebookId: number, body: ResearchCreateBody): ResearchRun {
+  requireNotebook(notebookId);
+  const fields = validateCreateBody(body);
+  const row = db()
+    .insert(researchRuns)
+    .values({
+      notebookId,
+      topic: fields.topic,
+      status: 'queued',
+      useNotebookSources: fields.useNotebookSources,
+      allowWeb: fields.allowWeb,
+      sourceIds: fields.sourceIds,
+      depth: fields.depth,
+      maxSearches: fields.maxSearches,
+      maxNodes: fields.maxNodes,
+      searchesUsed: 0,
+      graph: emptyGraph(),
+      checkpoint: null,
+      report: null,
+      cancelRequested: false,
+    })
+    .returning()
+    .get();
+  scheduleRun(row.id);
+  return serializeRun(row);
+}
+
+export function listRuns(
+  notebookId: number,
+  offset: number,
+  limit: number,
+  statusFilter?: ResearchRunStatus[],
+): { items: ResearchRunSummary[]; total: number; offset: number; limit: number } {
+  requireNotebook(notebookId);
+  const whereClause =
+    statusFilter && statusFilter.length > 0
+      ? and(eq(researchRuns.notebookId, notebookId), inArray(researchRuns.status, statusFilter))
+      : eq(researchRuns.notebookId, notebookId);
+  const total =
+    db().select({ value: count() }).from(researchRuns).where(whereClause).get()?.value ?? 0;
+  const rows = db()
+    .select()
+    .from(researchRuns)
+    .where(whereClause)
+    .orderBy(desc(researchRuns.updatedAt))
+    .limit(limit)
+    .offset(offset)
+    .all();
+  return { items: rows.map(serializeRunSummary), total, offset, limit };
+}
+
+export function getRun(notebookId: number, runId: number): ResearchRun {
+  return serializeRun(requireRun(notebookId, runId));
+}
+
+export function cancelRun(notebookId: number, runId: number): ResearchRun {
+  const row = requireRun(notebookId, runId);
+  if (row.status === 'completed' || row.status === 'failed' || row.status === 'cancelled') {
+    throw new AppHttpError(
+      ErrorCode.RESEARCH_INVALID_STATE,
+      `Cannot cancel run in status ${row.status}`,
+    );
+  }
+  abortRunWorkUnit(runId);
+  abortAllChatsForRun(runId);
+  updateRun(runId, {
+    cancelRequested: true,
+    llmActivity: null,
+    activeNodeId: null,
+    checkpoint: writeCheckpoint(row, 'cancel_requested'),
+  });
+  if (row.status === 'awaiting_confirm' || row.status === 'queued') {
+    finalizeCancel(runId);
+  }
+  // running: loop checks cancelRequested / AbortSignal
+  return serializeRun(requireRun(notebookId, runId));
+}
+
+export async function confirmRun(
+  notebookId: number,
+  runId: number,
+  body: ResearchConfirmBody,
+): Promise<ResearchRun> {
+  const row = requireRun(notebookId, runId);
+  if (row.status !== 'awaiting_confirm') {
+    throw new AppHttpError(
+      ErrorCode.RESEARCH_INVALID_STATE,
+      `Cannot confirm when status is ${row.status}`,
+    );
+  }
+  const kind = row.confirmKind ?? 'budget';
+  if (kind === 'budget') {
+    if (body.action !== 'continue' && body.action !== 'finish_report') {
+      throw new AppHttpError(
+        ErrorCode.INVALID_REQUEST,
+        'budget confirm requires continue or finish_report',
+      );
+    }
+    updateRun(runId, {
+      status: 'running',
+      confirmKind: null,
+      confirmBranchNodeId: null,
+    });
+    emitStatus(runId, 'running', body.action);
+    if (body.action === 'continue') {
+      // One more work-unit then report (stay under budget)
+      const latest = requireRun(notebookId, runId);
+      const graph = getGraph(latest);
+      const root =
+        findQuestionNode(graph.nodes as ResearchNode[]) ??
+        (graph.nodes[0] as ResearchNode | undefined);
+      if (root && (latest.allowWeb || latest.useNotebookSources)) {
+        const abort = ensureRunAbortController(runId);
+        try {
+          const work = await runNodeWorkUnit({
+            runId,
+            notebookId,
+            node: root,
+            topic: latest.topic,
+            allowWeb: latest.allowWeb && latest.searchesUsed < latest.maxSearches,
+            useNotebookSources: latest.useNotebookSources,
+            sourceIds: latest.sourceIds ?? null,
+            searchesUsed: latest.searchesUsed,
+            maxSearches: latest.maxSearches,
+            abortSignal: abort.signal,
+          });
+          const fresh = getGraph(requireFresh(runId));
+          const live =
+            findQuestionNode(fresh.nodes as ResearchNode[]) ??
+            fresh.nodes.find((n) => n.id === root.id);
+          if (live) {
+            live.evidenceIds = work.evidenceIds;
+            live.summary = work.evidenceIds.length
+              ? `已收集 ${work.evidenceIds.length} 条证据`
+              : live.summary;
+            persistGraph(runId, fresh);
+            emitGraphPatch(runId, { nodes: [live] });
+          }
+        } catch (error) {
+          if (error instanceof AppHttpError && error.code === ErrorCode.RESEARCH_BUDGET) {
+            emitLog(runId, '继续检索跳过：预算已尽');
+          } else {
+            emitLog(runId, `继续检索失败：${String(error)}`);
+          }
+        }
+      }
+    }
+    await synthesizeAndComplete(runId);
+  } else {
+    // expand_branch
+    if (body.action !== 'approve_branch' && body.action !== 'skip_branch') {
+      throw new AppHttpError(
+        ErrorCode.INVALID_REQUEST,
+        'expand_branch confirm requires approve_branch or skip_branch',
+      );
+    }
+    const branchNodeId = body.branchNodeId ?? row.confirmBranchNodeId;
+    if (!branchNodeId) {
+      throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'branchNodeId is required');
+    }
+    updateRun(runId, {
+      status: 'running',
+      confirmKind: null,
+      confirmBranchNodeId: null,
+    });
+    emitStatus(runId, 'running', body.action);
+    if (body.action === 'approve_branch') {
+      const latest = requireRun(notebookId, runId);
+      const graph = getGraph(latest);
+      const liveCount = graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length;
+      if (liveCount >= latest.maxNodes) {
+        throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Node budget exhausted');
+      }
+      const conclusion = findConclusionNode(graph.nodes as ResearchNode[]);
+      if (!conclusion) {
+        throw new AppHttpError(
+          ErrorCode.INVALID_REQUEST,
+          'Single-sink DAG missing conclusion node',
+        );
+      }
+      const child: ResearchNode = {
+        id: newId('node'),
+        role: 'research',
+        title: `扩展：${branchNodeId}`,
+        query: latest.topic,
+        conclusionStatus: 'partial',
+        phase: 'idle',
+        summary: '支路已批准',
+        evidenceIds: [],
+      };
+      const forkEdge: ResearchEdge = {
+        id: newId('edge'),
+        source: branchNodeId,
+        target: child.id,
+        kind: 'fork',
+      };
+      const mergeEdge: ResearchEdge = {
+        id: newId('edge'),
+        source: child.id,
+        target: conclusion.id,
+        kind: 'merge',
+      };
+      graph.nodes.push(child);
+      graph.edges.push(forkEdge, mergeEdge);
+      persistGraph(runId, graph, {
+        checkpoint: writeCheckpoint(latest, 'approve_branch'),
+      });
+      emitGraphPatch(runId, { nodes: [child], edges: [forkEdge, mergeEdge] });
+
+      // Run work_unit on the new research node before report (serial kernel)
+      const abort = ensureRunAbortController(runId);
+      try {
+        await drainResearchWorkUnits(runId, abort.signal);
+      } catch (error) {
+        if (error instanceof AppHttpError && error.code === ErrorCode.RESEARCH_BUDGET) {
+          emitLog(runId, '支路工作单元跳过：预算已尽');
+        } else {
+          emitLog(runId, `支路工作单元失败：${String(error)}`);
+        }
+      }
+    }
+    await synthesizeAndComplete(runId);
+  }
+  return serializeRun(requireRun(notebookId, runId));
+}
+
+export function isPruneProtectedNodeId(nodeId: string, nodes: ResearchNode[] = []): boolean {
+  const node = nodes.find((n) => n.id === nodeId);
+  return isPruneProtectedNode(node, nodeId);
+}
+
+/**
+ * Prune closure (r316 / update-research-prune-cascade) — keep in sync with
+ * Lab `collectPruneClosure` in apps/web/.../fake/deriveLabState.ts.
+ * - never includes protected sink/root nodes (role first, then id prefix)
+ * - does not walk `merge` edges (failed merges stay attached)
+ * - cascades only when every non-protected inbound parent is already in the
+ *   closure or already pruned (shared children with a live parent stay live)
+ */
+export function collectResearchPruneClosure(
+  rootId: string,
+  nodes: ResearchNode[],
+  edges: ResearchEdge[],
+): Set<string> {
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  if (!byId.has(rootId) || isPruneProtectedNodeId(rootId, nodes)) return new Set();
+
+  const children = new Map<string, string[]>();
+  const parents = new Map<string, string[]>();
+  for (const e of edges) {
+    if (e.kind === 'merge') continue;
+    const outs = children.get(e.source) ?? [];
+    outs.push(e.target);
+    children.set(e.source, outs);
+    const inns = parents.get(e.target) ?? [];
+    inns.push(e.source);
+    parents.set(e.target, inns);
+  }
+
+  const out = new Set<string>([rootId]);
+  const stack = [rootId];
+  while (stack.length) {
+    const id = stack.pop()!;
+    for (const childId of children.get(id) ?? []) {
+      if (out.has(childId)) continue;
+      if (isPruneProtectedNodeId(childId, nodes)) continue;
+      const blocking = (parents.get(childId) ?? []).some((pid) => {
+        if (out.has(pid)) return false;
+        if (isPruneProtectedNodeId(pid, nodes)) return false;
+        if (byId.get(pid)?.conclusionStatus === 'pruned') return false;
+        return true;
+      });
+      if (blocking) continue;
+      out.add(childId);
+      stack.push(childId);
+    }
+  }
+  return out;
+}
+
+export function pruneNode(notebookId: number, runId: number, nodeId: string): ResearchRun {
+  const row = requireRun(notebookId, runId);
+  assertLiveMutable(row.status);
+  const graph = getGraph(row);
+  const target = graph.nodes.find((n) => n.id === nodeId) as ResearchNode | undefined;
+  if (!target) {
+    throw new AppHttpError(ErrorCode.NOT_FOUND, `Node ${nodeId} not found`);
+  }
+  if (isPruneProtectedNode(target, nodeId)) {
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Cannot prune protected node ${nodeId}`);
+  }
+  const toPrune = collectResearchPruneClosure(
+    nodeId,
+    graph.nodes as ResearchNode[],
+    graph.edges as ResearchEdge[],
+  );
+  for (const n of graph.nodes) {
+    if (toPrune.has(n.id)) {
+      n.conclusionStatus = 'pruned';
+      n.phase = 'idle';
+    }
+  }
+  persistGraph(runId, graph, {
+    checkpoint: writeCheckpoint(row, `prune_${nodeId}`),
+  });
+  emitGraphPatch(runId, {
+    nodes: graph.nodes.filter((n) => toPrune.has(n.id)) as ResearchNode[],
+  });
+  emitLog(runId, `已剪枝节点 ${nodeId}${toPrune.size > 1 ? `（级联 ${toPrune.size}）` : ''}`);
+  return serializeRun(requireRun(notebookId, runId));
+}
+
+export function patchNode(
+  notebookId: number,
+  runId: number,
+  nodeId: string,
+  body: ResearchNodePatchBody,
+): ResearchRun {
+  const row = requireRun(notebookId, runId);
+  assertLiveMutable(row.status);
+  const graph = getGraph(row);
+  const node = graph.nodes.find((n) => n.id === nodeId) as ResearchNode | undefined;
+  if (!node) {
+    throw new AppHttpError(ErrorCode.NOT_FOUND, `Node ${nodeId} not found`);
+  }
+  if (node.conclusionStatus === 'pruned') {
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Cannot patch pruned node ${nodeId}`);
+  }
+  if (isPruneProtectedNode(node, nodeId)) {
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      `Cannot patch protected question/conclusion node ${nodeId}`,
+    );
+  }
+  if (body.title !== undefined) node.title = body.title;
+  if (body.query !== undefined) node.query = body.query;
+  if (body.conclusionStatus !== undefined) node.conclusionStatus = body.conclusionStatus;
+  persistGraph(runId, graph, {
+    checkpoint: writeCheckpoint(row, `patch_${nodeId}`),
+  });
+  emitGraphPatch(runId, { nodes: [node] });
+  return serializeRun(requireRun(notebookId, runId));
+}
+
+export function forkNode(
+  notebookId: number,
+  runId: number,
+  nodeId: string,
+  body: ResearchForkBody,
+): ResearchRun {
+  const row = requireRun(notebookId, runId);
+  assertLiveMutable(row.status);
+  const graph = getGraph(row);
+  if (!graph.nodes.some((n) => n.id === nodeId)) {
+    throw new AppHttpError(ErrorCode.NOT_FOUND, `Node ${nodeId} not found`);
+  }
+  if (graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length >= row.maxNodes) {
+    throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Node budget exhausted');
+  }
+  // Enter expand_branch confirm (same capability surface as M1)
+  emitLog(runId, `fork 请求${body.hint ? `：${body.hint}` : ''}`);
+  // Synchronous status flip so caller sees awaiting_confirm immediately
+  const current = requireRun(notebookId, runId);
+  updateRun(runId, {
+    status: 'awaiting_confirm',
+    confirmKind: 'expand_branch',
+    confirmBranchNodeId: nodeId,
+    checkpoint: writeCheckpoint(current, 'before_confirm_expand_branch'),
+  });
+  emitStatus(runId, 'awaiting_confirm', 'expand_branch');
+  broadcast(runId, 'confirm', {
+    kind: 'expand_branch',
+    branchNodeId: nodeId,
+    options: ['approve_branch', 'skip_branch'],
+  });
+  return serializeRun(requireRun(notebookId, runId));
+}
+
+export function convertToNote(
+  notebookId: number,
+  runId: number,
+  body: ResearchConvertBody,
+): { outputId: number; type: 'PARAGRAPH' } {
+  const { title, markdown } = resolveArtifactMarkdown(notebookId, runId, body.artifact);
+  const output = db()
+    .insert(outputs)
+    .values({
+      notebookId,
+      type: 'PARAGRAPH',
+      prompt: title,
+      chunkIds: [],
+      content: {
+        title,
+        text: markdown,
+        // 兜底：笔记栏可跳回 Lab 报告页（正式产品导航另案设计）
+        researchLab: {
+          notebookId,
+          runId,
+          artifactKind: body.artifact.kind,
+        },
+      },
+    })
+    .returning()
+    .get();
+  return { outputId: output.id, type: 'PARAGRAPH' };
+}
+
+export async function convertToSource(
+  notebookId: number,
+  runId: number,
+  body: ResearchConvertBody,
+): Promise<{ sourceId: number; filename: string; chunkCount: number }> {
+  const { title, markdown } = resolveArtifactMarkdown(notebookId, runId, body.artifact);
+  const chunkTexts = splitTextToChunks(markdown, 500, 50);
+  const filename = `research-${runId}-${body.artifact.kind}.md`;
+
+  const sourceRow = db()
+    .insert(sources)
+    .values({
+      notebookId,
+      filename,
+      mimeType: 'text/markdown',
+      parserType: 'text',
+      status: 'processing',
+      metadata: {
+        type: 'research_conversion',
+        source: 'research_conversion',
+        runId,
+        artifact: body.artifact,
+        title,
+      },
+    })
+    .returning()
+    .get();
+
+  let offset = 0;
+  for (let i = 0; i < chunkTexts.length; i++) {
+    const text = chunkTexts[i]!;
+    db()
+      .insert(chunks)
+      .values({
+        sourceId: sourceRow.id,
+        chunkIndex: i,
+        text,
+        startOffset: offset,
+        endOffset: offset + text.length,
+      })
+      .run();
+    offset += text.length + 2;
+  }
+
+  try {
+    const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
+    const strategy = new EmbedStrategy();
+    await strategy.indexSource(sourceRow.id, sourceRow.notebookId);
+    db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)).run();
+    bumpSourcesEpoch(sourceRow.notebookId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[research] convertToSource embed failed for source ${sourceRow.id}:`, message);
+    db()
+      .update(sources)
+      .set({
+        status: 'failed',
+        errorMessage: message.slice(0, 2000),
+        errorCode: 'EMBEDDING_FAILED',
+      })
+      .where(eq(sources.id, sourceRow.id))
+      .run();
+    bumpSourcesEpoch(sourceRow.notebookId);
+  }
+
+  return {
+    sourceId: sourceRow.id,
+    filename: sourceRow.filename,
+    chunkCount: chunkTexts.length,
+  };
+}
+
+/** Replay current state to a new SSE subscriber, then keep listening. */
+export async function streamRun(
+  notebookId: number,
+  runId: number,
+  emit: SseEmit,
+): Promise<() => void> {
+  const row = requireRun(notebookId, runId);
+  const unsub = subscribeRun(runId, emit);
+  emit('status', { status: row.status });
+  const graph = getGraph(row);
+  if (graph.nodes.length || graph.edges.length) {
+    emit('graph_patch', {
+      nodes: graph.nodes,
+      edges: graph.edges,
+    } satisfies ResearchGraphPatch);
+  }
+  if (row.status === 'awaiting_confirm' && row.confirmKind) {
+    emit('confirm', {
+      kind: row.confirmKind,
+      branchNodeId: row.confirmBranchNodeId ?? undefined,
+      options:
+        row.confirmKind === 'budget'
+          ? ['continue', 'finish_report']
+          : ['approve_branch', 'skip_branch'],
+    });
+  }
+  if (row.status === 'completed') {
+    emit('report_ready', { runId });
+  }
+  return unsub;
+}
+
+export function createResearchSseResponse(notebookId: number, runId: number): Response {
+  requireRun(notebookId, runId);
+  const sse = (event: string, data: unknown): string =>
+    `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+
+  let unsub: (() => void) | undefined;
+  let closed = false;
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      const emit: SseEmit = (event, data) => {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(sse(event, data)));
+        } catch {
+          closed = true;
+        }
+      };
+      try {
+        unsub = await streamRun(notebookId, runId, emit);
+        // Keep connection open until client cancels or run reaches terminal
+        // and a short grace period. Poll status for terminal close.
+        await new Promise<void>((resolve) => {
+          const tick = () => {
+            if (closed) {
+              resolve();
+              return;
+            }
+            const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+            if (
+              row &&
+              (row.status === 'completed' || row.status === 'failed' || row.status === 'cancelled')
+            ) {
+              // Allow final events to flush
+              setTimeout(() => resolve(), 50);
+              return;
+            }
+            setTimeout(tick, 100);
+          };
+          tick();
+        });
+      } catch (error) {
+        emit('error', {
+          errorCode: error instanceof AppHttpError ? error.code : ErrorCode.INTERNAL_ERROR,
+          message: String(error),
+        });
+      } finally {
+        unsub?.();
+        if (!closed) {
+          try {
+            controller.close();
+          } catch {
+            // already closed
+          }
+        }
+      }
+    },
+    cancel() {
+      closed = true;
+      unsub?.();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'content-type': 'text/event-stream',
+      'cache-control': 'no-cache',
+      'x-accel-buffering': 'no',
+    },
+  });
+}
