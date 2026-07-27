@@ -60,12 +60,13 @@ export type ApplyDecomposeResult = {
 
 /**
  * Apply a clamped plan onto an existing single-sink graph.
- * Creates research nodes + decompose/refine from question + merge→conclusion.
+ * Creates research nodes + decompose/refine from focus (or question) + merge→conclusion.
  */
 export function applyDecomposePlanToGraph(
   graph: ResearchGraphJson,
   plan: ResearchDecomposePlan,
   newId: (prefix: string) => string,
+  opts?: { focusNodeId?: string },
 ): ApplyDecomposeResult {
   const question =
     graph.nodes.find((n) => n.role === 'question') ??
@@ -73,7 +74,11 @@ export function applyDecomposePlanToGraph(
   const conclusion =
     graph.nodes.find((n) => n.role === 'conclusion') ??
     graph.nodes.find((n) => n.id.startsWith('node_conclusion'));
-  if (!question || !conclusion || plan.branches.length === 0) {
+  const focus =
+    (opts?.focusNodeId
+      ? graph.nodes.find((n) => n.id === opts.focusNodeId && n.conclusionStatus !== 'pruned')
+      : undefined) ?? question;
+  if (!focus || !conclusion || plan.branches.length === 0) {
     return { graph, addedNodes: [], addedEdges: [] };
   }
 
@@ -91,9 +96,9 @@ export function applyDecomposePlanToGraph(
       summary: '',
       evidenceIds: [],
     };
-    const fromQ: ResearchEdge = {
+    const fromFocus: ResearchEdge = {
       id: newId('edge'),
-      source: question.id,
+      source: focus.id,
       target: node.id,
       kind: branch.edgeKind === 'refine' ? 'refine' : 'decompose',
       labelNote: branch.edgeKind === 'refine' ? '细化' : '拆解',
@@ -106,7 +111,7 @@ export function applyDecomposePlanToGraph(
       labelNote: '汇入',
     };
     addedNodes.push(node);
-    addedEdges.push(fromQ, toC);
+    addedEdges.push(fromFocus, toC);
   }
 
   return {
@@ -152,6 +157,7 @@ export async function planTopicDecomposition(input: {
   depth: ResearchDepth;
   maxNodes: number;
   occupiedNodes: number;
+  hint?: string;
   abortSignal?: AbortSignal;
 }): Promise<ResearchDecomposePlan | null> {
   const soft = suggestedMaxResearchLeaves(input.depth);
@@ -174,6 +180,9 @@ export async function planTopicDecomposition(input: {
   // Think models (e.g. Qwen *-think-*) burn output tokens on reasoning before JSON.
   // Without an explicit budget, generateObject often truncates mid-object → empty plan.
   const maxOutputTokens = modelConfig.completionOptions?.maxTokens ?? 8192;
+  const hintLine = input.hint?.trim()
+    ? `再扩展提示：${input.hint.trim()}（优先围绕该提示拆支路）`
+    : null;
 
   try {
     const model = withRetry(await resolveModel(modelConfig));
@@ -187,6 +196,7 @@ export async function planTopicDecomposition(input: {
       prompt: [
         '你是深度研究规划器。把研究主题拆成若干并行「研究支路」。',
         `主题：${input.topic}`,
+        hintLine,
         `深度档：${input.depth}；最多输出 ${target} 条 branches（勿超过）。`,
         '每条 branch 需要 title（短标题）与 query（可检索的查询句）。',
         'edgeKind 默认 decompose（从总问题拆出）；仅当明显是细化子问题时用 refine。',
@@ -194,7 +204,9 @@ export async function planTopicDecomposition(input: {
         '若主题过窄无法拆解，返回空 branches 数组。',
         '最终只输出一个 JSON 对象，形状必须是 {"branches":[...]}，不要只返回数组。',
         '推理尽量短。',
-      ].join('\n'),
+      ]
+        .filter(Boolean)
+        .join('\n'),
     });
     const parsed = ResearchDecomposePlanSchema.safeParse(object);
     if (!parsed.success) return null;

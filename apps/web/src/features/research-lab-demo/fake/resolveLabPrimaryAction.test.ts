@@ -41,7 +41,7 @@ describe('resolveLabPrimaryAction', () => {
     expect(a).toMatchObject({ kind: 'resume', label: '继续研究' });
   });
 
-  it('awaiting_confirm budget → finish + continue (no skip/approve)', () => {
+  it('awaiting_confirm budget → finish + continue + reexpand', () => {
     const a = resolveLabPrimaryAction({
       ...base,
       phase: 'awaiting_confirm',
@@ -53,6 +53,25 @@ describe('resolveLabPrimaryAction', () => {
     expect(a.secondary).toEqual({
       kind: 'continue_dig',
       label: '继续深挖',
+      disabled: false,
+    });
+    expect(a.tertiary).toEqual({
+      kind: 'request_reexpand',
+      label: '再扩展',
+      disabled: false,
+    });
+  });
+
+  it('awaiting_confirm reexpand → approve + skip (no request again)', () => {
+    const a = resolveLabPrimaryAction({
+      ...base,
+      phase: 'awaiting_confirm',
+      confirmKind: 'reexpand',
+    });
+    expect(a.kind).toBe('approve_reexpand');
+    expect(a.secondary).toEqual({
+      kind: 'skip_reexpand',
+      label: '跳过再扩展',
       disabled: false,
     });
     expect(a.tertiary).toBeUndefined();

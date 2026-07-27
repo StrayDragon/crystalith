@@ -488,7 +488,7 @@ export const researchRuns = sqliteTable(
     graph: json<ResearchGraphJson>('graph'),
     checkpoint: json<ResearchCheckpointJson | null>('checkpoint'),
     report: json<ResearchReportJson | null>('report'),
-    confirmKind: text('confirm_kind', { enum: ['budget', 'expand_branch'] }),
+    confirmKind: text('confirm_kind', { enum: ['budget', 'expand_branch', 'reexpand'] }),
     confirmBranchNodeId: text('confirm_branch_node_id'),
     cancelRequested: bool('cancel_requested', false),
     errorMessage: text('error_message'),

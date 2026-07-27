@@ -28,6 +28,7 @@ export {
   pruneNode,
   patchNode,
   forkNode,
+  requestReexpand,
   convertToNote,
   convertToSource,
   streamRun,

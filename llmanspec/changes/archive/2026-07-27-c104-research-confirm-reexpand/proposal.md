@@ -1,5 +1,9 @@
 ---
 depends_on: []
+branch: sdd/c104-research-confirm-reexpand
+base_sha: 20ab202381fa97c44eb77980e151d6ca8104c2b3
+checkpointed: true
+checkpoint_sha: 20ab202381fa97c44eb77980e151d6ca8104c2b3
 ---
 
 ## Why

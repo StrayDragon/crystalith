@@ -41,6 +41,41 @@ import {
 } from './research-core.ts';
 import { hasLiveResearchBranches, orderResearchNodesForWork } from './research-work-queue.ts';
 
+/** Cooperative pause: awaiting_confirm must not be treated as cancel (c104 reexpand). */
+function shouldFinalizeCancelOnAbort(runId: number): boolean {
+  const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+  return row?.status !== 'awaiting_confirm';
+}
+
+/** After drain: budget M1 confirm when web budget remains/exhausted, else synthesize. */
+export async function finishWaveOrSynthesize(runId: number): Promise<void> {
+  const abort = ensureRunAbortController(runId);
+  try {
+    await drainResearchWorkUnits(runId, abort.signal);
+  } catch (error) {
+    if (error instanceof AppHttpError && error.code === ErrorCode.RESEARCH_BUDGET) {
+      emitLog(runId, '搜索预算已尽，进入预算确认');
+      await enterConfirm(runId, 'budget');
+      return;
+    }
+    throw error;
+  }
+  if (abort.signal.aborted || isCancelled(runId)) {
+    if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
+    return;
+  }
+  const row = requireFresh(runId);
+  if (row.allowWeb && row.searchesUsed > 0 && row.searchesUsed < row.maxSearches) {
+    await enterConfirm(runId, 'budget');
+    return;
+  }
+  if (row.allowWeb && row.searchesUsed >= row.maxSearches) {
+    await enterConfirm(runId, 'budget');
+    return;
+  }
+  await synthesizeAndComplete(runId);
+}
+
 /** Schedule async execution (microtask). */
 export function scheduleRun(runId: number): void {
   if (activeLoops.has(runId)) return;
@@ -499,7 +534,7 @@ export async function runLoop(runId: number): Promise<void> {
     appendProgressEvent(runId, 'unit_started', { headline: 'work_unit' });
 
     if (isCancelled(runId) || abort.signal.aborted) {
-      finalizeCancel(runId);
+      if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
       return;
     }
 
@@ -523,13 +558,15 @@ export async function runLoop(runId: number): Promise<void> {
     }
 
     // c93 / r326: auto-decompose topic into research nodes (topology only; c94 runs units).
+    // r333: at most once per run — skip when live research branches already exist
+    // (user-gated secondary decompose goes through request-reexpand / confirm, not here).
     if (isCancelled(runId) || abort.signal.aborted) {
-      finalizeCancel(runId);
+      if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
       return;
     }
     row = requireFresh(runId);
     graph = getGraph(row);
-    {
+    if (!hasLiveResearchBranches(graph.nodes as ResearchNode[])) {
       const occupied = graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length;
       try {
         const plan = await planTopicDecomposition({
@@ -619,7 +656,7 @@ export async function runLoop(runId: number): Promise<void> {
       row = requireFresh(runId);
 
       if (isCancelled(runId) || abort.signal.aborted) {
-        finalizeCancel(runId);
+        if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
         return;
       }
 
@@ -646,38 +683,10 @@ export async function runLoop(runId: number): Promise<void> {
     }
 
     // Serial work units for live research nodes (c93 branches + fork children)
-    try {
-      await drainResearchWorkUnits(runId, abort.signal);
-    } catch (error) {
-      if (error instanceof AppHttpError && error.code === ErrorCode.RESEARCH_BUDGET) {
-        emitLog(runId, '搜索预算已尽，进入预算确认');
-        await enterConfirm(runId, 'budget');
-        return;
-      }
-      throw error;
-    }
-    if (isCancelled(runId) || abort.signal.aborted) {
-      finalizeCancel(runId);
-      return;
-    }
-    row = requireFresh(runId);
-
-    // Pragmatic M1: after first wave with web, pause for budget confirm when
-    // we still have remaining search budget (so continue can resume).
-    if (row.allowWeb && row.searchesUsed > 0 && row.searchesUsed < row.maxSearches) {
-      await enterConfirm(runId, 'budget');
-      return;
-    }
-    // Fully exhausted after work → still pause so user can finish_report
-    if (row.allowWeb && row.searchesUsed >= row.maxSearches) {
-      await enterConfirm(runId, 'budget');
-      return;
-    }
-
-    await synthesizeAndComplete(runId);
+    await finishWaveOrSynthesize(runId);
   } catch (error) {
     if (abort.signal.aborted || isCancelled(runId)) {
-      finalizeCancel(runId);
+      if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
       return;
     }
     if (error instanceof AppHttpError && error.code === ErrorCode.RESEARCH_BUDGET) {
@@ -702,7 +711,7 @@ export async function runLoop(runId: number): Promise<void> {
 
 export async function enterConfirm(
   runId: number,
-  kind: 'budget' | 'expand_branch',
+  kind: 'budget' | 'expand_branch' | 'reexpand',
   branchNodeId?: string,
 ): Promise<void> {
   let row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
@@ -711,12 +720,20 @@ export async function enterConfirm(
     status: 'awaiting_confirm',
     confirmKind: kind,
     confirmBranchNodeId: branchNodeId ?? null,
+    llmActivity: null,
+    activeNodeId: null,
     checkpoint: writeCheckpoint(row, `before_confirm_${kind}`),
   });
   emitStatus(runId, 'awaiting_confirm', kind);
+  const options =
+    kind === 'budget'
+      ? ['continue', 'finish_report']
+      : kind === 'reexpand'
+        ? ['approve_reexpand', 'skip_reexpand']
+        : ['approve_branch', 'skip_branch'];
   broadcast(runId, 'confirm', {
     kind,
     branchNodeId,
-    options: kind === 'budget' ? ['continue', 'finish_report'] : ['approve_branch', 'skip_branch'],
+    options,
   });
 }
