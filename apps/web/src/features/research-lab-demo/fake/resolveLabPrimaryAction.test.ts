@@ -140,6 +140,37 @@ describe('applyEdenPrimaryActionOverlay', () => {
     expect(eden).toMatchObject({ kind: 'cancel', label: '取消研究', disabled: false });
   });
 
+  it('queued + seeded graph → resume schedule (c105 fork)', () => {
+    const a = resolveLabPrimaryAction({
+      ...base,
+      phase: 'decompose',
+      playing: true,
+    });
+    const eden = applyEdenPrimaryActionOverlay(a, {
+      runStatus: 'queued',
+      hasSeededGraph: true,
+    });
+    expect(eden).toMatchObject({ kind: 'resume', label: '继续研究', disabled: false });
+    expect(eden.secondary).toEqual({
+      kind: 'cancel',
+      label: '取消研究',
+      disabled: false,
+    });
+  });
+
+  it('queued without graph keeps pause→cancel overlay', () => {
+    const a = resolveLabPrimaryAction({
+      ...base,
+      phase: 'decompose',
+      playing: true,
+    });
+    const eden = applyEdenPrimaryActionOverlay(a, {
+      runStatus: 'queued',
+      hasSeededGraph: false,
+    });
+    expect(eden.kind).toBe('cancel');
+  });
+
   it('keeps expand_branch approve + skip', () => {
     const a = resolveLabPrimaryAction({
       ...base,

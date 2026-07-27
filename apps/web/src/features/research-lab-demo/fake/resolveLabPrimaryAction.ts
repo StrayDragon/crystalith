@@ -197,8 +197,30 @@ export function resolveLabPrimaryAction(input: LabPrimaryActionInput): LabPrimar
   });
 }
 
-/** Eden overlay: queued/running primary maps to cancel, not fixture pause. */
-export function applyEdenPrimaryActionOverlay(action: LabPrimaryAction): LabPrimaryAction {
+/** Eden overlay: queued/running primary maps to cancel, not fixture pause.
+ * Forked queued Runs with a seeded graph get「继续研究」→ schedule (c105). */
+export type EdenPrimaryOverlayContext = {
+  runStatus?: string | null;
+  hasSeededGraph?: boolean;
+};
+
+export function applyEdenPrimaryActionOverlay(
+  action: LabPrimaryAction,
+  ctx?: EdenPrimaryOverlayContext,
+): LabPrimaryAction {
+  if (ctx?.runStatus === 'queued' && ctx.hasSeededGraph) {
+    return {
+      kind: 'resume',
+      label: '继续研究',
+      disabled: false,
+      title: '启动内核，从当前图继续研究',
+      secondary: {
+        kind: 'cancel',
+        label: '取消研究',
+        disabled: false,
+      },
+    };
+  }
   if (action.kind === 'pause') {
     return {
       ...action,

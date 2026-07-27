@@ -149,16 +149,21 @@ function LabWorkbench({
       selectedRole: selected?.role ?? null,
       confirmKind: lab.confirmKind,
     });
-    return applyEdenPrimaryActionOverlay(base);
+    return applyEdenPrimaryActionOverlay(base, {
+      runStatus: lab.runStatus ?? null,
+      hasSeededGraph: lab.derived.nodes.length > 0,
+    });
   }, [
     lab.phase,
     lab.playing,
     lab.reshaping,
     questionText,
     lab.derived.conclusionNodeId,
+    lab.derived.nodes.length,
     lab.selectedNodeId,
     selected?.role,
     lab.confirmKind,
+    lab.runStatus,
   ]);
 
   const openReport = useCallback(() => {
@@ -416,7 +421,9 @@ function LabWorkbench({
                     ? tid(TestIds.researchLabConfirmSkipReexpand)
                     : primary.secondary.kind === 'request_reexpand'
                       ? tid(TestIds.researchLabRequestReexpand)
-                      : {})}
+                      : primary.secondary.kind === 'cancel'
+                        ? tid(TestIds.researchLabCancel)
+                        : {})}
             >
               {primary.secondary.label}
             </button>
@@ -434,7 +441,11 @@ function LabWorkbench({
                   ? tid(TestIds.researchLabConfirmApproveReexpand)
                   : primary.kind === 'finish_report'
                     ? tid(TestIds.researchLabConfirmFinish)
-                    : tid(TestIds.researchLabStart))}
+                    : primary.kind === 'resume'
+                      ? tid(TestIds.researchLabSchedule)
+                      : primary.kind === 'cancel'
+                        ? tid(TestIds.researchLabCancel)
+                        : tid(TestIds.researchLabStart))}
             >
               {lab.reshaping ? '重塑中…' : primary.label}
             </button>
