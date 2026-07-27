@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../api/eden';
 import { parseServerError } from '../../api/parseServerError';
 import { TestIds, tid } from '../../shared/testids';
+import { LabChatModelSelect } from './LabChatModelSelect';
 import { LAB_COMPOSE_DEPTH_OPTIONS, labComposeDepthBudgetHint } from './labComposeDepth';
 import {
   LAB_COMPOSE_BLOCK_MESSAGES,
@@ -204,6 +205,16 @@ export default function LabComposePanel({
           </div>
           <p className="text-[11px] text-gray-500">{labComposeDepthBudgetHint(draft.depth)}</p>
         </div>
+
+        {mode === 'eden' ? (
+          <label className="mt-4 block space-y-1.5" {...tid(TestIds.researchLabComposeModel)}>
+            <span className="text-[11px] font-medium text-gray-700">结案模型（可选）</span>
+            <LabChatModelSelect
+              value={draft.modelId}
+              onChange={(modelId) => onChange({ modelId })}
+            />
+          </label>
+        ) : null}
 
         {draft.useNotebookSources ? (
           <div className="mt-4 space-y-2" {...tid(TestIds.researchLabComposeSourceList)}>

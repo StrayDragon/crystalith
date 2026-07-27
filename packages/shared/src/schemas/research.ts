@@ -345,7 +345,32 @@ const ResearchCreateFieldsSchema = z.object({
       description: desc('research.allow_web', '是否允许外网检索（省略时默认 true）'),
     }),
   depth: ResearchDepthSchema.optional(),
+  /** Optional chat model for synthesize / node synthesis; omit = server default. */
+  modelId: z
+    .string()
+    .min(1)
+    .optional()
+    .openapi({
+      description: desc('research.model_id', '结案/节点综合所用模型 ID（省略则服务端默认）'),
+    }),
 });
+
+/** POST …/research/:rid/retry-synthesize — optional model override for same-Run re-synthesize. */
+export const ResearchRetrySynthesizeBodySchema = z
+  .object({
+    modelId: z
+      .string()
+      .min(1)
+      .optional()
+      .openapi({
+        description: desc(
+          'research.retry_synthesize_model_id',
+          '换模重试结案时覆盖写回 Run 的模型 ID',
+        ),
+      }),
+  })
+  .openapi({ description: desc('research.retry_synthesize_body', '重试结案请求体') });
+export type ResearchRetrySynthesizeBody = z.infer<typeof ResearchRetrySynthesizeBodySchema>;
 
 /** Nested POST /v2/notebooks/:nid/research */
 export const ResearchCreateNestedRequestSchema = ResearchCreateFieldsSchema.extend({
@@ -389,6 +414,24 @@ export const ResearchRunSchema = z
     report: ResearchReportSchema.nullable().optional(),
     confirmKind: z.enum(['budget', 'expand_branch']).nullable().optional(),
     confirmBranchNodeId: z.string().nullable().optional(),
+    /** Persisted chat model for synthesize / retry (omit = server default). */
+    modelId: z
+      .string()
+      .nullable()
+      .optional()
+      .openapi({ description: desc('research.run_model_id', 'Run 绑定的结案模型 ID') }),
+    /**
+     * Visible failure reason (maps from DB error_message).
+     * Synthesize-class failures use synthesize_failed: / synthesize_model_error: prefixes.
+     */
+    failureReason: z
+      .string()
+      .nullable()
+      .optional()
+      .openapi({
+        description: desc('research.failure_reason', '失败原因（结案类带 synthesize_ 前缀）'),
+      }),
+    /** @deprecated Prefer failureReason; kept for older clients. */
     errorMessage: z.string().nullable().optional(),
     /** XOR mutex with work_unit / node_chat; null when idle. */
     llmActivity: ResearchLlmActivitySchema.nullable().optional(),
@@ -440,6 +483,8 @@ export const ResearchRunSummarySchema = z
     maxNodes: z.number().int().positive(),
     searchesUsed: z.number().int().nonnegative().default(0),
     confirmKind: z.enum(['budget', 'expand_branch']).nullable().optional(),
+    modelId: z.string().nullable().optional(),
+    failureReason: z.string().nullable().optional(),
     errorMessage: z.string().nullable().optional(),
     createdAt: IsoTimestampSchema,
     updatedAt: IsoTimestampSchema,

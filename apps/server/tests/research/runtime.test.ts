@@ -180,7 +180,7 @@ describe('research runtime', () => {
       nodes: unknown[];
       evidences: unknown[];
     };
-    expect(run.report?.title).toContain('notebook only topic');
+    expect(run.report?.title).toMatch(/研究报告|notebook only topic/);
     expect(run.report?.citations).toBeDefined();
     expect(Array.isArray(run.evidences)).toBe(true);
   });
@@ -366,6 +366,30 @@ describe('research runtime', () => {
       }),
     );
     await waitForStatus(created.id, 'completed');
+
+    // Seed a report with citations to assert GFM footnote projection (reportToMarkdown).
+    const withCites = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}/report`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          report: {
+            title: 'Footnote Report',
+            sections: [
+              {
+                id: 'overview',
+                heading: '概述',
+                blocks: [{ type: 'paragraph', text: 'Cited claim', citeIds: ['c1'] }],
+              },
+            ],
+            citations: {
+              c1: { sourceName: 'Src', snippet: 'snip', url: 'https://example.com' },
+            },
+          },
+        }),
+      }),
+    );
+    expect(withCites.status).toBe(200);
 
     const convert = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}/convert-to-note`, {

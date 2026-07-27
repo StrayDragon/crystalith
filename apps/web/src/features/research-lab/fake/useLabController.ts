@@ -86,6 +86,9 @@ export interface LabController {
   setAllowWeb: (v: boolean) => void;
   depth: ResearchDepth;
   setDepth: (v: ResearchDepth) => void;
+  /** Compose model (Eden); fixture ignores. */
+  modelId: string | null;
+  setModelId: (v: string | null) => void;
   selectedSourceIds: number[];
   setSelectedSourceIds: (ids: number[]) => void;
   confirmChoice: string | null;
@@ -218,6 +221,7 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
   const [useNotebookSources, setUseNotebookSources] = useState(initial.useNotebookSources ?? false);
   const [allowWeb, setAllowWeb] = useState(initial.allowWeb ?? true);
   const [depth, setDepth] = useState<ResearchDepth>(DEFAULT_LAB_COMPOSE_DEPTH);
+  const [modelId, setModelId] = useState<string | null>(null);
   const [selectedSourceIds, setSelectedSourceIds] = useState<number[]>(
     initial.selectedSourceIds ?? [],
   );
@@ -664,6 +668,8 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     setAllowWeb,
     depth,
     setDepth,
+    modelId,
+    setModelId,
     selectedSourceIds,
     setSelectedSourceIds,
     confirmChoice,

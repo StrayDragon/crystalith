@@ -23,6 +23,7 @@ import {
   listProgress,
   patchResearchNode,
   pruneResearchNode,
+  retrySynthesizeResearchRun,
 } from './edenResearchApi';
 import { buildEdenCitationsMap } from './evidenceAdapter';
 import { LAB_SCENARIOS } from './fake/scenarios';
@@ -73,6 +74,13 @@ export type EdenLabController = LabController & {
   runId: number | null;
   llmActivity: ResearchRun['llmActivity'];
   reportError: (message: string) => void;
+  /** Run.failureReason (synthesize-class when applicable). */
+  failureReason: string | null;
+  /** Compose / retry model picker value (empty = server default). */
+  modelId: string | null;
+  setModelId: (v: string | null) => void;
+  /** Same-Run retry synthesize (optional override model). */
+  retrySynthesize: (overrideModelId?: string | null) => void;
 };
 
 function toLedgerItem(ev: ResearchProgressEvent): LabProgressLedgerItem {
@@ -122,6 +130,7 @@ export function useEdenLabController(
   const [useNotebookSources, setUseNotebookSources] = useState(false);
   const [allowWeb, setAllowWeb] = useState(true);
   const [depth, setDepth] = useState<ResearchDepth>(DEFAULT_LAB_COMPOSE_DEPTH);
+  const [modelId, setModelId] = useState<string | null>(null);
   const [selectedSourceIds, setSelectedSourceIds] = useState<number[]>([]);
   const [confirmChoice, setConfirmChoice] = useState<string | null>(null);
   const [consoleOpen, setConsoleOpen] = useState(false);
@@ -426,6 +435,7 @@ export function useEdenLabController(
             allowWeb,
             depth,
             sourceIds: useNotebookSources ? selectedSourceIds : undefined,
+            ...(modelId ? { modelId } : {}),
           });
           applyRun(created, `已创建 Run #${created.id}`);
           refreshResearchTasks(notebookId);
@@ -453,6 +463,7 @@ export function useEdenLabController(
       allowWeb,
       applyRun,
       depth,
+      modelId,
       notebookId,
       pullProgress,
       pushLog,
@@ -664,6 +675,8 @@ export function useEdenLabController(
     setAllowWeb,
     depth,
     setDepth,
+    modelId,
+    setModelId,
     selectedSourceIds,
     setSelectedSourceIds,
     confirmChoice,
@@ -686,6 +699,21 @@ export function useEdenLabController(
       const rid = runIdRef.current;
       if (rid) void loadRun(rid);
     },
+    retrySynthesize: (overrideModelId?: string | null) => {
+      const rid = runIdRef.current;
+      if (!rid) return;
+      const nextModel = overrideModelId === undefined ? modelId : overrideModelId;
+      void withBusy(async () => {
+        const next = await retrySynthesizeResearchRun(
+          notebookId,
+          rid,
+          nextModel ? { modelId: nextModel } : undefined,
+        );
+        startStream(next.id);
+        void pullProgress(next.id, progressSeqRef.current);
+        return next;
+      }, '重试结案');
+    },
     restart,
     reset: restart,
     pruneAlongEdge,
@@ -700,6 +728,7 @@ export function useEdenLabController(
     derived,
     scenario: LAB_SCENARIOS[0]!,
     lastError,
+    failureReason: run?.failureReason ?? run?.errorMessage ?? null,
     citations,
     runId: run?.id ?? runIdRef.current,
     llmActivity: run?.llmActivity ?? null,

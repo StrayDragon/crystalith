@@ -2,14 +2,17 @@
  * Deep Research run loop — schedule, drain work units, confirm helpers.
  */
 import type { ResearchDepth, ResearchNode } from '@crystalith/shared';
+import { generateText } from 'ai';
 import { eq } from 'drizzle-orm';
 
-import { searchWeb } from '../../ai/tools/web-search.ts';
+import { withRetry } from '../../ai/middleware.ts';
+import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';
 import { researchRuns } from '../../db/schema.ts';
-import { ragRegistry } from '../../rag/registry.ts';
+import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { applyDecomposePlanToGraph, planTopicDecomposition } from './decompose.ts';
+import { e2eStubNodeSummary, isResearchE2eStub } from './e2e-stub.ts';
 import { createResearchNodeAgent } from './node-agent.ts';
 import { synthesizeAndComplete } from './report.ts';
 import {
@@ -27,6 +30,7 @@ import {
   getGraph,
   insertEvidence,
   isCancelled,
+  listEvidences,
   newId,
   persistGraph,
   requireFresh,
@@ -96,9 +100,86 @@ export function ingestWorkToolResult(
   return { evidenceIds, searchesDelta };
 }
 
+async function shortSynthesizeNodeSummary(opts: {
+  runId: number;
+  node: ResearchNode;
+  topic: string;
+  evidenceIds: string[];
+  modelId: string | null | undefined;
+  abortSignal: AbortSignal;
+}): Promise<{ summary: string; conclusionStatus: ResearchNode['conclusionStatus'] }> {
+  const { runId, node, topic, evidenceIds, modelId, abortSignal } = opts;
+  if (isResearchE2eStub()) {
+    const summary = e2eStubNodeSummary(node.title, evidenceIds.length);
+    return {
+      summary,
+      conclusionStatus: evidenceIds.length > 0 ? 'partial' : 'missing',
+    };
+  }
+
+  const modelConfig = (() => {
+    const id = modelId?.trim();
+    if (id) return getModelById(id) ?? getDefaultChatModel();
+    return getDefaultChatModel();
+  })();
+  if (!modelConfig) {
+    emitLog(runId, `节点 ${node.id} 短综合跳过：无可用模型`);
+    return {
+      summary: evidenceIds.length ? `已收集 ${evidenceIds.length} 条证据` : '未收集到证据',
+      conclusionStatus: 'missing',
+    };
+  }
+
+  const evidenceLines = listEvidences(runId)
+    .filter((e) => evidenceIds.includes(e.id))
+    .map((e) => `- ${e.title}${e.snippet ? `：${e.snippet.slice(0, 160)}` : ''}`)
+    .join('\n');
+
+  try {
+    const model = withRetry(await resolveModel(modelConfig));
+    const { text } = await generateText({
+      model,
+      abortSignal,
+      maxOutputTokens: modelConfig.completionOptions?.maxTokens ?? 512,
+      temperature: modelConfig.completionOptions?.temperature ?? 0.2,
+      prompt: [
+        '请用一两句中文总结本节点的研究发现（短综合）。',
+        `研究主题：${topic}`,
+        `节点：${node.title}`,
+        node.query ? `查询：${node.query}` : '',
+        evidenceIds.length === 0
+          ? '证据：无。请诚实说明检索无命中，不要编造来源。'
+          : `证据：\n${evidenceLines}`,
+        '不要输出 JSON；只要纯文本摘要。',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    });
+    const summary = text.trim();
+    if (!summary) {
+      return {
+        summary: evidenceIds.length ? `已收集 ${evidenceIds.length} 条证据` : '未收集到证据',
+        conclusionStatus: 'missing',
+      };
+    }
+    return {
+      summary,
+      conclusionStatus: evidenceIds.length > 0 ? 'partial' : 'missing',
+    };
+  } catch (error) {
+    if (abortSignal.aborted || isCancelled(runId)) throw error;
+    console.warn('[research] node short synthesis failed:', error);
+    emitLog(runId, `节点 ${node.id} 短综合失败：${String(error)}`);
+    return {
+      summary: evidenceIds.length ? `已收集 ${evidenceIds.length} 条证据（综合失败）` : '综合失败',
+      conclusionStatus: 'missing',
+    };
+  }
+}
+
 /**
- * Node work-unit via ToolLoopAgent (mode=work_unit). Falls back to pragmatic
- * RAG/searchWeb when no model / agent fails / no tool results collected.
+ * Node work-unit via ToolLoopAgent (mode=work_unit) + LLM short synthesis.
+ * Empty tool results are legal; MUST NOT pragmatic fake-hit fallback.
  */
 export async function runNodeWorkUnit(opts: {
   runId: number;
@@ -111,7 +192,13 @@ export async function runNodeWorkUnit(opts: {
   searchesUsed: number;
   maxSearches: number;
   abortSignal: AbortSignal;
-}): Promise<{ evidenceIds: string[]; searchesUsed: number; via: 'agent' | 'pragmatic' }> {
+}): Promise<{
+  evidenceIds: string[];
+  searchesUsed: number;
+  via: 'agent' | 'none';
+  summary: string;
+  conclusionStatus: ResearchNode['conclusionStatus'];
+}> {
   const {
     runId,
     notebookId,
@@ -134,8 +221,7 @@ export async function runNodeWorkUnit(opts: {
   });
 
   const agent = await createResearchNodeAgent(notebookId);
-  let via: 'agent' | 'pragmatic' = 'pragmatic';
-  let toolHits = 0;
+  let via: 'agent' | 'none' = 'none';
 
   if (agent) {
     try {
@@ -144,7 +230,7 @@ export async function runNodeWorkUnit(opts: {
           `研究主题：${topic}`,
           `节点：${node.title}`,
           node.query ? `查询：${node.query}` : '',
-          '请使用可用工具收集证据，然后用一两句话总结。',
+          '请使用可用工具收集证据。无命中时保持空列表，不要编造。',
         ]
           .filter(Boolean)
           .join('\n'),
@@ -167,7 +253,6 @@ export async function runNodeWorkUnit(opts: {
           const output = 'output' in part ? part.output : undefined;
           if (toolName === 'webSearch') {
             if (searchesUsed >= maxSearches) {
-              // Soft-stop: do not fail the whole Run; caller may enter budget confirm.
               emitLog(runId, '外网检索跳过：搜索预算已尽');
               break;
             }
@@ -178,7 +263,6 @@ export async function runNodeWorkUnit(opts: {
             searchesUsed += ingested.searchesDelta;
             updateRun(runId, { searchesUsed });
           }
-          if (ingested.evidenceIds.length) toolHits += 1;
           emitLog(
             runId,
             toolName === 'webSearch'
@@ -187,8 +271,6 @@ export async function runNodeWorkUnit(opts: {
                 ? `检索笔记本：${ingested.evidenceIds.length} 条`
                 : `工具 ${toolName} 完成`,
           );
-        } else if (part.type === 'text-delta') {
-          // work-unit text is logged lightly; report synthesis stays deterministic
         } else if (part.type === 'error') {
           throw new Error(
             'error' in part && part.error instanceof Error
@@ -200,77 +282,41 @@ export async function runNodeWorkUnit(opts: {
       via = 'agent';
     } catch (error) {
       if (abortSignal.aborted || isCancelled(runId)) throw error;
-      console.warn('[research] work_unit agent failed; using pragmatic path:', error);
-      via = 'pragmatic';
-      toolHits = 0;
+      console.warn('[research] work_unit agent failed (no fake-hit fallback):', error);
+      emitLog(runId, `节点 ${node.id} 工具环失败，保留已收集证据继续短综合`);
+      via = evidenceIds.length ? 'agent' : 'none';
     }
+  } else {
+    emitLog(runId, `节点 ${node.id} 无可用模型，跳过工具检索`);
   }
 
-  const needsPragmatic =
-    via === 'pragmatic' ||
-    (toolHits === 0 && (allowWeb || (useNotebookSources && Boolean(sourceIds?.length))));
-
-  if (needsPragmatic && !abortSignal.aborted && !isCancelled(runId)) {
-    via = 'pragmatic';
-    // Notebook retrieve
-    if (useNotebookSources && sourceIds?.length) {
-      try {
-        const hits = await ragRegistry.retrieveWith('embed', notebookId, topic, {
-          topK: 5,
-          minScore: 0,
-          sourceIds,
-        });
-        for (const hit of hits) {
-          if (isCancelled(runId) || abortSignal.aborted) break;
-          const ev = insertEvidence(runId, notebookId, {
-            kind: 'chunk',
-            title: `来源 ${hit.sourceId} · chunk ${hit.chunkIndex}`,
-            snippet: hit.text.slice(0, 500),
-            sourceId: hit.sourceId,
-            chunkId: String(hit.chunkId),
-            collectedAtNodeId: node.id,
-          });
-          evidenceIds.push(ev.id);
-        }
-        emitLog(runId, `检索笔记本：${hits.length} 条`);
-      } catch (error) {
-        emitLog(runId, `笔记本检索失败：${String(error)}`);
-      }
-    }
-
-    if (allowWeb) {
-      if (searchesUsed >= maxSearches) {
-        emitLog(runId, '外网检索跳过：搜索预算已尽');
-      } else {
-        try {
-          const results = await searchWeb(topic, { maxResults: 5 });
-          searchesUsed += 1;
-          updateRun(runId, { searchesUsed });
-          for (const item of results) {
-            const ev = insertEvidence(runId, notebookId, {
-              kind: 'web',
-              title: item.title || item.url,
-              snippet: item.snippet,
-              url: item.url,
-              collectedAtNodeId: node.id,
-            });
-            evidenceIds.push(ev.id);
-          }
-          emitLog(runId, `外网检索：${results.length} 条`);
-        } catch (error) {
-          emitLog(runId, `外网检索失败：${String(error)}`);
-        }
-      }
-    }
-  }
+  const fresh = requireFresh(runId);
+  const synth = await shortSynthesizeNodeSummary({
+    runId,
+    node,
+    topic,
+    evidenceIds,
+    modelId: fresh.modelId,
+    abortSignal,
+  });
 
   appendProgressEvent(runId, 'unit_finished', {
     nodeId: node.id,
     headline: `work_unit done (${via})`,
-    payload: { evidenceCount: evidenceIds.length, via },
+    payload: {
+      evidenceCount: evidenceIds.length,
+      via,
+      conclusionStatus: synth.conclusionStatus,
+    },
   });
 
-  return { evidenceIds, searchesUsed, via };
+  return {
+    evidenceIds,
+    searchesUsed,
+    via,
+    summary: synth.summary,
+    conclusionStatus: synth.conclusionStatus,
+  };
 }
 
 export function patchNodePhase(
@@ -296,16 +342,24 @@ export function writeBackNodeWork(
   runId: number,
   nodeId: string,
   evidenceIds: string[],
+  opts?: {
+    summary?: string;
+    conclusionStatus?: ResearchNode['conclusionStatus'];
+  },
 ): ResearchNode | null {
   const row = requireFresh(runId);
   const graph = getGraph(row);
   const live = graph.nodes.find((n) => n.id === nodeId) as ResearchNode | undefined;
   if (!live || live.conclusionStatus === 'pruned') return null;
+  const conclusionStatus =
+    opts?.conclusionStatus ?? (evidenceIds.length > 0 ? 'partial' : 'missing');
+  const summary =
+    opts?.summary ?? (evidenceIds.length ? `已收集 ${evidenceIds.length} 条证据` : '未收集到证据');
   const updated: ResearchNode = {
     ...live,
     phase: 'idle',
-    conclusionStatus: evidenceIds.length > 0 ? 'partial' : 'missing',
-    summary: evidenceIds.length ? `已收集 ${evidenceIds.length} 条证据` : '未收集到证据',
+    conclusionStatus,
+    summary,
     evidenceIds,
   };
   const idx = graph.nodes.findIndex((n) => n.id === updated.id);
@@ -365,7 +419,10 @@ export async function drainResearchWorkUnits(
       abortSignal,
     });
     if (abortSignal.aborted || isCancelled(runId)) return;
-    const written = writeBackNodeWork(runId, node.id, work.evidenceIds);
+    const written = writeBackNodeWork(runId, node.id, work.evidenceIds, {
+      summary: work.summary,
+      conclusionStatus: work.conclusionStatus,
+    });
     if (!written) {
       emitLog(runId, `研究节点 ${node.id} 已剪枝，跳过写回`);
       appendProgressEvent(runId, 'unit_skipped_pruned', { nodeId: node.id });
@@ -373,7 +430,10 @@ export async function drainResearchWorkUnits(
       appendProgressEvent(runId, 'unit_finished', {
         nodeId: node.id,
         headline: written.summary ?? '支路完成',
-        payload: { evidenceCount: work.evidenceIds.length },
+        payload: {
+          evidenceCount: work.evidenceIds.length,
+          conclusionStatus: work.conclusionStatus,
+        },
       });
     }
   }
@@ -527,7 +587,10 @@ export async function runLoop(runId: number): Promise<void> {
         return;
       }
 
-      writeBackNodeWork(runId, liveQuestion.id, evidenceIds);
+      writeBackNodeWork(runId, liveQuestion.id, evidenceIds, {
+        summary: work.summary,
+        conclusionStatus: work.conclusionStatus,
+      });
       row = requireFresh(runId);
     } else {
       emitLog(runId, '已有研究支路，跳过问题节点检索，直接调度支路');

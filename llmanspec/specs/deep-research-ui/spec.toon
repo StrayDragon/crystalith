@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "deep-research-ui"
 purpose: "TBD - created by archiving change c77-deep-research-ui. Update purpose after archive."
 valid_scope[2]: src/,tests/
-requirements[54]{req_id,title,statement}:
+requirements[56]{req_id,title,statement}:
   r400,Lab route replaces E1 Desk as deep entry,"深研产品入口 MUST 为 /research-lab/:nid（及工作区烧瓶导航）；Workspace 顶栏 E1 MUST NOT 再以 DeepResearchDesk 作为深研主表面；MUST NOT 恢复「暂不可用」壳或已删除 HITL agent 作为深研路径。"
   r401,H1 create form on desk,DeepResearchDesk MUST 提供显式 useNotebookSources 与 allowWeb（默认皆开）、台内 sourceIds 多选、以及浅/中/深 depth（默认中）；当 useNotebookSources 为 true 且未选来源、或两开关皆关、或 topic 为空时 MUST 禁用开始；sourceIds MUST NOT 隐式绑定工作区勾选状态。
   r402,Queue freshness without list SSE,Desk 队列 MUST 在打开时拉取 notebook 作用域 listRuns；当存在非终态 Run 时 MUST 以短间隔轮询刷新，全终态或关闭 Desk 时 MUST 停止轮询；创建成功、关闭详情返回、以及详情内导致状态变化的操作之后 MUST 立即再拉 list；MUST NOT 在本变更引入 notebook 级 list SSE。
@@ -57,7 +57,9 @@ requirements[54]{req_id,title,statement}:
   r451,Eden revision restore reloads graph on return,"Eden 模式下用户经 revisions API 恢复快照后，返回图作业台时 MUST 经 GET ResearchRun 重载并应用 nodes/edges，使画布与 restored 快照一致；恢复成功时 MUST 刷新本地 Run 图态；MUST NOT 在报告已恢复而图仍显示旧态的情况下将 restoreGraphSlice 作为 Eden 默认静默 no-op。"
   r452,Workspace chat deep research commands,"工作区 chat 输入 MUST 支持文档化的 / slash 命令以打开 Lab Compose、预填 topic、或深链已有 Run（/research-lab/:nid 与可选 ?rid= / ?topic=）；实现 MUST 经 Eden 默认路径（fixture 下仍可导航 Lab）；命令 MUST 由 GET /v2/commands 以 kind=nav 暴露；确认执行时 MUST NOT 将深研 slash 当作普通 QA 消息发送；烧瓶与 Lab Compose 与任务抽屉 MUST 保持主要深研入口；MUST NOT 使 chat 成为唯一深研入口；MUST NOT 以 @ 提及作为本变更必达面（slash-only）。"
   r453,Eden Lab production e2e gate,仓库 MUST 提供 @p0（或等价）Playwright 路径，在 VITE_LAB_FIXTURE 未设时演练 Eden Lab：Compose 创建 → 图含 nodes/edges → M1 confirm → 报告页 → convert；该门禁 MUST 作为生产默认深研路径对拍证明；MUST NOT 仅以 fixture 回放 smoke 充当生产 parity 门禁。
-scenarios[97]{req_id,id,given,when,then,feature}:
+  r454,Lab compose and retry expose model picker,"Lab Compose MUST 允许用户可选选择 modelId 并在 POST create 时发送（省略则服务端默认）；当 Run status 为 failed 且 failureReason 为结案类失败时 Lab MUST 展示可见错误与「重试结案」入口，并 MUST 允许更换 model 后调用 retry-synthesize；MUST NOT 在 workspace chat 本变更中新增换模 UI。"
+  r455,Failed synthesize has no heuristic report UI,"当结案失败导致 Run failed 时 Lab MUST NOT 将启发式证据清单展示为权威报告正文；用户 MUST 能通过重试结案（可换模）恢复；0 证据但 completed 的诚实成稿 MUST 仍按普通报告渲染。"
+scenarios[101]{req_id,id,given,when,then,feature}:
   r400,"lab-route-is-deep-entry",用户要从工作区进入深研,打开深研,"进入 /research-lab/:nid 而非顶栏 DeepResearchDesk",false
   r401,"empty-sources-disables-start",用来源开关开启且台内未选任何来源,用户尝试开始深研,开始控件保持禁用且不得发出创建请求,false
   r402,"polling-stops-when-terminal",Desk 打开且队列仅含 completed/failed/cancelled,等待超过一个轮询间隔,客户端不再为 list 发起定时轮询请求,false
@@ -155,3 +157,7 @@ scenarios[97]{req_id,id,given,when,then,feature}:
   r453,"eden-e2e-compose-to-convert",e2e 环境 VITE_LAB_FIXTURE 未设且 server 可用,执行 @p0 Eden Lab 用例,走完 Compose→图→confirm→报告→convert 且无 fixture 权威态,true
   r453,"eden-graph-has-nodes-edges",Eden Run 由 e2e Compose 创建,等待图稳定,"research-lab-graph 可见且含至少一条边与一个研究节点",true
   r453,"fixture-smoke-not-p0-parity",仅 VITE_LAB_FIXTURE=1 的 Lab smoke,查阅 @p0 门禁定义,生产 parity 门禁仍要求 Eden 路径用例,true
+  r454,"compose-sends-model-id",用户在 Compose 选择某 model 并创建,查看 POST body,含对应 modelId,true
+  r454,"failed-shows-retry-with-model",Run 为结案 failed,用户查看作业台,"可见错误与重试结案及换模控件",true
+  r454,"retry-calls-api",用户在 failed 条已选新 model,点击重试结案,"客户端调用 retry-synthesize 且 body 含新 modelId",true
+  r455,"failed-no-heuristic-report","Run 结案 failed 且无权威 report",用户打开报告面或主表面,不展示证据清单冒充报告,true

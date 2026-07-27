@@ -9,6 +9,8 @@ export interface LabComposeDraft {
   selectedSourceIds: number[];
   /** L1 depth tier (r305/r447); gate does not depend on this field. */
   depth: ResearchDepth;
+  /** Optional chat model for create (omit/empty = server default). */
+  modelId?: string | null;
 }
 
 export type LabComposeBlockReason = 'topic' | 'no_channel' | 'need_sources';

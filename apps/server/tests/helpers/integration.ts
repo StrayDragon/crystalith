@@ -79,9 +79,42 @@ export function installAiMock(opts: AiMockOptions): void {
     Output: {
       object: <T>(spec: T) => spec,
     },
-    generateObject: async ({ prompt }: { prompt?: string }) => ({
-      object: opts.object?.(prompt ?? '') ?? {},
-    }),
+    generateObject: async ({ prompt }: { prompt?: string }) => {
+      const p = prompt ?? '';
+      const custom = opts.object?.(p);
+      const isReport =
+        custom &&
+        typeof custom === 'object' &&
+        custom !== null &&
+        'title' in (custom as object) &&
+        'sections' in (custom as object);
+      const isBranches =
+        custom && typeof custom === 'object' && custom !== null && 'branches' in (custom as object);
+
+      // Synthesize prompt → ResearchReport (ignore decompose custom branches)
+      if (/结案|ResearchReport|研究报告|综合成稿|深度研究结案/u.test(p)) {
+        if (isReport) return { object: custom };
+        return {
+          object: {
+            title: `研究报告：mock`,
+            sections: [
+              {
+                id: 'overview',
+                heading: '概述',
+                blocks: [{ type: 'paragraph', text, citeIds: [] }],
+              },
+            ],
+            citations: {},
+          },
+        };
+      }
+      if (isBranches) return { object: custom };
+      if (isReport) return { object: custom };
+      if (/拆解|规划器|branches|研究支路/u.test(p)) {
+        return { object: custom ?? { branches: [] } };
+      }
+      return { object: custom ?? {} };
+    },
     generateText: async ({ prompt, output }: { prompt?: string; output?: unknown }) => {
       if (output) {
         return { output: opts.object?.(prompt ?? '') ?? {}, text };

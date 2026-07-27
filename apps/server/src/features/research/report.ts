@@ -4,19 +4,25 @@
 import type {
   ResearchConvertBody,
   ResearchEdge,
+  ResearchEvidence,
   ResearchNode,
   ResearchProgressEvent,
   ResearchProgressKind,
   ResearchReport,
   ResearchReportView,
+  ResearchRetrySynthesizeBody,
   ResearchRevision,
   ResearchRevisionCreateBody,
   ResearchRun,
   ResearchRunStatus,
 } from '@crystalith/shared';
+import { ResearchReportSchema } from '@crystalith/shared';
+import { generateObject } from 'ai';
 import { and, asc, desc, eq, gt } from 'drizzle-orm';
 import { NotFoundError } from 'elysia';
 
+import { withRetry } from '../../ai/middleware.ts';
+import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';
 import {
   researchProgressEvents,
@@ -25,7 +31,9 @@ import {
   researchRuns,
   type ResearchReportJson,
 } from '../../db/schema.ts';
+import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
+import { e2eStubResearchReport, isResearchE2eStub } from './e2e-stub.ts';
 import {
   appendProgressEvent,
   broadcast,
@@ -45,26 +53,219 @@ import {
   type RunRow,
 } from './research-core.ts';
 
-export async function synthesizeAndComplete(runId: number): Promise<void> {
-  if (isCancelled(runId)) {
-    finalizeCancel(runId);
-    return;
+export const SYNTHESIZE_FAILED_PREFIX = 'synthesize_failed:';
+export const SYNTHESIZE_MODEL_ERROR_PREFIX = 'synthesize_model_error:';
+
+export function isSynthesizeFailureReason(reason: string | null | undefined): boolean {
+  if (!reason) return false;
+  return (
+    reason.startsWith(SYNTHESIZE_FAILED_PREFIX) || reason.startsWith(SYNTHESIZE_MODEL_ERROR_PREFIX)
+  );
+}
+
+function resolveSynthesizeModelConfig(modelId: string | null | undefined) {
+  const id = modelId?.trim();
+  if (id) return getModelById(id) ?? getDefaultChatModel();
+  return getDefaultChatModel();
+}
+
+/** Collect all cite keys the model claimed (map keys + inline citeIds). */
+export function collectClaimedCiteIds(report: ResearchReport): Set<string> {
+  const ids = new Set<string>();
+  for (const key of Object.keys(report.citations ?? {})) ids.add(key);
+  for (const section of report.sections) {
+    for (const block of section.blocks) {
+      if (block.type === 'paragraph') {
+        for (const id of block.citeIds) ids.add(id);
+      } else {
+        for (const item of block.items) {
+          for (const id of item.citeIds) ids.add(id);
+        }
+      }
+    }
   }
-  const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
-  if (!row) return;
-  const report = synthesizeReport(row);
+  return ids;
+}
+
+function citationFromEvidence(ev: ResearchEvidence): ResearchReport['citations'][string] {
+  return {
+    sourceName: ev.title,
+    snippet: ev.snippet ?? ev.title,
+    url: ev.url,
+    sourceId: ev.sourceId,
+    chunkId: ev.chunkId,
+  };
+}
+
+/**
+ * Bind cites to Run evidence map: strip illegal keys; fail only when model claimed
+ * cites and none remain legal (all-illegal / hallucinated).
+ */
+export function validateAndBindCitations(
+  report: ResearchReport,
+  evidences: ResearchEvidence[],
+): { ok: true; report: ResearchReport } | { ok: false; reason: string } {
+  const byId = new Map(evidences.map((e) => [e.id, e]));
+  const claimed = collectClaimedCiteIds(report);
+  const legalKeys = new Set([...claimed].filter((id) => byId.has(id)));
+
+  if (claimed.size > 0 && legalKeys.size === 0) {
+    return { ok: false, reason: 'claimed cites all illegal' };
+  }
+
+  const filterIds = (ids: string[]) => ids.filter((id) => legalKeys.has(id));
+  const sections = report.sections.map((section) => ({
+    ...section,
+    blocks: section.blocks.map((block) => {
+      if (block.type === 'paragraph') {
+        return { ...block, citeIds: filterIds(block.citeIds) };
+      }
+      return {
+        ...block,
+        items: block.items.map((item) => ({ ...item, citeIds: filterIds(item.citeIds) })),
+      };
+    }),
+  }));
+
+  const citations: ResearchReport['citations'] = {};
+  for (const id of legalKeys) {
+    const ev = byId.get(id)!;
+    const fromModel = report.citations[id];
+    citations[id] = fromModel
+      ? {
+          ...citationFromEvidence(ev),
+          ...fromModel,
+          sourceName: fromModel.sourceName || ev.title,
+          snippet: fromModel.snippet || ev.snippet || ev.title,
+        }
+      : citationFromEvidence(ev);
+  }
+
+  return {
+    ok: true,
+    report: {
+      title: report.title,
+      sections,
+      citations,
+    },
+  };
+}
+
+function buildEvidenceCatalog(evidences: ResearchEvidence[]): string {
+  if (evidences.length === 0) {
+    return '（本 Run 证据列表为空；请产出诚实不足/归纳说明，citeIds 与 citations 必须为空。）';
+  }
+  return evidences
+    .map((e) => {
+      const bits = [
+        `id=${e.id}`,
+        `kind=${e.kind}`,
+        `title=${e.title}`,
+        e.snippet ? `snippet=${e.snippet.slice(0, 200)}` : null,
+        e.url ? `url=${e.url}` : null,
+      ].filter(Boolean);
+      return `- ${bits.join(' | ')}`;
+    })
+    .join('\n');
+}
+
+function buildNodeSummaries(row: RunRow): string {
+  const graph = getGraph(row);
+  const lines = (graph.nodes as ResearchNode[])
+    .filter((n) => n.conclusionStatus !== 'pruned')
+    .map((n) => {
+      const role = n.role ?? 'research';
+      const sum = n.summary?.trim() || '（无摘要）';
+      return `- [${role}] ${n.title}: ${sum}`;
+    });
+  return lines.length ? lines.join('\n') : '（无节点摘要）';
+}
+
+/** LLM structured ResearchReport (or e2e stub). Throws on model/schema failure. */
+export async function generateLlmResearchReport(
+  row: RunRow,
+  evidences: ResearchEvidence[],
+  abortSignal?: AbortSignal,
+): Promise<ResearchReport> {
+  if (isResearchE2eStub()) {
+    return e2eStubResearchReport(row.topic, evidences.length);
+  }
+
+  const modelConfig = resolveSynthesizeModelConfig(row.modelId);
+  if (!modelConfig) {
+    throw new Error('No chat model configured for research synthesize');
+  }
+
+  const model = withRetry(await resolveModel(modelConfig));
+  const maxOutputTokens = modelConfig.completionOptions?.maxTokens ?? 8192;
+  const catalog = buildEvidenceCatalog(evidences);
+  const nodeSummaries = buildNodeSummaries(row);
+
+  const { object } = await generateObject({
+    model,
+    schema: ResearchReportSchema,
+    abortSignal,
+    maxOutputTokens,
+    temperature: modelConfig.completionOptions?.temperature ?? 0.3,
+    prompt: [
+      '你是深度研究结案写作者。请输出同形 ResearchReport JSON（title、sections、citations）。',
+      `研究主题：${row.topic}`,
+      '',
+      '节点摘要：',
+      nodeSummaries,
+      '',
+      '可用证据（cite key MUST 使用下列 id；禁止虚构 id）：',
+      catalog,
+      '',
+      '规则：',
+      '- sections 为正文；blocks 为 paragraph 或 bullets；每处 citeIds 只能引用证据 id。',
+      '- citations 为全局 map；key 必须是证据 id。',
+      '- 引用是充分不必要条件：可以 0 cite 仍有结论；有证据可不引用。',
+      '- 0 证据时写诚实不足说明，citeIds/citations 为空。',
+      '- 禁止把证据清单当研究报告正文。',
+      '- 推理尽量短；只输出符合 schema 的对象。',
+    ].join('\n'),
+  });
+
+  const parsed = ResearchReportSchema.safeParse(object);
+  if (!parsed.success) {
+    throw new Error(`Invalid ResearchReport from model: ${parsed.error.message}`);
+  }
+  return parsed.data;
+}
+
+function failSynthesize(runId: number, reason: string): void {
+  updateRun(runId, {
+    status: 'failed',
+    errorMessage: reason,
+    confirmKind: null,
+    confirmBranchNodeId: null,
+    llmActivity: null,
+    activeNodeId: null,
+    report: null,
+  });
+  appendProgressEvent(runId, 'unit_aborted', {
+    headline: '结案失败',
+    payload: { failureReason: reason },
+  });
+  emitLog(runId, `结案失败：${reason}`);
+  broadcast(runId, 'error', { errorCode: ErrorCode.INTERNAL_ERROR, message: reason });
+  emitStatus(runId, 'failed', reason);
+}
+
+function completeWithReport(runId: number, row: RunRow, report: ResearchReport): void {
   const now = new Date();
   updateRun(runId, {
     status: 'completed',
     report: report as unknown as typeof row.report,
     reportUpdatedAt: now,
+    errorMessage: null,
     confirmKind: null,
     confirmBranchNodeId: null,
     llmActivity: null,
     activeNodeId: null,
     checkpoint: writeCheckpoint({ ...row, status: 'completed' }, 'report'),
   });
-  // auto_complete revision snapshot
   const revId = newId('rev');
   const graph = getGraph(row);
   db()
@@ -95,64 +296,84 @@ export async function synthesizeAndComplete(runId: number): Promise<void> {
   emitStatus(runId, 'completed');
 }
 
-/** R6a structured report from evidences + topic. */
+export async function synthesizeAndComplete(runId: number): Promise<void> {
+  if (isCancelled(runId)) {
+    finalizeCancel(runId);
+    return;
+  }
+  const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+  if (!row) return;
+
+  emitLog(runId, '开始 LLM 结案成稿');
+  appendProgressEvent(runId, 'unit_started', { headline: 'synthesize' });
+
+  try {
+    const evidences = listEvidences(runId);
+    const raw = await generateLlmResearchReport(row, evidences);
+    const bound = validateAndBindCitations(raw, evidences);
+    if (!bound.ok) {
+      failSynthesize(runId, `${SYNTHESIZE_FAILED_PREFIX}${bound.reason}`);
+      return;
+    }
+    if (isCancelled(runId)) {
+      finalizeCancel(runId);
+      return;
+    }
+    completeWithReport(runId, row, bound.report);
+  } catch (error) {
+    if (isCancelled(runId)) {
+      finalizeCancel(runId);
+      return;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    failSynthesize(runId, `${SYNTHESIZE_MODEL_ERROR_PREFIX}${message}`);
+  }
+}
+
+/**
+ * Same-Run re-synthesize after synthesize-class failure.
+ * MUST NOT re-run decompose / drain.
+ */
+export async function retrySynthesize(
+  notebookId: number,
+  runId: number,
+  body: ResearchRetrySynthesizeBody = {},
+): Promise<ResearchRun> {
+  const row = requireRun(notebookId, runId);
+  if (row.status !== 'failed' || !isSynthesizeFailureReason(row.errorMessage)) {
+    throw new AppHttpError(
+      ErrorCode.RESEARCH_INVALID_STATE,
+      'retry-synthesize only allowed on synthesize-class failed runs',
+    );
+  }
+
+  const patch: Partial<RunRow> = {
+    status: 'running',
+    errorMessage: null,
+    confirmKind: null,
+    confirmBranchNodeId: null,
+    llmActivity: null,
+    activeNodeId: null,
+  };
+  const override = body.modelId?.trim();
+  if (override) {
+    patch.modelId = override;
+  }
+  updateRun(runId, patch);
+  emitStatus(runId, 'running', 'retry_synthesize');
+  emitLog(runId, override ? `换模重试结案：${override}` : '重试结案');
+
+  await synthesizeAndComplete(runId);
+  return serializeRun(requireRun(notebookId, runId));
+}
+
+/**
+ * @deprecated Heuristic evidence bullet list removed from success path (c102).
+ * Stub-shaped helper retained for isolated fixtures only — MUST NOT complete a Run.
+ */
 export function synthesizeReport(row: RunRow): ResearchReport {
   const evidences = listEvidences(row.id);
-  const citations: ResearchReport['citations'] = {};
-  const citeIds: string[] = [];
-  for (const ev of evidences) {
-    const cid = `c${citeIds.length + 1}`;
-    citeIds.push(cid);
-    citations[cid] = {
-      sourceName: ev.title,
-      snippet: ev.snippet ?? ev.title,
-      url: ev.url,
-      sourceId: ev.sourceId,
-      chunkId: ev.chunkId,
-    };
-  }
-  const summaryLines =
-    evidences.length > 0
-      ? evidences.map((e, i) => `- ${e.title}${citeIds[i] ? ` [${citeIds[i]}]` : ''}`).join('\n')
-      : '- （暂无证据）';
-
-  return {
-    title: `研究报告：${row.topic}`,
-    sections: [
-      {
-        id: 'overview',
-        heading: '概述',
-        blocks: [
-          {
-            type: 'paragraph',
-            text: `围绕「${row.topic}」的深度研究结果如下。共收集 ${evidences.length} 条证据。`,
-            citeIds: citeIds.slice(0, 3),
-          },
-        ],
-      },
-      {
-        id: 'evidence',
-        heading: '证据摘要',
-        blocks: [
-          {
-            type: 'bullets',
-            items: evidences.length
-              ? evidences.map((e, i) => ({
-                  text: `${e.title}${e.snippet ? ` — ${e.snippet.slice(0, 120)}` : ''}`,
-                  citeIds: citeIds[i] ? [citeIds[i]] : [],
-                }))
-              : [{ text: '未收集到可用证据', citeIds: [] }],
-          },
-          {
-            type: 'paragraph',
-            text: `证据列表：\n${summaryLines}`,
-            citeIds,
-          },
-        ],
-      },
-    ],
-    citations,
-  };
+  return e2eStubResearchReport(row.topic, evidences.length);
 }
 
 export function reportToMarkdown(report: ResearchReport): string {
@@ -356,7 +577,6 @@ export function restoreRevision(notebookId: number, runId: number, revId: string
     reportUpdatedAt: rev.report ? now : row.reportUpdatedAt,
     activeRevisionId: revId,
   });
-  // Discard stale working edit
   db().delete(researchReportEdits).where(eq(researchReportEdits.runId, runId)).run();
 
   emitGraphPatch(runId, {
