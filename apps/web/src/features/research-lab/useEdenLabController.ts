@@ -89,6 +89,8 @@ export type EdenLabController = LabController & {
   requestReexpand: (hint?: string) => void;
   /** ResearchRun.status for Eden primary overlay (c105 schedule). */
   runStatus: ResearchRunStatus | null;
+  /** HTTP/command in-flight — MUST NOT be conflated with layout reshaping. */
+  busy: boolean;
 };
 
 function toLedgerItem(ev: ResearchProgressEvent): LabProgressLedgerItem {
@@ -739,7 +741,8 @@ export function useEdenLabController(
     confirmChoice,
     setConfirmChoice,
     mutations: { ...EMPTY_MUTATIONS, activityNotes: activityLog },
-    reshaping: reshaping || busy,
+    reshaping,
+    busy,
     composeAndStart,
     startFromIdle: () => undefined,
     pause: () => undefined,

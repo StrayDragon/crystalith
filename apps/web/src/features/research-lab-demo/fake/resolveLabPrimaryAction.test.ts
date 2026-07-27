@@ -158,6 +158,23 @@ describe('applyEdenPrimaryActionOverlay', () => {
     });
   });
 
+  it('queued+seeded overlay stays enabled even if fixture reshaping would disable', () => {
+    // Regression: busy MUST NOT be folded into reshaping (manual QA Path C).
+    const a = resolveLabPrimaryAction({
+      ...base,
+      phase: 'decompose',
+      playing: true,
+      reshaping: false,
+    });
+    const eden = applyEdenPrimaryActionOverlay(a, {
+      runStatus: 'queued',
+      hasSeededGraph: true,
+    });
+    expect(eden.disabled).toBe(false);
+    expect(eden.secondary?.disabled).toBe(false);
+    expect(eden.kind).toBe('resume');
+    expect(eden.secondary?.kind).toBe('cancel');
+  });
   it('queued without graph keeps pause→cancel overlay', () => {
     const a = resolveLabPrimaryAction({
       ...base,
