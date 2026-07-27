@@ -1,13 +1,16 @@
 import { afterEach, describe, expect, it } from 'bun:test';
 
 import {
+  DEFAULT_FIRECRAWL_API_BASE,
   isWebExtractorEnabled,
+  resolveFirecrawlApiBase,
   resolveFirecrawlApiKey,
+  resolveFirecrawlScrapeUrl,
   resolveJinaApiKey,
 } from '../../src/shared/extraction/config.ts';
 import { listExtractorMetadata } from '../../src/shared/extraction/factory.ts';
 
-const CL_KEYS = ['CL_JINA_API_KEY', 'CL_FIRECRAWL_API_KEY'] as const;
+const CL_KEYS = ['CL_JINA_API_KEY', 'CL_FIRECRAWL_API_KEY', 'CL_FIRECRAWL_API_BASE'] as const;
 
 afterEach(() => {
   for (const key of CL_KEYS) delete process.env[key];
@@ -27,6 +30,32 @@ describe('extractor config wiring (source_ingestion.web_extraction)', () => {
     };
     expect(resolveJinaApiKey(cfg)).toBe('cl-jina');
     expect(resolveFirecrawlApiKey(cfg)).toBe('cl-fc');
+  });
+
+  it('prefers CL_FIRECRAWL_API_BASE over yaml base_url', () => {
+    process.env.CL_FIRECRAWL_API_BASE = 'http://127.0.0.1:3002/';
+    const cfg = {
+      source_ingestion: {
+        web_extraction: {
+          firecrawl: { base_url: 'http://yaml-host:9999' },
+        },
+      },
+    };
+    expect(resolveFirecrawlApiBase(cfg)).toBe('http://127.0.0.1:3002');
+    expect(resolveFirecrawlScrapeUrl(cfg)).toBe('http://127.0.0.1:3002/v2/scrape');
+  });
+
+  it('uses yaml firecrawl.base_url then cloud default', () => {
+    const cfg = {
+      source_ingestion: {
+        web_extraction: {
+          firecrawl: { base_url: 'https://fc.example.com/' },
+        },
+      },
+    };
+    expect(resolveFirecrawlApiBase(cfg)).toBe('https://fc.example.com');
+    expect(resolveFirecrawlApiBase({})).toBe(DEFAULT_FIRECRAWL_API_BASE);
+    expect(resolveFirecrawlScrapeUrl({})).toBe(`${DEFAULT_FIRECRAWL_API_BASE}/v2/scrape`);
   });
 
   it('reads jina/firecrawl keys from web_extraction', () => {

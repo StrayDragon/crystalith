@@ -77,6 +77,9 @@ export const BuildRunEnvSchema = z
     // --- Search ---
     CL_SEARXNG_HOST: z.string().default('').describe(desc('env.CL_SEARXNG_HOST')),
 
+    // --- Web extraction ---
+    CL_FIRECRAWL_API_BASE: z.string().default('').describe(desc('env.CL_FIRECRAWL_API_BASE')),
+
     // --- Frontend ---
     VITE_API_PROXY_TARGET: z
       .string()

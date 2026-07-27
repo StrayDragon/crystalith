@@ -1,9 +1,9 @@
-// Resolve extractor keys from app config / env.
+// Resolve extractor keys / hosts from app config / env.
 // Priority (highest first):
-//   1. CL_JINA_API_KEY / CL_FIRECRAWL_API_KEY (process.env)
-//   2. source_ingestion.web_extraction.{jina,firecrawl}.api_key
-//      (yaml already prefers secret.CL_* → env.CL_* → deprecated JINA_*/FIRECRAWL_*)
-//   3. Legacy extraction.{jina,firecrawl}_api_key
+//   keys:  CL_* → web_extraction.*.api_key → legacy extraction.*
+//   base:  CL_FIRECRAWL_API_BASE → web_extraction.firecrawl.base_url → cloud default
+
+export const DEFAULT_FIRECRAWL_API_BASE = 'https://api.firecrawl.dev';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -13,8 +13,14 @@ function nonEmptyString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
-function envKey(name: 'CL_JINA_API_KEY' | 'CL_FIRECRAWL_API_KEY'): string | undefined {
+function envKey(
+  name: 'CL_JINA_API_KEY' | 'CL_FIRECRAWL_API_KEY' | 'CL_FIRECRAWL_API_BASE',
+): string | undefined {
   return nonEmptyString(process.env[name]);
+}
+
+function normalizeApiBase(raw: string): string {
+  return raw.replace(/\/+$/u, '');
 }
 
 function webExtractionBlock(config: unknown): Record<string, unknown> | undefined {
@@ -60,9 +66,25 @@ export function resolveFirecrawlApiKey(config: unknown): string | undefined {
 }
 
 /**
+ * Firecrawl API root (no trailing slash). Default cloud host when unset.
+ * Priority: CL_FIRECRAWL_API_BASE → web_extraction.firecrawl.base_url → default.
+ */
+export function resolveFirecrawlApiBase(config: unknown): string {
+  const fromCl = envKey('CL_FIRECRAWL_API_BASE');
+  if (fromCl) return normalizeApiBase(fromCl);
+  const fromWeb = nonEmptyString(extractorSection(config, 'firecrawl')?.base_url);
+  if (fromWeb) return normalizeApiBase(fromWeb);
+  return DEFAULT_FIRECRAWL_API_BASE;
+}
+
+/** POST target for scrape (self-hosted or cloud). */
+export function resolveFirecrawlScrapeUrl(config: unknown): string {
+  return `${resolveFirecrawlApiBase(config)}/v2/scrape`;
+}
+
+/**
  * When `enabled` is explicitly false under web_extraction, treat as unavailable.
  * Missing section / missing flag → enabled (availability still needs API key).
- * CL_* keys still require enabled !== false (flip yaml `enabled` to use them).
  */
 export function isWebExtractorEnabled(config: unknown, name: 'jina' | 'firecrawl'): boolean {
   const section = extractorSection(config, name);

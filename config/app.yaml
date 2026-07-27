@@ -332,6 +332,8 @@ source_ingestion:
       # Availability still requires a non-empty api_key (CL_FIRECRAWL_API_KEY).
       enabled: true
       api_key: "{{ secret.CL_FIRECRAWL_API_KEY | default(env.CL_FIRECRAWL_API_KEY | default(env.FIRECRAWL_API_KEY | default(''))) }}"
+      # Self-hosted: set CL_FIRECRAWL_API_BASE (e.g. http://127.0.0.1:3002). Empty → cloud default.
+      base_url: "{{ env.CL_FIRECRAWL_API_BASE | default('') }}"
       timeout: 60
 
     browserless:

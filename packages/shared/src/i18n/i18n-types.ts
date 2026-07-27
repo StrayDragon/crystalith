@@ -190,6 +190,7 @@ export type Translation = {
   'env.CL_CHAT_LIGHT_MODEL': string;
   'env.CL_EMBEDDING_MODEL': string;
   'env.CL_SEARXNG_HOST': string;
+  'env.CL_FIRECRAWL_API_BASE': string;
   'env.VITE_API_PROXY_TARGET': string;
   'env.SEARXNG_HOST': string;
   'env.POSTGRES_PASSWORD': string;

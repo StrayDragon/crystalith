@@ -952,6 +952,7 @@ export const RootConfigSchema = z.object({
           firecrawl: z.object({
             enabled: z.boolean().default(false).optional(),
             api_key: z.string().default('').optional(),
+            base_url: z.string().default('').optional(),
             timeout: z.number().int().positive().default(60).optional(),
           }),
           browserless: z.object({
