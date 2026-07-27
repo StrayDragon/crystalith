@@ -18,6 +18,7 @@ vi.mock('./edenResearchApi', async (importOriginal) => {
     ...actual,
     createResearchRun: (...args: unknown[]) => createResearchRun(...args),
     retrySynthesizeResearchRun: (...args: unknown[]) => retrySynthesizeResearchRun(...args),
+    listProgress: vi.fn(async () => ({ items: [], nextAfterSeq: 0 })),
     getResearchRun: vi.fn(async (_nid: number, rid: number) => ({
       id: rid,
       notebookId: 62,
