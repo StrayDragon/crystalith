@@ -15,11 +15,12 @@ import { z } from 'zod';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
+import { fetchPageTool } from '../../ai/tools/fetch-page.ts';
 import { retrieveSourcesTool } from '../../ai/tools/retrieve-sources.ts';
 import { webSearchTool } from '../../ai/tools/web-search.ts';
 import { db } from '../../db/index.ts';
 import { embedSingle } from '../../rag/embedder.ts';
-import { getDefaultChatModel, getSearxngHost } from '../../shared/config.ts';
+import { getDefaultChatModel, getSearxngHost, getWorkUnitMaxSteps } from '../../shared/config.ts';
 import { withRunLlmLockReleased } from './run-locks.ts';
 
 /** Release per-run LLM lock while tool IO runs so parallel work-units can overlap search. */
@@ -42,6 +43,12 @@ export const ResearchNodeAgentCallOptionsSchema = z.object({
   nodeQuery: z.string().optional(),
   allowWeb: z.boolean().default(false),
   useNotebookSources: z.boolean().default(false),
+  /** Remaining successful page fetches for the Run (c107). */
+  pagesRemaining: z.number().int().nonnegative().optional(),
+  /** Per-node soft page cap for this work-unit (c107). */
+  pageSoft: z.number().int().positive().optional(),
+  /** Remaining web searches for the Run. */
+  searchesRemaining: z.number().int().nonnegative().optional(),
 });
 export type ResearchNodeAgentCallOptions = z.infer<typeof ResearchNodeAgentCallOptionsSchema>;
 
@@ -175,6 +182,7 @@ function workTools(opts: { notebookId: number; allowWeb: boolean; useNotebookSou
     webSearch: opts.allowWeb
       ? wrapToolIoOutsideLlmLock(webSearchTool({ host: getSearxngHost() || '' }))
       : wrapToolIoOutsideLlmLock(webSearchTool({ host: '' })),
+    ...(opts.allowWeb ? { fetchPage: wrapToolIoOutsideLlmLock(fetchPageTool()) } : {}),
     retrieveSources: wrapToolIoOutsideLlmLock(
       retrieveSourcesTool(db(), opts.notebookId, embedSingle),
     ),
@@ -189,7 +197,8 @@ function chatInstructions(
     '你是 Deep Research 节点助手。用简洁中文回复。',
     `当前节点角色：${role}；标题：${node.title}`,
     node.query ? `当前 query：${node.query}` : '',
-    '可用 Work 工具做检索（webSearch / retrieveSources）。',
+    '可用 Work 工具做检索（webSearch / fetchPage / retrieveSources）。',
+    'webSearch 得 SERP 摘要后，对值得读的 URL 自选调用 fetchPage 读正文；禁止编造。',
     '改图类动作必须调用 Structure 提议工具（propose_*），不要声称已剪枝/分叉。',
     '用户接受提议后由前端走 HTTP 命令口；你不会直接改图。',
   ]
@@ -197,12 +206,22 @@ function chatInstructions(
     .join('\n');
 }
 
-function workInstructions(role: ResearchNodeRole): string {
+function workInstructions(options: ResearchNodeAgentCallOptions): string {
+  const budgetBits = [
+    typeof options.searchesRemaining === 'number' ? `剩余搜索 ${options.searchesRemaining}` : null,
+    typeof options.pagesRemaining === 'number' ? `剩余读页 ${options.pagesRemaining}` : null,
+    typeof options.pageSoft === 'number' ? `本节点读页软上限 ${options.pageSoft}` : null,
+  ].filter(Boolean);
   return [
     '你在执行研究节点工作单元：检索并综合证据。',
-    `节点角色：${role}`,
+    `节点角色：${options.role}`,
     '只使用 Work 工具；不要调用 propose_* 结构工具。',
-  ].join('\n');
+    '流程：webSearch → 自选值得读的 URL 调用 fetchPage → 基于正文薄判断是否够用 → 不够可再搜/再读。',
+    '禁止编造来源；无命中时保持空列表。',
+    budgetBits.length ? `预算：${budgetBits.join('；')}。` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 export async function createResearchNodeAgent(notebookId: number) {
@@ -240,17 +259,17 @@ export async function createResearchNodeAgent(notebookId: number) {
         ...work,
       };
       const workActive = [
-        ...(options.allowWeb ? (['webSearch'] as const) : []),
+        ...(options.allowWeb ? (['webSearch', 'fetchPage'] as const) : []),
         ...(options.useNotebookSources ? (['retrieveSources'] as const) : []),
       ];
       if (options.mode === 'work_unit') {
         return {
           ...rest,
           tools,
-          instructions: workInstructions(options.role),
+          instructions: workInstructions(options),
           activeTools: workActive,
           toolApproval: undefined,
-          stopWhen: isStepCount(6),
+          stopWhen: isStepCount(getWorkUnitMaxSteps()),
         };
       }
       const structureActive = STRUCTURE_TOOL_NAMES.filter((name) => {

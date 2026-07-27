@@ -270,10 +270,47 @@ export function getDefaultChatModel(): ModelConfig | undefined {
   return models.available.find((m) => m.roles.includes('chat'));
 }
 
+const RESEARCH_SETTINGS_FALLBACK: ResearchSettings = {
+  progressEventRetain: 200,
+  parallelBranchUnits: 2,
+  pageRatio: 1.5,
+  workUnitMaxSteps: 12,
+  nodeContentTokenBudget: 32768,
+  nodeSummaryTokenBudget: 65536,
+};
+
 /** Parsed `research:` section from app.yaml (defaults applied). */
 export function getResearchSettings(): ResearchSettings {
   const parsed = ResearchSettingsSchema.safeParse(config().raw.research ?? {});
-  return parsed.success ? parsed.data : { progressEventRetain: 200, parallelBranchUnits: 2 };
+  return parsed.success ? parsed.data : { ...RESEARCH_SETTINGS_FALLBACK };
+}
+
+/** maxPageFetches = ceil(maxSearches * pageRatio); default ratio 1.5. */
+export function getPageRatio(): number {
+  const n = getResearchSettings().pageRatio ?? 1.5;
+  if (!Number.isFinite(n) || n <= 0) return 1.5;
+  return n;
+}
+
+/** ToolLoopAgent work_unit step cap (c107). */
+export function getWorkUnitMaxSteps(): number {
+  const n = getResearchSettings().workUnitMaxSteps ?? 12;
+  if (!Number.isFinite(n)) return 12;
+  return Math.max(1, Math.trunc(n));
+}
+
+/** Per-node web evidence content token budget (c107). */
+export function getNodeContentTokenBudget(): number {
+  const n = getResearchSettings().nodeContentTokenBudget ?? 32768;
+  if (!Number.isFinite(n)) return 32768;
+  return Math.max(1, Math.trunc(n));
+}
+
+/** Node short-synthesis evidence context token budget (c107). */
+export function getNodeSummaryTokenBudget(): number {
+  const n = getResearchSettings().nodeSummaryTokenBudget ?? 65536;
+  if (!Number.isFinite(n)) return 65536;
+  return Math.max(1, Math.trunc(n));
 }
 
 /**
@@ -749,6 +786,33 @@ export const ResearchSettingsSchema = z.object({
         '主题自动拆解所用模型 id；省略或空字符串时继承 models.defaults.chat',
       ),
     ),
+  /** maxPageFetches = ceil(maxSearches * pageRatio); default 1.5 (c107). */
+  pageRatio: z
+    .number()
+    .positive()
+    .default(1.5)
+    .describe(desc('research.page_ratio', '读页预算 = ceil(maxSearches × pageRatio)')),
+  /** ToolLoopAgent work_unit step cap (c107). */
+  workUnitMaxSteps: z
+    .number()
+    .int()
+    .positive()
+    .default(12)
+    .describe(desc('research.work_unit_max_steps', '节点 work_unit 工具环最大步数')),
+  /** Per-node web evidence content token budget (c107). */
+  nodeContentTokenBudget: z
+    .number()
+    .int()
+    .positive()
+    .default(32768)
+    .describe(desc('research.node_content_token_budget', '单节点网页正文合计 token 上限')),
+  /** Node short-synthesis evidence context token budget (c107). */
+  nodeSummaryTokenBudget: z
+    .number()
+    .int()
+    .positive()
+    .default(65536)
+    .describe(desc('research.node_summary_token_budget', '节点短综合证据上下文 token 上限')),
 });
 export type ResearchSettings = z.infer<typeof ResearchSettingsSchema>;
 
@@ -879,10 +943,14 @@ export const RootConfigSchema = z.object({
   research: ResearchSettingsSchema.default({
     progressEventRetain: 200,
     parallelBranchUnits: 2,
+    pageRatio: 1.5,
+    workUnitMaxSteps: 12,
+    nodeContentTokenBudget: 32768,
+    nodeSummaryTokenBudget: 65536,
   }).describe(
     desc(
       'root.research',
-      'Deep Research 运行时：进度账本保留、支路并行度、可选拆解模型（默认继承 chat）等',
+      'Deep Research 运行时：进度账本保留、支路并行度、读页预算比、work_unit 步数、token 预算、可选拆解模型等',
     ),
   ),
 });

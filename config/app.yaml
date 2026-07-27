@@ -350,3 +350,11 @@ research:
   # Optional model id for topic auto-decompose (c93). Omit or leave empty to
   # inherit models.defaults.chat.
   # decomposeModelId: ""
+  # Page-fetch budget = ceil(maxSearches * pageRatio) (c107). Independent of searches.
+  pageRatio: 1.5
+  # ToolLoopAgent work_unit step cap (c107).
+  workUnitMaxSteps: 12
+  # Per-node web evidence content token budget (c107).
+  nodeContentTokenBudget: 32768
+  # Node short-synthesis evidence context token budget (c107).
+  nodeSummaryTokenBudget: 65536
