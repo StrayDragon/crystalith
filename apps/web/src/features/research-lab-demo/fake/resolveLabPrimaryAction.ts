@@ -1,6 +1,6 @@
 import type { LabNodeRole, LabPhase } from './types';
 
-export type LabConfirmKind = 'budget' | 'expand_branch';
+export type LabConfirmKind = 'budget' | 'expand_branch' | 'reexpand';
 
 export type LabPrimaryActionKind =
   | 'start'
@@ -11,6 +11,9 @@ export type LabPrimaryActionKind =
   | 'continue_dig'
   | 'approve_branch'
   | 'skip_branch'
+  | 'approve_reexpand'
+  | 'skip_reexpand'
+  | 'request_reexpand'
   | 'view_conclusion'
   | 'restart'
   | 'retry';
@@ -101,16 +104,35 @@ export function resolveLabPrimaryAction(input: LabPrimaryActionInput): LabPrimar
         },
       });
     }
-    // Default / budget (H3=A): only continue + finish_report
+    if (confirmKind === 'reexpand') {
+      return disableForReshape({
+        kind: 'approve_reexpand',
+        label: '批准再扩展',
+        disabled: false,
+        confirmHint: '再扩展确认 · 可批准结构化再拆或跳过并收束',
+        title: '批准再扩展并追加研究支路',
+        secondary: {
+          kind: 'skip_reexpand',
+          label: '跳过再扩展',
+          disabled: false,
+        },
+      });
+    }
+    // Default / budget (H3=A): only continue + finish_report; 再扩展 as tertiary
     return disableForReshape({
       kind: 'finish_report',
       label: '生成结论',
       disabled: false,
-      confirmHint: '预算将尽 · 可继续深挖或生成结论',
+      confirmHint: '预算将尽 · 可继续深挖、再扩展或生成结论',
       title: '结束并生成研究报告',
       secondary: {
         kind: 'continue_dig',
         label: '继续深挖',
+        disabled: false,
+      },
+      tertiary: {
+        kind: 'request_reexpand',
+        label: '再扩展',
         disabled: false,
       },
     });
@@ -149,12 +171,22 @@ export function resolveLabPrimaryAction(input: LabPrimaryActionInput): LabPrimar
         kind: 'pause',
         label: '暂停',
         disabled: false,
+        secondary: {
+          kind: 'request_reexpand',
+          label: '再扩展',
+          disabled: false,
+        },
       });
     }
     return disableForReshape({
       kind: 'resume',
       label: '继续研究',
       disabled: false,
+      secondary: {
+        kind: 'request_reexpand',
+        label: '再扩展',
+        disabled: false,
+      },
     });
   }
 
@@ -172,6 +204,7 @@ export function applyEdenPrimaryActionOverlay(action: LabPrimaryAction): LabPrim
       ...action,
       kind: 'cancel',
       label: '取消研究',
+      // Keep secondary「再扩展」when present (c104).
     };
   }
   return action;

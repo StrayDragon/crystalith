@@ -268,7 +268,14 @@ export type ResearchArtifactRef = z.infer<typeof ResearchArtifactRefSchema>;
 export const ResearchConfirmBodySchema = z
   .object({
     action: z
-      .enum(['continue', 'finish_report', 'approve_branch', 'skip_branch'])
+      .enum([
+        'continue',
+        'finish_report',
+        'approve_branch',
+        'skip_branch',
+        'approve_reexpand',
+        'skip_reexpand',
+      ])
       .openapi({ description: desc('research.confirm_action', '确认动作') }),
     branchNodeId: z
       .string()
@@ -278,6 +285,24 @@ export const ResearchConfirmBodySchema = z
   })
   .openapi({ description: desc('research.confirm_body', '待确认响应体') });
 export type ResearchConfirmBody = z.infer<typeof ResearchConfirmBodySchema>;
+
+/** POST …/request-reexpand — user-gated secondary decompose (c104 / r334). */
+export const ResearchRequestReexpandBodySchema = z
+  .object({
+    hint: z
+      .string()
+      .optional()
+      .openapi({ description: desc('research.reexpand_hint', '再扩展提示（可选）') }),
+    focusNodeId: z
+      .string()
+      .min(1)
+      .optional()
+      .openapi({
+        description: desc('research.reexpand_focus_node', '局部再拆焦点节点（可选）'),
+      }),
+  })
+  .openapi({ description: desc('research.request_reexpand_body', '请求再扩展体') });
+export type ResearchRequestReexpandBody = z.infer<typeof ResearchRequestReexpandBodySchema>;
 
 export const ResearchConvertBodySchema = z
   .object({
@@ -412,7 +437,7 @@ export const ResearchRunSchema = z
       .default([])
       .openapi({ description: desc('research.run_evidences', '研究 Run 证据列表') }),
     report: ResearchReportSchema.nullable().optional(),
-    confirmKind: z.enum(['budget', 'expand_branch']).nullable().optional(),
+    confirmKind: z.enum(['budget', 'expand_branch', 'reexpand']).nullable().optional(),
     confirmBranchNodeId: z.string().nullable().optional(),
     /** Persisted chat model for synthesize / retry (omit = server default). */
     modelId: z
@@ -482,7 +507,7 @@ export const ResearchRunSummarySchema = z
     maxSearches: z.number().int().positive(),
     maxNodes: z.number().int().positive(),
     searchesUsed: z.number().int().nonnegative().default(0),
-    confirmKind: z.enum(['budget', 'expand_branch']).nullable().optional(),
+    confirmKind: z.enum(['budget', 'expand_branch', 'reexpand']).nullable().optional(),
     modelId: z.string().nullable().optional(),
     failureReason: z.string().nullable().optional(),
     errorMessage: z.string().nullable().optional(),
@@ -534,7 +559,7 @@ export const ResearchStreamStatusEventSchema = z.object({
 });
 
 export const ResearchStreamConfirmEventSchema = z.object({
-  kind: z.enum(['budget', 'expand_branch']),
+  kind: z.enum(['budget', 'expand_branch', 'reexpand']),
   branchNodeId: z.string().optional(),
   options: z.array(z.string()).optional(),
 });

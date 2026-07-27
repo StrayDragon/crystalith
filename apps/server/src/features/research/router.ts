@@ -17,6 +17,7 @@ import {
   ResearchProgressQuerySchema,
   ResearchReportPutBodySchema,
   ResearchReportViewSchema,
+  ResearchRequestReexpandBodySchema,
   ResearchRetrySynthesizeBodySchema,
   ResearchRevisionCreateBodySchema,
   ResearchRevisionSchema,
@@ -51,6 +52,7 @@ import {
   pruneNode,
   putCanonicalReport,
   putWorkingReport,
+  requestReexpand,
   restoreRevision,
   retrySynthesize,
 } from './service.ts';
@@ -101,10 +103,18 @@ registerApiDoc([
   {
     path: '/v2/notebooks/:nid/research/:rid/confirm',
     method: 'post',
-    summary: '确认预算/扩支等硬停点',
+    summary: '确认预算/扩支/再扩展等硬停点',
     tags: ['research'],
     request: { body: ResearchConfirmBodySchema },
     responses: { 200: { description: '已更新的 ResearchRun', body: ResearchRunSchema } },
+  },
+  {
+    path: '/v2/notebooks/:nid/research/:rid/request-reexpand',
+    method: 'post',
+    summary: '请求再扩展（进入 reexpand 确认门，批准后结构化再拆）',
+    tags: ['research'],
+    request: { body: ResearchRequestReexpandBodySchema },
+    responses: { 200: { description: '已进入再扩展确认的 ResearchRun', body: ResearchRunSchema } },
   },
   {
     path: '/v2/notebooks/:nid/research/:rid/cancel',
@@ -294,6 +304,15 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       return confirmRun(nid, rid, body);
     },
     { body: ResearchConfirmBodySchema, response: ResearchRunSchema },
+  )
+  .post(
+    '/notebooks/:nid/research/:rid/request-reexpand',
+    ({ params, body }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const rid = requirePositiveIntId(params.rid, 'research run id');
+      return requestReexpand(nid, rid, body);
+    },
+    { body: ResearchRequestReexpandBodySchema, response: ResearchRunSchema },
   )
   .post(
     '/notebooks/:nid/research/:rid/cancel',

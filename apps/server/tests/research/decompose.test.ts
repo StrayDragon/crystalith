@@ -121,4 +121,28 @@ describe('research decompose (c93)', () => {
     expect(graph.nodes).toHaveLength(2);
     expect(graph.edges).toHaveLength(0);
   });
+
+  it('applyDecomposePlanToGraph can attach from focusNodeId', () => {
+    seq = 0;
+    const base = seedGraph();
+    const withFocus = applyDecomposePlanToGraph(
+      base,
+      {
+        branches: [{ title: 'F', query: 'qf', edgeKind: 'refine' }],
+      },
+      newId,
+    );
+    expect(withFocus.addedEdges[0]?.source).toBe('node_root_q');
+
+    const focused = applyDecomposePlanToGraph(
+      withFocus.graph,
+      {
+        branches: [{ title: 'G', query: 'qg', edgeKind: 'decompose' }],
+      },
+      newId,
+      { focusNodeId: withFocus.addedNodes[0]!.id },
+    );
+    expect(focused.addedEdges[0]?.source).toBe(withFocus.addedNodes[0]!.id);
+    expect(focused.addedEdges[0]?.kind).toBe('decompose');
+  });
 });

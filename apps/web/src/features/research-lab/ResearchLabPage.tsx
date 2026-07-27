@@ -238,6 +238,15 @@ function LabWorkbench({
       case 'skip_branch':
         lab.skipBranch();
         break;
+      case 'approve_reexpand':
+        lab.approveReexpand();
+        break;
+      case 'skip_reexpand':
+        lab.skipReexpand();
+        break;
+      case 'request_reexpand':
+        lab.requestReexpand();
+        break;
       case 'view_conclusion':
         openReport();
         break;
@@ -385,7 +394,9 @@ function LabWorkbench({
               className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-40"
               {...(primary.tertiary.kind === 'finish_report'
                 ? tid(TestIds.researchLabConfirmFinish)
-                : {})}
+                : primary.tertiary.kind === 'request_reexpand'
+                  ? tid(TestIds.researchLabRequestReexpand)
+                  : {})}
             >
               {primary.tertiary.label}
             </button>
@@ -401,7 +412,11 @@ function LabWorkbench({
                 ? tid(TestIds.researchLabConfirmContinue)
                 : primary.secondary.kind === 'skip_branch'
                   ? tid(TestIds.researchLabConfirmSkip)
-                  : {})}
+                  : primary.secondary.kind === 'skip_reexpand'
+                    ? tid(TestIds.researchLabConfirmSkipReexpand)
+                    : primary.secondary.kind === 'request_reexpand'
+                      ? tid(TestIds.researchLabRequestReexpand)
+                      : {})}
             >
               {primary.secondary.label}
             </button>
@@ -415,9 +430,11 @@ function LabWorkbench({
               className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:pointer-events-none disabled:opacity-40"
               {...(primary.kind === 'approve_branch'
                 ? tid(TestIds.researchLabConfirmApprove)
-                : primary.kind === 'finish_report'
-                  ? tid(TestIds.researchLabConfirmFinish)
-                  : tid(TestIds.researchLabStart))}
+                : primary.kind === 'approve_reexpand'
+                  ? tid(TestIds.researchLabConfirmApproveReexpand)
+                  : primary.kind === 'finish_report'
+                    ? tid(TestIds.researchLabConfirmFinish)
+                    : tid(TestIds.researchLabStart))}
             >
               {lab.reshaping ? '重塑中…' : primary.label}
             </button>

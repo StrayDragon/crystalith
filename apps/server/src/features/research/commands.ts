@@ -11,6 +11,7 @@ import type {
   ResearchGraphPatch,
   ResearchNode,
   ResearchNodePatchBody,
+  ResearchRequestReexpandBody,
   ResearchRun,
   ResearchRunStatus,
   ResearchRunSummary,
@@ -19,14 +20,16 @@ import { RESEARCH_DEPTH_BUDGETS } from '@crystalith/shared';
 import { and, count, desc, eq, inArray } from 'drizzle-orm';
 
 import { db } from '../../db/index.ts';
-import { chunks, outputs, researchRuns, sources } from '../../db/schema.ts';
+import { chunks, outputs, researchProgressEvents, researchRuns, sources } from '../../db/schema.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { splitTextToChunks } from '../outputs/render.ts';
+import { applyDecomposePlanToGraph, planTopicDecomposition } from './decompose.ts';
 import { resolveArtifactMarkdown, synthesizeAndComplete } from './report.ts';
 import {
   abortAllChatsForRun,
   abortRunWorkUnit,
+  appendProgressEvent,
   assertLiveMutable,
   broadcast,
   emptyGraph,
@@ -39,6 +42,7 @@ import {
   finalizeCancel,
   getGraph,
   isPruneProtectedNode,
+  isTerminalStatus,
   newId,
   persistGraph,
   requireFresh,
@@ -51,7 +55,12 @@ import {
   writeCheckpoint,
   type SseEmit,
 } from './research-core.ts';
-import { drainResearchWorkUnits, runNodeWorkUnit, scheduleRun } from './run-loop.ts';
+import {
+  drainResearchWorkUnits,
+  finishWaveOrSynthesize,
+  runNodeWorkUnit,
+  scheduleRun,
+} from './run-loop.ts';
 
 export function validateCreateBody(body: ResearchCreateBody): {
   topic: string;
@@ -249,6 +258,88 @@ export async function confirmRun(
       }
     }
     await synthesizeAndComplete(runId);
+  } else if (kind === 'reexpand') {
+    if (body.action !== 'approve_reexpand' && body.action !== 'skip_reexpand') {
+      throw new AppHttpError(
+        ErrorCode.INVALID_REQUEST,
+        'reexpand confirm requires approve_reexpand or skip_reexpand',
+      );
+    }
+    const focusNodeId = body.branchNodeId ?? row.confirmBranchNodeId ?? undefined;
+    const hint = readLatestReexpandHint(runId);
+    updateRun(runId, {
+      status: 'running',
+      confirmKind: null,
+      confirmBranchNodeId: null,
+      llmActivity: 'work_unit',
+    });
+    emitStatus(runId, 'running', body.action);
+    appendProgressEvent(runId, 'confirm_resolved', {
+      headline: body.action === 'approve_reexpand' ? '已批准再扩展' : '已跳过再扩展',
+      payload: { action: body.action, focusNodeId: focusNodeId ?? null },
+    });
+
+    if (body.action === 'skip_reexpand') {
+      // Locked simplest: clear confirm → synthesize
+      await synthesizeAndComplete(runId);
+      return serializeRun(requireRun(notebookId, runId));
+    }
+
+    // approve_reexpand: planner → graph_patch → drain → budget/synthesize
+    const latest = requireRun(notebookId, runId);
+    const graph = getGraph(latest);
+    const occupied = graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length;
+    const abort = ensureRunAbortController(runId);
+    try {
+      const plan = await planTopicDecomposition({
+        topic: latest.topic,
+        depth: (latest.depth ?? 'medium') as ResearchDepth,
+        maxNodes: latest.maxNodes,
+        occupiedNodes: occupied,
+        hint: hint ?? undefined,
+        abortSignal: abort.signal,
+      });
+      if (!plan || plan.branches.length === 0) {
+        appendProgressEvent(runId, 'unit_aborted', {
+          headline: '再扩展规划为空或失败，不伪造支路',
+          payload: { reason: 'empty_or_null_plan' },
+        });
+        emitLog(runId, '再扩展规划为空或失败，改走结案');
+        await synthesizeAndComplete(runId);
+        return serializeRun(requireRun(notebookId, runId));
+      }
+      const applied = applyDecomposePlanToGraph(graph, plan, newId, {
+        focusNodeId: focusNodeId,
+      });
+      if (applied.addedNodes.length === 0) {
+        appendProgressEvent(runId, 'unit_aborted', {
+          headline: '再扩展未写入节点，不伪造支路',
+        });
+        emitLog(runId, '再扩展未写入节点，改走结案');
+        await synthesizeAndComplete(runId);
+        return serializeRun(requireRun(notebookId, runId));
+      }
+      persistGraph(runId, applied.graph, {
+        checkpoint: writeCheckpoint(latest, 'approve_reexpand'),
+      });
+      emitGraphPatch(runId, {
+        nodes: applied.addedNodes,
+        edges: applied.addedEdges,
+      });
+      appendProgressEvent(runId, 'graph_patched_summary', {
+        headline: `再扩展新增 ${applied.addedNodes.length} 个研究支路`,
+        payload: { researchNodes: applied.addedNodes.length },
+      });
+      emitLog(runId, `再扩展新增 ${applied.addedNodes.length} 个研究支路`);
+      await finishWaveOrSynthesize(runId);
+    } catch (error) {
+      appendProgressEvent(runId, 'unit_aborted', {
+        headline: '再扩展规划失败，不伪造支路',
+        payload: { error: String(error) },
+      });
+      emitLog(runId, `再扩展失败：${String(error)}`);
+      await synthesizeAndComplete(runId);
+    }
   } else {
     // expand_branch
     if (body.action !== 'approve_branch' && body.action !== 'skip_branch') {
@@ -324,6 +415,96 @@ export async function confirmRun(
     }
     await synthesizeAndComplete(runId);
   }
+  return serializeRun(requireRun(notebookId, runId));
+}
+
+/** Read hint stored by requestReexpand in the latest confirm_entered progress payload. */
+function readLatestReexpandHint(runId: number): string | null {
+  const rows = db()
+    .select()
+    .from(researchProgressEvents)
+    .where(eq(researchProgressEvents.runId, runId))
+    .orderBy(desc(researchProgressEvents.seq))
+    .limit(40)
+    .all();
+  for (const pe of rows) {
+    if (pe.kind !== 'confirm_entered') continue;
+    const payload = pe.payload as Record<string, unknown> | null;
+    if (!payload || payload.confirmKind !== 'reexpand') continue;
+    const hint = payload.hint;
+    return typeof hint === 'string' && hint.trim() ? hint.trim() : null;
+  }
+  return null;
+}
+
+/**
+ * c104 / r334: user-gated re-expand → awaiting_confirm + confirmKind=reexpand.
+ * Allowed while running or awaiting_confirm; terminal statuses rejected.
+ */
+export function requestReexpand(
+  notebookId: number,
+  runId: number,
+  body: ResearchRequestReexpandBody = {},
+): ResearchRun {
+  const row = requireRun(notebookId, runId);
+  if (isTerminalStatus(row.status)) {
+    throw new AppHttpError(
+      ErrorCode.RESEARCH_INVALID_STATE,
+      `Cannot request reexpand when status is ${row.status}`,
+    );
+  }
+  if (row.status !== 'running' && row.status !== 'awaiting_confirm') {
+    throw new AppHttpError(
+      ErrorCode.RESEARCH_INVALID_STATE,
+      `Cannot request reexpand when status is ${row.status}`,
+    );
+  }
+
+  const focusNodeId = body.focusNodeId?.trim() || null;
+  if (focusNodeId) {
+    const graph = getGraph(row);
+    if (!graph.nodes.some((n) => n.id === focusNodeId && n.conclusionStatus !== 'pruned')) {
+      throw new AppHttpError(ErrorCode.NOT_FOUND, `Focus node ${focusNodeId} not found`);
+    }
+  }
+
+  // Cooperative pause: flip status before abort so runLoop does not finalizeCancel.
+  if (row.status === 'running') {
+    updateRun(runId, {
+      status: 'awaiting_confirm',
+      confirmKind: 'reexpand',
+      confirmBranchNodeId: focusNodeId,
+      llmActivity: null,
+      activeNodeId: null,
+      checkpoint: writeCheckpoint(row, 'before_confirm_reexpand'),
+    });
+    abortRunWorkUnit(runId);
+  } else {
+    updateRun(runId, {
+      status: 'awaiting_confirm',
+      confirmKind: 'reexpand',
+      confirmBranchNodeId: focusNodeId,
+      checkpoint: writeCheckpoint(row, 'before_confirm_reexpand'),
+    });
+  }
+
+  const hint = body.hint?.trim() || null;
+  appendProgressEvent(runId, 'confirm_entered', {
+    nodeId: focusNodeId,
+    headline: '等待确认再扩展',
+    payload: {
+      confirmKind: 'reexpand',
+      hint,
+      focusNodeId,
+    },
+  });
+  emitStatus(runId, 'awaiting_confirm', 'reexpand');
+  emitLog(runId, `请求再扩展${hint ? `：${hint}` : ''}`);
+  broadcast(runId, 'confirm', {
+    kind: 'reexpand',
+    branchNodeId: focusNodeId ?? undefined,
+    options: ['approve_reexpand', 'skip_reexpand'],
+  });
   return serializeRun(requireRun(notebookId, runId));
 }
 
@@ -603,7 +784,9 @@ export async function streamRun(
       options:
         row.confirmKind === 'budget'
           ? ['continue', 'finish_report']
-          : ['approve_branch', 'skip_branch'],
+          : row.confirmKind === 'reexpand'
+            ? ['approve_reexpand', 'skip_reexpand']
+            : ['approve_branch', 'skip_branch'],
     });
   }
   if (row.status === 'completed') {

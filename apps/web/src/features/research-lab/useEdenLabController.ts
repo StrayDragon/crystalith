@@ -33,6 +33,7 @@ import {
   listProgress,
   patchResearchNode,
   pruneResearchNode,
+  requestReexpand,
   retrySynthesizeResearchRun,
 } from './edenResearchApi';
 import { buildEdenCitationsMap } from './evidenceAdapter';
@@ -81,6 +82,10 @@ export type EdenLabController = LabController & {
   setModelId: (v: string | null) => void;
   /** Same-Run retry synthesize (optional override model). */
   retrySynthesize: (overrideModelId?: string | null) => void;
+  /** c104 / r334: request-reexpand + confirm actions. */
+  approveReexpand: () => void;
+  skipReexpand: () => void;
+  requestReexpand: (hint?: string) => void;
 };
 
 function toLedgerItem(ev: ResearchProgressEvent): LabProgressLedgerItem {
@@ -231,7 +236,7 @@ export function useEdenLabController(
               window.setTimeout(() => setReshaping(false), 400);
             } else if (ev.event === 'confirm') {
               const data = ev.data as {
-                kind?: 'budget' | 'expand_branch';
+                kind?: 'budget' | 'expand_branch' | 'reexpand';
                 branchNodeId?: string;
               };
               setRun((prev) =>
@@ -579,6 +584,55 @@ export function useEdenLabController(
       .catch(() => undefined);
   }, [notebookId, run?.confirmBranchNodeId, withBusy]);
 
+  const approveReexpand = useCallback(() => {
+    const rid = runIdRef.current;
+    if (!rid) return;
+    const branchNodeId = run?.confirmBranchNodeId ?? undefined;
+    setConfirmChoice('approve_reexpand');
+    void withBusy(
+      () =>
+        confirmResearchRun(notebookId, rid, {
+          action: 'approve_reexpand',
+          branchNodeId,
+        }),
+      '批准再扩展',
+    )
+      .then(() => setHighlightedNodeIds([]))
+      .catch(() => undefined);
+  }, [notebookId, run?.confirmBranchNodeId, withBusy]);
+
+  const skipReexpand = useCallback(() => {
+    const rid = runIdRef.current;
+    if (!rid) return;
+    setConfirmChoice('skip_reexpand');
+    void withBusy(
+      () =>
+        confirmResearchRun(notebookId, rid, {
+          action: 'skip_reexpand',
+        }),
+      '跳过再扩展',
+    )
+      .then(() => setHighlightedNodeIds([]))
+      .catch(() => undefined);
+  }, [notebookId, withBusy]);
+
+  const requestReexpandAction = useCallback(
+    (hint?: string) => {
+      const rid = runIdRef.current;
+      if (!rid) return;
+      const focusNodeId = selectedNodeId ?? undefined;
+      void withBusy(
+        () =>
+          requestReexpand(notebookId, rid, {
+            ...(hint?.trim() ? { hint: hint.trim() } : {}),
+            ...(focusNodeId ? { focusNodeId } : {}),
+          }),
+        '请求再扩展',
+      ).catch(() => undefined);
+    },
+    [notebookId, selectedNodeId, withBusy],
+  );
+
   const restart = useCallback(() => {
     stopStream();
     setRun(null);
@@ -695,6 +749,9 @@ export function useEdenLabController(
     continueDig,
     approveBranch,
     skipBranch,
+    approveReexpand,
+    skipReexpand,
+    requestReexpand: requestReexpandAction,
     retry: () => {
       const rid = runIdRef.current;
       if (rid) void loadRun(rid);

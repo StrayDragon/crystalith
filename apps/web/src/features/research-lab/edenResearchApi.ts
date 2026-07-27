@@ -12,6 +12,7 @@ import type {
   ResearchProgressList,
   ResearchReport,
   ResearchReportView,
+  ResearchRequestReexpandBody,
   ResearchRevision,
   ResearchRevisionCreateBody,
   ResearchRevisionsList,
@@ -123,6 +124,20 @@ export async function confirmResearchRun(
     .confirm.post(body);
   if (error) throwEdenError(error);
   if (!data) throw new Error('确认 ResearchRun 失败：空响应');
+  return data as ResearchRun;
+}
+
+export async function requestReexpand(
+  notebookId: number,
+  runId: number,
+  body?: ResearchRequestReexpandBody,
+): Promise<ResearchRun> {
+  const { data, error } = await api.v2
+    .notebooks({ nid: notebookId })
+    .research({ rid: runId })
+    ['request-reexpand'].post(body ?? {});
+  if (error) throwEdenError(error);
+  if (!data) throw new Error('请求再扩展失败：空响应');
   return data as ResearchRun;
 }
 
