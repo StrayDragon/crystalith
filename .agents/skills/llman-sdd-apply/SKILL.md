@@ -2,7 +2,7 @@
 name: 'llman-sdd-apply'
 description: '在一个闭环内实施 llman SDD 变更的 tasks：写代码 → 跑测试 → 失败自修复 → 直到门禁全绿。自动更新 tasks.md 勾选状态并运行校验。用于提案完成后的实现阶段。'
 metadata:
-  version: '0.0.64'
+  version: '0.0.65'
   llman_sdd:
     bdd_mode: 'off'
     skill_set: 'default'
@@ -31,13 +31,13 @@ flowchart LR
 
 ## 硬约束
 
-- **SSOT 驱动**：以 `proposal.md` / `design.md` / `tasks.md` / `specs/` 为唯一事实来源；specs 中的 MUST/SHALL 必须逐条落实。
+- **SSOT 驱动**：以 `proposal.md` / `design.md` / `tasks.md` 及 feature 分支上的 live `llmanspec/specs/**` 为唯一事实来源；specs 中的 MUST/SHALL 必须逐条落实。
 - **范围锁定**：只实现当前 change 的范围；禁止顺手修「无关问题」。
 - **最小改动**：改动保持最小并严格围绕当前 tasks。
 - **禁止猜测**：需求不明确、specs 与实现矛盾时，先 STOP 并报告，不要自行假定行为。
 - **不保留旧兼容层**：若 change 要求改行为，直接全量升级到新写法，除非 tasks/proposal 明确写了要兼容。
 - **不要问「要不要继续」**：除非遇到无法自动解决的 blocker，否则一路执行到闭环结束。
-- **BDD-on 收尾**：实现自测通过后优先 `llman sdd change finalize <id>`（工作区可脏）→ 一次 `git commit`；勿默认再拆 checkpoint/archive 三连 commit。
+- **收尾**：实现自测通过后优先 `llman sdd change finalize <id>`（工作区可脏）→ 一次 `git commit`；勿默认再拆 checkpoint/archive 三连 commit。
 
 ## 步骤
 
@@ -55,13 +55,13 @@ flowchart LR
 - 若已提供 change id，直接使用。
 - 否则从上下文推断；若不明确，运行 `llman sdd list --json` 并让用户选择。
 - 始终说明："使用变更：<id>"，并告知如何覆盖。
-
+- 确认已在经 `llman sdd change start <id>` 或 `change attach <id>` 绑定的非默认 feature 分支上（仅在需要重绑时用 `--force`）。分支上的 specs/features 即 SSOT——不要在 `changes/<id>/specs/` 下编写。
 - 检查阶段守卫：
   ```bash
   llman sdd show <id> --json --type change
   ```
-  - `draft`：变更尚未准备好实现 → STOP，提示先用 `llman-sdd-propose` 完善到至少 `spec` 阶段。
-  - `specified` / `designed` / `full`：通过，继续。
+  - `draft`：变更尚未准备好实现 → STOP，提示先用 `llman-sdd-propose` 完善到 Designed，再 `llman sdd change start <id>`。若已有 proposal+design+tasks 仍是 `draft`，说明变更**未 start/attach** —— 在非默认 feature 分支上运行 `change start` 或 `change attach`（不要新增 `changes/<id>/specs/`）。
+  - `designed` / `full`：通过，继续。`full` 表示 attach 绑定 + 工件齐全；`changes/<id>/specs/` 预期为**不存在**，请勿视为缺失。
 - 使用 `llman sdd context --task "<proposal 中的目标>" --paths "<specs 中的 scope>"` 获取相关 specs。
   - 若 context 不可用，运行 `llman sdd index rebuild` 后重试。
 
@@ -72,8 +72,7 @@ flowchart LR
 - `llmanspec/changes/<id>/proposal.md`
 - `llmanspec/changes/<id>/design.md`（如存在）
 - `llmanspec/changes/<id>/tasks.md`
-
-- `llmanspec/changes/<id>/specs/**`
+- feature 分支上的 live specs：`llmanspec/specs/**`（`spec.toon` + 配置了 `bdd:` 时的 `*.feature`）——这是 SSOT
 
 将 `proposal.md` 和 `design.md` 中的决策整理为不可违反的硬约束清单。把 `tasks.md` 转成可执行的最小步骤序列（保持原顺序）。
 
@@ -98,7 +97,7 @@ flowchart LR
 
 - 相关测试集：`just test` 或 `cargo test --all`
 - 格式/lint：`just check` 或 `just lint` + `just fmt`
-
+- Git-native：留在已 attach 的 feature 分支；编辑 live `spec.toon`（约束）与 `*.feature`（配置了 `bdd:` 时的 `@req`）；`llman sdd validate --specs` 通过后，verify 阶段结束优先 `change finalize`（工作区可脏）；勿在每个 task 后跑 `checkpoint`。勿使用 `change delta` / solidify / feature_delta。
 - SDD 校验：`llman sdd validate <id> --strict --no-interactive`
 
 **若失败 → 进入自修复循环（不要问要不要继续）：**
@@ -137,10 +136,12 @@ flowchart LR
 - `llman sdd index rebuild`（重建 pageindex 树索引——不需要模型）
 - `llman sdd index check`（检查索引新鲜度）
 - `llman sdd change new <id>`（创建草稿 `changes/<id>/proposal.md`）
-
-- `llman sdd change delta …`（仅 BDD-off：TOON delta 作者工具；BDD-on 会拒绝）
-
-- `llman sdd change archive <id>`（封存变更；BDD-on：checkpoint 后仅文档 / 或作 finalize fallback；BDD-off：合并 TOON delta）
+- `llman sdd change start <id> [--worktree]`（Designed→Full：干净树 → 创建 `sdd/<id>` 分支 + attach 绑定）
+- `llman sdd change attach <id> [--force]`（绑定已有 feature 分支 + base SHA）
+- `llman sdd change finalize <id> [--no-check]`（**推荐单 commit 路径**——不要求干净树；门禁 + 自动 ff-merge + 文档改名）
+- `llman sdd change checkpoint <id> [--no-check]`（干净工作区 + 归档前门禁；严格 sha = HEAD）
+- `llman sdd change diff <id> [--export-patch <path>]`（只读 `base...HEAD` 审查/导出）
+- `llman sdd change archive <id>`（封存变更：自动 ff-merge 到默认分支，再将文档改名到 `changes/archive/`；单 commit 收尾优先用 `finalize`）
 - `llman sdd archive freeze [--before YYYY-MM-DD] [--keep-recent N] [--dry-run]`（冻结已归档目录）
 - `llman sdd archive thaw [--change <id> ...] [--dest <path>]`（从冷备份恢复）
 - `llman sdd graph [CHANGE] [--format mermaid] [--scope active|archived|all] [--depth N]`（生成变更依赖图）
