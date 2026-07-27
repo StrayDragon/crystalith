@@ -7,14 +7,22 @@ import { eq } from 'drizzle-orm';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
+import { countTokens, truncateToTokens } from '../../ai/tokenizer.ts';
 import { db } from '../../db/index.ts';
 import { researchRuns } from '../../db/schema.ts';
-import { getDefaultChatModel, getModelById, getParallelBranchUnits } from '../../shared/config.ts';
+import {
+  getDefaultChatModel,
+  getModelById,
+  getNodeContentTokenBudget,
+  getNodeSummaryTokenBudget,
+  getParallelBranchUnits,
+} from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { applyDecomposePlanToGraph, planTopicDecomposition } from './decompose.ts';
 import { e2eStubNodeSummary, e2eStubWebHits, isResearchE2eStub } from './e2e-stub.ts';
 import { createResearchNodeAgent } from './node-agent.ts';
 import { synthesizeAndComplete } from './report.ts';
+import { computePageSoftCap } from './research-budget.ts';
 import {
   activeLoops,
   appendProgressEvent,
@@ -37,9 +45,14 @@ import {
   resolveNodeRole,
   seedSingleSinkGraph,
   updateRun,
+  upsertWebEvidenceContent,
   writeCheckpoint,
 } from './research-core.ts';
-import { hasLiveResearchBranches, orderResearchNodesForWork } from './research-work-queue.ts';
+import {
+  hasLiveResearchBranches,
+  orderResearchNodesForWork,
+  resolveNodeRoleForWork,
+} from './research-work-queue.ts';
 import { withRunLlmLock, withRunWriteLock } from './run-locks.ts';
 
 /** Cooperative pause: awaiting_confirm must not be treated as cancel (c104 reexpand). */
@@ -94,16 +107,27 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** Apply a Work tool result into research_evidences; returns new evidence ids + search delta. */
+/** Remaining token budget for web evidence content on a node (c107). */
+function remainingNodeContentBudget(runId: number, nodeId: string): number {
+  const budget = getNodeContentTokenBudget();
+  const used = listEvidences(runId)
+    .filter((e) => e.kind === 'web' && e.collectedAtNodeId === nodeId && e.content)
+    .reduce((sum, e) => sum + countTokens(e.content ?? ''), 0);
+  return Math.max(0, budget - used);
+}
+
+/** Apply a Work tool result into research_evidences; returns new evidence ids + deltas. */
 export function ingestWorkToolResult(
   runId: number,
   notebookId: number,
   nodeId: string,
   toolName: string,
   output: unknown,
-): { evidenceIds: string[]; searchesDelta: number } {
+  opts?: { contentTokenBudgetRemaining?: number },
+): { evidenceIds: string[]; searchesDelta: number; pagesDelta: number } {
   const evidenceIds: string[] = [];
   let searchesDelta = 0;
+  let pagesDelta = 0;
   if (toolName === 'webSearch' && Array.isArray(output)) {
     searchesDelta = 1;
     for (const item of output) {
@@ -137,8 +161,21 @@ export function ingestWorkToolResult(
       });
       evidenceIds.push(ev.id);
     }
+  } else if (toolName === 'fetchPage' && isRecord(output)) {
+    const url = typeof output.url === 'string' ? output.url : '';
+    if (output.ok === true && url && typeof output.content === 'string') {
+      const budget = opts?.contentTokenBudgetRemaining ?? getNodeContentTokenBudget();
+      const truncated = budget <= 0 ? '' : truncateToTokens(output.content, Math.max(0, budget));
+      if (truncated) {
+        const title = typeof output.title === 'string' ? output.title : url;
+        const ev = upsertWebEvidenceContent(runId, notebookId, nodeId, url, title, truncated);
+        evidenceIds.push(ev.id);
+        pagesDelta = 1;
+      }
+    }
+    // Failure / empty: keep SERP snippet; pagesDelta stays 0.
   }
-  return { evidenceIds, searchesDelta };
+  return { evidenceIds, searchesDelta, pagesDelta };
 }
 
 async function shortSynthesizeNodeSummary(opts: {
@@ -171,10 +208,19 @@ async function shortSynthesizeNodeSummary(opts: {
     };
   }
 
-  const evidenceLines = listEvidences(runId)
+  const evidenceLinesRaw = listEvidences(runId)
     .filter((e) => evidenceIds.includes(e.id))
-    .map((e) => `- ${e.title}${e.snippet ? `：${e.snippet.slice(0, 160)}` : ''}`)
+    .map((e) => {
+      if (e.content?.trim()) {
+        return `- [正文] ${e.title}${e.url ? ` (${e.url})` : ''}：\n${e.content}`;
+      }
+      if (e.snippet?.trim()) {
+        return `- [摘要] ${e.title}${e.url ? ` (${e.url})` : ''}：${e.snippet}`;
+      }
+      return `- ${e.title}`;
+    })
     .join('\n');
+  const evidenceLines = truncateToTokens(evidenceLinesRaw, getNodeSummaryTokenBudget());
 
   try {
     const model = withRetry(await resolveModel(modelConfig));
@@ -254,8 +300,17 @@ export async function runNodeWorkUnit(opts: {
     abortSignal,
   } = opts;
   let searchesUsed = opts.searchesUsed;
+  let nodePagesUsed = 0;
   const evidenceIds: string[] = [...(node.evidenceIds ?? [])];
   const role = resolveNodeRole(node);
+
+  const runAtStart = requireFresh(runId);
+  const remainingPages = Math.max(0, runAtStart.maxPageFetches - runAtStart.pagesUsed);
+  const liveResearchCount = getGraph(runAtStart).nodes.filter(
+    (n) => resolveNodeRoleForWork(n) === 'research' && n.conclusionStatus !== 'pruned',
+  ).length;
+  const pageSoft = computePageSoftCap(remainingPages, liveResearchCount);
+  const searchesRemaining = Math.max(0, maxSearches - searchesUsed);
 
   updateRun(runId, { llmActivity: 'work_unit', activeNodeId: node.id });
   appendProgressEvent(runId, 'unit_started', {
@@ -324,7 +379,8 @@ export async function runNodeWorkUnit(opts: {
             `研究主题：${topic}`,
             `节点：${node.title}`,
             node.query ? `查询：${node.query}` : '',
-            '请使用可用工具收集证据。无命中时保持空列表，不要编造。',
+            `预算：剩余搜索 ${searchesRemaining}；剩余读页 ${remainingPages}；本节点读页软上限 ${pageSoft}。`,
+            '请使用可用工具收集证据：webSearch 后自选 URL 读页（fetchPage）。无命中时保持空列表，不要编造。',
           ]
             .filter(Boolean)
             .join('\n'),
@@ -337,6 +393,9 @@ export async function runNodeWorkUnit(opts: {
             nodeQuery: node.query,
             allowWeb,
             useNotebookSources: useNotebookSources && Boolean(sourceIds?.length),
+            pagesRemaining: remainingPages,
+            pageSoft,
+            searchesRemaining,
           } as never,
         });
 
@@ -352,21 +411,43 @@ export async function runNodeWorkUnit(opts: {
                 break;
               }
             }
+            if (toolName === 'fetchPage') {
+              const freshPages = requireFresh(runId);
+              if (freshPages.pagesUsed >= freshPages.maxPageFetches || nodePagesUsed >= pageSoft) {
+                emitLog(runId, '读页跳过：页面预算或节点软上限已尽（不触发 budget confirm）');
+                continue;
+              }
+            }
             await withRunWriteLock(runId, () => {
-              const ingested = ingestWorkToolResult(runId, notebookId, node.id, toolName, output);
-              evidenceIds.push(...ingested.evidenceIds);
+              const contentBudgetRemaining = remainingNodeContentBudget(runId, node.id);
+              const ingested = ingestWorkToolResult(runId, notebookId, node.id, toolName, output, {
+                contentTokenBudgetRemaining: contentBudgetRemaining,
+              });
+              for (const id of ingested.evidenceIds) {
+                if (!evidenceIds.includes(id)) evidenceIds.push(id);
+              }
               if (ingested.searchesDelta > 0) {
                 const fresh = requireFresh(runId);
                 searchesUsed = fresh.searchesUsed + ingested.searchesDelta;
                 updateRun(runId, { searchesUsed });
               }
+              if (ingested.pagesDelta > 0) {
+                const fresh = requireFresh(runId);
+                const pagesUsed = fresh.pagesUsed + ingested.pagesDelta;
+                nodePagesUsed += ingested.pagesDelta;
+                updateRun(runId, { pagesUsed });
+              }
               emitLog(
                 runId,
                 toolName === 'webSearch'
                   ? `外网检索：${ingested.evidenceIds.length} 条`
-                  : toolName === 'retrieveSources'
-                    ? `检索笔记本：${ingested.evidenceIds.length} 条`
-                    : `工具 ${toolName} 完成`,
+                  : toolName === 'fetchPage'
+                    ? ingested.pagesDelta > 0
+                      ? `读页成功：${ingested.evidenceIds.join(', ')}`
+                      : '读页失败或正文为空，保留摘要'
+                    : toolName === 'retrieveSources'
+                      ? `检索笔记本：${ingested.evidenceIds.length} 条`
+                      : `工具 ${toolName} 完成`,
               );
             });
           } else if (part.type === 'error') {
@@ -406,6 +487,7 @@ export async function runNodeWorkUnit(opts: {
       evidenceCount: evidenceIds.length,
       via,
       conclusionStatus: synth.conclusionStatus,
+      nodePagesUsed,
     },
   });
 
