@@ -21,7 +21,7 @@ vi.mock('../../shared/toast', () => ({
   },
 }));
 
-import type { LabCitation, LabNode } from './fake/types';
+import type { LabCitation, LabNode } from '../research-lab-demo/fake/types';
 import LabNodeDrawer from './LabNodeDrawer';
 
 const researchNode: LabNode = {

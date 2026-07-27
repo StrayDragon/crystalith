@@ -8,7 +8,8 @@
 - `src/features/workspace/` — main workspace feature
   - `domains/` — business domains (notebooks, sessions, messages, sources, outputs, refine, studio, research)
   - `layout/`, `shared/`, `app/` — workspace scaffolding
-- `src/features/research-lab/` — Deep Research **UX Lab**（fake 运行时；深研主表面入口）
+- `src/features/research-lab/` — Deep Research **产品** Lab（Eden ResearchRun + SSE）
+- `src/features/research-lab-demo/` — Deep Research **演示** Lab（xlsx-lib / fake；仅 DEV 或 `VITE_LAB_DEMO=1`）
 - `src/api/` — API client：**Eden** `treaty<App>`（`eden.ts`）一等
 - `src/shared/` — shared utilities, Layer system, types
 
@@ -17,18 +18,20 @@
 - SSOT 文档：包根 [`DESIGN.md`](./DESIGN.md)（YAML tokens + 中文原则）
 - 实现侧：Tailwind / `src/app/tailwind.css`、MUI 局部组件；新表面优先对齐 DESIGN token，避免另起一套色板
 
-## Research Lab（默认 Eden；fixture 可选）
+## Research Lab（产品 Eden；演示隔离）
 
-`/research-lab/:nid` 是深研**产品主表面**（作业台）。**默认**走 Eden `ResearchRun` + SSE（`useEdenLabController`）；本地 xlsx-lib 演示需 `VITE_LAB_FIXTURE=1`（`isLabFixtureMode()` → `useLabController` + `fixtureLabSessionPort`）。
+`/research-lab/:nid`（及 `/report`）是深研**产品主表面**，**仅** Eden `ResearchRun` + SSE（`useEdenLabController` / `EdenLabReportPage`）。旧 `VITE_LAB_FIXTURE` **不再**切换产品权威。
 
-| 默认（Eden）                              | Fixture（`VITE_LAB_FIXTURE=1`）     |
-| ----------------------------------------- | ----------------------------------- |
-| `POST …/research` · `GET …/research` list | `fixtureLabSessionPort` demo 列表   |
-| Run 图 SSOT + SSE `graph_patch`           | `fake/*` + phase 定时回放           |
-| `useEdenLabController` · `?rid=` 切换 Run | `useLabController` · sessionStorage |
-| 服务端 report + checkpoints（报告页待接） | `labSession` / revisions            |
+| 产品 `/research-lab`                      | 演示 `/demo/research-lab`（DEV \|\| `VITE_LAB_DEMO=1`） |
+| ----------------------------------------- | ------------------------------------------------------- |
+| `POST …/research` · `GET …/research` list | `fixtureLabSessionPort` demo 列表                       |
+| Run 图 SSOT + SSE `graph_patch`           | `fake/*` + phase 定时回放                               |
+| `useEdenLabController` · `?rid=` 切换 Run | `useLabController` · sessionStorage                     |
+| 服务端 report + checkpoints               | `labSession` / revisions                                |
 
-**闭环入口**：头像旁烧瓶（任务抽屉）→「新建研究」→ Compose →（Eden）创建 Run 并 stream /（fixture）xlsx-lib 回放。笔记本切换器旁**不再**放直达烧瓶。
+演示路由在 `App.tsx` 中仅当 `isLabDemoMode()`（`import.meta.env.DEV || VITE_LAB_DEMO === '1'`）注册；生产默认构建不挂载。流程见 `.agents/skills/cl-prd-demo/SKILL.md`。
+
+**闭环入口**：头像旁烧瓶（任务抽屉）→「新建研究」→ Compose → 创建 Run 并 stream。笔记本切换器旁**不再**放直达烧瓶。入口 **MUST** 只导航产品 `/research-lab`，不得链到 `/demo/...`。
 
 **辅助入口（c99）— workspace chat slash**（不取代烧瓶 / Compose / 任务抽屉）：
 
@@ -40,8 +43,8 @@
 
 发送时吞掉（不进 QA）。命令列表来自 `GET /v2/commands`（`kind: 'nav'`）。**不做 `@` 提及。**
 
-- 剪枝闭包 **B** 与 server `collectResearchPruneClosure` 对齐（`fake/deriveLabState`）；变更走 `llmanspec/changes/update-research-prune-cascade`
-- 展示层（`LabGraph`、Compose、任务抽屉）共用；数据权威由 `ResearchLabPage` 分支选择
+- 剪枝闭包 **B** 与 server `collectResearchPruneClosure` 对齐（demo `fake/deriveLabState`）；变更走 `llmanspec/changes/update-research-prune-cascade`
+- 展示层（`LabGraph`、Compose、任务抽屉壳）可被 demo 复用；产品页无 `LabController | Eden` 联合分支
 - 顶栏搜索仅为 Fast 网搜；勿恢复为深研主入口
 
 ## Build, Test, and Development Commands

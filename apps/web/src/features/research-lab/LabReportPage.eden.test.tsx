@@ -113,7 +113,7 @@ describe('LabReportPage eden revisions/convert (c89)', () => {
     stubReady();
     const getItem = vi.spyOn(Storage.prototype, 'getItem');
 
-    renderWithLayer(<LabReportPage notebookId={62} mode="eden" runId={9} />);
+    renderWithLayer(<LabReportPage notebookId={62} runId={9} />);
 
     await waitFor(() => {
       expect(screen.getByText('研究报告：主题')).toBeTruthy();
@@ -176,7 +176,7 @@ describe('LabReportPage eden revisions/convert (c89)', () => {
         ],
       });
 
-    renderWithLayer(<LabReportPage notebookId={62} mode="eden" runId={9} />);
+    renderWithLayer(<LabReportPage notebookId={62} runId={9} />);
     await waitFor(() => expect(screen.getByText('研究报告：主题')).toBeTruthy());
 
     fireEvent.click(screen.getByTestId('research-lab-revision-save'));
@@ -188,7 +188,7 @@ describe('LabReportPage eden revisions/convert (c89)', () => {
   it('convert report to note toasts on success', async () => {
     stubReady();
     convertResearchToNote.mockResolvedValue({ outputId: 99, type: 'PARAGRAPH' });
-    renderWithLayer(<LabReportPage notebookId={62} mode="eden" runId={9} />);
+    renderWithLayer(<LabReportPage notebookId={62} runId={9} />);
     await waitFor(() => expect(screen.getByText('研究报告：主题')).toBeTruthy());
 
     fireEvent.click(screen.getByRole('button', { name: /转为笔记/ }));
@@ -207,7 +207,7 @@ describe('LabReportPage eden revisions/convert (c89)', () => {
     });
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    renderWithLayer(<LabReportPage notebookId={62} mode="eden" runId={9} />);
+    renderWithLayer(<LabReportPage notebookId={62} runId={9} />);
     await waitFor(() => expect(screen.getByText('草稿')).toBeTruthy());
 
     fireEvent.click(screen.getByTestId('research-lab-report-discard'));
@@ -232,7 +232,7 @@ describe('LabReportPage eden revisions/convert (c89)', () => {
     });
     listResearchRevisions.mockResolvedValue({ items: [] });
 
-    renderWithLayer(<LabReportPage notebookId={62} mode="eden" runId={9} />);
+    renderWithLayer(<LabReportPage notebookId={62} runId={9} />);
 
     await waitFor(() => {
       expect(screen.getByText(/尚无报告/)).toBeTruthy();
@@ -240,7 +240,7 @@ describe('LabReportPage eden revisions/convert (c89)', () => {
   });
 
   it('shows error when rid missing', async () => {
-    renderWithLayer(<LabReportPage notebookId={62} mode="eden" runId={null} />);
+    renderWithLayer(<LabReportPage notebookId={62} runId={null} />);
 
     await waitFor(() => {
       expect(screen.getByText(/缺少 \?rid=/)).toBeTruthy();
@@ -315,7 +315,7 @@ describe('LabReportPage eden revisions/convert (c89)', () => {
     listResearchRevisions.mockResolvedValue({ items: revItems });
     restoreResearchRevision.mockResolvedValue({ ok: true });
 
-    renderWithLayer(<LabReportPage notebookId={62} mode="eden" runId={9} />);
+    renderWithLayer(<LabReportPage notebookId={62} runId={9} />);
     await waitFor(() => expect(screen.getByText('研究报告：主题')).toBeTruthy());
 
     const select = screen.getByTestId('research-lab-revision-select');

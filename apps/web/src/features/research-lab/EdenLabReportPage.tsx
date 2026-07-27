@@ -1,6 +1,6 @@
 /**
  * Eden Lab report surface — ResearchRun revisions / CoW / convert (c85 + c89).
- * Fixture CoW / revisions remain on LabReportPage fixture branch only.
+ * Fixture CoW / revisions remain on DemoLabReportPage only.
  */
 import type {
   ResearchReport,

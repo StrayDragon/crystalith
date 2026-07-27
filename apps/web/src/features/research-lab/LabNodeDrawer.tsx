@@ -3,21 +3,21 @@ import { useEffect, useRef, useState } from 'react';
 
 import { TestIds, tid } from '../../shared/testids';
 import { toast } from '../../shared/toast';
-import { runConvertToNote, runConvertToSource } from './edenConvertActions';
-import { streamNodeChat } from './edenResearchApi';
-import { resolveNodeCitations } from './evidenceAdapter';
-import type { LabNodeActionProposal } from './fake/nodeChatTypes';
+import type { LabNodeActionProposal } from '../research-lab-demo/fake/nodeChatTypes';
 import {
   buildNodeQuickActionGroups,
   QUICK_ACTION_ACTIVE_CLASS,
   QUICK_ACTION_TONE_CLASS,
-} from './fake/nodeQuickActions';
-import { proposeNodeChatTurn } from './fake/proposeNodeChatTurn';
+} from '../research-lab-demo/fake/nodeQuickActions';
+import { proposeNodeChatTurn } from '../research-lab-demo/fake/proposeNodeChatTurn';
 import {
   resolveDefaultNodePanelTab,
   type LabNodePanelTab,
-} from './fake/resolveDefaultNodePanelTab';
-import type { LabCitation, LabNode, LabPhase } from './fake/types';
+} from '../research-lab-demo/fake/resolveDefaultNodePanelTab';
+import type { LabCitation, LabNode, LabPhase } from '../research-lab-demo/fake/types';
+import { runConvertToNote, runConvertToSource } from './edenConvertActions';
+import { streamNodeChat } from './edenResearchApi';
+import { resolveNodeCitations } from './evidenceAdapter';
 import { LAB_STATUS_LEGEND } from './LabGraph';
 
 type ChatRole = 'user' | 'assistant' | 'system';

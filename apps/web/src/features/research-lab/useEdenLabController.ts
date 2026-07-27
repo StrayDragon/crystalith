@@ -11,10 +11,20 @@ import type {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { streamRequest } from '../../api/stream';
+import type {
+  LabCitation,
+  LabEdgePathPreset,
+  LabLayoutAlgorithm,
+  LabLayoutDirection,
+  LabNode,
+  LabViewMode,
+} from '../research-lab-demo/fake/types';
+import type { LabController } from '../research-lab-demo/fake/useLabController';
 import { applyGraphPatch } from './applyGraphPatch';
 import { confirmHighlightIds } from './confirmHighlight';
 import { deriveEdenLabPhase } from './deriveEdenLabPhase';
 import { cancelActiveEdenRun } from './edenCancelFlow';
+import { EDEN_LAB_SCENARIO, EDEN_LAB_SCENARIOS } from './edenLabScenario';
 import {
   confirmResearchRun,
   createResearchRun,
@@ -26,16 +36,6 @@ import {
   retrySynthesizeResearchRun,
 } from './edenResearchApi';
 import { buildEdenCitationsMap } from './evidenceAdapter';
-import { LAB_SCENARIOS } from './fake/scenarios';
-import type {
-  LabCitation,
-  LabEdgePathPreset,
-  LabLayoutAlgorithm,
-  LabLayoutDirection,
-  LabNode,
-  LabViewMode,
-} from './fake/types';
-import type { LabController } from './fake/useLabController';
 import { DEFAULT_LAB_COMPOSE_DEPTH } from './labComposeDepth';
 import {
   computeLabProgressPct,
@@ -638,7 +638,7 @@ export function useEdenLabController(
 
   // LabController-compatible surface (fixture knobs no-op / stubbed).
   return {
-    scenarios: LAB_SCENARIOS,
+    scenarios: EDEN_LAB_SCENARIOS,
     scenarioId: 'eden',
     setScenarioId: () => undefined,
     phase,
@@ -726,7 +726,7 @@ export function useEdenLabController(
     },
     persistNow: () => undefined,
     derived,
-    scenario: LAB_SCENARIOS[0]!,
+    scenario: EDEN_LAB_SCENARIO,
     lastError,
     failureReason: run?.failureReason ?? run?.errorMessage ?? null,
     citations,

@@ -12,8 +12,6 @@ import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import ConfirmPopover from '../../../shared/ConfirmPopover';
 import { TestIds, tid } from '../../../shared/testids';
 import type { AsyncStatus } from '../../../shared/types';
-import { isLabFixtureMode } from '../../research-lab/labFixtureMode';
-import { fixtureLabSessionPort } from '../../research-lab/labSessionPort';
 import ResearchTasksDrawer from '../../research-lab/ResearchTasksDrawer';
 import ResearchTasksTrigger from '../../research-lab/ResearchTasksTrigger';
 import { navigateLabWithRun } from '../../research-lab/useEdenLabController';
@@ -420,33 +418,12 @@ export default function WorkspaceHeader({
         notebookId={activeNotebookId}
         onSelectTask={(task) => {
           setTasksDrawerOpen(false);
-          if (isLabFixtureMode()) {
-            fixtureLabSessionPort.openTask({
-              id: task.id,
-              notebookId: task.notebookId,
-              topic: task.topic,
-              status: task.status as
-                | 'queued'
-                | 'running'
-                | 'awaiting_confirm'
-                | 'completed'
-                | 'failed',
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
-              scenarioId: 'xlsx-lib',
-            });
-            return;
-          }
           const rid = Number(task.id);
           if (Number.isFinite(rid) && rid > 0) navigateLabWithRun(task.notebookId, rid);
         }}
         onCreateNew={() => {
           if (!activeNotebookId) return;
           setTasksDrawerOpen(false);
-          if (isLabFixtureMode()) {
-            fixtureLabSessionPort.openCompose(activeNotebookId);
-            return;
-          }
           navigateLabWithRun(activeNotebookId, null);
         }}
       />

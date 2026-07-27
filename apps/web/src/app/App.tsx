@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 
-import { isLabFixtureMode } from '../features/research-lab/labFixtureMode';
+import DemoLabReportPage from '../features/research-lab-demo/DemoLabReportPage';
+import DemoResearchLabPage from '../features/research-lab-demo/DemoResearchLabPage';
+import { parseDemoResearchLabPath } from '../features/research-lab-demo/demoRouting';
+import { isLabDemoMode } from '../features/research-lab-demo/labDemoMode';
 import LabReportPage from '../features/research-lab/LabReportPage';
 import { parseResearchLabPath } from '../features/research-lab/labRouting';
 // Deep Research UX surface: `/research-lab/:nid` (Lab). Production ResearchRun API remains server-side.
@@ -24,16 +27,36 @@ function useLocationKey(): string {
 function AppRoutes() {
   const locationKey = useLocationKey();
   const pathname = locationKey.split('?')[0] ?? locationKey;
+
+  if (isLabDemoMode()) {
+    const demo = parseDemoResearchLabPath(pathname);
+    if (demo?.view === 'report') {
+      return (
+        <ErrorBoundary
+          title="演示报告页异常"
+          description="演示研究报告页加载失败，请返回图谱重试。"
+        >
+          <DemoLabReportPage notebookId={demo.notebookId} />
+        </ErrorBoundary>
+      );
+    }
+    if (demo) {
+      return (
+        <ErrorBoundary
+          title="演示试验室异常"
+          description="演示深度研究页加载失败，请返回工作区重试。"
+        >
+          <DemoResearchLabPage notebookId={demo.notebookId} />
+        </ErrorBoundary>
+      );
+    }
+  }
+
   const lab = parseResearchLabPath(pathname);
   if (lab?.view === 'report') {
-    const fixture = isLabFixtureMode();
     return (
       <ErrorBoundary title="报告页异常" description="研究报告页加载失败，请返回图谱重试。">
-        <LabReportPage
-          notebookId={lab.notebookId}
-          mode={fixture ? 'fixture' : 'eden'}
-          runId={fixture ? null : readActiveRunIdFromUrl()}
-        />
+        <LabReportPage notebookId={lab.notebookId} runId={readActiveRunIdFromUrl()} />
       </ErrorBoundary>
     );
   }

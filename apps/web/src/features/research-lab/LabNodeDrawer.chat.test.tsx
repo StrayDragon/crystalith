@@ -10,15 +10,16 @@ vi.mock('./edenResearchApi', () => ({
 }));
 
 // Mock reason: detect accidental fixture propose on Eden path (r438/r440).
-vi.mock('./fake/proposeNodeChatTurn', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./fake/proposeNodeChatTurn')>();
+vi.mock('../research-lab-demo/fake/proposeNodeChatTurn', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../research-lab-demo/fake/proposeNodeChatTurn')>();
   return {
     ...actual,
     proposeNodeChatTurn: (...args: unknown[]) => proposeNodeChatTurn(...args),
   };
 });
 
-import type { LabNode } from './fake/types';
+import type { LabNode } from '../research-lab-demo/fake/types';
 import LabNodeDrawer from './LabNodeDrawer';
 
 const researchNode: LabNode = {

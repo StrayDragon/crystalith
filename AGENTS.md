@@ -33,7 +33,8 @@ crystalith/
 │       ├── DESIGN.md               # Web 设计系统 token / 原则
 │       └── src/
 │           ├── features/workspace/ # Main workspace UI（含 Deep Research Desk）
-│           ├── features/research-lab/ # Deep Research UX Lab（fake；非生产）
+│           ├── features/research-lab/ # Deep Research 产品 Lab（Eden）
+│           ├── features/research-lab-demo/ # Deep Research demo（fake；DEV / VITE_LAB_DEMO）
 │           ├── api/                # eden RPC（一等 client）
 │           └── shared/             # Shared UI utilities, Layer system
 ├── packages/
@@ -52,7 +53,7 @@ crystalith/
 - ✅ All c00–c62 completed (63 changes); v1 parity confirmed through E2E
 - ⏸️ **Deep Research** backend stubbed (501 Not Implemented), pending rewrite
 - ✅ Frontend: all output renderers aligned with v1 interactive components
-- 🔬 **Research Lab**（`apps/web/src/features/research-lab/`）：Deep Research UX 原型（fake）；设计系统见 `apps/web/DESIGN.md`；细则 `apps/web/AGENTS.md`
+- 🔬 **Research Lab**：产品 `research-lab/`（Eden）；演示 `research-lab-demo/`（`/demo/research-lab`，DEV / `VITE_LAB_DEMO`）；细则 `apps/web/AGENTS.md`
 - ✅ c14: `backend/py/` + `api/generated/` deleted；wire 类型走 Eden + `@crystalith/shared`（`shared-types.ts` 已移除）
 - ⏸️ **c13** distribution (Tauri / single-binary) — blocked on human auth
 - 📦 阶段性收敛台账已归档：`_archive/2026-07-19-ssot-qa-progress.md`；作业法见 `.agents/skills/crystalith-ssot-qa-batches/`
