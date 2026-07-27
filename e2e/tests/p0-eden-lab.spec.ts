@@ -149,4 +149,80 @@ test.describe('@p0 Eden Lab production path', () => {
       throw new Error(`Eden Lab e2e failed (notebook=${notebookId} rid=${rid}): ${msg}`);
     }
   });
+
+  test('R02: budget → request-reexpand → skip → completed (c104 / r459)', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+
+    await gotoWorkspace(page);
+
+    const nbRes = await page.request.get('/v2/notebooks');
+    expect(nbRes.ok()).toBeTruthy();
+    const notebooks = (await nbRes.json()) as Array<{ id: number }>;
+    expect(notebooks.length).toBeGreaterThan(0);
+    const notebookId = notebooks[0]!.id;
+
+    let runId: number | null = null;
+    try {
+      await openLabCompose(page);
+      await page.getByTestId(TestIds.researchLabComposeTopic).fill('e2e reexpand skip path');
+      const allowWeb = page.getByTestId(TestIds.researchLabComposeAllowWeb);
+      if (!(await allowWeb.isChecked())) await allowWeb.check();
+      await page.getByTestId(TestIds.researchLabComposeSubmit).click();
+
+      await expect(page).toHaveURL(/\/research-lab\/\d+\?rid=\d+/, { timeout: 30_000 });
+      runId = readRidFromUrl(page);
+      expect(runId).toBeTruthy();
+
+      const atBudget = await waitForRunStatus(page, notebookId, runId!, 'awaiting_confirm', 90_000);
+      expect(atBudget.confirmKind ?? 'budget').toBe('budget');
+
+      await expect(page.getByTestId(TestIds.researchLabRequestReexpand)).toBeVisible({
+        timeout: 20_000,
+      });
+      await page.getByTestId(TestIds.researchLabRequestReexpand).click();
+
+      // Status stays awaiting_confirm — poll until confirmKind flips to reexpand.
+      const reexpandDeadline = Date.now() + 30_000;
+      let atReexpand: Awaited<ReturnType<typeof waitForRunStatus>> | null = null;
+      while (Date.now() < reexpandDeadline) {
+        const res = await page.request.get(`/v2/notebooks/${notebookId}/research/${runId}`);
+        expect(res.ok()).toBeTruthy();
+        const body = (await res.json()) as {
+          status: string;
+          confirmKind?: string | null;
+        };
+        if (body.status === 'awaiting_confirm' && body.confirmKind === 'reexpand') {
+          atReexpand = body as Awaited<ReturnType<typeof waitForRunStatus>>;
+          break;
+        }
+        await page.waitForTimeout(250);
+      }
+      expect(atReexpand?.confirmKind).toBe('reexpand');
+
+      await expect(page.getByTestId(TestIds.researchLabConfirmApproveReexpand)).toBeVisible({
+        timeout: 20_000,
+      });
+      await expect(page.getByTestId(TestIds.researchLabConfirmSkipReexpand)).toBeVisible();
+      await page.getByTestId(TestIds.researchLabConfirmSkipReexpand).click();
+
+      await waitForRunStatus(page, notebookId, runId!, 'completed', 90_000);
+
+      await attachResearchDiagnostics(page, testInfo, {
+        notebookId,
+        runId,
+        label: 'r02-reexpand-skip-complete',
+      });
+    } catch (error) {
+      await attachResearchDiagnostics(page, testInfo, {
+        notebookId,
+        runId,
+        label: 'r02-failure',
+      });
+      const msg = error instanceof Error ? error.message : String(error);
+      const rid = runId ?? 'null';
+      throw new Error(`Eden Lab R02 failed (notebook=${notebookId} rid=${rid}): ${msg}`);
+    }
+  });
 });

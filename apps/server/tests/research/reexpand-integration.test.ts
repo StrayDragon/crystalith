@@ -116,6 +116,65 @@ describe('research request-reexpand (c104)', () => {
     expect(run.confirmKind).toBe('reexpand');
   });
 
+  it('request-reexpand from running cooperatively pauses to reexpand confirm', async () => {
+    const create = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          topic: 'c104 running reexpand',
+          useNotebookSources: false,
+          allowWeb: true,
+          depth: 'shallow',
+        }),
+      }),
+    );
+    expect(create.status).toBe(201);
+    const created = (await create.json()) as { id: number };
+
+    // Prefer catching live running; stub may already leave the window.
+    let caughtRunning = false;
+    try {
+      await waitForStatus(created.id, ['running'], 1500);
+      caughtRunning = true;
+    } catch {
+      /* fall through — force running to exercise the cooperative-pause branch */
+    }
+    if (!caughtRunning) {
+      getOrm()
+        .update(researchRuns)
+        .set({ status: 'running', confirmKind: null, confirmBranchNodeId: null })
+        .where(eq(researchRuns.id, created.id))
+        .run();
+    }
+
+    const res = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}/request-reexpand`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ hint: 'running 再扩展' }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const run = (await res.json()) as {
+      status: string;
+      confirmKind: string | null;
+      llmActivity?: string | null;
+    };
+    expect(run.status).toBe('awaiting_confirm');
+    expect(run.confirmKind).toBe('reexpand');
+    expect(run.llmActivity ?? null).toBeNull();
+    // Cooperative abort MUST NOT finalize as cancelled
+    await Bun.sleep(80);
+    const get = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}`),
+    );
+    const after = (await get.json()) as { status: string; confirmKind: string | null };
+    expect(after.status).not.toBe('cancelled');
+    expect(after.status).toBe('awaiting_confirm');
+    expect(after.confirmKind).toBe('reexpand');
+  });
+
   it('approve_reexpand adds research nodes', async () => {
     const { id, researchCount } = await createAndAwaitConfirm();
     await app.handle(
