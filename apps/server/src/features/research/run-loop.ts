@@ -12,7 +12,7 @@ import { researchRuns } from '../../db/schema.ts';
 import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { applyDecomposePlanToGraph, planTopicDecomposition } from './decompose.ts';
-import { e2eStubNodeSummary, isResearchE2eStub } from './e2e-stub.ts';
+import { e2eStubNodeSummary, e2eStubWebHits, isResearchE2eStub } from './e2e-stub.ts';
 import { createResearchNodeAgent } from './node-agent.ts';
 import { synthesizeAndComplete } from './report.ts';
 import {
@@ -219,6 +219,51 @@ export async function runNodeWorkUnit(opts: {
     nodeId: node.id,
     headline: `work_unit:${node.id}`,
   });
+
+  // E2E stub: deterministic web hits + searchesUsed bump so M1 budget confirm still fires
+  // (c102 removed pragmatic fake-hit; without this, stub runs complete with searchesUsed=0).
+  if (isResearchE2eStub()) {
+    if (allowWeb && searchesUsed < maxSearches) {
+      const query = node.query?.trim() || node.title || topic;
+      const ingested = ingestWorkToolResult(
+        runId,
+        notebookId,
+        node.id,
+        'webSearch',
+        e2eStubWebHits(query),
+      );
+      evidenceIds.push(...ingested.evidenceIds);
+      if (ingested.searchesDelta > 0) {
+        searchesUsed += ingested.searchesDelta;
+        updateRun(runId, { searchesUsed });
+      }
+      emitLog(runId, `外网检索（e2e stub）：${ingested.evidenceIds.length} 条`);
+    }
+    const synth = await shortSynthesizeNodeSummary({
+      runId,
+      node,
+      topic,
+      evidenceIds,
+      modelId: requireFresh(runId).modelId,
+      abortSignal,
+    });
+    appendProgressEvent(runId, 'unit_finished', {
+      nodeId: node.id,
+      headline: 'work_unit done (e2e-stub)',
+      payload: {
+        evidenceCount: evidenceIds.length,
+        via: 'stub',
+        conclusionStatus: synth.conclusionStatus,
+      },
+    });
+    return {
+      evidenceIds,
+      searchesUsed,
+      via: 'none',
+      summary: synth.summary,
+      conclusionStatus: synth.conclusionStatus,
+    };
+  }
 
   const agent = await createResearchNodeAgent(notebookId);
   let via: 'agent' | 'none' = 'none';
