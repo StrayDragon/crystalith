@@ -183,7 +183,7 @@ models:
 
     - id: "gateway-chat-primary"
       provider: "openai-compatible"
-      model: "{{ env.CL_CHAT_MODEL | default('Qwen3.6-35B-A3B/UD-Q4_K_M-think-general') }}"
+      model: "{{ env.CL_CHAT_MODEL | default('NOT-SET') }}"
       displayName: "Gateway Chat (primary)"
       description: "Primary chat via OpenAI-compatible gateway"
       roles: [chat, edit]
