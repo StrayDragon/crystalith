@@ -277,9 +277,9 @@ optional_services: {}
 # LLM / embedding providers do NOT use this by default (c109).
 # ----------------------------------------------------------------------------
 proxy_settings: &default_proxy
-  enabled: false
-  http_url: ""
-  https_url: ""
+  enabled: true
+  http_url: "http://127.0.0.1:20171"
+  https_url: "http://127.0.0.1:20171"
   socks5_url: ""
   no_proxy:
     - localhost

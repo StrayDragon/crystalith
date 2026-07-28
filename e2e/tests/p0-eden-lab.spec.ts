@@ -1,6 +1,7 @@
 import {
   attachResearchDiagnostics,
   openLabCompose,
+  readNotebookIdFromLabUrl,
   readRidFromUrl,
   waitForLiveResearchNode,
   waitForRunStatus,
@@ -30,7 +31,7 @@ test.describe('@p0 Eden Lab production path', () => {
     expect(nbRes.ok()).toBeTruthy();
     const notebooks = (await nbRes.json()) as Array<{ id: number }>;
     expect(notebooks.length).toBeGreaterThan(0);
-    const notebookId = notebooks[0]!.id;
+    let notebookId = notebooks[0]!.id;
 
     let runId: number | null = null;
     try {
@@ -42,6 +43,7 @@ test.describe('@p0 Eden Lab production path', () => {
       await page.getByTestId(TestIds.researchLabComposeSubmit).click();
 
       await expect(page).toHaveURL(/\/research-lab\/\d+\?rid=\d+/, { timeout: 30_000 });
+      notebookId = readNotebookIdFromLabUrl(page) ?? notebookId;
       runId = readRidFromUrl(page);
       expect(runId).toBeTruthy();
 
@@ -55,27 +57,16 @@ test.describe('@p0 Eden Lab production path', () => {
       const reportPath = `/research-lab/${notebookId}/report?rid=${runId}`;
       await page.goto(reportPath);
       await expect(page.getByTestId(TestIds.researchLabReportPage)).toBeVisible({
-        timeout: 30_000,
+        timeout: 20_000,
       });
       await expect(page.getByTestId(TestIds.researchLabReport)).toBeVisible();
+      await expect(page.getByTestId(TestIds.researchLabConvertNote)).toBeVisible();
 
-      const noteResp = page.waitForResponse(
-        (res) =>
-          res.request().method() === 'POST' &&
-          res.url().includes(`/research/${runId}/convert-to-note`) &&
-          res.ok(),
-      );
       await page.getByTestId(TestIds.researchLabConvertNote).click();
-      await noteResp;
-
-      const sourceResp = page.waitForResponse(
-        (res) =>
-          res.request().method() === 'POST' &&
-          res.url().includes(`/research/${runId}/convert-to-source`) &&
-          res.ok(),
-      );
+      // Convert feedback is toast text (no dedicated Ok testids; see edenConvertActions).
+      await expect(page.getByText(/已转为笔记 #\d+/)).toBeVisible({ timeout: 30_000 });
       await page.getByTestId(TestIds.researchLabConvertSource).click();
-      await sourceResp;
+      await expect(page.getByText(/已转为来源 #\d+/)).toBeVisible({ timeout: 60_000 });
 
       await attachResearchDiagnostics(page, testInfo, {
         notebookId,
@@ -92,6 +83,7 @@ test.describe('@p0 Eden Lab production path', () => {
       if (!(await allowWeb2.isChecked())) await allowWeb2.check();
       await page.getByTestId(TestIds.researchLabComposeSubmit).click();
       await expect(page).toHaveURL(/\/research-lab\/\d+\?rid=\d+/, { timeout: 30_000 });
+      notebookId = readNotebookIdFromLabUrl(page) ?? notebookId;
       runId = readRidFromUrl(page);
       expect(runId).toBeTruthy();
 
@@ -145,7 +137,7 @@ test.describe('@p0 Eden Lab production path', () => {
     expect(nbRes.ok()).toBeTruthy();
     const notebooks = (await nbRes.json()) as Array<{ id: number }>;
     expect(notebooks.length).toBeGreaterThan(0);
-    const notebookId = notebooks[0]!.id;
+    let notebookId = notebooks[0]!.id;
 
     let runId: number | null = null;
     try {
@@ -156,6 +148,7 @@ test.describe('@p0 Eden Lab production path', () => {
       await page.getByTestId(TestIds.researchLabComposeSubmit).click();
 
       await expect(page).toHaveURL(/\/research-lab\/\d+\?rid=\d+/, { timeout: 30_000 });
+      notebookId = readNotebookIdFromLabUrl(page) ?? notebookId;
       runId = readRidFromUrl(page);
       expect(runId).toBeTruthy();
 
