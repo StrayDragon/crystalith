@@ -1,7 +1,10 @@
 ---
 depends_on:
   - c107-research-web-page-evidence
-status: designed
+status: full
+branch: sdd/c108-research-budget-commitment
+base_sha: 5851bbd259781abcf768356f1c19c6831f61b6e5
+checkpointed: false
 ---
 
 ## Why
@@ -24,7 +27,7 @@ status: designed
 
 ## Locked decisions
 
-见 explore 表 1–10 + OQ：ratio clamp B、加购 UI C、读页交界 D、默认 medium A、数字 A、诚实报告 A；seams 方案 1。
+Explore 1–10 + OQ 全锁；seams 方案 1。详见 `design.md`。
 
 ## Non-Goals
 
@@ -32,9 +35,9 @@ status: designed
 
 ## Capabilities
 
-- `deep-research-runtime` — 预算承诺、加购、软上限、确认时机、部分完成报告
-- `deep-research-ui` — 常驻加购、budget 文案、部分完成提示
+- `deep-research-runtime` — r305/r306/r327 修订；r341–r344
+- `deep-research-ui` — r449 修订；r461–r462
 
 ## Impact / Seams
 
-- `RESEARCH_DEPTH_BUDGETS` / run-loop / commands / config / Lab UI / specs r305 r306+ / tests
+- `RESEARCH_DEPTH_BUDGETS` / run-loop / commands / config / Lab UI / tests
