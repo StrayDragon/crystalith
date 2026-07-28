@@ -508,8 +508,9 @@ export function emitLog(runId: number, message: string): void {
 
 export function isCancelled(runId: number): boolean {
   const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
-  if (Boolean(row?.cancelRequested) || row?.status === 'cancelled') return true;
-  return Boolean(runAbortControllers.get(runId)?.signal.aborted);
+  // AbortSignal is also used for cooperative reexpand pause — do not treat abort alone
+  // as user cancel (c104/c108). Callers that need abort should check AbortSignal directly.
+  return Boolean(row?.cancelRequested) || row?.status === 'cancelled';
 }
 
 export function requireFresh(runId: number): RunRow {
@@ -520,7 +521,9 @@ export function requireFresh(runId: number): RunRow {
 
 export function finalizeCancel(runId: number): void {
   const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
-  if (!row || row.status === 'cancelled') return;
+  // Never clobber a terminal Run (completed/failed/cancelled). Cooperative reexpand
+  // abort can race with skip_reexpand → synthesize finishing first.
+  if (!row || isTerminalStatus(row.status)) return;
   updateRun(runId, {
     status: 'cancelled',
     checkpoint: writeCheckpoint(row, 'cancel'),

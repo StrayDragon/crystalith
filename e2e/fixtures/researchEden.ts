@@ -102,6 +102,35 @@ export async function waitForRunStatus(
   throw new Error(`Timed out waiting for status ${targets.join('|')}; last=${last}`);
 }
 
+/**
+ * c108: runs no longer pause on mid-wave budget confirm. Catch a live window
+ * (running / awaiting_confirm) with at least one research node for fork/reexpand.
+ */
+export async function waitForLiveResearchNode(
+  page: Page,
+  notebookId: number,
+  runId: number,
+  timeoutMs = 90_000,
+): Promise<ResearchRunBody & { researchNodeId: string }> {
+  const start = Date.now();
+  let last = '';
+  while (Date.now() - start < timeoutMs) {
+    const res = await page.request.get(`/v2/notebooks/${notebookId}/research/${runId}`);
+    expect(res.ok()).toBeTruthy();
+    const body = (await res.json()) as ResearchRunBody;
+    last = `${body.status};nodes=${body.nodes?.length ?? 0}`;
+    const research = (body.nodes ?? []).find((n) => n.role === 'research');
+    if (research?.id && (body.status === 'running' || body.status === 'awaiting_confirm')) {
+      return { ...body, researchNodeId: research.id };
+    }
+    if (body.status === 'completed' || body.status === 'failed' || body.status === 'cancelled') {
+      throw new Error(`Run reached ${body.status} before live research node window; last=${last}`);
+    }
+    await page.waitForTimeout(100);
+  }
+  throw new Error(`Timed out waiting for live research node; last=${last}`);
+}
+
 export function readRidFromUrl(page: Page): number | null {
   const rid = Number(new URL(page.url()).searchParams.get('rid'));
   return Number.isFinite(rid) && rid > 0 ? rid : null;

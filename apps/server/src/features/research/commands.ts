@@ -295,7 +295,10 @@ export async function confirmRun(
     });
 
     if (body.action === 'skip_reexpand') {
-      // Locked simplest: clear confirm → synthesize
+      // Locked simplest: clear confirm → synthesize.
+      // Fresh AbortController: request-reexpand aborts the prior work-unit signal;
+      // do not let a stale aborted controller poison synthesize / later schedule.
+      ensureRunAbortController(runId);
       await synthesizeAndComplete(runId);
       return serializeRun(requireRun(notebookId, runId));
     }

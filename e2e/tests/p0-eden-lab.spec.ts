@@ -2,23 +2,24 @@ import {
   attachResearchDiagnostics,
   openLabCompose,
   readRidFromUrl,
+  waitForLiveResearchNode,
   waitForRunStatus,
 } from '../fixtures/researchEden';
 import { test, expect, TestIds, gotoWorkspace } from '../fixtures/test';
 
 /**
- * @p0 Eden Lab production path (c100 / r453).
+ * @p0 Eden Lab production path (c100 / r453; c108 budget commitment).
  *
  * - VITE_LAB_FIXTURE must be unset (playwright webServer env).
  * - Server: CL_RESEARCH_E2E_STUB=1 + mock OpenAI gateway (L1 A+B).
- * - One long case: Compose→graph→budget+expand→report→convert note+source (L2=A, L3=C, L4=A+B).
- * - Failures attach screenshot + run JSON (L6).
+ * - c108: mid-wave budget confirm removed — happy path runs to completed;
+ *   expand/reexpand catch a live running window instead of awaiting budget.
  *
  * Fixture-only Lab smoke (S06b in p0-smoke) is NOT a substitute for this gate (L5=B).
  */
 
 test.describe('@p0 Eden Lab production path', () => {
-  test('R01: Compose → graph → M1 budget+expand → report → convert note+source', async ({
+  test('R01: Compose → graph → completed → report → convert; expand_branch while live', async ({
     page,
   }, testInfo) => {
     test.setTimeout(180_000);
@@ -33,7 +34,7 @@ test.describe('@p0 Eden Lab production path', () => {
 
     let runId: number | null = null;
     try {
-      // --- Pass 1: budget confirm + report converts ---
+      // --- Pass 1: commitment run completes without mid-wave budget pause (c108) ---
       await openLabCompose(page);
       await page.getByTestId(TestIds.researchLabComposeTopic).fill('e2e deep research parity');
       const allowWeb = page.getByTestId(TestIds.researchLabComposeAllowWeb);
@@ -44,26 +45,13 @@ test.describe('@p0 Eden Lab production path', () => {
       runId = readRidFromUrl(page);
       expect(runId).toBeTruthy();
 
-      const awaitingBudget = await waitForRunStatus(
-        page,
-        notebookId,
-        runId!,
-        'awaiting_confirm',
-        90_000,
-      );
-      expect(awaitingBudget.confirmKind ?? 'budget').toBe('budget');
-      expect((awaitingBudget.nodes ?? []).length).toBeGreaterThanOrEqual(3);
-      expect((awaitingBudget.edges ?? []).length).toBeGreaterThanOrEqual(1);
-
       await expect(page.getByTestId(TestIds.researchLabGraph)).toBeVisible();
-      await expect(page.getByTestId(TestIds.researchLabConfirmContinue)).toBeVisible({
-        timeout: 20_000,
-      });
-      await page.getByTestId(TestIds.researchLabConfirmContinue).click();
 
-      await waitForRunStatus(page, notebookId, runId!, 'completed', 90_000);
+      const completed = await waitForRunStatus(page, notebookId, runId!, 'completed', 90_000);
+      expect((completed.nodes ?? []).length).toBeGreaterThanOrEqual(3);
+      expect((completed.edges ?? []).length).toBeGreaterThanOrEqual(1);
+      expect(completed.maxSearches).toBeGreaterThanOrEqual(20);
 
-      // Open report (Eden path; not fixture sessionStorage)
       const reportPath = `/research-lab/${notebookId}/report?rid=${runId}`;
       await page.goto(reportPath);
       await expect(page.getByTestId(TestIds.researchLabReportPage)).toBeVisible({
@@ -92,10 +80,10 @@ test.describe('@p0 Eden Lab production path', () => {
       await attachResearchDiagnostics(page, testInfo, {
         notebookId,
         runId,
-        label: 'pass1-budget-complete',
+        label: 'pass1-complete',
       });
 
-      // --- Pass 2: expand_branch confirm (L3=C) ---
+      // --- Pass 2: expand_branch while Run is still live (c108) ---
       await page.goto('/');
       await gotoWorkspace(page);
       await openLabCompose(page);
@@ -107,14 +95,10 @@ test.describe('@p0 Eden Lab production path', () => {
       runId = readRidFromUrl(page);
       expect(runId).toBeTruthy();
 
-      const atBudget = await waitForRunStatus(page, notebookId, runId!, 'awaiting_confirm', 90_000);
-      expect(atBudget.confirmKind ?? 'budget').toBe('budget');
-      const researchNode = (atBudget.nodes ?? []).find((n) => n.role === 'research');
-      expect(researchNode?.id).toBeTruthy();
+      const live = await waitForLiveResearchNode(page, notebookId, runId!, 90_000);
 
-      // Interrupt budget with fork → expand_branch surface
       const forkRes = await page.request.post(
-        `/v2/notebooks/${notebookId}/research/${runId}/nodes/${researchNode!.id}/fork`,
+        `/v2/notebooks/${notebookId}/research/${runId}/nodes/${live.researchNodeId}/fork`,
         { data: { hint: 'e2e expand' } },
       );
       expect(forkRes.ok()).toBeTruthy();
@@ -150,7 +134,7 @@ test.describe('@p0 Eden Lab production path', () => {
     }
   });
 
-  test('R02: budget → request-reexpand → skip → completed (c104 / r459)', async ({
+  test('R02: live → request-reexpand → skip → completed (c104 / r459 / c108)', async ({
     page,
   }, testInfo) => {
     test.setTimeout(120_000);
@@ -175,15 +159,13 @@ test.describe('@p0 Eden Lab production path', () => {
       runId = readRidFromUrl(page);
       expect(runId).toBeTruthy();
 
-      const atBudget = await waitForRunStatus(page, notebookId, runId!, 'awaiting_confirm', 90_000);
-      expect(atBudget.confirmKind ?? 'budget').toBe('budget');
+      await waitForLiveResearchNode(page, notebookId, runId!, 90_000);
 
       await expect(page.getByTestId(TestIds.researchLabRequestReexpand)).toBeVisible({
         timeout: 20_000,
       });
       await page.getByTestId(TestIds.researchLabRequestReexpand).click();
 
-      // Status stays awaiting_confirm — poll until confirmKind flips to reexpand.
       const reexpandDeadline = Date.now() + 30_000;
       let atReexpand: Awaited<ReturnType<typeof waitForRunStatus>> | null = null;
       while (Date.now() < reexpandDeadline) {

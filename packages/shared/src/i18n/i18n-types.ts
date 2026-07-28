@@ -198,6 +198,8 @@ export type Translation = {
   'env.BROWSERLESS_TOKEN': string;
   'env.CL_CHAT_API_KEY': string;
   'env.CL_EMBEDDING_API_KEY': string;
+  'env.CL_JINA_API_KEY': string;
+  'env.CL_FIRECRAWL_API_KEY': string;
   'env.CRYSTALITH_API_KEY': string;
   'env.OPENAI_API_KEY': string;
   'env.ANTHROPIC_API_KEY': string;

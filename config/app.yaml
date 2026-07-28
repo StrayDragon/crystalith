@@ -322,14 +322,16 @@ source_ingestion:
 
     jina:
       enabled: true
-      api_key: "{{ env.JINA_API_KEY | default('') }}"
+      # Prefer CL_* (secret.env or shell) over deprecated JINA_API_KEY.
+      api_key: "{{ secret.CL_JINA_API_KEY | default(env.CL_JINA_API_KEY | default(env.JINA_API_KEY | default(''))) }}"
       timeout: 30
       proxy:
         <<: *default_proxy
 
     firecrawl:
-      enabled: false
-      api_key: "{{ env.FIRECRAWL_API_KEY | default('') }}"
+      # Availability still requires a non-empty api_key (CL_FIRECRAWL_API_KEY).
+      enabled: true
+      api_key: "{{ secret.CL_FIRECRAWL_API_KEY | default(env.CL_FIRECRAWL_API_KEY | default(env.FIRECRAWL_API_KEY | default(''))) }}"
       timeout: 60
 
     browserless:

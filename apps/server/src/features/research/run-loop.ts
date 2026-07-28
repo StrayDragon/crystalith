@@ -55,10 +55,32 @@ import {
 } from './research-work-queue.ts';
 import { withRunLlmLock, withRunWriteLock } from './run-locks.ts';
 
-/** Cooperative pause: awaiting_confirm must not be treated as cancel (c104 reexpand). */
+/** Cooperative pause: awaiting_confirm / reexpand abort must not finalize cancel (c104/c108). */
 function shouldFinalizeCancelOnAbort(runId: number): boolean {
   const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
-  return row?.status !== 'awaiting_confirm';
+  if (!row) return true;
+  // AbortSignal is shared by cancel and cooperative reexpand pause — only user cancel
+  // sets cancelRequested. Skipping this check races: skip_reexpand flips status back to
+  // running while the aborted runLoop still exits and would finalizeCancel.
+  if (!row.cancelRequested) return false;
+  return row.status !== 'awaiting_confirm';
+}
+
+/** Sleep that resolves early when AbortSignal fires (cooperative reexpand pause). */
+function sleepUnlessAborted(ms: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.resolve();
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      signal.removeEventListener('abort', finish);
+      resolve();
+    };
+    const timer = setTimeout(finish, ms);
+    signal.addEventListener('abort', finish, { once: true });
+  });
 }
 
 /** After drain: budget confirm only when truly exhausted and still need search; else synthesize. */
@@ -734,6 +756,25 @@ export async function runLoop(runId: number): Promise<void> {
           headline: '拆解失败，改走单路径',
         });
         emitLog(runId, `主题拆解失败：${String(error)}，改走单路径`);
+      }
+    }
+
+    // c108 e2e: mid-wave budget confirm removed — give Playwright a short live
+    // window to fork / request-reexpand before stub drain finishes.
+    // Abortable sleep: request-reexpand must wake the loop immediately (not wait out the hold).
+    row = requireFresh(runId);
+    graph = getGraph(row);
+    if (
+      isResearchE2eStub() &&
+      hasLiveResearchBranches(graph.nodes as ResearchNode[]) &&
+      !abort.signal.aborted &&
+      !isCancelled(runId)
+    ) {
+      emitLog(runId, 'e2e stub: hold 2.5s before drain for live interaction window');
+      await sleepUnlessAborted(2500, abort.signal);
+      if (abort.signal.aborted || isCancelled(runId)) {
+        if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
+        return;
       }
     }
 

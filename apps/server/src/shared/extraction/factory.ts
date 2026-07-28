@@ -66,8 +66,8 @@ const DESCRIPTIONS: Record<string, string> = {
 };
 
 const RECOVERY_HINTS: Record<string, string> = {
-  jina: 'Set extraction.jina_api_key in config',
-  firecrawl: 'Set extraction.firecrawl_api_key in config',
+  jina: 'Set CL_JINA_API_KEY (secret.env / shell); falls back to JINA_API_KEY',
+  firecrawl: 'Set CL_FIRECRAWL_API_KEY (secret.env / shell); falls back to FIRECRAWL_API_KEY',
 };
 
 /**

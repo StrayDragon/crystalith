@@ -1,27 +1,17 @@
 // Jina Reader extractor — mirrors v1 shared/extraction/jina_extractor.py.
 // Calls the r.jina.ai API (GET) with optional auth key and markdown format.
+import { isWebExtractorEnabled, resolveJinaApiKey } from './config.ts';
 import type { ExtractedContent, Extractor } from './types.ts';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function jinaApiKey(config: unknown): string | undefined {
-  if (!isRecord(config)) return undefined;
-  const extraction = config.extraction;
-  if (!isRecord(extraction)) return undefined;
-  return typeof extraction.jina_api_key === 'string' ? extraction.jina_api_key : undefined;
-}
 
 export const jinaExtractor: Extractor = {
   name: 'jina',
 
   isAvailable(config: unknown): boolean {
-    return !!jinaApiKey(config);
+    return isWebExtractorEnabled(config, 'jina') && !!resolveJinaApiKey(config);
   },
 
   async extract(url: string, config: unknown): Promise<ExtractedContent> {
-    const apiKey = jinaApiKey(config);
+    const apiKey = resolveJinaApiKey(config);
     const headers: Record<string, string> = {
       'X-Return-Format': 'markdown',
       Accept: 'text/markdown',

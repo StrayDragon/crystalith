@@ -127,6 +127,10 @@ export const SecretsEnvSchema = z
 
     CL_EMBEDDING_API_KEY: z.string().default('').describe(desc('env.CL_EMBEDDING_API_KEY')),
 
+    CL_JINA_API_KEY: z.string().default('').describe(desc('env.CL_JINA_API_KEY')),
+
+    CL_FIRECRAWL_API_KEY: z.string().default('').describe(desc('env.CL_FIRECRAWL_API_KEY')),
+
     CRYSTALITH_API_KEY: z.string().default('').describe(desc('env.CRYSTALITH_API_KEY')),
 
     OPENAI_API_KEY: z.string().default('').describe(desc('env.OPENAI_API_KEY')),
