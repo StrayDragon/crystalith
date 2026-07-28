@@ -3,8 +3,8 @@
 ## Propose（本阶段）
 
 - [x] proposal + design + seams 确认
-- [ ] live specs（runtime + ui）+ `change start` + validate
-- [ ] blocked-by: c107 Full 提案完成（depends_on）
+- [x] live specs（runtime + ui）+ attach Full + validate
+- [x] blocked-by: c107 Full 提案完成（depends_on；本分支基于 c107 tip）
 
 ## Apply（后续 `llman-sdd-apply`；建议 c107 apply 后）
 
