@@ -81,7 +81,14 @@ async function createAndAwaitConfirm(): Promise<{ id: number; researchCount: num
   );
   expect(create.status).toBe(201);
   const created = (await create.json()) as { id: number };
+  // c108: open-run commitment no longer mid-wave budget-pauses; wait until kernel settles.
   await waitForStatus(created.id, ['awaiting_confirm', 'completed']);
+  getOrm()
+    .update(researchRuns)
+    .set({ status: 'awaiting_confirm', confirmKind: 'budget', llmActivity: null })
+    .where(eq(researchRuns.id, created.id))
+    .run();
+  await Bun.sleep(20);
   const get = await app.handle(
     new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}`),
   );

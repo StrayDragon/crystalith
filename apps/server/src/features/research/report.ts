@@ -177,9 +177,34 @@ function buildNodeSummaries(row: RunRow): string {
     .map((n) => {
       const role = n.role ?? 'research';
       const sum = n.summary?.trim() || '（无摘要）';
-      return `- [${role}] ${n.title}: ${sum}`;
+      const status = n.conclusionStatus ? ` status=${n.conclusionStatus}` : '';
+      return `- [${role}] ${n.title}${status}: ${sum}`;
     });
   return lines.length ? lines.join('\n') : '（无节点摘要）';
+}
+
+/** Research nodes that remain missing / uncovered (c108 partial completion). */
+function listUncoveredResearchTopics(row: RunRow): string[] {
+  const graph = getGraph(row);
+  return (graph.nodes as ResearchNode[])
+    .filter((n) => {
+      const role = n.role ?? (n.id.startsWith('node_root') ? 'question' : 'research');
+      if (role !== 'research') return false;
+      if (n.conclusionStatus === 'pruned') return false;
+      if (n.conclusionStatus === 'missing') return true;
+      if ((n.evidenceIds?.length ?? 0) === 0 && n.conclusionStatus !== 'clear') return true;
+      return false;
+    })
+    .map((n) => n.title.trim() || n.id);
+}
+
+function buildPartialCompletionPromptHint(row: RunRow): string | null {
+  const gaps = listUncoveredResearchTopics(row);
+  if (gaps.length === 0) return null;
+  return [
+    '【预算用尽·部分完成】当前仍有未覆盖/未完成的研究节点。报告 MUST 明示「预算用尽·部分完成」，并列出未覆盖主题；MUST NOT 将残缺研究包装为已完整覆盖。已有证据仍正常综合。',
+    `未覆盖主题：${gaps.join('；')}`,
+  ].join('\n');
 }
 
 /**
@@ -336,6 +361,7 @@ export async function generateLlmResearchReport(
   const maxOutputTokens = modelConfig.completionOptions?.maxTokens ?? 8192;
   const catalog = buildEvidenceCatalog(evidences);
   const nodeSummaries = buildNodeSummaries(row);
+  const partialHint = buildPartialCompletionPromptHint(row);
   const prompt = [
     '你是深度研究结案写作者。请输出同形 ResearchReport JSON（title、sections、citations）。',
     `研究主题：${row.topic}`,
@@ -346,6 +372,7 @@ export async function generateLlmResearchReport(
     '可用证据（cite key MUST 使用下列 id；禁止虚构 id）：',
     catalog,
     '',
+    ...(partialHint ? [partialHint, ''] : []),
     '规则：',
     '- sections 为正文；blocks 为 paragraph 或 bullets；每处 citeIds 只能引用证据 id。',
     '- citations 为全局 map；key 必须是证据 id；无引用时用空对象 {}。',

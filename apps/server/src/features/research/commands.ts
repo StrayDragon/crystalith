@@ -22,12 +22,12 @@ import { and, count, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '../../db/index.ts';
 import { chunks, outputs, researchProgressEvents, researchRuns, sources } from '../../db/schema.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
-import { getPageRatio } from '../../shared/config.ts';
+import { getPageRatio, getSearchAddOnSettings } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { splitTextToChunks } from '../outputs/render.ts';
 import { applyDecomposePlanToGraph, planTopicDecomposition } from './decompose.ts';
 import { resolveArtifactMarkdown, synthesizeAndComplete } from './report.ts';
-import { computeMaxPageFetches } from './research-budget.ts';
+import { computeMaxPageFetches, computeSearchAddOnK } from './research-budget.ts';
 import {
   abortAllChatsForRun,
   abortRunWorkUnit,
@@ -40,7 +40,6 @@ import {
   emitStatus,
   ensureRunAbortController,
   findConclusionNode,
-  findQuestionNode,
   finalizeCancel,
   getGraph,
   isPruneProtectedNode,
@@ -57,12 +56,41 @@ import {
   writeCheckpoint,
   type SseEmit,
 } from './research-core.ts';
+import { orderResearchNodesForWork } from './research-work-queue.ts';
 import {
   drainResearchWorkUnits,
   finishWaveOrSynthesize,
-  runNodeWorkUnit,
   scheduleRun,
+  writeBackNodeWork,
 } from './run-loop.ts';
+
+/** Raise maxSearches by formula K; does NOT touch maxNodes / maxPageFetches (c108). */
+export function applySearchBudgetAddOn(runId: number): { k: number; maxSearches: number } {
+  const row = requireFresh(runId);
+  const { addOnRatio, addOnMinK, addOnMaxK } = getSearchAddOnSettings();
+  const k = computeSearchAddOnK(row.maxSearches, addOnRatio, addOnMinK, addOnMaxK);
+  const maxSearches = row.maxSearches + k;
+  updateRun(runId, { maxSearches });
+  emitLog(runId, `检索预算加购 +${k} → maxSearches=${maxSearches}`);
+  appendProgressEvent(runId, 'budget_tick', {
+    headline: `检索预算加购 +${k}`,
+    payload: { k, maxSearches, maxNodes: row.maxNodes },
+  });
+  return { k, maxSearches };
+}
+
+/** Mark unfinished research nodes missing before partial-completion synthesize. */
+function markUnfinishedResearchMissing(runId: number): void {
+  const row = requireFresh(runId);
+  const graph = getGraph(row);
+  const pending = orderResearchNodesForWork(graph.nodes as ResearchNode[]);
+  for (const node of pending) {
+    writeBackNodeWork(runId, node.id, node.evidenceIds ?? [], {
+      summary: node.summary?.trim() || '预算用尽，未完成检索',
+      conclusionStatus: 'missing',
+    });
+  }
+}
 
 export function validateCreateBody(body: ResearchCreateBody): {
   topic: string;
@@ -233,48 +261,17 @@ export async function confirmRun(
       confirmBranchNodeId: null,
     });
     emitStatus(runId, 'running', body.action);
+    appendProgressEvent(runId, 'confirm_resolved', {
+      headline: body.action === 'continue' ? '已加购并继续研究' : '预算触顶后出报告',
+      payload: { action: body.action, confirmKind: 'budget' },
+    });
     if (body.action === 'continue') {
-      // One more work-unit then report (stay under budget)
-      const latest = requireRun(notebookId, runId);
-      const graph = getGraph(latest);
-      const root =
-        findQuestionNode(graph.nodes as ResearchNode[]) ??
-        (graph.nodes[0] as ResearchNode | undefined);
-      if (root && (latest.allowWeb || latest.useNotebookSources)) {
-        const abort = ensureRunAbortController(runId);
-        try {
-          const work = await runNodeWorkUnit({
-            runId,
-            notebookId,
-            node: root,
-            topic: latest.topic,
-            allowWeb: latest.allowWeb && latest.searchesUsed < latest.maxSearches,
-            useNotebookSources: latest.useNotebookSources,
-            sourceIds: latest.sourceIds ?? null,
-            searchesUsed: latest.searchesUsed,
-            maxSearches: latest.maxSearches,
-            abortSignal: abort.signal,
-          });
-          const fresh = getGraph(requireFresh(runId));
-          const live =
-            findQuestionNode(fresh.nodes as ResearchNode[]) ??
-            fresh.nodes.find((n) => n.id === root.id);
-          if (live) {
-            live.evidenceIds = work.evidenceIds;
-            live.summary = work.summary;
-            live.conclusionStatus = work.conclusionStatus;
-            persistGraph(runId, fresh);
-            emitGraphPatch(runId, { nodes: [live] });
-          }
-        } catch (error) {
-          if (error instanceof AppHttpError && error.code === ErrorCode.RESEARCH_BUDGET) {
-            emitLog(runId, '继续检索跳过：预算已尽');
-          } else {
-            emitLog(runId, `继续检索失败：${String(error)}`);
-          }
-        }
-      }
+      // c108: raise maxSearches by K and resume drain (NOT fake one-unit then synthesize).
+      applySearchBudgetAddOn(runId);
+      scheduleRun(runId);
+      return serializeRun(requireRun(notebookId, runId));
     }
+    markUnfinishedResearchMissing(runId);
     await synthesizeAndComplete(runId);
   } else if (kind === 'reexpand') {
     if (body.action !== 'approve_reexpand' && body.action !== 'skip_reexpand') {
@@ -432,6 +429,38 @@ export async function confirmRun(
       }
     }
     await synthesizeAndComplete(runId);
+  }
+  return serializeRun(requireRun(notebookId, runId));
+}
+
+/**
+ * c108 / r343: proactive search budget add-on (same K as budget continue).
+ * Allowed when running or awaiting_confirm(budget). Does not raise maxNodes / maxPageFetches.
+ */
+export function addBudget(notebookId: number, runId: number): ResearchRun {
+  const row = requireRun(notebookId, runId);
+  const isRunning = row.status === 'running';
+  const isBudgetConfirm =
+    row.status === 'awaiting_confirm' && (row.confirmKind ?? 'budget') === 'budget';
+  if (!isRunning && !isBudgetConfirm) {
+    throw new AppHttpError(
+      ErrorCode.RESEARCH_INVALID_STATE,
+      `add-budget only allowed when running or awaiting_confirm(budget); got ${row.status}`,
+    );
+  }
+  applySearchBudgetAddOn(runId);
+  if (isBudgetConfirm) {
+    updateRun(runId, {
+      status: 'running',
+      confirmKind: null,
+      confirmBranchNodeId: null,
+    });
+    emitStatus(runId, 'running', 'add_budget');
+    appendProgressEvent(runId, 'confirm_resolved', {
+      headline: '已加购并继续研究',
+      payload: { action: 'add_budget', confirmKind: 'budget' },
+    });
+    scheduleRun(runId);
   }
   return serializeRun(requireRun(notebookId, runId));
 }

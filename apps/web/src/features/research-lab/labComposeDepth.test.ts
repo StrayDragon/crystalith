@@ -16,8 +16,8 @@ describe('labComposeDepth', () => {
   });
 
   it('budget hint matches r305 mapping', () => {
-    expect(labComposeDepthBudgetHint('shallow')).toBe('浅：约 8 次检索 / 12 节点');
-    expect(labComposeDepthBudgetHint('medium')).toBe('中：约 20 次检索 / 30 节点');
-    expect(labComposeDepthBudgetHint('deep')).toBe('深：约 40 次检索 / 60 节点');
+    expect(labComposeDepthBudgetHint('shallow')).toBe('浅：约 20 次检索 / 24 节点');
+    expect(labComposeDepthBudgetHint('medium')).toBe('中：约 50 次检索 / 60 节点');
+    expect(labComposeDepthBudgetHint('deep')).toBe('深：约 100 次检索 / 120 节点');
   });
 });

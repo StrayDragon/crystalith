@@ -134,8 +134,8 @@ describe('research runtime', () => {
     expect(body.id).toBeGreaterThan(0);
     expect(['queued', 'running', 'awaiting_confirm', 'completed']).toContain(body.status);
     expect(body.depth).toBe('medium');
-    expect(body.maxSearches).toBe(20);
-    expect(body.maxNodes).toBe(30);
+    expect(body.maxSearches).toBe(50);
+    expect(body.maxNodes).toBe(60);
   });
 
   it('POST unknown notebook returns 404', async () => {
@@ -185,7 +185,7 @@ describe('research runtime', () => {
     expect(Array.isArray(run.evidences)).toBe(true);
   });
 
-  it('web run pauses at awaiting_confirm; finish_report completes', async () => {
+  it('budget confirm finish_report completes (c108 true tip)', async () => {
     const res = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {
         method: 'POST',
@@ -199,8 +199,19 @@ describe('research runtime', () => {
       }),
     );
     expect(res.status).toBe(201);
-    const created = (await res.json()) as { id: number };
-    await waitForStatus(created.id, 'awaiting_confirm');
+    const created = (await res.json()) as { id: number; maxSearches: number };
+    await waitForStatus(created.id, ['completed', 'running', 'awaiting_confirm', 'queued']);
+
+    getOrm()
+      .update(researchRuns)
+      .set({
+        status: 'awaiting_confirm',
+        confirmKind: 'budget',
+        searchesUsed: created.maxSearches,
+        llmActivity: null,
+      })
+      .where(eq(researchRuns.id, created.id))
+      .run();
 
     const confirm = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}/confirm`, {
@@ -272,7 +283,7 @@ describe('research runtime', () => {
     );
     expect(res.status).toBe(201);
     const created = (await res.json()) as { id: number };
-    await waitForStatus(created.id, 'awaiting_confirm');
+    await waitForStatus(created.id, ['awaiting_confirm', 'running', 'completed', 'queued']);
 
     getOrm()
       .update(researchRuns)
@@ -357,7 +368,16 @@ describe('research runtime', () => {
       }),
     );
     const created = (await res.json()) as { id: number };
-    await waitForStatus(created.id, 'awaiting_confirm');
+    await waitForStatus(created.id, ['awaiting_confirm', 'running', 'completed', 'queued']);
+    getOrm()
+      .update(researchRuns)
+      .set({
+        status: 'awaiting_confirm',
+        confirmKind: 'budget',
+        llmActivity: null,
+      })
+      .where(eq(researchRuns.id, created.id))
+      .run();
     await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}/confirm`, {
         method: 'POST',
@@ -564,7 +584,7 @@ describe('research runtime', () => {
       }),
     );
     const created = (await res.json()) as { id: number };
-    await waitForStatus(created.id, 'awaiting_confirm');
+    await waitForStatus(created.id, ['awaiting_confirm', 'running', 'completed', 'queued']);
 
     getOrm()
       .update(researchRuns)
@@ -645,7 +665,7 @@ describe('research runtime', () => {
       }),
     );
     const created = (await res.json()) as { id: number };
-    await waitForStatus(created.id, 'awaiting_confirm');
+    await waitForStatus(created.id, ['awaiting_confirm', 'running', 'completed', 'queued']);
 
     getOrm()
       .update(researchRuns)
@@ -741,8 +761,13 @@ describe('research runtime', () => {
       }),
     );
     const created = (await res.json()) as { id: number };
-    // Cancel while still live (queued/running/awaiting)
-    await Bun.sleep(5);
+    await waitForStatus(created.id, ['queued', 'running', 'awaiting_confirm', 'completed']);
+    // Force live running so cancel is accepted (c108 no longer mid-wave pauses).
+    getOrm()
+      .update(researchRuns)
+      .set({ status: 'running', cancelRequested: false, llmActivity: null })
+      .where(eq(researchRuns.id, created.id))
+      .run();
     const cancel = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research/${created.id}/cancel`, {
         method: 'POST',
@@ -774,7 +799,9 @@ describe('research runtime', () => {
       }),
     );
     const created = (await res.json()) as { id: number };
-    await waitForStatus(created.id, 'awaiting_confirm');
+    // Wait for kernel to settle so our forced confirm is not overwritten by synthesize.
+    await waitForStatus(created.id, ['completed', 'awaiting_confirm', 'running', 'queued']);
+    await Bun.sleep(30);
 
     getOrm()
       .update(researchRuns)

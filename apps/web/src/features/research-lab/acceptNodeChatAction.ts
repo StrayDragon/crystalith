@@ -20,7 +20,11 @@ export type AcceptNodeChatLabPorts = {
   setTopicDraft: (topic: string) => void;
   finishReport: () => void;
   continueDig: () => void;
+  addBudget: () => void;
   setConfirmChoice: (choice: string | null) => void;
+  /** When set, confirm_continue routes to addBudget if not awaiting budget confirm. */
+  runStatus?: string | null;
+  confirmKind?: string | null;
 };
 
 export type AcceptNodeChatActionInput = {
@@ -84,8 +88,17 @@ export function acceptNodeChatAction(input: AcceptNodeChatActionInput): boolean 
       return true;
     }
     case 'confirm_continue': {
-      lab.continueDig();
-      lab.setConfirmChoice('continue_dig');
+      // c108: awaiting budget confirm → continue (+K resume); otherwise proactive add-budget
+      const awaitingBudget =
+        lab.runStatus === 'awaiting_confirm' &&
+        (lab.confirmKind === 'budget' || lab.confirmKind === null);
+      if (awaitingBudget) {
+        lab.continueDig();
+        lab.setConfirmChoice('continue_dig');
+      } else {
+        lab.addBudget();
+        lab.setConfirmChoice('add_budget');
+      }
       return true;
     }
     case 'open_report': {

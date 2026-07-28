@@ -156,6 +156,8 @@ export const TestIds = {
   researchLabConfirmSkip: 'research-lab-confirm-skip',
   researchLabConfirmApproveReexpand: 'research-lab-confirm-approve-reexpand',
   researchLabConfirmSkipReexpand: 'research-lab-confirm-skip-reexpand',
+  researchLabAddBudget: 'research-lab-add-budget',
+  researchLabPartialCompletionBanner: 'research-lab-partial-completion-banner',
   researchLabRequestReexpand: 'research-lab-request-reexpand',
   researchLabSchedule: 'research-lab-schedule',
   researchLabCancel: 'research-lab-cancel',

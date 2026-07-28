@@ -26,6 +26,7 @@ import { deriveEdenLabPhase } from './deriveEdenLabPhase';
 import { cancelActiveEdenRun } from './edenCancelFlow';
 import { EDEN_LAB_SCENARIO, EDEN_LAB_SCENARIOS } from './edenLabScenario';
 import {
+  addResearchBudget,
   confirmResearchRun,
   createResearchRun,
   forkResearchNode,
@@ -549,8 +550,16 @@ export function useEdenLabController(
         confirmResearchRun(notebookId, rid, {
           action: 'continue',
         }),
-      '继续研究',
+      '加购继续',
     )
+      .then(() => setHighlightedNodeIds([]))
+      .catch(() => undefined);
+  }, [notebookId, withBusy]);
+
+  const addBudget = useCallback(() => {
+    const rid = runIdRef.current;
+    if (!rid) return;
+    void withBusy(() => addResearchBudget(notebookId, rid), '增加检索预算')
       .then(() => setHighlightedNodeIds([]))
       .catch(() => undefined);
   }, [notebookId, withBusy]);
@@ -764,6 +773,7 @@ export function useEdenLabController(
     cancel,
     finishReport,
     continueDig,
+    addBudget,
     approveBranch,
     skipBranch,
     approveReexpand,

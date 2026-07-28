@@ -26,6 +26,7 @@ export {
   scheduleQueuedRun,
   cancelRun,
   confirmRun,
+  addBudget,
   collectResearchPruneClosure,
   pruneNode,
   patchNode,

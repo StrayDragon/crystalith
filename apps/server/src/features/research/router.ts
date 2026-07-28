@@ -4,6 +4,7 @@
  * Lab (apps/web research-lab) is the product UI; this router is ResearchRun SSOT.
  */
 import {
+  ResearchAddBudgetBodySchema,
   ResearchConfirmBodySchema,
   ResearchConvertBodySchema,
   ResearchConvertToNoteResponseSchema,
@@ -33,6 +34,7 @@ import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
 import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import {
+  addBudget,
   cancelRun,
   confirmRun,
   convertToNote,
@@ -111,6 +113,14 @@ registerApiDoc([
     tags: ['research'],
     request: { body: ResearchConfirmBodySchema },
     responses: { 200: { description: '已更新的 ResearchRun', body: ResearchRunSchema } },
+  },
+  {
+    path: '/v2/notebooks/:nid/research/:rid/add-budget',
+    method: 'post',
+    summary: '主动加购检索预算（抬高 maxSearches，不抬 maxNodes）',
+    tags: ['research'],
+    request: { body: ResearchAddBudgetBodySchema },
+    responses: { 200: { description: '已加购的 ResearchRun', body: ResearchRunSchema } },
   },
   {
     path: '/v2/notebooks/:nid/research/:rid/request-reexpand',
@@ -323,6 +333,15 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       return confirmRun(nid, rid, body);
     },
     { body: ResearchConfirmBodySchema, response: ResearchRunSchema },
+  )
+  .post(
+    '/notebooks/:nid/research/:rid/add-budget',
+    ({ params }) => {
+      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const rid = requirePositiveIntId(params.rid, 'research run id');
+      return addBudget(nid, rid);
+    },
+    { body: ResearchAddBudgetBodySchema, response: ResearchRunSchema },
   )
   .post(
     '/notebooks/:nid/research/:rid/request-reexpand',

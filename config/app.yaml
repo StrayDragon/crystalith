@@ -358,3 +358,7 @@ research:
   nodeContentTokenBudget: 32768
   # Node short-synthesis evidence context token budget (c107).
   nodeSummaryTokenBudget: 65536
+  # Search budget add-on: K = clamp(ceil(maxSearches × addOnRatio), minK, maxK) (c108).
+  addOnRatio: 0.25
+  addOnMinK: 5
+  addOnMaxK: 50
