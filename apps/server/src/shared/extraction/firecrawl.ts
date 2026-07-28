@@ -1,6 +1,11 @@
 // Firecrawl extractor — mirrors v1 shared/extraction/firecrawl_extractor.py.
-// Calls the Firecrawl REST API (POST /v2/scrape) without the SDK.
-import { isWebExtractorEnabled, resolveFirecrawlApiKey } from './config.ts';
+// Calls the Firecrawl REST API (POST {base}/v2/scrape) without the SDK.
+// base defaults to https://api.firecrawl.dev; override via CL_FIRECRAWL_API_BASE.
+import {
+  isWebExtractorEnabled,
+  resolveFirecrawlApiKey,
+  resolveFirecrawlScrapeUrl,
+} from './config.ts';
 import type { ExtractedContent, Extractor } from './types.ts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -18,7 +23,8 @@ export const firecrawlExtractor: Extractor = {
     const apiKey = resolveFirecrawlApiKey(config);
     if (!apiKey) throw new Error('Firecrawl API key required');
 
-    const res = await fetch('https://api.firecrawl.dev/v2/scrape', {
+    const scrapeUrl = resolveFirecrawlScrapeUrl(config);
+    const res = await fetch(scrapeUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,

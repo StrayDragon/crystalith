@@ -463,6 +463,9 @@
                 "api_key": {
                   "type": "string"
                 },
+                "base_url": {
+                  "type": "string"
+                },
                 "timeout": {
                   "type": "number"
                 }
