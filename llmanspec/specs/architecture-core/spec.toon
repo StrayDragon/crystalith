@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "architecture-core"
 purpose: "定义 Crystalith v2 前后端基础结构约束：Bun/Elysia feature routers、web workspace domains、依赖方向与 TS 工具链。只覆盖结构与边界，不覆盖业务语义。"
 valid_scope[2]: apps/,packages/
-requirements[7]{req_id,title,statement}:
+requirements[8]{req_id,title,statement}:
   r1,"Backend follows feature-sliced layout","后端 MUST 使用 `apps/server/src/features/<feature>/router.ts` 作为该域的 HTTP 路由入口；跨域共享放在 `apps/server/src/shared/`、`rag/`、`ai/`、`db/`。"
   r2,"Dependency direction is one-way","`features` MUST NOT 依赖 web 应用层；`shared` MUST NOT 依赖 `features`。仅类型标注可在 `import type` / 等价边界中例外。"
   r3,Router aggregation is centralized,"所有后端路由 MUST 在 `apps/server/src/server.ts`（`createApp`）统一挂载，避免多入口隐式依赖链。"
@@ -10,7 +10,8 @@ requirements[7]{req_id,title,statement}:
   r5,Frontend app/shared boundaries stay thin,"`apps/web/src/app` 仅负责入口装配；跨 domain 复用 MUST 放到 `apps/web/src/shared` 或 `apps/web/src/features/workspace/shared`。"
   r6,Workspace state uses sliced Zustand stores,"复杂工作区状态 MUST 按 slice 组织并通过 selector 访问，避免全局重渲染与循环依赖。"
   r7,TypeScript toolchain version,"server/web/shared workspaces MUST 使用 `typescript` `^7` 作为 devDependency；tsconfig `moduleResolution` MUST 为 `bundler`。"
-scenarios[7]{req_id,id,given,when,then}:
+  r_outbound_fetch_ssot,Non-LLM outbound HTTP uses outboundFetch,"新增或修改的非 LLM 出站 HTTP 客户端（搜索、URL 抓取、网页抽取、同类中间件）MUST 使用 `apps/server/src/shared/net/outbound-fetch.ts` 的 `outboundFetch`（或经其包装的 helper，如 `fetchWithRedirectGuard`）。MUST NOT 在这些路径直接调用全局 `fetch` 绕过代理合约。AI SDK / LLM / embedding provider 路径本阶段不受此约束。"
+scenarios[8]{req_id,id,given,when,then}:
   r1,"add-a-new-backend-feature","","开发者新增一个后端 feature","该 feature SHALL 以 `features/<feature>/router.ts` 作为路由入口"
   r2,"import-layering-is-enforced","","代码引入了跨层依赖（如 `shared` 导入 `features`）","系统 SHALL 视为违规并要求修正"
   r3,"register-a-new-route","","开发者增加一个新的 API 路由","路由 SHALL 在 `server.ts` 统一聚合注册"
@@ -18,3 +19,4 @@ scenarios[7]{req_id,id,given,when,then}:
   r5,"place-cross-feature-ui-reuse","","需要跨 feature 复用组件或工具","复用代码 SHALL 放入 `src/shared` 或 `features/workspace/shared`"
   r6,"add-a-new-workspace-state-slice","","UI 需要新增一类复杂的工作区状态","状态 SHALL 以 slice 组织并通过 selector 访问"
   r7,"check-tsc-major","","检查各 workspace package.json 的 typescript","版本范围 SHALL 为 `^7`"
+  r_outbound_fetch_ssot,"new-non-llm-http-client","","开发者新增非 LLM 出站 HTTP 调用","实现 SHALL 经 outboundFetch 或已包装 helper，而非裸 fetch"

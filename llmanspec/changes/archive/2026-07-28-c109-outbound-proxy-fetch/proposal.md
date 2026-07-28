@@ -1,6 +1,10 @@
 ---
 depends_on: []
 status: designed
+branch: sdd/c109-outbound-proxy-fetch
+base_sha: 5851bbd259781abcf768356f1c19c6831f61b6e5
+checkpointed: true
+checkpoint_sha: 5851bbd259781abcf768356f1c19c6831f61b6e5
 ---
 
 ## Why

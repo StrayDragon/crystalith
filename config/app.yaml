@@ -272,6 +272,9 @@ optional_services: {}
 
 # ----------------------------------------------------------------------------
 # Proxy settings (YAML anchor for optional reuse)
+# Outbound non-LLM HTTP (search / URL fetch / extractors) reads this via
+# apps/server/src/shared/net/outbound-fetch.ts. socks5_url is ignored for now.
+# LLM / embedding providers do NOT use this by default (c109).
 # ----------------------------------------------------------------------------
 proxy_settings: &default_proxy
   enabled: false
