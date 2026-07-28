@@ -156,6 +156,11 @@ export const ResearchEvidenceSchema = z
       .string()
       .optional()
       .openapi({ description: desc('research.evidence_snippet', '证据摘要片段') }),
+    /** Truncated page body from fetchPage (same-URL upgrade; keeps snippet). */
+    content: z
+      .string()
+      .optional()
+      .openapi({ description: desc('research.evidence_content', '网页正文（截断后）') }),
     url: z
       .string()
       .optional()
@@ -428,6 +433,18 @@ export const ResearchRunSchema = z
     maxSearches: z.number().int().positive(),
     maxNodes: z.number().int().positive(),
     searchesUsed: z.number().int().nonnegative().default(0),
+    /** Independent page-fetch budget (c107); does not consume maxSearches. */
+    maxPageFetches: z
+      .number()
+      .int()
+      .positive()
+      .openapi({ description: desc('research.max_page_fetches', '读页次数上限') }),
+    pagesUsed: z
+      .number()
+      .int()
+      .nonnegative()
+      .default(0)
+      .openapi({ description: desc('research.pages_used', '已成功读页次数') }),
     nodes: z.array(ResearchNodeSchema).default([]),
     edges: z.array(ResearchEdgeSchema).default([]),
     /** Run-level evidence pool; node.evidenceIds index into this list (EV1). */
@@ -482,6 +499,8 @@ export const ResearchRunSchema = z
       maxSearches: 20,
       maxNodes: 30,
       searchesUsed: 0,
+      maxPageFetches: 30,
+      pagesUsed: 0,
       nodes: [],
       edges: [],
       evidences: [],
@@ -507,6 +526,17 @@ export const ResearchRunSummarySchema = z
     maxSearches: z.number().int().positive(),
     maxNodes: z.number().int().positive(),
     searchesUsed: z.number().int().nonnegative().default(0),
+    maxPageFetches: z
+      .number()
+      .int()
+      .positive()
+      .openapi({ description: desc('research.max_page_fetches', '读页次数上限') }),
+    pagesUsed: z
+      .number()
+      .int()
+      .nonnegative()
+      .default(0)
+      .openapi({ description: desc('research.pages_used', '已成功读页次数') }),
     confirmKind: z.enum(['budget', 'expand_branch', 'reexpand']).nullable().optional(),
     modelId: z.string().nullable().optional(),
     failureReason: z.string().nullable().optional(),

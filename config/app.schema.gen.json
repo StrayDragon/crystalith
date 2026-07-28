@@ -774,10 +774,14 @@
       }
     },
     "research": {
-      "description": "Deep Research 运行时：进度账本保留、支路并行度、可选拆解模型（默认继承 chat）等",
+      "description": "Deep Research 运行时：进度账本保留、支路并行度、读页预算比、work_unit 步数、token 预算、可选拆解模型等",
       "default": {
         "progressEventRetain": 200,
-        "parallelBranchUnits": 2
+        "parallelBranchUnits": 2,
+        "pageRatio": 1.5,
+        "workUnitMaxSteps": 12,
+        "nodeContentTokenBudget": 32768,
+        "nodeSummaryTokenBudget": 65536
       },
       "type": "object",
       "properties": {
@@ -794,6 +798,26 @@
         "decomposeModelId": {
           "description": "主题自动拆解所用模型 id；省略或空字符串时继承 models.defaults.chat",
           "type": "string"
+        },
+        "pageRatio": {
+          "description": "读页预算 = ceil(maxSearches × pageRatio)",
+          "default": 1.5,
+          "type": "number"
+        },
+        "workUnitMaxSteps": {
+          "description": "节点 work_unit 工具环最大步数",
+          "default": 12,
+          "type": "number"
+        },
+        "nodeContentTokenBudget": {
+          "description": "单节点网页正文合计 token 上限",
+          "default": 32768,
+          "type": "number"
+        },
+        "nodeSummaryTokenBudget": {
+          "description": "节点短综合证据上下文 token 上限",
+          "default": 65536,
+          "type": "number"
         }
       }
     }

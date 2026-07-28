@@ -107,6 +107,8 @@ describe('terminal node labels (r435)', () => {
       maxSearches: 20,
       maxNodes: 30,
       searchesUsed: 2,
+      maxPageFetches: 30,
+      pagesUsed: 0,
       nodes: [
         {
           id: 'node_r',
