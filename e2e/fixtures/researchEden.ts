@@ -135,3 +135,11 @@ export function readRidFromUrl(page: Page): number | null {
   const rid = Number(new URL(page.url()).searchParams.get('rid'));
   return Number.isFinite(rid) && rid > 0 ? rid : null;
 }
+
+/** Lab route `/research-lab/:notebookId` — prefer over notebooks[0] after compose. */
+export function readNotebookIdFromLabUrl(page: Page): number | null {
+  const m = new URL(page.url()).pathname.match(/\/research-lab\/(\d+)/u);
+  if (!m?.[1]) return null;
+  const id = Number(m[1]);
+  return Number.isFinite(id) && id > 0 ? id : null;
+}
