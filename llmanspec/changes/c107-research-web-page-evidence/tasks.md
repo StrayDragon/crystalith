@@ -3,7 +3,7 @@
 ## Propose（本阶段）
 
 - [x] proposal + design + seams 确认
-- [ ] live specs（runtime 新 req）+ `change start` + validate
+- [x] live specs（runtime r337–r340）+ `change start` + validate
 
 ## Apply（后续 `llman-sdd-apply`）
 

@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "deep-research-runtime"
 purpose: ResearchRun HTTP/SSE 运行时：创建/列表/图命令口/报告/revisions 与编排约束（对齐 Lab Compose 外网优先默认）
 valid_scope[2]: src/,tests/
-requirements[37]{req_id,title,statement}:
+requirements[41]{req_id,title,statement}:
   r300,ResearchRun is process SSOT,系统 MUST 以 notebook 作用域的 ResearchRun 作为深研过程 SSOT（图、checkpoint、权威报告与 citation map 挂在 Run 上）；MUST NOT 把长跑过程态的唯一权威塞进 Output 行。
   r301,Create replaces 501 stub,"POST /v2/notebooks/:nid/research MUST 在合法 notebook 下创建 ResearchRun 并返回可追踪 id 与初始状态；MUST NOT 再以 501 NOT_IMPLEMENTED 作为成功创建路径。"
   r302,List and get runs for task inbox,系统 MUST 提供 notebook 作用域的 listRuns 与 getRun；缺少 notebook 作用域时 MUST 拒绝全表列举。
@@ -40,7 +40,11 @@ requirements[37]{req_id,title,statement}:
   r334,"Confirm-gated request-reexpand","系统 MUST 提供 request-reexpand 命令口（POST …/request-reexpand 或等价），使 Run 进入 awaiting_confirm 且 confirmKind=reexpand；用户 approve_reexpand MUST 经结构化规划追加 research 节点（受 maxNodes）并 graph_patch，skip_reexpand MUST 不新增支路并允许继续收束；规划失败 MUST NOT 伪造多支路；MUST NOT 在 tool execute 中静默改图。"
   r335,"Revision fork creates new Run","系统 MUST 提供从某 revision 派生新 ResearchRun 的命令口（POST …/revisions/:revId/fork-run 或等价）；新 Run MUST 拷贝该 revision 快照的 graph 与 report（若有）以及源 Run 的 topic/预算/modelId 等创建配置，searchesUsed MUST 重置为 0 且初始 status MUST 为 queued；源 Run 的图/报告/revisions MUST 保持不变；默认 MUST NOT 自动 schedule；可选 schedule 或独立 schedule 口 MAY 仅对 queued Run 启动内核；图中 evidence 引用 MUST 在新 Run 作用域内可用（拷贝并 remap 或等价）。"
   r336,"Per-run LLM queue and write lock","当 parallelBranchUnits>1 时，同一 ResearchRun 上并发的支路 work-unit MUST 经 per-Run LLM 队列串行化模型调用，并 MUST 对 persistGraph/evidence/writeBack 使用 per-Run 写锁；不同 Run 之间 MUST NOT 因此互斥；cancel/prune MUST 仍能中止进行中的单元；节点 chat 与 work-unit 互斥 MUST 保留。"
-scenarios[60]{req_id,id,given,when,then,feature}:
+  r337,"fetchPage via ExtractorFactory","当 allowWeb 为 true 时，ResearchNodeAgent 的 work_unit 与 node_chat MUST 暴露 fetchPage（或等价）Work 工具以读取给定 URL 正文；实现 MUST 复用既有 ExtractorFactory 回退链（readability→jina→firecrawl 或配置顺序）；MUST NOT 在 research 模块内另写第二套网页爬虫；单页抽取失败 MUST 保留已有 SERP 证据并允许单元继续，MUST NOT 仅因此将整 work-unit 或整 Run 立即 failed。"
+  r338,"Page fetch budget independent of searches","创建 ResearchRun 时 MUST 计算并持久化 maxPageFetches=max(1,ceil(maxSearches×pageRatio))（pageRatio 来自配置，默认 1.5）且 pagesUsed 初始为 0；成功读页 MUST 递增 pagesUsed；每个 work-unit 开始时 MUST 计算每节点读页软上限 max(1,ceil(remainingPages/remainingLiveResearchNodes)) 并强制遵守；读页触顶 MUST NOT 进入 confirmKind=budget，MUST NOT 消耗 maxSearches；fork-run 时 pagesUsed MUST 重置为 0 并拷贝或按公式重算 maxPageFetches。"
+  r339,"Evidence content token upgrade","web 证据在 fetchPage 成功后 MUST 在同 URL 证据上行写入截断正文 content 并保留原 snippet；节点内 web content 合计 MUST 受 nodeContentTokenBudget 约束（默认 32768 token，配置化，使用项目既有 tokenizer）；短综合喂给模型的证据上下文 MUST 受 nodeSummaryTokenBudget 约束（默认 65536 token）；短综合 MUST 能区分仅有 snippet 与已有 content；超限时 MUST 截断本页 content 而非丢弃 SERP 命中。"
+  r340,"Agent-chosen page reads thin sufficiency","work_unit 工具环 MUST 由 agent 自选值得阅读的 URL 调用 fetchPage，MUST NOT 在运行时对每次 webSearch 结果自动读取 Top-N；工具环步数 MUST 取配置 workUnitMaxSteps（默认 12）；指令 MUST 向 agent 暴露剩余读页预算与本节点软上限，并要求在已读正文基础上薄判断是否足够再决定是否继续检索。"
+scenarios[68]{req_id,id,given,when,then,feature}:
   r300,"run-holds-graph-and-report",用户已创建一次深研 Run,系统推进研究并生成报告,图与权威报告及 citation map 均挂在该 ResearchRun 上，而非仅存在于 Output 行,true
   r301,"create-returns-run-id",notebook 存在且请求合法,客户端 POST 创建深研,系统返回 ResearchRun id 与初始状态且不得以 501 作为成功路径,true
   r302,"list-requires-notebook",系统中存在多个 notebook 的 Run,客户端省略 notebook 作用域调用 list,系统拒绝全表列举,true
@@ -101,3 +105,11 @@ scenarios[60]{req_id,id,given,when,then,feature}:
   r336,"parallel-drain-completes-all","Run 含至少两个待执行 research 节点且 parallelBranchUnits>=2",drain 完成,每个节点均写回且 merge 边仍在,true
   r336,"llm-calls-serialized-per-run",同一 Run 两支路几乎同时进入短综合,观察 LLM 调用,任意时刻该 Run 至多一个 LLM 进行中,true
   r336,"parallel-cancel-aborts",并行 drain 进行中,用户 cancel,活动单元中止且 status 进入 cancelled,true
+  r337,"fetchpage-uses-extractor-factory",allowWeb 的 work_unit 需要读某 URL,agent 调用 fetchPage,走 ExtractorFactory 且 research 内无第二套爬虫实现,true
+  r337,"fetchpage-failure-keeps-snippet",已有同 URL 的 SERP evidence 且抽取失败,fetchPage 返回,原 snippet 证据仍在且单元可继续,true
+  r338,"max-page-fetches-from-ratio",创建 depth=medium 且 pageRatio=1.5 的 Run,查看 Run 字段,maxPageFetches 为按公式由 maxSearches 算出的值且 pagesUsed=0,true
+  r338,"page-soft-cap-per-node",剩余 6 次读页且 3 个活 research 节点,某节点 work-unit 开始,该节点读页软上限为 2,true
+  r338,"page-cap-no-budget-confirm",pagesUsed 已达 maxPageFetches,agent 再请求读页,拒绝或跳过读页且 Run 不因读页进入 confirmKind=budget,true
+  r339,"content-upgrades-same-url",webSearch 已写入某 URL snippet 后 fetchPage 成功,查看证据,同 URL 证据含 content 且 snippet 仍在,true
+  r339,"content-token-truncate",单页正文超过节点剩余 token 预算,写入 content,content 被截断至预算内且 SERP 命中保留,true
+  r340,"no-auto-top-n-fetch",webSearch 返回多条命中,运行时未另配置自动读,系统不自动对其 Top-N 调用 fetchPage,true
