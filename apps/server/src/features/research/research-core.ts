@@ -212,6 +212,8 @@ export function serializeRun(row: RunRow): ResearchRun {
     maxSearches: row.maxSearches,
     maxNodes: row.maxNodes,
     searchesUsed: row.searchesUsed,
+    maxPageFetches: row.maxPageFetches,
+    pagesUsed: row.pagesUsed,
     nodes: graph.nodes as ResearchNode[],
     edges: graph.edges as ResearchEdge[],
     evidences: listEvidences(row.id),
@@ -241,6 +243,8 @@ export function serializeRunSummary(row: RunRow): ResearchRunSummary {
     maxSearches: row.maxSearches,
     maxNodes: row.maxNodes,
     searchesUsed: row.searchesUsed,
+    maxPageFetches: row.maxPageFetches,
+    pagesUsed: row.pagesUsed,
     confirmKind: (row.confirmKind as 'budget' | 'expand_branch' | 'reexpand' | null) ?? null,
     modelId: row.modelId ?? null,
     failureReason: row.errorMessage ?? null,
@@ -308,6 +312,7 @@ export function insertEvidence(
       kind: evidence.kind,
       title: evidence.title,
       snippet: evidence.snippet ?? null,
+      content: evidence.content ?? null,
       url: evidence.url ?? null,
       sourceId: evidence.sourceId ?? null,
       chunkId: evidence.chunkId ?? null,
@@ -315,6 +320,62 @@ export function insertEvidence(
     })
     .run();
   return { ...evidence, id };
+}
+
+/**
+ * Upgrade same-URL web evidence with truncated page body (c107).
+ * Finds existing web evidence by runId+url; updates content (and title if provided);
+ * otherwise inserts a new web row.
+ */
+export function upsertWebEvidenceContent(
+  runId: number,
+  notebookId: number,
+  nodeId: string,
+  url: string,
+  title: string,
+  content: string,
+): ResearchEvidence {
+  const existing = db()
+    .select()
+    .from(researchEvidences)
+    .where(
+      and(
+        eq(researchEvidences.runId, runId),
+        eq(researchEvidences.kind, 'web'),
+        eq(researchEvidences.url, url),
+      ),
+    )
+    .get();
+
+  if (existing) {
+    db()
+      .update(researchEvidences)
+      .set({
+        content,
+        title: title.trim() || existing.title,
+      })
+      .where(eq(researchEvidences.id, existing.id))
+      .run();
+    return {
+      id: existing.id,
+      kind: 'web',
+      title: title.trim() || existing.title,
+      snippet: existing.snippet ?? undefined,
+      content,
+      url: existing.url ?? url,
+      sourceId: existing.sourceId ?? undefined,
+      chunkId: existing.chunkId ?? undefined,
+      collectedAtNodeId: existing.collectedAtNodeId ?? undefined,
+    };
+  }
+
+  return insertEvidence(runId, notebookId, {
+    kind: 'web',
+    title: title.trim() || url,
+    content,
+    url,
+    collectedAtNodeId: nodeId,
+  });
 }
 
 export function listEvidences(runId: number): ResearchEvidence[] {
@@ -328,6 +389,7 @@ export function listEvidences(runId: number): ResearchEvidence[] {
       kind: e.kind as 'web' | 'chunk',
       title: e.title,
       snippet: e.snippet ?? undefined,
+      content: e.content ?? undefined,
       url: e.url ?? undefined,
       sourceId: e.sourceId ?? undefined,
       chunkId: e.chunkId ?? undefined,

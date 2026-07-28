@@ -3,7 +3,8 @@ depends_on: []
 status: designed
 branch: sdd/c107-research-web-page-evidence
 base_sha: 5851bbd259781abcf768356f1c19c6831f61b6e5
-checkpointed: false
+checkpointed: true
+checkpoint_sha: 5851bbd259781abcf768356f1c19c6831f61b6e5
 ---
 
 ## Why

@@ -485,6 +485,9 @@ export const researchRuns = sqliteTable(
     maxSearches: integer('max_searches').notNull(),
     maxNodes: integer('max_nodes').notNull(),
     searchesUsed: integer('searches_used').notNull().default(0),
+    /** Independent page-fetch budget (c107). */
+    maxPageFetches: integer('max_page_fetches').notNull(),
+    pagesUsed: integer('pages_used').notNull().default(0),
     graph: json<ResearchGraphJson>('graph'),
     checkpoint: json<ResearchCheckpointJson | null>('checkpoint'),
     report: json<ResearchReportJson | null>('report'),
@@ -521,6 +524,8 @@ export const researchEvidences = sqliteTable(
     kind: text('kind', { enum: ['web', 'chunk'] }).notNull(),
     title: text('title').notNull(),
     snippet: text('snippet'),
+    /** Truncated page body from fetchPage (c107). */
+    content: text('content'),
     url: text('url'),
     sourceId: integer('source_id'),
     chunkId: text('chunk_id'),

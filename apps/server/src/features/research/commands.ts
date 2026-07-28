@@ -22,10 +22,12 @@ import { and, count, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '../../db/index.ts';
 import { chunks, outputs, researchProgressEvents, researchRuns, sources } from '../../db/schema.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
+import { getPageRatio } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { splitTextToChunks } from '../outputs/render.ts';
 import { applyDecomposePlanToGraph, planTopicDecomposition } from './decompose.ts';
 import { resolveArtifactMarkdown, synthesizeAndComplete } from './report.ts';
+import { computeMaxPageFetches } from './research-budget.ts';
 import {
   abortAllChatsForRun,
   abortRunWorkUnit,
@@ -113,6 +115,7 @@ export function validateCreateBody(body: ResearchCreateBody): {
 export function createRun(notebookId: number, body: ResearchCreateBody): ResearchRun {
   requireNotebook(notebookId);
   const fields = validateCreateBody(body);
+  const maxPageFetches = computeMaxPageFetches(fields.maxSearches, getPageRatio());
   const row = db()
     .insert(researchRuns)
     .values({
@@ -126,6 +129,8 @@ export function createRun(notebookId: number, body: ResearchCreateBody): Researc
       maxSearches: fields.maxSearches,
       maxNodes: fields.maxNodes,
       searchesUsed: 0,
+      maxPageFetches,
+      pagesUsed: 0,
       modelId: fields.modelId,
       graph: emptyGraph(),
       checkpoint: null,
