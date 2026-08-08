@@ -1,8 +1,8 @@
 kind: llman.sdd.spec
 name: "workspace-ui-core"
-purpose: 定义 Workspace 顶层体验的不变量：模块化布局、头部入口、响应式策略、全局 UX 基线。该规范只覆盖“顶层框架与跨面板约束”，避免与各业务面板的交互细节耦合。
+purpose: 定义 Workspace 顶层体验的不变量：模块化布局、头部入口、响应式策略、全局 UX 基线。该规范只覆盖"顶层框架与跨面板约束"，避免与各业务面板的交互细节耦合。
 valid_scope[2]: src/,tests/
-requirements[14]{req_id,title,statement}:
+requirements[12]{req_id,title,statement}:
   r58,Workspace uses modular canvas layout,工作区 MUST 基于模块化画布布局，默认包含 Sources/Chat/Studio 核心模块。
   r116,Header remains compact and hosts search entry,顶部栏 MUST 提供 notebook 切换、布局锁定、全局入口，并 MUST 在中间区域提供统一的搜索/调研输入入口；窄屏下关键入口仍可访问。
   r153,"Mobile viewport uses single-panel navigation",当视口宽度处于移动端窄屏范围时（以 `md` 断点为界），Workspace MUST 以单面板模式呈现 Sources / Chat / Studio，并通过底部 TabBar 提供面板切换入口，以避免多列挤压造成不可用。
@@ -14,10 +14,8 @@ requirements[14]{req_id,title,statement}:
   r281,Workspace provides guided empty states,Workspace MUST 在首次进入与关键空态下提供分层引导，明确下一步动作与成功路径。
   r64,Workspace health status is visible and actionable,Workspace MUST 提供可见的健康入口，能展示核心依赖与可选服务的降级信息，并包含可执行的恢复建议。
   r70,Command palette is discoverable and includes core actions,Workspace MUST 提供可发现的命令面板（例如 Ctrl+K）并包含覆盖核心流程的最小动作集；其中与可选能力相关的动作 MUST 随运行时 capability 动态变化。
-  r74,Slides entry points follow runtime capability,Workspace 中的 slides 入口（如 onboarding、快捷按钮、Studio tool cards）MUST 跟随运行时 capability，而不是默认显示为可用。
   "workspace-topbar-e1-search-panel",Top bar MUST open E1 anchored search panel,"用户点击或聚焦顶栏搜索/调研输入时，Workspace MUST 打开锚定于顶栏的宽幅面板（E1）：面板层级与关闭策略 MUST 走统一 Layer（Esc 与遮罩可关闭）；MUST NOT 使用硬编码 z-index。"
-  "workspace-topbar-panel-tabs",E1 panel MUST expose Fast Search and Deep Research tabs,顶栏 E1 面板 MUST 至少提供「直接搜索」与「深度研究」两个 Tab；「直接搜索」MUST 为默认可用的网搜添来源路径；「深度研究」Tab 在本阶段可为壳，但 MUST 可发现。
-scenarios[20]{req_id,id,given,when,then,feature}:
+scenarios[17]{req_id,id,given,when,then,feature}:
   r58,"default-workspace-layout","",用户首次进入 Workspace,系统 SHALL 呈现模块化画布布局，并包含 Sources/Chat/Studio 核心模块的入口,true
   r116,"topbar-shows-search-entry","",用户进入 Workspace 桌面布局,系统 SHALL 在顶部栏中间区域展示可点击的搜索/调研输入入口,false
   r153,"mobile-shows-one-main-panel-at-a-time","",视口宽度 < 768px 且用户进入 Workspace,Workspace SHALL 仅展示一个主面板（Sources 或 Chat 或 Studio）,true
@@ -31,10 +29,7 @@ scenarios[20]{req_id,id,given,when,then,feature}:
   r274,"panel-interaction-details-are-not-defined-here","",评审者需要了解具体面板的交互契约,"系统 SHALL 引导其查阅 `workspace-ui-panels` 而非在本规范中堆叠细节",true
   r281,"no-backend-connection","",前端无法连接后端或连接状态为 error,Workspace SHALL 显示可见的错误提示,true
   r281,"notebook-exists-but-has-no-sources","",当前 notebook 下来源列表为空,Workspace SHALL 引导用户上传文件、从 URL 导入或使用搜索导入,true
-  r281,"sources-exist-but-no-session-yet","",当前 notebook 已有来源但尚无可用会话,Workspace SHALL 提供“一键开始会话”的明确入口,true
+  r281,"sources-exist-but-no-session-yet","",当前 notebook 已有来源但尚无可用会话,Workspace SHALL 提供"一键开始会话"的明确入口,true
   r64,"optional-services-are-degraded","",可选服务（如 chroma/redis/ollama/searxng）处于 degraded/unknown,Workspace SHALL 呈现该状态与 recoveryHint,true
   r70,"open-command-palette","",用户触发 Ctrl+K（或等价入口）,系统 SHALL 打开命令面板,true
-  r74,"missing-slides-capability-shows-guidance-instead-of-a-broken","",`/v2/workspace/tools` 未返回 `SLIDES`，且 diagnostics / official catalog 提供 slides 相关恢复提示,客户端 SHALL 不渲染可直接打开的 slides 入口,true
   "workspace-topbar-e1-search-panel","click-opens-anchored-panel","",用户点击顶栏搜索输入,系统 SHALL 打开锚定顶栏的宽幅面板且可用 Esc 或遮罩关闭,false
-  "workspace-topbar-panel-tabs","default-tab-is-fast-search","",用户打开 E1 面板,系统 SHALL 展示直接搜索与深度研究 Tab，且直接搜索可用于发起网搜,false
-  "workspace-topbar-panel-tabs","deep-research-tab-visible","",用户打开 E1 面板并切换到深度研究,系统 SHALL 展示深度研究 Tab 内容（可为重建中壳），且不得因缺 Runtime 而整页崩溃,false

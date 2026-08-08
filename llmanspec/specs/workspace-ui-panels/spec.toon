@@ -1,56 +1,48 @@
 kind: llman.sdd.spec
 name: "workspace-ui-panels"
-purpose: 定义 Workspace 业务面板（Sources/Chat/Studio/Research 与引用交互）的最小 UI 契约：面板装配、流式反馈、状态与取消语义、错误可恢复路径。该规范聚焦“用户可观察行为与稳定边界”，不绑定具体组件实现。
+purpose: 定义 Workspace 业务面板（Sources/Chat/Studio/Research 与引用交互）的最小 UI 契约：面板装配、流式反馈、状态与取消语义、错误可恢复路径。该规范聚焦"用户可观察行为与稳定边界"，不绑定具体组件实现。
 valid_scope[2]: src/,tests/
-requirements[21]{req_id,title,statement}:
-  r59,Panel composition stays stable with topbar search entry,"Workspace MUST 以稳定的面板集合装配 Sources/Chat/Studio 等能力，并保持各面板的基本区域划分与入口可发现；网搜添来源 MUST 经由顶栏 E1 面板（仅 Fast/直接搜索）发现，而非嵌在来源栏主搜索条。深研入口 MUST NOT 再以顶栏 E1 deep Tab / DeepResearchDesk 形式提供；深研主表面入口 MUST 为 /research-lab（及等价烧瓶导航）。"
+requirements[19]{req_id,title,statement}:
+  r59,Panel composition stays stable with topbar search entry,"Workspace MUST 以稳定的面板集合装配 Sources/Chat/Studio 等能力，并保持各面板的基本区域划分与入口可发现；网搜添来源 MUST 经由顶栏 E1 面板（仅 Fast/直接搜索）发现，而非嵌在来源栏主搜索条；深研主表面入口 MUST 为 /research-lab（及等价烧瓶导航）。"
   r117,Streaming UX supports send/chunk/done/error and cancel,涉及流式输出的面板（如 Chat/Research）MUST 显式呈现 send/chunk/done/error 状态，并 MUST 支持用户取消以停止继续追加内容。
   r154,"Chat input supports /prompt directives as user-facing commands","Workspace 的 Chat 面板 MUST 允许用户在输入框中使用 `/prompt:<preset> <query>` 指令来请求受控的预设生成模式。"
   r189,Chat input provides command autocomplete for /prompt presets,"Workspace 的 Chat 输入框 MUST 使用 `GET /v2/commands` 获取命令列表，并在用户输入 `/` 或 `/prompt:` 前缀时提供自动补全 UI。"
   r220,System config UI allows users to manage prompt presets,"Workspace UI MUST 提供“系统配置”入口，并允许用户对 custom `/prompt:*` presets 执行 CRUD（触发词、描述、system prompt、启用状态）。"
-  r246,Chat panel renders plain assistant text plus Rivu mounts,Chat 面板 MUST 将 assistant `message.content` 作为纯文本/markdown 渲染，并 MUST 基于 session `sharedState.ui` 的 mounts 在消息气泡下方渲染结构化 UI。前端 MUST 不再解析 `message.content` 中的 legacy envelope。
+  r246,Chat panel renders plain assistant text plus mounts,"Chat 面板 MUST 将 assistant `message.content` 作为纯文本/markdown 渲染，并 MUST 基于 session `sharedState.ui` 的 mounts 在消息气泡下方渲染结构化 UI。"
   r264,"Streaming UX applies server-authoritative snapshots and deltas",当一次对话响应以流式方式生成时，Chat 面板 MUST 使用服务端发送的 `state_snapshot`/`state_delta` 驱动 UI，并以服务端稳定 `messageId` 关联消息与 mounts。
   r275,"Tool/action cards enforce confirmation and auto-exec whitelist","当消息包含 `tool_use` parts 时，Chat 面板 MUST： - 仅对宿主白名单内且标记为 `autoExecute=true` 的动作执行自动执行 - 对需要确认或非白名单动作提供显式确认入口 - 对每次执行展示对应 `toolResult` 的结果与错误恢复路径（如允许重试）"
   r282,Sources workflows are gated and explicit,Sources 相关操作 MUST 对来源未就绪/失败等情况显式 gating 并提供可恢复提示；依赖来源的 Studio/结构化生成入口在未选择 ready 来源时可禁用；Chat 发送 MUST NOT 仅因未勾选来源而禁用（未勾选时走 ungrounded QA）。
   r65,"Ingestion feedback is queue-based and deterministic",上传/抓取/搜索等 ingest 操作 MUST 以队列项呈现并可并发显示状态，且每个队列项 MUST 有确定的终态（done/error/cancelled）与重试入口。
   r71,Sources upload file type support is consistent and includes PDF,Workspace 的 Sources 上传入口 MUST 支持后端核心发行版的常见内置解析格式，且前端 `accept`、预过滤与提示文案 MUST 保持一致。 该支持集 SHALL 至少包含：`.txt/.md/.markdown` 与 `.pdf`（`application/pdf`），以及 `.csv`（`text/csv`）。
   r76,"Studio queue, rendering fallback, and export gating are explicit",Studio MUST 明确展示生成队列状态并支持取消；渲染 MUST 定义确定的回退顺序；导出选项 MUST 仅显示当前输出类型支持项。
-  "frontend-extractor-types-must-not-duplicate",Frontend MUST NOT keep stale duplicate type definitions that diverge from the SSOT,"前端 MUST NOT 在 apps/web 本地保留与 `@crystalith/shared` / shared-types（SSOT）重复且字段不全的类型定义（如 ExtractorInfoResponse 缺 priority/displayName/requiresApiKey/requiresService/recoveryHint 等字段）。重复类型 MUST 删除以消除混淆，统一从 `@crystalith/shared` 导入。"
-  r283,Citation UI distinguishes source count from chunk count,Chat 引用入口与引用详情弹层 MUST 同时展示唯一来源数与片段（citation/chunk）数，文案 MUST 避免将片段数表述为来源数（例如「来自 N 个来源 · K 个片段」）。
-  "studio-panel-lazy-loads-output-body","Studio panel MUST lazy-load output body",工作台 Studio/笔记列首屏 MUST 仅依赖 outputs 列表摘要渲染条目。用户选中或打开某条时 MUST 再请求详情拉取全文；已加载详情 SHOULD 缓存以避免重复请求。
-  "source-detail-summary-actions","Source detail MUST expose generate and refresh-regenerate",来源详情自动摘要区：无缓存时 MUST 提供「生成摘要」操作以 POST 生成；有缓存时 MUST 用既有刷新控件触发 POST 重新生成（MUST NOT 依赖 GET 产生副作用）。
-  "sources-panel-must-not-host-primary-web-search",Sources panel MUST NOT host primary web search,来源面板 MUST NOT 再承载用于「在网络中搜索新来源」的主搜索条，也 MUST NOT 再以 Deep/Fast 模式切换作为网搜/深研主入口；来源面板 MUST 专注库管理（添加 URL/上传/连接器/列表）。若保留本地过滤，placeholder MUST 表达筛选已有来源而非网搜。
-  "topbar-fast-search-reuses-web-ingest",Fast Search tab MUST reuse existing web search and ingest,E1「直接搜索」Tab MUST 使用与迁出前一致的网搜 API（SearXNG）与添加到来源的 ingest 路径；前端 MUST NOT 复制第二套独立的 SearXNG fetch 实现。失败与空结果 MUST 有明确用户可见反馈。
-  "deep-research-tab-is-shell-until-runtime",Deep Research tab MUST host DeepResearchDesk,E1「深度研究」Tab MUST 承载 DeepResearchDesk（创建、队列与打开 Run 详情的入口），并 MUST 通过 c76 ResearchRun API 创建与追踪任务；MUST NOT 再以「重建中/暂不可用」壳作为唯一交付，也 MUST NOT 调用已删除的 HITL Deep Research agent 编排。
-  "sources-must-not-host-deep-research-queue",Sources panel MUST NOT host deep research queue,来源面板 MUST NOT 再嵌深研任务队列、深研历史对话框或旧 HITL 深研详情作为主路径；深研入口与队列 MUST 仅经由顶栏 E1 deep tab / Desk 提供。
-  r290,"Topbar search is Fast-only",顶栏搜索/调研面板 MUST 仅提供直接搜索（Fast）网搜添来源能力；MUST NOT 再展示「深度研究」Tab，也 MUST NOT 挂载 DeepResearchDesk。
-scenarios[29]{req_id,id,given,when,then,feature}:
-  r59,"research-lab-entry-not-sources-bar",用户需要深研入口,在工作区查找入口,"系统 SHALL 通过烧瓶或 /research-lab 提供深研，而不是来源栏主搜索条或顶栏 deep Tab",false
-  r117,"cancel-stops-streaming","",用户在流式生成过程中点击取消,系统 SHALL 停止继续追加 chunk，并展示取消后的可恢复状态（如可重试）,true
-  r154,"user-can-send-a-prompt-message","","用户在 Chat 输入框中输入以 `/prompt:` 开头的内容并发送（无论是否打开自动补全）",UI SHALL 将该文本作为一次消息发送（不应在前端预过滤为“非法输入”）,true
-  r189,"tab-accepts-the-selected-suggestion","",用户打开补全菜单并选中某项命令,UI SHALL 将该命令的 `trigger` 插入到输入框中（替换当前 token）,true
-  r189,"disabled-commands-are-not-selectable","",补全列表中某条命令 `enabled=false`,UI SHALL 将其展示为 disabled,true
-  r220,"preset-crud-updates-autocomplete","",用户在“系统配置”中创建/更新/删除 custom preset,UI SHALL 刷新 `GET /v2/commands` 的缓存并更新补全列表,true
-  r246,"render-mounted-components-for-a-message","","`sharedState.ui` 中存在 `messageId` 指向某条 assistant message、且 `slot=\"inline\"` 的 mounts",Chat 面板 SHALL 在该消息正文下方渲染对应的 Rivu components,true
-  r246,"unknown-component-falls-back-safely","",`sharedState.ui` 中出现未注册的 component type 或 props 校验失败,Chat 面板 SHALL 使用安全回退渲染,true
-  r264,"streaming-restores-mounts-after-reload","",用户刷新页面后重新进入同一个 session,Chat 面板 SHALL 通过 `/ui/state` 恢复此前已持久化的 mounts,true
-  r264,"cancel-rolls-back-provisional-ui","",用户在流式生成过程中点击取消，且该次回答尚未 `done`,Chat 面板 SHALL 停止继续追加内容,true
-  r275,"auto-exec-runs-only-for-whitelisted-tools","",tool_use 标记为 `autoExecute=true` 但 `name` 不在白名单,Chat 面板 SHALL 不自动执行,true
-  r282,"chat-send-allowed-without-selection",用户未勾选任何来源但笔记本有来源,用户在 Chat 输入并发送,系统 SHALL 允许发送并走无 RAG 对话，且不得仅因未勾选而禁用发送,true
-  r282,"studio-still-gated-without-ready-sources",用户未选择任何 ready 来源,用户打开依赖来源的 Studio/结构化生成入口,系统 SHALL 禁用该入口或给出明确提示,true
-  r65,"parallel-ingestion-items-do-not-overwrite","",用户连续发起多次搜索或导入操作,系统 SHALL 为每次操作创建独立队列项并分别展示进度与结果,true
-  r71,"uploading-a-pdf-is-accepted-by-the-ui","",用户在 Sources 面板通过“选择文件”或“拖拽”方式上传 `.pdf`,UI SHALL 接受该文件并进入上传队列,true
-  r71,"uploading-a-csv-is-accepted-by-the-ui","",用户在 Sources 面板通过“选择文件”或“拖拽”方式上传 `.csv`,UI SHALL 接受该文件并进入上传队列,true
-  r71,"unsupported-formats-are-rejected-with-clear-feedback","",用户上传一个明确不支持的格式（如 `.docx`）,UI SHALL 拒绝该文件,true
-  r76,"rendering-falls-back-deterministically","",专用渲染器不可用或渲染失败,系统 SHALL 按既定顺序回退到通用渲染或原始 JSON，且不展示不支持的导出格式,true
-  "frontend-extractor-types-must-not-duplicate","stale-extractor-type-removed",apps/web 存在字段不全的本地 ExtractorInfoResponse,the change is applied,the stale type MUST be deleted and all imports MUST reference the complete `@crystalith/shared` version,true
-  r283,"citation-label-shows-sources-and-chunks",一条回答含 3 条 citation 且均来自同一 source,用户查看引用按钮或引用详情标题,UI SHALL 展示来源数为 1 且片段数为 3 的区分文案,true
-  "studio-panel-lazy-loads-output-body","open-fetches-detail",Studio 列已显示摘要列表,用户点击一条 output,前端 SHALL 请求详情并渲染全文，首屏列表请求 MUST NOT 以拉全文为前置,false
-  "source-detail-summary-actions","empty-shows-generate",GET 返回空态摘要,用户查看自动摘要区,界面 SHALL 展示生成摘要入口且不假装已有摘要正文,false
-  "source-detail-summary-actions","refresh-icon-regenerates",已展示缓存摘要,用户点击摘要区刷新图标,客户端 SHALL POST summary 并更新展示,false
-  "sources-panel-must-not-host-primary-web-search","sources-has-no-primary-web-search","",用户查看来源面板,界面 SHALL 不展示「在网络中搜索新来源」主搜索条，也不展示 Deep/Fast 网搜模式切换作为主入口,false
-  "topbar-fast-search-reuses-web-ingest","fast-search-can-add-source",顶栏 E1 直接搜索 Tab 已打开,用户提交网搜查询并选择结果添加到笔记本,系统 SHALL 走现有网搜与 ingest 路径将来源加入当前 notebook,false
-  "topbar-fast-search-reuses-web-ingest","searxng-error-is-visible",SearXNG 不可用或网搜失败,用户在直接搜索 Tab 发起查询,系统 SHALL 展示明确错误/降级提示且不静默空成功,false
-  "deep-research-tab-is-shell-until-runtime","desk-can-start-run",c76 合约可用且 notebook 合法,用户在深度研究 Tab 填写合法创建表并开始,系统 SHALL 创建 ResearchRun 并在 Desk 队列展示而非仅显示重建壳,false
-  "sources-must-not-host-deep-research-queue","sources-no-research-queue",用户在工作区,打开 Sources 面板,界面 SHALL 不展示深研队列或旧 HITL 深研历史主入口,false
-  r290,"topbar-has-no-deep-tab",用户打开顶栏搜索面板,查看 tabs,仅见直接搜索，不见深度研究 Tab 与 DeepResearchDesk,false
+  r283,Citation UI distinguishes source count from chunk count,Chat 引用入口与引用详情弹层 MUST 同时展示唯一来源数与片段（citation/chunk）数，并支持按来源分组或过滤。
+  "sources-bar-tab-model","Sources bar MUST use tabs (all/selected/history) with cross-tab enforcement","Sources 栏 MUST 使用 all/selected/history 三个 tab（默认 all），tab 间状态联动 MUST 遵守： - 拖动/添加/移除来源只允许在 all tab 发生 - selected 计数 MUST 基于 `selectedSourceIds` 动态计算 - history 仅记录最近 upload/import/query 动作，MUST NOT 作为选择来源的渠道；将历史条目添加回来源栏 SHOULD 支持（该动作仅更新来源栏视图，不触发后端搜索）；sources 列表滚动 MUST 由独立 scroll 状态管理。"
+  "frontend-inline-error-boundary",Frontend MUST provide inline error boundary,前端 MUST 提供内联错误边界（inline error boundary）渲染组件内错误并允许重试，MUST NOT 白屏。
+  "frontend-message-status-from-fetcher",Frontend MUST derive message status from fetcher/session snapshot,前端消息气泡状态（pending/streaming/done/error）MUST 派生自 fetcher/session snapshot 而非本地临时布尔标记，以保证多 tab 一致性与重连语义。
+  "workspace-sources-bar-gating","Sources workflows are gated by ready/error states with actionable recovery","Sources 栏内每个来源条目 MUST 展示： - `ready`：正常（含 source 显示信息） - `failed`：错误信息与可执行恢复提示 - `loading`（等待 embedding/解析完成）：旋转指示器，且不阻塞其它来源的操作 来源列表条目 MUST 提供“移除”与“重新生成摘要”等操作，仅当操作真实可用时呈现。"
+  "workspace-sources-panel-error-snapshot","Sources panel MUST expose error snapshot at panel level","Sources 面板 MUST 在面板层提供错误快照：某来源错误时面板头部或摘要区 SHALL 显示该来源失败总数/错误消息摘要，而不是仅依赖列表项上的小图标。"
+  "workspace-sources-drag-drop-add","Sources drag-and-drop MUST add to source list without upload","将文件拖入 Sources 栏/面板非上传区时，系统 MUST 仅把该文件加入来源列表（等待后续上传或转换为可检索来源），MUST NOT 自动触发上传或解析。"
+scenarios[23]{req_id,id,given,when,then,feature}:
+  r59,"default-panel-composition-visible","",用户进入 Workspace 桌面布局,系统 SHALL 呈现稳定的面板集合（Sources/Chat/Studio 等）且入口可发现,true
+  r117,"streaming-states-are-visible-and-cancellable","",用户发起一次流式生成,系统 SHALL 呈现 send/chunk/done/error 状态并允许取消,true
+  r154,"typing-prompt-directive-uses-preset","",用户在 Chat 输入框输入 `/prompt:stats 本月销量`,系统 SHALL 识别为预设指令并在发送时以预设模式执行,true
+  r189,"slash-command-completes","",用户在 Chat 输入框输入 `/`,系统 SHALL 展示可用 `/prompt:*` 命令自动补全列表,true
+  r220,"preset-crud-in-system-config","",用户进入系统配置并管理 prompt presets,系统 SHALL 支持对 custom preset 的增删改与启停,true
+  r246,"assistant-message-renders-plain-text-and-mounts","",用户收到一条 assistant 消息且 session 状态包含 `ui.mounts`,系统 SHALL 渲染纯文本内容并在消息下方渲染对应 mounts,true
+  r264,"snapshot-delta-drive-render","",一次流式响应进行中,前端 SHALL 以服务端 `state_snapshot`/`state_delta` 更新 UI 且消息与 mounts 关联稳定 `messageId`,true
+  r275,"auto-execute-tool-with-confirmation","",消息含 `tool_use` 且工具在白名单且 autoExecute=true,系统 SHALL 自动执行,true
+  r275,"tool-result-shows-error-and-retry","",工具执行失败,系统 SHALL 展示错误并提供重试或恢复路径,true
+  r282,"ungrounded-chat-is-allowed","",来源存在但用户未勾选任何来源,系统 SHALL 允许发送并走 ungrounded QA,true
+  r282,"no-ready-sources-disables-studio","",来源全部未 ready 或失败,Studio 入口/生成按钮 SHALL 禁用或引导用户先修复来源,true
+  r65,"upload-feedback-is-queue-based","",用户上传多个文件,系统 SHALL 以队列项展示每个文件的状态并支持失败重试,true
+  r71,"pdf-and-text-upload-supported","",用户选择 `.pdf` 或 `.txt` 文件上传,系统 SHALL 接受该文件并展示解析进度,true
+  r76,"studio-queue-visible-and-cancellable","",用户触发多个 Studio 生成,系统 SHALL 展示生成队列并允许取消单项,true
+  r76,"export-options-match-output-type","",用户导出某输出类型,导出选项 SHALL 仅包含该类型支持的格式,true
+  r283,"citation-shows-source-and-chunk-counts","",Chat 回答带 citations,引用入口 SHALL 同时展示唯一来源数与片段数,true
+  "sources-bar-tab-model","drag-add-removes-only-in-all-tab","","用户在 selected tab 拖动或尝试添加/移除来源",系统 SHALL 禁止该操作或切回 all tab 执行,true
+  "sources-bar-tab-model","selected-count-dynamic","","用户在 all tab 勾选/取消勾选来源",selected tab 计数 SHALL 动态反映 selectedSourceIds,true
+  "frontend-inline-error-boundary","inline-error-render",渲染某组件抛错,前端渲染该组件位置,SHALL 显示内联错误 + 重试，不白屏,true
+  "frontend-message-status-from-fetcher","status-from-fetcher",多 tab 查看同一 session,消息状态渲染,SHALL 由 fetcher/session snapshot 派生保持一致,true
+  "workspace-sources-bar-gating","failed-source-shows-recovery","某来源 embedding 失败",用户查看 Sources 栏,"该条目 SHALL 展示错误信息与恢复提示（如重试/移除）",true
+  "workspace-sources-panel-error-snapshot","panel-error-summary","多个来源失败",用户查看 Sources 面板,"面板级错误快照 SHALL 汇总失败数与摘要",true
+  "workspace-sources-drag-drop-add","drag-adds-without-upload","用户拖入一个新文件到来源栏非上传区",系统处理拖放,"SHALL 仅加入列表、不触发上传",true

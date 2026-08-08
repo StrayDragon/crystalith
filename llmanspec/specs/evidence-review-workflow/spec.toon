@@ -1,8 +1,0 @@
-kind: llman.sdd.spec
-name: "evidence-review-workflow"
-purpose: 已落地的 low_similarity 空 citations 合约（c73 已移除 citations /context HTTP；结果级审阅 UI 愿景早于 Wave E 删除）。
-valid_scope[2]: src/,tests/
-requirements[1]{req_id,title,statement}:
-  "evidence-low-similarity-strip",Low similarity evidence review MUST strip citations,evidence 审查在 low_similarity 判定下 MUST 返回空 citations 列表，因为低相似度证据不应作为引用呈现给用户
-scenarios[1]{req_id,id,given,when,then,feature}:
-  "evidence-low-similarity-strip","low-sim-evidence",检索结果最高 score 低于阈值,evidence 判定,"系统 SHALL 返回 citations=[] 并标记 noEvidenceReason=low_similarity",true

@@ -2,29 +2,24 @@ kind: llman.sdd.spec
 name: "generation-core"
 purpose: 定义统一生成主链路：上下文解析、结构化生成、后处理、引用映射、持久化，以及 QA/outputs 与 preference 的一致语义（Refine HTTP 已于 c73 移除）。
 valid_scope[2]: src/,tests/
-requirements[21]{req_id,title,statement}:
+requirements[16]{req_id,title,statement}:
   r31,Output generation follows deterministic node pipeline,"结构化输出 MUST 遵循 `ResolveContext -> Generate -> Postprocess -> MapCitations -> Persist` 逻辑顺序。"
   r89,Source scope is explicit and validated,生成/问答请求中的 sourceIds 语义 MUST 明确且可校验：非空列表 MUST 限定检索范围；缺失或空列表对 QA 表示 ungrounded（无 RAG）；非法或越权 id MUST 返回错误。
   r126,"Preference tuning is table-driven",`preference` MUST 通过集中 tuning 表映射到检索与重试默认值。
   r162,Explicit request knobs override defaults,请求显式给定 `topK/minScore` 等参数时 MUST 覆盖 preference 默认值。
   r197,"QA stream and non-stream completion logic is shared",流式与非流式 QA MUST 复用同一完成阶段逻辑，保证 citations/evidence/confidence 一致。
   r250,"Postprocessing is deterministic and citation-safe",后处理 MUST 先于引用映射，且对非法 citation 索引做清洗并保持非阻塞。
-  r265,Tool output types require a corresponding OutputTypePlugin,"对于 FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING 等“工具输出类型”，系统 MUST 要求存在可用的 `OutputTypePlugin` 才能生成结构化输出；当插件缺失/禁用/加载失败时，生成请求 MUST 失败并返回可执行的恢复提示。 错误响应 MUST 使用统一错误信封（`errorCode`, `message`, `details?`, `retryAfter?`），且： - HTTP status SHOULD 为 409（或等价“能力不可用”语义） - `details` MUST 包含 `outputType` 与推荐的 `requiredPluginId`（例如 `output-faq`） - `message` MUST 可直接面向用户显示"
-  "outputs-citation-tree-mapping",Citations MUST be mapped into content tree with camelCase Citation dicts,outputs 生成管线 MUST 递归遍历 content 对象，把每个 citations 数字索引数组替换为完整 Citation dict（camelCase 字段），并持久化映射后的 content；同时返回扁平 citations 数组。
-  "outputs-rag-failure-propagation",Outputs retrieval failure MUST propagate not dump all chunks,outputs 检索失败时 MUST 抛出错误使请求失败，MUST NOT 回退为选取 notebook 全部 chunk（违背检索子集意图）
-  "outputs-postprocess-field-level","Postprocess MUST do per-type field-level backfill",outputs 后处理 MUST 对每个输出类型逐字段补默认值（如 GUIDE 的 examples/exercises、MINDMAP 的 children），而非仅做顶层空检查后整体替换
-  "qa-context-stats-fields",ContextStats MUST use camelCase field names,QA ContextStats MUST 使用 camelCase 字段名 totalTokens/systemTokens/historyTokens/retrievalTokens/queryTokens/maxTokens/compressed，MUST NOT 使用无后缀的 total/system 等
-  "qa-inline-citation-fallback",QA MUST ensure inline citations when missing,"QA answer 无 [N] 形式内联引用时 MUST 追加 [1] 兜底标记（对齐 v1 _ensure_inline_citations）"
+  r265,Tool output types require a corresponding OutputTypePlugin,"对于 FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING 等“工具输出类型”，系统 MUST 要求存在可用的 `OutputTypePlugin` 才能生成结构化输出；当插件缺失/禁用/加载失败时，生成请求 MUST 失败并返回可执行的恢复提示，使用统一错误信封（见 workspace-api-contract r151），`details` MUST 包含 `outputType` 与推荐的 `requiredPluginId`（例如 `output-faq`），`message` MUST 可直接面向用户显示。"
+  "outputs-citation-mapping",Outputs MUST map LLM citation indices to full citation objects,"outputs 生成管线 MUST 将 LLM 输出的数字 citation 索引映射回完整 Citation 对象（仅附加被引用的 chunk）：递归遍历 content 树，把 citations 数字索引数组替换为完整 camelCase Citation dict，并持久化映射后的 content，同时返回扁平 citations 数组。"
+  "outputs-rag",Outputs RAG retrieval with failure propagation,"outputs 生成 MUST 通过 RAG 检索获取相关上下文（topK 由生成偏好调节），MUST NOT dump 全部 chunk 以避免上下文窗口溢出；检索失败 MUST 传播错误使请求失败，MUST NOT 回退为选取 notebook 全部 chunk（违背检索子集意图）。"
+  "outputs-postprocess",Outputs postprocess MUST backfill per-type fields and fall back,"outputs 后处理 MUST 对每个输出类型逐字段补默认值（如 GUIDE 的 examples/exercises、MINDMAP 的 children），而非仅做顶层空检查后整体替换；生成失败时 MUST 产出类型化 fallback 内容而非空结果。"
+  "qa-context-stats",ContextStats contract: shared SSOT with camelCase fields and real token counts,"ContextStats 类型 MUST 定义于 packages/shared（Zod SSOT），字段 MUST 为 camelCase：totalTokens/systemTokens/historyTokens/retrievalTokens/queryTokens/maxTokens/compressed（MUST NOT 使用无后缀的 total/system 等）；token 数值 MUST 来自真实 token 计数；compressed 标志 SHALL 在历史被截断/摘要时为 true。MUST NOT 在 server 本地平行定义同域类型。"
+  "qa-inline-citation-fallback",QA MUST ensure inline citations when missing,"QA answer 无 [N] 形式内联引用时 MUST 追加 [1] 兜底标记（对齐既有语义）"
   "qa-low-similarity-empty","Low similarity no-evidence MUST return empty citations","当 noEvidenceReason 为 low_similarity 时 MUST 返回 citations=[] 空数组，MUST NOT 返回检索到的 citations"
-  "qa-retrieve-before-generate",QA MUST gate retrieval then optionally generate,"QA 管线 MUST 在进入 LLM 之前先解析 sourceIds：当 sourceIds 非空时 MUST 先做确定性检索并判定 evidence；当 sourceIds 缺失或为空且笔记本仍有来源时 MUST 跳过检索并以无引用（citations=[]）进入 LLM 生成；当笔记本无任何来源时 MUST 返回 evidence=false 且 reason=no_sources 且不进入 LLM。"
-  "qa-no-evidence-reasons","QA MUST produce 5 distinct no-evidence reasons",当 evidence 为 false 时系统 MUST 从 5 种 reason 中确定一个并返回对应本地化回答：no_sources / embedding_empty / no_vector_hits / no_valid_chunks / low_similarity
-  "qa-confidence-score",QA MUST compute and return confidence score,当 evidence 为 true 时系统 MUST 计算并返回 confidence 置信度分数
-  "outputs-citation-mapping",Outputs MUST map LLM citation indices to full citation objects,outputs 生成管线 MUST 将 LLM 输出的数字 citation 索引映射回完整的 Citation 对象，而非附加全部检索 chunk
-  "outputs-postprocess",Outputs MUST run postprocess and fallback,outputs 生成管线 MUST 在生成后运行 postprocess（空内容 fallback + citation 索引清理），并在生成失败时产出类型化 fallback 内容
-  r_outputs_rag,Outputs RAG retrieval,结构化输出生成 MUST 通过 RAG 检索获取相关上下文 而非 dump 全部 chunk 以避免上下文窗口溢出 检索 MUST 支持 topK 参数并由生成偏好调节
-  r_outputs_citations,Outputs citations attached,结构化输出生成 MUST 把检索到的 chunk 作为 citations 附到生成结果以支持证据追溯
-  "context-stats-defined-in-shared","ContextStats type MUST be defined in packages/shared not server-local","The ContextStats type MUST be defined in packages/shared/src/schemas (consistent with the project Zod SSOT rule) and MUST NOT be defined only in apps/server/src/features/qa/retrieve-and-judge.ts as a server-local interface. The current server-local definition violates the AGENTS.md rule that forbids redefining types outside packages/shared. This type also provides the contract for the frontend to display token budget information."
-scenarios[23]{req_id,id,given,when,then,feature}:
+  "qa-retrieve-before-generate","QA MUST gate retrieval then optionally generate","QA 管线 MUST 在进入 LLM 之前先解析 sourceIds：当 sourceIds 非空时 MUST 先做确定性检索并判定 evidence；当 sourceIds 缺失或为空且笔记本仍有来源时 MUST 跳过检索并以无引用（citations=[]）进入 LLM 生成；当笔记本无任何来源时 MUST 返回 evidence=false 且 reason=no_sources 且不进入 LLM。"
+  "qa-no-evidence-reasons","QA MUST produce 5 distinct no-evidence reasons","当 evidence 为 false 时系统 MUST 从 5 种 reason 中确定一个并返回对应本地化回答：no_sources / embedding_empty / no_vector_hits / no_valid_chunks / low_similarity"
+  "qa-confidence-score","QA MUST compute and return confidence score","当 evidence 为 true 时系统 MUST 计算并返回 confidence 置信度分数"
+scenarios[21]{req_id,id,given,when,then,feature}:
   r31,"generation-pipeline-order-is-stable","",系统处理一次结构化输出生成请求,"各阶段 SHALL 按 `ResolveContext -> Generate -> Postprocess -> MapCitations -> Persist` 的顺序执行",true
   r89,"empty-source-ids-means-ungrounded-qa",QA 请求 sourceIds 缺失或为空且笔记本有来源,系统处理该请求,系统 SHALL 按 ungrounded 路径生成且不因空 scope 拒绝请求,true
   r126,"preference-maps-to-defaults","",请求选择某个 `preference`,系统 SHALL 从集中 tuning 表加载对应的检索与重试默认值,true
@@ -32,19 +27,17 @@ scenarios[23]{req_id,id,given,when,then,feature}:
   r197,"stream-and-non-stream-responses-are-consistent","",同一输入分别使用流式与非流式 QA 路径,系统 SHALL 在完成阶段返回一致的 citations/evidence/confidence 语义,true
   r250,"invalid-citations-are-sanitized","",模型输出包含非法 citation 索引或越界引用,系统 SHALL 在后处理阶段清洗并保持流程非阻塞,true
   r265,"missing-plugin-blocks-tool-output-generation","",客户端请求生成某工具输出类型但服务器未安装/未启用对应插件,系统 SHALL 返回失败响应,true
-  "outputs-citation-tree-mapping","persisted-citation-dicts-are-camelcase","content 树中某节点含 citations:[1]",管线持久化,写入的 Citation dict SHALL 使用 sourceId/sourceName/chunkId 等 camelCase 键,true
-  "outputs-rag-failure-propagation","retrieval-throws",retrieveWith 抛出错误,管线处理,系统 SHALL 传播错误使请求失败，而非 dump 全量 chunk,true
-  "outputs-postprocess-field-level","guide-missing-examples",LLM 输出 GUIDE 类型但 examples 为空,后处理阶段,系统 SHALL 为 examples 字段补默认值而非整体替换为 fallback,true
-  "qa-context-stats-fields","client-reads-context",客户端读取 done 事件的 context 字段,响应构建,系统 SHALL 使用 totalTokens/systemTokens 等 camelCase 字段名并含 compressed 布尔,true
+  "outputs-citation-mapping","llm-selects-subset","LLM 输出 citations 为 [1,3]",管线映射 citation,系统 SHALL 只附加第 1 和第 3 个检索 chunk 的 citation 而非全部,true
+  "outputs-citation-mapping","persisted-citation-dicts-are-camelcase","content 树中某节点含 citations:[1]",管线持久化,写入的 Citation dict SHALL 使用 sourceId/sourceName/chunkId 等 camelCase 键,true
+  "outputs-rag","large_notebook",notebook 含大量 chunk,用户生成输出,系统 SHALL 仅检索 topK 相关 chunk 进入 prompt,true
+  "outputs-rag","retrieval-throws",retrieveWith 抛出错误,管线处理,系统 SHALL 传播错误使请求失败，而非 dump 全量 chunk,true
+  "outputs-postprocess","guide-missing-examples",LLM 输出 GUIDE 类型但 examples 为空,后处理阶段,系统 SHALL 为 examples 字段补默认值而非整体替换为 fallback,true
+  "outputs-postprocess","generation-fails",LLM 生成抛出异常,postprocess 阶段处理,系统 SHALL 产出类型化 fallback 内容而非空结果,true
+  "qa-context-stats","client-reads-context",客户端读取 done 事件的 context 字段,响应构建,系统 SHALL 使用 totalTokens/systemTokens 等 camelCase 字段名并含 compressed 布尔,true
+  "qa-context-stats","no-server-local-duplication",retrieval 阶段计算 token 预算,server 构造 ContextStats 对象,它 MUST 使用 shared 类型且 MUST NOT 在 server 本地重声明同域接口,true
   "qa-inline-citation-fallback","answer-no-brackets","LLM answer 不含 [N]",后处理,"系统 SHALL 追加 [1] 兜底",true
   "qa-low-similarity-empty","low-similarity",检索 score 低于阈值,"判定 no-evidence","系统 SHALL 返回 citations=[]",true
+  "qa-no-evidence-reasons","five-reasons",检索结果空或无效,证据判定,"系统 SHALL 从 5 种 reason 中确定一个并返回对应本地化回答",true
   "qa-retrieve-before-generate","ungrounded-empty-selection",笔记本有已索引来源但请求未提供 sourceIds（或为空数组）,用户提问,"系统 SHALL 跳过 RAG 检索进入 LLM 生成，且返回 citations=[]",true
   "qa-retrieve-before-generate","no-sources-case",笔记本中无任何 source,用户提问,系统 SHALL 返回 evidence=false 且 reason=no_sources 的标准化回答，不进入 LLM 生成,true
-  "qa-no-evidence-reasons","low-similarity-case",检索结果 similarity_avg 低于阈值,用户提问,系统 SHALL 返回 evidence=false 且 reason=low_similarity 的标准化回答,true
   "qa-confidence-score","high-evidence-case",检索返回多个高相似度 chunk 跨越多 source,用户提问,"系统 SHALL 返回 evidence=true 且 confidence 为 0-1 分数",true
-  "outputs-citation-mapping","llm-selects-subset","LLM 输出 citations 为 [1,3]",管线映射 citation,系统 SHALL 只附加第 1 和第 3 个检索 chunk 的 citation 而非全部,true
-  "outputs-postprocess","generation-fails",LLM 生成抛出异常,postprocess 阶段处理,系统 SHALL 产出类型化 fallback 内容而非空结果,true
-  r_outputs_rag,large_notebook,notebook 含大量 chunk,用户生成输出,系统 SHALL 仅检索 topK 相关 chunk 进入 prompt,true
-  r_outputs_citations,citations_attached,检索到相关 chunk,生成完成,系统 SHALL 在输出结果附 citations,true
-  "context-stats-defined-in-shared","shared-import",the frontend or server needs to display or pass ContextStats,importing ContextStats from packages/shared,the import MUST succeed and fields MUST align with camelCase wire (totalTokens plus systemTokens plus historyTokens plus retrievalTokens plus queryTokens plus maxTokens plus compressed),true
-  "context-stats-defined-in-shared","no-server-local-duplication",the retrieval stage computes the token budget,the server constructs a ContextStats object,it MUST use the shared type and MUST NOT redeclare interface ContextStats locally in the server,true
