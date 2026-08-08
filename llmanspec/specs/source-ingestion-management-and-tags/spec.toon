@@ -2,13 +2,12 @@ kind: llman.sdd.spec
 name: "source-ingestion-management-and-tags"
 purpose: "定义来源管理与标签体系：列表、排序、过滤、chunks、删除、re-embed、tag CRUD 与绑定关系。该规范强调查询语义与失效规则可预测，避免因缓存或排序漂移导致 UI/服务不一致。"
 valid_scope[2]: src/,tests/
-requirements[14]{req_id,title,statement}:
+requirements[13]{req_id,title,statement}:
   r48,Source list query semantics are stable,来源列表 MUST 支持 tag 精确过滤与稳定排序（date/name/size/type + asc/desc）。
-  r106,"Source list can be epoch-cached",列表结果 MUST 基于 `sources_epoch` 缓存并在来源变更后 O(1) 失效。
+  r106,"Source list can be epoch-cached","列表结果 MUST 基于 `sources_epoch` 缓存；来源集合或 tag 相关变更成功后 MUST 使缓存 O(1) 失效并在下次查询重建。"
   r143,Chunks endpoint returns deterministic order,来源 chunks 接口 MUST 按 `chunk_index` 升序返回。
   r178,"Delete and re-embed keep storage and epochs consistent","删除 MUST 同时删 DB 与向量；re-embed MUST 使用既有 chunks 重算向量并维护 epoch。"
   r210,"Tag uniqueness is notebook-scoped and case-insensitive",同一 notebook 下 tag 名称 MUST 大小写不敏感唯一。
-  r238,Tag mutations invalidate source list caches,tag 创建/更新/删除/绑定/解绑成功后 MUST bump `sources_epoch`。
   r256,Source failures include diagnostic fields,来源在失败或不可恢复状态下 MUST 提供结构化诊断信息，以支持 UI 给出可操作的修复建议。
   r268,"Batch operations return per-item results and keep epoch consistent","批量删除、批量 re-embed 与 tag 绑定/解绑 MUST 返回逐项结果并保持 `sources_epoch` 失效语义可预测。"
   r277,Optional source dedup does not silently drop data,系统 MAY 支持来源去重，但在命中去重时 MUST 不得静默丢弃用户导入请求。
@@ -17,16 +16,15 @@ requirements[14]{req_id,title,statement}:
   "tag-binding-response-and-ownership",Tag binding MUST return v1 response shape and verify ownership,"tag binding MUST 返回 {count, results:[SourceBatchItemResult]} 结构，且 DELETE binding MUST 校验 source 属于该 notebook"
   "tags-uniqueness-and-ownership",Tag operations MUST enforce uniqueness and notebook ownership,"source tag 的创建和更新 MUST 强制名称唯一性（case-insensitive，返回 409），所有 tag 操作 MUST 校验 tag 属于指定 notebook"
   "tags-assign-idempotent",Tag assign and remove MUST be idempotent,tag 的 assign 和 remove 操作 MUST 验证 source 存在且具备幂等性
-scenarios[14]{req_id,id,given,when,then,feature}:
+scenarios[13]{req_id,id,given,when,then,feature}:
   r48,"list-sources-with-filters-and-sort","",用户按 tag 过滤并指定排序参数查询来源列表,系统 SHALL 返回稳定排序结果并按 tag 精确过滤,true
-  r106,"source-list-cache-invalidates-on-epoch-bump","",来源集合发生变更并 bump `sources_epoch`,系统 SHALL 使来源列表缓存 O(1) 失效并在下次查询重建,true
+  r106,"source-list-cache-invalidates-on-epoch-bump","",来源集合或 tag 发生变更并 bump `sources_epoch`,系统 SHALL 使来源列表缓存 O(1) 失效并在下次查询重建,true
   r143,"chunks-are-ordered-by-chunk-index","",客户端请求某来源的 chunks,系统 SHALL 按 `chunk_index` 升序返回结果,true
   r178,"re-embed-recomputes-vectors-without-changing-chunks","","用户对一个来源执行 re-embed",系统 SHALL 使用既有 chunks 重算向量并维护 epoch 一致性,true
   r210,"tags-are-unique-case-insensitively","",用户在同一 notebook 创建 tag `AI` 与 `ai`,系统 SHALL 将其视为冲突并保持大小写不敏感唯一性,true
-  r238,"tag-changes-invalidate-list-cache","",用户成功创建/更新/删除/绑定/解绑某个 tag,系统 SHALL bump `sources_epoch` 以使来源列表缓存失效,true
   r256,"source-ingestion-fails-with-stable-error-code","",某来源导入/解析/索引失败并进入 FAILED 状态,系统 SHALL 返回稳定的 `errorCode`,true
   r268,"batch-delete-returns-partial-failures","",用户发起批量删除且其中部分来源不可删除或不存在,系统 SHALL 返回逐项成功/失败结果,true
-  r277,"dedup-hit-requires-explicit-user-choice","",系统检测到新导入来源与既有来源 dedup_key 冲突,系统 SHALL 提供“复用既有来源”或“仍创建新来源”的明确选择（或等价机制）,true
+  r277,"dedup-hit-requires-explicit-user-choice","",系统检测到新导入来源与既有来源 dedup_key 冲突,系统 SHALL 提供"复用既有来源"或"仍创建新来源"的明确选择（或等价机制）,true
   "sources-reembed-requires-failed","reembed-ready-source",source 状态为 ready,"客户端请求 re-embed",系统 SHALL 返回 400 拒绝,true
   "sources-batch-per-item-results","batch-delete",客户端请求 batch delete,删除完成,"系统 SHALL 返回 per-item results 数组且使用 DELETE 方法",true
   "tag-binding-response-and-ownership","delete-binding-cross-notebook",source 属于其它 notebook,客户端请求 DELETE binding,系统 SHALL 拒绝（404 或 400）,true

@@ -8,7 +8,7 @@ requirements[45]{req_id,title,statement}:
   r302,List and get runs for task inbox,系统 MUST 提供 notebook 作用域的 listRuns 与 getRun；缺少 notebook 作用域时 MUST 拒绝全表列举。
   r303,Shared webSearch tool only,深研 Runtime 的外网检索 MUST 复用既有 searchWeb/SearXNG 实现；MUST NOT 在 research 模块内复制第二套 SearXNG fetch。
   r304,H1 explicit source and web toggles,创建 ResearchRun 时 MUST 接受显式 useNotebookSources 与 allowWeb；省略时默认 useNotebookSources=false、allowWeb=true（外网优先，对齐 Lab Compose）；sourceIds MUST 仅表示深研配置台内选择、MUST NOT 隐式绑定工作区勾选状态；当 useNotebookSources 为 true 且 sourceIds 为空时 MUST 拒绝创建；当 useNotebookSources 与 allowWeb 皆为 false 时 MUST 拒绝创建；需要笔记本来源时客户端 MUST 显式传 useNotebookSources=true。
-  r305,L1 depth tiers,系统 MUST 支持浅/中/深三档深度并映射为 maxSearches 与 maxNodes（浅 20/24、中 50/60、深 100/120）；默认档 MUST 为中。
+  r305,L1 depth tiers,系统 MUST 支持浅/中/深三档深度并映射为 maxSearches 与 maxNodes；档位映射 MUST 可配置（默认浅 20/24、中 50/60、深 100/120）；默认档 MUST 为中。
   r306,M1 confirm gates only,"待确认硬停 MUST 覆盖：外网搜索预算真触顶（searchesUsed≥maxSearches 且仍需花搜索）、主控扩展新支路、以及用户请求的 reexpand；budget 确认动作 MUST 为继续加购（抬高 maxSearches）或出报告；系统 MUST NOT 因波次结束仍有剩余搜索额度或逼近 maxSearches-1 而自动进入 confirmKind=budget；MUST NOT 恢复逐步审批计划或强制转化弹窗。"
   r307,Convert to note is PARAGRAPH with footnotes,显式 convertToNote MUST 将选定产物写入 Markdown PARAGRAPH Output；引用 MUST 按全局 citation map 序列化为 GFM 脚注形式；MUST NOT 在完成时自动写入笔记。
   r308,Convert to source is retrievable,显式 convertToSource MUST 将来源入库并进入可嵌入索引路径，使得后续对话检索能够命中转化内容。
@@ -30,7 +30,7 @@ requirements[45]{req_id,title,statement}:
   r324,Align ResearchRun contract to Lab inventory,"系统 MUST 根据 c80 inventory 中标为 fix-api 的项修正 ResearchRun Zod 与 HTTP/SSE 行为，使命令口与 Lab 设计语义一致；MUST 在本变更内使 apps/server/tests/research 全绿；MUST NOT 删除 /v2/notebooks/:nid/research* 主路由面。"
   r325,"Lab-only extras stay documented not silent","对 inventory 标为 lab-only/no-api 的能力，系统 MUST 在合约或 inventory 中显式记录为非 API 权威，MUST NOT 用未文档化的 501 或静默丢字段冒充已支持；标为 defer 的项 MUST 列出后续 change。"
   r326,"Topic auto-decompose after seed","seed 单结论 DAG 完成后，系统 MUST 通过结构化 LLM 规划将主题自动拆解为 research 角色节点：自 question 以 decompose/refine 边扩展，各活研究节点 MUST 以 merge 边汇入唯一 conclusion；节点总数 MUST 受 Run.maxNodes（depth→r305）约束；规划失败或输出非法时 MUST 回退为仅 question work-unit 路径且 MUST NOT 伪造多支路拓扑；拓扑权威 MUST 来自服务端 graph_patch 与 progress ledger，MUST NOT 以前端 timer/phase 为 SSOT；LLM MUST NOT 直接 mutate 图，仅允许经内核规划写回后 emit graph_patch。"
-  r327,"Parallel-capable branch work-units","系统 MUST 对图中全部非 pruned 的 research 角色节点执行 work-unit（检索/综合、writeBackNodeWork、graph_patch）；调度 MUST 跳过 conclusionStatus=pruned 节点；完成分支波次后若搜索预算未触顶 MUST 直接 synthesize 收束（或按其它非 budget 门控继续），MUST NOT 仅因仍有剩余搜索额度而进入 confirmKind=budget；MUST NOT 为收束便利删除 research→conclusion 的 merge 边；每单元 MUST 写入 progress ledger（unit_started/unit_finished/unit_skipped_pruned）。调度 MAY 同时推进最多 N 个节点（N 由配置 parallelBranchUnits 给出，默认 2，N=1 时等价串行）；同一 ResearchRun 上的 LLM 调用 MUST 串行（每 Run 至多一个进行中的 LLM）。"
+  r327,"Parallel-capable branch work-units","系统 MUST 对图中全部非 pruned 的 research 角色节点执行 work-unit（检索/综合、writeBackNodeWork、graph_patch）；调度 MUST 跳过 conclusionStatus=pruned 节点；完成分支波次后若搜索预算未触顶 MUST 直接 synthesize 收束（或按其它非 budget 门控继续，与 r306 的确认门控一致）；MUST NOT 为收束便利删除 research→conclusion 的 merge 边；每单元 MUST 写入 progress ledger（unit_started/unit_finished/unit_skipped_pruned）。调度 MAY 同时推进最多 N 个节点（N 由配置 parallelBranchUnits 给出，默认 2，N=1 时等价串行）；同一 ResearchRun 上的 LLM 调用 MUST 串行（每 Run 至多一个进行中的 LLM）。"
   r328,"LLM synthesize report no heuristic success","结案 MUST 经结构化 LLM 产出 ResearchReport 并在成功时将 Run 置为 completed；当结案模型调用失败或 cite 校验判定 synthesize_failed 时 MUST 将 Run 置为 failed 并暴露 failureReason；MUST NOT 在成功路径使用启发式证据清单作为权威报告；报告正文 token MUST NOT 进入 Run SSE（仍仅 report_ready + GET）。"
   r329,"Retry synthesize with optional modelId","系统 MUST 提供对结案失败 Run 的 retry-synthesize 命令口（POST …/research/:rid/retry-synthesize 或等价）；请求 MAY 含 modelId 并 MUST 写回 Run；重试 MUST 复用已有 graph 与 evidence 且 MUST NOT 重跑 decompose 或支路 work-unit；成功 MUST completed+report，再次失败 MUST 保持 failed；对非结案失败态 MUST 拒绝（RESEARCH_INVALID_STATE 或等价）。"
   r330,"Run modelId on create and synthesize","创建 ResearchRun 时 MUST 接受可选 modelId 并持久化；结案与 retry-synthesize MUST 使用 Run.modelId（省略时回落默认 chat/config）；retry 覆盖的 modelId MUST 写回 Run；GET Run MUST 暴露 modelId（若有）。"
@@ -55,7 +55,7 @@ scenarios[74]{req_id,id,given,when,then,feature}:
   r303,"websearch-shared",顶栏直接搜索与深研均需外网检索,深研 Runtime 发起 web 搜索,走与 sources 网搜相同的 searchWeb 实现,true
   r304,"toggles-require-explicit-selection",用户打开用来源开关但未在深研台勾选来源,尝试创建深研 Run,系统拒绝创建且不得静默改为仅外网,true
   r304,"omit-defaults-web-first",客户端仅传 topic、省略通道字段,POST 创建深研,Run 的 useNotebookSources=false 且 allowWeb=true,true
-  r305,"default-medium-tier",用户未指定深度档位,创建深研 Run,系统使用中档预算 maxSearches=50 与 maxNodes=60,true
+  r305,"default-medium-tier",用户未指定深度档位,创建深研 Run,系统使用默认中档预算（数值来自配置的默认映射）,true
   r306,"budget-confirm",Run 外网搜索预算已触顶且仍需搜索,主控需要继续消耗搜索额度,进入待确认并提供加购继续或出报告动作,true
   r306,"no-mid-wave-budget-confirm",波次结束且 searchesUsed 大于 0 但小于 maxSearches,观察 Run 状态,不因剩余额度进入 confirmKind=budget,true
   r307,"convert-note-footnotes",Run 已有带 citation map 的终稿,用户显式 convertToNote,写入 PARAGRAPH 且正文含 GFM 脚注投影,true
