@@ -1,5 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,r260,Web search mode is not Deep Research,"POST …/sources/search 的 mode 字段 MUST 仅表示网搜通道元数据（默认 Fast Research 或等价）；MUST NOT 用 mode=Deep Research（或同义）触发或冒充 ResearchRun 深研编排；本约束 MUST NOT 删除或削弱 /v2/notebooks/:nid/research* ResearchRun API。",null,null,null
-op_scenarios[1]{req_id,id,given,when,then,feature}:
-  r260,"search-mode-not-researchrun","客户端发起 sources.search","传入任意 mode","服务仅执行网搜/回传结果，不得创建 ResearchRun；ResearchRun 仍仅由 /research 创建口提供",true

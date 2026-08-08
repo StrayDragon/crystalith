@@ -1,6 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,"source-detail-summary-actions","Source detail MUST expose generate and refresh-regenerate",来源详情自动摘要区：无缓存时 MUST 提供「生成摘要」操作以 POST 生成；有缓存时 MUST 用既有刷新控件触发 POST 重新生成（MUST NOT 依赖 GET 产生副作用）。,null,null,null
-op_scenarios[2]{req_id,id,given,when,then,feature}:
-  "source-detail-summary-actions","empty-shows-generate",GET 返回空态摘要,用户查看自动摘要区,界面 SHALL 展示生成摘要入口且不假装已有摘要正文,false
-  "source-detail-summary-actions","refresh-icon-regenerates",已展示缓存摘要,用户点击摘要区刷新图标,客户端 SHALL POST summary 并更新展示,false

@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  add_requirement,"output-list-omits-full-content","Output list MUST omit full content","outputs（Studio 笔记）列表端点成功响应中的每个 item MUST NOT 包含完整 generation payload / 长 markdown 正文。item MUST 至少含标识与展示所需元数据（如 id、type、title、status、timestamps）；可选短 preview。完整正文 MUST 仅由单条详情端点返回。",null,null,null
-  add_requirement,"output-detail-returns-full-content","Output detail MUST return full content","GET 单条 output（notebook-scoped）MUST 返回渲染所需的完整内容字段。客户端在用户选中/打开条目前 MUST NOT 依赖 list 内嵌全文。",null,null,null
-op_scenarios[2]{req_id,id,given,when,then,feature}:
-  "output-list-omits-full-content","list-without-body","notebook 下存在含长正文的 output","客户端调用 list outputs","响应 items SHALL 不含完整正文大字段",false
-  "output-detail-returns-full-content","detail-has-body","同一 output 存在","客户端 GET 该 output 详情","响应 SHALL 含完整内容可供渲染",false

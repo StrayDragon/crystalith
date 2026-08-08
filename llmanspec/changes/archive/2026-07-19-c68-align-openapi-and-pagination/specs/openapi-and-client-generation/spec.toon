@@ -1,5 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,"openapi-route-docs-stay-synced","OpenAPI route docs stay synced with mounted Zod","对外列表与关键读写端点的 registerApiDoc（及路由 query/response Zod 挂载）MUST 与运行时契约同步：分页列表 MUST 文档化为 PaginatedSchema；文档 path MUST 与 handler 一致。MUST NOT 以过时 apiDocs 路径或裸数组响应描述误导 Scalar/外部消费者。",null,null,null
-op_scenarios[1]{req_id,id,given,when,then,feature}:
-  "openapi-route-docs-stay-synced","paginated-list-documented","messages 或 research 列表已改为 PaginatedSchema","检查对应 registerApiDoc responses","文档 SHALL 描述含 items/total 的分页信封而非仅 Message 数组",false

@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,r448,"Lab progress ledger panel","Eden 模式下 Lab MUST 将 GET …/research/:rid/progress 账本与/或 SSE progress 事件 surfaced 为可见的 timeline 或 metrics 面板（非仅 activity log）；面板 MUST 展示结构化进度事件（至少 kind、headline、时间戳，可选 nodeId）；加载 Run 时 MUST 拉取 progress  gap-fill，流式追加 MUST 与 ledger seq 对齐；MUST NOT 以 fixture LabPhase 定时百分比或前端 timer 作为 Eden Run 的权威进度来源。",null,null,null
-op_scenarios[3]{req_id,id,given,when,then,feature}:
-  r448,"eden-shows-progress-timeline",Eden Lab 已加载 running Run 且服务端有 progress 事件,用户打开进度面板,可见结构化事件列表而非仅 console log 文本,true
-  r448,"sse-appends-to-ledger-panel",客户端已订阅 Run SSE,收到 progress 事件,进度面板追加对应条目且 seq 单调,true
-  r448,"eden-not-phase-timer-authority",Eden 模式 Run 为 running,查看顶栏进度权威,进度来自 ledger 而非 PHASE_PROGRESS 映射,false

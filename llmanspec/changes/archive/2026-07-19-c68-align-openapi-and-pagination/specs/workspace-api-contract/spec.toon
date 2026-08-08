@@ -1,8 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  add_requirement,"list-endpoints-use-paginated-envelope","List endpoints MUST use PaginatedSchema envelope","notebook-scoped 或可增长的列表端点（至少包括 messages、sessions、sources、outputs、research sessions、studio slides、notebook tasks）MUST 接受 PaginationParams（offset/limit）并 MUST 返回 PaginatedSchema 形状：items、total、offset、limit。MUST NOT 再对上述端点返回无 total 的裸数组作为成功响应。",null,null,null
-  add_requirement,"openapi-docs-match-handler-paths","OpenAPI and AsyncAPI paths MUST match handlers","registerApiDoc 与 AsyncAPI 中登记的 path MUST 与 Elysia handler 实际 path 一致；已知漂移（citations context、research stream）MUST 修正。列表端点的 OpenAPI response 描述 MUST 反映 PaginatedSchema 而非裸数组。",null,null,null
-op_scenarios[3]{req_id,id,given,when,then,feature}:
-  "list-endpoints-use-paginated-envelope","messages-list-returns-paginated","会话中存在多条消息","客户端以 offset/limit 调用 GET messages","响应 SHALL 含 items 与 total 且 items 长度不超过 limit",false
-  "list-endpoints-use-paginated-envelope","research-list-paginated-with-notebook","notebook 下存在 research sessions","客户端携带 notebookId 与分页参数调用 GET /v2/research","响应 SHALL 为 PaginatedSchema 且不得返回其他 notebook 的 session",false
-  "openapi-docs-match-handler-paths","citations-context-doc-path","实现路径为 /v2/notebooks/:nid/citations/context","检查 registerApiDoc 登记","文档 path SHALL 与实现一致且 MUST NOT 再登记过时的 /v2/citations/context 为唯一真源",false

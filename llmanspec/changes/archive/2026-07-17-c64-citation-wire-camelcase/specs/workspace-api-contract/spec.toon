@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  modify_requirement,r75,Citation model is unified across APIs as camelCase,citation 对象 MUST 在 QA/messages/outputs/streaming done 等对外 API 中保持字段语义一致，且 JSON 字段名 MUST 为 camelCase：sourceId、sourceName、chunkId、chunkIndex、pageNumber、paragraphIndex、snippet、score；MUST NOT 再使用 source_id/source_name/chunk_id 等 snake_case 别名。,null,null,null
-  add_requirement,r284,CitationSchema SSOT is camelCase in packages/shared,packages/shared 的 CitationSchema MUST 以 camelCase 字段作为 Zod SSOT，并驱动 OpenAPI/eden 类型；服务端序列化与前端消费 MUST 直接使用该 schema 推断类型，不得并行维护一套 snake_case Citation 线类型。,null,null,null
-op_scenarios[2]{req_id,id,given,when,then,feature}:
-  r75,"citation-wire-fields-are-camelcase",一次 QA 或 messages 响应包含 citations,客户端读取 citation 对象字段,JSON 中 SHALL 出现 sourceId/sourceName/chunkId 等 camelCase 键，且 MUST NOT 依赖 source_id 等 snake_case 键,true
-  r284,"shared-citation-schema-camelcase",CitationSchema 已更新为 camelCase,服务端构建 citations 或前端类型检查 Citation,两端 SHALL 共用同一 camelCase 字段集且类型检查通过,true

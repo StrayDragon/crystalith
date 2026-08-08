@@ -1,5 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,"studio-panel-lazy-loads-output-body","Studio panel MUST lazy-load output body","工作台 Studio/笔记列首屏 MUST 仅依赖 outputs 列表摘要渲染条目。用户选中或打开某条时 MUST 再请求详情拉取全文；已加载详情 SHOULD 缓存以避免重复请求。",null,null,null
-op_scenarios[1]{req_id,id,given,when,then,feature}:
-  "studio-panel-lazy-loads-output-body","open-fetches-detail","Studio 列已显示摘要列表","用户点击一条 output","前端 SHALL 请求详情并渲染全文，首屏列表请求 MUST NOT 以拉全文为前置",false

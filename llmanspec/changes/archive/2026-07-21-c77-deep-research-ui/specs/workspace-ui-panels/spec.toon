@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  modify_requirement,"deep-research-tab-is-shell-until-runtime",Deep Research tab MUST host DeepResearchDesk,"E1「深度研究」Tab MUST 承载 DeepResearchDesk（创建、队列与打开 Run 详情的入口），并 MUST 通过 c76 ResearchRun API 创建与追踪任务；MUST NOT 再以「重建中/暂不可用」壳作为唯一交付，也 MUST NOT 调用已删除的 HITL Deep Research agent 编排。",null,null,null
-  add_requirement,"sources-must-not-host-deep-research-queue",Sources panel MUST NOT host deep research queue,"来源面板 MUST NOT 再嵌深研任务队列、深研历史对话框或旧 HITL 深研详情作为主路径；深研入口与队列 MUST 仅经由顶栏 E1 deep tab / Desk 提供。",null,null,null
-op_scenarios[2]{req_id,id,given,when,then,feature}:
-  "deep-research-tab-is-shell-until-runtime","desk-can-start-run",c76 合约可用且 notebook 合法,用户在深度研究 Tab 填写合法创建表并开始,系统 SHALL 创建 ResearchRun 并在 Desk 队列展示而非仅显示重建壳,false
-  "sources-must-not-host-deep-research-queue","sources-no-research-queue",用户在工作区,打开 Sources 面板,界面 SHALL 不展示深研队列或旧 HITL 深研历史主入口,false

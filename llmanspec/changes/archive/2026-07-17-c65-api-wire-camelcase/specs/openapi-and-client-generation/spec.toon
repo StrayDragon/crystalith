@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  modify_requirement,r132,Shared Zod schemas are camelCase SSOT for request and response,前后端共享的 Zod schema MUST 放在 packages/shared/ 且 API 字段 MUST 为 camelCase。Elysia 端点 MUST 使用相同 schema 校验入参与约束响应形状；前端 MUST 复用同 schema 或 Eden 推断类型，MUST NOT 并行维护一套 snake_case Api 类型作为合约。,null,null,null
-  modify_requirement,r37,"Eden RPC is the TypeScript client for first-party apps","Crystalith Web（及未来嵌入同一 HTTP 面的 Tauri webview）MUST 使用 Elysia eden treaty 调用 server API（import type App from server + treaty）。MUST NOT 使用 @hey-api/openapi-ts 生成新代码。OpenAPI/Scalar MUST 继续作为人类与外部消费者的文档面，与 Eden 并行存在。",null,null,null
-op_scenarios[2]{req_id,id,given,when,then,feature}:
-  r132,"openapi-reflects-camelcase",packages/shared schema 已改为 camelCase,生成或查看 OpenAPI/Scalar,文档中的 schema 属性名 SHALL 为 camelCase,true
-  r37,"eden-and-openapi-coexist",c65 完成后,检查前端依赖与 /openapi,前端 SHALL 通过 eden 调用 API，且 OpenAPI/Scalar SHALL 仍可访问并反映 camelCase schema,true
