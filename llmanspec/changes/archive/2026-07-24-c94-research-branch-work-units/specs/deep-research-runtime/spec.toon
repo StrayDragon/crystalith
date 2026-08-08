@@ -1,8 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,r327,"Serial branch work-units","系统 MUST 对图中全部非 pruned 的 research 角色节点（不仅 question）串行执行 work-unit：检索/综合、经 writeBackNodeWork 写回 evidence 与 phase，并经 graph_patch 推送增量；调度 MUST 跳过 conclusionStatus=pruned 节点；完成分支波次后 MUST 按既有 M1 语义进入 budget confirm 与 synthesize 收束；MUST NOT 为收束便利删除 research→conclusion 的 merge 边；每单元 MUST 写入 progress ledger（unit_started/unit_finished/unit_skipped_pruned）。",null,null,null
-op_scenarios[4]{req_id,id,given,when,then,feature}:
-  r327,"drain-all-research-nodes",Run 经拆解含三个活 research 节点,runLoop 执行 drain,每个节点均完成 work-unit 且 evidenceIds 写回,true
-  r327,"skip-question-when-branches",Run 已拆解出活 research 节点,runLoop 调度,跳过 question work-unit 且各 research 完成写回,true
-  r327,"skip-pruned-branch-unit",其中一支已被 prune,调度器 drain,pruned 节点被跳过且其余节点仍执行,true
-  r327,"merge-edges-survive-synthesize",各支路已写回证据,Run 进入 synthesize 并完成,所有活 research 至 conclusion 的 merge 边仍存在,true

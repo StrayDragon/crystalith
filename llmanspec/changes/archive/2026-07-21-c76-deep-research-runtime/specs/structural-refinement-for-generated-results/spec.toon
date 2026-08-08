@@ -1,5 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  modify_requirement,stub_placeholder,"Deep Research constraints moved to deep-research-runtime","原 structural-refinement-for-generated-results 下的深研约束已迁移；本 capability MUST NOT 再承载 Deep Research Runtime MUST/SHALL；新合约以 deep-research-runtime 为准。",null,null,null
-op_scenarios[1]{req_id,id,given,when,then,feature}:
-  stub_placeholder,"redirect-to-runtime","查阅旧 structural-refinement capability",验证深研行为合约归属,"以 deep-research-runtime 为准且本 capability 不再新增深研 MUST",true

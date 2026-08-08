@@ -1,9 +1,0 @@
-kind: llman.sdd.delta
-ops[3]{op,req_id,title,statement,from,to,name}:
-  add_requirement,r420,Lab is deep-research primary surface,"/research-lab/:nid MUST 作为深研产品主表面；工作区 MUST 经烧瓶（或等价）导航进入；在 c82 接线前 Lab 会话权威 MAY 为 fixture，但 MUST 可走通既定设计面；MUST NOT 将顶栏搜索面板恢复为深研主入口。",null,null,null
-  add_requirement,r421,xlsx-lib fixture drives Lab walkthrough,"Lab 主路径 MUST 默认使用写死研究任务 scenario id=xlsx-lib；该 fixture MUST 足以演练图交互、节点抽屉与提案、报告与 cite、revisions 与画布设置等既有 Lab 设计面；MUST NOT 在本变更引入第二套并行正式 scenario 作为主路径。",null,null,null
-  add_requirement,r422,Inventory Lab versus ResearchRun,"本变更 MUST 产出 inventory 文档，逐项对照 Lab 设计面与现有 ResearchRun HTTP/SSE 合约（Keep/Gap/Extra/Ambiguous）；MUST NOT 在本变更将 fixture 替换为 Eden 权威态（留待 c82）。",null,null,null
-op_scenarios[3]{req_id,id,given,when,then,feature}:
-  r420,"open-lab-as-primary","用户从工作区进入深研","导航完成","位于 /research-lab/:nid 主表面",false
-  r421,"default-scenario-xlsx-lib","用户打开 Lab 主路径","查看当前 scenario","为 xlsx-lib 且可演练主要设计面",false
-  r422,"inventory-lists-gaps","c80 完成","查阅 inventory.md","含 Lab↔ResearchRun 对照表且标出 Gap",false

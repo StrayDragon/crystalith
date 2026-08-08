@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  modify_requirement,fm1,Frontend uses Eden and shared camelCase types without parallel Api catalogs,"前端 MUST 使用 eden treaty 进行后端 HTTP 调用，类型 MUST 来自 App 推断与/或 @crystalith/shared。MUST NOT 依赖 api/generated/。MUST NOT 再维护与 wire 不一致的平行 Api* / shared-types 目录作为 SSOT；过渡删除后仅允许从 shared/eden re-export。",null,null,null
-  add_requirement,r286,"Frontend MUST NOT snake-to-camel normalize API payloads",在 wire 已为 camelCase 后，前端 MUST NOT 再实现针对 API 载荷的 snake_case→camelCase 字段重命名映射（normalize*）。允许保留与命名无关的 UI 派生（如状态文案、相对时间）。,null,null,null
-op_scenarios[2]{req_id,id,given,when,then,feature}:
-  fm1,"no-parallel-api-ssot",c65 前端清理完成,搜索手写 ApiNotebook/ApiSource 等平行线类型,"SHALL 不再存在与 shared 字段名冲突的平行 SSOT（或仅剩 re-export）",true
-  r286,"normalize-snake-maps-removed",wire camelCase 已上线,审查 apps/web normalize* 与 Api 映射,SHALL 不存在 notebook_id→notebookId 这类 API 字段重命名逻辑,true

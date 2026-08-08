@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,r326,"Topic auto-decompose after seed","seed 单结论 DAG 完成后，系统 MUST 通过结构化 LLM 规划将主题自动拆解为 research 角色节点：自 question 以 decompose/refine 边扩展，各活研究节点 MUST 以 merge 边汇入唯一 conclusion；节点总数 MUST 受 Run.maxNodes（depth→r305）约束；规划失败或输出非法时 MUST 回退为仅 question work-unit 路径且 MUST NOT 伪造多支路拓扑；拓扑权威 MUST 来自服务端 graph_patch 与 progress ledger，MUST NOT 以前端 timer/phase 为 SSOT；LLM MUST NOT 直接 mutate 图，仅允许经内核规划写回后 emit graph_patch。",null,null,null
-op_scenarios[3]{req_id,id,given,when,then,feature}:
-  r326,"decompose-emits-branches-and-merges",Run 已 seed 且 planner 成功,内核完成拆解,graph 含多个 research 节点、question 发出 decompose 边且各活节点有 merge 至 conclusion,true
-  r326,"planner-failure-falls-back-question-only",planner 返回非法或解析失败,runLoop 继续,仅 question 路径执行工作单元且不得假装多分支已成功,true
-  r326,"max-nodes-respected",Run depth=shallow 且 maxNodes=12,planner 提议超限支路,服务端裁剪或拒绝扩展且节点数不超过预算,true

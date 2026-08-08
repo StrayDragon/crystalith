@@ -1,8 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  modify_requirement,r282,Sources workflows are gated and explicit,Sources 相关操作 MUST 对来源未就绪/失败等情况显式 gating 并提供可恢复提示；依赖来源的 Studio/结构化生成入口在未选择 ready 来源时可禁用；Chat 发送 MUST NOT 仅因未勾选来源而禁用（未勾选时走 ungrounded QA）。,null,null,null
-  add_requirement,r283,Citation UI distinguishes source count from chunk count,Chat 引用入口与引用详情弹层 MUST 同时展示唯一来源数与片段（citation/chunk）数，文案 MUST 避免将片段数表述为来源数（例如「来自 N 个来源 · K 个片段」）。,null,null,null
-op_scenarios[3]{req_id,id,given,when,then,feature}:
-  r282,"chat-send-allowed-without-selection",用户未勾选任何来源但笔记本有来源,用户在 Chat 输入并发送,系统 SHALL 允许发送并走无 RAG 对话，且不得仅因未勾选而禁用发送,true
-  r282,"studio-still-gated-without-ready-sources",用户未选择任何 ready 来源,用户打开依赖来源的 Studio/结构化生成入口,系统 SHALL 禁用该入口或给出明确提示,true
-  r283,"citation-label-shows-sources-and-chunks",一条回答含 3 条 citation 且均来自同一 source,用户查看引用按钮或引用详情标题,UI SHALL 展示来源数为 1 且片段数为 3 的区分文案,true

@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  modify_requirement,r59,Panel composition stays stable with topbar search entry,"Workspace MUST 以稳定的面板集合装配 Sources/Chat/Studio 等能力，并保持各面板的基本区域划分与入口可发现；网搜添来源 MUST 经由顶栏 E1 面板（仅 Fast/直接搜索）发现，而非嵌在来源栏主搜索条。深研入口 MUST NOT 再以顶栏 E1 deep Tab / DeepResearchDesk 形式提供；深研主表面入口 MUST 为 /research-lab（及等价烧瓶导航）。",null,null,null
-  add_requirement,r290,Topbar search is Fast-only,"顶栏搜索/调研面板 MUST 仅提供直接搜索（Fast）网搜添来源能力；MUST NOT 再展示「深度研究」Tab，也 MUST NOT 挂载 DeepResearchDesk。",null,null,null
-op_scenarios[2]{req_id,id,given,when,then,feature}:
-  r59,"research-lab-entry-not-sources-bar","用户需要深研入口","在工作区查找入口","系统 SHALL 通过烧瓶或 /research-lab 提供深研，而不是来源栏主搜索条或顶栏 deep Tab",false
-  r290,"topbar-has-no-deep-tab","用户打开顶栏搜索面板","查看 tabs","仅见直接搜索，不见深度研究 Tab 与 DeepResearchDesk",false

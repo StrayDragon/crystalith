@@ -1,5 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,"openapi-documents-nested-canonical-paths","OpenAPI MUST document nested canonical paths","registerApiDoc 与 OpenAPI 文档 MUST 以嵌套 /v2/notebooks/:nid/... 为 notebook-scoped 资源的 canonical path；旧扁平 path 若仍登记 MUST 标为 deprecated。MUST NOT 仅以扁平 path 作为唯一真源误导消费者。",null,null,null
-op_scenarios[1]{req_id,id,given,when,then,feature}:
-  "openapi-documents-nested-canonical-paths","outputs-nested-in-docs","outputs 已挂载嵌套路径","检查 registerApiDoc / OpenAPI","文档 SHALL 含 /v2/notebooks/{nid}/outputs 且旧扁平路径若存在 SHALL 标 deprecated",false

@@ -1,9 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  add_requirement,r449,"Eden M1 confirm surface by confirmKind","当 Run status 为 awaiting_confirm 时，Lab MUST 按 confirmKind（budget 与 expand_branch）展示分化文案；MUST 高亮 confirmBranchNodeId 对应图区域；MUST 暴露 continue、finish_report、approve_branch 与 skip_branch 并经 Eden confirm 命令口执行；RESEARCH_BUDGET 与 RESEARCH_INVALID_STATE MUST 映射为可见错误（对齐 r410）；MUST NOT 恢复逐步计划审批 UI。",null,null,null
-op_scenarios[5]{req_id,id,given,when,then,feature}:
-  r449,"budget-kind-copy-and-actions","Eden Run 为 awaiting_confirm 且 confirmKind=budget","用户查看确认条","展示预算将尽类文案且提供 continue 与 finish_report",true
-  r449,"expand-branch-highlight-and-actions","Eden Run 为 awaiting_confirm、confirmKind=expand_branch 且 confirmBranchNodeId 已设","用户查看图与确认条","对应节点高亮且可见 approve_branch 与 skip_branch",true
-  r449,"skip-branch-calls-confirm","Eden Run 为 expand_branch 待确认","用户点 skip_branch","发出 POST confirm action=skip_branch 且带 branchNodeId",true
-  r449,"confirm-budget-error-visible","Eden confirm 返回 RESEARCH_BUDGET","用户操作确认条","界面展示可见错误而非静默失败",true
-  r449,"no-step-plan-approval-ui","Eden Lab 处于 awaiting_confirm","用户浏览作业台","不出现逐步计划审批 UI",true

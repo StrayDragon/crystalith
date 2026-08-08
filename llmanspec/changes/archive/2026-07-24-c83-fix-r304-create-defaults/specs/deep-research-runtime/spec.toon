@@ -1,8 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  modify_requirement,r304,H1 explicit source and web toggles,"创建 ResearchRun 时 MUST 接受显式 useNotebookSources 与 allowWeb；省略时默认 useNotebookSources=false、allowWeb=true（外网优先，对齐 Lab Compose）；sourceIds MUST 仅表示深研配置台内选择、MUST NOT 隐式绑定工作区勾选状态；当 useNotebookSources 为 true 且 sourceIds 为空时 MUST 拒绝创建；当 useNotebookSources 与 allowWeb 皆为 false 时 MUST 拒绝创建；需要笔记本来源时客户端 MUST 显式传 useNotebookSources=true。",null,null,null
-  modify_requirement,r311,R2a status machine and R3b SSE,ResearchRun MUST 使用状态 queued|running|awaiting_confirm|completed|failed|cancelled；GET stream MUST 发出 status、graph_patch、confirm、report_ready、log、error、progress 事件（R3b）；MUST NOT 对流式推送报告正文 token。,null,null,null
-op_scenarios[3]{req_id,id,given,when,then,feature}:
-  r304,"toggles-require-explicit-selection","用户打开用来源开关但未在深研台勾选来源","尝试创建深研 Run","系统拒绝创建且不得静默改为仅外网",true
-  r304,"omit-defaults-web-first","客户端仅传 topic、省略通道字段","POST 创建深研","Run 的 useNotebookSources=false 且 allowWeb=true",true
-  r311,"stream-status-events","客户端已订阅 Run 的 SSE stream","Run 从 queued 进入 running","客户端收到 status 事件且可继续接收 graph_patch、log 与 progress",true

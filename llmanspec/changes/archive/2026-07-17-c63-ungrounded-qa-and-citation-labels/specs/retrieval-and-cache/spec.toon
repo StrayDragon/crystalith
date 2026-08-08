@@ -1,5 +1,0 @@
-kind: llman.sdd.delta
-ops[1]{op,req_id,title,statement,from,to,name}:
-  modify_requirement,"qa-source-scoping",QA retrieval MUST support source_ids filtering and empty skip,QA 检索路径 MUST 支持通过 source_ids 参数将检索范围限定到指定 source 子集，并支持可配置的 min_score 阈值作为证据门控；当 source_ids 缺失或为空时 MUST 跳过向量检索（不得回退为全库检索）。,null,null,null
-op_scenarios[1]{req_id,id,given,when,then,feature}:
-  "qa-source-scoping","empty-skips-retrieval",笔记本有多个 source,QA 请求未提供 source_ids 或为空数组,系统 SHALL 不执行向量检索，且不得返回任何检索 hit,true

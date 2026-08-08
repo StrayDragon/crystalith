@@ -1,7 +1,0 @@
-kind: llman.sdd.delta
-ops[2]{op,req_id,title,statement,from,to,name}:
-  add_requirement,r324,Align ResearchRun contract to Lab inventory,"系统 MUST 根据 c80 inventory 中标为 fix-api 的项修正 ResearchRun Zod 与 HTTP/SSE 行为，使命令口与 Lab 设计语义一致；MUST 在本变更内使 apps/server/tests/research 全绿；MUST NOT 删除 /v2/notebooks/:nid/research* 主路由面。",null,null,null
-  add_requirement,r325,Lab-only extras stay documented not silent,"对 inventory 标为 lab-only/no-api 的能力，系统 MUST 在合约或 inventory 中显式记录为非 API 权威，MUST NOT 用未文档化的 501 或静默丢字段冒充已支持；标为 defer 的项 MUST 列出后续 change。",null,null,null
-op_scenarios[2]{req_id,id,given,when,then,feature}:
-  r324,"research-tests-green-after-align","c81 合约修正完成","运行 server research 测试套件","全部通过且 research 路由仍可创建 Run",true
-  r325,"lab-only-capability-documented","某 Lab 能力不进 API","查阅 inventory/合约","该能力被标为 lab-only 或 defer，而非伪装成功",false
