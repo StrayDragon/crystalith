@@ -212,8 +212,7 @@ export function createNodeChatSseResponse(
                 nodeQuery: node.query,
                 allowWeb: row.allowWeb,
                 useNotebookSources: row.useNotebookSources,
-                // ToolLoopAgent constructed with loosely typed settings
-              } as never,
+              },
             });
 
             for await (const part of result.stream) {
