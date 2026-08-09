@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { LabNodeActionProposal } from '../research-lab-demo/fake/nodeChatTypes';
-import type { LabEdge, LabNode } from '../research-lab-demo/fake/types';
 import { acceptNodeChatAction } from './acceptNodeChatAction';
+import type { LabNodeActionProposal } from './model/nodeChatTypes';
+import type { LabEdge, LabNode } from './model/types';
 
 function node(partial: Partial<LabNode> & Pick<LabNode, 'id' | 'title'>): LabNode {
   return {

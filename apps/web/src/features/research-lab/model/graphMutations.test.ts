@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { deriveLabState } from './deriveLabState';
+import { deriveLabState } from '../../research-lab-demo/fake/deriveLabState';
+import { getLabScenario } from '../../research-lab-demo/fake/scenarios';
 import { defaultForkDraft, previewPruneAlongEdge } from './graphMutations';
 import { extractCitationIds, parseReportSections } from './reportDocument';
-import { getLabScenario } from './scenarios';
 
 describe('reportDocument', () => {
   it('parses sections and inline citation ids', () => {

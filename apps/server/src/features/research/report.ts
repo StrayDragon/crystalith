@@ -3,7 +3,6 @@
  */
 import type {
   ResearchConvertBody,
-  ResearchEdge,
   ResearchEvidence,
   ResearchNode,
   ResearchProgressEvent,
@@ -11,15 +10,11 @@ import type {
   ResearchReport,
   ResearchReportView,
   ResearchRetrySynthesizeBody,
-  ResearchRevision,
-  ResearchRevisionCreateBody,
   ResearchRun,
-  ResearchRunStatus,
 } from '@crystalith/shared';
 import { ResearchReportSchema } from '@crystalith/shared';
 import { generateObject, generateText } from 'ai';
-import { and, asc, desc, eq, gt } from 'drizzle-orm';
-import { NotFoundError } from 'elysia';
+import { and, asc, eq, gt } from 'drizzle-orm';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
@@ -35,16 +30,20 @@ import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { e2eStubResearchReport, isResearchE2eStub } from './e2e-stub.ts';
 import {
+  isSynthesizeFailureReason,
+  repairResearchReportText,
+  SYNTHESIZE_FAILED_PREFIX,
+  SYNTHESIZE_MODEL_ERROR_PREFIX,
+  validateAndBindCitations,
+} from './report-citations.ts';
+import {
   appendProgressEvent,
   broadcast,
-  emitGraphPatch,
   emitLog,
   emitStatus,
   finalizeCancel,
   getGraph,
-  insertEvidence,
   isCancelled,
-  isTerminalStatus,
   listEvidences,
   newId,
   requireRun,
@@ -54,102 +53,28 @@ import {
   type RunRow,
 } from './research-core.ts';
 
-export const SYNTHESIZE_FAILED_PREFIX = 'synthesize_failed:';
-export const SYNTHESIZE_MODEL_ERROR_PREFIX = 'synthesize_model_error:';
+export {
+  collectClaimedCiteIds,
+  isSynthesizeFailureReason,
+  repairResearchReportText,
+  SYNTHESIZE_FAILED_PREFIX,
+  SYNTHESIZE_MODEL_ERROR_PREFIX,
+  validateAndBindCitations,
+} from './report-citations.ts';
 
-export function isSynthesizeFailureReason(reason: string | null | undefined): boolean {
-  if (!reason) return false;
-  return (
-    reason.startsWith(SYNTHESIZE_FAILED_PREFIX) || reason.startsWith(SYNTHESIZE_MODEL_ERROR_PREFIX)
-  );
-}
+export {
+  createRevision,
+  forkRunFromRevision,
+  getRevision,
+  listRevisions,
+  restoreRevision,
+  serializeRevision,
+} from './report-revisions.ts';
 
 function resolveSynthesizeModelConfig(modelId: string | null | undefined) {
   const id = modelId?.trim();
   if (id) return getModelById(id) ?? getDefaultChatModel();
   return getDefaultChatModel();
-}
-
-/** Collect all cite keys the model claimed (map keys + inline citeIds). */
-export function collectClaimedCiteIds(report: ResearchReport): Set<string> {
-  const ids = new Set<string>();
-  for (const key of Object.keys(report.citations ?? {})) ids.add(key);
-  for (const section of report.sections) {
-    for (const block of section.blocks) {
-      if (block.type === 'paragraph') {
-        for (const id of block.citeIds) ids.add(id);
-      } else {
-        for (const item of block.items) {
-          for (const id of item.citeIds) ids.add(id);
-        }
-      }
-    }
-  }
-  return ids;
-}
-
-function citationFromEvidence(ev: ResearchEvidence): ResearchReport['citations'][string] {
-  return {
-    sourceName: ev.title,
-    snippet: ev.snippet ?? ev.title,
-    url: ev.url,
-    sourceId: ev.sourceId,
-    chunkId: ev.chunkId,
-  };
-}
-
-/**
- * Bind cites to Run evidence map: strip illegal keys; fail only when model claimed
- * cites and none remain legal (all-illegal / hallucinated).
- */
-export function validateAndBindCitations(
-  report: ResearchReport,
-  evidences: ResearchEvidence[],
-): { ok: true; report: ResearchReport } | { ok: false; reason: string } {
-  const byId = new Map(evidences.map((e) => [e.id, e]));
-  const claimed = collectClaimedCiteIds(report);
-  const legalKeys = new Set([...claimed].filter((id) => byId.has(id)));
-
-  if (claimed.size > 0 && legalKeys.size === 0) {
-    return { ok: false, reason: 'claimed cites all illegal' };
-  }
-
-  const filterIds = (ids: string[]) => ids.filter((id) => legalKeys.has(id));
-  const sections = report.sections.map((section) => ({
-    ...section,
-    blocks: section.blocks.map((block) => {
-      if (block.type === 'paragraph') {
-        return { ...block, citeIds: filterIds(block.citeIds) };
-      }
-      return {
-        ...block,
-        items: block.items.map((item) => ({ ...item, citeIds: filterIds(item.citeIds) })),
-      };
-    }),
-  }));
-
-  const citations: ResearchReport['citations'] = {};
-  for (const id of legalKeys) {
-    const ev = byId.get(id)!;
-    const fromModel = report.citations[id];
-    citations[id] = fromModel
-      ? {
-          ...citationFromEvidence(ev),
-          ...fromModel,
-          sourceName: fromModel.sourceName || ev.title,
-          snippet: fromModel.snippet || ev.snippet || ev.title,
-        }
-      : citationFromEvidence(ev);
-  }
-
-  return {
-    ok: true,
-    report: {
-      title: report.title,
-      sections,
-      citations,
-    },
-  };
 }
 
 function buildEvidenceCatalog(evidences: ResearchEvidence[]): string {
@@ -205,141 +130,6 @@ function buildPartialCompletionPromptHint(row: RunRow): string | null {
     '【预算用尽·部分完成】当前仍有未覆盖/未完成的研究节点。报告 MUST 明示「预算用尽·部分完成」，并列出未覆盖主题；MUST NOT 将残缺研究包装为已完整覆盖。已有证据仍正常综合。',
     `未覆盖主题：${gaps.join('；')}`,
   ].join('\n');
-}
-
-/**
- * Local / think models often emit fenced JSON, preamble, or omit `citations`.
- * Used by generateObject repair + unit tests (mirrors repairDecomposePlanText).
- */
-export function repairResearchReportText(text: string): string | null {
-  let trimmed = text.trim();
-  if (!trimmed) return null;
-
-  trimmed = trimmed.replaceAll(/<think>[\s\S]*?<\/think>/giu, '').trim();
-
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/iu);
-  if (fenced) trimmed = fenced[1]!.trim();
-
-  const start = trimmed.indexOf('{');
-  if (start < 0) return null;
-  let depth = 0;
-  let end = -1;
-  let inString = false;
-  let escape = false;
-  for (let i = start; i < trimmed.length; i++) {
-    const ch = trimmed[i]!;
-    if (inString) {
-      if (escape) escape = false;
-      else if (ch === '\\') escape = true;
-      else if (ch === '"') inString = false;
-      continue;
-    }
-    if (ch === '"') {
-      inString = true;
-      continue;
-    }
-    if (ch === '{') depth++;
-    else if (ch === '}') {
-      depth--;
-      if (depth === 0) {
-        end = i;
-        break;
-      }
-    }
-  }
-  if (end < 0) return null;
-
-  try {
-    const raw: unknown = JSON.parse(trimmed.slice(start, end + 1));
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-    const obj = raw as Record<string, unknown>;
-    if (typeof obj.title !== 'string') return null;
-    if (!Array.isArray(obj.sections)) return null;
-    if (
-      obj.citations === null ||
-      obj.citations === undefined ||
-      typeof obj.citations !== 'object' ||
-      Array.isArray(obj.citations)
-    ) {
-      obj.citations = {};
-    }
-
-    const citationsIn = obj.citations as Record<string, unknown>;
-    const citationsOut: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(citationsIn)) {
-      if (!value || typeof value !== 'object' || Array.isArray(value)) {
-        citationsOut[key] = { sourceName: key, snippet: '' };
-        continue;
-      }
-      const c = value as Record<string, unknown>;
-      const repaired: Record<string, unknown> = {
-        sourceName: typeof c.sourceName === 'string' && c.sourceName ? c.sourceName : key,
-        snippet: typeof c.snippet === 'string' ? c.snippet : '',
-      };
-      if (typeof c.url === 'string') repaired.url = c.url;
-      if (typeof c.sourceId === 'number' && Number.isInteger(c.sourceId) && c.sourceId > 0) {
-        repaired.sourceId = c.sourceId;
-      }
-      if (typeof c.chunkId === 'number' || typeof c.chunkId === 'string') {
-        repaired.chunkId = c.chunkId;
-      }
-      if (typeof c.chunkIndex === 'number' && Number.isInteger(c.chunkIndex)) {
-        repaired.chunkIndex = c.chunkIndex;
-      }
-      citationsOut[key] = repaired;
-    }
-    obj.citations = citationsOut;
-
-    obj.sections = (obj.sections as unknown[]).map((section, idx) => {
-      if (!section || typeof section !== 'object' || Array.isArray(section)) {
-        return {
-          id: `s${idx + 1}`,
-          heading: '节',
-          blocks: [{ type: 'paragraph', text: String(section ?? ''), citeIds: [] }],
-        };
-      }
-      const s = section as Record<string, unknown>;
-      const id = typeof s.id === 'string' && s.id.trim() ? s.id : `s${idx + 1}`;
-      const heading = typeof s.heading === 'string' ? s.heading : '节';
-      const blocksRaw = Array.isArray(s.blocks) ? s.blocks : [];
-      const blocks = blocksRaw.map((block) => {
-        if (!block || typeof block !== 'object' || Array.isArray(block)) {
-          return { type: 'paragraph', text: String(block ?? ''), citeIds: [] };
-        }
-        const b = block as Record<string, unknown>;
-        if (b.type === 'bullets') {
-          const items = Array.isArray(b.items) ? b.items : [];
-          return {
-            type: 'bullets',
-            items: items.map((item) => {
-              if (!item || typeof item !== 'object' || Array.isArray(item)) {
-                return { text: String(item ?? ''), citeIds: [] };
-              }
-              const it = item as Record<string, unknown>;
-              return {
-                text: typeof it.text === 'string' ? it.text : String(it.text ?? ''),
-                citeIds: Array.isArray(it.citeIds)
-                  ? it.citeIds.filter((x): x is string => typeof x === 'string')
-                  : [],
-              };
-            }),
-          };
-        }
-        return {
-          type: 'paragraph',
-          text: typeof b.text === 'string' ? b.text : String(b.text ?? ''),
-          citeIds: Array.isArray(b.citeIds)
-            ? b.citeIds.filter((x): x is string => typeof x === 'string')
-            : [],
-        };
-      });
-      return { id, heading, blocks };
-    });
-
-    return JSON.stringify(obj);
-  } catch {
-    return null;
-  }
 }
 
 /** LLM structured ResearchReport (or e2e stub). Throws on model/schema failure. */
@@ -627,22 +417,6 @@ export function resolveArtifactMarkdown(
   return { title: ev.title, markdown: md };
 }
 
-export function serializeRevision(row: typeof researchRevisions.$inferSelect): ResearchRevision {
-  return {
-    id: row.id,
-    runId: row.runId,
-    notebookId: row.notebookId,
-    label: row.label,
-    kind: row.kind as ResearchRevision['kind'],
-    parentRevisionId: row.parentRevisionId ?? null,
-    graph: row.graph as ResearchRevision['graph'],
-    report: (row.report as ResearchReport | null) ?? null,
-    searchesUsed: row.searchesUsed,
-    statusAtSave: row.statusAtSave as ResearchRunStatus,
-    createdAt: row.createdAt.toISOString(),
-  };
-}
-
 export function listProgress(
   notebookId: number,
   runId: number,
@@ -669,259 +443,6 @@ export function listProgress(
   }));
   const nextAfterSeq = items.length ? items.at(-1)!.seq : undefined;
   return { items, nextAfterSeq };
-}
-
-export function listRevisions(notebookId: number, runId: number): { items: ResearchRevision[] } {
-  requireRun(notebookId, runId);
-  const rows = db()
-    .select()
-    .from(researchRevisions)
-    .where(eq(researchRevisions.runId, runId))
-    .orderBy(desc(researchRevisions.createdAt))
-    .all();
-  return { items: rows.map(serializeRevision) };
-}
-
-export function getRevision(notebookId: number, runId: number, revId: string): ResearchRevision {
-  requireRun(notebookId, runId);
-  const row = db()
-    .select()
-    .from(researchRevisions)
-    .where(and(eq(researchRevisions.runId, runId), eq(researchRevisions.id, revId)))
-    .get();
-  if (!row) throw new NotFoundError(`Revision ${revId} not found`);
-  return serializeRevision(row);
-}
-
-export function createRevision(
-  notebookId: number,
-  runId: number,
-  body: ResearchRevisionCreateBody,
-): ResearchRevision {
-  const row = requireRun(notebookId, runId);
-  const from = body.from ?? 'canonical';
-  let report: ResearchReportJson | null = (row.report as ResearchReportJson | null) ?? null;
-  if (from === 'working') {
-    const edit = db()
-      .select()
-      .from(researchReportEdits)
-      .where(eq(researchReportEdits.runId, runId))
-      .get();
-    if (!edit) {
-      throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'No working report to snapshot');
-    }
-    report = edit.report;
-  }
-  const id = newId('rev');
-  const inserted = db()
-    .insert(researchRevisions)
-    .values({
-      id,
-      runId,
-      notebookId,
-      label: body.label?.trim() || `保存 ${new Date().toISOString()}`,
-      kind: 'user_save',
-      parentRevisionId: row.activeRevisionId ?? null,
-      graph: getGraph(row),
-      report,
-      searchesUsed: row.searchesUsed,
-      statusAtSave: row.status,
-    })
-    .returning()
-    .get();
-  updateRun(runId, { activeRevisionId: id });
-  appendProgressEvent(runId, 'revision_created', {
-    headline: inserted.label,
-    payload: { revisionId: id, kind: 'user_save', from },
-  });
-  return serializeRevision(inserted);
-}
-
-export function restoreRevision(notebookId: number, runId: number, revId: string): ResearchRun {
-  const row = requireRun(notebookId, runId);
-  if (!isTerminalStatus(row.status)) {
-    throw new AppHttpError(
-      ErrorCode.RESEARCH_INVALID_STATE,
-      'Restore only allowed on terminal runs',
-    );
-  }
-  const rev = db()
-    .select()
-    .from(researchRevisions)
-    .where(and(eq(researchRevisions.runId, runId), eq(researchRevisions.id, revId)))
-    .get();
-  if (!rev) throw new NotFoundError(`Revision ${revId} not found`);
-
-  const now = new Date();
-  updateRun(runId, {
-    graph: rev.graph,
-    report: rev.report,
-    reportUpdatedAt: rev.report ? now : row.reportUpdatedAt,
-    activeRevisionId: revId,
-  });
-  db().delete(researchReportEdits).where(eq(researchReportEdits.runId, runId)).run();
-
-  emitGraphPatch(runId, {
-    nodes: (rev.graph.nodes ?? []) as ResearchNode[],
-    edges: (rev.graph.edges ?? []) as ResearchEdge[],
-  });
-  appendProgressEvent(runId, 'revision_restored', {
-    headline: `恢复 ${rev.label}`,
-    payload: { revisionId: revId },
-  });
-  if (rev.report) {
-    broadcast(runId, 'report_ready', { runId });
-  }
-  return serializeRun(requireRun(notebookId, runId));
-}
-
-function collectReferencedEvidenceIds(
-  graph: { nodes?: ResearchNode[] },
-  report: ResearchReport | null,
-): Set<string> {
-  const ids = new Set<string>();
-  for (const node of graph.nodes ?? []) {
-    for (const eid of node.evidenceIds ?? []) ids.add(eid);
-  }
-  if (report) {
-    for (const id of collectClaimedCiteIds(report)) ids.add(id);
-  }
-  return ids;
-}
-
-function remapEvidenceId(id: string, idMap: Map<string, string>): string {
-  return idMap.get(id) ?? id;
-}
-
-function remapGraphEvidenceIds(
-  graph: { nodes: ResearchNode[]; edges: ResearchEdge[] },
-  idMap: Map<string, string>,
-): { nodes: ResearchNode[]; edges: ResearchEdge[] } {
-  return {
-    nodes: graph.nodes.map((node) => ({
-      ...node,
-      evidenceIds: (node.evidenceIds ?? []).map((id) => remapEvidenceId(id, idMap)),
-    })),
-    edges: graph.edges.map((e) => ({ ...e })),
-  };
-}
-
-function remapReportEvidenceIds(
-  report: ResearchReport,
-  idMap: Map<string, string>,
-): ResearchReport {
-  const citations: ResearchReport['citations'] = {};
-  for (const [key, value] of Object.entries(report.citations ?? {})) {
-    citations[remapEvidenceId(key, idMap)] = value;
-  }
-  const sections = report.sections.map((section) => ({
-    ...section,
-    blocks: section.blocks.map((block) => {
-      if (block.type === 'paragraph') {
-        return {
-          ...block,
-          citeIds: block.citeIds.map((id) => remapEvidenceId(id, idMap)),
-        };
-      }
-      return {
-        ...block,
-        items: block.items.map((item) => ({
-          ...item,
-          citeIds: item.citeIds.map((id) => remapEvidenceId(id, idMap)),
-        })),
-      };
-    }),
-  }));
-  return { title: report.title, sections, citations };
-}
-
-/**
- * POST …/revisions/:revId/fork-run — create a new ResearchRun from a revision snapshot.
- * Does NOT schedule; caller may call scheduleRun when body.schedule is true.
- * Source Run is never mutated.
- */
-export function forkRunFromRevision(notebookId: number, runId: number, revId: string): ResearchRun {
-  const source = requireRun(notebookId, runId);
-  const rev = db()
-    .select()
-    .from(researchRevisions)
-    .where(and(eq(researchRevisions.runId, runId), eq(researchRevisions.id, revId)))
-    .get();
-  if (!rev) throw new NotFoundError(`Revision ${revId} not found`);
-
-  const snapshotGraph = structuredClone(rev.graph) as {
-    nodes: ResearchNode[];
-    edges: ResearchEdge[];
-  };
-  const snapshotReport = rev.report ? (structuredClone(rev.report) as ResearchReport) : null;
-
-  const referenced = collectReferencedEvidenceIds(snapshotGraph, snapshotReport);
-  const sourceEvidences = listEvidences(runId);
-  const idMap = new Map<string, string>();
-  for (const ev of sourceEvidences) {
-    if (!referenced.has(ev.id)) continue;
-    idMap.set(ev.id, newId('ev'));
-  }
-
-  const remappedGraph = remapGraphEvidenceIds(snapshotGraph, idMap);
-  const remappedReport = snapshotReport ? remapReportEvidenceIds(snapshotReport, idMap) : null;
-
-  const inserted = db()
-    .insert(researchRuns)
-    .values({
-      notebookId,
-      topic: source.topic,
-      status: 'queued',
-      useNotebookSources: source.useNotebookSources,
-      allowWeb: source.allowWeb,
-      sourceIds: source.sourceIds,
-      depth: source.depth,
-      maxSearches: source.maxSearches,
-      maxNodes: source.maxNodes,
-      searchesUsed: 0,
-      maxPageFetches: source.maxPageFetches,
-      pagesUsed: 0,
-      modelId: source.modelId,
-      graph: remappedGraph,
-      checkpoint: null,
-      report: remappedReport,
-      confirmKind: null,
-      confirmBranchNodeId: null,
-      cancelRequested: false,
-      errorMessage: null,
-      activeRevisionId: null,
-      activeNodeId: null,
-      llmActivity: null,
-      reportUpdatedAt: remappedReport ? new Date() : null,
-    })
-    .returning()
-    .get();
-
-  for (const ev of sourceEvidences) {
-    const newIdValue = idMap.get(ev.id);
-    if (!newIdValue) continue;
-    insertEvidence(inserted.id, notebookId, {
-      id: newIdValue,
-      kind: ev.kind,
-      title: ev.title,
-      snippet: ev.snippet,
-      content: ev.content,
-      url: ev.url,
-      sourceId: ev.sourceId,
-      chunkId: ev.chunkId,
-      collectedAtNodeId: ev.collectedAtNodeId,
-    });
-  }
-
-  appendProgressEvent(inserted.id, 'run_queued', {
-    headline: `从修订「${rev.label}」派生`,
-    payload: {
-      forkedFromRunId: runId,
-      forkedFromRevisionId: revId,
-    },
-  });
-
-  return serializeRun(inserted);
 }
 
 export function assertReportEditable(status: string, hasReport: boolean): void {

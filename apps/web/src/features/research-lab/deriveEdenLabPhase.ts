@@ -4,8 +4,8 @@
  */
 import type { ResearchRunStatus } from '@crystalith/shared';
 
-import type { LabPhase } from '../research-lab-demo/fake/types';
 import type { LabProgressLedgerItem } from './labProgressLedger';
+import type { LabPhase } from './model/types';
 
 export type DeriveEdenLabPhaseInput = {
   status: ResearchRunStatus | null | undefined;

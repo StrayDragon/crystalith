@@ -1,5 +1,5 @@
-import type { LabConfirmKind } from '../research-lab-demo/fake/resolveLabPrimaryAction';
-import type { LabPhase } from '../research-lab-demo/fake/types';
+import type { LabConfirmKind } from './model/resolveLabPrimaryAction';
+import type { LabPhase } from './model/types';
 
 /** Top paused/awaiting banner: never pair explore playing with「已暂停」 (r437). */
 export function shouldShowLabPausedBanner(input: {

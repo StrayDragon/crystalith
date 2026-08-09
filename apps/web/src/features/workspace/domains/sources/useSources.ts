@@ -72,6 +72,18 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
   ]);
 }
 
+async function uploadSourceFile(
+  notebookId: number,
+  file: File,
+  dedupAction: 'prompt' | 'reuse' | 'create_new',
+): Promise<void> {
+  const r = await api.v2
+    .notebooks({ nid: notebookId })
+    // Eden treats Zod .default() query fields as required on the client.
+    .sources.upload.post({ file }, { query: { dedupAction } });
+  if (r.error) throw new Error(parseServerError(r.error).message);
+}
+
 export function useSources() {
   const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
   const sources = useWorkspaceStore((s) => s.sources);
@@ -127,7 +139,6 @@ export function useSources() {
         .notebooks({ nid: activeNotebookId! })
         .sources.get({ query: sourceListQuery })
         .then((r) => {
-          // eslint-disable-next-line typescript/no-base-to-string
           if (r.error) throw new Error(parseServerError(r.error).message);
           return r.data?.items ?? [];
         }),
@@ -141,7 +152,6 @@ export function useSources() {
         .notebooks({ nid: activeNotebookId! })
         .sources.tags.get()
         .then((r) => {
-          // eslint-disable-next-line typescript/no-base-to-string
           if (r.error) throw new Error(parseServerError(r.error).message);
           return r.data ?? [];
         }),
@@ -189,8 +199,7 @@ export function useSources() {
   }, [activeNotebookId]);
 
   useEffect(() => {
-    // eslint-disable-next-line eqeqeq
-    if (jumpToCitationChunkId == null) return undefined;
+    if (jumpToCitationChunkId === null) return undefined;
     const timer = window.setTimeout(() => {
       store.getState().setJumpToCitation(null);
     }, 1800);
@@ -223,12 +232,10 @@ export function useSources() {
 
   const highlightedChunkIds = useMemo(() => {
     const highlighted = new Set<number>();
-    // eslint-disable-next-line eqeqeq
-    if (hoveredCitationChunkId != null) {
+    if (hoveredCitationChunkId !== null) {
       highlighted.add(hoveredCitationChunkId);
     }
-    // eslint-disable-next-line eqeqeq
-    if (jumpToCitationChunkId != null) {
+    if (jumpToCitationChunkId !== null) {
       highlighted.add(jumpToCitationChunkId);
     }
     for (const chunkId of hoveredMessageChunkIds) {
@@ -273,15 +280,8 @@ export function useSources() {
             ),
           );
           try {
-            // eslint-disable-next-line no-await-in-loop -- Upload queue + dedup confirmation requires serial execution.
-            await api.v2
-              .notebooks({ nid: activeNotebookId })
-              // Eden treats Zod .default() query fields as required on the client.
-              .sources.upload.post({ file }, { query: { dedupAction: 'prompt' } })
-              .then((r) => {
-                // eslint-disable-next-line typescript/no-base-to-string
-                if (r.error) throw new Error(parseServerError(r.error).message);
-              });
+            // Upload queue + dedup confirmation requires serial execution.
+            await uploadSourceFile(activeNotebookId, file, 'prompt');
             successCount += 1;
             setUploadQueue((prev) =>
               prev.map((item) => (item.id === queueId ? { ...item, status: 'success' } : item)),
@@ -300,14 +300,8 @@ export function useSources() {
               );
               const dedupAction = reuse ? 'reuse' : 'create_new';
               try {
-                // eslint-disable-next-line no-await-in-loop -- Keep per-file UI updates and dedup flow serial.
-                await api.v2
-                  .notebooks({ nid: activeNotebookId })
-                  .sources.upload.post({ file }, { query: { dedupAction } })
-                  .then((r) => {
-                    // eslint-disable-next-line typescript/no-base-to-string, eslint/preserve-caught-error
-                    if (r.error) throw new Error(parseServerError(r.error).message);
-                  });
+                // Keep per-file UI updates and dedup flow serial.
+                await uploadSourceFile(activeNotebookId, file, dedupAction);
                 successCount += 1;
                 setUploadQueue((prev) =>
                   prev.map((item) =>
@@ -695,11 +689,9 @@ export function useSources() {
         return;
       }
       try {
-        const { data: result, error: coErr } = await api.v2
-          .notebooks({ nid: activeNotebookId })
-          .outputs({ id: outputId })
-          // eslint-disable-next-line no-unexpected-multiline
-          ['convert-to-source'].post();
+        const notebook = api.v2.notebooks({ nid: activeNotebookId });
+        const output = notebook.outputs({ id: outputId });
+        const { data: result, error: coErr } = await output['convert-to-source'].post();
         if (coErr) throw new Error(parseServerError(coErr).message);
         await mutate();
         toast.success(`已转换为来源：${result?.filename}（${result?.chunkCount} 个分块）`);
@@ -790,7 +782,6 @@ export function useSources() {
         .notebooks({ nid: activeNotebookId! })
         .extractors.get()
         .then((r) => {
-          // eslint-disable-next-line typescript/no-base-to-string
           if (r.error) throw new Error(parseServerError(r.error).message);
           if (!r.data) throw new Error('加载提取器失败');
           return r.data;
@@ -855,11 +846,9 @@ export function useSources() {
       if (!activeNotebookId) {
         throw new Error('请先创建笔记本');
       }
-      const { data: result, error: csErr } = await api.v2
-        .notebooks({ nid: activeNotebookId })
-        .sources({ sid: sourceId })
-        // eslint-disable-next-line no-unexpected-multiline
-        ['qa-to-source'].post({ messages });
+      const notebook = api.v2.notebooks({ nid: activeNotebookId });
+      const source = notebook.sources({ sid: sourceId });
+      const { data: result, error: csErr } = await source['qa-to-source'].post({ messages });
       if (csErr) throw new Error(parseServerError(csErr).message);
       await mutate();
       return result;
@@ -878,11 +867,9 @@ export function useSources() {
         return;
       }
       try {
-        const { error: reErr } = await api.v2
-          .notebooks({ nid: activeNotebookId })
-          .sources({ sid: sourceId })
-          // eslint-disable-next-line no-unexpected-multiline
-          ['re-embed'].post();
+        const notebook = api.v2.notebooks({ nid: activeNotebookId });
+        const source = notebook.sources({ sid: sourceId });
+        const { error: reErr } = await source['re-embed'].post();
         if (reErr) throw new Error(parseServerError(reErr).message);
         toast.success('已重新嵌入来源');
         await mutate();

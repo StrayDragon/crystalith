@@ -1,14 +1,11 @@
-import {
-  formatStatusChangeNote,
-  mockEnrichAfterStatus,
-} from '../research-lab-demo/fake/mockNodeEnrichment';
+import { formatStatusChangeNote, mockEnrichAfterStatus } from './model/mockNodeEnrichment';
 /**
  * Map a confirmed ActionProposal onto Lab mutation ports / Eden command HTTP.
  * Aligns r417 / r439 — never silent local-only graph authority in Eden mode.
  */
-import type { LabNodeActionProposal } from '../research-lab-demo/fake/nodeChatTypes';
-import { findInboundEdgeForNode } from '../research-lab-demo/fake/proposeNodeChatTurn';
-import type { LabEdge, LabNode } from '../research-lab-demo/fake/types';
+import type { LabNodeActionProposal } from './model/nodeChatTypes';
+import { findInboundEdgeForNode } from './model/proposeNodeChatTurn';
+import type { LabEdge, LabNode } from './model/types';
 
 export type AcceptNodeChatLabPorts = {
   pruneAlongEdge: (edgeId: string) => void;

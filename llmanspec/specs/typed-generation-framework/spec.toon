@@ -21,6 +21,6 @@ scenarios[11]{req_id,id,given,when,then,feature}:
   r184,系统注册一个生成类型,"",系统新增或加载某个生成类型,该类型 SHALL 至少声明输入要求、输出结构、控制面与完成语义,true
   r216,生成完成并返回结果,"",某个生成请求完成并返回结果,结果 SHALL 回传其生成类型标识与输出类型标识,true
   r243,结果被渲染为某种输出形式,"",某个生成结果被渲染或承载,系统 SHALL 能区分其生成类型与输出类型,true
-  r261,下游能力需要为某些生成类型增加控制项,"",下游能力需要为部分生成类型增加 knobs/presets 等控制项,该能力 SHALL 通过公共框架的扩展位表达（如 controlSurface）；MUST NOT 将已退役本地 refine HTTP 字段名（如 allowsRefinement）当作框架必填契约——研究域 refinement 已随 Deep Research stub 移除，不经过此字段,true
+  r261,下游能力需要为某些生成类型增加控制项,"",下游能力需要为部分生成类型增加 knobs/presets 等控制项,该能力 SHALL 通过公共框架的扩展位表达（如 controlSurface）；MUST NOT 将已退役本地 refine HTTP 字段名（如 allowsRefinement）当作框架必填契约——本地 refine HTTP 已于 c73 移除，研究域不经过此字段,true
   "outputs-citations-must-be-sanitized","citation-out-of-range","生成 content 含越界 citation 索引（如 [99] 但只有 3 个 citation）",系统 postprocess,SHALL 剥离越界索引并设 _postprocessed/_warnings 标记（与既有语义一致）,true
   "outputs-quality-preference-must-trigger-llm-repair","quality-repair",preference=quality 且输出有可修补的缺字段,系统 postprocess,SHALL 触发修补尝试而非直接 fallback,true

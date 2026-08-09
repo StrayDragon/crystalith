@@ -3,22 +3,22 @@ import { useEffect, useRef, useState } from 'react';
 
 import { TestIds, tid } from '../../shared/testids';
 import { toast } from '../../shared/toast';
-import type { LabNodeActionProposal } from '../research-lab-demo/fake/nodeChatTypes';
-import {
-  buildNodeQuickActionGroups,
-  QUICK_ACTION_ACTIVE_CLASS,
-  QUICK_ACTION_TONE_CLASS,
-} from '../research-lab-demo/fake/nodeQuickActions';
-import { proposeNodeChatTurn } from '../research-lab-demo/fake/proposeNodeChatTurn';
-import {
-  resolveDefaultNodePanelTab,
-  type LabNodePanelTab,
-} from '../research-lab-demo/fake/resolveDefaultNodePanelTab';
-import type { LabCitation, LabNode, LabPhase } from '../research-lab-demo/fake/types';
 import { runConvertToNote, runConvertToSource } from './edenConvertActions';
 import { streamNodeChat } from './edenResearchApi';
 import { resolveNodeCitations } from './evidenceAdapter';
 import { LAB_STATUS_LEGEND } from './LabGraph';
+import type { LabNodeActionProposal } from './model/nodeChatTypes';
+import {
+  buildNodeQuickActionGroups,
+  QUICK_ACTION_ACTIVE_CLASS,
+  QUICK_ACTION_TONE_CLASS,
+} from './model/nodeQuickActions';
+import { proposeNodeChatTurn } from './model/proposeNodeChatTurn';
+import {
+  resolveDefaultNodePanelTab,
+  type LabNodePanelTab,
+} from './model/resolveDefaultNodePanelTab';
+import type { LabCitation, LabNode, LabPhase } from './model/types';
 
 type ChatRole = 'user' | 'assistant' | 'system';
 

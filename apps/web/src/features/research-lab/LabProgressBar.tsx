@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 
 import { useLayer } from '../../shared/layer';
 import { TestIds, tid } from '../../shared/testids';
-import type { LabPhase } from '../research-lab-demo/fake/types';
-import { LAB_PHASE_LABELS } from '../research-lab-demo/fake/types';
 import { formatProgressTime, type LabProgressLedgerItem } from './labProgressLedger';
+import type { LabPhase } from './model/types';
+import { LAB_PHASE_LABELS } from './model/types';
 
 export type LabProgressBarProps = {
   phase: LabPhase;

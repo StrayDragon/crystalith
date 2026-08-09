@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 
 import { useLayer } from '../../shared/layer';
 import { TestIds, tid } from '../../shared/testids';
-import type { ForkDraft, PrunePreview } from '../research-lab-demo/fake/graphMutations';
+import type { ForkDraft, PrunePreview } from './model/graphMutations';
 
 export function LabForkDialog({
   open,

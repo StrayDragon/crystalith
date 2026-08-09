@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import { nodeProgress } from '../research-lab-demo/fake/labLayout';
-import { resolveLabPrimaryAction } from '../research-lab-demo/fake/resolveLabPrimaryAction';
-import type { LabNode } from '../research-lab-demo/fake/types';
 import {
   buildEdenCitationsMap,
   evidenceToLabCitation,
@@ -16,6 +13,9 @@ import {
   shouldShowLabPausedBanner,
   shouldShowLabPlayingTip,
 } from './labBannerState';
+import { nodeProgress } from './model/labLayout';
+import { resolveLabPrimaryAction } from './model/resolveLabPrimaryAction';
+import type { LabNode } from './model/types';
 import {
   deriveLabStateFromRun,
   isEdenLabPlaying,

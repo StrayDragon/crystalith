@@ -1,4 +1,4 @@
-import type { LabScenario } from '../research-lab-demo/fake/types';
+import type { LabScenario } from './model/types';
 
 /**
  * Neutral placeholder for Eden Lab UI fields that still read `lab.scenario.*`
