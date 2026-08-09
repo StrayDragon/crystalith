@@ -137,13 +137,11 @@ function parseSlidesFromMarkdown(markdown: string): SlideExportItem[] {
       continue;
     }
 
-    if (!current) {
-      current = {
-        title: '导出幻灯片',
-        bullets: [],
-        paragraphs: [],
-      };
-    }
+    current ??= {
+      title: '导出幻灯片',
+      bullets: [],
+      paragraphs: [],
+    };
 
     if (line.startsWith('- ') || line.startsWith('* ')) {
       current.bullets.push(line.replace(/^[-*]\s+/u, ''));
@@ -165,6 +163,8 @@ export function buildSlidesExportItems(output: OutputItem): SlideExportItem[] {
 
   if (Array.isArray(outlineSlides) && outlineSlides.length > 0) {
     return outlineSlides.map((slide) => ({
+      // intentionally || — empty title is missing
+      // oxlint-disable-next-line typescript/prefer-nullish-coalescing
       title: slide.title || '未命名幻灯片',
       bullets: Array.isArray(slide.bullets) ? slide.bullets.map(String) : [],
       paragraphs: [],

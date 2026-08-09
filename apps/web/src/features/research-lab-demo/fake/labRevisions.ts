@@ -193,7 +193,7 @@ export function updateDefaultRevision(input: {
       graph: input.graph,
     });
   }
-  const prev = store.revisions[idx]!;
+  const prev = store.revisions[idx];
   const updated: LabRevision = {
     ...prev,
     reportMarkdown: input.reportMarkdown,

@@ -455,7 +455,11 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
         id: newId,
         role: 'research',
         title,
+        // intentionally || — empty trim becomes undefined
+        // oxlint-disable-next-line typescript/prefer-nullish-coalescing
         query: draft.query?.trim() || undefined,
+        // intentionally || — empty trim falls back to seed summary
+        // oxlint-disable-next-line typescript/prefer-nullish-coalescing
         summary: draft.summary?.trim() || seed.summary,
         conclusion: seed.conclusion,
         conclusionStatus: seed.conclusionStatus,

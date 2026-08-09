@@ -288,6 +288,8 @@ export function generateFallbackContent(
   const errorNote = '⚠️ AI 模型生成失败，请稍后重试或使用更强大的模型。';
   const _fallback = true;
   // c59: use user prompt as visible title (v1 _fallback_output(prompt, ...))
+  // intentionally || — empty prompt uses empty string before slice
+  // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   const title = (prompt || '').trim().slice(0, 200);
 
   switch (type) {

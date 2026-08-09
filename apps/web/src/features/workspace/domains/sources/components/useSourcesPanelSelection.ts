@@ -105,6 +105,8 @@ export function useSourcesPanelSelection({
       if (index == null) return;
 
       const shiftPressed = Boolean(event?.shiftKey);
+      // intentionally || — modifier key presence check
+      // oxlint-disable-next-line typescript/prefer-nullish-coalescing
       const togglePressed = Boolean(event?.ctrlKey || event?.metaKey);
 
       setSelectedSourceIds((prev) => {

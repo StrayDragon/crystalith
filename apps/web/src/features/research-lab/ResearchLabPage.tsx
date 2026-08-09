@@ -137,6 +137,8 @@ function LabWorkbench({
   const drawerCitations = lab.citations;
 
   const questionText =
+    // intentionally || — empty conclusion falls back to topic draft
+    // oxlint-disable-next-line typescript/prefer-nullish-coalescing
     lab.derived.nodes.find((n) => n.role === 'question')?.conclusion?.trim() ||
     lab.topicDraft.trim();
 

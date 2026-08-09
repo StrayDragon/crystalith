@@ -54,6 +54,8 @@ export default function GuideChecklist({ modules, className }: GuideChecklistPro
         {modules.map((module, index) => {
           const isDone = completed.has(index);
           const keyPoints = module.keyPoints ?? [];
+          // intentionally || — empty objective text is missing
+          // oxlint-disable-next-line typescript/prefer-nullish-coalescing
           const summary = module.objective?.text || '';
           const moduleKeyBase = JSON.stringify({
             title: module.title ?? '',
@@ -68,6 +70,8 @@ export default function GuideChecklist({ modules, className }: GuideChecklistPro
             <CollapsibleSection
               key={moduleKey}
               id={`guide-module-${index}`}
+              // intentionally || — empty title is missing
+              // oxlint-disable-next-line typescript/prefer-nullish-coalescing
               title={module.title || `模块 ${index + 1}`}
               summary={summary}
               defaultOpen={index === 0}
@@ -88,6 +92,8 @@ export default function GuideChecklist({ modules, className }: GuideChecklistPro
                       });
                     }}
                     name={`guide-module-${index}-done`}
+                    // intentionally || — empty title is missing
+                    // oxlint-disable-next-line typescript/prefer-nullish-coalescing
                     aria-label={`${module.title || `模块 ${index + 1}`} 完成状态`}
                   />
                   {isDone ? '已完成' : '未完成'}
@@ -106,7 +112,13 @@ export default function GuideChecklist({ modules, className }: GuideChecklistPro
                     const ordinal = pointKeyCounts.get(baseKey) ?? 0;
                     pointKeyCounts.set(baseKey, ordinal + 1);
                     const pointKey = `${baseKey || 'point'}:${ordinal}`;
-                    return <li key={pointKey}>{point.text || '要点'}</li>;
+                    return (
+                      <li key={pointKey}>
+                        {/* intentionally || — empty string is missing */}
+                        {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
+                        {point.text || '要点'}
+                      </li>
+                    );
                   })}
                 </ul>
               ) : (

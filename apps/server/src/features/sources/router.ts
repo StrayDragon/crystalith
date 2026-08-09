@@ -1020,6 +1020,8 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         const buffer = new TextEncoder().encode(extracted.content);
         const result = await ingestSource({
           buffer,
+          // intentionally || — filename fallback chain
+          // oxlint-disable-next-line typescript/prefer-nullish-coalescing
           filename: extracted.title || title || url.split('/').pop() || 'webpage.html',
           notebookId: nid,
           mimeType: 'text/html',
@@ -1047,6 +1049,8 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         const buffer = new TextEncoder().encode(html);
         const result = await ingestSource({
           buffer,
+          // intentionally || — filename fallback chain
+          // oxlint-disable-next-line typescript/prefer-nullish-coalescing
           filename: title || url.split('/').pop() || 'webpage.html',
           notebookId: nid,
           mimeType: 'text/html',

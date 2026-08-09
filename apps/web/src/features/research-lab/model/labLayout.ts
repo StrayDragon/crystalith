@@ -40,12 +40,15 @@ export type LabEdgeData = {
   canPrune: boolean;
   canFork: boolean;
   /** Edge touches a pruned branch — mute stroke/label; keep「汇入」wording. */
-  faded?: boolean;
-  onFork: (edgeId: string) => void;
-  onPrune: (edgeId: string) => void;
+  faded: boolean;
+  onFork: (id: string) => void;
+  onPrune: (id: string) => void;
   pathOffset: number;
   pathPreset: LabEdgePathPreset;
 };
+
+export type LabFlowNode = Node<LabRfData, 'lab'>;
+export type LabFlowEdge = Edge<LabEdgeData, 'labAction'>;
 
 /** Node card progress / status hint (exported for live LabGraph patches). */
 export function nodeProgress(n: LabNode): { pct: number; hint?: string; show: boolean } {
@@ -115,7 +118,7 @@ export async function layoutWithElk(
   direction: LabLayoutDirection,
   handlers: { onFork: (id: string) => void; onPrune: (id: string) => void },
   opts?: { reshaping?: boolean; algorithm?: LabLayoutAlgorithm },
-): Promise<{ nodes: Node[]; edges: Edge[] }> {
+): Promise<{ nodes: LabFlowNode[]; edges: LabFlowEdge[] }> {
   const algorithm = opts?.algorithm ?? 'layered';
   const sizeById = new Map(nodes.map((n) => [n.id, estimateSize(n)]));
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
@@ -166,7 +169,7 @@ export async function layoutWithElk(
       return nodeById.get(e.source)?.conclusionStatus === 'pruned';
     });
 
-  const rfNodes: Node[] = nodes.map((n) => {
+  const rfNodes: LabFlowNode[] = nodes.map((n) => {
     const p = pos.get(n.id) ?? { x: 0, y: 0, layer: 0 };
     const prog = nodeProgress(n);
     const isConclusion = n.role === 'conclusion' || n.id === conclusionId;
@@ -182,6 +185,8 @@ export async function layoutWithElk(
         phase: n.phase,
         role: n.role,
         preview:
+          // intentionally || — empty conclusion falls back to summary
+          // oxlint-disable-next-line typescript/prefer-nullish-coalescing
           n.role === 'question' || n.role === 'conclusion' ? n.conclusion || n.summary : undefined,
         direction,
         progressPct: prog.pct,
@@ -214,7 +219,7 @@ export async function layoutWithElk(
     });
   }
 
-  const rfEdges: Edge[] = edges.map((e) => {
+  const rfEdges: LabFlowEdge[] = edges.map((e) => {
     const source = nodeById.get(e.source);
     const target = nodeById.get(e.target);
     const faded = source?.conclusionStatus === 'pruned' || target?.conclusionStatus === 'pruned';

@@ -4,15 +4,13 @@
 import type {
   ResearchConvertBody,
   ResearchEvidence,
-  ResearchNode,
   ResearchProgressEvent,
-  ResearchProgressKind,
   ResearchReport,
   ResearchReportView,
   ResearchRetrySynthesizeBody,
   ResearchRun,
 } from '@crystalith/shared';
-import { ResearchReportSchema } from '@crystalith/shared';
+import { ResearchProgressKindSchema, ResearchReportSchema } from '@crystalith/shared';
 import { generateObject, generateText } from 'ai';
 import { and, asc, eq, gt } from 'drizzle-orm';
 
@@ -24,7 +22,6 @@ import {
   researchReportEdits,
   researchRevisions,
   researchRuns,
-  type ResearchReportJson,
 } from '../../db/schema.ts';
 import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
@@ -79,10 +76,12 @@ function buildEvidenceCatalog(evidences: ResearchEvidence[]): string {
 
 function buildNodeSummaries(row: RunRow): string {
   const graph = getGraph(row);
-  const lines = (graph.nodes as ResearchNode[])
+  const lines = graph.nodes
     .filter((n) => n.conclusionStatus !== 'pruned')
     .map((n) => {
       const role = n.role ?? 'research';
+      // intentionally || — empty summary gets placeholder
+      // oxlint-disable-next-line typescript/prefer-nullish-coalescing
       const sum = n.summary?.trim() || '（无摘要）';
       const status = n.conclusionStatus ? ` status=${n.conclusionStatus}` : '';
       return `- [${role}] ${n.title}${status}: ${sum}`;
@@ -93,7 +92,7 @@ function buildNodeSummaries(row: RunRow): string {
 /** Research nodes that remain missing / uncovered (c108 partial completion). */
 function listUncoveredResearchTopics(row: RunRow): string[] {
   const graph = getGraph(row);
-  return (graph.nodes as ResearchNode[])
+  return graph.nodes
     .filter((n) => {
       const role = n.role ?? (n.id.startsWith('node_root') ? 'question' : 'research');
       if (role !== 'research') return false;
@@ -211,7 +210,7 @@ function completeWithReport(runId: number, row: RunRow, report: ResearchReport):
   const now = new Date();
   updateRun(runId, {
     status: 'completed',
-    report: report as unknown as typeof row.report,
+    report,
     reportUpdatedAt: now,
     errorMessage: null,
     confirmKind: null,
@@ -232,7 +231,7 @@ function completeWithReport(runId: number, row: RunRow, report: ResearchReport):
       kind: 'auto_complete',
       parentRevisionId: row.activeRevisionId ?? null,
       graph,
-      report: report as unknown as ResearchReportJson,
+      report,
       searchesUsed: row.searchesUsed,
       statusAtSave: 'completed',
     })
@@ -382,7 +381,7 @@ export function resolveArtifactMarkdown(
     if (!row.report) {
       throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Run has no report yet');
     }
-    const report = row.report as unknown as ResearchReport;
+    const report = row.report;
     return { title: report.title, markdown: reportToMarkdown(report) };
   }
   if (artifact.kind === 'node') {
@@ -418,10 +417,10 @@ export function listProgress(
     runId: r.runId,
     seq: r.seq,
     at: r.at.toISOString(),
-    kind: r.kind as ResearchProgressKind,
+    kind: ResearchProgressKindSchema.parse(r.kind),
     nodeId: r.nodeId ?? null,
     headline: r.headline ?? null,
-    payload: (r.payload as Record<string, unknown> | null) ?? null,
+    payload: r.payload ?? null,
   }));
   const nextAfterSeq = items.length ? items.at(-1)!.seq : undefined;
   return { items, nextAfterSeq };
@@ -443,8 +442,8 @@ export function getReportView(notebookId: number, runId: number): ResearchReport
     .from(researchReportEdits)
     .where(eq(researchReportEdits.runId, runId))
     .get();
-  const canonical = (row.report as ResearchReport | null) ?? null;
-  const working = edit ? (edit.report as ResearchReport) : null;
+  const canonical = row.report ?? null;
+  const working = edit ? edit.report : null;
   return {
     canonical,
     working: working ?? undefined,
@@ -463,7 +462,7 @@ export function putCanonicalReport(
   assertReportEditable(row.status, Boolean(row.report));
   const now = new Date();
   updateRun(runId, {
-    report: report as unknown as ResearchReportJson,
+    report,
     reportUpdatedAt: now,
   });
   appendProgressEvent(runId, 'report_canonical_updated', { headline: '权威报告已更新' });
@@ -486,7 +485,7 @@ export function putWorkingReport(
   if (existing) {
     db()
       .update(researchReportEdits)
-      .set({ report: report as unknown as ResearchReportJson, updatedAt: new Date() })
+      .set({ report, updatedAt: new Date() })
       .where(eq(researchReportEdits.runId, runId))
       .run();
   } else {
@@ -495,7 +494,7 @@ export function putWorkingReport(
       .values({
         runId,
         baseReportUpdatedAt: row.reportUpdatedAt ?? null,
-        report: report as unknown as ResearchReportJson,
+        report,
       })
       .run();
   }

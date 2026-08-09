@@ -20,6 +20,8 @@ export default function ReportViewer({ sections, className }: ReportViewerProps)
     () =>
       sections.map((section, index) => ({
         id: `report-section-${index}`,
+        // intentionally || — empty heading is missing
+        // oxlint-disable-next-line typescript/prefer-nullish-coalescing
         title: section.heading || `章节 ${index + 1}`,
       })),
     [sections],
@@ -70,6 +72,8 @@ export default function ReportViewer({ sections, className }: ReportViewerProps)
             >
               <CollapsibleSection
                 id={`report-section-${index}`}
+                // intentionally || — empty heading is missing
+                // oxlint-disable-next-line typescript/prefer-nullish-coalescing
                 title={section.heading || `章节 ${index + 1}`}
                 defaultOpen={index === 0}
               >
@@ -80,7 +84,13 @@ export default function ReportViewer({ sections, className }: ReportViewerProps)
                       const ordinal = pointKeyCounts.get(baseKey) ?? 0;
                       pointKeyCounts.set(baseKey, ordinal + 1);
                       const pointKey = `${baseKey || 'point'}:${ordinal}`;
-                      return <li key={pointKey}>{point.text || '内容'}</li>;
+                      return (
+                        <li key={pointKey}>
+                          {/* intentionally || — empty string is missing */}
+                          {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
+                          {point.text || '内容'}
+                        </li>
+                      );
                     })}
                   </ul>
                 ) : (

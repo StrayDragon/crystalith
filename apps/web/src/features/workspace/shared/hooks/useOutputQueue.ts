@@ -158,7 +158,11 @@ async function runSlidesGenerate(
     throw new Error('生成未完成，请稍后重试。');
   }
   if (snapshot.status === 'error') {
-    throw new Error(snapshot.errorMessage?.trim() || '生成失败，请稍后重试。');
+    throw new Error(
+      // intentionally || — empty error message gets default
+      // oxlint-disable-next-line typescript/prefer-nullish-coalescing
+      snapshot.errorMessage?.trim() || '生成失败，请稍后重试。',
+    );
   }
   if (!hasSlidesStageCompleted(stage, snapshot)) {
     throw new Error('生成未完成，请稍后重试。');
@@ -440,8 +444,12 @@ export function useOutputQueue({
           const preference = job.preference;
           const body = {
             type: job.type,
+            // intentionally || — empty prompt/modelId become undefined
+            // oxlint-disable-next-line typescript/prefer-nullish-coalescing
             prompt: job.prompt || undefined,
             sourceIds: job.sourceIds.length ? job.sourceIds : undefined,
+            // intentionally || — empty modelId becomes undefined
+            // oxlint-disable-next-line typescript/prefer-nullish-coalescing
             modelId: job.modelId || undefined,
             ...(preference ? { preference } : {}),
           };

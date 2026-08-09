@@ -90,6 +90,8 @@ export async function getContext(slide: typeof studioSlides.$inferSelect): Promi
   const preference = slide.generationConfig?.preference ?? null;
   const { topK, minScore } = resolveRetrievalTuning(preference);
 
+  // intentionally || — empty prompt/title falls back to default query
+  // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   const query = slide.prompt || slide.title || 'presentation slides';
   try {
     const { ragRegistry } = await import('../../rag/registry.ts');
@@ -227,6 +229,8 @@ export async function generateOutline(
     instructions:
       'You are a presentation designer. Create a slide outline with title and bullet points for each slide.' +
       hintLines,
+    // intentionally || — empty title gets presentation default
+    // oxlint-disable-next-line typescript/prefer-nullish-coalescing
     prompt: `Create a slide outline based on:\n\nTitle: ${slide.title || 'Presentation'}\n\nContent:\n${context}\n\n${slide.prompt ? `Additional instructions: ${slide.prompt}` : ''}`,
   });
 

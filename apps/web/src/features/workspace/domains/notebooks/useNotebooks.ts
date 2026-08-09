@@ -156,6 +156,8 @@ export function useNotebooks() {
 
   const handleCreateNotebookQuick = useCallback(
     async (name?: string) => {
+      // intentionally || — empty trim gets default notebook name
+      // oxlint-disable-next-line typescript/prefer-nullish-coalescing
       const finalName = name?.trim() || DEFAULT_NOTEBOOK_NAME;
       if (!finalName || connectionState !== 'live') return false;
 

@@ -83,9 +83,11 @@ export function applySearchBudgetAddOn(runId: number): { k: number; maxSearches:
 function markUnfinishedResearchMissing(runId: number): void {
   const row = requireFresh(runId);
   const graph = getGraph(row);
-  const pending = orderResearchNodesForWork(graph.nodes as ResearchNode[]);
+  const pending = orderResearchNodesForWork(graph.nodes);
   for (const node of pending) {
     writeBackNodeWork(runId, node.id, node.evidenceIds ?? [], {
+      // intentionally || — empty summary gets budget message
+      // oxlint-disable-next-line typescript/prefer-nullish-coalescing
       summary: node.summary?.trim() || '预算用尽，未完成检索',
       conclusionStatus: 'missing',
     });
@@ -127,6 +129,8 @@ export function validateCreateBody(body: ResearchCreateBody): {
     }
     sourceIds = ids;
   }
+  // intentionally || — empty trim becomes null
+  // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   const modelId = body.modelId?.trim() || null;
   return {
     topic,
@@ -311,7 +315,7 @@ export async function confirmRun(
     try {
       const plan = await planTopicDecomposition({
         topic: latest.topic,
-        depth: (latest.depth ?? 'medium') as ResearchDepth,
+        depth: latest.depth ?? 'medium',
         maxNodes: latest.maxNodes,
         occupiedNodes: occupied,
         hint: hint ?? undefined,
@@ -383,7 +387,7 @@ export async function confirmRun(
       if (liveCount >= latest.maxNodes) {
         throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Node budget exhausted');
       }
-      const conclusion = findConclusionNode(graph.nodes as ResearchNode[]);
+      const conclusion = findConclusionNode(graph.nodes);
       if (!conclusion) {
         throw new AppHttpError(
           ErrorCode.INVALID_REQUEST,
@@ -479,7 +483,7 @@ function readLatestReexpandHint(runId: number): string | null {
     .all();
   for (const pe of rows) {
     if (pe.kind !== 'confirm_entered') continue;
-    const payload = pe.payload as Record<string, unknown> | null;
+    const payload = pe.payload;
     if (!payload || payload.confirmKind !== 'reexpand') continue;
     const hint = payload.hint;
     return typeof hint === 'string' && hint.trim() ? hint.trim() : null;
@@ -510,6 +514,8 @@ export function requestReexpand(
     );
   }
 
+  // intentionally || — empty trim becomes null
+  // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   const focusNodeId = body.focusNodeId?.trim() || null;
   if (focusNodeId) {
     const graph = getGraph(row);
@@ -538,6 +544,8 @@ export function requestReexpand(
     });
   }
 
+  // intentionally || — empty trim becomes null
+  // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   const hint = body.hint?.trim() || null;
   appendProgressEvent(runId, 'confirm_entered', {
     nodeId: focusNodeId,
@@ -616,18 +624,14 @@ export function pruneNode(notebookId: number, runId: number, nodeId: string): Re
   const row = requireRun(notebookId, runId);
   assertLiveMutable(row.status);
   const graph = getGraph(row);
-  const target = graph.nodes.find((n) => n.id === nodeId) as ResearchNode | undefined;
+  const target = graph.nodes.find((n) => n.id === nodeId);
   if (!target) {
     throw new AppHttpError(ErrorCode.NOT_FOUND, `Node ${nodeId} not found`);
   }
   if (isPruneProtectedNode(target, nodeId)) {
     throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Cannot prune protected node ${nodeId}`);
   }
-  const toPrune = collectResearchPruneClosure(
-    nodeId,
-    graph.nodes as ResearchNode[],
-    graph.edges as ResearchEdge[],
-  );
+  const toPrune = collectResearchPruneClosure(nodeId, graph.nodes, graph.edges);
   for (const n of graph.nodes) {
     if (toPrune.has(n.id)) {
       n.conclusionStatus = 'pruned';
@@ -638,7 +642,7 @@ export function pruneNode(notebookId: number, runId: number, nodeId: string): Re
     checkpoint: writeCheckpoint(row, `prune_${nodeId}`),
   });
   emitGraphPatch(runId, {
-    nodes: graph.nodes.filter((n) => toPrune.has(n.id)) as ResearchNode[],
+    nodes: graph.nodes.filter((n) => toPrune.has(n.id)),
   });
   emitLog(runId, `已剪枝节点 ${nodeId}${toPrune.size > 1 ? `（级联 ${toPrune.size}）` : ''}`);
   return serializeRun(requireRun(notebookId, runId));
@@ -653,7 +657,7 @@ export function patchNode(
   const row = requireRun(notebookId, runId);
   assertLiveMutable(row.status);
   const graph = getGraph(row);
-  const node = graph.nodes.find((n) => n.id === nodeId) as ResearchNode | undefined;
+  const node = graph.nodes.find((n) => n.id === nodeId);
   if (!node) {
     throw new AppHttpError(ErrorCode.NOT_FOUND, `Node ${nodeId} not found`);
   }
@@ -768,8 +772,7 @@ export async function convertToSource(
     .get();
 
   let offset = 0;
-  for (let i = 0; i < chunkTexts.length; i++) {
-    const text = chunkTexts[i]!;
+  for (const [i, text] of chunkTexts.entries()) {
     db()
       .insert(chunks)
       .values({

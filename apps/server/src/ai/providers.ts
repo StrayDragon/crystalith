@@ -93,6 +93,7 @@ function resolveEmbeddingAccessor(
 
 function buildProviderOpts(config: ModelConfig, includeHeaders: boolean): Record<string, unknown> {
   const providerConfig = config.providerConfig ?? {};
+  /* oxlint-disable typescript/prefer-nullish-coalescing -- empty config strings become undefined */
   return {
     apiKey: resolveApiKey(providerConfig.apiKey),
     baseURL: providerConfig.baseUrl || undefined,
@@ -101,6 +102,7 @@ function buildProviderOpts(config: ModelConfig, includeHeaders: boolean): Record
     ...(includeHeaders ? { headers: config.requestOptions?.headers ?? undefined } : {}),
     supportsStructuredOutputs: providerConfig.supportsStructuredOutputs ?? false,
   };
+  /* oxlint-enable typescript/prefer-nullish-coalescing */
 }
 
 /** Resolve a ModelConfig into a concrete LanguageModelV4. */

@@ -97,13 +97,13 @@ export function markdownToResearchReport(
     if (skipRest) continue;
     const h1 = /^#\s+(.+)$/u.exec(line);
     if (h1 && !sawH1) {
-      title = h1[1]!.trim() || title;
+      title = h1[1].trim() || title;
       sawH1 = true;
       continue;
     }
     const h2 = /^##\s+(.+)$/u.exec(line);
     if (h2) {
-      const label = h2[1]!.trim();
+      const label = h2[1].trim();
       if (label === '参考文献') {
         flush();
         skipRest = true;

@@ -22,6 +22,7 @@ import type {
   ResearchRunSummary,
   ResearchRunsPage,
 } from '@crystalith/shared';
+import { ResearchNodeActionProposalSchema } from '@crystalith/shared';
 
 import { api } from '../../api/eden';
 import { parseServerError } from '../../api/parseServerError';
@@ -35,6 +36,10 @@ function throwEdenError(error: unknown): never {
   throw err;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export async function createResearchRun(
   notebookId: number,
   body: ResearchCreateBody,
@@ -42,7 +47,7 @@ export async function createResearchRun(
   const { data, error } = await api.v2.notebooks({ nid: notebookId }).research.post(body);
   if (error) throwEdenError(error);
   if (!data) throw new Error('创建 ResearchRun 失败：空响应');
-  return data as ResearchRun;
+  return data;
 }
 
 export async function listResearchRuns(
@@ -58,7 +63,7 @@ export async function listResearchRuns(
   });
   if (error) throwEdenError(error);
   if (!data) throw new Error('列出 ResearchRun 失败：空响应');
-  return data as ResearchRunsPage;
+  return data;
 }
 
 export async function getResearchRun(notebookId: number, runId: number): Promise<ResearchRun> {
@@ -68,7 +73,7 @@ export async function getResearchRun(notebookId: number, runId: number): Promise
     .get();
   if (error) throwEdenError(error);
   if (!data) throw new Error('获取 ResearchRun 失败：空响应');
-  return data as ResearchRun;
+  return data;
 }
 
 export async function listProgress(
@@ -87,7 +92,7 @@ export async function listProgress(
     });
   if (error) throwEdenError(error);
   if (!data) throw new Error('获取进度账本失败：空响应');
-  return data as ResearchProgressList;
+  return data;
 }
 
 export async function cancelResearchRun(notebookId: number, runId: number): Promise<ResearchRun> {
@@ -97,7 +102,7 @@ export async function cancelResearchRun(notebookId: number, runId: number): Prom
     .cancel.post();
   if (error) throwEdenError(error);
   if (!data) throw new Error('取消 ResearchRun 失败：空响应');
-  return data as ResearchRun;
+  return data;
 }
 
 export async function retrySynthesizeResearchRun(
@@ -109,7 +114,7 @@ export async function retrySynthesizeResearchRun(
   const { data, error } = await run['retry-synthesize'].post(body ?? {});
   if (error) throwEdenError(error);
   if (!data) throw new Error('重试结案失败：空响应');
-  return data as ResearchRun;
+  return data;
 }
 
 export async function confirmResearchRun(
@@ -123,7 +128,7 @@ export async function confirmResearchRun(
     .confirm.post(body);
   if (error) throwEdenError(error);
   if (!data) throw new Error('确认 ResearchRun 失败：空响应');
-  return data as ResearchRun;
+  return data;
 }
 
 export async function addResearchBudget(notebookId: number, runId: number): Promise<ResearchRun> {
@@ -131,7 +136,7 @@ export async function addResearchBudget(notebookId: number, runId: number): Prom
   const { data, error } = await run['add-budget'].post({});
   if (error) throwEdenError(error);
   if (!data) throw new Error('加购检索预算失败：空响应');
-  return data as ResearchRun;
+  return data;
 }
 
 export async function requestReexpand(
@@ -143,7 +148,7 @@ export async function requestReexpand(
   const { data, error } = await run['request-reexpand'].post(body ?? {});
   if (error) throwEdenError(error);
   if (!data) throw new Error('请求再扩展失败：空响应');
-  return data as ResearchRun;
+  return data;
 }
 
 export async function pruneResearchNode(
@@ -158,7 +163,7 @@ export async function pruneResearchNode(
     .prune.post();
   if (error) throwEdenError(error);
   if (!data) throw new Error('剪枝失败：空响应');
-  return data as ResearchRun;
+  return data;
 }
 
 export async function forkResearchNode(
@@ -174,7 +179,7 @@ export async function forkResearchNode(
     .fork.post(body ?? {});
   if (error) throwEdenError(error);
   if (!data) throw new Error('分叉失败：空响应');
-  return data as ResearchRun;
+  return data;
 }
 
 export async function patchResearchNode(
@@ -190,7 +195,7 @@ export async function patchResearchNode(
     .patch(body);
   if (error) throwEdenError(error);
   if (!data) throw new Error('更新节点失败：空响应');
-  return data as ResearchRun;
+  return data;
 }
 
 export function summaryToTaskItem(s: ResearchRunSummary): {
@@ -222,7 +227,7 @@ export async function listResearchRevisions(
   const { data, error } = await researchRunPath(notebookId, runId).revisions.get();
   if (error) throwEdenError(error);
   if (!data) throw new Error('列出版本失败：空响应');
-  return data as ResearchRevisionsList;
+  return data;
 }
 
 export async function createResearchRevision(
@@ -233,7 +238,7 @@ export async function createResearchRevision(
   const { data, error } = await researchRunPath(notebookId, runId).revisions.post(body ?? {});
   if (error) throwEdenError(error);
   if (!data) throw new Error('创建版本失败：空响应');
-  return data as ResearchRevision;
+  return data;
 }
 
 export async function getResearchRevision(
@@ -244,7 +249,7 @@ export async function getResearchRevision(
   const { data, error } = await researchRunPath(notebookId, runId).revisions({ revId }).get();
   if (error) throwEdenError(error);
   if (!data) throw new Error('获取版本失败：空响应');
-  return data as ResearchRevision;
+  return data;
 }
 
 export async function restoreResearchRevision(
@@ -257,7 +262,7 @@ export async function restoreResearchRevision(
     .restore.post();
   if (error) throwEdenError(error);
   if (!data) throw new Error('恢复版本失败：空响应');
-  return data as ResearchRun;
+  return data;
 }
 
 /** POST …/revisions/:revId/fork-run — new ResearchRun from revision snapshot (c105). */
@@ -271,7 +276,7 @@ export async function forkResearchRunFromRevision(
   const { data, error } = await revision['fork-run'].post(body ?? {});
   if (error) throwEdenError(error);
   if (!data) throw new Error('派生新研究失败：空响应');
-  return data as ResearchRun;
+  return data;
 }
 
 /** POST …/schedule — start kernel for queued Run only. */
@@ -279,7 +284,7 @@ export async function scheduleResearchRun(notebookId: number, runId: number): Pr
   const { data, error } = await researchRunPath(notebookId, runId).schedule.post();
   if (error) throwEdenError(error);
   if (!data) throw new Error('启动研究失败：空响应');
-  return data as ResearchRun;
+  return data;
 }
 
 /** GET …/report — canonical + working view (no separate GET …/report/working). */
@@ -290,7 +295,7 @@ export async function getResearchReportView(
   const { data, error } = await researchRunPath(notebookId, runId).report.get();
   if (error) throwEdenError(error);
   if (!data) throw new Error('获取报告视图失败：空响应');
-  return data as ResearchReportView;
+  return data;
 }
 
 export async function putResearchCanonicalReport(
@@ -301,7 +306,7 @@ export async function putResearchCanonicalReport(
   const { data, error } = await researchRunPath(notebookId, runId).report.put({ report });
   if (error) throwEdenError(error);
   if (!data) throw new Error('写入权威报告失败：空响应');
-  return data as ResearchReportView;
+  return data;
 }
 
 export async function putResearchWorkingReport(
@@ -312,7 +317,7 @@ export async function putResearchWorkingReport(
   const { data, error } = await researchRunPath(notebookId, runId).report.working.put({ report });
   if (error) throwEdenError(error);
   if (!data) throw new Error('写入 working 报告失败：空响应');
-  return data as ResearchReportView;
+  return data;
 }
 
 export async function discardResearchWorkingReport(
@@ -322,7 +327,7 @@ export async function discardResearchWorkingReport(
   const { data, error } = await researchRunPath(notebookId, runId).report.working.delete();
   if (error) throwEdenError(error);
   if (!data) throw new Error('丢弃 working 报告失败：空响应');
-  return data as ResearchReportView;
+  return data;
 }
 
 export async function convertResearchToNote(
@@ -335,7 +340,7 @@ export async function convertResearchToNote(
   });
   if (error) throwEdenError(error);
   if (!data) throw new Error('转为笔记失败：空响应');
-  return data as ResearchConvertToNoteResponse;
+  return data;
 }
 
 export async function convertResearchToSource(
@@ -348,7 +353,7 @@ export async function convertResearchToSource(
   });
   if (error) throwEdenError(error);
   if (!data) throw new Error('转为来源失败：空响应');
-  return data as ResearchConvertToSourceResponse;
+  return data;
 }
 
 /**
@@ -368,28 +373,38 @@ export async function* streamNodeChat(
     body,
     signal: options?.signal,
   })) {
+    const data = isRecord(ev.data) ? ev.data : {};
     if (ev.event === 'chunk') {
-      const data = ev.data as { text?: string };
-      yield { event: 'chunk', data: { text: data.text ?? '' } };
+      yield {
+        event: 'chunk',
+        data: { text: typeof data.text === 'string' ? data.text : '' },
+      };
     } else if (ev.event === 'proposal') {
-      yield { event: 'proposal', data: ev.data as ResearchNodeActionProposal };
+      const proposal = ResearchNodeActionProposalSchema.safeParse(ev.data);
+      if (!proposal.success) continue;
+      yield { event: 'proposal', data: proposal.data };
     } else if (ev.event === 'done') {
-      const data = ev.data as { proposals?: ResearchNodeActionProposal[] };
-      yield { event: 'done', data: { proposals: data.proposals } };
+      const proposalsRaw = Array.isArray(data.proposals) ? data.proposals : undefined;
+      const proposals = proposalsRaw
+        ?.map((item) => ResearchNodeActionProposalSchema.safeParse(item))
+        .filter((r): r is { success: true; data: ResearchNodeActionProposal } => r.success)
+        .map((r) => r.data);
+      yield { event: 'done', data: { proposals } };
     } else if (ev.event === 'error') {
-      const data = ev.data as { errorCode?: string; message?: string };
       yield {
         event: 'error',
         data: {
-          errorCode: data.errorCode ?? 'UNKNOWN',
-          message: data.message ?? '节点对话失败',
+          errorCode: typeof data.errorCode === 'string' ? data.errorCode : 'UNKNOWN',
+          message: typeof data.message === 'string' ? data.message : '节点对话失败',
         },
       };
     } else if (ev.event === 'log') {
-      const data = ev.data as { message?: string; nodeId?: string };
       yield {
         event: 'log',
-        data: { message: data.message ?? '', nodeId: data.nodeId },
+        data: {
+          message: typeof data.message === 'string' ? data.message : '',
+          nodeId: typeof data.nodeId === 'string' ? data.nodeId : undefined,
+        },
       };
     }
     // Unknown event names are ignored (must not mix into Run stream handlers).

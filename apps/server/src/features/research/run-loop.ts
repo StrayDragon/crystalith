@@ -1,7 +1,7 @@
 /**
  * Deep Research run loop — schedule, drain work units, confirm helpers.
  */
-import type { ResearchDepth, ResearchNode } from '@crystalith/shared';
+import type { ResearchNode } from '@crystalith/shared';
 import { generateText } from 'ai';
 import { eq } from 'drizzle-orm';
 
@@ -104,7 +104,7 @@ export async function finishWaveOrSynthesize(runId: number): Promise<void> {
   if (row.status === 'awaiting_confirm') return;
   // c108: no mid-wave remaining-budget confirm; only true exhaustion with work left.
   if (row.allowWeb && row.searchesUsed >= row.maxSearches) {
-    const pending = orderResearchNodesForWork(getGraph(row).nodes as ResearchNode[]);
+    const pending = orderResearchNodesForWork(getGraph(row).nodes);
     if (pending.length > 0) {
       await enterConfirm(runId, 'budget');
       return;
@@ -342,6 +342,8 @@ export async function runNodeWorkUnit(opts: {
   // (c102 removed pragmatic fake-hit; without this, stub runs complete with searchesUsed=0).
   if (isResearchE2eStub()) {
     if (allowWeb && searchesUsed < maxSearches) {
+      // intentionally || — empty query falls back to title/topic
+      // oxlint-disable-next-line typescript/prefer-nullish-coalescing
       const query = node.query?.trim() || node.title || topic;
       await withRunWriteLock(runId, () => {
         const ingested = ingestWorkToolResult(
@@ -405,6 +407,8 @@ export async function runNodeWorkUnit(opts: {
             .filter(Boolean)
             .join('\n'),
           abortSignal,
+          // ToolLoopAgent settings are intentionally `any` (see node-agent.ts); options
+          // match ResearchNodeAgentCallOptions but inference rejects the bag without never.
           options: {
             mode: 'work_unit',
             role,
@@ -542,7 +546,7 @@ export function patchNodePhase(
 ): ResearchNode | null {
   const row = requireFresh(runId);
   const graph = getGraph(row);
-  const live = graph.nodes.find((n) => n.id === nodeId) as ResearchNode | undefined;
+  const live = graph.nodes.find((n) => n.id === nodeId);
   if (!live || live.conclusionStatus === 'pruned') return null;
   const updated: ResearchNode = { ...live, phase };
   const idx = graph.nodes.findIndex((n) => n.id === updated.id);
@@ -565,7 +569,7 @@ export function writeBackNodeWork(
 ): ResearchNode | null {
   const row = requireFresh(runId);
   const graph = getGraph(row);
-  const live = graph.nodes.find((n) => n.id === nodeId) as ResearchNode | undefined;
+  const live = graph.nodes.find((n) => n.id === nodeId);
   if (!live || live.conclusionStatus === 'pruned') return null;
   const conclusionStatus =
     opts?.conclusionStatus ?? (evidenceIds.length > 0 ? 'partial' : 'missing');
@@ -600,7 +604,7 @@ export async function drainResearchWorkUnits(
     const row = requireFresh(runId);
     const graph = getGraph(row);
     // F2=B: stable insertion-order queue (orderResearchNodesForWork); re-read each wave
-    const pending = orderResearchNodesForWork(graph.nodes as ResearchNode[]);
+    const pending = orderResearchNodesForWork(graph.nodes);
     if (pending.length === 0) return;
     const batch = pending.slice(0, parallelN);
 
@@ -627,6 +631,8 @@ export async function drainResearchWorkUnits(
           runId,
           notebookId: fresh.notebookId,
           node,
+          // intentionally || — empty node query falls back to run topic
+          // oxlint-disable-next-line typescript/prefer-nullish-coalescing
           topic: node.query?.trim() || fresh.topic,
           allowWeb: fresh.allowWeb && fresh.searchesUsed < fresh.maxSearches,
           useNotebookSources: fresh.useNotebookSources,
@@ -692,8 +698,8 @@ export async function runLoop(runId: number): Promise<void> {
 
     // Seed single-sink DAG (question + conclusion) at start of loop (r317).
     let graph = getGraph(row);
-    let question = findQuestionNode(graph.nodes as ResearchNode[]);
-    let conclusion = findConclusionNode(graph.nodes as ResearchNode[]);
+    let question = findQuestionNode(graph.nodes);
+    let conclusion = findConclusionNode(graph.nodes);
     if (!question || !conclusion) {
       const seeded = seedSingleSinkGraph(row.topic);
       question = seeded.question;
@@ -718,12 +724,12 @@ export async function runLoop(runId: number): Promise<void> {
     }
     row = requireFresh(runId);
     graph = getGraph(row);
-    if (!hasLiveResearchBranches(graph.nodes as ResearchNode[])) {
+    if (!hasLiveResearchBranches(graph.nodes)) {
       const occupied = graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length;
       try {
         const plan = await planTopicDecomposition({
           topic: row.topic,
-          depth: (row.depth ?? 'medium') as ResearchDepth,
+          depth: row.depth ?? 'medium',
           maxNodes: row.maxNodes,
           occupiedNodes: occupied,
           abortSignal: abort.signal,
@@ -770,7 +776,7 @@ export async function runLoop(runId: number): Promise<void> {
     graph = getGraph(row);
     if (
       isResearchE2eStub() &&
-      hasLiveResearchBranches(graph.nodes as ResearchNode[]) &&
+      hasLiveResearchBranches(graph.nodes) &&
       !abort.signal.aborted &&
       !isCancelled(runId)
     ) {
@@ -786,14 +792,14 @@ export async function runLoop(runId: number): Promise<void> {
     // No branches → keep question → drain (fork children / empty decompose fallback).
     row = requireFresh(runId);
     graph = getGraph(row);
-    question = findQuestionNode(graph.nodes as ResearchNode[])!;
+    question = findQuestionNode(graph.nodes)!;
     if (question.conclusionStatus === 'pruned') {
       emitLog(runId, `跳过已剪枝节点 ${question.id}`);
       await synthesizeAndComplete(runId);
       return;
     }
 
-    const skipQuestionUnit = hasLiveResearchBranches(graph.nodes as ResearchNode[]);
+    const skipQuestionUnit = hasLiveResearchBranches(graph.nodes);
     if (!skipQuestionUnit) {
       const evidenceIds: string[] = [...(question.evidenceIds ?? [])];
 
@@ -828,7 +834,7 @@ export async function runLoop(runId: number): Promise<void> {
 
       row = requireFresh(runId);
       graph = getGraph(row);
-      const liveQuestion = findQuestionNode(graph.nodes as ResearchNode[]);
+      const liveQuestion = findQuestionNode(graph.nodes);
       if (!liveQuestion || liveQuestion.conclusionStatus === 'pruned') {
         emitLog(runId, '问题节点已剪枝，跳过写回');
         await synthesizeAndComplete(runId);

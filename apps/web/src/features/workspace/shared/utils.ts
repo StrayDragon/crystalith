@@ -127,6 +127,8 @@ export function formatRelativeTime(value?: TimestampInput): string {
 }
 
 export function buildSourceSummaryPrompt(title?: string | null): string {
+  // intentionally || — empty string is missing
+  // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   const safeTitle = title?.trim() || '文档';
   return `请总结《${safeTitle}》的核心观点`;
 }
@@ -181,6 +183,8 @@ function formatMindmapLines(
   lines: string[] = [],
 ) {
   if (!node) return lines;
+  // intentionally || — empty string is missing
+  // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   lines.push(formatOutputLine(`- ${node.label || '未命名节点'}`, depth));
   if (Array.isArray(node.children)) {
     node.children.forEach((child) => {
@@ -194,6 +198,7 @@ export function formatStructuredOutputForCopy(output: OutputItem): string {
   const typed = decodeOutputItem(output);
   if (!typed) return JSON.stringify(output.content ?? {}, null, 2);
 
+  /* oxlint-disable typescript/prefer-nullish-coalescing -- copy export labels treat empty string as missing */
   switch (typed.type) {
     case 'FAQ':
       return typed.content.items
@@ -289,6 +294,7 @@ export function formatStructuredOutputForCopy(output: OutputItem): string {
     default:
       return JSON.stringify(output.content ?? {}, null, 2);
   }
+  /* oxlint-enable typescript/prefer-nullish-coalescing */
 }
 
 export function normalizeNotebook(row: WireNotebook): Notebook {
@@ -398,6 +404,8 @@ export function formatSourceType(row: Pick<WireSource, 'filename' | 'mimeType'>)
   if (extension === 'txt') return 'TXT';
   if (row.mimeType === 'text/markdown') return 'Markdown';
   if (row.mimeType === 'text/plain') return 'TXT';
+  // intentionally || — empty mime type is missing
+  // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   return row.mimeType || '未知';
 }
 

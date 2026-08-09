@@ -53,6 +53,8 @@ export function navigateToResearchLab(
       notebookId,
       view: 'graph',
       rid: runId ?? null,
+      // intentionally || — empty trim becomes null
+      // oxlint-disable-next-line typescript/prefer-nullish-coalescing
       topic: opts?.topic?.trim() || null,
     },
     '',

@@ -101,7 +101,7 @@ export function buildSuggestedReportFromNodes(input: {
     lines.push('## 引用');
     lines.push('');
     for (const id of used) {
-      const c = citations[id]!;
+      const c = citations[id];
       lines.push(`[^${id}]: ${c.title}${c.url ? ` — ${c.url}` : ''}`);
     }
     lines.push('');

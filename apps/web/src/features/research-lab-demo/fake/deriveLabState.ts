@@ -269,7 +269,7 @@ export function advanceLabPlayback(
   if (idx < 0 || idx >= PLAYBACK_ORDER.length - 1) {
     return { phase: phase === 'failed' ? phase : 'completed', playing: false };
   }
-  const next = PLAYBACK_ORDER[idx + 1]!;
+  const next = PLAYBACK_ORDER[idx + 1];
   if (next === 'awaiting_confirm') {
     if (!askOnInterrupt) return { phase: 'completed', playing: false };
     return { phase: 'awaiting_confirm', playing: false };

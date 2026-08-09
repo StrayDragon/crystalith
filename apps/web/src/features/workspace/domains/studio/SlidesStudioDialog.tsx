@@ -120,6 +120,8 @@ export default function SlidesStudioDialog(props: SlidesStudioDialogProps) {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            {/* intentionally || — empty engine is missing */}
+            {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
             <Chip value={slidesEngine || '未配置'} size="sm" variant="ghost" />
             <IconButton
               variant="text"

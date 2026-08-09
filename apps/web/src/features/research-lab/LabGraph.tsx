@@ -16,9 +16,7 @@ import {
   getSmoothStepPath,
   getStraightPath,
   useReactFlow,
-  type Edge,
   type EdgeProps,
-  type Node,
   type NodeChange,
   type NodeProps,
   type XYPosition,
@@ -27,7 +25,13 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEven
 
 import { TestIds, tid } from '../../shared/testids';
 import LabCanvasSettings from './LabCanvasSettings';
-import { layoutWithElk, nodeProgress, type LabEdgeData, type LabRfData } from './model/labLayout';
+import {
+  layoutWithElk,
+  nodeProgress,
+  type LabFlowEdge,
+  type LabFlowNode,
+  type LabRfData,
+} from './model/labLayout';
 import type {
   LabEdge,
   LabEdgePathPreset,
@@ -110,8 +114,8 @@ const ROLE_LABEL = {
 /** Invisible connection anchors — edges still attach, dots stay hidden. */
 const HIDDEN_HANDLE = '!w-2 !h-2 !min-w-0 !min-h-0 !border-0 !bg-transparent !opacity-0';
 
-function LabFlowNode({ data }: NodeProps) {
-  const d = data as LabRfData;
+function LabFlowNode({ data }: NodeProps<LabFlowNode>) {
+  const d = data;
   const style = STATUS_STYLE[d.conclusionStatus] ?? STATUS_STYLE.pending;
   const isConclusion = d.role === 'conclusion';
   const isQuestion = d.role === 'question';
@@ -203,8 +207,8 @@ const LabActionEdge = memo(function LabActionEdge({
   style,
   markerEnd,
   data,
-}: EdgeProps) {
-  const d = data as LabEdgeData | undefined;
+}: EdgeProps<LabFlowEdge>) {
+  const d = data;
   const [hovered, setHovered] = useState(false);
   const [path, labelX, labelY] = labEdgePath(d?.pathPreset ?? 'smoothstep', {
     sourceX,
@@ -245,6 +249,8 @@ const LabActionEdge = memo(function LabActionEdge({
                   d?.faded ? 'text-slate-400 border-slate-100' : 'text-slate-500 border-slate-200'
                 }`}
               >
+                {/* intentionally || — empty label note falls back to kind */}
+                {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
                 {d?.labelNote || d?.kind || ''}
               </span>
               {d?.canFork || d?.canPrune ? (
@@ -284,6 +290,8 @@ const LabActionEdge = memo(function LabActionEdge({
                 d?.faded ? 'text-slate-300' : 'text-slate-400'
               }`}
             >
+              {/* intentionally || — empty label note falls back to kind */}
+              {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
               {d?.labelNote || d?.kind || ''}
             </span>
           )}
@@ -328,8 +336,8 @@ function Inner({
   onEdgePathPreset: (p: LabEdgePathPreset) => void;
 }) {
   const { fitView } = useReactFlow();
-  const [rfNodes, setRfNodes] = useState<Node[]>([]);
-  const [rfEdges, setRfEdges] = useState<Edge[]>([]);
+  const [rfNodes, setRfNodes] = useState<LabFlowNode[]>([]);
+  const [rfEdges, setRfEdges] = useState<LabFlowEdge[]>([]);
   const [showMiniMap, setShowMiniMap] = useState(true);
   const [layoutAnim, setLayoutAnim] = useState(false);
   const layoutAnimTimer = useRef<number | null>(null);
@@ -419,20 +427,24 @@ function Inner({
         nextNodes.map((n) => ({
           ...n,
           data: {
-            ...(n.data as LabRfData),
+            ...n.data,
             selected: n.id === selectedRef.current,
-            reshaping: reshaping && (n.data as LabRfData).role === 'conclusion',
+            reshaping: reshaping && n.data.role === 'conclusion',
           },
         })),
       );
       setRfEdges(
-        result.edges.map((e) => ({
-          ...e,
-          data: {
-            ...(e.data as LabEdgeData),
-            pathPreset: edgePathPresetRef.current,
-          },
-        })),
+        result.edges.map((e) => {
+          const base = e.data;
+          if (!base) return e;
+          return {
+            ...e,
+            data: {
+              ...base,
+              pathPreset: edgePathPresetRef.current,
+            },
+          };
+        }),
       );
       pulseLayoutAnim();
     });
@@ -455,13 +467,17 @@ function Inner({
   const edgePresetReady = useRef(false);
   useEffect(() => {
     setRfEdges((prev) =>
-      prev.map((e) => ({
-        ...e,
-        data: {
-          ...(e.data as LabEdgeData),
-          pathPreset: edgePathPreset,
-        },
-      })),
+      prev.map((e) => {
+        const base = e.data;
+        if (!base) return e;
+        return {
+          ...e,
+          data: {
+            ...base,
+            pathPreset: edgePathPreset,
+          },
+        };
+      }),
     );
     if (!edgePresetReady.current) {
       edgePresetReady.current = true;
@@ -481,7 +497,7 @@ function Inner({
       return prev.map((n) => {
         const lab = labNodes.find((l) => l.id === n.id);
         if (!lab) return n;
-        const d = n.data as LabRfData;
+        const d = n.data;
         const prog = nodeProgress(lab);
         const isConclusion = lab.role === 'conclusion';
         return {
@@ -493,6 +509,8 @@ function Inner({
             conclusionStatus: lab.conclusionStatus,
             phase: lab.phase,
             role: lab.role,
+            // intentionally || — empty conclusion falls back to summary
+            // oxlint-disable-next-line typescript/prefer-nullish-coalescing
             preview:
               lab.role === 'question' || lab.role === 'conclusion'
                 ? lab.conclusion || lab.summary
@@ -533,7 +551,7 @@ function Inner({
     return () => window.clearTimeout(t);
   }, [structureKey, direction, layoutAlgorithm, reshaping, fitView, rfNodes.length]);
 
-  const onNodesChange = useCallback((changes: NodeChange[]) => {
+  const onNodesChange = useCallback((changes: NodeChange<LabFlowNode>[]) => {
     setRfNodes((nds) => {
       const next = applyNodeChanges(changes, nds);
       for (const c of changes) {
@@ -552,7 +570,7 @@ function Inner({
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
       onNodesChange={onNodesChange}
-      onNodeClick={(_: MouseEvent, node: Node) => onSelectNode(node.id)}
+      onNodeClick={(_: MouseEvent, node: LabFlowNode) => onSelectNode(node.id)}
       onPaneClick={() => onSelectNode(null)}
       nodesDraggable
       nodesConnectable={false}
@@ -573,8 +591,8 @@ function Inner({
           className="!m-3 !overflow-hidden !rounded-xl !border !border-gray-200 !bg-white/95 !shadow-sm"
           maskColor="rgb(15 23 42 / 0.08)"
           nodeStrokeWidth={2}
-          nodeColor={(n) => {
-            const role = (n.data as LabRfData | undefined)?.role;
+          nodeColor={(n: LabFlowNode) => {
+            const role = n.data?.role;
             if (role === 'question') return '#3b82f6';
             if (role === 'conclusion') return '#f59e0b';
             return '#64748b';

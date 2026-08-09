@@ -71,7 +71,7 @@ export function createDb(path?: string): Orm {
 
 /** Process-wide singleton (the desktop app talks to one DB file). */
 export function db(): Orm {
-  if (!_orm) _orm = createDb();
+  _orm ??= createDb();
   return _orm;
 }
 
