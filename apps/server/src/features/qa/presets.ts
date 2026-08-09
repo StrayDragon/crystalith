@@ -195,11 +195,19 @@ export function parseStatsPresetOutput(text: string): StatsPresetOutput | null {
   if (isObject(payload.table) && Array.isArray(payload.table.columns)) {
     const cols = payload.table.columns;
     if (!cols.every((c) => typeof c === 'string') || cols.length === 0) return null;
-    const rows = Array.isArray(payload.table.rows) ? payload.table.rows : [];
-    if (!rows.every((r) => Array.isArray(r))) return null;
-    table = { columns: cols, rows };
+    const rawRows: unknown[] = Array.isArray(payload.table.rows) ? payload.table.rows : [];
+    if (!rawRows.every(isStatsRow)) return null;
+    table = { columns: cols, rows: rawRows };
   }
   return { fallback_markdown: fm, chart: validatedChart, table };
+}
+
+function isStatsCell(v: unknown): v is string | number | null {
+  return v === null || typeof v === 'string' || typeof v === 'number';
+}
+
+function isStatsRow(v: unknown): v is Array<string | number | null> {
+  return Array.isArray(v) && v.every(isStatsCell);
 }
 
 function isObject(v: unknown): v is Record<string, unknown> {

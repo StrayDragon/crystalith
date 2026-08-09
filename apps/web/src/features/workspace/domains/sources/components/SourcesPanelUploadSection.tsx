@@ -117,6 +117,8 @@ export default function SourcesPanelUploadSection({
                 ? t('sources.upload.uploading')
                 : t('sources.upload.add_sources')}
             <input
+              // RefObject from parent matches useRef; hidden input ref typing is stricter.
+              // oxlint-disable-next-line typescript/no-unsafe-type-assertion
               ref={fileInputRef as Ref<HTMLInputElement>}
               type="file"
               hidden

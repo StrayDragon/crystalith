@@ -147,7 +147,8 @@ export function useKeyboardShortcuts(
     const target = options.target ?? (typeof window !== 'undefined' ? window : null);
     if (!target || typeof target.addEventListener !== 'function') return;
 
-    const handleKeyDown = (event: KeyboardEvent) => {
+    const handleKeyDown: EventListener = (event) => {
+      if (!(event instanceof KeyboardEvent)) return;
       if (event.defaultPrevented) return;
 
       for (const binding of activeBindings) {
@@ -171,10 +172,10 @@ export function useKeyboardShortcuts(
       }
     };
 
-    target.addEventListener('keydown', handleKeyDown as EventListener);
+    target.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      target.removeEventListener('keydown', handleKeyDown as EventListener);
+      target.removeEventListener('keydown', handleKeyDown);
     };
   }, [activeBindings, enabled, options.target]);
 }

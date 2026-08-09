@@ -10,6 +10,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function asDisplayText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value === null || value === undefined) return '';
+  if (
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint' ||
+    typeof value === 'symbol'
+  ) {
+    return String(value);
+  }
+  return '';
+}
+
 export function isSynthesizeFailureReason(reason: string | null | undefined): boolean {
   if (!reason) return false;
   return (
@@ -211,7 +225,7 @@ export function repairResearchReportText(text: string): string | null {
               }
               const it = item;
               return {
-                text: typeof it.text === 'string' ? it.text : String(it.text ?? ''),
+                text: typeof it.text === 'string' ? it.text : asDisplayText(it.text),
                 citeIds: Array.isArray(it.citeIds)
                   ? it.citeIds.filter((x): x is string => typeof x === 'string')
                   : [],
@@ -221,7 +235,7 @@ export function repairResearchReportText(text: string): string | null {
         }
         return {
           type: 'paragraph',
-          text: typeof b.text === 'string' ? b.text : String(b.text ?? ''),
+          text: typeof b.text === 'string' ? b.text : asDisplayText(b.text),
           citeIds: Array.isArray(b.citeIds)
             ? b.citeIds.filter((x): x is string => typeof x === 'string')
             : [],

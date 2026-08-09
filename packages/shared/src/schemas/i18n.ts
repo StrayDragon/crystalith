@@ -29,6 +29,6 @@ import { L } from '../i18n/i18n-util.js';
  *                   This prevents compile errors during active development.
  * @returns The Chinese description string.
  */
-export function desc<K extends string>(key: K, fallback?: string): string {
+export function desc(key: string, fallback?: string): string {
   return (L as Record<string, string>)[key] ?? fallback ?? key;
 }

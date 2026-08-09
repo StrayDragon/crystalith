@@ -277,6 +277,10 @@ function LabWorkbench({
       case 'skip_branch':
         lab.skipBranch();
         break;
+      case 'approve_reexpand':
+      case 'skip_reexpand':
+      case 'request_reexpand':
+        break;
       case 'view_conclusion':
         openReport();
         break;

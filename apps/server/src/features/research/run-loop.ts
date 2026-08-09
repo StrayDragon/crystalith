@@ -158,7 +158,12 @@ export function ingestWorkToolResult(
       if (!isRecord(item)) continue;
       const ev = insertEvidence(runId, notebookId, {
         kind: 'web',
-        title: typeof item.title === 'string' ? item.title : String(item.url ?? 'web'),
+        title:
+          typeof item.title === 'string'
+            ? item.title
+            : typeof item.url === 'string'
+              ? item.url
+              : 'web',
         snippet: typeof item.snippet === 'string' ? item.snippet : undefined,
         url: typeof item.url === 'string' ? item.url : undefined,
         collectedAtNodeId: nodeId,
@@ -471,7 +476,7 @@ export async function runNodeWorkUnit(opts: {
           if (abortSignal.aborted || isCancelled(runId)) break;
           if (part.type === 'tool-result') {
             const toolName = 'toolName' in part ? part.toolName : '';
-            const output = 'output' in part ? part.output : undefined;
+            const output: unknown = 'output' in part ? part.output : undefined;
             if (toolName === 'webSearch') {
               const freshBudget = requireFresh(runId);
               if (freshBudget.searchesUsed >= maxSearches || nodeSearchesUsed >= searchSoft) {

@@ -226,7 +226,7 @@ export function loadConfig(path?: string): AppConfig {
   }
   const raw = readFileSync(resolvedPath, 'utf-8');
   const rendered = renderTemplates(raw);
-  const parsedYaml = parseYaml(rendered);
+  const parsedYaml: unknown = parseYaml(rendered);
   const parsed = isRecord(parsedYaml) ? parsedYaml : {};
 
   const models = ModelsSettingsSchema.parse(parsed.models ?? {});

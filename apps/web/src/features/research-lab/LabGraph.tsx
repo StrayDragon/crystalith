@@ -83,6 +83,14 @@ function labEdgePath(
       const [path, x, y] = getSimpleBezierPath(base);
       return [path, x, y];
     }
+    case 'smoothstep': {
+      const [path, x, y] = getSmoothStepPath({
+        ...base,
+        borderRadius: 18,
+        offset: args.pathOffset,
+      });
+      return [path, x, y];
+    }
     default: {
       const [path, x, y] = getSmoothStepPath({
         ...base,
@@ -510,6 +518,12 @@ function Inner({
         const d = n.data;
         const prog = nodeProgress(lab);
         const isConclusion = lab.role === 'conclusion';
+        let preview: string | undefined;
+        if (lab.role === 'question' || lab.role === 'conclusion') {
+          // intentionally || — empty conclusion falls back to summary
+          // oxlint-disable-next-line typescript/prefer-nullish-coalescing
+          preview = lab.conclusion || lab.summary;
+        }
         return {
           ...n,
           draggable: true,
@@ -519,12 +533,7 @@ function Inner({
             conclusionStatus: lab.conclusionStatus,
             phase: lab.phase,
             role: lab.role,
-            // intentionally || — empty conclusion falls back to summary
-            // oxlint-disable-next-line typescript/prefer-nullish-coalescing
-            preview:
-              lab.role === 'question' || lab.role === 'conclusion'
-                ? lab.conclusion || lab.summary
-                : undefined,
+            preview,
             askOnInterrupt: lab.askOnInterrupt,
             progressPct: prog.pct,
             statusHint: prog.hint,

@@ -5,7 +5,10 @@ export function render(content: unknown, isFallback?: boolean) {
   const slides = decodeOutputContent('SLIDES', content);
   if (!slides) return <OutputError message="无效的演示数据" />;
 
-  const title = slides.title || '演示';
+  const title =
+    // intentionally || — empty title falls back to default label
+    // oxlint-disable-next-line typescript/prefer-nullish-coalescing
+    slides.title || '演示';
   const outline = slides.outline;
   const markdown = slides.markdown;
 
@@ -15,6 +18,8 @@ export function render(content: unknown, isFallback?: boolean) {
       <div>
         <div className="text-lg font-semibold text-gray-900 dark:text-slate-100">{title}</div>
         <div className="text-xs text-gray-500 dark:text-slate-400">
+          {/* intentionally || — empty engine falls back to slidev */}
+          {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
           引擎：{slides.engine || 'slidev'}
         </div>
       </div>
@@ -35,6 +40,8 @@ export function render(content: unknown, isFallback?: boolean) {
                 const bulletKeyCounts = new Map<string, number>();
                 return (
                   <div key={slideKey}>
+                    {/* intentionally || — empty slide title falls back to index label */}
+                    {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
                     <div className="font-semibold">{slide.title || `幻灯片 ${index + 1}`}</div>
                     {Array.isArray(slide.bullets) && slide.bullets.length > 0 ? (
                       <ul className="list-disc pl-5 text-xs text-gray-600 dark:text-slate-400">
