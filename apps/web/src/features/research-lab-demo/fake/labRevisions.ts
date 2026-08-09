@@ -51,6 +51,37 @@ export function emptyGraphSlice(topicDraft = ''): LabRevisionGraphSlice {
   };
 }
 
+function isLabRevisionGraphSlice(value: unknown): value is LabRevisionGraphSlice {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.phase === 'string' &&
+    isRecord(value.mutations) &&
+    typeof value.topicDraft === 'string' &&
+    typeof value.forkSeq === 'number' &&
+    (value.forceStatus === null || typeof value.forceStatus === 'string')
+  );
+}
+
+function isLabRevision(value: unknown): value is LabRevision {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.id === 'string' &&
+    typeof value.notebookId === 'number' &&
+    typeof value.scenarioId === 'string' &&
+    typeof value.label === 'string' &&
+    (value.kind === 'default_export' || value.kind === 'user_save') &&
+    typeof value.createdAt === 'string' &&
+    (value.parentId === null || typeof value.parentId === 'string') &&
+    typeof value.reportMarkdown === 'string' &&
+    isLabRevisionGraphSlice(value.graph)
+  );
+}
+
+function parseLabRevisions(value: unknown): LabRevision[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(isLabRevision);
+}
+
 export function readRevisionStore(notebookId: number, scenarioId: string): LabRevisionStore {
   try {
     const raw = sessionStorage.getItem(revisionsStorageKey(notebookId, scenarioId));
@@ -61,14 +92,15 @@ export function readRevisionStore(notebookId: number, scenarioId: string): LabRe
     if (!isRecord(parsed) || !Array.isArray(parsed.revisions)) {
       return { notebookId, scenarioId, activeId: null, revisions: [] };
     }
+    const revisions = parseLabRevisions(parsed.revisions);
     return {
       notebookId,
       scenarioId,
       activeId:
         typeof parsed.activeId === 'string' || parsed.activeId === null
           ? parsed.activeId
-          : (parsed.revisions[0]?.id ?? null),
-      revisions: parsed.revisions as LabRevision[],
+          : (revisions[0]?.id ?? null),
+      revisions,
     };
   } catch {
     return { notebookId, scenarioId, activeId: null, revisions: [] };
