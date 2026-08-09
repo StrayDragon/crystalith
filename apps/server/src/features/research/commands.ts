@@ -565,7 +565,7 @@ export function isPruneProtectedNodeId(nodeId: string, nodes: ResearchNode[] = [
 
 /**
  * Prune closure (r316 / update-research-prune-cascade) — keep in sync with
- * Lab `collectPruneClosure` in apps/web/.../fake/deriveLabState.ts.
+ * Lab `collectPruneClosure` in apps/web/.../research-lab/model/pruneClosure.ts.
  * - never includes protected sink/root nodes (role first, then id prefix)
  * - does not walk `merge` edges (failed merges stay attached)
  * - cascades only when every non-protected inbound parent is already in the

@@ -28,15 +28,8 @@ import {
 } from '../../research-lab/labProgressLedger';
 import { consumeComposeTopicFromUrl } from '../../research-lab/labRouting';
 import type { LabController } from '../../research-lab/model/labController';
-import {
-  persistLabSessionSnapshot,
-  readLabSessionSnapshot,
-  type LabSessionSnapshot,
-} from '../labSession';
-import { advanceLabPlayback, deriveLabState, EMPTY_MUTATIONS } from './deriveLabState';
-import { mockForkSeed } from './mockNodeEnrichment';
-import type { LabConfirmKind } from './resolveLabPrimaryAction';
-import { getLabScenario, LAB_SCENARIOS } from './scenarios';
+import { mockForkSeed } from '../../research-lab/model/mockNodeEnrichment';
+import type { LabConfirmKind } from '../../research-lab/model/resolveLabPrimaryAction';
 import type {
   LabEdge,
   LabEdgePathPreset,
@@ -47,10 +40,15 @@ import type {
   LabNode,
   LabPhase,
   LabViewMode,
-} from './types';
-import { LAB_PHASE_LABELS } from './types';
-
-export type { LabController };
+} from '../../research-lab/model/types';
+import { LAB_PHASE_LABELS } from '../../research-lab/model/types';
+import {
+  persistLabSessionSnapshot,
+  readLabSessionSnapshot,
+  type LabSessionSnapshot,
+} from '../labSession';
+import { advanceLabPlayback, deriveLabState, EMPTY_MUTATIONS } from './deriveLabState';
+import { getLabScenario, LAB_SCENARIOS } from './scenarios';
 
 let forkSeq = 0;
 

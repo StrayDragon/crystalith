@@ -1,4 +1,4 @@
-import type { LabNode, LabPhaseSnapshot, LabScenario } from './types';
+import type { LabNode, LabPhaseSnapshot, LabScenario } from '../../research-lab/model/types';
 
 function emptySnap(
   visibleNodeIds: string[],

@@ -1,4 +1,4 @@
-import { extractCitationIds } from './reportDocument';
+import { extractCitationIds } from '../../research-lab/model/reportDocument';
 
 const WORKING_KEY_PREFIX = 'crystalith.research-lab.report-working';
 

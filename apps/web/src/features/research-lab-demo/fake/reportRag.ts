@@ -1,4 +1,4 @@
-import type { LabCitation } from './types';
+import type { LabCitation } from '../../research-lab/model/types';
 
 export interface ReportRagChunk {
   id: string;

@@ -261,7 +261,7 @@ describe('create run sets maxPageFetches', () => {
 
 describe('fork-run pages + content', () => {
   it('resets pagesUsed, copies maxPageFetches and evidence content', async () => {
-    const { forkRunFromRevision } = await import('../../src/features/research/report.ts');
+    const { forkRunFromRevision } = await import('../../src/features/research/report-revisions.ts');
     const { newId } = await import('../../src/features/research/research-core.ts');
     const { researchRevisions } = await import('../../src/db/schema.ts');
 

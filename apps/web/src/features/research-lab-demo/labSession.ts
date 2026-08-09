@@ -1,6 +1,5 @@
 import type { ResearchConclusionStatus } from '@crystalith/shared';
 
-import { EMPTY_MUTATIONS } from './fake/deriveLabState';
 import type {
   LabEdgePathPreset,
   LabGraphMutations,
@@ -8,7 +7,8 @@ import type {
   LabLayoutDirection,
   LabMetrics,
   LabPhase,
-} from './fake/types';
+} from '../research-lab/model/types';
+import { EMPTY_MUTATIONS } from './fake/deriveLabState';
 
 const LAB_SCENARIO_STORAGE_KEY = 'crystalith.research-lab.scenarioId';
 const LAB_SESSION_STORAGE_KEY = 'crystalith.research-lab.session';

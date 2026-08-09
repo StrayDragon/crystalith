@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState, type PointerEvent as PtrEvent
 
 import { useLayer } from '../../shared/layer';
 import { TestIds, tid } from '../../shared/testids';
-import { LAB_PHASES, LAB_PHASE_LABELS, type LabPhase } from './fake/types';
-import type { LabController } from './fake/useLabController';
+import type { LabController } from '../research-lab/model/labController';
+import { LAB_PHASES, LAB_PHASE_LABELS, type LabPhase } from '../research-lab/model/types';
 
 const STATUS_OPTIONS: Array<ResearchConclusionStatus | 'none'> = [
   'none',

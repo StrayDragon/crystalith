@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import type { LabNode } from '../../research-lab/model/types';
 import { findNodesByCitation, pickPreferredCiteNode } from './findNodesByCitation';
-import type { LabNode } from './types';
 
 function node(partial: Pick<LabNode, 'id' | 'title' | 'citationIds'> & Partial<LabNode>): LabNode {
   return {

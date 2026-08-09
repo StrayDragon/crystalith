@@ -24,6 +24,20 @@ import { LabForkDialog, LabPruneDialog, useDialogEscape } from '../research-lab/
 import LabNodeDrawer from '../research-lab/LabNodeDrawer';
 import LabProgressBar from '../research-lab/LabProgressBar';
 import { navigateToWorkspace } from '../research-lab/labRouting';
+import {
+  defaultForkDraft,
+  findForkContext,
+  previewPruneAlongEdge,
+  type ForkDraft,
+  type PrunePreview,
+} from '../research-lab/model/graphMutations';
+import type { LabController } from '../research-lab/model/labController';
+import type { LabNodeActionProposal } from '../research-lab/model/nodeChatTypes';
+import {
+  resolveLabPrimaryAction,
+  type LabPrimaryActionKind,
+} from '../research-lab/model/resolveLabPrimaryAction';
+import type { LabNode } from '../research-lab/model/types';
 import ResearchTasksDrawer from '../research-lab/ResearchTasksDrawer';
 import ResearchTasksTrigger from '../research-lab/ResearchTasksTrigger';
 import type { ResearchTaskListItem } from '../research-lab/researchTaskTypes';
@@ -43,22 +57,11 @@ import {
 } from './demoRouting';
 import { buildSuggestedReportFromNodes } from './fake/buildSuggestedReport';
 import {
-  defaultForkDraft,
-  findForkContext,
-  previewPruneAlongEdge,
-  type ForkDraft,
-  type PrunePreview,
-} from './fake/graphMutations';
-import {
   ensureDefaultRevision,
   graphSliceFromSession,
   updateDefaultRevision,
 } from './fake/labRevisions';
-import type { LabNodeActionProposal } from './fake/nodeChatTypes';
 import { resolveDefaultExportMarkdown } from './fake/resolveDefaultExportMarkdown';
-import { resolveLabPrimaryAction, type LabPrimaryActionKind } from './fake/resolveLabPrimaryAction';
-import type { LabNode } from './fake/types';
-import type { LabController } from './fake/useLabController';
 import { useLabController } from './fake/useLabController';
 import LabControlConsole from './LabControlConsole';
 import { fixtureLabSessionPort } from './labSessionPort';

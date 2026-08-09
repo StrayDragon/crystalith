@@ -1,7 +1,7 @@
 import type { ResearchConclusionStatus } from '@crystalith/shared';
 
+import type { LabGraphMutations, LabPhase } from '../../research-lab/model/types';
 import { EMPTY_MUTATIONS } from './deriveLabState';
-import type { LabGraphMutations, LabPhase } from './types';
 
 /**
  * Paired revision: thinking-graph snapshot + report result.

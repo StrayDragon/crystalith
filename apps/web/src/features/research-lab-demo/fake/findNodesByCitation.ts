@@ -1,4 +1,4 @@
-import type { LabNode, LabNodeRole } from './types';
+import type { LabNode, LabNodeRole } from '../../research-lab/model/types';
 
 const ROLE_RANK: Record<LabNodeRole, number> = {
   research: 0,
