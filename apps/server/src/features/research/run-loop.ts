@@ -69,18 +69,14 @@ function shouldFinalizeCancelOnAbort(runId: number): boolean {
 /** Sleep that resolves early when AbortSignal fires (cooperative reexpand pause). */
 function sleepUnlessAborted(ms: number, signal: AbortSignal): Promise<void> {
   if (signal.aborted) return Promise.resolve();
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      signal.removeEventListener('abort', finish);
-      resolve();
-    };
-    const timer = setTimeout(finish, ms);
-    signal.addEventListener('abort', finish, { once: true });
-  });
+  return Promise.race([
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, ms);
+    }),
+    new Promise<void>((resolve) => {
+      signal.addEventListener('abort', () => resolve(), { once: true });
+    }),
+  ]);
 }
 
 /** After drain: budget confirm only when truly exhausted and still need search; else synthesize. */
@@ -424,6 +420,45 @@ export async function runNodeWorkUnit(opts: {
           } as never,
         });
 
+        let pendingIngest: { toolName: string; output: unknown } | null = null;
+        const flushPendingIngest = () => {
+          const pending = pendingIngest;
+          if (!pending) return;
+          pendingIngest = null;
+          const { toolName, output } = pending;
+          const contentBudgetRemaining = remainingNodeContentBudget(runId, node.id);
+          const ingested = ingestWorkToolResult(runId, notebookId, node.id, toolName, output, {
+            contentTokenBudgetRemaining: contentBudgetRemaining,
+          });
+          for (const id of ingested.evidenceIds) {
+            if (!evidenceIds.includes(id)) evidenceIds.push(id);
+          }
+          if (ingested.searchesDelta > 0) {
+            const fresh = requireFresh(runId);
+            searchesUsed = fresh.searchesUsed + ingested.searchesDelta;
+            nodeSearchesUsed += ingested.searchesDelta;
+            updateRun(runId, { searchesUsed });
+          }
+          if (ingested.pagesDelta > 0) {
+            const fresh = requireFresh(runId);
+            const pagesUsed = fresh.pagesUsed + ingested.pagesDelta;
+            nodePagesUsed += ingested.pagesDelta;
+            updateRun(runId, { pagesUsed });
+          }
+          emitLog(
+            runId,
+            toolName === 'webSearch'
+              ? `外网检索：${ingested.evidenceIds.length} 条`
+              : toolName === 'fetchPage'
+                ? ingested.pagesDelta > 0
+                  ? `读页成功：${ingested.evidenceIds.join(', ')}`
+                  : '读页失败或正文为空，保留摘要'
+                : toolName === 'retrieveSources'
+                  ? `检索笔记本：${ingested.evidenceIds.length} 条`
+                  : `工具 ${toolName} 完成`,
+          );
+        };
+
         for await (const part of result.stream) {
           if (abortSignal.aborted || isCancelled(runId)) break;
           if (part.type === 'tool-result') {
@@ -448,39 +483,8 @@ export async function runNodeWorkUnit(opts: {
                 continue;
               }
             }
-            await withRunWriteLock(runId, () => {
-              const contentBudgetRemaining = remainingNodeContentBudget(runId, node.id);
-              const ingested = ingestWorkToolResult(runId, notebookId, node.id, toolName, output, {
-                contentTokenBudgetRemaining: contentBudgetRemaining,
-              });
-              for (const id of ingested.evidenceIds) {
-                if (!evidenceIds.includes(id)) evidenceIds.push(id);
-              }
-              if (ingested.searchesDelta > 0) {
-                const fresh = requireFresh(runId);
-                searchesUsed = fresh.searchesUsed + ingested.searchesDelta;
-                nodeSearchesUsed += ingested.searchesDelta;
-                updateRun(runId, { searchesUsed });
-              }
-              if (ingested.pagesDelta > 0) {
-                const fresh = requireFresh(runId);
-                const pagesUsed = fresh.pagesUsed + ingested.pagesDelta;
-                nodePagesUsed += ingested.pagesDelta;
-                updateRun(runId, { pagesUsed });
-              }
-              emitLog(
-                runId,
-                toolName === 'webSearch'
-                  ? `外网检索：${ingested.evidenceIds.length} 条`
-                  : toolName === 'fetchPage'
-                    ? ingested.pagesDelta > 0
-                      ? `读页成功：${ingested.evidenceIds.join(', ')}`
-                      : '读页失败或正文为空，保留摘要'
-                    : toolName === 'retrieveSources'
-                      ? `检索笔记本：${ingested.evidenceIds.length} 条`
-                      : `工具 ${toolName} 完成`,
-              );
-            });
+            pendingIngest = { toolName, output };
+            await withRunWriteLock(runId, flushPendingIngest);
           } else if (part.type === 'error') {
             throw new Error(
               'error' in part && part.error instanceof Error

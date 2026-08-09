@@ -9,11 +9,11 @@ export function withFootnoteDefinitions(
   const citeIds = extractCitationIds(markdown);
   const nodeIds = extractNodeIds(markdown);
   if (citeIds.length === 0 && nodeIds.length === 0) return markdown;
-  const body = markdown.replaceAll(/\n*(\[\^@?[a-zA-Z0-9_-]+\]:[^\n]*\n*)+$/g, '').trimEnd();
+  const body = markdown.replaceAll(/\n*(\[\^@?[a-zA-Z0-9_-]+\]:[^\n]*\n*)+$/gu, '').trimEnd();
   const defs = [
     ...citeIds.map((id) => {
       const c = citations[id];
-      const title = (c?.title ?? id).replaceAll(/\n/g, ' ');
+      const title = (c?.title ?? id).replaceAll('\n', ' ');
       return `[^${id}]: ${title}`;
     }),
     ...nodeIds.map((id) => `[^@${id}]: lab-node:${id}`),
@@ -23,5 +23,5 @@ export function withFootnoteDefinitions(
 
 /** Drop trailing footnote definition block for CoW storage (inline [^id] stays). */
 export function stripFootnoteDefinitions(markdown: string): string {
-  return markdown.replaceAll(/\n*(\[\^@?[a-zA-Z0-9_-]+\]:[^\n]*\n*)+$/g, '').trimEnd() + '\n';
+  return markdown.replaceAll(/\n*(\[\^@?[a-zA-Z0-9_-]+\]:[^\n]*\n*)+$/gu, '').trimEnd() + '\n';
 }

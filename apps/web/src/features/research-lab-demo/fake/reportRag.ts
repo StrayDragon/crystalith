@@ -18,7 +18,7 @@ export interface ReportRagAnswer {
 function tokenize(q: string): string[] {
   return q
     .toLowerCase()
-    .split(/[\s,，。；;、./\\|_+\-—:：?？!！"'“”‘’()[\]{}]+/)
+    .split(/[\s,，。；;、./\\|_+\-—:：?？!！"'“”‘’()[\]{}]+/u)
     .map((t) => t.trim())
     .filter((t) => t.length >= 2);
 }
@@ -35,7 +35,7 @@ function scoreText(tokens: string[], text: string): number {
 
 function splitReportParagraphs(reportMarkdown: string): Array<{ id: string; text: string }> {
   return reportMarkdown
-    .split(/\n{2,}/)
+    .split(/\n{2,}/u)
     .map((p) => p.trim())
     .filter(Boolean)
     .map((text, i) => ({ id: `report-p${i + 1}`, text }));
@@ -97,7 +97,7 @@ export function answerFromChunks(query: string, chunks: ReportRagChunk[]): Repor
   ];
   const snippets = chunks
     .slice(0, 3)
-    .map((c, i) => `(${i + 1}) ${c.text.replaceAll(/\s+/g, ' ').slice(0, 120)}…`)
+    .map((c, i) => `(${i + 1}) ${c.text.replaceAll(/\s+/gu, ' ').slice(0, 120)}…`)
     .join('\n');
   const citeNote =
     citationIds.length > 0

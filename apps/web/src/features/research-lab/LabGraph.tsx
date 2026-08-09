@@ -79,7 +79,6 @@ function labEdgePath(
       const [path, x, y] = getSimpleBezierPath(base);
       return [path, x, y];
     }
-    case 'smoothstep':
     default: {
       const [path, x, y] = getSmoothStepPath({
         ...base,

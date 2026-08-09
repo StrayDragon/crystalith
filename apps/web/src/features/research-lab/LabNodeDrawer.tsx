@@ -58,7 +58,9 @@ async function streamInto(
   for (let i = 0; i < chars.length; i++) {
     acc += chars[i];
     onUpdate(acc, false);
-    await new Promise((r) => setTimeout(r, chars[i] === '\n' ? 18 : 8));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, chars[i] === '\n' ? 18 : 8);
+    });
   }
   onUpdate(acc, true);
 }
@@ -306,34 +308,50 @@ export default function LabNodeDrawer({
         if (ac.signal.aborted || nodeIdRef.current !== node.id) break;
         if (ev.event === 'chunk') {
           acc += ev.data.text;
+          const textSnap = acc;
+          const proposalsSnap = proposals;
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === asstId ? { ...m, text: acc, streaming: true, proposals } : m,
+              m.id === asstId
+                ? { ...m, text: textSnap, streaming: true, proposals: proposalsSnap }
+                : m,
             ),
           );
         } else if (ev.event === 'proposal') {
           proposals = mergeProposals(proposals, [toLabProposal(ev.data)]);
+          const textSnap = acc;
+          const proposalsSnap = proposals;
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === asstId ? { ...m, text: acc, streaming: true, proposals } : m,
+              m.id === asstId
+                ? { ...m, text: textSnap, streaming: true, proposals: proposalsSnap }
+                : m,
             ),
           );
         } else if (ev.event === 'done') {
           if (ev.data.proposals?.length) {
             proposals = mergeProposals(proposals, ev.data.proposals.map(toLabProposal));
           }
+          const textSnap = acc;
+          const proposalsSnap = proposals;
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === asstId ? { ...m, text: acc, streaming: false, proposals } : m,
+              m.id === asstId
+                ? { ...m, text: textSnap, streaming: false, proposals: proposalsSnap }
+                : m,
             ),
           );
         } else if (ev.event === 'error') {
           const msg = ev.data.message || ev.data.errorCode || '节点对话失败';
           setChatError(msg);
           onChatError?.(msg);
+          const textSnap = acc || msg;
+          const proposalsSnap = proposals;
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === asstId ? { ...m, text: acc || msg, streaming: false, proposals } : m,
+              m.id === asstId
+                ? { ...m, text: textSnap, streaming: false, proposals: proposalsSnap }
+                : m,
             ),
           );
         }

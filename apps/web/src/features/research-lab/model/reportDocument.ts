@@ -1,7 +1,7 @@
 import type { LabCitation } from './types';
 
-const CITE_RE = /\[\^([a-zA-Z0-9_-]+)\]/g;
-const NODE_REF_RE = /\[\^@([a-zA-Z0-9_-]+)\]/g;
+const CITE_RE = /\[\^([a-zA-Z0-9_-]+)\]/gu;
+const NODE_REF_RE = /\[\^@([a-zA-Z0-9_-]+)\]/gu;
 
 export interface ReportInlinePart {
   type: 'text' | 'code' | 'cite' | 'node';
@@ -40,7 +40,7 @@ export interface ReportBlock {
 
 export function extractCitationIds(text: string): string[] {
   const ids: string[] = [];
-  const re = new RegExp(CITE_RE.source, 'g');
+  const re = new RegExp(CITE_RE.source, 'gu');
   let m: RegExpExecArray | null;
   while ((m = re.exec(text))) {
     const id = m[1];
@@ -53,7 +53,7 @@ export function extractCitationIds(text: string): string[] {
 /** Block/section anchors into the thinking graph: `[^@n-libs]`. */
 export function extractNodeIds(text: string): string[] {
   const ids: string[] = [];
-  const re = new RegExp(NODE_REF_RE.source, 'g');
+  const re = new RegExp(NODE_REF_RE.source, 'gu');
   let m: RegExpExecArray | null;
   while ((m = re.exec(text))) {
     if (m[1] && !ids.includes(m[1])) ids.push(m[1]);
@@ -86,9 +86,9 @@ export function parseReportSections(markdown: string): ReportSection[] {
   };
 
   for (const line of lines) {
-    if (/^#{1,3}\s+/.test(line)) {
+    if (/^#{1,3}\s+/u.test(line)) {
       flush();
-      heading = line.replace(/^#{1,3}\s+/, '').trim();
+      heading = line.replace(/^#{1,3}\s+/u, '').trim();
     } else {
       buf.push(line);
     }
@@ -124,7 +124,7 @@ export function parseReportBlocks(markdown: string): ReportBlock[] {
   };
 
   for (const raw of lines) {
-    const headingMatch = raw.match(/^(#{1,3})\s+(.*)$/);
+    const headingMatch = raw.match(/^(#{1,3})\s+(.*)$/u);
     if (headingMatch) {
       flushPara();
       sectionId = `sec-${sectionIdx++}`;
@@ -142,12 +142,12 @@ export function parseReportBlocks(markdown: string): ReportBlock[] {
       continue;
     }
 
-    if (/^\s*$/.test(raw)) {
+    if (/^\s*$/u.test(raw)) {
       flushPara();
       continue;
     }
 
-    if (/^\s*([-*]|\d+\.)\s+/.test(raw)) {
+    if (/^\s*([-*]|\d+\.)\s+/u.test(raw)) {
       flushPara();
       const text = raw.trim();
       blocks.push({
@@ -170,7 +170,7 @@ export function parseReportBlocks(markdown: string): ReportBlock[] {
 /** Tokenize a line into text / inline code / citation / node pills. */
 export function parseInlineParts(line: string): ReportInlinePart[] {
   const parts: ReportInlinePart[] = [];
-  const combined = /`([^`]+)`|\[\^@([a-zA-Z0-9_-]+)\]|\[\^([a-zA-Z0-9_-]+)\]/g;
+  const combined = /`([^`]+)`|\[\^@([a-zA-Z0-9_-]+)\]|\[\^([a-zA-Z0-9_-]+)\]/gu;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = combined.exec(line))) {
@@ -207,6 +207,6 @@ export function citationPillLabel(c: LabCitation | undefined, fallbackId: string
   const num =
     c?.notebookSourceId !== undefined && c.notebookSourceId !== null
       ? String(c.notebookSourceId)
-      : fallbackId.replaceAll(/\D/g, '') || '?';
+      : fallbackId.replaceAll(/\D/gu, '') || '?';
   return `${num} ${citationKindLabel(c)}`;
 }
