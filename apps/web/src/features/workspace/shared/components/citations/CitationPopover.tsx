@@ -97,7 +97,8 @@ export default function CitationPopover({
     if (!isOpen) return;
 
     function handleClickOutside(event: globalThis.MouseEvent) {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+      const target = event.target;
+      if (popoverRef.current && !(target instanceof Node && popoverRef.current.contains(target))) {
         onClose();
       }
     }

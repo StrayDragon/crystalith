@@ -40,9 +40,10 @@ export default function FlashcardViewer({ items, className }: FlashcardViewerPro
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const tag = target?.tagName?.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const tag = target.tagName.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || target.isContentEditable) {
         return;
       }
       if (event.key === ' ' || event.code === 'Space') {

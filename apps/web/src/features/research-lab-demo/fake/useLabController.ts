@@ -50,6 +50,19 @@ import {
 import { advanceLabPlayback, deriveLabState, EMPTY_MUTATIONS } from './deriveLabState';
 import { getLabScenario, LAB_SCENARIOS } from './scenarios';
 
+const LAB_NODE_PATCH_KEYS: Array<keyof LabNode> = [
+  'title',
+  'role',
+  'query',
+  'summary',
+  'conclusion',
+  'conclusionStatus',
+  'phase',
+  'citationIds',
+  'askOnInterrupt',
+  'statusOverride',
+];
+
 let forkSeq = 0;
 
 function loadInitial(fallbackScenarioId: string): LabSessionSnapshot {
@@ -506,7 +519,7 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
 
   const editNode = useCallback(
     (nodeId: string, patch: Partial<LabNode>) => {
-      const keys = Object.keys(patch).filter((k) => k !== 'id') as Array<keyof LabNode>;
+      const keys = LAB_NODE_PATCH_KEYS.filter((key) => key in patch);
       const configOnly = keys.length > 0 && keys.every((k) => k === 'askOnInterrupt');
       /** Query change reshapes the research graph; prose-only edits do not. */
       const needsReshape = keys.includes('query');

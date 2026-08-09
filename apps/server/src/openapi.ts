@@ -143,7 +143,7 @@ export function registerApiDoc(routes: OpenApiRoute[]): void {
         parameters.push({
           name,
           in: 'query',
-          required: !schema.isOptional(),
+          required: !schema.safeParse(undefined).success,
           schema: zodSchemaToOpenApi(schema),
         });
       }

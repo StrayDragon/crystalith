@@ -7,7 +7,7 @@ import { config } from '../../shared/config.ts';
 import { extractUrl, ExtractionError } from '../../shared/extraction/factory.ts';
 
 export const FetchPageArgs = z.object({
-  url: z.string().url().describe('Absolute URL of the page to fetch and extract.'),
+  url: z.url().describe('Absolute URL of the page to fetch and extract.'),
 });
 
 export type FetchPageArgs = z.infer<typeof FetchPageArgs>;

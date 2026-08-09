@@ -220,6 +220,7 @@ export function serializeRun(row: RunRow): ResearchRun {
     confirmBranchNodeId: row.confirmBranchNodeId ?? null,
     modelId: row.modelId ?? null,
     failureReason: row.errorMessage ?? null,
+    // oxlint-disable-next-line typescript/no-deprecated -- wire compat for older clients
     errorMessage: row.errorMessage ?? null,
     llmActivity: row.llmActivity ?? null,
     activeNodeId: row.activeNodeId ?? null,
@@ -246,6 +247,7 @@ export function serializeRunSummary(row: RunRow): ResearchRunSummary {
     confirmKind: row.confirmKind ?? null,
     modelId: row.modelId ?? null,
     failureReason: row.errorMessage ?? null,
+    // oxlint-disable-next-line typescript/no-deprecated -- wire compat for older clients
     errorMessage: row.errorMessage ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

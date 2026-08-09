@@ -121,10 +121,11 @@ export function useSourceDetailDialog({
         }
         setBrief(newBrief);
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
+        const message = parseServerError(error).message;
         // intentionally || — empty error message gets default
         // oxlint-disable-next-line typescript/prefer-nullish-coalescing
-        setBriefError(error.message || '加载摘要失败');
+        setBriefError(message || '加载摘要失败');
       })
       .finally(() => {
         setIsBriefLoading(false);
@@ -156,10 +157,11 @@ export function useSourceDetailDialog({
         chunksCache.set(source.id, response);
         setChunks(response);
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
+        const message = parseServerError(error).message;
         // intentionally || — empty error message gets default
         // oxlint-disable-next-line typescript/prefer-nullish-coalescing
-        setChunksError(error.message || '加载原始数据失败');
+        setChunksError(message || '加载原始数据失败');
       })
       .finally(() => {
         setIsChunksLoading(false);
@@ -253,10 +255,11 @@ export function useSourceDetailDialog({
         briefCache.set(source.id, newBrief);
         setBrief(newBrief);
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
+        const message = parseServerError(error).message;
         // intentionally || — empty error message gets default
         // oxlint-disable-next-line typescript/prefer-nullish-coalescing
-        setBriefError(error.message || '生成摘要失败');
+        setBriefError(message || '生成摘要失败');
       })
       .finally(() => {
         setIsBriefLoading(false);

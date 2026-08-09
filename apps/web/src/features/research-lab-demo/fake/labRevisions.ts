@@ -1,5 +1,6 @@
 import type { ResearchConclusionStatus } from '@crystalith/shared';
 
+import { isRecord, parseJsonValue } from '../../../shared/json';
 import type { LabGraphMutations, LabPhase } from '../../research-lab/model/types';
 import { EMPTY_MUTATIONS } from './deriveLabState';
 
@@ -56,15 +57,18 @@ export function readRevisionStore(notebookId: number, scenarioId: string): LabRe
     if (!raw) {
       return { notebookId, scenarioId, activeId: null, revisions: [] };
     }
-    const parsed = JSON.parse(raw) as LabRevisionStore;
-    if (!parsed || !Array.isArray(parsed.revisions)) {
+    const parsed = parseJsonValue(raw);
+    if (!isRecord(parsed) || !Array.isArray(parsed.revisions)) {
       return { notebookId, scenarioId, activeId: null, revisions: [] };
     }
     return {
       notebookId,
       scenarioId,
-      activeId: parsed.activeId ?? parsed.revisions[0]?.id ?? null,
-      revisions: parsed.revisions,
+      activeId:
+        typeof parsed.activeId === 'string' || parsed.activeId === null
+          ? parsed.activeId
+          : (parsed.revisions[0]?.id ?? null),
+      revisions: parsed.revisions as LabRevision[],
     };
   } catch {
     return { notebookId, scenarioId, activeId: null, revisions: [] };

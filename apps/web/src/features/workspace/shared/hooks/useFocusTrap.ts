@@ -1,5 +1,7 @@
 import { useEffect, useRef, type RefObject } from 'react';
 
+import { eventTargetNode } from '../../../../shared/json';
+
 const FOCUSABLE_SELECTOR = [
   'a[href]',
   'button:not([disabled])',
@@ -72,7 +74,7 @@ export function useFocusTrap({ active, containerRef, onEscape }: UseFocusTrapOpt
 
       const first = nodes[0];
       const last = nodes.at(-1);
-      const target = event.target as Node | null;
+      const target = eventTargetNode(event);
 
       if (event.shiftKey) {
         if (target === first || !target || !container.contains(target)) {

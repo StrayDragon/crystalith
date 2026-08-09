@@ -15,6 +15,7 @@ import { TestIds, tid } from '../../../../../shared/testids';
 import { toast } from '../../../../../shared/toast';
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
 import type {
+  SourceConnectorsListResponse,
   ConnectorBindingRead,
   ImportResultItem,
   ImportScope,
@@ -648,9 +649,9 @@ export default function SourceConnectorsDialog({
   }, [open]);
 
   const canQuery = Boolean(open && notebookId && isConnected);
-  const { data, error, isLoading, mutate } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR<SourceConnectorsListResponse, Error>(
     canQuery ? ['workspace/source-connectors', notebookId] : null,
-    async () => {
+    async (): Promise<SourceConnectorsListResponse> => {
       const notebook = api.v2.notebooks({ nid: notebookId! });
       const { data: response, error: fetchErr } = await notebook['source-connectors'].get();
       if (fetchErr)

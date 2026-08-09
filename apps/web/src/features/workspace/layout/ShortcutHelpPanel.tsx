@@ -35,7 +35,9 @@ export default function ShortcutHelpPanel({ open, shortcuts, onClose }: Shortcut
 
   const groupedShortcuts = useMemo(() => {
     const groups = new Map<ShortcutCategory, WorkspaceShortcutDefinition[]>();
-    CATEGORY_ORDER.forEach((category) => groups.set(category, []));
+    CATEGORY_ORDER.forEach((category) => {
+      groups.set(category, []);
+    });
 
     shortcuts.forEach((shortcut) => {
       const items = groups.get(shortcut.category) ?? [];

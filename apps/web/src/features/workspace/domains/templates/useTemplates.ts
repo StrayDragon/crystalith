@@ -18,9 +18,9 @@ export function useTemplates() {
     error: swrError,
     isLoading,
     mutate,
-  } = useSWR<WorkspaceTemplate[]>(
+  } = useSWR<WorkspaceTemplate[], Error>(
     SWR_KEY,
-    async () => {
+    async (): Promise<WorkspaceTemplate[]> => {
       const { data, error } = await api.v2.templates.get();
       if (error)
         throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');

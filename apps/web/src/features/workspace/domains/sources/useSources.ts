@@ -4,6 +4,7 @@ import type {
   NotebookExtractorsPolicyView,
   PatchNotebookExtractorPolicy,
   QAMessage,
+  Source,
   SourceFromUrlMode,
   SourceSearchResult,
   SourceTag,
@@ -124,7 +125,7 @@ export function useSources() {
     [sortBy, sortOrder, tagFilter],
   );
 
-  const { data, error, isLoading, mutate } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR<Source[], Error>(
     activeNotebookId && isConnected
       ? [
           'workspace/sources',
@@ -134,7 +135,7 @@ export function useSources() {
           sourceListQuery.tag ?? '',
         ]
       : null,
-    () =>
+    (): Promise<Source[]> =>
       api.v2
         .notebooks({ nid: activeNotebookId! })
         .sources.get({ query: sourceListQuery })

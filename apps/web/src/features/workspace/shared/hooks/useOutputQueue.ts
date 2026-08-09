@@ -1,4 +1,4 @@
-import type { Output as WireOutput } from '@crystalith/shared';
+import type { Output as WireOutput, OutputListItem } from '@crystalith/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 
@@ -193,9 +193,9 @@ export function useOutputQueue({
     error: outputsError,
     isLoading: outputsLoading,
     mutate: mutateOutputs,
-  } = useSWR(
+  } = useSWR<OutputListItem[], Error>(
     activeNotebookId && isConnected ? ['workspace/outputs', activeNotebookId] : null,
-    async () => {
+    async (): Promise<OutputListItem[]> => {
       const { data, error: fetchErr } = await api.v2
         .notebooks({ nid: activeNotebookId! })
         .outputs.get({

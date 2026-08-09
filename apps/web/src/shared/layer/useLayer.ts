@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { LAYER_LEVELS, MAX_SLOTS_PER_LAYER } from './constants';
 import { useLayerContext } from './LayerProvider';
 import type { LayerName, UseLayerResult } from './types';
 
@@ -47,7 +48,6 @@ export function useLayer(layerName: LayerName, slot: number = 0): UseLayerResult
  * @returns z-index 数值
  */
 export function getLayerZIndex(layerName: LayerName, slot: number = 0): number {
-  const { LAYER_LEVELS, MAX_SLOTS_PER_LAYER } = require('./constants');
   const baseZIndex = LAYER_LEVELS[layerName];
   const safeSlot = Math.max(0, Math.min(slot, MAX_SLOTS_PER_LAYER - 1));
   return baseZIndex + safeSlot;

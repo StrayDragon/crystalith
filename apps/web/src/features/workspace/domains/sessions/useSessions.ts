@@ -1,3 +1,4 @@
+import type { Session } from '@crystalith/shared';
 import { useCallback, useEffect } from 'react';
 import useSWR from 'swr';
 
@@ -16,9 +17,9 @@ export function useSessions() {
   const store = useWorkspaceStore;
   const isConnected = connectionState === 'live';
 
-  const { data, error, isLoading, mutate } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR<Session[], Error>(
     activeNotebookId && isConnected ? ['workspace/sessions', activeNotebookId] : null,
-    async () => {
+    async (): Promise<Session[]> => {
       const { data, error: fetchErr } = await api.v2
         .notebooks({ nid: activeNotebookId! })
         .sessions.get({ query: { offset: 0, limit: 200 } });

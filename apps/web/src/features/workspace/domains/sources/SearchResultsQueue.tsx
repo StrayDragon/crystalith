@@ -540,7 +540,9 @@ export default function SearchResultsQueue({
               <Button
                 variant="text"
                 size="sm"
-                onClick={() => window.open(expandedResult.url, '_blank')}
+                onClick={() => {
+                  window.open(expandedResult.url, '_blank');
+                }}
                 className="ml-auto normal-case text-gray-700"
               >
                 打开原链接

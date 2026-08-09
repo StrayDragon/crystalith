@@ -830,6 +830,7 @@ export function useEdenLabController(
     derived,
     scenario: EDEN_LAB_SCENARIO,
     lastError,
+    // oxlint-disable-next-line typescript/no-deprecated -- read legacy wire field until all clients use failureReason
     failureReason: run?.failureReason ?? run?.errorMessage ?? null,
     citations,
     runId: run?.id ?? runIdRef.current,
