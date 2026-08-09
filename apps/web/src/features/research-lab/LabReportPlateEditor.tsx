@@ -66,7 +66,42 @@ function readLabElementField<K extends keyof LabPlateElementFields>(
 function plateAttributes(
   attrs: Record<string, unknown>,
 ): NonNullable<PlateElementProps['attributes']> {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Plate attributes boundary
   return attrs as NonNullable<PlateElementProps['attributes']>;
+}
+
+function mergeAttributeClassName(
+  attrs: PlateElementProps['attributes'] | undefined,
+  ...classes: string[]
+): string {
+  const existing =
+    attrs &&
+    typeof attrs === 'object' &&
+    'className' in attrs &&
+    typeof attrs.className === 'string'
+      ? attrs.className
+      : '';
+  return [existing, ...classes].filter(Boolean).join(' ');
+}
+
+function isClickHandler(value: unknown): value is (ev: MouseEvent<HTMLElement>) => void {
+  return typeof value === 'function';
+}
+
+function findSlateEditorRoot(container: Element | null | undefined): HTMLElement | null {
+  const el = container?.querySelector('[data-slate-editor="true"]') ?? null;
+  return el instanceof HTMLElement ? el : null;
+}
+
+/** Plate children is `any` in PlateElementProps; centralize the split. */
+function plateChildren(props: PlateElementProps): {
+  children: ReactNode;
+  rest: Omit<PlateElementProps, 'children'>;
+} {
+  // oxlint-disable-next-line typescript/no-unsafe-assignment -- Plate children is typed `any`
+  const { children, ...rest } = props;
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Plate children boundary
+  return { children: children as ReactNode, rest };
 }
 
 function useBlockShell(blockId: string) {
@@ -103,16 +138,24 @@ function withBlockBrowseProps(
   const prevAttrs = (props.attributes ?? {}) as Record<string, unknown>;
   const onClick = (e: MouseEvent<HTMLElement>) => {
     const prev = prevAttrs.onClick;
-    if (typeof prev === 'function') {
-      (prev as (ev: MouseEvent<HTMLElement>) => void)(e);
+    if (isClickHandler(prev)) {
+      prev(e);
     }
     shell.onClick(e);
   };
+  // Strip deprecated top-level className so Plate does not apply it twice.
+  // oxlint-disable-next-line typescript/no-deprecated -- migrate into attributes.className
+  const { className: legacyClassName, ...propsWithoutClass } = props;
   return {
-    ...props,
-    className: `${baseClass} ${shell.className}`,
+    ...propsWithoutClass,
     attributes: plateAttributes({
       ...props.attributes,
+      className: mergeAttributeClassName(
+        props.attributes,
+        typeof legacyClassName === 'string' ? legacyClassName : '',
+        baseClass,
+        shell.className,
+      ),
       'data-lab-block-id': blockId,
       ...(primaryNodeId ? { 'data-lab-node-id': primaryNodeId } : {}),
       onClick,
@@ -204,12 +247,15 @@ function ParagraphElement(props: PlateElementProps) {
   }
 
   // Do NOT wrap {children} in an extra div — Slate paints a twin leaf.
-  const { children, ...rest } = p;
+  const { children, rest } = plateChildren(p);
   return (
     <PlateElement
       {...rest}
       as="div"
-      className={`${rest.className ?? ''} lab-report-li relative`}
+      attributes={plateAttributes({
+        ...rest.attributes,
+        className: mergeAttributeClassName(rest.attributes, 'lab-report-li relative'),
+      })}
       style={{
         paddingLeft: Math.max(28, (indent > 0 ? indent : 1) * 18 + 10),
         listStyle: 'none',
@@ -239,9 +285,9 @@ const LabListBelowNodes = (props: { element: TElement }) => {
 
 /** FootnoteReference → citation pill or graph-node chip (`[^@nodeId]`). */
 function CiteFootnoteReference(props: PlateElementProps) {
-  const { children, ...rest } = props;
+  const { children, rest } = plateChildren(props);
   const { citations, showCitations, activeCitationId, onCite, onLocateNode } = useLabReportCite();
-  const identifier = String(readLabElementField(props.element, 'identifier') ?? '');
+  const identifier = readLabElementField(props.element, 'identifier') ?? '';
   const isNodeAnchor = identifier.startsWith('@');
   const nodeId = isNodeAnchor ? identifier.slice(1) : '';
 
@@ -370,7 +416,7 @@ function collectLabNodeIds(node: unknown, out: string[] = []): string[] {
   if (!node || typeof node !== 'object') return out;
   const n = node as { type?: string; identifier?: string; children?: unknown[] };
   if (n.type === 'footnoteReference') {
-    const id = String(n.identifier ?? '');
+    const id = n.identifier ?? '';
     if (id.startsWith('@')) {
       const nodeId = id.slice(1);
       if (nodeId && !out.includes(nodeId)) out.push(nodeId);
@@ -394,7 +440,7 @@ function ensureBlockIds(value: Value): Value {
       id,
       ...(labNodeIds.length ? { labNodeIds } : {}),
     };
-  }) as Value;
+  });
 }
 
 function labCitationToUi(c: LabCitation): Citation {
@@ -414,7 +460,9 @@ function flashCitePill(pill: HTMLElement) {
   // force reflow so re-triggering the same animation works
   void pill.offsetWidth;
   pill.classList.add('ux-source-locate-flash');
-  window.setTimeout(() => pill.classList.remove('ux-source-locate-flash'), 1400);
+  window.setTimeout(() => {
+    pill.classList.remove('ux-source-locate-flash');
+  }, 1400);
 }
 
 function resolveCitePill(
@@ -522,7 +570,7 @@ export default function LabReportPlateEditor({
   useEffect(() => {
     skipNotify.current = true;
     const md = withFootnoteDefinitions(initialMarkdown.current, citationsRef.current);
-    const value = ensureBlockIds(editor.getApi(MarkdownPlugin).markdown.deserialize(md) as Value);
+    const value = ensureBlockIds(editor.getApi(MarkdownPlugin).markdown.deserialize(md));
     editor.tf.reset();
     editor.tf.setValue(value.length > 0 ? value : [{ type: 'p', children: [{ text: '' }] }]);
     setActiveCitationId(null);
@@ -531,24 +579,24 @@ export default function LabReportPlateEditor({
     setPopoverRect(null);
     queueMicrotask(() => {
       skipNotify.current = false;
-      const el = scrollRef.current?.querySelector(
-        '[data-slate-editor="true"]',
-      ) as HTMLElement | null;
-      setEditorRoot(el);
+      setEditorRoot(findSlateEditorRoot(scrollRef.current));
     });
   }, [documentKey, editor]);
 
   useEffect(() => {
     const root = scrollRef.current;
     if (!root) return;
-    const onScroll = () => setScrollTop(root.scrollTop);
+    const onScroll = () => {
+      setScrollTop(root.scrollTop);
+    };
     root.addEventListener('scroll', onScroll, { passive: true });
-    return () => root.removeEventListener('scroll', onScroll);
+    return () => {
+      root.removeEventListener('scroll', onScroll);
+    };
   }, []);
 
   useEffect(() => {
-    const el = scrollRef.current?.querySelector('[data-slate-editor="true"]') as HTMLElement | null;
-    setEditorRoot(el);
+    setEditorRoot(findSlateEditorRoot(scrollRef.current));
   }, [showCitations, documentKey]);
 
   const closeCite = useCallback(() => {
@@ -571,8 +619,8 @@ export default function LabReportPlateEditor({
         return;
       }
       const { pill, occurrence } = hit;
-      const host = pill.closest('[data-lab-block-id]') as HTMLElement | null;
-      if (host?.dataset.labBlockId) {
+      const host = pill.closest('[data-lab-block-id]');
+      if (host instanceof HTMLElement && host.dataset.labBlockId) {
         setSelectedBlockId(host.dataset.labBlockId);
       }
       setActiveCitationId(citationId);
@@ -590,7 +638,9 @@ export default function LabReportPlateEditor({
 
       flashCitePill(pill);
 
-      const openAt = () => setPopoverRect(pill.getBoundingClientRect());
+      const openAt = () => {
+        setPopoverRect(pill.getBoundingClientRect());
+      };
       // Wait a frame (and another after smooth scroll) so popover anchors correctly.
       requestAnimationFrame(() => {
         openAt();
