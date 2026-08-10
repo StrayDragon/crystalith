@@ -101,7 +101,6 @@ export default function AddSearchResultDialog({
         );
 
         try {
-          // eslint-disable-next-line no-await-in-loop -- Keep serial semantics for cancellation + per-item progress updates.
           await onAddSource(result, mode);
           // 再次检查是否在请求过程中被取消
           if (cancelledRef.current) {
@@ -116,16 +115,10 @@ export default function AddSearchResultDialog({
             prev.map((s) => (s.url === resultUrl ? { ...s, status: 'success' } : s)),
           );
         } catch (error) {
-          // eslint-disable-next-line eslint/no-loop-func
+          const errorMessage = error instanceof Error ? error.message : '添加失败';
           setStatuses((prev) =>
             prev.map((s) =>
-              s.url === resultUrl
-                ? {
-                    ...s,
-                    status: 'error',
-                    error: error instanceof Error ? error.message : '添加失败',
-                  }
-                : s,
+              s.url === resultUrl ? { ...s, status: 'error', error: errorMessage } : s,
             ),
           );
         }

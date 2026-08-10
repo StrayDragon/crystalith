@@ -31,15 +31,12 @@ import {
 } from 'react';
 import remarkGfm from 'remark-gfm';
 
-import { citationPillLabel } from '../research-lab-demo/fake/reportDocument';
-import {
-  stripFootnoteDefinitions,
-  withFootnoteDefinitions,
-} from '../research-lab-demo/fake/reportFootnotes';
-import type { LabCitation } from '../research-lab-demo/fake/types';
 import CitationPopover from '../workspace/shared/components/citations/CitationPopover';
 import type { Citation } from '../workspace/shared/types';
 import LabReportCiteAside from './LabReportCiteAside';
+import { citationPillLabel } from './model/reportDocument';
+import { stripFootnoteDefinitions, withFootnoteDefinitions } from './model/reportFootnotes';
+import type { LabCitation } from './model/types';
 import {
   LabReportCiteProvider,
   useLabReportCite,

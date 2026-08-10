@@ -26,20 +26,15 @@ import {
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 
 import { TestIds, tid } from '../../shared/testids';
-import {
-  layoutWithElk,
-  nodeProgress,
-  type LabEdgeData,
-  type LabRfData,
-} from '../research-lab-demo/fake/labLayout';
+import LabCanvasSettings from './LabCanvasSettings';
+import { layoutWithElk, nodeProgress, type LabEdgeData, type LabRfData } from './model/labLayout';
 import type {
   LabEdge,
   LabEdgePathPreset,
   LabLayoutAlgorithm,
   LabLayoutDirection,
   LabNode,
-} from '../research-lab-demo/fake/types';
-import LabCanvasSettings from './LabCanvasSettings';
+} from './model/types';
 
 import '@xyflow/react/dist/style.css';
 

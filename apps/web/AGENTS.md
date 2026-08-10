@@ -43,7 +43,9 @@
 
 发送时吞掉（不进 QA）。命令列表来自 `GET /v2/commands`（`kind: 'nav'`）。**不做 `@` 提及。**
 
-- 剪枝闭包 **B** 与 server `collectResearchPruneClosure` 对齐（demo `fake/deriveLabState`）；变更走 `llmanspec/changes/update-research-prune-cascade`
+- **共享 Lab model**：类型与纯函数 SSOT 在 `research-lab/model/`（types、layout、graphMutations、report*、node chat 等）。**Demo 不得作为产品类型 SSOT**；**产品不得 import `research-lab-demo/fake/*`**。Demo 可从产品 `model/` 导入，或经 `demo/fake/*` 薄 re-export shim。
+- 剪枝闭包 **B** 在 `research-lab/model/pruneClosure`（与 server `collectResearchPruneClosure` 对齐）；demo `fake/deriveLabState` 复用之。变更走 `llmanspec/changes/update-research-prune-cascade`
+- `LabController` 接口在 `research-lab/model/labController`（Eden / demo 各自实现）
 - 展示层（`LabGraph`、Compose、任务抽屉壳）可被 demo 复用；产品页无 `LabController | Eden` 联合分支
 - 顶栏搜索仅为 Fast 网搜；勿恢复为深研主入口
 

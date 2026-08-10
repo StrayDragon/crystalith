@@ -319,16 +319,7 @@ function SourceConnectorConfigStep({
             <input
               type={inputType}
               className="mt-1 w-full rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-gray-900 dark:text-slate-100"
-              value={
-                // eslint-disable-next-line eqeqeq
-                current == null
-                  ? ''
-                  : typeof current === 'string'
-                    ? current
-                    : typeof current === 'string'
-                      ? current
-                      : ''
-              }
+              value={typeof current === 'string' ? current : ''}
               onChange={(e) => onUpdateConfig(key, e.target.value, typeHint)}
               placeholder={key}
               {...tid(`${TestIds.sourcesConnectorsConfigField}-${key}`)}
@@ -648,9 +639,8 @@ export default function SourceConnectorsDialog({
   const { data, error, isLoading, mutate } = useSWR(
     canQuery ? ['workspace/source-connectors', notebookId] : null,
     async () => {
-      const { data: response, error: fetchErr } = await api.v2
-        .notebooks({ nid: notebookId! }) // eslint-disable-next-line no-unexpected-multiline
-        ['source-connectors'].get();
+      const notebook = api.v2.notebooks({ nid: notebookId! });
+      const { data: response, error: fetchErr } = await notebook['source-connectors'].get();
       if (fetchErr)
         throw new Error(
           typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
@@ -721,10 +711,13 @@ export default function SourceConnectorsDialog({
     setSyncCheck(null);
     setSyncApplyResult(null);
     try {
-      const { data: created, error: createErr } = await api.v2
-        .notebooks({ nid: notebookId }) // eslint-disable-next-line no-unexpected-multiline
-        ['source-connectors']({ connectorId: selectedConnector.connectorId })
-        .bindings.post({ connectionConfig });
+      const notebook = api.v2.notebooks({ nid: notebookId });
+      const connector = notebook['source-connectors']({
+        connectorId: selectedConnector.connectorId,
+      });
+      const { data: created, error: createErr } = await connector.bindings.post({
+        connectionConfig,
+      });
       if (createErr)
         throw new Error(
           typeof createErr === 'string'
@@ -755,10 +748,9 @@ export default function SourceConnectorsDialog({
     setSyncCheck(null);
     setSyncApplyResult(null);
     try {
-      const { data: snap, error: snapErr } = await api.v2
-        .notebooks({ nid: notebookId }) // eslint-disable-next-line no-unexpected-multiline
-        ['source-connector-bindings']({ bindingId: binding.id })
-        .snapshot.post();
+      const notebook = api.v2.notebooks({ nid: notebookId });
+      const bindingApi = notebook['source-connector-bindings']({ bindingId: binding.id });
+      const { data: snap, error: snapErr } = await bindingApi.snapshot.post();
       if (snapErr)
         throw new Error(
           typeof snapErr === 'string' ? snapErr : typeof snapErr === 'string' ? snapErr : '',
@@ -794,10 +786,10 @@ export default function SourceConnectorsDialog({
     setSyncCheck(null);
     setSyncApplyResult(null);
     try {
-      const { data: result, error: importErr } = await api.v2
-        .notebooks({ nid: notebookId }) // eslint-disable-next-line no-unexpected-multiline
-        ['source-connector-bindings']({ bindingId: binding.id }) // eslint-disable-next-line no-unexpected-multiline
-        ['import-scope'].post(scopePayload);
+      const notebook = api.v2.notebooks({ nid: notebookId });
+      const bindingApi = notebook['source-connector-bindings']({ bindingId: binding.id });
+      const { data: result, error: importErr } =
+        await bindingApi['import-scope'].post(scopePayload);
       if (importErr)
         throw new Error(
           typeof importErr === 'string'
@@ -836,10 +828,9 @@ export default function SourceConnectorsDialog({
     setSyncCheck(null);
     setSyncApplyResult(null);
     try {
-      const { data: result, error: syncErr } = await api.v2
-        .notebooks({ nid: notebookId }) // eslint-disable-next-line no-unexpected-multiline
-        ['source-connector-bindings']({ bindingId: binding.id }) // eslint-disable-next-line no-unexpected-multiline
-        ['sync-check'].post();
+      const notebook = api.v2.notebooks({ nid: notebookId });
+      const bindingApi = notebook['source-connector-bindings']({ bindingId: binding.id });
+      const { data: result, error: syncErr } = await bindingApi['sync-check'].post();
       if (syncErr)
         throw new Error(
           typeof syncErr === 'string' ? syncErr : typeof syncErr === 'string' ? syncErr : '',
@@ -860,10 +851,11 @@ export default function SourceConnectorsDialog({
     if (busy) return;
     setSyncApplyResult(null);
     try {
-      const { data: result, error: applyErr } = await api.v2
-        .notebooks({ nid: notebookId }) // eslint-disable-next-line no-unexpected-multiline
-        ['source-connector-bindings']({ bindingId: binding.id }) // eslint-disable-next-line no-unexpected-multiline
-        ['sync-check'].apply.post({ syncCheckId: syncCheck.id });
+      const notebook = api.v2.notebooks({ nid: notebookId });
+      const bindingApi = notebook['source-connector-bindings']({ bindingId: binding.id });
+      const { data: result, error: applyErr } = await bindingApi['sync-check'].apply.post({
+        syncCheckId: syncCheck.id,
+      });
       if (applyErr)
         throw new Error(
           typeof applyErr === 'string' ? applyErr : typeof applyErr === 'string' ? applyErr : '',

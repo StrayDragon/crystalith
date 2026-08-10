@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react';
 
-import type { LabCitation } from '../research-lab-demo/fake/types';
+import type { LabCitation } from './model/types';
 
 export type CiteActivateOptions = {
   /** 0-based occurrence among pills with the same citationId (document order). */

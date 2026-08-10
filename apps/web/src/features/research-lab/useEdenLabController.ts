@@ -11,15 +11,6 @@ import type {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { streamRequest } from '../../api/stream';
-import type {
-  LabCitation,
-  LabEdgePathPreset,
-  LabLayoutAlgorithm,
-  LabLayoutDirection,
-  LabNode,
-  LabViewMode,
-} from '../research-lab-demo/fake/types';
-import type { LabController } from '../research-lab-demo/fake/useLabController';
 import { applyGraphPatch } from './applyGraphPatch';
 import { confirmHighlightIds } from './confirmHighlight';
 import { deriveEdenLabPhase } from './deriveEdenLabPhase';
@@ -49,6 +40,15 @@ import {
 } from './labProgressLedger';
 import { consumeComposeTopicFromUrl } from './labRouting';
 import { consumeLabRunNeedsReload } from './labRunReloadGate';
+import type { LabController } from './model/labController';
+import type {
+  LabCitation,
+  LabEdgePathPreset,
+  LabLayoutAlgorithm,
+  LabLayoutDirection,
+  LabNode,
+  LabViewMode,
+} from './model/types';
 import { deriveLabStateFromRun, isEdenLabPlaying } from './researchGraphAdapter';
 import { refreshResearchTasks } from './researchTasksCache';
 

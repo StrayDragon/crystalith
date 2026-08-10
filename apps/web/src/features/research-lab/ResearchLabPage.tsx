@@ -10,20 +10,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { TestIds, tid } from '../../shared/testids';
 import { toast } from '../../shared/toast';
-import {
-  defaultForkDraft,
-  findForkContext,
-  previewPruneAlongEdge,
-  type ForkDraft,
-  type PrunePreview,
-} from '../research-lab-demo/fake/graphMutations';
-import type { LabNodeActionProposal } from '../research-lab-demo/fake/nodeChatTypes';
-import {
-  applyEdenPrimaryActionOverlay,
-  resolveLabPrimaryAction,
-  type LabPrimaryActionKind,
-} from '../research-lab-demo/fake/resolveLabPrimaryAction';
-import type { LabNode } from '../research-lab-demo/fake/types';
 import { acceptNodeChatAction as applyNodeChatAction } from './acceptNodeChatAction';
 import { cancelActiveEdenRun } from './edenCancelFlow';
 import {
@@ -46,6 +32,20 @@ import { LabForkDialog, LabPruneDialog, useDialogEscape } from './LabMutationDia
 import LabNodeDrawer from './LabNodeDrawer';
 import LabProgressBar from './LabProgressBar';
 import { navigateToLabReport, navigateToWorkspace } from './labRouting';
+import {
+  defaultForkDraft,
+  findForkContext,
+  previewPruneAlongEdge,
+  type ForkDraft,
+  type PrunePreview,
+} from './model/graphMutations';
+import type { LabNodeActionProposal } from './model/nodeChatTypes';
+import {
+  applyEdenPrimaryActionOverlay,
+  resolveLabPrimaryAction,
+  type LabPrimaryActionKind,
+} from './model/resolveLabPrimaryAction';
+import type { LabNode } from './model/types';
 import ResearchTasksDrawer from './ResearchTasksDrawer';
 import ResearchTasksTrigger from './ResearchTasksTrigger';
 import { isActiveResearchStatus, type ResearchTaskListItem } from './researchTaskTypes';

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { deriveLabState } from './deriveLabState';
+import { deriveLabState } from '../../research-lab-demo/fake/deriveLabState';
+import { getLabScenario } from '../../research-lab-demo/fake/scenarios';
 import { findInboundEdgeForNode, proposeNodeChatTurn } from './proposeNodeChatTurn';
-import { getLabScenario } from './scenarios';
 
 describe('proposeNodeChatTurn', () => {
   it('research reject → prune + fork proposals (pending)', () => {

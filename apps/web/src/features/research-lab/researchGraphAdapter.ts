@@ -5,7 +5,7 @@ import type {
   ResearchRunStatus,
 } from '@crystalith/shared';
 
-import type { LabDerivedState, LabEdge, LabNode, LabPhase } from '../research-lab-demo/fake/types';
+import type { LabDerivedState, LabEdge, LabNode, LabPhase } from './model/types';
 
 function inferRole(node: ResearchNode): LabNode['role'] {
   if (node.role) return node.role;
