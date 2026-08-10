@@ -8,8 +8,8 @@ import type {
   ResearchRevision,
   ResearchRevisionCreateBody,
   ResearchRun,
-  ResearchRunStatus,
 } from '@crystalith/shared';
+import { ResearchRunStatusSchema } from '@crystalith/shared';
 import { and, desc, eq } from 'drizzle-orm';
 import { NotFoundError } from 'elysia';
 
@@ -42,12 +42,12 @@ export function serializeRevision(row: typeof researchRevisions.$inferSelect): R
     runId: row.runId,
     notebookId: row.notebookId,
     label: row.label,
-    kind: row.kind as ResearchRevision['kind'],
+    kind: row.kind,
     parentRevisionId: row.parentRevisionId ?? null,
-    graph: row.graph as ResearchRevision['graph'],
-    report: (row.report as ResearchReport | null) ?? null,
+    graph: row.graph,
+    report: row.report ?? null,
     searchesUsed: row.searchesUsed,
-    statusAtSave: row.statusAtSave as ResearchRunStatus,
+    statusAtSave: ResearchRunStatusSchema.parse(row.statusAtSave),
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -81,7 +81,7 @@ export function createRevision(
 ): ResearchRevision {
   const row = requireRun(notebookId, runId);
   const from = body.from ?? 'canonical';
-  let report: ResearchReportJson | null = (row.report as ResearchReportJson | null) ?? null;
+  let report: ResearchReportJson | null = row.report ?? null;
   if (from === 'working') {
     const edit = db()
       .select()
@@ -100,6 +100,8 @@ export function createRevision(
       id,
       runId,
       notebookId,
+      // intentionally || — empty label gets timestamp default
+      // oxlint-disable-next-line typescript/prefer-nullish-coalescing
       label: body.label?.trim() || `保存 ${new Date().toISOString()}`,
       kind: 'user_save',
       parentRevisionId: row.activeRevisionId ?? null,
@@ -143,8 +145,8 @@ export function restoreRevision(notebookId: number, runId: number, revId: string
   db().delete(researchReportEdits).where(eq(researchReportEdits.runId, runId)).run();
 
   emitGraphPatch(runId, {
-    nodes: (rev.graph.nodes ?? []) as ResearchNode[],
-    edges: (rev.graph.edges ?? []) as ResearchEdge[],
+    nodes: rev.graph.nodes ?? [],
+    edges: rev.graph.edges ?? [],
   });
   appendProgressEvent(runId, 'revision_restored', {
     headline: `恢复 ${rev.label}`,
@@ -230,11 +232,8 @@ export function forkRunFromRevision(notebookId: number, runId: number, revId: st
     .get();
   if (!rev) throw new NotFoundError(`Revision ${revId} not found`);
 
-  const snapshotGraph = structuredClone(rev.graph) as {
-    nodes: ResearchNode[];
-    edges: ResearchEdge[];
-  };
-  const snapshotReport = rev.report ? (structuredClone(rev.report) as ResearchReport) : null;
+  const snapshotGraph = structuredClone(rev.graph);
+  const snapshotReport = rev.report ? structuredClone(rev.report) : null;
 
   const referenced = collectReferencedEvidenceIds(snapshotGraph, snapshotReport);
   const sourceEvidences = listEvidences(runId);

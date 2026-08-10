@@ -1,6 +1,9 @@
 import type {
   ImportScope,
   JsonMetadata,
+  ResearchEdge,
+  ResearchNode,
+  ResearchReport,
   SlideGenerationConfig,
   SlidesOutline,
   Snapshot,
@@ -417,34 +420,10 @@ export const studioSlideRelations = relations(studioSlides, ({ one }) => ({
 // Research runs + evidences (c76)
 // ---------------------------------------------------------------------------
 
-/** Graph JSON stored on research_runs. */
+/** Graph JSON stored on research_runs (aligned with shared ResearchNode/Edge). */
 export type ResearchGraphJson = {
-  nodes: Array<{
-    id: string;
-    title: string;
-    role?: 'question' | 'research' | 'conclusion';
-    query?: string;
-    summary?: string;
-    conclusionStatus: 'clear' | 'partial' | 'missing' | 'pending' | 'pruned';
-    phase?: 'idle' | 'retrieving' | 'synthesizing';
-    evidenceIds?: string[];
-  }>;
-  edges: Array<{
-    id: string;
-    source: string;
-    target: string;
-    kind:
-      | 'decompose'
-      | 'expand'
-      | 'focus'
-      | 'filter'
-      | 'compare'
-      | 'refine'
-      | 'support'
-      | 'fork'
-      | 'merge';
-    labelNote?: string;
-  }>;
+  nodes: ResearchNode[];
+  edges: ResearchEdge[];
 };
 
 /** Checkpoint blob (CP1). */
@@ -456,12 +435,8 @@ export type ResearchCheckpointJson = {
   reason?: string;
 };
 
-/** Report JSON on research_runs. */
-export type ResearchReportJson = {
-  title: string;
-  sections: unknown[];
-  citations: Record<string, unknown>;
-};
+/** Report JSON on research_runs (aligned with shared ResearchReport). */
+export type ResearchReportJson = ResearchReport;
 
 export const researchRuns = sqliteTable(
   'research_runs',

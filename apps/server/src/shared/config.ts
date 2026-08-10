@@ -41,11 +41,11 @@ export function getSecretPath(): string {
 let _configPath: string | null = null;
 let _secretPath: string | null = null;
 export function configPath(): string {
-  if (_configPath === null) _configPath = getConfigPath();
+  _configPath ??= getConfigPath();
   return _configPath;
 }
 export function secretPath(): string {
-  if (_secretPath === null) _secretPath = getSecretPath();
+  _secretPath ??= getSecretPath();
   return _secretPath;
 }
 
@@ -76,7 +76,7 @@ function parseDotenv(path: string): Record<string, string> {
 
 let _secrets: Record<string, string> | null = null;
 function secrets(): Record<string, string> {
-  if (_secrets === null) _secrets = parseDotenv(secretPath());
+  _secrets ??= parseDotenv(secretPath());
   return _secrets;
 }
 
@@ -101,12 +101,12 @@ function findDotenv(): string {
 
 let _envPath: string | null = null;
 function envPath(): string {
-  if (_envPath === null) _envPath = findDotenv();
+  _envPath ??= findDotenv();
   return _envPath;
 }
 
 function envOverlay(): Record<string, string> {
-  if (_envOverlay === null) _envOverlay = parseDotenv(envPath());
+  _envOverlay ??= parseDotenv(envPath());
   return _envOverlay;
 }
 
@@ -236,7 +236,7 @@ export function loadConfig(path?: string): AppConfig {
 
 /** Process-wide singleton. */
 export function config(): AppConfig {
-  if (_config === null) _config = loadConfig();
+  _config ??= loadConfig();
   return _config;
 }
 
@@ -593,6 +593,8 @@ export function getSearchSettings(): SearchSettings {
 /** SearXNG host from `search.searxng.host` (yaml ← CL_SEARXNG_HOST) → env fallbacks. Empty disables web search. */
 export function getSearxngHost(): string {
   const host = getSearchSettings().searxng.host;
+  // intentionally || — empty string is missing
+  // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   return host || process.env.CL_SEARXNG_HOST || process.env.SEARXNG_HOST || '';
 }
 

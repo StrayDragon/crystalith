@@ -123,6 +123,8 @@ export function useSlidesStudioDialog({
     return '未选择来源，无法生成演示。';
   }, [draft?.sourceIds, isPreviewMode, selectedSourceIds]);
 
+  // intentionally || — engine fallback chain
+  // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   const slidesEngine = draft?.engine || slidesConfig?.engine || null;
   const hasSelectedSources = useMemo(() => {
     const draftSourceIds = draft?.sourceIds ?? [];

@@ -339,76 +339,79 @@ function ChatPanel({
               </Menu>
             )}
 
-            {isConnected && (onConvertToSource || onConvertToOutput) && (
-              <Menu placement="bottom-start">
-                <MenuHandler>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
-                    disabled={isConverting}
-                  >
-                    {isConverting ? (
-                      <Spinner className="w-3.5 h-3.5" />
-                    ) : (
-                      <ConvertIcon style={{ fontSize: 14 }} />
-                    )}
-                    转换
-                    <ExpandMoreIcon style={{ fontSize: 12 }} />
-                  </button>
-                </MenuHandler>
-                <MenuList className="p-1 min-w-[160px]" style={{ zIndex: LAYER_LEVELS.dropdown }}>
-                  {onConvertToSource && (
-                    <MenuItem
-                      onClick={() => {
-                        void onConvertToSource();
-                      }}
-                      className="flex items-center gap-2 py-2 px-3 text-xs"
+            {isConnected &&
+              // intentionally || — optional callback presence check
+              // oxlint-disable-next-line typescript/prefer-nullish-coalescing
+              (onConvertToSource || onConvertToOutput) && (
+                <Menu placement="bottom-start">
+                  <MenuHandler>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
                       disabled={isConverting}
                     >
-                      <SourceIcon style={{ fontSize: 14 }} />
-                      <span>转为来源</span>
-                    </MenuItem>
-                  )}
-                  {onConvertToOutput && (
-                    <>
-                      <div className="px-3 py-1 text-[10px] text-gray-400 dark:text-slate-400 font-medium">
-                        转为笔记
-                      </div>
+                      {isConverting ? (
+                        <Spinner className="w-3.5 h-3.5" />
+                      ) : (
+                        <ConvertIcon style={{ fontSize: 14 }} />
+                      )}
+                      转换
+                      <ExpandMoreIcon style={{ fontSize: 12 }} />
+                    </button>
+                  </MenuHandler>
+                  <MenuList className="p-1 min-w-[160px]" style={{ zIndex: LAYER_LEVELS.dropdown }}>
+                    {onConvertToSource && (
                       <MenuItem
                         onClick={() => {
-                          void onConvertToOutput('PARAGRAPH');
+                          void onConvertToSource();
                         }}
                         className="flex items-center gap-2 py-2 px-3 text-xs"
                         disabled={isConverting}
                       >
-                        <NotesIcon style={{ fontSize: 14 }} />
-                        <span>段落</span>
+                        <SourceIcon style={{ fontSize: 14 }} />
+                        <span>转为来源</span>
                       </MenuItem>
-                      <MenuItem
-                        onClick={() => {
-                          void onConvertToOutput('BULLETS');
-                        }}
-                        className="flex items-center gap-2 py-2 px-3 text-xs"
-                        disabled={isConverting}
-                      >
-                        <NotesIcon style={{ fontSize: 14 }} />
-                        <span>要点</span>
-                      </MenuItem>
-                      <MenuItem
-                        onClick={() => {
-                          void onConvertToOutput('STRUCTURED');
-                        }}
-                        className="flex items-center gap-2 py-2 px-3 text-xs"
-                        disabled={isConverting}
-                      >
-                        <NotesIcon style={{ fontSize: 14 }} />
-                        <span>结构化</span>
-                      </MenuItem>
-                    </>
-                  )}
-                </MenuList>
-              </Menu>
-            )}
+                    )}
+                    {onConvertToOutput && (
+                      <>
+                        <div className="px-3 py-1 text-[10px] text-gray-400 dark:text-slate-400 font-medium">
+                          转为笔记
+                        </div>
+                        <MenuItem
+                          onClick={() => {
+                            void onConvertToOutput('PARAGRAPH');
+                          }}
+                          className="flex items-center gap-2 py-2 px-3 text-xs"
+                          disabled={isConverting}
+                        >
+                          <NotesIcon style={{ fontSize: 14 }} />
+                          <span>段落</span>
+                        </MenuItem>
+                        <MenuItem
+                          onClick={() => {
+                            void onConvertToOutput('BULLETS');
+                          }}
+                          className="flex items-center gap-2 py-2 px-3 text-xs"
+                          disabled={isConverting}
+                        >
+                          <NotesIcon style={{ fontSize: 14 }} />
+                          <span>要点</span>
+                        </MenuItem>
+                        <MenuItem
+                          onClick={() => {
+                            void onConvertToOutput('STRUCTURED');
+                          }}
+                          className="flex items-center gap-2 py-2 px-3 text-xs"
+                          disabled={isConverting}
+                        >
+                          <NotesIcon style={{ fontSize: 14 }} />
+                          <span>结构化</span>
+                        </MenuItem>
+                      </>
+                    )}
+                  </MenuList>
+                </Menu>
+              )}
           </div>
         ) : null}
       </div>
@@ -492,9 +495,9 @@ function ChatPanel({
                 Footer: () => (renderNotice ? <div className="pt-1">{renderNotice}</div> : null),
               }}
             />
-          ) : renderNotice ? (
-            renderNotice
-          ) : null}
+          ) : (
+            (renderNotice ?? null)
+          )}
         </div>
       </div>
 

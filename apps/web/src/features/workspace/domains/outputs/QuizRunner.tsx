@@ -166,6 +166,8 @@ export default function QuizRunner({ questions, className }: QuizRunnerProps) {
           题目 {currentIndex + 1}
         </div>
         <div className="mt-2 text-lg font-semibold text-gray-900 dark:text-slate-100">
+          {/* intentionally || — empty string is missing */}
+          {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
           {current?.question || '暂无题目'}
         </div>
         {Array.isArray(current?.options) && current.options.length > 0 ? (

@@ -202,10 +202,10 @@ function buildTree(
 ): LayoutNode {
   const id = prefix;
   const isCollapsed = collapsed.has(id);
-  const childCount = node.children?.length || 0;
+  const childCount = node.children?.length ?? 0;
   const children = isCollapsed
     ? []
-    : (node.children || []).map((c, i) => buildTree(c, depth + 1, `${prefix}-${i}`, collapsed));
+    : (node.children ?? []).map((c, i) => buildTree(c, depth + 1, `${prefix}-${i}`, collapsed));
   const height =
     children.length === 0
       ? NODE_HEIGHT
@@ -282,7 +282,7 @@ function getAutoCollapsed(
   const set = new Set<string>();
   const traverse = (n: MindmapNode, d: number, p: string) => {
     if (d >= maxDepth && n.children?.length) set.add(p);
-    (n.children || []).forEach((c, i) => traverse(c, d + 1, `${p}-${i}`));
+    (n.children ?? []).forEach((c, i) => traverse(c, d + 1, `${p}-${i}`));
   };
   if (maxDepth > 0) traverse(node, depth, prefix);
   return set;

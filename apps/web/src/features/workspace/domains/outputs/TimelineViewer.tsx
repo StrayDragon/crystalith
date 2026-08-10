@@ -56,13 +56,19 @@ export default function TimelineViewer({ events, className }: TimelineViewerProp
                 }}
               >
                 <div className="text-xs font-semibold text-gray-500 dark:text-slate-400">
+                  {/* intentionally || — empty string is missing */}
+                  {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
                   {item.date || '时间'}
                 </div>
                 <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                  {/* intentionally || — empty string is missing */}
+                  {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
                   {item.event || '事件'}
                 </div>
                 {isOpen ? (
                   <div className="text-sm text-gray-600 dark:text-slate-300">
+                    {/* intentionally || — empty string is missing */}
+                    {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
                     {item.description || '暂无描述'}
                   </div>
                 ) : null}

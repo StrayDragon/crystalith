@@ -128,8 +128,8 @@ export function parseReportBlocks(markdown: string): ReportBlock[] {
     if (headingMatch) {
       flushPara();
       sectionId = `sec-${sectionIdx++}`;
-      const level = headingMatch[1]!.length;
-      const text = headingMatch[2]!.trim();
+      const level = headingMatch[1].length;
+      const text = headingMatch[2].trim();
       blocks.push({
         id: `blk-${blockIdx++}`,
         kind: 'heading',

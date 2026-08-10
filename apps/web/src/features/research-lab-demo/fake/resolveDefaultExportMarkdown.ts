@@ -1,5 +1,4 @@
 import type {
-  LabCitation,
   LabEdge,
   LabGraphMutations,
   LabNode,
@@ -25,7 +24,7 @@ export function resolveDefaultExportMarkdown(input: {
   return buildSuggestedReportFromNodes({
     topic: scenario.topic,
     nodes,
-    citations: scenario.citations as Record<string, LabCitation>,
+    citations: scenario.citations,
     edges,
   });
 }

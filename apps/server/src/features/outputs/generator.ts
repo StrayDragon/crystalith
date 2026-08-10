@@ -246,6 +246,8 @@ export async function generateOutputByType(
   const meta = OUTPUT_META[type];
   if (!meta) throw new Error(`Unknown output type: ${type}`);
 
+  // intentionally || — empty custom prompt falls back to type default
+  // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   const systemPrompt = customPrompt || meta.prompt;
   const fullPrompt = `Context:\n${context}\n\nGenerate a ${meta.displayText} (${meta.description}) based on the above context.`;
 

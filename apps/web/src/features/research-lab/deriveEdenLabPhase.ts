@@ -93,7 +93,7 @@ export function deriveEdenLabPhase(input: DeriveEdenLabPhaseInput): LabPhase {
   const events = input.progressEvents;
   if (events.length > 0) {
     for (let i = events.length - 1; i >= 0; i -= 1) {
-      const mapped = phaseFromProgressKind(events[i]!);
+      const mapped = phaseFromProgressKind(events[i]);
       if (mapped === 'awaiting_confirm' || mapped === 'completed' || mapped === 'failed') {
         // Prefer run.status for terminals; skip ledger terminal noise while running/queued
         continue;

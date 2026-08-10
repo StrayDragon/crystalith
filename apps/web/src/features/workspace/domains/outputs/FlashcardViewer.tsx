@@ -94,6 +94,8 @@ export default function FlashcardViewer({ items, className }: FlashcardViewerPro
                     问题
                   </div>
                   <div className="mt-2 text-lg font-semibold text-gray-900 dark:text-slate-100">
+                    {/* intentionally || — empty string is missing */}
+                    {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
                     {card.question || '暂无问题'}
                   </div>
                 </div>
@@ -110,6 +112,8 @@ export default function FlashcardViewer({ items, className }: FlashcardViewerPro
                     答案
                   </div>
                   <div className="mt-2 text-lg font-semibold text-gray-900 dark:text-slate-100">
+                    {/* intentionally || — empty string is missing */}
+                    {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
                     {card.answer || '暂无答案'}
                   </div>
                 </div>

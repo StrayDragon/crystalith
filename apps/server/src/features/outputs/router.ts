@@ -271,6 +271,7 @@ async function handleGenerateOutput(
     if (!text) {
       throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'PARAGRAPH content.text must not be empty');
     }
+    /* oxlint-disable typescript/prefer-nullish-coalescing -- title/prompt fallback chains */
     const title =
       (typeof parsedContent.data.title === 'string' && parsedContent.data.title.trim()) ||
       text
@@ -292,6 +293,7 @@ async function handleGenerateOutput(
       })
       .returning()
       .get();
+    /* oxlint-enable typescript/prefer-nullish-coalescing */
     set.status = 201;
     return serializeOutput(output);
   }

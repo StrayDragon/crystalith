@@ -11,6 +11,8 @@ export type OutboundFetchInit = RequestInit & {
 
 function nonEmpty(value: string | null | undefined): string | undefined {
   const t = value?.trim();
+  // intentionally || — empty string is missing
+  // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   return t ? t : undefined;
 }
 

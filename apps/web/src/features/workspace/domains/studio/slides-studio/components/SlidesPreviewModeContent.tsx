@@ -16,7 +16,11 @@ export function SlidesPreviewModeContent({
   onMarkdownChange,
   selectionLabel,
 }: SlidesPreviewModeContentProps) {
+  // intentionally || — title fallback chain for preview
+  // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   const previewTitle = title.trim() || outlineTitle.trim() || draft?.title || '演示';
+  // intentionally || — zero length falls through to draft slide count
+  // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   const slideCount = outlineItems.length || draft?.outline?.slides?.length || 0;
   const outlinePreview = outlineItems.slice(0, 4);
   const queueLabel = queueStatus
@@ -79,7 +83,11 @@ export function SlidesPreviewModeContent({
                   return (
                     <li key={outlinePreviewKey} className="flex items-center gap-2">
                       <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
-                      <span className="truncate">{item.title || `幻灯片 ${index + 1}`}</span>
+                      <span className="truncate">
+                        {/* intentionally || — empty title is missing */}
+                        {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
+                        {item.title || `幻灯片 ${index + 1}`}
+                      </span>
                     </li>
                   );
                 });
@@ -97,9 +105,13 @@ export function SlidesPreviewModeContent({
         )}
         <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-slate-300">
           <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1">
+            {/* intentionally || — empty engine is missing */}
+            {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
             引擎：{slidesEngine || '未配置'}
           </div>
           <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1">
+            {/* intentionally || — empty queue label is missing */}
+            {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
             状态：{queueLabel || '就绪'}
           </div>
         </div>

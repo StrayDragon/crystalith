@@ -6,6 +6,10 @@ import type { ResearchEvidence, ResearchReport } from '@crystalith/shared';
 export const SYNTHESIZE_FAILED_PREFIX = 'synthesize_failed:';
 export const SYNTHESIZE_MODEL_ERROR_PREFIX = 'synthesize_model_error:';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export function isSynthesizeFailureReason(reason: string | null | undefined): boolean {
   if (!reason) return false;
   return (
@@ -80,6 +84,8 @@ export function validateAndBindCitations(
           ...citationFromEvidence(ev),
           ...fromModel,
           sourceName: fromModel.sourceName || ev.title,
+          // intentionally || — empty snippet falls back through evidence fields
+          // oxlint-disable-next-line typescript/prefer-nullish-coalescing
           snippet: fromModel.snippet || ev.snippet || ev.title,
         }
       : citationFromEvidence(ev);
@@ -106,7 +112,7 @@ export function repairResearchReportText(text: string): string | null {
   trimmed = trimmed.replaceAll(/<think>[\s\S]*?<\/think>/giu, '').trim();
 
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/iu);
-  if (fenced) trimmed = fenced[1]!.trim();
+  if (fenced?.[1]) trimmed = fenced[1].trim();
 
   const start = trimmed.indexOf('{');
   if (start < 0) return null;
@@ -115,7 +121,7 @@ export function repairResearchReportText(text: string): string | null {
   let inString = false;
   let escape = false;
   for (let i = start; i < trimmed.length; i++) {
-    const ch = trimmed[i]!;
+    const ch = trimmed.charAt(i);
     if (inString) {
       if (escape) escape = false;
       else if (ch === '\\') escape = true;
@@ -139,8 +145,8 @@ export function repairResearchReportText(text: string): string | null {
 
   try {
     const raw: unknown = JSON.parse(trimmed.slice(start, end + 1));
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-    const obj = raw as Record<string, unknown>;
+    if (!isRecord(raw)) return null;
+    const obj = raw;
     if (typeof obj.title !== 'string') return null;
     if (!Array.isArray(obj.sections)) return null;
     if (
@@ -152,14 +158,14 @@ export function repairResearchReportText(text: string): string | null {
       obj.citations = {};
     }
 
-    const citationsIn = obj.citations as Record<string, unknown>;
+    const citationsIn = isRecord(obj.citations) ? obj.citations : {};
     const citationsOut: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(citationsIn)) {
-      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      if (!isRecord(value)) {
         citationsOut[key] = { sourceName: key, snippet: '' };
         continue;
       }
-      const c = value as Record<string, unknown>;
+      const c = value;
       const repaired: Record<string, unknown> = {
         sourceName: typeof c.sourceName === 'string' && c.sourceName ? c.sourceName : key,
         snippet: typeof c.snippet === 'string' ? c.snippet : '',
@@ -178,32 +184,32 @@ export function repairResearchReportText(text: string): string | null {
     }
     obj.citations = citationsOut;
 
-    obj.sections = (obj.sections as unknown[]).map((section, idx) => {
-      if (!section || typeof section !== 'object' || Array.isArray(section)) {
+    obj.sections = obj.sections.map((section, idx) => {
+      if (!isRecord(section)) {
         return {
           id: `s${idx + 1}`,
           heading: '节',
           blocks: [{ type: 'paragraph', text: String(section ?? ''), citeIds: [] }],
         };
       }
-      const s = section as Record<string, unknown>;
+      const s = section;
       const id = typeof s.id === 'string' && s.id.trim() ? s.id : `s${idx + 1}`;
       const heading = typeof s.heading === 'string' ? s.heading : '节';
       const blocksRaw = Array.isArray(s.blocks) ? s.blocks : [];
       const blocks = blocksRaw.map((block) => {
-        if (!block || typeof block !== 'object' || Array.isArray(block)) {
+        if (!isRecord(block)) {
           return { type: 'paragraph', text: String(block ?? ''), citeIds: [] };
         }
-        const b = block as Record<string, unknown>;
+        const b = block;
         if (b.type === 'bullets') {
           const items = Array.isArray(b.items) ? b.items : [];
           return {
             type: 'bullets',
             items: items.map((item) => {
-              if (!item || typeof item !== 'object' || Array.isArray(item)) {
+              if (!isRecord(item)) {
                 return { text: String(item ?? ''), citeIds: [] };
               }
-              const it = item as Record<string, unknown>;
+              const it = item;
               return {
                 text: typeof it.text === 'string' ? it.text : String(it.text ?? ''),
                 citeIds: Array.isArray(it.citeIds)

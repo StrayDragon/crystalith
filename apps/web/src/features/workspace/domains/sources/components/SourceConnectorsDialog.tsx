@@ -171,6 +171,8 @@ function SourceConnectorSelectStep({
               <div className="min-w-0">
                 <div className="text-sm font-semibold truncate">{connector.displayName}</div>
                 <div className="mt-0.5 text-[11px] opacity-80 truncate">
+                  {/* intentionally || — empty description falls back to id */}
+                  {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
                   {connector.description || connector.connectorId}
                 </div>
               </div>

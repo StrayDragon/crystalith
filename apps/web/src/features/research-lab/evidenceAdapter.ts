@@ -10,6 +10,8 @@ export function evidenceToLabCitation(ev: ResearchEvidence): LabCitation {
     id: ev.id,
     title: ev.title || ev.id,
     url: ev.url ?? '',
+    // intentionally || — empty snippet falls back to title/placeholder
+    // oxlint-disable-next-line typescript/prefer-nullish-coalescing
     snippet: ev.snippet?.trim() || ev.title || '（无摘要）',
     kind,
     origin: ev.kind === 'chunk' && ev.sourceId !== undefined ? 'notebook' : 'research',

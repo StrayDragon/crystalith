@@ -122,6 +122,8 @@ export function useSourceDetailDialog({
         setBrief(newBrief);
       })
       .catch((error) => {
+        // intentionally || — empty error message gets default
+        // oxlint-disable-next-line typescript/prefer-nullish-coalescing
         setBriefError(error.message || '加载摘要失败');
       })
       .finally(() => {
@@ -155,6 +157,8 @@ export function useSourceDetailDialog({
         setChunks(response);
       })
       .catch((error) => {
+        // intentionally || — empty error message gets default
+        // oxlint-disable-next-line typescript/prefer-nullish-coalescing
         setChunksError(error.message || '加载原始数据失败');
       })
       .finally(() => {
@@ -250,6 +254,8 @@ export function useSourceDetailDialog({
         setBrief(newBrief);
       })
       .catch((error) => {
+        // intentionally || — empty error message gets default
+        // oxlint-disable-next-line typescript/prefer-nullish-coalescing
         setBriefError(error.message || '生成摘要失败');
       })
       .finally(() => {

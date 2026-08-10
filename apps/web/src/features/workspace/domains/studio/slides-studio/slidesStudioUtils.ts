@@ -53,6 +53,8 @@ export function normalizeDraft(raw: StudioSlide): SlideDraft {
 }
 
 export function outlineTitleFromDraft(draft: SlideDraft | null) {
+  // intentionally || — title fallback chain
+  // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   return draft?.outline?.title || draft?.title || '演示';
 }
 

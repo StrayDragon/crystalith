@@ -298,12 +298,10 @@ export function useChat({
             const chunk = QaStreamChunkEventSchema.safeParse(eventData);
             if (!chunk.success || !chunk.data.text) continue;
             streamingBufferRef.current += chunk.data.text;
-            if (!streamingFlushTimerRef.current) {
-              streamingFlushTimerRef.current = setTimeout(() => {
-                streamingFlushTimerRef.current = null;
-                flushBufferedContent();
-              }, 50);
-            }
+            streamingFlushTimerRef.current ??= setTimeout(() => {
+              streamingFlushTimerRef.current = null;
+              flushBufferedContent();
+            }, 50);
             continue;
           }
 

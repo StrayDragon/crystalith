@@ -140,7 +140,12 @@ export function useSlidesConfigForm({
         prev ||
         resolveOptionId(configDefaults?.themePreset ?? null, slidesConfig.themePresetOptions),
     );
-    setConfigFrontmatter((prev) => prev || configDefaults?.frontmatter || '');
+    setConfigFrontmatter(
+      (prev) =>
+        // intentionally || — empty frontmatter falls back to defaults
+        // oxlint-disable-next-line typescript/prefer-nullish-coalescing
+        prev || configDefaults?.frontmatter || '',
+    );
   }, [configDefaults, open, slidesConfig]);
 
   const buildGenerationConfig = useCallback((): SlideGenerationConfig => {

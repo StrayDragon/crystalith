@@ -87,6 +87,8 @@ export function ModelSelector({
 
   const handleChange = useCallback(
     (newValue: string | undefined) => {
+      // intentionally || — empty string becomes null
+      // oxlint-disable-next-line typescript/prefer-nullish-coalescing
       onChange(newValue || null);
     },
     [onChange],
@@ -123,6 +125,8 @@ export function ModelSelector({
         </Typography>
       ) : null}
       <Select
+        // intentionally || — null value becomes empty string for controlled select
+        // oxlint-disable-next-line typescript/prefer-nullish-coalescing
         value={value || ''}
         onChange={(val) => handleChange(val)}
         disabled={disabled}

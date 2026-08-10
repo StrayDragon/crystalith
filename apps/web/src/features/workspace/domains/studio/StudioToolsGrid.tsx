@@ -78,6 +78,8 @@ export default function StudioToolsGrid({
   );
   const supportsTopic = activeToolSchema?.supportsTopic !== false;
   const topicPlaceholder =
+    // intentionally || — empty placeholder gets default
+    // oxlint-disable-next-line typescript/prefer-nullish-coalescing
     activeToolSchema?.topicPlaceholder ||
     '示例提示\n• 限定特定来源或主题\n• 说明重点关注的方向\n• 提供具体的约束条件';
 
@@ -105,7 +107,11 @@ export default function StudioToolsGrid({
           ? schema.quantityOptions
           : FALLBACK_QUANTITY_OPTIONS;
       const localDifficultyOptions = schema?.difficultyOptions ?? [];
+      // intentionally || — empty default option id
+      // oxlint-disable-next-line typescript/prefer-nullish-coalescing
       setConfigQuantity(localQuantityOptions.find((o) => o.isDefault)?.id || 'standard');
+      // intentionally || — empty default option id
+      // oxlint-disable-next-line typescript/prefer-nullish-coalescing
       setConfigDifficulty(localDifficultyOptions.find((o) => o.isDefault)?.id || 'medium');
       setConfigTopic('');
       setConfigModelId(null);

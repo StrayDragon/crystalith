@@ -3,15 +3,12 @@
  * No imports from run-loop / commands / report / node-chat (cycle bridge).
  */
 import type {
-  ResearchDepth,
-  ResearchEdge,
   ResearchEvidence,
   ResearchGraphPatch,
   ResearchNode,
   ResearchNodeRole,
   ResearchProgressEvent,
   ResearchProgressKind,
-  ResearchReport,
   ResearchRun,
   ResearchRunStatus,
   ResearchRunSummary,
@@ -191,10 +188,11 @@ export function subscribeRun(runId: number, emit: SseEmit): () => void {
     set = new Set();
     runEmitters.set(runId, set);
   }
-  set.add(emit);
+  const emitters = set;
+  emitters.add(emit);
   return () => {
-    set!.delete(emit);
-    if (set!.size === 0) runEmitters.delete(runId);
+    emitters.delete(emit);
+    if (emitters.size === 0) runEmitters.delete(runId);
   };
 }
 
@@ -204,26 +202,26 @@ export function serializeRun(row: RunRow): ResearchRun {
     id: row.id,
     notebookId: row.notebookId,
     topic: row.topic,
-    status: row.status as ResearchRunStatus,
+    status: row.status,
     useNotebookSources: row.useNotebookSources,
     allowWeb: row.allowWeb,
     sourceIds: row.sourceIds ?? null,
-    depth: row.depth as ResearchDepth,
+    depth: row.depth,
     maxSearches: row.maxSearches,
     maxNodes: row.maxNodes,
     searchesUsed: row.searchesUsed,
     maxPageFetches: row.maxPageFetches,
     pagesUsed: row.pagesUsed,
-    nodes: graph.nodes as ResearchNode[],
-    edges: graph.edges as ResearchEdge[],
+    nodes: graph.nodes,
+    edges: graph.edges,
     evidences: listEvidences(row.id),
-    report: (row.report as ResearchReport | null) ?? null,
-    confirmKind: (row.confirmKind as 'budget' | 'expand_branch' | 'reexpand' | null) ?? null,
+    report: row.report ?? null,
+    confirmKind: row.confirmKind ?? null,
     confirmBranchNodeId: row.confirmBranchNodeId ?? null,
     modelId: row.modelId ?? null,
     failureReason: row.errorMessage ?? null,
     errorMessage: row.errorMessage ?? null,
-    llmActivity: (row.llmActivity as ResearchRun['llmActivity']) ?? null,
+    llmActivity: row.llmActivity ?? null,
     activeNodeId: row.activeNodeId ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -235,17 +233,17 @@ export function serializeRunSummary(row: RunRow): ResearchRunSummary {
     id: row.id,
     notebookId: row.notebookId,
     topic: row.topic,
-    status: row.status as ResearchRunStatus,
+    status: row.status,
     useNotebookSources: row.useNotebookSources,
     allowWeb: row.allowWeb,
     sourceIds: row.sourceIds ?? null,
-    depth: row.depth as ResearchDepth,
+    depth: row.depth,
     maxSearches: row.maxSearches,
     maxNodes: row.maxNodes,
     searchesUsed: row.searchesUsed,
     maxPageFetches: row.maxPageFetches,
     pagesUsed: row.pagesUsed,
-    confirmKind: (row.confirmKind as 'budget' | 'expand_branch' | 'reexpand' | null) ?? null,
+    confirmKind: row.confirmKind ?? null,
     modelId: row.modelId ?? null,
     failureReason: row.errorMessage ?? null,
     errorMessage: row.errorMessage ?? null,
@@ -386,7 +384,7 @@ export function listEvidences(runId: number): ResearchEvidence[] {
     .all()
     .map((e) => ({
       id: e.id,
-      kind: e.kind as 'web' | 'chunk',
+      kind: e.kind,
       title: e.title,
       snippet: e.snippet ?? undefined,
       content: e.content ?? undefined,

@@ -115,6 +115,8 @@ function SourceListRow({
           (source.errorMessage || source.recoveryHint || source.errorCode) ? (
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-[10px] text-red-600 dark:text-red-400 truncate">
+                {/* intentionally || — error message fallback chain */}
+                {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
                 {source.errorMessage || source.errorCode || '导入失败'}
               </span>
               {source.recoveryHint ? (
@@ -161,6 +163,8 @@ function SourceListRow({
                 onClick={() => {
                   void (async () => {
                     const text =
+                      // intentionally || — recovery hint fallback chain
+                      // oxlint-disable-next-line typescript/prefer-nullish-coalescing
                       source.recoveryHint || source.errorMessage || source.errorCode || '';
                     const ok = await copyToClipboard(text);
                     if (ok) {
