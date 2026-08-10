@@ -44,10 +44,10 @@ function JsonFallback({ value }: { value: unknown }) {
 }
 
 function resolveItems(content: unknown, itemsKey: string): unknown[] | null {
-  if (Array.isArray(content)) return content;
+  if (Array.isArray(content)) return content as unknown[];
   if (!isRecord(content)) return null;
   const found = content[itemsKey];
-  return Array.isArray(found) ? found : null;
+  return Array.isArray(found) ? (found as unknown[]) : null;
 }
 
 function resolveOptionString(

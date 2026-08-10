@@ -59,7 +59,7 @@ export function useRefine() {
     error: toolsError,
     isLoading: toolsLoading,
     mutate: refreshTools,
-  } = useSWR(
+  } = useSWR<WorkspaceToolsListResponse, Error>(
     isConnected ? 'workspace/tools' : null,
     async (): Promise<WorkspaceToolsListResponse> => {
       const { data, error } = await api.v2.workspace.tools.get();

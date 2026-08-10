@@ -1,3 +1,4 @@
+import { isRecord, parseJsonValue } from '../../../shared/json';
 import { extractCitationIds } from '../../research-lab/model/reportDocument';
 
 const WORKING_KEY_PREFIX = 'crystalith.research-lab.report-working';
@@ -93,16 +94,16 @@ export function readWorkingCopy(notebookId: number, scenarioId: string): ReportW
   try {
     const raw = sessionStorage.getItem(workingCopyStorageKey(notebookId, scenarioId));
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as ReportWorkingCopy;
+    const parsed = parseJsonValue(raw);
     if (
-      !parsed ||
+      !isRecord(parsed) ||
       parsed.notebookId !== notebookId ||
       parsed.scenarioId !== scenarioId ||
       typeof parsed.markdown !== 'string'
     ) {
       return null;
     }
-    return parsed;
+    return parsed as unknown as ReportWorkingCopy;
   } catch {
     return null;
   }

@@ -1,4 +1,4 @@
-import type { QaNestedRequest } from '@crystalith/shared';
+import type { Message, QaNestedRequest } from '@crystalith/shared';
 import {
   CitationSchema,
   QaAnswerSchema,
@@ -113,11 +113,11 @@ export function useChat({
   const streamingFlushTimerRef = useRef<NodeJS.Timeout | null>(null);
   const streamingAbortControllerRef = useRef<AbortController | null>(null);
 
-  const { data, error, isLoading, mutate } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR<Message[], Error>(
     activeNotebookId && activeSessionId && isConnected
       ? ['workspace/messages', activeNotebookId, activeSessionId]
       : null,
-    async () => {
+    async (): Promise<Message[]> => {
       const { data: result, error: fetchErr } = await api.v2
         .notebooks({ nid: activeNotebookId! })
         .sessions({ sid: activeSessionId! })

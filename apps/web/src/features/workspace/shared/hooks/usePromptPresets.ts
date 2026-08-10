@@ -43,9 +43,9 @@ export function usePromptPresets(_options?: { enabled?: boolean }) {
     error: swrError,
     isLoading,
     mutate,
-  } = useSWR<PromptPresetItem[]>(
+  } = useSWR<PromptPresetItem[], Error>(
     SWR_KEY,
-    async () => {
+    async (): Promise<PromptPresetItem[]> => {
       const { data, error } = await api.v2['prompt-presets'].get();
       if (error)
         throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');

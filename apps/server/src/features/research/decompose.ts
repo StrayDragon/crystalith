@@ -186,6 +186,7 @@ export async function planTopicDecomposition(input: {
 
   try {
     const model = withRetry(await resolveModel(modelConfig));
+    // oxlint-disable-next-line typescript/no-deprecated -- migrate to generateText+output in dedicated change
     const { object } = await generateObject({
       model,
       schema: ResearchDecomposePlanSchema,

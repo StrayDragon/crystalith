@@ -1,3 +1,5 @@
+import { parseJsonValue } from '../../shared/json';
+
 /**
  * Demo ResearchRun task list (sessionStorage).
  * Swap for Eden GET …/research list in c82.
@@ -36,7 +38,9 @@ function emit(): void {
 
 export function subscribeDemoResearchTasks(listener: Listener): () => void {
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 export function getDemoTaskSwitchEpoch(): number {
@@ -85,8 +89,10 @@ export function getDemoResearchTasksSnapshot(): DemoResearchTask[] {
       cachedTasksSnapshot = EMPTY_DEMO_RESEARCH_TASKS;
       return cachedTasksSnapshot;
     }
-    const parsed = JSON.parse(raw) as DemoResearchTask[];
-    cachedTasksSnapshot = Array.isArray(parsed) ? parsed : EMPTY_DEMO_RESEARCH_TASKS;
+    const parsed = parseJsonValue(raw);
+    cachedTasksSnapshot = Array.isArray(parsed)
+      ? (parsed as DemoResearchTask[])
+      : EMPTY_DEMO_RESEARCH_TASKS;
     return cachedTasksSnapshot;
   } catch {
     cachedTasksRaw = null;

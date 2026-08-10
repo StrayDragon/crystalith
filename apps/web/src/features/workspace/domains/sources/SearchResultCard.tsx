@@ -110,7 +110,9 @@ const SearchResultCard = forwardRef<HTMLDivElement, SearchResultCardProps>(
                   <span>作为全文导入</span>
                 </MenuItem>
                 <MenuItem
-                  onClick={() => window.open(result.url, '_blank')}
+                  onClick={() => {
+                    window.open(result.url, '_blank');
+                  }}
                   className="flex items-center gap-2 py-2 px-3 text-xs"
                 >
                   <OpenInNewIcon className="h-3.5 w-3.5" />

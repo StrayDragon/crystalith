@@ -47,7 +47,7 @@ export async function generateOutput<T extends ToolOutputType>(
   opts: GenerateOutputOptions & { type: T },
 ): Promise<GenerateOutputResult<T>> {
   // ZodType erase: AI SDK Output.object cannot take the ToolOutputType schema union.
-  const schema: z.ZodTypeAny = OutputContentSchemaByType[opts.type];
+  const schema: z.ZodType = OutputContentSchemaByType[opts.type];
 
   const model = opts.model ?? (await resolveModelFromConfig(opts.modelId));
   const wrapped = withRetry(model);

@@ -559,7 +559,9 @@ export default function LabNodeDrawer({
                           type="button"
                           title={a.title}
                           disabled={sendBusy || a.disabled}
-                          onClick={() => runAction(a.proposal, 'badge')}
+                          onClick={() => {
+                            runAction(a.proposal, 'badge');
+                          }}
                           className={`rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-45 ${QUICK_ACTION_TONE_CLASS[a.tone]} ${
                             a.active ? QUICK_ACTION_ACTIVE_CLASS : ''
                           }`}

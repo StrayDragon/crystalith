@@ -51,9 +51,9 @@ function normalizeCommand(
 
 export function useCommands(options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? true;
-  const { data, error, isLoading, mutate } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR<CommandItem[], Error>(
     enabled ? COMMANDS_CACHE_KEY : null,
-    async () => {
+    async (): Promise<CommandItem[]> => {
       const { data: result, error: fetchErr } = await api.v2.commands.get();
       if (fetchErr)
         throw new Error(

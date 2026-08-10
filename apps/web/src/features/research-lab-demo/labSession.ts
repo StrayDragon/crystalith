@@ -1,5 +1,6 @@
 import type { ResearchConclusionStatus } from '@crystalith/shared';
 
+import { isRecord, parseJsonValue } from '../../shared/json';
 import type {
   LabEdgePathPreset,
   LabGraphMutations,
@@ -70,18 +71,19 @@ export function readLabSessionSnapshot(): LabSessionSnapshot | null {
   try {
     const raw = sessionStorage.getItem(LAB_SESSION_STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as LabSessionSnapshot;
-    if (!parsed || typeof parsed.scenarioId !== 'string') return null;
+    const parsed = parseJsonValue(raw);
+    if (!isRecord(parsed) || typeof parsed.scenarioId !== 'string') return null;
+    const base = parsed as unknown as LabSessionSnapshot;
     return {
-      ...parsed,
-      mutations: parsed.mutations ?? EMPTY_MUTATIONS,
-      edgePathPreset: parsed.edgePathPreset ?? 'smoothstep',
-      layoutAlgorithm: parsed.layoutAlgorithm ?? 'layered',
-      consoleVisible: parsed.consoleVisible ?? false,
-      highlightedNodeIds: parsed.highlightedNodeIds ?? [],
-      useNotebookSources: parsed.useNotebookSources ?? false,
-      allowWeb: parsed.allowWeb ?? true,
-      selectedSourceIds: Array.isArray(parsed.selectedSourceIds) ? parsed.selectedSourceIds : [],
+      ...base,
+      mutations: base.mutations ?? EMPTY_MUTATIONS,
+      edgePathPreset: base.edgePathPreset ?? 'smoothstep',
+      layoutAlgorithm: base.layoutAlgorithm ?? 'layered',
+      consoleVisible: base.consoleVisible ?? false,
+      highlightedNodeIds: base.highlightedNodeIds ?? [],
+      useNotebookSources: base.useNotebookSources ?? false,
+      allowWeb: base.allowWeb ?? true,
+      selectedSourceIds: Array.isArray(base.selectedSourceIds) ? base.selectedSourceIds : [],
       // never auto-resume playback on restore
       playing: false,
     };

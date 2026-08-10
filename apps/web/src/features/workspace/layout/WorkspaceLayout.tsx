@@ -742,7 +742,9 @@ export default function WorkspaceLayout() {
                 void chat.retryMessages(...args);
               }}
               hasSources={sources.sources.length > 0}
-              onSaveToNote={refine.saveContentAsNote}
+              onSaveToNote={(content) => {
+                void refine.saveContentAsNote(content);
+              }}
               onConvertToSource={chat.convertSessionToSource}
               onConvertToOutput={chat.convertSessionToOutput}
               isConverting={chat.isConverting}

@@ -74,7 +74,11 @@ function SourceListRow({
         {...tid(TestIds.sourceRow)}
         onClick={(event) => {
           if (event.shiftKey || event.ctrlKey || event.metaKey) {
-            onToggleSource(source.id, event.nativeEvent);
+            onToggleSource(source.id, {
+              shiftKey: event.shiftKey,
+              ctrlKey: event.ctrlKey,
+              metaKey: event.metaKey,
+            });
             return;
           }
           onOpenDetail(source);
@@ -222,8 +226,8 @@ function SourceListRow({
             <span>
               <Checkbox
                 checked={false}
-                onChange={(event) => {
-                  onToggleSource(source.id, event.nativeEvent as MouseEvent);
+                onChange={() => {
+                  onToggleSource(source.id);
                 }}
                 containerProps={{ className: 'p-1' }}
                 className="h-4 w-4 rounded border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"
@@ -236,8 +240,8 @@ function SourceListRow({
         ) : (
           <Checkbox
             checked={isSelected}
-            onChange={(event) => {
-              onToggleSource(source.id, event.nativeEvent as MouseEvent);
+            onChange={() => {
+              onToggleSource(source.id);
             }}
             containerProps={{ className: 'p-1' }}
             className="h-4 w-4 rounded border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"

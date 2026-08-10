@@ -31,8 +31,10 @@ export function useMediaQuery(query: string, options?: { defaultState?: boolean 
       };
     }
 
+    // oxlint-disable-next-line typescript/no-deprecated -- MediaQueryList legacy fallback (no addEventListener)
     mediaQueryList.addListener(handler);
     return () => {
+      // oxlint-disable-next-line typescript/no-deprecated -- MediaQueryList legacy fallback (no removeEventListener)
       mediaQueryList.removeListener(handler);
     };
   }, [defaultState, query]);

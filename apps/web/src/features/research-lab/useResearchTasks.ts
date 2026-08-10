@@ -25,9 +25,9 @@ export function useResearchTasks(notebookId: number | null): {
 
   const key = notebookId && notebookId > 0 ? researchTasksSwrKey(notebookId) : null;
 
-  const { data, error, isLoading, mutate } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR<ResearchTaskListItem[], Error>(
     key,
-    async ([, nid]: readonly ['research-tasks', number]) => {
+    async ([, nid]: readonly ['research-tasks', number]): Promise<ResearchTaskListItem[]> => {
       const page = await listResearchRuns(nid, { offset: 0, limit: 50 });
       return page.items.map(summaryToTaskItem);
     },
@@ -62,7 +62,7 @@ export function useResearchTasks(notebookId: number | null): {
     activeCount,
     activeTaskId: null,
     loading: isLoading,
-    error: error ? String(error.message ?? error) : '',
+    error: error instanceof Error ? error.message : error ? String(error) : '',
     refresh,
   };
 }

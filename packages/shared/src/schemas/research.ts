@@ -566,7 +566,7 @@ export type ResearchRunsPage = z.infer<typeof ResearchRunsPageSchema>;
 
 const ResearchStatusListQuerySchema = z.preprocess((value) => {
   if (value === undefined || value === null || value === '') return undefined;
-  if (Array.isArray(value)) return value;
+  if (Array.isArray(value)) return value as unknown[];
   if (typeof value === 'string') {
     return value
       .split(',')

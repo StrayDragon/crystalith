@@ -1,3 +1,5 @@
+import { isRecord, parseJsonValue } from '../../shared/json';
+
 /**
  * Cross-route signal: report restore → graph Lab must force GET loadRun (c98 / J2=B).
  */
@@ -8,13 +10,22 @@ export function markLabRunNeedsReload(notebookId: number, runId: number): void {
   sessionStorage.setItem(KEY, JSON.stringify({ notebookId, runId, at: Date.now() }));
 }
 
+function readReloadMarker(raw: string): { notebookId?: number; runId?: number } | null {
+  const parsed = parseJsonValue(raw);
+  if (!isRecord(parsed)) return null;
+  const notebookId = parsed.notebookId;
+  const runId = parsed.runId;
+  if (typeof notebookId !== 'number' || typeof runId !== 'number') return null;
+  return { notebookId, runId };
+}
+
 export function consumeLabRunNeedsReload(notebookId: number, runId: number): boolean {
   if (typeof sessionStorage === 'undefined') return false;
   try {
     const raw = sessionStorage.getItem(KEY);
     if (!raw) return false;
-    const parsed = JSON.parse(raw) as { notebookId?: number; runId?: number };
-    if (parsed.notebookId === notebookId && parsed.runId === runId) {
+    const parsed = readReloadMarker(raw);
+    if (parsed?.notebookId === notebookId && parsed.runId === runId) {
       sessionStorage.removeItem(KEY);
       return true;
     }
@@ -29,8 +40,8 @@ export function peekLabRunNeedsReload(notebookId: number, runId: number): boolea
   try {
     const raw = sessionStorage.getItem(KEY);
     if (!raw) return false;
-    const parsed = JSON.parse(raw) as { notebookId?: number; runId?: number };
-    return parsed.notebookId === notebookId && parsed.runId === runId;
+    const parsed = readReloadMarker(raw);
+    return parsed?.notebookId === notebookId && parsed.runId === runId;
   } catch {
     return false;
   }

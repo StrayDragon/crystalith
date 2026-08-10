@@ -74,7 +74,9 @@ export function useSourcesPanelSelection({
     sources
       .filter((source) => selectedSourceIds[source.id])
       .forEach((source) => {
-        source.tags.forEach((tag) => tagSet.add(tag));
+        source.tags.forEach((tag) => {
+          tagSet.add(tag);
+        });
       });
     return Array.from(tagSet).toSorted((a, b) => a.localeCompare(b, 'zh-CN'));
   }, [sources, selectedSourceIds]);

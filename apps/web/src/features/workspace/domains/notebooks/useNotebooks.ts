@@ -1,3 +1,4 @@
+import type { Notebook } from '@crystalith/shared';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import useSWR from 'swr';
 
@@ -27,9 +28,9 @@ export function useNotebooks() {
     error: notebookError,
     isLoading,
     mutate,
-  } = useSWR(
+  } = useSWR<Notebook[], Error>(
     'workspace/notebooks',
-    async () => {
+    async (): Promise<Notebook[]> => {
       const { data, error } = await api.v2.notebooks.get();
       if (error)
         throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');

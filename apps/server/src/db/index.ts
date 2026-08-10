@@ -43,9 +43,9 @@ export function createDb(path?: string): Orm {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 
   const db = new Database(dbPath, { create: true });
-  db.exec('PRAGMA journal_mode = WAL;');
-  db.exec('PRAGMA foreign_keys = ON;');
-  db.exec('PRAGMA synchronous = NORMAL;');
+  db.run('PRAGMA journal_mode = WAL;');
+  db.run('PRAGMA foreign_keys = ON;');
+  db.run('PRAGMA synchronous = NORMAL;');
 
   // sqlite-vec: load native extension into the bun:sqlite connection.
   sqliteVec.load(db);

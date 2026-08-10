@@ -20,6 +20,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     document.body.append(textarea);
     textarea.focus();
     textarea.select();
+    // oxlint-disable-next-line typescript/no-deprecated -- legacy clipboard fallback when navigator.clipboard unavailable
     const success = document.execCommand('copy');
     (textarea as HTMLElement).remove();
     return success;

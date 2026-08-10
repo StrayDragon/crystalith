@@ -2,6 +2,7 @@ import type { ResearchConclusionStatus } from '@crystalith/shared';
 import { DragIndicator as DragIndicatorIcon } from '@mui/icons-material';
 import { useCallback, useEffect, useRef, useState, type PointerEvent as PtrEvent } from 'react';
 
+import { targetElement, isRecord, parseJsonValue } from '../../shared/json';
 import { useLayer } from '../../shared/layer';
 import { TestIds, tid } from '../../shared/testids';
 import type { LabController } from '../research-lab/model/labController';
@@ -22,8 +23,9 @@ function readPos(): { x: number; y: number } {
   try {
     const raw = sessionStorage.getItem(POS_KEY);
     if (!raw) return { x: 16, y: -1 };
-    const p = JSON.parse(raw) as { x?: number; y?: number };
-    if (typeof p.x === 'number' && typeof p.y === 'number') return { x: p.x, y: p.y };
+    const p = parseJsonValue(raw);
+    if (isRecord(p) && typeof p.x === 'number' && typeof p.y === 'number')
+      return { x: p.x, y: p.y };
   } catch {
     /* ignore */
   }
@@ -66,7 +68,8 @@ export default function LabControlConsole({ lab }: { lab: LabController }) {
       const el = panelRef.current;
       if (!el) return;
       e.preventDefault();
-      (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+      const captureTarget = targetElement(e.target);
+      captureTarget?.setPointerCapture?.(e.pointerId);
       dragRef.current = {
         ox: e.clientX,
         oy: e.clientY,
@@ -89,7 +92,8 @@ export default function LabControlConsole({ lab }: { lab: LabController }) {
     if (!dragRef.current) return;
     dragRef.current = null;
     try {
-      (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+      const releaseTarget = targetElement(e.target);
+      releaseTarget?.releasePointerCapture?.(e.pointerId);
     } catch {
       /* ignore */
     }
@@ -252,8 +256,17 @@ export default function LabControlConsole({ lab }: { lab: LabController }) {
               className="h-8 w-full rounded-md border border-gray-200 bg-white px-2"
               value={lab.forceStatus ?? 'none'}
               onChange={(e) => {
-                const v = e.target.value as ResearchConclusionStatus | 'none';
-                lab.setForceStatus(v === 'none' ? null : v);
+                const v = e.target.value;
+                if (v === 'none') {
+                  lab.setForceStatus(null);
+                  return;
+                }
+                for (const option of STATUS_OPTIONS) {
+                  if (option !== 'none' && option === v) {
+                    lab.setForceStatus(option);
+                    break;
+                  }
+                }
               }}
             >
               {STATUS_OPTIONS.map((s) => (

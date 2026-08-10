@@ -39,7 +39,10 @@ export default function LabProgressBar({
   useEffect(() => {
     if (!detailsOpen) return;
     const onDoc = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setDetailsOpen(false);
+      const target = e.target;
+      if (!(target instanceof Node && rootRef.current?.contains(target))) {
+        setDetailsOpen(false);
+      }
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setDetailsOpen(false);

@@ -44,7 +44,9 @@ function buildCitationMap(chunkRows: ChunkRow[]): {
 
   const citationMap = new Map<number, Citation>();
   // 1-based index
-  citations.forEach((citation, i) => citationMap.set(i + 1, citation));
+  citations.forEach((citation, i) => {
+    citationMap.set(i + 1, citation);
+  });
 
   return { citations, citationMap };
 }

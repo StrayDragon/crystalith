@@ -155,6 +155,7 @@ export async function generateLlmResearchReport(
   ].join('\n');
 
   try {
+    // oxlint-disable-next-line typescript/no-deprecated -- migrate to generateText+output in dedicated change
     const { object } = await generateObject({
       model,
       schema: ResearchReportSchema,
