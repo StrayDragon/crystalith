@@ -230,8 +230,12 @@ const LabActionEdge = memo(function LabActionEdge({
         strokeWidth={28}
         className="react-flow__edge-interaction"
         style={{ cursor: d?.canFork || d?.canPrune ? 'pointer' : 'default' }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseEnter={() => {
+          setHovered(true);
+        }}
+        onMouseLeave={() => {
+          setHovered(false);
+        }}
       />
       <EdgeLabelRenderer>
         <div
@@ -239,8 +243,12 @@ const LabActionEdge = memo(function LabActionEdge({
           style={{
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
           }}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
+          onMouseEnter={() => {
+            setHovered(true);
+          }}
+          onMouseLeave={() => {
+            setHovered(false);
+          }}
         >
           {hovered ? (
             <div className="flex flex-col items-center gap-1">
@@ -487,7 +495,9 @@ function Inner({
     const t = window.setTimeout(() => {
       void fitView({ padding: 0.22, duration: 280 });
     }, 40);
-    return () => window.clearTimeout(t);
+    return () => {
+      window.clearTimeout(t);
+    };
   }, [edgePathPreset, fitView, pulseLayoutAnim]);
 
   // Patch live fields without resetting positions (incl. progress / terminal labels).
@@ -548,7 +558,9 @@ function Inner({
       },
       reshaping ? 40 : 80,
     );
-    return () => window.clearTimeout(t);
+    return () => {
+      window.clearTimeout(t);
+    };
   }, [structureKey, direction, layoutAlgorithm, reshaping, fitView, rfNodes.length]);
 
   const onNodesChange = useCallback((changes: NodeChange<LabFlowNode>[]) => {
@@ -570,8 +582,12 @@ function Inner({
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
       onNodesChange={onNodesChange}
-      onNodeClick={(_: MouseEvent, node: LabFlowNode) => onSelectNode(node.id)}
-      onPaneClick={() => onSelectNode(null)}
+      onNodeClick={(_: MouseEvent, node: LabFlowNode) => {
+        onSelectNode(node.id);
+      }}
+      onPaneClick={() => {
+        onSelectNode(null);
+      }}
       nodesDraggable
       nodesConnectable={false}
       elementsSelectable

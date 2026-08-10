@@ -420,7 +420,9 @@ export default function LabNodeDrawer({
           <button
             key={id}
             type="button"
-            onClick={() => setTab(id)}
+            onClick={() => {
+              setTab(id);
+            }}
             className={`rounded-md px-2.5 py-1 text-[11px] font-medium ${
               tab === id
                 ? 'bg-blue-50 text-blue-800'
@@ -523,7 +525,9 @@ export default function LabNodeDrawer({
                               type="button"
                               className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-[10px] text-gray-600 hover:bg-gray-50"
                               {...tid(TestIds.researchLabChatActionDismiss)}
-                              onClick={() => patchProposal(m.id, p.id, 'dismissed')}
+                              onClick={() => {
+                                patchProposal(m.id, p.id, 'dismissed');
+                              }}
                             >
                               忽略
                             </button>
@@ -585,7 +589,9 @@ export default function LabNodeDrawer({
             <div className="flex gap-1.5">
               <textarea
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -638,7 +644,9 @@ export default function LabNodeDrawer({
                   type="button"
                   role="switch"
                   aria-checked={node.askOnInterrupt !== false}
-                  onClick={() => onEdit(node.id, { askOnInterrupt: node.askOnInterrupt === false })}
+                  onClick={() => {
+                    onEdit(node.id, { askOnInterrupt: node.askOnInterrupt === false });
+                  }}
                   className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors ${
                     node.askOnInterrupt !== false ? 'bg-teal-600' : 'bg-gray-300'
                   }`}

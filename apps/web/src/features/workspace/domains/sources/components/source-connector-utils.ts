@@ -27,9 +27,7 @@ export function formatSnapshotTimestamp(value: unknown): string {
 }
 
 export function allParentDirs(path: string): string[] {
-  const parts = String(path || '')
-    .split('/')
-    .filter(Boolean);
+  const parts = (path || '').split('/').filter(Boolean);
   if (parts.length <= 1) return [];
   const dirs: string[] = [];
   for (let idx = 1; idx < parts.length; idx += 1) {

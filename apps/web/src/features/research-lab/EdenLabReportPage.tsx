@@ -359,7 +359,9 @@ export default function EdenLabReportPage({
       <header className="flex shrink-0 items-center gap-2 border-b border-gray-200 bg-white px-3 py-2 shadow-sm">
         <button
           type="button"
-          onClick={() => navigateToResearchLab(notebookId, runId)}
+          onClick={() => {
+            navigateToResearchLab(notebookId, runId);
+          }}
           className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
           {...tid(TestIds.researchLabBack)}
         >
@@ -405,7 +407,7 @@ export default function EdenLabReportPage({
               onChange={(e) => {
                 const id = e.target.value;
                 setActiveRevId(id);
-                void restoreRevision(id);
+                restoreRevision(id);
               }}
               title={busy ? '正在恢复修订…' : '选择并恢复服务端修订快照'}
               {...tid(TestIds.researchLabRevisionSelect)}
@@ -425,7 +427,9 @@ export default function EdenLabReportPage({
             <button
               type="button"
               disabled={busy}
-              onClick={() => void saveRevision()}
+              onClick={() => {
+                saveRevision();
+              }}
               className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[11px] text-blue-900 hover:bg-blue-100 disabled:opacity-40"
               title="创建当前快照（服务端 revisions）"
               {...tid(TestIds.researchLabRevisionSave)}
@@ -437,7 +441,9 @@ export default function EdenLabReportPage({
             <button
               type="button"
               disabled={busy || !activeRevId}
-              onClick={() => void forkFromRevision()}
+              onClick={() => {
+                forkFromRevision();
+              }}
               className="inline-flex items-center gap-1 rounded-md border border-teal-200 bg-teal-50 px-2.5 py-1.5 text-[11px] text-teal-900 hover:bg-teal-100 disabled:opacity-40"
               title="基于当前选中修订快照派生新 ResearchRun（不污染原 Run）"
               {...tid(TestIds.researchLabRevisionForkRun)}
@@ -449,7 +455,9 @@ export default function EdenLabReportPage({
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => void finishEditing()}
+                onClick={() => {
+                  finishEditing();
+                }}
                 className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[11px] text-blue-800 hover:bg-blue-100 disabled:opacity-40"
                 {...tid(TestIds.researchLabReportDoneEdit)}
               >
@@ -460,7 +468,9 @@ export default function EdenLabReportPage({
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => void startEditing()}
+                onClick={() => {
+                  startEditing();
+                }}
                 className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50 disabled:opacity-40"
                 title="编辑报告（服务端 working CoW）"
                 {...tid(TestIds.researchLabReportEdit)}
@@ -504,7 +514,9 @@ export default function EdenLabReportPage({
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => void commitCanonical()}
+                  onClick={() => {
+                    commitCanonical();
+                  }}
                   className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[11px] text-emerald-900 hover:bg-emerald-100 disabled:opacity-40"
                 >
                   提交权威
@@ -512,7 +524,9 @@ export default function EdenLabReportPage({
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => void discardWorking()}
+                  onClick={() => {
+                    discardWorking();
+                  }}
                   className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] text-gray-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:opacity-40"
                   {...tid(TestIds.researchLabReportDiscard)}
                 >
@@ -525,7 +539,9 @@ export default function EdenLabReportPage({
             <button
               type="button"
               disabled={busy}
-              onClick={() => void convertSource()}
+              onClick={() => {
+                convertSource();
+              }}
               className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50 disabled:opacity-40"
               {...tid(TestIds.researchLabConvertSource)}
             >
@@ -535,7 +551,9 @@ export default function EdenLabReportPage({
             <button
               type="button"
               disabled={busy}
-              onClick={() => void convertNote()}
+              onClick={() => {
+                convertNote();
+              }}
               className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50 disabled:opacity-40"
               {...tid(TestIds.researchLabConvertNote)}
             >
@@ -571,7 +589,9 @@ export default function EdenLabReportPage({
             <button
               type="button"
               className="mt-4 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
-              onClick={() => navigateToResearchLab(notebookId, runId)}
+              onClick={() => {
+                navigateToResearchLab(notebookId, runId);
+              }}
             >
               返回作业台
             </button>
@@ -583,7 +603,9 @@ export default function EdenLabReportPage({
             <button
               type="button"
               className="mt-4 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
-              onClick={() => navigateToResearchLab(notebookId, runId)}
+              onClick={() => {
+                navigateToResearchLab(notebookId, runId);
+              }}
             >
               返回作业台
             </button>
@@ -603,7 +625,9 @@ export default function EdenLabReportPage({
               orphanIds={new Set()}
               showCitations={false}
               readOnly={false}
-              onMarkdownChange={(md) => setDraftMarkdown(md)}
+              onMarkdownChange={(md) => {
+                setDraftMarkdown(md);
+              }}
             />
           </div>
         ) : null}

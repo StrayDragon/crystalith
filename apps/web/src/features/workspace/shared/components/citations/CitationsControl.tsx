@@ -58,7 +58,9 @@ export default function CitationsControl({
           triggerClassName ??
           'inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer'
         }
-        onClick={(e) => handleOpenPopover(e.currentTarget.getBoundingClientRect())}
+        onClick={(e) => {
+          handleOpenPopover(e.currentTarget.getBoundingClientRect());
+        }}
         aria-label={ariaLabel}
       >
         <QuoteIcon style={{ fontSize: 14 }} />

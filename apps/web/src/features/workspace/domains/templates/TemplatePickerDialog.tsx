@@ -192,7 +192,9 @@ export default function TemplatePickerDialog({
               className="!border !border-gray-300 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-lg shadow-gray-900/5 ring-4 ring-transparent placeholder:text-gray-500 focus:!border-gray-900 focus:!border-t-gray-900 focus:ring-gray-900/10"
               containerProps={{ className: 'min-w-0' }}
               value={notebookName}
-              onChange={(e) => setNotebookName(e.target.value)}
+              onChange={(e) => {
+                setNotebookName(e.target.value);
+              }}
               placeholder="输入名称"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {

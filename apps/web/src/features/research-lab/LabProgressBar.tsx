@@ -65,7 +65,9 @@ export default function LabProgressBar({
         className="flex w-full items-center gap-2 rounded-md px-0.5 py-0.5 text-left hover:bg-gray-50"
         aria-expanded={detailsOpen}
         title={detailsOpen ? '收起进度详情' : '点击查看进度账本'}
-        onClick={() => setDetailsOpen((v) => !v)}
+        onClick={() => {
+          setDetailsOpen((v) => !v);
+        }}
       >
         <span className="w-[4.5rem] shrink-0 truncate text-[11px] font-medium text-gray-700">
           {LAB_PHASE_LABELS[phase]}

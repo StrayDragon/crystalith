@@ -133,7 +133,7 @@ export function repairDecomposePlanText(text: string): string | null {
   if (!trimmed) return null;
 
   const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/iu);
-  if (fenced) trimmed = fenced[1]!.trim();
+  if (fenced) trimmed = fenced[1].trim();
 
   try {
     const raw: unknown = JSON.parse(trimmed);

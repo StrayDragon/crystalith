@@ -138,14 +138,18 @@ export default function LabComposePanel({
             rows={4}
             value={draft.topic}
             placeholder="目标、范围、期望输出…"
-            onChange={(e) => onChange({ topic: e.target.value })}
+            onChange={(e) => {
+              onChange({ topic: e.target.value });
+            }}
             className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/25"
             {...tid(TestIds.researchLabComposeTopic)}
           />
           <button
             type="button"
             className="text-[11px] text-blue-600 hover:text-blue-700"
-            onClick={() => onChange({ topic: exampleTopic })}
+            onClick={() => {
+              onChange({ topic: exampleTopic });
+            }}
             {...tid(TestIds.researchLabComposeExample)}
           >
             {exampleLabel}
@@ -158,7 +162,9 @@ export default function LabComposePanel({
             <input
               type="checkbox"
               checked={draft.useNotebookSources}
-              onChange={(e) => onChange({ useNotebookSources: e.target.checked })}
+              onChange={(e) => {
+                onChange({ useNotebookSources: e.target.checked });
+              }}
               {...tid(TestIds.researchLabComposeUseSources)}
             />
             使用笔记本来源
@@ -167,7 +173,9 @@ export default function LabComposePanel({
             <input
               type="checkbox"
               checked={draft.allowWeb}
-              onChange={(e) => onChange({ allowWeb: e.target.checked })}
+              onChange={(e) => {
+                onChange({ allowWeb: e.target.checked });
+              }}
               {...tid(TestIds.researchLabComposeAllowWeb)}
             />
             允许外网检索
@@ -190,7 +198,9 @@ export default function LabComposePanel({
                   key={opt.value}
                   type="button"
                   aria-pressed={active}
-                  onClick={() => onChange({ depth: opt.value })}
+                  onClick={() => {
+                    onChange({ depth: opt.value });
+                  }}
                   className={`flex-1 rounded-md px-2 py-1.5 text-[12px] font-medium transition-colors ${
                     active
                       ? 'bg-white text-blue-700 shadow-sm'
@@ -211,7 +221,9 @@ export default function LabComposePanel({
             <span className="text-[11px] font-medium text-gray-700">结案模型（可选）</span>
             <LabChatModelSelect
               value={draft.modelId}
-              onChange={(modelId) => onChange({ modelId })}
+              onChange={(modelId) => {
+                onChange({ modelId });
+              }}
             />
           </label>
         ) : null}
@@ -243,7 +255,9 @@ export default function LabComposePanel({
                         type="checkbox"
                         className="mt-0.5"
                         checked={checked}
-                        onChange={() => toggleSource(s.id)}
+                        onChange={() => {
+                          toggleSource(s.id);
+                        }}
                       />
                       <span className="min-w-0 truncate text-gray-800">{s.filename}</span>
                     </label>

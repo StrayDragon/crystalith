@@ -83,5 +83,5 @@ export async function outboundFetch(
     return fetch(input, init);
   }
   const next: OutboundFetchInit = { ...init, proxy };
-  return fetch(input, next as RequestInit);
+  return fetch(input, next);
 }

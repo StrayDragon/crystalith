@@ -175,7 +175,9 @@ export default function SessionSwitcher({
                 className="w-full h-8 pl-9 pr-3 rounded-lg bg-gray-100 border border-gray-300 text-xs text-gray-900 focus:outline-none focus:border-gray-500 focus:ring-0"
                 placeholder="搜索会话"
                 value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
+                onChange={(e) => {
+                  setSearchValue(e.target.value);
+                }}
                 id="session-search-input"
                 name="sessionSearch"
                 aria-label="搜索会话"
@@ -218,7 +220,9 @@ export default function SessionSwitcher({
                         ref={editInputRef}
                         className="flex-1 h-7 px-2 text-sm rounded border border-gray-400 focus:border-blue-500 focus:outline-none"
                         value={editingTitle}
-                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onChange={(e) => {
+                          setEditingTitle(e.target.value);
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();

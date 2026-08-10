@@ -50,10 +50,9 @@ async function lookupHostIps(host: string): Promise<{ address: string }[]> {
     return await Promise.race([
       dnsLookup(host, { all: true, family: 4 }),
       new Promise<never>((_, reject) => {
-        timer = setTimeout(
-          () => reject(new Error(`DNS lookup timed out after ${DNS_LOOKUP_TIMEOUT_MS}ms`)),
-          DNS_LOOKUP_TIMEOUT_MS,
-        );
+        timer = setTimeout(() => {
+          reject(new Error(`DNS lookup timed out after ${DNS_LOOKUP_TIMEOUT_MS}ms`));
+        }, DNS_LOOKUP_TIMEOUT_MS);
       }),
     ]);
   } finally {

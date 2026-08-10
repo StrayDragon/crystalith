@@ -121,7 +121,9 @@ export function SlidesPreviewModeContent({
           <Textarea
             label="Slides Markdown"
             value={markdown}
-            onChange={(event) => onMarkdownChange(event.target.value)}
+            onChange={(event) => {
+              onMarkdownChange(event.target.value);
+            }}
             rows={12}
             className="font-mono text-xs"
           />

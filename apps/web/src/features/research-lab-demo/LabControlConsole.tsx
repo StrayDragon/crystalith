@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState, type PointerEvent as PtrEvent
 import { useLayer } from '../../shared/layer';
 import { TestIds, tid } from '../../shared/testids';
 import type { LabController } from '../research-lab/model/labController';
-import { LAB_PHASES, LAB_PHASE_LABELS, type LabPhase } from '../research-lab/model/types';
+import { LAB_PHASES, LAB_PHASE_LABELS } from '../research-lab/model/types';
 
 const STATUS_OPTIONS: Array<ResearchConclusionStatus | 'none'> = [
   'none',
@@ -131,7 +131,9 @@ export default function LabControlConsole({ lab }: { lab: LabController }) {
             e.stopPropagation();
             lab.setConsoleOpen(!lab.consoleOpen);
           }}
-          onPointerDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+          }}
         >
           {collapsed ? '展开' : '收起'}
         </button>
@@ -148,7 +150,9 @@ export default function LabControlConsole({ lab }: { lab: LabController }) {
                 <button
                   key={s.id}
                   type="button"
-                  onClick={() => lab.setScenarioId(s.id)}
+                  onClick={() => {
+                    lab.setScenarioId(s.id);
+                  }}
                   className={`rounded-lg border px-2 py-1.5 text-left transition-colors ${
                     lab.scenarioId === s.id
                       ? 'border-blue-600 bg-blue-600 text-white'
@@ -196,21 +200,27 @@ export default function LabControlConsole({ lab }: { lab: LabController }) {
           <section className="flex flex-wrap gap-1.5">
             <button
               type="button"
-              onClick={() => lab.startFromIdle()}
+              onClick={() => {
+                lab.startFromIdle();
+              }}
               className="rounded-md bg-blue-600 px-2.5 py-1.5 text-[11px] text-white hover:bg-blue-700"
             >
               播放全程
             </button>
             <button
               type="button"
-              onClick={() => lab.setPlaying(!lab.playing)}
+              onClick={() => {
+                lab.setPlaying(!lab.playing);
+              }}
               className="rounded-md border border-gray-200 px-2.5 py-1.5 text-[11px] hover:bg-gray-50"
             >
               {lab.playing ? '暂停' : '继续播放'}
             </button>
             <button
               type="button"
-              onClick={() => lab.reset()}
+              onClick={() => {
+                lab.reset();
+              }}
               className="rounded-md border border-gray-200 px-2.5 py-1.5 text-[11px] hover:bg-gray-50"
             >
               重置
@@ -226,7 +236,9 @@ export default function LabControlConsole({ lab }: { lab: LabController }) {
                 max={3000}
                 step={100}
                 value={lab.playbackMs}
-                onChange={(e) => lab.setPlaybackMs(Number(e.target.value))}
+                onChange={(e) => {
+                  lab.setPlaybackMs(Number(e.target.value));
+                }}
                 className="mt-1 w-full accent-blue-600"
               />
             </label>
@@ -292,7 +304,9 @@ export default function LabControlConsole({ lab }: { lab: LabController }) {
             <button
               type="button"
               className="mt-1 text-[10px] text-gray-400 hover:text-gray-700"
-              onClick={() => lab.setMetricsOverride(null)}
+              onClick={() => {
+                lab.setMetricsOverride(null);
+              }}
             >
               清除指标覆盖
             </button>
@@ -305,7 +319,9 @@ export default function LabControlConsole({ lab }: { lab: LabController }) {
             <select
               className="h-8 w-full rounded-md border border-gray-200 bg-white px-2"
               value={lab.selectedNodeId ?? ''}
-              onChange={(e) => lab.setSelectedNodeId(e.target.value || null)}
+              onChange={(e) => {
+                lab.setSelectedNodeId(e.target.value || null);
+              }}
             >
               <option value="">（无）</option>
               {lab.derived.nodes.map((n) => (
@@ -317,7 +333,7 @@ export default function LabControlConsole({ lab }: { lab: LabController }) {
           </section>
 
           <section className="rounded-lg border border-gray-100 bg-gray-50 px-2 py-1.5 text-[10px] leading-relaxed text-gray-500">
-            当前：{lab.scenario.shortLabel} · {LAB_PHASE_LABELS[lab.phase as LabPhase]} · 节点{' '}
+            当前：{lab.scenario.shortLabel} · {LAB_PHASE_LABELS[lab.phase]} · 节点{' '}
             {lab.derived.nodes.length} · 边 {lab.derived.edges.length}
             {lab.confirmChoice ? ` · 确认选择：${lab.confirmChoice}` : ''}
             <div className="mt-1 text-gray-400">布局/连线请用画布左下角「画布」设置</div>

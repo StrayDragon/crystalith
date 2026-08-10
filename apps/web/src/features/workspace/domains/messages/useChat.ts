@@ -173,7 +173,12 @@ export function useChat({
     s.setError('messages', '');
   }, [data, error, store]);
 
-  const setDraft = useCallback((value: string) => store.getState().setDraft(value), [store]);
+  const setDraft = useCallback(
+    (value: string) => {
+      store.getState().setDraft(value);
+    },
+    [store],
+  );
 
   const sendMessage = useCallback(async () => {
     const s = store.getState();

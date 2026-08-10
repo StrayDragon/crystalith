@@ -414,7 +414,7 @@ export function appendProgressEvent(
       .from(researchProgressEvents)
       .where(eq(researchProgressEvents.runId, runId))
       .get()?.value ?? 0;
-  const seq = Number(maxSeq) + 1;
+  const seq = maxSeq + 1;
   const id = newId('pe');
   const at = new Date();
   db()

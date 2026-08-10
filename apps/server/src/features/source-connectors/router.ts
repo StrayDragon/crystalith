@@ -315,7 +315,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       requireNotebook(nid);
 
-      const connectorId = String(params.connectorId ?? '').trim();
+      const connectorId = (params.connectorId ?? '').trim();
       const connector = getConnectorOr404(connectorId);
 
       const config = normalizeConnectionConfig(connectorId, body.connectionConfig);

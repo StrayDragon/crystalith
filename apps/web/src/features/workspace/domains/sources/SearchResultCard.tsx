@@ -58,7 +58,9 @@ const SearchResultCard = forwardRef<HTMLDivElement, SearchResultCardProps>(
           <div className="flex-shrink-0">
             <Checkbox
               checked={isSelected}
-              onChange={() => onToggle(result)}
+              onChange={() => {
+                onToggle(result);
+              }}
               containerProps={{ className: 'p-0' }}
               className="h-3.5 w-3.5 rounded border-gray-300 bg-white checked:bg-blue-600 checked:border-blue-600"
               iconProps={{ className: 'text-white' }}
@@ -125,7 +127,9 @@ const SearchResultCard = forwardRef<HTMLDivElement, SearchResultCardProps>(
     return (
       <div
         ref={ref}
-        onClick={() => onToggle(result)}
+        onClick={() => {
+          onToggle(result);
+        }}
         onKeyDown={(e) => {
           if (e.key === ' ' || e.key === 'Enter') {
             e.preventDefault();
@@ -146,8 +150,12 @@ const SearchResultCard = forwardRef<HTMLDivElement, SearchResultCardProps>(
       >
         <Checkbox
           checked={isSelected}
-          onChange={() => onToggle(result)}
-          onClick={(e) => e.stopPropagation()}
+          onChange={() => {
+            onToggle(result);
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
           containerProps={{ className: 'p-0 mt-0.5' }}
           className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
           iconProps={{ className: 'text-white' }}
@@ -158,7 +166,9 @@ const SearchResultCard = forwardRef<HTMLDivElement, SearchResultCardProps>(
             href={result.url}
             target="_blank"
             rel="noreferrer"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
             className="text-gray-900 hover:text-blue-600 transition-colors"
           >
             <Typography variant="small" className="font-semibold text-xs leading-snug line-clamp-1">

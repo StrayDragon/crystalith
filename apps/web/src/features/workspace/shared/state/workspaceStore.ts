@@ -192,8 +192,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
   ...initialState,
 
   // --- Notebooks ---
-  setNotebooks: (notebooks) => set({ notebooks }),
-  setActiveNotebook: (id) =>
+  setNotebooks: (notebooks) => {
+    set({ notebooks });
+  },
+  setActiveNotebook: (id) => {
     set((state) => ({
       activeNotebookId: id,
       // Reset dependent state when switching notebooks (mirrors old reducer)
@@ -219,12 +221,17 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
         outputs: '',
         send: '',
       },
-    })),
-  setAutoCreatedNotebookId: (autoCreatedNotebookId) => set({ autoCreatedNotebookId }),
+    }));
+  },
+  setAutoCreatedNotebookId: (autoCreatedNotebookId) => {
+    set({ autoCreatedNotebookId });
+  },
 
   // --- Sessions ---
-  setSessions: (sessions) => set({ sessions }),
-  setActiveSession: (id) =>
+  setSessions: (sessions) => {
+    set({ sessions });
+  },
+  setActiveSession: (id) => {
     set((state) => ({
       activeSessionId: id,
       // Reset messages & citations when switching sessions (mirrors old reducer)
@@ -239,32 +246,48 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
         messages: '',
         send: '',
       },
-    })),
+    }));
+  },
 
   // --- Sources ---
-  setSources: (sources) => set({ sources }),
-  setSelectedSources: (selected) => set({ selectedSourceIds: selected }),
+  setSources: (sources) => {
+    set({ sources });
+  },
+  setSelectedSources: (selected) => {
+    set({ selectedSourceIds: selected });
+  },
 
   // --- Messages / Chat ---
-  setMessages: (messages) => set({ messages }),
-  appendMessageContent: (messageId, text) =>
+  setMessages: (messages) => {
+    set({ messages });
+  },
+  appendMessageContent: (messageId, text) => {
     set((state) => ({
       messages: state.messages.map((msg) =>
         msg.id === messageId ? { ...msg, content: msg.content + text } : msg,
       ),
-    })),
-  updateMessage: (messageId, updates) =>
+    }));
+  },
+  updateMessage: (messageId, updates) => {
     set((state) => ({
       messages: state.messages.map((msg) => (msg.id === messageId ? { ...msg, ...updates } : msg)),
-    })),
-  addStreamingMessage: (message) =>
+    }));
+  },
+  addStreamingMessage: (message) => {
     set((state) => ({
       messages: [...state.messages, message],
-    })),
-  setDraft: (draft) => set({ draft }),
-  setCitations: (citations) => set({ citations }),
-  setHoveredCitation: (chunkId) => set({ hoveredCitationChunkId: chunkId }),
-  setHoveredMessageChunks: (chunkIds) =>
+    }));
+  },
+  setDraft: (draft) => {
+    set({ draft });
+  },
+  setCitations: (citations) => {
+    set({ citations });
+  },
+  setHoveredCitation: (chunkId) => {
+    set({ hoveredCitationChunkId: chunkId });
+  },
+  setHoveredMessageChunks: (chunkIds) => {
     set((state) => {
       if (
         state.hoveredMessageChunkIds.length === chunkIds.length &&
@@ -273,43 +296,78 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
         return state;
       }
       return { hoveredMessageChunkIds: chunkIds };
-    }),
-  setJumpToCitation: (chunkId) => set({ jumpToCitationChunkId: chunkId }),
-  locateSourceInList: (sourceId) =>
+    });
+  },
+  setJumpToCitation: (chunkId) => {
+    set({ jumpToCitationChunkId: chunkId });
+  },
+  locateSourceInList: (sourceId) => {
     set((state) => ({
       jumpToSourceTarget: {
         id: sourceId,
         token: (state.jumpToSourceTarget?.token ?? 0) + 1,
       },
-    })),
+    }));
+  },
 
   // --- Outputs ---
-  setOutputs: (outputs) => set({ outputs }),
-  setOutputType: (type) => set({ outputType: type }),
-  setOutputTypeRenderDescriptors: (descriptors) =>
-    set({ outputTypeRenderDescriptors: descriptors }),
-  setOutputTypeFrontendBundles: (bundles) => set({ outputTypeFrontendBundles: bundles }),
+  setOutputs: (outputs) => {
+    set({ outputs });
+  },
+  setOutputType: (type) => {
+    set({ outputType: type });
+  },
+  setOutputTypeRenderDescriptors: (descriptors) => {
+    set({ outputTypeRenderDescriptors: descriptors });
+  },
+  setOutputTypeFrontendBundles: (bundles) => {
+    set({ outputTypeFrontendBundles: bundles });
+  },
 
   // --- Refine ---
-  setRefineMode: (mode) => set({ refineMode: mode }),
-  setRefinePrompt: (prompt) => set({ refinePrompt: prompt }),
-  setRefineJobs: (jobs) => set({ refineJobs: jobs }),
-  setRefineSettings: (settings) => set({ refineSettings: settings }),
-  setHasNewOutput: (value) => set({ hasNewOutput: value }),
-  setRecentCompletedJob: (id) => set({ recentCompletedJobId: id }),
+  setRefineMode: (mode) => {
+    set({ refineMode: mode });
+  },
+  setRefinePrompt: (prompt) => {
+    set({ refinePrompt: prompt });
+  },
+  setRefineJobs: (jobs) => {
+    set({ refineJobs: jobs });
+  },
+  setRefineSettings: (settings) => {
+    set({ refineSettings: settings });
+  },
+  setHasNewOutput: (value) => {
+    set({ hasNewOutput: value });
+  },
+  setRecentCompletedJob: (id) => {
+    set({ recentCompletedJobId: id });
+  },
 
   // --- UI / Connection ---
-  setActivePanel: (panel) => set({ activePanel: panel }),
-  setCreateState: (status) => set({ createState: status }),
-  setCreateName: (name) => set({ createName: name }),
-  setConnectionState: (connectionState) => set({ connectionState }),
-  setUploadState: (status) => set({ uploadState: status }),
-  setLoading: (key, value) =>
+  setActivePanel: (panel) => {
+    set({ activePanel: panel });
+  },
+  setCreateState: (status) => {
+    set({ createState: status });
+  },
+  setCreateName: (name) => {
+    set({ createName: name });
+  },
+  setConnectionState: (connectionState) => {
+    set({ connectionState });
+  },
+  setUploadState: (status) => {
+    set({ uploadState: status });
+  },
+  setLoading: (key, value) => {
     set((state) => ({
       loading: { ...state.loading, [key]: value },
-    })),
-  setError: (key, value) =>
+    }));
+  },
+  setError: (key, value) => {
     set((state) => ({
       errors: { ...state.errors, [key]: value },
-    })),
+    }));
+  },
 }));

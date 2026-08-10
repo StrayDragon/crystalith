@@ -59,7 +59,9 @@ export default function FlashcardViewer({ items, className }: FlashcardViewerPro
       }
     };
     window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+    };
   }, [handleFlip, handleNext, handlePrev]);
 
   if (total === 0) {

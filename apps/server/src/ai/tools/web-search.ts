@@ -80,7 +80,9 @@ export async function searchWeb(
   url.searchParams.set('engines', 'bing,wikipedia,brave,google');
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
 
   try {
     const resp = await outboundFetch(url, { signal: controller.signal });

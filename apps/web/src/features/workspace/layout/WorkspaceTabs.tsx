@@ -30,7 +30,9 @@ export default function WorkspaceTabs({ activePanel, onChange }: WorkspaceTabsPr
                 : 'text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800'
             }`}
             aria-current={isActive ? 'page' : undefined}
-            onClick={() => onChange(item.id)}
+            onClick={() => {
+              onChange(item.id);
+            }}
           >
             {item.label}
           </button>

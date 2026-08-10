@@ -33,8 +33,8 @@ export function normalizeDraft(raw: StudioSlide): SlideDraft {
       }
     : null;
   return {
-    id: Number(raw.id),
-    notebookId: Number(raw.notebookId ?? 0),
+    id: raw.id,
+    notebookId: raw.notebookId ?? 0,
     outputId: raw.outputId ?? null,
     title: raw.title ?? null,
     prompt: raw.prompt ?? null,
@@ -136,7 +136,13 @@ export async function waitForSlidevPreviewReady(
         setTimeout(resolve, intervalMs);
       }),
       new Promise<void>((resolve) => {
-        signal?.addEventListener('abort', () => resolve(), { once: true });
+        signal?.addEventListener(
+          'abort',
+          () => {
+            resolve();
+          },
+          { once: true },
+        );
       }),
     ]);
   }

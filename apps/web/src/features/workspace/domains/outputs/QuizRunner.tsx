@@ -21,7 +21,7 @@ interface AnswerState {
 }
 
 function normalize(value: string | undefined | null): string {
-  return (value ?? '').toString().trim().toLowerCase();
+  return (value ?? '').trim().toLowerCase();
 }
 
 /**
@@ -49,7 +49,7 @@ function extractOptionLetter(text: string): string | null {
 }
 
 function resolveCorrect(answer: QuizQuestion['answer']): string[] {
-  if (Array.isArray(answer)) return answer.filter(Boolean).map((item) => item.toString());
+  if (Array.isArray(answer)) return answer.filter(Boolean);
   if (typeof answer === 'string') return [answer];
   return [];
 }
@@ -183,7 +183,9 @@ export default function QuizRunner({ questions, className }: QuizRunnerProps) {
                       ? 'border-gray-900 bg-gray-900 text-white dark:border-sky-500 dark:bg-sky-500 dark:text-slate-950'
                       : 'border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800'
                   }`}
-                  onClick={() => handleSelect(option)}
+                  onClick={() => {
+                    handleSelect(option);
+                  }}
                   disabled={currentAnswer.submitted}
                 >
                   {option}
@@ -198,7 +200,9 @@ export default function QuizRunner({ questions, className }: QuizRunnerProps) {
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
               placeholder="输入你的答案"
               value={currentAnswer.selected ?? ''}
-              onChange={(event) => handleSelect(event.target.value)}
+              onChange={(event) => {
+                handleSelect(event.target.value);
+              }}
               disabled={currentAnswer.submitted}
               name="quizAnswer"
               aria-label="输入你的答案"

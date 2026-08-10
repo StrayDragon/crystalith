@@ -200,7 +200,7 @@ export default function DiagnosticsDialog({
             <div className="mt-0.5 text-[11px] text-gray-600 dark:text-slate-400">
               {data?.generatedAt
                 ? t('workspace.diagnostics.generated_at', {
-                    timestamp: formatTimestamp(data.generatedAt) || String(data.generatedAt),
+                    timestamp: formatTimestamp(data.generatedAt) || `${data.generatedAt}`,
                   })
                 : t('workspace.diagnostics.description')}
             </div>

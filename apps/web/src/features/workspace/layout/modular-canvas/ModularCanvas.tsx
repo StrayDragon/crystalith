@@ -149,7 +149,9 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(functi
 
     const gridHost = container as GridHTMLElement;
     gridHost.gridstack?.destroy(false);
-    gridHost.querySelectorAll(':scope > .grid-stack-item').forEach((el) => el.remove());
+    gridHost.querySelectorAll(':scope > .grid-stack-item').forEach((el) => {
+      el.remove();
+    });
 
     const gs = GridStack.init(
       {
@@ -180,7 +182,9 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(functi
     };
     gs.on('change', onChange);
 
-    requestAnimationFrame(() => computeCellHeight());
+    requestAnimationFrame(() => {
+      computeCellHeight();
+    });
 
     return () => {
       gs.off('change');
@@ -197,10 +201,14 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(functi
 
     computeCellHeight();
 
-    const ro = new ResizeObserver(() => computeCellHeight());
+    const ro = new ResizeObserver(() => {
+      computeCellHeight();
+    });
     ro.observe(container);
 
-    const onWindowResize = () => computeCellHeight();
+    const onWindowResize = () => {
+      computeCellHeight();
+    };
     window.addEventListener('resize', onWindowResize);
 
     return () => {
@@ -305,7 +313,9 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(functi
             label={meta?.label ?? wid}
             locked={locked}
             headerExtras={widgetHeaderExtras?.[wid]}
-            onRemove={() => removeWidgetFn(wid)}
+            onRemove={() => {
+              removeWidgetFn(wid);
+            }}
           >
             {renderWidget(wid)}
           </WidgetShell>,

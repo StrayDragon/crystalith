@@ -124,7 +124,9 @@ export default function CitationPopover({
     }
 
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isOpen, onClose]);
 
   const handleLocateSource = useCallback(
@@ -234,7 +236,9 @@ export default function CitationPopover({
                 <button
                   type="button"
                   className="flex flex-1 min-w-0 items-start gap-3 text-left bg-transparent"
-                  onClick={() => handleRowActivate(citation)}
+                  onClick={() => {
+                    handleRowActivate(citation);
+                  }}
                 >
                   {/* Index Badge */}
                   <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
@@ -265,8 +269,12 @@ export default function CitationPopover({
                     <button
                       type="button"
                       className="w-6 h-6 rounded-full border border-gray-200 text-gray-400 flex items-center justify-center hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors opacity-70 group-hover:opacity-100"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={(e) => handleLocateSource(e, citation)}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                      }}
+                      onClick={(e) => {
+                        handleLocateSource(e, citation);
+                      }}
                       aria-label={`定位来源：${citation.sourceName}`}
                       title="定位来源"
                     >
@@ -277,8 +285,12 @@ export default function CitationPopover({
                     <button
                       type="button"
                       className="w-6 h-6 rounded-full border border-gray-200 text-gray-400 flex items-center justify-center hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors opacity-70 group-hover:opacity-100"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={(e) => handleOpenSource(e, citation)}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                      }}
+                      onClick={(e) => {
+                        handleOpenSource(e, citation);
+                      }}
                       aria-label={`打开来源：${citation.sourceName}`}
                       title="打开来源"
                     >

@@ -89,7 +89,9 @@ export function SourceDetailQAPanel({
                   <Menu
                     placement="bottom-start"
                     open={exportMenuOpen === message.id}
-                    handler={(isMenuOpen) => onExportMenuOpenChange(isMenuOpen ? message.id : null)}
+                    handler={(isMenuOpen) => {
+                      onExportMenuOpenChange(isMenuOpen ? message.id : null);
+                    }}
                   >
                     <MenuHandler>
                       <IconButton
@@ -111,7 +113,7 @@ export function SourceDetailQAPanel({
                       <MenuItem
                         className="flex items-center gap-2 text-xs"
                         onClick={() => {
-                          void onCopyToClipboard();
+                          onCopyToClipboard();
                           onExportMenuOpenChange(null);
                         }}
                       >
@@ -132,7 +134,7 @@ export function SourceDetailQAPanel({
                         <MenuItem
                           className="flex items-center gap-2 text-xs"
                           onClick={() => {
-                            void onSaveAsSource();
+                            onSaveAsSource();
                             onExportMenuOpenChange(null);
                           }}
                           disabled={isSavingAsSource}
@@ -165,11 +167,13 @@ export function SourceDetailQAPanel({
             className="w-full h-9 pl-3 pr-10 rounded-full bg-gray-50 dark:bg-slate-800 border border-transparent focus:bg-white dark:bg-slate-900 focus:border-gray-200 dark:border-slate-700 focus:ring-0 text-sm outline-none transition-all placeholder:text-gray-400 dark:text-slate-500"
             placeholder="基于此来源内容提问..."
             value={inputValue}
-            onChange={(e) => onInputChange(e.target.value)}
+            onChange={(e) => {
+              onInputChange(e.target.value);
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                void onSend();
+                onSend();
               }
             }}
             disabled={isLoading}
@@ -182,7 +186,7 @@ export function SourceDetailQAPanel({
               size="sm"
               className={`rounded-full w-7 h-7 ${!inputValue.trim() || isLoading ? 'bg-gray-200 text-gray-400 dark:text-slate-500' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
               onClick={() => {
-                void onSend();
+                onSend();
               }}
               aria-label="发送问题"
               disabled={!inputValue.trim() || isLoading}

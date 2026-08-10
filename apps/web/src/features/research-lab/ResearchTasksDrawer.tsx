@@ -150,7 +150,9 @@ export default function ResearchTasksDrawer({
                     <button
                       type="button"
                       className="w-full text-left"
-                      onClick={() => onSelectTask(task)}
+                      onClick={() => {
+                        onSelectTask(task);
+                      }}
                       {...tid(TestIds.researchTasksItem)}
                       data-task-id={task.id}
                     >

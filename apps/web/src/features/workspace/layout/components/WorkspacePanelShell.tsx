@@ -56,7 +56,9 @@ export default function WorkspacePanelShell({
             variant="text"
             size="sm"
             className="w-7 h-7 rounded-full text-gray-500 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700"
-            onClick={() => onToggleExpand(panel)}
+            onClick={() => {
+              onToggleExpand(panel);
+            }}
           >
             {isExpanded ? (
               <IconExitFullscreen className="w-4 h-4" />

@@ -68,7 +68,9 @@ export function CollapsibleSection({
           className="flex flex-1 flex-col items-start gap-1 text-left"
           aria-expanded={open}
           aria-controls={contentId}
-          onClick={() => setOpen((prev) => !prev)}
+          onClick={() => {
+            setOpen((prev) => !prev);
+          }}
         >
           <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-slate-100">
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-[10px] text-gray-500 dark:border-slate-600 dark:text-slate-300">

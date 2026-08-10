@@ -78,7 +78,9 @@ export function SlidesStageContent({
         <Input
           label="演示标题"
           value={outlineTitle}
-          onChange={(event) => onOutlineTitleChange(event.target.value)}
+          onChange={(event) => {
+            onOutlineTitleChange(event.target.value);
+          }}
           crossOrigin="anonymous"
         />
         <div className="space-y-4">
@@ -103,14 +105,18 @@ export function SlidesStageContent({
                       <Input
                         label={`幻灯片 ${index + 1} 标题`}
                         value={item.title}
-                        onChange={(event) => onUpdateSlideTitle(index, event.target.value)}
+                        onChange={(event) => {
+                          onUpdateSlideTitle(index, event.target.value);
+                        }}
                         crossOrigin="anonymous"
                       />
                       <Button
                         variant="text"
                         color="red"
                         size="sm"
-                        onClick={() => onRemoveSlide(index)}
+                        onClick={() => {
+                          onRemoveSlide(index);
+                        }}
                       >
                         删除
                       </Button>
@@ -118,7 +124,9 @@ export function SlidesStageContent({
                     <Textarea
                       label="要点（每行一个）"
                       value={item.bullets.join('\n')}
-                      onChange={(event) => onUpdateSlideBullets(index, event.target.value)}
+                      onChange={(event) => {
+                        onUpdateSlideBullets(index, event.target.value);
+                      }}
                       rows={4}
                     />
                   </div>
@@ -143,7 +151,9 @@ export function SlidesStageContent({
       <Textarea
         label="Slides Markdown"
         value={markdown}
-        onChange={(event) => onMarkdownChange(event.target.value)}
+        onChange={(event) => {
+          onMarkdownChange(event.target.value);
+        }}
         rows={16}
         className="font-mono text-xs"
       />

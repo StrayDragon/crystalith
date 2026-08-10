@@ -316,7 +316,9 @@ export default function StudioToolsGrid({
                     key={option.id}
                     variant={configQuantity === option.id ? 'filled' : 'outlined'}
                     size="sm"
-                    onClick={() => setConfigQuantity(option.id)}
+                    onClick={() => {
+                      setConfigQuantity(option.id);
+                    }}
                     className={`rounded-full px-3 py-1.5 normal-case font-normal border-gray-200 ${
                       configQuantity === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
                     }`}
@@ -342,7 +344,9 @@ export default function StudioToolsGrid({
                     key={option.id}
                     variant={configDifficulty === option.id ? 'filled' : 'outlined'}
                     size="sm"
-                    onClick={() => setConfigDifficulty(option.id)}
+                    onClick={() => {
+                      setConfigDifficulty(option.id);
+                    }}
                     className={`rounded-full px-3 py-1.5 normal-case font-normal border-gray-200 ${
                       configDifficulty === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
                     }`}
@@ -365,7 +369,9 @@ export default function StudioToolsGrid({
               <Textarea
                 placeholder={topicPlaceholder}
                 value={configTopic}
-                onChange={(e) => setConfigTopic(e.target.value)}
+                onChange={(e) => {
+                  setConfigTopic(e.target.value);
+                }}
                 className="!border-t-blue-gray-200 focus:!border-t-gray-900 min-h-[100px]"
                 labelProps={{
                   className: 'before:content-none after:content-none',
@@ -393,7 +399,9 @@ export default function StudioToolsGrid({
                   key={option.id}
                   variant={preference === option.id ? 'filled' : 'outlined'}
                   size="sm"
-                  onClick={() => setPreference(option.id)}
+                  onClick={() => {
+                    setPreference(option.id);
+                  }}
                   className={`rounded-full px-3 py-1.5 normal-case font-normal border-gray-200 ${
                     preference === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
                   }`}

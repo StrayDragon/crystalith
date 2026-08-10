@@ -54,14 +54,14 @@ export function normalizeImportScope(scope: ImportScope): {
 
   const directories: string[] = [];
   for (const value of rawDirectories) {
-    const text = String(value ?? '').trim();
+    const text = (value ?? '').trim();
     if (!text) continue;
     directories.push(normalizeDirectoryPath(text));
   }
 
   const files: string[] = [];
   for (const value of rawFiles) {
-    const text = String(value ?? '').trim();
+    const text = (value ?? '').trim();
     if (!text) continue;
     files.push(normalizeFilePath(text));
   }

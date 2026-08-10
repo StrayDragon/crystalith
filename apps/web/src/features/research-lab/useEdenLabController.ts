@@ -239,7 +239,9 @@ export function useEdenLabController(
                 return { ...prev, nodes: g.nodes, edges: g.edges };
               });
               setReshaping(true);
-              window.setTimeout(() => setReshaping(false), 400);
+              window.setTimeout(() => {
+                setReshaping(false);
+              }, 400);
             } else if (ev.event === 'confirm') {
               const data = ev.data as {
                 kind?: 'budget' | 'expand_branch' | 'reexpand';
@@ -364,7 +366,9 @@ export function useEdenLabController(
       consumeLabRunNeedsReload(notebookId, initialRunId);
       void loadRun(initialRunId);
     }
-    return () => stopStream();
+    return () => {
+      stopStream();
+    };
   }, [initialRunId, loadRun, notebookId, stopStream]);
 
   const phase = deriveEdenLabPhase({
@@ -537,7 +541,9 @@ export function useEdenLabController(
       () => confirmResearchRun(notebookId, rid, { action: 'finish_report' }),
       '确认出报告',
     )
-      .then(() => setHighlightedNodeIds([]))
+      .then(() => {
+        setHighlightedNodeIds([]);
+      })
       .catch(() => undefined);
   }, [notebookId, withBusy]);
 
@@ -552,7 +558,9 @@ export function useEdenLabController(
         }),
       '加购继续',
     )
-      .then(() => setHighlightedNodeIds([]))
+      .then(() => {
+        setHighlightedNodeIds([]);
+      })
       .catch(() => undefined);
   }, [notebookId, withBusy]);
 
@@ -560,7 +568,9 @@ export function useEdenLabController(
     const rid = runIdRef.current;
     if (!rid) return;
     void withBusy(() => addResearchBudget(notebookId, rid), '增加检索预算')
-      .then(() => setHighlightedNodeIds([]))
+      .then(() => {
+        setHighlightedNodeIds([]);
+      })
       .catch(() => undefined);
   }, [notebookId, withBusy]);
 
@@ -577,7 +587,9 @@ export function useEdenLabController(
         }),
       '批准扩支',
     )
-      .then(() => setHighlightedNodeIds([]))
+      .then(() => {
+        setHighlightedNodeIds([]);
+      })
       .catch(() => undefined);
   }, [notebookId, run?.confirmBranchNodeId, withBusy]);
 
@@ -594,7 +606,9 @@ export function useEdenLabController(
         }),
       '跳过支路',
     )
-      .then(() => setHighlightedNodeIds([]))
+      .then(() => {
+        setHighlightedNodeIds([]);
+      })
       .catch(() => undefined);
   }, [notebookId, run?.confirmBranchNodeId, withBusy]);
 
@@ -611,7 +625,9 @@ export function useEdenLabController(
         }),
       '批准再扩展',
     )
-      .then(() => setHighlightedNodeIds([]))
+      .then(() => {
+        setHighlightedNodeIds([]);
+      })
       .catch(() => undefined);
   }, [notebookId, run?.confirmBranchNodeId, withBusy]);
 
@@ -626,7 +642,9 @@ export function useEdenLabController(
         }),
       '跳过再扩展',
     )
-      .then(() => setHighlightedNodeIds([]))
+      .then(() => {
+        setHighlightedNodeIds([]);
+      })
       .catch(() => undefined);
   }, [notebookId, withBusy]);
 

@@ -74,7 +74,13 @@ function sleepUnlessAborted(ms: number, signal: AbortSignal): Promise<void> {
       setTimeout(resolve, ms);
     }),
     new Promise<void>((resolve) => {
-      signal.addEventListener('abort', () => resolve(), { once: true });
+      signal.addEventListener(
+        'abort',
+        () => {
+          resolve();
+        },
+        { once: true },
+      );
     }),
   ]);
 }
@@ -464,7 +470,7 @@ export async function runNodeWorkUnit(opts: {
         for await (const part of result.stream) {
           if (abortSignal.aborted || isCancelled(runId)) break;
           if (part.type === 'tool-result') {
-            const toolName = 'toolName' in part ? String(part.toolName) : '';
+            const toolName = 'toolName' in part ? part.toolName : '';
             const output = 'output' in part ? part.output : undefined;
             if (toolName === 'webSearch') {
               const freshBudget = requireFresh(runId);

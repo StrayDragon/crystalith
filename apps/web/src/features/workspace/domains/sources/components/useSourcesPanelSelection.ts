@@ -35,7 +35,7 @@ export function useSourcesPanelSelection({
         const isSelectable = source.statusTone === 'READY';
         next[source.id] = hasExistingSelection
           ? isSelectable
-            ? Boolean(prev[source.id])
+            ? (prev[source.id] ?? false)
             : false
           : isSelectable;
       });

@@ -56,7 +56,9 @@ export default function CommandPalette({ open, onClose, commands }: CommandPalet
           type="text"
           value={query}
           {...tid(TestIds.commandPaletteInput)}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
               e.preventDefault();

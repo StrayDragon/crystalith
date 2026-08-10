@@ -882,7 +882,9 @@ export function createResearchSseResponse(notebookId: number, runId: number): Re
               (row.status === 'completed' || row.status === 'failed' || row.status === 'cancelled')
             ) {
               // Allow final events to flush
-              setTimeout(() => resolve(), 50);
+              setTimeout(() => {
+                resolve();
+              }, 50);
               return;
             }
             setTimeout(tick, 100);

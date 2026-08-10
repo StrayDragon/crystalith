@@ -70,7 +70,7 @@ export default function ExtractorPolicyDialog({
       const ap = a.priority ?? 10_000;
       const bp = b.priority ?? 10_000;
       if (ap !== bp) return ap - bp;
-      return String(a.type).localeCompare(String(b.type));
+      return a.type.localeCompare(b.type);
     });
   }, [extractors]);
 

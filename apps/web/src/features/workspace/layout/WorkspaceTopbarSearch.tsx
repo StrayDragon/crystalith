@@ -86,7 +86,9 @@ function FastSearchBody({
     const id = window.setInterval(() => {
       setElapsedSec(Math.floor((Date.now() - started) / 1000));
     }, 1000);
-    return () => window.clearInterval(id);
+    return () => {
+      window.clearInterval(id);
+    };
   }, [isSearching]);
 
   return (
@@ -102,7 +104,9 @@ function FastSearchBody({
           id="source-search-input"
           name="sourceSearch"
           aria-label={t('sources.search.aria_label')}
-          onChange={(e) => onSearchQueryChange(e.target.value)}
+          onChange={(e) => {
+            onSearchQueryChange(e.target.value);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
@@ -191,12 +195,16 @@ export default function WorkspaceTopbarSearch({
       if (e.key === 'Escape') onOpenChange(false);
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
   }, [open, onOpenChange]);
 
   useEffect(() => {
     if (!open) return;
-    window.requestAnimationFrame(() => searchInputRef.current?.focus());
+    window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
   }, [open]);
 
   const submitFastSearch = useCallback(() => {
@@ -220,7 +228,9 @@ export default function WorkspaceTopbarSearch({
         {...tid(TestIds.topbarSearchTrigger)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        onClick={() => onOpenChange(true)}
+        onClick={() => {
+          onOpenChange(true);
+        }}
       >
         <SearchIcon style={{ fontSize: 16 }} />
         <span className="truncate">{t('sources.search.placeholder')}</span>
@@ -239,7 +249,9 @@ export default function WorkspaceTopbarSearch({
               <button
                 type="button"
                 className="absolute inset-0 z-0 cursor-default bg-black/20"
-                onClick={() => onOpenChange(false)}
+                onClick={() => {
+                  onOpenChange(false);
+                }}
                 aria-label="关闭搜索面板"
               />
               <div className="absolute top-16 left-1/2 z-10 w-[min(960px,calc(100%-2rem))] -translate-x-1/2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl">
@@ -251,7 +263,9 @@ export default function WorkspaceTopbarSearch({
                     type="button"
                     className="w-8 h-8 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 flex items-center justify-center"
                     aria-label="关闭"
-                    onClick={() => onOpenChange(false)}
+                    onClick={() => {
+                      onOpenChange(false);
+                    }}
                   >
                     <CloseIcon style={{ fontSize: 18 }} />
                   </button>

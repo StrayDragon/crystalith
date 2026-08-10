@@ -197,7 +197,9 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
 
   const triggerReshape = useCallback(() => {
     setReshaping(true);
-    window.setTimeout(() => setReshaping(false), 900);
+    window.setTimeout(() => {
+      setReshaping(false);
+    }, 900);
   }, []);
 
   const setScenarioId = useCallback((id: string) => {
@@ -286,7 +288,9 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
       },
       Math.max(400, playbackMs),
     );
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+    };
   }, [playing, playbackMs]);
 
   const reset = useCallback(() => {

@@ -48,7 +48,7 @@ export function createDb(path?: string): Orm {
   db.exec('PRAGMA synchronous = NORMAL;');
 
   // sqlite-vec: load native extension into the bun:sqlite connection.
-  sqliteVec.load(db as unknown as Parameters<typeof sqliteVec.load>[0]);
+  sqliteVec.load(db);
 
   const orm = drizzle({ client: db, schema });
 

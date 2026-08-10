@@ -240,7 +240,7 @@ export function normalizeOutputPayload(type: OutputTypeId, content: unknown): Ou
 }
 
 export function isFallbackOutputPayload(content: OutputPayload): boolean {
-  return Boolean(isRecord(content) && content._fallback === true);
+  return isRecord(content) && content._fallback === true;
 }
 
 export function getOutputPayloadWarnings(content: OutputPayload): string[] {

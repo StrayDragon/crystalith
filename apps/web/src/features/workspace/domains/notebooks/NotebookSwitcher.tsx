@@ -134,7 +134,9 @@ export default function NotebookSwitcher({
     const timer = setTimeout(() => {
       searchInputRef?.current?.focus();
     }, 0);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+    };
   }, [isOpen, searchInputRef]);
 
   useEffect(() => {
@@ -142,7 +144,9 @@ export default function NotebookSwitcher({
     const timer = setTimeout(() => {
       createInputHostRef.current?.querySelector<HTMLInputElement>('input')?.focus();
     }, 0);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+    };
   }, [createOpen]);
 
   useLayoutEffect(() => {
@@ -201,7 +205,9 @@ export default function NotebookSwitcher({
       setEditingTitle('');
     }
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+    };
   }, [createOpen, isOpen, onClose]);
 
   // Click-outside close without a dimming mask.
@@ -325,7 +331,9 @@ export default function NotebookSwitcher({
         templates={templates}
         isLoading={templatesLoading}
         error={templatesError}
-        onClose={() => setTemplatePickerOpen(false)}
+        onClose={() => {
+          setTemplatePickerOpen(false);
+        }}
         onOpenManager={() => {
           setTemplatePickerOpen(false);
           setTemplateManagerOpen(true);
@@ -338,7 +346,9 @@ export default function NotebookSwitcher({
         templates={templates}
         isLoading={templatesLoading}
         error={templatesError}
-        onClose={() => setTemplateManagerOpen(false)}
+        onClose={() => {
+          setTemplateManagerOpen(false);
+        }}
         onUpdateDescription={async (templateId, description) => {
           await updateTemplateDescription(templateId, description);
         }}
@@ -352,7 +362,9 @@ export default function NotebookSwitcher({
         notebookId={saveTemplateNotebookId}
         defaultName={saveTemplateDefaultName}
         defaultOutputType={outputType}
-        onClose={() => setSaveTemplateOpen(false)}
+        onClose={() => {
+          setSaveTemplateOpen(false);
+        }}
         onSave={async ({ notebookId, name, description, outputType: templateOutputType }) => {
           try {
             await saveCurrentNotebookAsTemplate({
@@ -446,7 +458,9 @@ export default function NotebookSwitcher({
                     className="w-full h-8 pl-9 pr-3 rounded-lg bg-gray-100 border border-gray-300 text-xs text-gray-900 focus:outline-none focus:border-gray-500 focus:ring-0"
                     placeholder="搜索笔记本"
                     value={searchValue}
-                    onChange={(e) => setSearchValue(e.target.value)}
+                    onChange={(e) => {
+                      setSearchValue(e.target.value);
+                    }}
                     id="notebook-search-input"
                     name="notebookSearch"
                     aria-label="搜索笔记本"
@@ -486,7 +500,9 @@ export default function NotebookSwitcher({
                             ref={editInputRef}
                             className="flex-1 h-7 px-2 text-sm rounded border border-gray-400 focus:border-blue-500 focus:outline-none"
                             value={editingTitle}
-                            onChange={(e) => setEditingTitle(e.target.value)}
+                            onChange={(e) => {
+                              setEditingTitle(e.target.value);
+                            }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
                                 e.preventDefault();
@@ -640,7 +656,9 @@ export default function NotebookSwitcher({
                   className="!border !border-gray-300 bg-white text-gray-900 shadow-lg shadow-gray-900/5 ring-4 ring-transparent placeholder:text-gray-500 focus:!border-gray-900 focus:!border-t-gray-900 focus:ring-gray-900/10"
                   containerProps={{ className: 'min-w-0' }}
                   value={createName}
-                  onChange={(e) => onCreateNameChange(e.target.value)}
+                  onChange={(e) => {
+                    onCreateNameChange(e.target.value);
+                  }}
                   placeholder={isConnected ? '输入名称' : '未连接到后端'}
                   disabled={!isConnected || createLoading}
                   onKeyDown={(e) => {
@@ -661,7 +679,9 @@ export default function NotebookSwitcher({
                   size="sm"
                   variant="text"
                   className="rounded-full px-3 py-1.5 normal-case font-normal text-gray-700 text-[11px]"
-                  onClick={() => setCreateOpen(false)}
+                  onClick={() => {
+                    setCreateOpen(false);
+                  }}
                 >
                   取消
                 </Button>

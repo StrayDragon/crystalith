@@ -101,7 +101,9 @@ export function useTheme() {
     };
 
     mediaQuery.addEventListener('change', handleSystemThemeChange);
-    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
+    return () => {
+      mediaQuery.removeEventListener('change', handleSystemThemeChange);
+    };
   }, [theme]);
 
   useEffect(() => {
