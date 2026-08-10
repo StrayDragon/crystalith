@@ -34,7 +34,7 @@ export function normalizeTemplate(raw: Template): WorkspaceTemplate {
     id: raw.id,
     name: raw.name ?? '',
     description: raw.description ?? '',
-    isBuiltin: Boolean(raw.isBuiltin),
+    isBuiltin: raw.isBuiltin,
     createdAt: raw.createdAt ?? '',
     config: {
       sessionTitles: asStringArray(

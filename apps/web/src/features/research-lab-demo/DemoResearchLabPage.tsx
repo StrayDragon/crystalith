@@ -115,7 +115,9 @@ function DemoResearchLabSession({ notebookId }: { notebookId: number }) {
         const demo = listDemoResearchTasks().find((t) => t.id === task.id);
         if (demo) fixtureLabSessionPort.openTask(demo);
       }}
-      onCreateNew={() => fixtureLabSessionPort.openCompose(notebookId)}
+      onCreateNew={() => {
+        fixtureLabSessionPort.openCompose(notebookId);
+      }}
     />
   );
 }
@@ -238,7 +240,9 @@ function LabWorkbench({
         mode: 'fixture',
         lab,
         openReport,
-        onStatusNote: (message) => toast.info(message, 2400),
+        onStatusNote: (message) => {
+          toast.info(message, 2400);
+        },
       });
     },
     [lab, openReport],
@@ -313,8 +317,12 @@ function LabWorkbench({
     [lab.derived],
   );
 
-  const cancelFork = useCallback(() => setForkEdgeId(null), []);
-  const cancelPrune = useCallback(() => setPrunePreview(null), []);
+  const cancelFork = useCallback(() => {
+    setForkEdgeId(null);
+  }, []);
+  const cancelPrune = useCallback(() => {
+    setPrunePreview(null);
+  }, []);
   useDialogEscape(forkEdgeId !== null, cancelFork);
   useDialogEscape(prunePreview !== null, cancelPrune);
 
@@ -332,7 +340,9 @@ function LabWorkbench({
       <header className="flex shrink-0 items-center gap-2 border-b border-gray-200 bg-white px-3 py-2 shadow-sm">
         <button
           type="button"
-          onClick={() => navigateToWorkspace()}
+          onClick={() => {
+            navigateToWorkspace();
+          }}
           className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
           {...tid(TestIds.researchLabBack)}
         >
@@ -361,7 +371,9 @@ function LabWorkbench({
             researchDone={lab.researchDone}
             researchTotal={lab.researchTotal}
             events={lab.progressEvents}
-            onSelectNodeId={(nodeId) => lab.setSelectedNodeId(nodeId)}
+            onSelectNodeId={(nodeId) => {
+              lab.setSelectedNodeId(nodeId);
+            }}
           />
         ) : (
           <div className="min-w-0 flex-1" />
@@ -422,7 +434,9 @@ function LabWorkbench({
               type="button"
               disabled={primary.tertiary.disabled}
               title={primary.title}
-              onClick={() => runPrimary(primary.tertiary!.kind)}
+              onClick={() => {
+                runPrimary(primary.tertiary!.kind);
+              }}
               className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-40"
               {...(primary.tertiary.kind === 'finish_report'
                 ? tid(TestIds.researchLabConfirmFinish)
@@ -436,7 +450,9 @@ function LabWorkbench({
               type="button"
               disabled={primary.secondary.disabled}
               title={primary.title}
-              onClick={() => runPrimary(primary.secondary!.kind)}
+              onClick={() => {
+                runPrimary(primary.secondary!.kind);
+              }}
               className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-40"
               {...(primary.secondary.kind === 'continue_dig'
                 ? tid(TestIds.researchLabConfirmContinue)
@@ -452,7 +468,9 @@ function LabWorkbench({
               type="button"
               disabled={primary.disabled}
               title={primary.title}
-              onClick={() => runPrimary(primary.kind)}
+              onClick={() => {
+                runPrimary(primary.kind);
+              }}
               className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:pointer-events-none disabled:opacity-40"
               {...(primary.kind === 'approve_branch'
                 ? tid(TestIds.researchLabConfirmApprove)
@@ -464,7 +482,12 @@ function LabWorkbench({
             </button>
           ) : null}
 
-          <ResearchTasksTrigger notebookId={notebookId} onOpen={() => setTasksDrawerOpen(true)} />
+          <ResearchTasksTrigger
+            notebookId={notebookId}
+            onOpen={() => {
+              setTasksDrawerOpen(true);
+            }}
+          />
         </div>
       </header>
 
@@ -554,7 +577,9 @@ function LabWorkbench({
             reportAvailable={selected?.role === 'conclusion' && lab.derived.reportVisible}
             onOpenReport={openReport}
             constraintsNote={selected?.role === 'question' ? lab.scenario.constraintsNote : null}
-            onClose={() => lab.setSelectedNodeId(null)}
+            onClose={() => {
+              lab.setSelectedNodeId(null);
+            }}
             onConfirmFinish={() => {
               lab.finishReport();
               lab.setConfirmChoice('finish_report');
@@ -602,7 +627,9 @@ function LabWorkbench({
 
       <ResearchTasksDrawer
         open={tasksDrawerOpen}
-        onClose={() => setTasksDrawerOpen(false)}
+        onClose={() => {
+          setTasksDrawerOpen(false);
+        }}
         notebookId={notebookId}
         tasks={demoTasks.tasks.map((t) => ({
           id: t.id,

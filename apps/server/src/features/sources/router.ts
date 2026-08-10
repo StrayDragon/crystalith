@@ -504,7 +504,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     ({ params, set }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const sid = requirePositiveIntId(params.sid, 'source id');
-      return handleDeleteSource(sid, nid, set);
+      handleDeleteSource(sid, nid, set);
     },
     { response: { 204: Empty204Schema } },
   )

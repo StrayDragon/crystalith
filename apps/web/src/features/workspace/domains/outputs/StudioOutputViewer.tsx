@@ -196,9 +196,9 @@ export default function StudioOutputViewer({
                 </MenuHandler>
                 <MenuList className="p-1 min-w-[160px] dark:bg-slate-900 dark:border-slate-700">
                   <MenuItem
-                    onClick={() =>
-                      exportOutputMarkdownDownload({ notebookId, outputId: selectedOutput.id })
-                    }
+                    onClick={() => {
+                      exportOutputMarkdownDownload({ notebookId, outputId: selectedOutput.id });
+                    }}
                     className="flex items-center gap-2 py-2 px-3 text-xs"
                   >
                     <span>导出 Markdown</span>
@@ -274,7 +274,9 @@ export default function StudioOutputViewer({
                       <button
                         type="button"
                         className="flex-1 text-left p-2 min-w-0"
-                        onClick={() => onSelectOutput(output.id)}
+                        onClick={() => {
+                          onSelectOutput(output.id);
+                        }}
                         aria-current={isActive}
                       >
                         <Typography
@@ -313,7 +315,9 @@ export default function StudioOutputViewer({
                             <MenuList className="p-1 min-w-[120px] dark:bg-slate-900 dark:border-slate-700">
                               <ConfirmPopover
                                 message={`确定要删除「${getOutputTitle(output)}」吗？此操作不可撤销。`}
-                                onConfirm={() => handleDelete(output.id)}
+                                onConfirm={() => {
+                                  handleDelete(output.id);
+                                }}
                                 placement="left"
                               >
                                 <MenuItem className="flex items-center gap-2 text-red-500 hover:bg-red-50 hover:text-red-700 py-2 dark:hover:bg-red-500/20 dark:hover:text-red-300">
@@ -340,7 +344,13 @@ export default function StudioOutputViewer({
             {selectedOutput?.contentLoaded ? (
               <OutputContent
                 output={selectedOutput}
-                onDelete={onDeleteOutput ? (id) => handleDelete(id) : undefined}
+                onDelete={
+                  onDeleteOutput
+                    ? (id) => {
+                        handleDelete(id);
+                      }
+                    : undefined
+                }
               />
             ) : null}
             {outputCitations.length > 0 ? (

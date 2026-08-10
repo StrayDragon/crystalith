@@ -230,7 +230,9 @@ export default function SearchResultsQueue({
         <div className="flex items-center justify-between w-full px-3 py-2">
           <button
             type="button"
-            onClick={() => toggleQueueItemExpanded(queueItem.id)}
+            onClick={() => {
+              toggleQueueItemExpanded(queueItem.id);
+            }}
             className="flex items-center gap-2 min-w-0 flex-1 text-left hover:opacity-90 transition-opacity"
             {...tid(TestIds.searchQueueToggle)}
           >
@@ -291,7 +293,9 @@ export default function SearchResultsQueue({
             {!isLoading && itemResults.length > 0 && (
               <button
                 type="button"
-                onClick={() => setIsFullscreen(true)}
+                onClick={() => {
+                  setIsFullscreen(true);
+                }}
                 className="p-1 rounded-lg hover:bg-blue-200 transition-colors"
                 aria-label="全屏查看搜索结果"
                 title="全屏查看"
@@ -451,7 +455,14 @@ export default function SearchResultsQueue({
 
       {/* Expanded Result Dialog — mount only when open so Dialog always has children */}
       {expandedResult ? (
-        <Dialog open handler={() => setExpandedResult(null)} size="md" className="rounded-xl">
+        <Dialog
+          open
+          handler={() => {
+            setExpandedResult(null);
+          }}
+          size="md"
+          className="rounded-xl"
+        >
           <DialogHeader className="flex items-start gap-3 pb-2">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 border border-blue-200 flex-shrink-0">
               <SearchIcon className="text-blue-600" />
@@ -474,7 +485,9 @@ export default function SearchResultsQueue({
             <IconButton
               variant="text"
               size="sm"
-              onClick={() => setExpandedResult(null)}
+              onClick={() => {
+                setExpandedResult(null);
+              }}
               className="flex-shrink-0"
             >
               <CloseIcon />
@@ -540,7 +553,9 @@ export default function SearchResultsQueue({
       {/* Fullscreen Dialog - All Results */}
       <Dialog
         open={isFullscreen}
-        handler={() => setIsFullscreen(false)}
+        handler={() => {
+          setIsFullscreen(false);
+        }}
         size="xl"
         className="rounded-xl max-h-[90vh] flex flex-col"
         dismiss={{ outsidePress: false }}
@@ -559,7 +574,12 @@ export default function SearchResultsQueue({
               </Typography>
             </div>
           </div>
-          <IconButton variant="text" onClick={() => setIsFullscreen(false)}>
+          <IconButton
+            variant="text"
+            onClick={() => {
+              setIsFullscreen(false);
+            }}
+          >
             <CloseIcon />
           </IconButton>
         </DialogHeader>
@@ -599,7 +619,9 @@ export default function SearchResultsQueue({
                 >
                   <Checkbox
                     checked={isSelected}
-                    onChange={() => handleToggle(result)}
+                    onChange={() => {
+                      handleToggle(result);
+                    }}
                     containerProps={{ className: 'p-0 mt-1' }}
                     className="h-5 w-5 rounded border-gray-300 bg-white checked:bg-blue-600 checked:border-blue-600"
                     iconProps={{ className: 'text-white' }}
@@ -715,7 +737,9 @@ export default function SearchResultsQueue({
           <div className="flex items-center gap-3">
             <Button
               variant="outlined"
-              onClick={() => setIsFullscreen(false)}
+              onClick={() => {
+                setIsFullscreen(false);
+              }}
               className="normal-case"
             >
               取消

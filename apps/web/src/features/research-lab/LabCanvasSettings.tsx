@@ -52,7 +52,9 @@ export default function LabCanvasSettings({
             <button
               type="button"
               className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+              }}
               aria-label="收起画布设置"
             >
               <ExpandMoreIcon sx={{ fontSize: 16 }} />
@@ -69,7 +71,9 @@ export default function LabCanvasSettings({
                 <button
                   type="button"
                   title="上下布局（TB）"
-                  onClick={() => onDirection('TB')}
+                  onClick={() => {
+                    onDirection('TB');
+                  }}
                   className={`inline-flex h-7 w-7 items-center justify-center rounded-md ${
                     direction === 'TB' ? 'bg-slate-900 text-white' : 'text-gray-500 hover:bg-white'
                   }`}
@@ -79,7 +83,9 @@ export default function LabCanvasSettings({
                 <button
                   type="button"
                   title="左右布局（LR）"
-                  onClick={() => onDirection('LR')}
+                  onClick={() => {
+                    onDirection('LR');
+                  }}
                   className={`inline-flex h-7 w-7 items-center justify-center rounded-md ${
                     direction === 'LR' ? 'bg-slate-900 text-white' : 'text-gray-500 hover:bg-white'
                   }`}
@@ -101,7 +107,9 @@ export default function LabCanvasSettings({
                     key={a.id}
                     type="button"
                     title={a.title}
-                    onClick={() => onAlgorithm(a.id)}
+                    onClick={() => {
+                      onAlgorithm(a.id);
+                    }}
                     className={`h-7 rounded-md px-2 text-[10px] font-medium ${
                       algorithm === a.id
                         ? 'bg-slate-900 text-white'
@@ -125,7 +133,9 @@ export default function LabCanvasSettings({
                     key={p.id}
                     type="button"
                     title={p.title}
-                    onClick={() => onEdgePathPreset(p.id)}
+                    onClick={() => {
+                      onEdgePathPreset(p.id);
+                    }}
                     className={`h-7 rounded-md px-2 text-[10px] font-medium ${
                       edgePathPreset === p.id
                         ? 'bg-slate-900 text-white'
@@ -143,7 +153,9 @@ export default function LabCanvasSettings({
               <button
                 type="button"
                 title={showMiniMap ? '隐藏小地图' : '显示小地图'}
-                onClick={() => onShowMiniMap(!showMiniMap)}
+                onClick={() => {
+                  onShowMiniMap(!showMiniMap);
+                }}
                 className={`inline-flex h-7 items-center gap-1 rounded-md border px-2 text-[10px] font-medium ${
                   showMiniMap
                     ? 'border-slate-900 bg-slate-900 text-white'
@@ -160,7 +172,9 @@ export default function LabCanvasSettings({
 
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setOpen((v) => !v);
+        }}
         aria-expanded={open}
         className={`inline-flex h-[34px] items-center gap-1 rounded-lg border px-2 text-[11px] font-medium shadow-sm transition-colors ${
           open

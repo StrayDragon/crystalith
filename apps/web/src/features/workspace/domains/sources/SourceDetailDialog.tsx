@@ -173,7 +173,9 @@ export default function SourceDetailDialog({
             >
               <Tab
                 value="overview"
-                onClick={() => setActiveTab('overview')}
+                onClick={() => {
+                  setActiveTab('overview');
+                }}
                 className={`py-3 px-4 text-xs font-medium ${activeTab === 'overview' ? 'text-blue-500' : 'text-gray-500 dark:text-slate-400'}`}
                 {...tid(TestIds.sourceDetailTabSummary)}
               >
@@ -184,7 +186,9 @@ export default function SourceDetailDialog({
               </Tab>
               <Tab
                 value="raw"
-                onClick={() => setActiveTab('raw')}
+                onClick={() => {
+                  setActiveTab('raw');
+                }}
                 className={`py-3 px-4 text-xs font-medium ${activeTab === 'raw' ? 'text-blue-500' : 'text-gray-500 dark:text-slate-400'}`}
                 {...tid(TestIds.sourceDetailTabRaw)}
               >
@@ -277,7 +281,9 @@ export default function SourceDetailDialog({
                   isBriefLoading={isBriefLoading}
                   briefError={briefError}
                   summaryCollapsed={summaryCollapsed}
-                  onToggleCollapsed={() => setSummaryCollapsed((prev) => !prev)}
+                  onToggleCollapsed={() => {
+                    setSummaryCollapsed((prev) => !prev);
+                  }}
                   onGenerateOrRefresh={handleGenerateOrRefreshBrief}
                   canGenerate={Boolean(notebookId && isConnected)}
                 />

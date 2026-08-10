@@ -39,7 +39,12 @@ export function useSlidesStageGeneration({
     }
   }, []);
 
-  useEffect(() => () => closeGenerate(), [closeGenerate]);
+  useEffect(
+    () => () => {
+      closeGenerate();
+    },
+    [closeGenerate],
+  );
 
   const resetGenerationState = useCallback(() => {
     setIsGenerating(false);

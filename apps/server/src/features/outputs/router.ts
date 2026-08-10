@@ -177,7 +177,7 @@ function serializeOutputListItem(row: typeof outputs.$inferSelect) {
         notebookId,
         runId,
         ...(kind === 'report' || kind === 'node' || kind === 'evidence'
-          ? { artifactKind: kind as 'report' | 'node' | 'evidence' }
+          ? { artifactKind: kind }
           : {}),
       };
     }
@@ -586,7 +586,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     ({ params, set }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const id = requirePositiveIntId(params.id, 'output id');
-      return handleDeleteOutput(id, nid, set);
+      handleDeleteOutput(id, nid, set);
     },
     { response: { 204: Empty204Schema } },
   )

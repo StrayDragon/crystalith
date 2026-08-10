@@ -299,7 +299,7 @@ export function formatStructuredOutputForCopy(output: OutputItem): string {
 
 export function normalizeNotebook(row: WireNotebook): Notebook {
   return {
-    id: Number(row.id),
+    id: row.id,
     title: row.name ?? '未命名笔记本',
     updatedAt: formatTimestamp(row.updatedAt ?? undefined),
     updatedAtRaw: toTimestampRaw(row.updatedAt),
@@ -325,7 +325,7 @@ export function pickDefaultNotebookId(
 
 export function normalizeSession(row: WireSession): SessionSummary {
   return {
-    id: Number(row.id),
+    id: row.id,
     title: row.title ?? '未命名会话',
     createdAt: formatTimestamp(row.createdAt ?? undefined),
     updatedAt: formatTimestamp(row.updatedAt ?? undefined),
@@ -350,7 +350,7 @@ export function normalizeOutput(
 ): OutputItem {
   const hasContent = 'content' in row && row.content !== undefined && row.content !== null;
   return {
-    id: Number(row.id),
+    id: row.id,
     type: row.type,
     prompt: row.prompt ?? '',
     chunkIds: row.chunkIds ?? [],
@@ -362,8 +362,8 @@ export function normalizeOutput(
     researchLab:
       'researchLab' in row && row.researchLab
         ? {
-            notebookId: Number(row.researchLab.notebookId),
-            runId: Number(row.researchLab.runId),
+            notebookId: row.researchLab.notebookId,
+            runId: row.researchLab.runId,
             ...(row.researchLab.artifactKind ? { artifactKind: row.researchLab.artifactKind } : {}),
           }
         : null,
@@ -410,7 +410,7 @@ export function formatSourceType(row: Pick<WireSource, 'filename' | 'mimeType'>)
 }
 
 export function normalizeSource(row: WireSource): SourceItem {
-  const statusKey = String(row.status ?? 'READY').toUpperCase();
+  const statusKey = (row.status ?? 'READY').toUpperCase();
   const metadata = isRecord(row.metadata) ? row.metadata : null;
   const rawIndexProgress = metadata?.index_progress;
   const indexProgress =
@@ -427,7 +427,7 @@ export function normalizeSource(row: WireSource): SourceItem {
     '未知';
 
   return {
-    id: Number(row.id),
+    id: row.id,
     title: row.filename ?? '未命名文件',
     type: formatSourceType(row),
     status: statusLabel,

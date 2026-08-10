@@ -547,7 +547,11 @@ export default function WorkspaceLayout() {
       id: slidesTool ? 'open-slides-studio' : 'recover-slides-workflow',
       label: slidesTool ? '打开 Slides Studio' : '查看 Slides 诊断 / 安装指引',
       icon: '🖼️',
-      action: slidesTool ? () => overlays.openSlidesDialog('config') : handleOpenSlidesRecovery,
+      action: slidesTool
+        ? () => {
+            overlays.openSlidesDialog('config');
+          }
+        : handleOpenSlidesRecovery,
     });
 
     cmds.push({

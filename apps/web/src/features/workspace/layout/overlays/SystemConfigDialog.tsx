@@ -39,7 +39,7 @@ function labelForSource(source: 'builtin' | 'custom') {
 }
 
 function toTextareaValue(value: string | null | undefined) {
-  return (value ?? '').toString();
+  return value ?? '';
 }
 
 export default function SystemConfigDialog({ open, onClose }: SystemConfigDialogProps) {
@@ -280,7 +280,9 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                 </div>
                 <button
                   type="button"
-                  onClick={() => setEditor(null)}
+                  onClick={() => {
+                    setEditor(null);
+                  }}
                   className="text-xs text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200"
                 >
                   取消
@@ -294,9 +296,9 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                   </div>
                   <input
                     value={editor.trigger}
-                    onChange={(e) =>
-                      setEditor((prev) => (prev ? { ...prev, trigger: e.target.value } : prev))
-                    }
+                    onChange={(e) => {
+                      setEditor((prev) => (prev ? { ...prev, trigger: e.target.value } : prev));
+                    }}
                     className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm font-mono text-gray-900 dark:text-slate-100"
                     placeholder="demo"
                     disabled={saving}
@@ -312,9 +314,9 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                   </div>
                   <input
                     value={editor.description}
-                    onChange={(e) =>
-                      setEditor((prev) => (prev ? { ...prev, description: e.target.value } : prev))
-                    }
+                    onChange={(e) => {
+                      setEditor((prev) => (prev ? { ...prev, description: e.target.value } : prev));
+                    }}
                     className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-gray-900 dark:text-slate-100"
                     placeholder="一句话说明这个 preset 的用途…"
                     disabled={saving}
@@ -343,9 +345,9 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                 <textarea
                   id={`system-config-system-prompt-${editor.presetId ?? 'new'}`}
                   value={editor.systemPrompt}
-                  onChange={(e) =>
-                    setEditor((prev) => (prev ? { ...prev, systemPrompt: e.target.value } : prev))
-                  }
+                  onChange={(e) => {
+                    setEditor((prev) => (prev ? { ...prev, systemPrompt: e.target.value } : prev));
+                  }}
                   className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm font-mono text-gray-900 dark:text-slate-100 min-h-[140px]"
                   placeholder="写入将覆盖 QA 的 system message 的内容…"
                   disabled={saving}
@@ -357,9 +359,9 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                   <input
                     type="checkbox"
                     checked={editor.enabled}
-                    onChange={(e) =>
-                      setEditor((prev) => (prev ? { ...prev, enabled: e.target.checked } : prev))
-                    }
+                    onChange={(e) => {
+                      setEditor((prev) => (prev ? { ...prev, enabled: e.target.checked } : prev));
+                    }}
                     disabled={saving}
                   />
                   启用
@@ -414,7 +416,9 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => startCopyBuiltin(preset)}
+                            onClick={() => {
+                              startCopyBuiltin(preset);
+                            }}
                             className="px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-white/80 dark:hover:bg-slate-800 text-[11px]"
                           >
                             复制为自定义
@@ -502,7 +506,9 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
 
                             <button
                               type="button"
-                              onClick={() => startEdit(preset)}
+                              onClick={() => {
+                                startEdit(preset);
+                              }}
                               className="px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 text-[11px] flex items-center gap-1"
                               disabled={!presetId}
                             >
@@ -514,9 +520,9 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                               message={`确认删除 /prompt:${preset.trigger} ?`}
                               onConfirm={() => {
                                 if (!presetId) return;
-                                void deleteCustomPreset(presetId).then(() =>
-                                  toast.success('已删除预设'),
-                                );
+                                void deleteCustomPreset(presetId).then(() => {
+                                  toast.success('已删除预设');
+                                });
                               }}
                               placement="top"
                               disabled={!presetId}

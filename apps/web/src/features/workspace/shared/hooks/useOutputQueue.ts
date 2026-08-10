@@ -249,7 +249,9 @@ export function useOutputQueue({
   }, [outputQueueJobs]);
 
   useEffect(() => {
-    outputAbortControllersRef.current.forEach((controller) => controller.abort());
+    outputAbortControllersRef.current.forEach((controller) => {
+      controller.abort();
+    });
     outputAbortControllersRef.current.clear();
     setOutputQueueJobs([]);
     outputQueueRef.current = [];

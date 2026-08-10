@@ -41,7 +41,9 @@ export function LabForkDialog({
         aria-modal
         aria-labelledby="lab-fork-title"
         className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && canSubmit) onConfirm();
         }}
@@ -60,7 +62,9 @@ export function LabForkDialog({
             <input
               className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2.5 text-xs"
               value={draft.title}
-              onChange={(e) => onChange({ ...draft, title: e.target.value })}
+              onChange={(e) => {
+                onChange({ ...draft, title: e.target.value });
+              }}
               autoFocus
             />
           </label>
@@ -69,7 +73,9 @@ export function LabForkDialog({
             <textarea
               className="mt-1 min-h-[56px] w-full rounded-lg border border-slate-200 px-2.5 py-1.5 font-mono text-xs"
               value={draft.query}
-              onChange={(e) => onChange({ ...draft, query: e.target.value })}
+              onChange={(e) => {
+                onChange({ ...draft, query: e.target.value });
+              }}
             />
           </label>
           <label className="block text-[10px] uppercase tracking-wider text-slate-400">
@@ -77,7 +83,9 @@ export function LabForkDialog({
             <textarea
               className="mt-1 min-h-[64px] w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs"
               value={draft.summary}
-              onChange={(e) => onChange({ ...draft, summary: e.target.value })}
+              onChange={(e) => {
+                onChange({ ...draft, summary: e.target.value });
+              }}
             />
           </label>
         </div>
@@ -136,7 +144,9 @@ export function LabPruneDialog({
         aria-modal
         aria-labelledby="lab-prune-title"
         className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) onConfirm();
         }}
@@ -204,6 +214,8 @@ export function useDialogEscape(open: boolean, onCancel: () => void) {
       if (e.key === 'Escape') onCancel();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
   }, [open, onCancel]);
 }

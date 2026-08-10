@@ -50,7 +50,7 @@ if (typeof window !== 'undefined' && !window.ResizeObserver) {
     unobserve() {}
 
     disconnect() {}
-  } as typeof ResizeObserver;
+  };
 }
 
 if (typeof window !== 'undefined' && !window.IntersectionObserver) {

@@ -330,7 +330,9 @@ export default function StudioOutputsList({
                       <button
                         type="button"
                         className="flex-shrink-0 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 text-[10px] font-semibold text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700"
-                        onClick={() => onCancelOutputJob(note.queueJobId!)}
+                        onClick={() => {
+                          onCancelOutputJob(note.queueJobId!);
+                        }}
                       >
                         取消
                       </button>
@@ -359,7 +361,9 @@ export default function StudioOutputsList({
                     <button
                       type="button"
                       className="flex-shrink-0 rounded-md border border-red-300 bg-white dark:bg-slate-900 px-2 py-1 text-[10px] font-semibold text-red-700 hover:bg-red-100"
-                      onClick={() => onRetryOutputJob(note.queueJobId!)}
+                      onClick={() => {
+                        onRetryOutputJob(note.queueJobId!);
+                      }}
                     >
                       重试
                     </button>
@@ -368,7 +372,9 @@ export default function StudioOutputsList({
                     <button
                       type="button"
                       className="flex-shrink-0 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 text-[10px] font-semibold text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700"
-                      onClick={() => onCancelOutputJob(note.queueJobId!)}
+                      onClick={() => {
+                        onCancelOutputJob(note.queueJobId!);
+                      }}
                     >
                       取消
                     </button>
@@ -434,7 +440,9 @@ export default function StudioOutputsList({
                         variant="text"
                         size="sm"
                         className="opacity-0 group-hover:opacity-100 w-7 h-7 min-w-[28px] rounded-full hover:bg-gray-200 text-gray-500 dark:text-slate-400 transition-opacity"
-                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                        }}
                       >
                         <MoreHorizIcon fontSize="small" />
                       </IconButton>
@@ -445,7 +453,9 @@ export default function StudioOutputsList({
                     >
                       {onSelectOutputFullscreen && note.outputId && (
                         <MenuItem
-                          onClick={() => onSelectOutputFullscreen(note.outputId!)}
+                          onClick={() => {
+                            onSelectOutputFullscreen(note.outputId!);
+                          }}
                           className="flex items-center gap-2 py-2 px-3 text-xs"
                         >
                           <OpenInFullIcon className="h-3.5 w-3.5" />
@@ -472,7 +482,9 @@ export default function StudioOutputsList({
                           </MenuItem>
                         ))}
                       <MenuItem
-                        onClick={() => handleConvertToSource(note.id)}
+                        onClick={() => {
+                          handleConvertToSource(note.id);
+                        }}
                         className="flex items-center gap-2 py-2 px-3 text-xs"
                       >
                         <ConvertIcon className="h-3.5 w-3.5" />
@@ -489,7 +501,9 @@ export default function StudioOutputsList({
                       </MenuItem>
                       <ConfirmPopover
                         message="确定要删除此输出吗？此操作不可撤销。"
-                        onConfirm={() => handleDeleteNote(note.id)}
+                        onConfirm={() => {
+                          handleDeleteNote(note.id);
+                        }}
                         placement="left"
                       >
                         <MenuItem className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700">

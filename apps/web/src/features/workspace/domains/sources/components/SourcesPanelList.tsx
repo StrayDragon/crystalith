@@ -62,7 +62,7 @@ export default function SourcesPanelList({
             <SourceListRow
               source={source}
               isHighlighted={highlightedSourceId === source.id}
-              isSelected={Boolean(selectedSourceIds[source.id])}
+              isSelected={selectedSourceIds[source.id] ?? false}
               isConnected={isConnected}
               removeState={removeState}
               onToggleSource={onToggleSource}

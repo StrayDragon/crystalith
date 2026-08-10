@@ -123,7 +123,7 @@ export function createNodeChatSseResponse(
 ): Response {
   const row = requireRun(notebookId, runId);
   const graph = getGraph(row);
-  const node = graph.nodes.find((n) => n.id === nodeId) as ResearchNode | undefined;
+  const node = graph.nodes.find((n) => n.id === nodeId);
   if (!node) {
     throw new AppHttpError(ErrorCode.NOT_FOUND, `Node ${nodeId} not found`);
   }
@@ -145,7 +145,9 @@ export function createNodeChatSseResponse(
   const key = chatKey(runId, nodeId);
   const ac = new AbortController();
   chatAbortControllers.set(key, ac);
-  const onRequestAbort = () => ac.abort();
+  const onRequestAbort = () => {
+    ac.abort();
+  };
   requestSignal?.addEventListener('abort', onRequestAbort);
 
   updateRun(runId, { llmActivity: 'node_chat', activeNodeId: nodeId });
@@ -218,7 +220,7 @@ export function createNodeChatSseResponse(
             for await (const part of result.stream) {
               if (ac.signal.aborted) break;
               if (part.type === 'text-delta') {
-                const text = 'text' in part ? String(part.text ?? '') : '';
+                const text = 'text' in part ? (part.text ?? '') : '';
                 if (text) emit('chunk', { text });
               } else if (part.type === 'tool-approval-request') {
                 const toolCall = (

@@ -126,7 +126,9 @@ export default function SlidesStudioDialog(props: SlidesStudioDialogProps) {
             <IconButton
               variant="text"
               size="sm"
-              onClick={() => setIsFullscreen((prev) => !prev)}
+              onClick={() => {
+                setIsFullscreen((prev) => !prev);
+              }}
               className="rounded-full"
               aria-label={isFullscreen ? '退出全屏' : '进入全屏'}
             >
@@ -159,7 +161,9 @@ export default function SlidesStudioDialog(props: SlidesStudioDialogProps) {
                       size="sm"
                       variant={activeStage === stage.id ? 'filled' : 'outlined'}
                       color={activeStage === stage.id ? 'blue' : 'gray'}
-                      onClick={() => setActiveStage(stage.id)}
+                      onClick={() => {
+                        setActiveStage(stage.id);
+                      }}
                       disabled={isGenerating}
                     >
                       {stage.label}

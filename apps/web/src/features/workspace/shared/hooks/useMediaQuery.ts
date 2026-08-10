@@ -26,11 +26,15 @@ export function useMediaQuery(query: string, options?: { defaultState?: boolean 
 
     if (typeof mediaQueryList.addEventListener === 'function') {
       mediaQueryList.addEventListener('change', handler);
-      return () => mediaQueryList.removeEventListener('change', handler);
+      return () => {
+        mediaQueryList.removeEventListener('change', handler);
+      };
     }
 
     mediaQueryList.addListener(handler);
-    return () => mediaQueryList.removeListener(handler);
+    return () => {
+      mediaQueryList.removeListener(handler);
+    };
   }, [defaultState, query]);
 
   return matches;

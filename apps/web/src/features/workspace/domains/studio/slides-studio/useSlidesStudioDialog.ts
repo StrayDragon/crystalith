@@ -440,7 +440,9 @@ export function useSlidesStudioDialog({
     const timer = window.setInterval(() => {
       void refreshDraft(draft.id);
     }, 5000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+    };
   }, [draft?.id, isConnected, isPreviewMode, open, queueStatus, refreshDraft]);
 
   useEffect(() => {
@@ -575,7 +577,9 @@ export function useSlidesStudioDialog({
     configThemePreset,
     onConfigThemePresetChange: setConfigThemePreset,
     showAdvanced,
-    onToggleAdvanced: () => setShowAdvanced((prev) => !prev),
+    onToggleAdvanced: () => {
+      setShowAdvanced((prev) => !prev);
+    },
     configFrontmatter,
     onConfigFrontmatterChange: setConfigFrontmatter,
     frontmatterPreview,
@@ -617,7 +621,9 @@ export function useSlidesStudioDialog({
     slidesEngine,
     queueStatus,
     showMarkdownEditor,
-    onToggleMarkdownEditor: () => setShowMarkdownEditor((prev) => !prev),
+    onToggleMarkdownEditor: () => {
+      setShowMarkdownEditor((prev) => !prev);
+    },
     markdown,
     onMarkdownChange: setMarkdown,
     selectionLabel,

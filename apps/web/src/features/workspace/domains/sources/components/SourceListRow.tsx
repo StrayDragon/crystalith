@@ -222,7 +222,9 @@ function SourceListRow({
             <span>
               <Checkbox
                 checked={false}
-                onChange={(event) => onToggleSource(source.id, event.nativeEvent as MouseEvent)}
+                onChange={(event) => {
+                  onToggleSource(source.id, event.nativeEvent as MouseEvent);
+                }}
                 containerProps={{ className: 'p-1' }}
                 className="h-4 w-4 rounded border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"
                 iconProps={{ className: 'text-white' }}
@@ -234,7 +236,9 @@ function SourceListRow({
         ) : (
           <Checkbox
             checked={isSelected}
-            onChange={(event) => onToggleSource(source.id, event.nativeEvent as MouseEvent)}
+            onChange={(event) => {
+              onToggleSource(source.id, event.nativeEvent as MouseEvent);
+            }}
             containerProps={{ className: 'p-1' }}
             className="h-4 w-4 rounded border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"
             iconProps={{ className: 'text-white' }}

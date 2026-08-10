@@ -17,9 +17,13 @@ import { ToastContainer } from '../shared/toast';
 function useLocationKey(): string {
   const [key, setKey] = useState(() => `${window.location.pathname}${window.location.search}`);
   useEffect(() => {
-    const sync = () => setKey(`${window.location.pathname}${window.location.search}`);
+    const sync = () => {
+      setKey(`${window.location.pathname}${window.location.search}`);
+    };
     window.addEventListener('popstate', sync);
-    return () => window.removeEventListener('popstate', sync);
+    return () => {
+      window.removeEventListener('popstate', sync);
+    };
   }, []);
   return key;
 }

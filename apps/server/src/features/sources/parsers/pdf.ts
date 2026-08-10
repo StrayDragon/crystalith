@@ -15,7 +15,7 @@ export const pdfParser: Parser = {
     const pageTexts = Array.isArray(pages) ? pages : [pages];
 
     const typedPages = pageTexts.map((pageText, i) => ({
-      text: String(pageText),
+      text: pageText,
       metadata: { page: i + 1 },
     }));
 

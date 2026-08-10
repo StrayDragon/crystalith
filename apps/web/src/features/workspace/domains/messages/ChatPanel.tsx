@@ -218,7 +218,9 @@ function ChatPanel({
     const success = await copyToClipboard(content);
     if (success) {
       setCopiedId(messageId);
-      setTimeout(() => setCopiedId(null), 2000);
+      setTimeout(() => {
+        setCopiedId(null);
+      }, 2000);
     }
   }, []);
 
@@ -312,13 +314,13 @@ function ChatPanel({
                 </MenuHandler>
                 <MenuList className="p-1 min-w-[160px]" style={{ zIndex: LAYER_LEVELS.dropdown }}>
                   <MenuItem
-                    onClick={() =>
+                    onClick={() => {
                       exportQaMarkdownDownload({
                         notebookId: notebookId ?? 0,
                         sessionId: sessionId ?? 0,
                         messageId: numericMessageId,
-                      })
-                    }
+                      });
+                    }}
                     className="flex items-center gap-2 py-2 px-3 text-xs"
                   >
                     <span>导出 Markdown</span>
@@ -618,19 +620,21 @@ function ChatPanel({
                 event.currentTarget.selectionStart ?? event.currentTarget.value.length,
               );
             }}
-            onBlur={() => closeCommandMenu()}
-            onClick={(event) =>
+            onBlur={() => {
+              closeCommandMenu();
+            }}
+            onClick={(event) => {
               updateCommandMenu(
                 event.currentTarget.value,
                 event.currentTarget.selectionStart ?? event.currentTarget.value.length,
-              )
-            }
-            onKeyUp={(event) =>
+              );
+            }}
+            onKeyUp={(event) => {
               updateCommandMenu(
                 event.currentTarget.value,
                 event.currentTarget.selectionStart ?? event.currentTarget.value.length,
-              )
-            }
+              );
+            }}
             disabled={isSending || isBlocked}
             aria-label="对话输入"
             placeholder={isBlocked ? '请先创建笔记本' : '开始输入...'}

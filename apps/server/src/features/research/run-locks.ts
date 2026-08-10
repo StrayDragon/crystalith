@@ -67,7 +67,7 @@ export async function withRunLlmLock<T>(runId: number, fn: AsyncFn<T>): Promise<
  */
 export async function withRunLlmLockReleased<T>(fn: AsyncFn<T>): Promise<T> {
   const ctx = llmAls.getStore();
-  if (!ctx || ctx.released) return await fn();
+  if (!ctx || ctx.released) return fn();
   ctx.released = true;
   releaseRunLlmLock(ctx.runId);
   try {

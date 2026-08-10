@@ -100,7 +100,12 @@ export function SlidesStageActions({
   if (activeStage === 'outline') {
     return (
       <div className="flex gap-2">
-        <Button variant="outlined" onClick={() => onSetActiveStage('input')}>
+        <Button
+          variant="outlined"
+          onClick={() => {
+            onSetActiveStage('input');
+          }}
+        >
           返回输入
         </Button>
         <Button variant="outlined" onClick={onSaveOutline} disabled={isGenerating || !isConnected}>
@@ -115,7 +120,12 @@ export function SlidesStageActions({
 
   return (
     <div className="flex gap-2">
-      <Button variant="outlined" onClick={() => onSetActiveStage('outline')}>
+      <Button
+        variant="outlined"
+        onClick={() => {
+          onSetActiveStage('outline');
+        }}
+      >
         返回大纲
       </Button>
       <Button variant="outlined" onClick={onSaveMarkdown} disabled={isGenerating || !isConnected}>

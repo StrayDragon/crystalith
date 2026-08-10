@@ -159,7 +159,9 @@ function SourceConnectorSelectStep({
           <button
             key={connector.connectorId}
             type="button"
-            onClick={() => onSelectConnector(connector.connectorId)}
+            onClick={() => {
+              onSelectConnector(connector.connectorId);
+            }}
             {...tid(`${TestIds.sourcesConnectorsOption}-${connector.connectorId}`)}
             className={`w-full text-left rounded-xl border px-4 py-3 transition-colors ${
               selected
@@ -263,7 +265,9 @@ function SourceConnectorConfigStep({
               <select
                 className="mt-1 w-full rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-gray-900 dark:text-slate-100"
                 value={typeof current === 'string' ? current : ''}
-                onChange={(e) => onUpdateConfig(key, e.target.value, typeHint)}
+                onChange={(e) => {
+                  onUpdateConfig(key, e.target.value, typeHint);
+                }}
               >
                 <option value="">请选择…</option>
                 {enumValues.map((v: unknown) => {
@@ -288,7 +292,9 @@ function SourceConnectorConfigStep({
               <input
                 type="checkbox"
                 checked={Boolean(current)}
-                onChange={(e) => onUpdateConfig(key, e.target.checked, typeHint)}
+                onChange={(e) => {
+                  onUpdateConfig(key, e.target.checked, typeHint);
+                }}
                 className="mt-0.5"
               />
               <div className="min-w-0">
@@ -322,7 +328,9 @@ function SourceConnectorConfigStep({
               type={inputType}
               className="mt-1 w-full rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-gray-900 dark:text-slate-100"
               value={typeof current === 'string' ? current : ''}
-              onChange={(e) => onUpdateConfig(key, e.target.value, typeHint)}
+              onChange={(e) => {
+                onUpdateConfig(key, e.target.value, typeHint);
+              }}
               placeholder={key}
               {...tid(`${TestIds.sourcesConnectorsConfigField}-${key}`)}
             />
@@ -375,7 +383,9 @@ function SourceConnectorSnapshotStep({
         <input
           className="mt-1 w-full rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-gray-900 dark:text-slate-100"
           value={snapshotFilter}
-          onChange={(e) => onSnapshotFilterChange(e.target.value)}
+          onChange={(e) => {
+            onSnapshotFilterChange(e.target.value);
+          }}
           placeholder="按路径包含匹配"
         />
       </label>
@@ -467,10 +477,10 @@ function SourceConnectorScopeStep({
               >
                 <input
                   type="checkbox"
-                  checked={Boolean(selectedDirs[dir])}
-                  onChange={(e) =>
-                    onSelectedDirsChange((prev) => ({ ...prev, [dir]: e.target.checked }))
-                  }
+                  checked={selectedDirs[dir] ?? false}
+                  onChange={(e) => {
+                    onSelectedDirsChange((prev) => ({ ...prev, [dir]: e.target.checked }));
+                  }}
                 />
                 <span className="text-xs font-mono text-gray-900 dark:text-slate-100 truncate">
                   {dir}
@@ -492,13 +502,13 @@ function SourceConnectorScopeStep({
               >
                 <input
                   type="checkbox"
-                  checked={Boolean(selectedFiles[entry.relativePath])}
-                  onChange={(e) =>
+                  checked={selectedFiles[entry.relativePath] ?? false}
+                  onChange={(e) => {
                     onSelectedFilesChange((prev) => ({
                       ...prev,
                       [entry.relativePath]: e.target.checked,
-                    }))
-                  }
+                    }));
+                  }}
                 />
                 <span className="text-xs font-mono text-gray-900 dark:text-slate-100 truncate">
                   {entry.relativePath}

@@ -116,7 +116,9 @@ function ToolsPopover({
       onClose();
     };
     window.addEventListener('keydown', handleKeyDown, true);
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+    };
   }, [open, onClose]);
 
   return (
@@ -261,7 +263,9 @@ function StudioPanel({
       noteEditorBodyRef.current?.querySelector<HTMLTextAreaElement>('textarea')?.focus();
     }, 0);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+    };
   }, [noteEditorOpen]);
 
   return (
@@ -364,7 +368,9 @@ function StudioPanel({
               rows={8}
               placeholder="在此输入笔记内容..."
               value={noteEditorContent}
-              onChange={(e) => setNoteEditorContent(e.target.value)}
+              onChange={(e) => {
+                setNoteEditorContent(e.target.value);
+              }}
               className="!border-t-blue-gray-200 focus:!border-t-gray-900"
               labelProps={{
                 className: 'before:content-none after:content-none',

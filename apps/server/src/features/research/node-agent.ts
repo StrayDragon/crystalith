@@ -29,8 +29,7 @@ function wrapToolIoOutsideLlmLock<T extends { execute?: (...args: never[]) => un
   if (typeof execute !== 'function') return t;
   return {
     ...t,
-    execute: async (...args: never[]) =>
-      withRunLlmLockReleased(() => execute(...args) as ReturnType<typeof execute>),
+    execute: async (...args: never[]) => withRunLlmLockReleased(() => execute(...args)),
   };
 }
 export type ResearchAgentMode = 'work_unit' | 'node_chat';

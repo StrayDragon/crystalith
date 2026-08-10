@@ -15,7 +15,13 @@ function ChunkItem({ chunk }: { chunk: ChunkRead }) {
 
   return (
     <div className="border border-gray-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 hover:border-gray-300 dark:border-slate-600 transition-colors">
-      <button type="button" className="w-full p-3 text-left" onClick={() => setExpanded(!expanded)}>
+      <button
+        type="button"
+        className="w-full p-3 text-left"
+        onClick={() => {
+          setExpanded(!expanded);
+        }}
+      >
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-xs font-medium">

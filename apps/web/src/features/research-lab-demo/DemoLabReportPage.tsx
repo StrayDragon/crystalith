@@ -401,7 +401,9 @@ export default function DemoLabReportPage({ notebookId }: DemoLabReportPageProps
       <header className="flex shrink-0 items-center gap-2 border-b border-gray-200 bg-white px-3 py-2 shadow-sm">
         <button
           type="button"
-          onClick={() => navigateToDemoResearchLab(notebookId)}
+          onClick={() => {
+            navigateToDemoResearchLab(notebookId);
+          }}
           className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
           {...tid(TestIds.researchLabBack)}
         >
@@ -439,7 +441,9 @@ export default function DemoLabReportPage({ notebookId }: DemoLabReportPageProps
           <select
             className="max-w-[160px] rounded-md border border-gray-200 bg-white px-2 py-1.5 text-[11px] text-gray-700"
             value={activeRevId}
-            onChange={(e) => switchRevision(e.target.value)}
+            onChange={(e) => {
+              switchRevision(e.target.value);
+            }}
             title="切换报告轮次（每轮绑定思考图）"
             {...tid(TestIds.researchLabRevisionSelect)}
           >
@@ -549,7 +553,9 @@ export default function DemoLabReportPage({ notebookId }: DemoLabReportPageProps
               role="switch"
               aria-checked={showCitations}
               title={showCitations ? '隐藏引用' : '显示引用'}
-              onClick={() => setShowCitations((v) => !v)}
+              onClick={() => {
+                setShowCitations((v) => !v);
+              }}
               className={`ml-1 inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] transition-colors ${
                 showCitations
                   ? 'text-gray-600 hover:bg-gray-100'

@@ -121,7 +121,9 @@ export default function AddSourceFromUrlDialog({
           <div className="flex items-center gap-2 mb-2">
             <button
               type="button"
-              onClick={() => setMode('link')}
+              onClick={() => {
+                setMode('link');
+              }}
               {...tid(TestIds.urlImportModeLink)}
               className={`px-2.5 py-1 rounded-lg border text-xs flex items-center gap-1.5 ${
                 mode === 'link'
@@ -134,7 +136,9 @@ export default function AddSourceFromUrlDialog({
             </button>
             <button
               type="button"
-              onClick={() => setMode('fetch')}
+              onClick={() => {
+                setMode('fetch');
+              }}
               {...tid(TestIds.urlImportModeFetch)}
               className={`px-2.5 py-1 rounded-lg border text-xs flex items-center gap-1.5 ${
                 mode === 'fetch'
@@ -152,7 +156,9 @@ export default function AddSourceFromUrlDialog({
             <input
               ref={urlInputRef}
               value={url}
-              onChange={(event) => setUrl(event.target.value)}
+              onChange={(event) => {
+                setUrl(event.target.value);
+              }}
               placeholder="https://example.com/article"
               aria-label="URL"
               {...tid(TestIds.urlImportInput)}

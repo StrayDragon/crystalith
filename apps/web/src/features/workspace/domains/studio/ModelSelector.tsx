@@ -128,7 +128,9 @@ export function ModelSelector({
         // intentionally || — null value becomes empty string for controlled select
         // oxlint-disable-next-line typescript/prefer-nullish-coalescing
         value={value || ''}
-        onChange={(val) => handleChange(val)}
+        onChange={(val) => {
+          handleChange(val);
+        }}
         disabled={disabled}
         size={size}
       >

@@ -282,7 +282,9 @@ function getAutoCollapsed(
   const set = new Set<string>();
   const traverse = (n: MindmapNode, d: number, p: string) => {
     if (d >= maxDepth && n.children?.length) set.add(p);
-    (n.children ?? []).forEach((c, i) => traverse(c, d + 1, `${p}-${i}`));
+    (n.children ?? []).forEach((c, i) => {
+      traverse(c, d + 1, `${p}-${i}`);
+    });
   };
   if (maxDepth > 0) traverse(node, depth, prefix);
   return set;
@@ -312,7 +314,9 @@ function InnerFlow({ data, autoCollapseDepth, isDarkTheme }: InnerFlowProps) {
     const timer = setTimeout(() => {
       void fitView({ padding: 0.2 });
     }, 100);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+    };
   }, [nodes, fitView]);
 
   const toggle = useCallback((id: string) => {
@@ -327,7 +331,9 @@ function InnerFlow({ data, autoCollapseDepth, isDarkTheme }: InnerFlowProps) {
     });
   }, []);
 
-  const expandAll = useCallback(() => setCollapsed(new Set()), []);
+  const expandAll = useCallback(() => {
+    setCollapsed(new Set());
+  }, []);
 
   const collapseAll = useCallback(() => {
     if (!data?.root) return;
@@ -335,11 +341,15 @@ function InnerFlow({ data, autoCollapseDepth, isDarkTheme }: InnerFlowProps) {
     const visit = (n: MindmapNode, p: string) => {
       if (n.children?.length) {
         all.add(p);
-        n.children.forEach((c, i) => visit(c, `${p}-${i}`));
+        n.children.forEach((c, i) => {
+          visit(c, `${p}-${i}`);
+        });
       }
     };
     if (data.root.children?.length) all.add('root');
-    data.root.children?.forEach((c, i) => visit(c, `root-${i}`));
+    data.root.children?.forEach((c, i) => {
+      visit(c, `root-${i}`);
+    });
     setCollapsed(all);
   }, [data]);
 

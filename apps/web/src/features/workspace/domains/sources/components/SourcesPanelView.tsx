@@ -130,7 +130,9 @@ function SourcesPanelView({
     const start = window.requestAnimationFrame(() => {
       setHighlightedSourceId(jumpToSource.id);
     });
-    const timer = window.setTimeout(() => setHighlightedSourceId(null), 1500);
+    const timer = window.setTimeout(() => {
+      setHighlightedSourceId(null);
+    }, 1500);
     return () => {
       window.cancelAnimationFrame(start);
       window.clearTimeout(timer);
@@ -163,7 +165,9 @@ function SourcesPanelView({
           onRetryUpload={onRetryUpload}
           onClearUploadQueue={onClearUploadQueue}
           fileInputRef={fileInputRef}
-          onOpenConnectors={() => setConnectorsOpen(true)}
+          onOpenConnectors={() => {
+            setConnectorsOpen(true);
+          }}
           onOpenUrlImport={onOpenUrlImport}
           extractorTooltip={[
             `提取器：${extractorModeLabel}`,
@@ -174,7 +178,9 @@ function SourcesPanelView({
           ]
             .filter(Boolean)
             .join(' · ')}
-          onOpenExtractorPolicy={() => setExtractorPolicyOpen(true)}
+          onOpenExtractorPolicy={() => {
+            setExtractorPolicyOpen(true);
+          }}
         />
       </div>
 
@@ -241,7 +247,9 @@ function SourcesPanelView({
 
       <ExtractorPolicyDialog
         open={extractorPolicyOpen}
-        onClose={() => setExtractorPolicyOpen(false)}
+        onClose={() => {
+          setExtractorPolicyOpen(false);
+        }}
         isConnected={isConnected}
         isLoading={extractorsLoading}
         extractors={extractors}
@@ -253,7 +261,9 @@ function SourcesPanelView({
 
       <SourceConnectorsDialog
         open={connectorsOpen}
-        onClose={() => setConnectorsOpen(false)}
+        onClose={() => {
+          setConnectorsOpen(false);
+        }}
         notebookId={notebookId}
         isConnected={isConnected}
         onSourcesChanged={onRefreshSources}

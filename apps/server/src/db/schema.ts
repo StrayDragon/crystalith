@@ -320,7 +320,7 @@ export const sourceConnectorBindings = sqliteTable(
       .notNull()
       .references(() => notebooks.id, { onDelete: 'cascade' }),
     connectorId: text('connector_id').notNull(),
-    connectionConfig: jsonReq<Record<string, unknown>>('connection_config'),
+    connectionConfig: jsonReq('connection_config'),
     importScope: json<ImportScope | null>('import_scope'),
     lastConfirmedSnapshot: json<Snapshot | null>('last_confirmed_snapshot'),
     lastSyncCheckResult: json<SyncCheckResult | null>('last_sync_check_result'),

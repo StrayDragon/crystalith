@@ -46,13 +46,17 @@ export function SlidesInputStage({
       <Input
         label="演示标题"
         value={title}
-        onChange={(event) => onTitleChange(event.target.value)}
+        onChange={(event) => {
+          onTitleChange(event.target.value);
+        }}
         crossOrigin="anonymous"
       />
       <Textarea
         label="演示说明"
         value={prompt}
-        onChange={(event) => onPromptChange(event.target.value)}
+        onChange={(event) => {
+          onPromptChange(event.target.value);
+        }}
         rows={5}
       />
       <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 p-3 space-y-3">
@@ -93,7 +97,9 @@ export function SlidesInputStage({
             <select
               className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-xs text-gray-700 dark:text-slate-200"
               value={configQuantity}
-              onChange={(event) => onConfigQuantityChange(event.target.value)}
+              onChange={(event) => {
+                onConfigQuantityChange(event.target.value);
+              }}
               name="slideQuantity"
             >
               {quantityOptions.map((option) => (
@@ -108,7 +114,9 @@ export function SlidesInputStage({
             <select
               className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-xs text-gray-700 dark:text-slate-200"
               value={configStructure}
-              onChange={(event) => onConfigStructureChange(event.target.value)}
+              onChange={(event) => {
+                onConfigStructureChange(event.target.value);
+              }}
               name="slideStructure"
             >
               {structureOptions.map((option) => (
@@ -123,7 +131,9 @@ export function SlidesInputStage({
             <select
               className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-xs text-gray-700 dark:text-slate-200"
               value={configAudience}
-              onChange={(event) => onConfigAudienceChange(event.target.value)}
+              onChange={(event) => {
+                onConfigAudienceChange(event.target.value);
+              }}
               name="slideAudience"
             >
               {audienceOptions.map((option) => (
@@ -138,7 +148,9 @@ export function SlidesInputStage({
             <select
               className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-xs text-gray-700 dark:text-slate-200"
               value={configTone}
-              onChange={(event) => onConfigToneChange(event.target.value)}
+              onChange={(event) => {
+                onConfigToneChange(event.target.value);
+              }}
               name="slideTone"
             >
               {toneOptions.map((option) => (
@@ -153,7 +165,9 @@ export function SlidesInputStage({
             <select
               className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-xs text-gray-700 dark:text-slate-200"
               value={configLanguage}
-              onChange={(event) => onConfigLanguageChange(event.target.value)}
+              onChange={(event) => {
+                onConfigLanguageChange(event.target.value);
+              }}
               name="slideLanguage"
             >
               {languageOptions.map((option) => (
@@ -168,7 +182,9 @@ export function SlidesInputStage({
             <select
               className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-xs text-gray-700 dark:text-slate-200"
               value={configDensity}
-              onChange={(event) => onConfigDensityChange(event.target.value)}
+              onChange={(event) => {
+                onConfigDensityChange(event.target.value);
+              }}
               name="slideDensity"
             >
               {densityOptions.map((option) => (
@@ -183,7 +199,9 @@ export function SlidesInputStage({
             <select
               className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-xs text-gray-700 dark:text-slate-200"
               value={configThemePreset}
-              onChange={(event) => onConfigThemePresetChange(event.target.value)}
+              onChange={(event) => {
+                onConfigThemePresetChange(event.target.value);
+              }}
               name="slideThemePreset"
             >
               {themePresetOptions.map((option) => (
@@ -205,7 +223,9 @@ export function SlidesInputStage({
               </Typography>
               <Textarea
                 value={configFrontmatter}
-                onChange={(event) => onConfigFrontmatterChange(event.target.value)}
+                onChange={(event) => {
+                  onConfigFrontmatterChange(event.target.value);
+                }}
                 rows={5}
                 className="font-mono text-[11px]"
                 placeholder={

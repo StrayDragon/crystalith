@@ -189,8 +189,12 @@ export default function WorkspaceHeader({
             createState={createState}
             createError={createError}
             request={notebookSwitcherRequest}
-            onToggle={() => setNotebookSwitcherOpen(true)}
-            onClose={() => setNotebookSwitcherOpen(false)}
+            onToggle={() => {
+              setNotebookSwitcherOpen(true);
+            }}
+            onClose={() => {
+              setNotebookSwitcherOpen(false);
+            }}
             onSelect={onSelectNotebook}
             onUpdate={onUpdateNotebook}
             onDelete={onDeleteNotebook}
@@ -233,7 +237,9 @@ export default function WorkspaceHeader({
           {/* Task inbox (deep research runs) — before avatar */}
           <ResearchTasksTrigger
             notebookId={activeNotebookId}
-            onOpen={() => setTasksDrawerOpen(true)}
+            onOpen={() => {
+              setTasksDrawerOpen(true);
+            }}
           />
 
           {/* Avatar dropdown — consolidates all controls */}
@@ -330,7 +336,9 @@ export default function WorkspaceHeader({
                 return (
                   <MenuItem
                     key={option.value}
-                    onClick={() => setTheme(option.value)}
+                    onClick={() => {
+                      setTheme(option.value);
+                    }}
                     className={`flex items-center gap-2.5 py-2 px-3 text-xs rounded-lg ${
                       isActive
                         ? 'bg-blue-50 dark:bg-slate-700 text-blue-700 dark:text-blue-300'
@@ -414,7 +422,9 @@ export default function WorkspaceHeader({
       </header>
       <ResearchTasksDrawer
         open={tasksDrawerOpen}
-        onClose={() => setTasksDrawerOpen(false)}
+        onClose={() => {
+          setTasksDrawerOpen(false);
+        }}
         notebookId={activeNotebookId}
         onSelectTask={(task) => {
           setTasksDrawerOpen(false);
