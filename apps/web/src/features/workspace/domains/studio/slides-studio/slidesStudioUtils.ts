@@ -129,17 +129,14 @@ export async function waitForSlidevPreviewReady(
     } catch {
       // Connection refused / abort while Slidev restarts.
     }
-    await new Promise<void>((resolve) => {
-      const timer = setTimeout(resolve, intervalMs);
-      signal?.addEventListener(
-        'abort',
-        () => {
-          clearTimeout(timer);
-          resolve();
-        },
-        { once: true },
-      );
-    });
+    await Promise.race([
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, intervalMs);
+      }),
+      new Promise<void>((resolve) => {
+        signal?.addEventListener('abort', () => resolve(), { once: true });
+      }),
+    ]);
   }
   return false;
 }

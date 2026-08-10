@@ -54,14 +54,14 @@ vi.mock('../../api/stream', () => ({
 
 // Mock reason: assert stopStream-before-cancel without HTTP.
 vi.mock('./edenCancelFlow', () => ({
-  cancelActiveEdenRun: (...args: unknown[]) => cancelActiveEdenRun(...args),
+  cancelActiveEdenRun,
 }));
 
 vi.mock('./edenResearchApi', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./edenResearchApi')>();
   return {
     ...actual,
-    createResearchRun: (...args: unknown[]) => createResearchRun(...args),
+    createResearchRun,
     listProgress: vi.fn(async () => ({ items: [], nextAfterSeq: 0 })),
     getResearchRun: vi.fn(async (_nid: number, rid: number) => ({
       id: rid,
