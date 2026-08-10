@@ -3,13 +3,15 @@
  */
 import type {
   ResearchDepth,
-  ResearchGraphPatch,
   ResearchProgressEvent,
   ResearchRun,
   ResearchRunStatus,
+  ResearchStreamEvent,
 } from '@crystalith/shared';
+import { ResearchStreamEventSchema } from '@crystalith/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { parseServerError } from '../../api/parseServerError';
 import { streamRequest } from '../../api/stream';
 import { applyGraphPatch } from './applyGraphPatch';
 import { confirmHighlightIds } from './confirmHighlight';
@@ -106,19 +108,21 @@ function toLedgerItem(ev: ResearchProgressEvent): LabProgressLedgerItem {
   };
 }
 
-function sseToLedgerItem(data: {
-  seq?: number;
-  kind?: string;
-  at?: string;
-  nodeId?: string;
-  headline?: string;
-  payload?: Record<string, unknown>;
-}): LabProgressLedgerItem | null {
-  if (typeof data.seq !== 'number' || !data.kind) return null;
+function parseResearchStreamEvent(ev: {
+  event: string;
+  data: unknown;
+}): ResearchStreamEvent | null {
+  const parsed = ResearchStreamEventSchema.safeParse(ev);
+  return parsed.success ? parsed.data : null;
+}
+
+function sseToLedgerItem(
+  data: Extract<ResearchStreamEvent, { event: 'progress' }>['data'],
+): LabProgressLedgerItem {
   return {
     id: `sse_${data.seq}`,
     seq: data.seq,
-    at: data.at ?? new Date().toISOString(),
+    at: data.at,
     kind: data.kind,
     nodeId: data.nodeId ?? null,
     headline: data.headline ?? null,
@@ -210,79 +214,82 @@ export function useEdenLabController(
             { signal: ac.signal },
           )) {
             if (ac.signal.aborted) break;
-            if (ev.event === 'status') {
-              const data = ev.data as { status?: ResearchRunStatus; reason?: string };
-              const nextStatus = data.status;
-              if (nextStatus && TERMINAL_STATUSES.has(nextStatus)) {
-                if (data.reason) pushLog(data.reason);
-                else pushLog(`状态 → ${nextStatus}`);
+            const typed = parseResearchStreamEvent(ev);
+            if (!typed) {
+              if (import.meta.env.DEV) {
+                pushLog(`SSE：跳过无效事件 ${ev.event}`);
+              }
+              continue;
+            }
+            switch (typed.event) {
+              case 'status': {
+                const { status: nextStatus, reason } = typed.data;
+                if (TERMINAL_STATUSES.has(nextStatus)) {
+                  if (reason) pushLog(reason);
+                  else pushLog(`状态 → ${nextStatus}`);
+                  try {
+                    const fresh = await getResearchRun(notebookId, rid);
+                    applyRun(fresh);
+                  } catch {
+                    setRun((prev) => (prev ? { ...prev, status: nextStatus } : prev));
+                  }
+                  stopStream();
+                  refreshResearchTasks(notebookId);
+                  void pullProgress(rid, progressSeqRef.current);
+                } else {
+                  setRun((prev) => (prev ? { ...prev, status: nextStatus } : prev));
+                  if (reason) pushLog(reason);
+                  else pushLog(`状态 → ${nextStatus}`);
+                  refreshResearchTasks(notebookId);
+                }
+                break;
+              }
+              case 'graph_patch': {
+                const patch = typed.data;
+                setRun((prev) => {
+                  if (!prev) return prev;
+                  const g = applyGraphPatch({ nodes: prev.nodes, edges: prev.edges }, patch);
+                  return { ...prev, nodes: g.nodes, edges: g.edges };
+                });
+                setReshaping(true);
+                window.setTimeout(() => {
+                  setReshaping(false);
+                }, 400);
+                break;
+              }
+              case 'confirm': {
+                const data = typed.data;
+                setRun((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        status: 'awaiting_confirm',
+                        confirmKind: data.kind,
+                        confirmBranchNodeId: data.branchNodeId ?? prev.confirmBranchNodeId,
+                      }
+                    : prev,
+                );
+                pushLog(`等待确认：${data.kind}`);
+                refreshResearchTasks(notebookId);
+                break;
+              }
+              case 'report_ready': {
+                pushLog('报告已就绪');
                 try {
                   const fresh = await getResearchRun(notebookId, rid);
                   applyRun(fresh);
                 } catch {
-                  setRun((prev) => (prev ? { ...prev, status: nextStatus } : prev));
+                  /* ignore refresh errors */
                 }
-                stopStream();
                 refreshResearchTasks(notebookId);
-                void pullProgress(rid, progressSeqRef.current);
-              } else {
-                setRun((prev) => (prev ? { ...prev, status: nextStatus ?? prev.status } : prev));
-                if (data.reason) pushLog(data.reason);
-                else if (nextStatus) pushLog(`状态 → ${nextStatus}`);
-                refreshResearchTasks(notebookId);
+                break;
               }
-            } else if (ev.event === 'graph_patch') {
-              const patch = ev.data as ResearchGraphPatch;
-              setRun((prev) => {
-                if (!prev) return prev;
-                const g = applyGraphPatch({ nodes: prev.nodes, edges: prev.edges }, patch);
-                return { ...prev, nodes: g.nodes, edges: g.edges };
-              });
-              setReshaping(true);
-              window.setTimeout(() => {
-                setReshaping(false);
-              }, 400);
-            } else if (ev.event === 'confirm') {
-              const data = ev.data as {
-                kind?: 'budget' | 'expand_branch' | 'reexpand';
-                branchNodeId?: string;
-              };
-              setRun((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      status: 'awaiting_confirm',
-                      confirmKind: data.kind ?? prev.confirmKind,
-                      confirmBranchNodeId: data.branchNodeId ?? prev.confirmBranchNodeId,
-                    }
-                  : prev,
-              );
-              pushLog(`等待确认：${data.kind ?? 'confirm'}`);
-              refreshResearchTasks(notebookId);
-            } else if (ev.event === 'report_ready') {
-              pushLog('报告已就绪');
-              try {
-                const fresh = await getResearchRun(notebookId, rid);
-                applyRun(fresh);
-              } catch {
-                /* ignore refresh errors */
+              case 'log': {
+                pushLog(typed.data.message);
+                break;
               }
-              refreshResearchTasks(notebookId);
-            } else if (ev.event === 'log') {
-              const data = ev.data as { message?: string };
-              if (data.message) pushLog(data.message);
-            } else if (ev.event === 'progress') {
-              const data = ev.data as {
-                seq?: number;
-                kind?: string;
-                at?: string;
-                nodeId?: string;
-                headline?: string;
-                message?: string;
-                payload?: Record<string, unknown>;
-              };
-              const item = sseToLedgerItem(data);
-              if (item) {
+              case 'progress': {
+                const item = sseToLedgerItem(typed.data);
                 setProgressEvents((prev) => {
                   const next = mergeProgressBySeq(prev, [item]);
                   progressSeqRef.current = lastProgressSeq(next);
@@ -290,16 +297,15 @@ export function useEdenLabController(
                 });
                 if (item.headline) pushLog(item.headline);
                 else pushLog(`进度：${item.kind}`);
-              } else if (data.message) {
-                pushLog(data.message);
-              } else if (data.kind) {
-                pushLog(`进度：${data.kind}`);
+                break;
               }
-            } else if (ev.event === 'error') {
-              const data = ev.data as { message?: string; errorCode?: string };
-              const msg = data.message ?? data.errorCode ?? '流错误';
-              setLastError(msg);
-              pushLog(msg);
+              case 'error': {
+                const { message, errorCode } = typed.data;
+                const msg = message || errorCode || '流错误';
+                setLastError(msg);
+                pushLog(msg);
+                break;
+              }
             }
           }
         } catch (error) {
@@ -415,15 +421,13 @@ export function useEdenLabController(
         refreshResearchTasks(notebookId);
         return next;
       } catch (error) {
-        const err = error as Error & { errorCode?: string };
-        const base = err instanceof Error ? err.message : String(error);
-        const code = typeof err.errorCode === 'string' ? err.errorCode : undefined;
+        const { errorCode, message } = parseServerError(error);
         const msg =
-          code === 'RESEARCH_BUDGET' || code === 'RESEARCH_INVALID_STATE'
-            ? `[${code}] ${base}`
-            : code
-              ? `[${code}] ${base}`
-              : base;
+          errorCode === 'RESEARCH_BUDGET' || errorCode === 'RESEARCH_INVALID_STATE'
+            ? `[${errorCode}] ${message}`
+            : errorCode
+              ? `[${errorCode}] ${message}`
+              : message;
         setLastError(msg);
         pushLog(msg);
         throw error;
