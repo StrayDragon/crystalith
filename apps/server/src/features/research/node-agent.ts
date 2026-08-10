@@ -10,7 +10,7 @@ import type {
   ResearchNodeActionProposal,
   ResearchNodeRole,
 } from '@crystalith/shared';
-import { isStepCount, tool, ToolLoopAgent } from 'ai';
+import { isStepCount, tool, ToolLoopAgent, type ToolLoopAgentSettings, type ToolSet } from 'ai';
 import { z } from 'zod';
 
 import { withRetry } from '../../ai/middleware.ts';
@@ -53,6 +53,9 @@ export const ResearchNodeAgentCallOptionsSchema = z.object({
   searchSoft: z.number().int().positive().optional(),
 });
 export type ResearchNodeAgentCallOptions = z.infer<typeof ResearchNodeAgentCallOptionsSchema>;
+
+/** Agent with typed call options; tool bag stays `ToolSet` (swapped in prepareCall). */
+export type ResearchNodeAgent = ToolLoopAgent<ResearchNodeAgentCallOptions, ToolSet>;
 
 const STRUCTURE_TOOL_NAMES = [
   'propose_prune',
@@ -228,7 +231,9 @@ function workInstructions(options: ResearchNodeAgentCallOptions): string {
     .join('\n');
 }
 
-export async function createResearchNodeAgent(notebookId: number) {
+export async function createResearchNodeAgent(
+  notebookId: number,
+): Promise<ResearchNodeAgent | null> {
   const modelConfig = getDefaultChatModel();
   if (!modelConfig) return null;
   const model = withRetry(await resolveModel(modelConfig));
@@ -239,17 +244,16 @@ export async function createResearchNodeAgent(notebookId: number) {
     useNotebookSources: true,
   });
 
-  // AI SDK ToolLoopAgent tool generics are brittle across prepareCall tool bags;
-  // validate behavior via tests rather than fighting the inference graph here.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const settings: any = {
+  // prepareCall swaps the tool bag per mode; keep TOOLS = ToolSet and type CALL_OPTIONS
+  // so stream({ options }) is typed without call-site `as never`.
+  const settings = {
     id: 'research-node-agent',
     model,
     callOptionsSchema: ResearchNodeAgentCallOptionsSchema,
     tools: {
       ...structure,
       ...baseWork,
-    },
+    } as ToolSet,
     prepareCall: (callArgs: { options: ResearchNodeAgentCallOptions; [key: string]: unknown }) => {
       const options = callArgs.options;
       const { options: _opts, ...rest } = callArgs;
@@ -261,7 +265,7 @@ export async function createResearchNodeAgent(notebookId: number) {
       const tools = {
         ...structure,
         ...work,
-      };
+      } as ToolSet;
       const workActive = [
         ...(options.allowWeb ? (['webSearch', 'fetchPage'] as const) : []),
         ...(options.useNotebookSources ? (['retrieveSources'] as const) : []),
@@ -314,5 +318,8 @@ export async function createResearchNodeAgent(notebookId: number) {
     },
   };
 
-  return new ToolLoopAgent(settings);
+  // Single construction boundary: prepareCall return shape vs ToolLoopAgentSettings Pick.
+  return new ToolLoopAgent(
+    settings as unknown as ToolLoopAgentSettings<ResearchNodeAgentCallOptions, ToolSet>,
+  );
 }

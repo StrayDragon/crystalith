@@ -46,6 +46,29 @@ import {
 const BLOCK_IDLE = 'rounded-md px-1.5 -mx-1.5 py-0.5 transition-colors';
 const BLOCK_SELECTED = 'rounded-md px-1.5 -mx-1.5 py-0.5 bg-blue-50 ring-1 ring-blue-100';
 
+/** Lab-only fields we hang on Plate/Slate elements (not in stock TElement). */
+type LabPlateElementFields = {
+  id?: string;
+  labNodeIds?: string[];
+  listStyleType?: string;
+  identifier?: string;
+};
+
+function readLabElementField<K extends keyof LabPlateElementFields>(
+  element: unknown,
+  key: K,
+): LabPlateElementFields[K] | undefined {
+  if (!element || typeof element !== 'object' || !(key in element)) return undefined;
+  return (element as LabPlateElementFields)[key];
+}
+
+/** Plate attributes typing is opaque; centralize the boundary cast. */
+function plateAttributes(
+  attrs: Record<string, unknown>,
+): NonNullable<PlateElementProps['attributes']> {
+  return attrs as NonNullable<PlateElementProps['attributes']>;
+}
+
 function useBlockShell(blockId: string) {
   const { selectedBlockId, onSelectBlock, readOnly } = useLabReportCite();
   const selected = selectedBlockId === blockId;
@@ -64,7 +87,7 @@ function useBlockShell(blockId: string) {
 }
 
 function blockIdOf(element: TElement, fallback: string): string {
-  const id = (element as unknown as { id?: string }).id;
+  const id = readLabElementField(element, 'id');
   return typeof id === 'string' ? id : fallback;
 }
 
@@ -75,7 +98,7 @@ function withBlockBrowseProps(
   baseClass: string,
 ): PlateElementProps {
   const shell = useBlockShell(blockId);
-  const labNodeIds = (props.element as { labNodeIds?: string[] }).labNodeIds;
+  const labNodeIds = readLabElementField(props.element, 'labNodeIds');
   const primaryNodeId = labNodeIds?.[0];
   const prevAttrs = (props.attributes ?? {}) as Record<string, unknown>;
   const onClick = (e: MouseEvent<HTMLElement>) => {
@@ -88,12 +111,12 @@ function withBlockBrowseProps(
   return {
     ...props,
     className: `${baseClass} ${shell.className}`,
-    attributes: {
+    attributes: plateAttributes({
       ...props.attributes,
       'data-lab-block-id': blockId,
       ...(primaryNodeId ? { 'data-lab-node-id': primaryNodeId } : {}),
       onClick,
-    } as unknown as PlateElementProps['attributes'],
+    }),
   };
 }
 
@@ -208,7 +231,7 @@ function ParagraphElement(props: PlateElementProps) {
  * wrap so indent-list semantics stay; markers come only from ParagraphElement.
  */
 const LabListBelowNodes = (props: { element: TElement }) => {
-  if (!(props.element as { listStyleType?: string }).listStyleType) return undefined;
+  if (!readLabElementField(props.element, 'listStyleType')) return undefined;
   return function LabListWrap({ children }: { children: ReactNode }) {
     return <div className="lab-report-list-wrap m-0 p-0">{children}</div>;
   };
@@ -218,7 +241,7 @@ const LabListBelowNodes = (props: { element: TElement }) => {
 function CiteFootnoteReference(props: PlateElementProps) {
   const { children, ...rest } = props;
   const { citations, showCitations, activeCitationId, onCite, onLocateNode } = useLabReportCite();
-  const identifier = String((props.element as { identifier?: string }).identifier ?? '');
+  const identifier = String(readLabElementField(props.element, 'identifier') ?? '');
   const isNodeAnchor = identifier.startsWith('@');
   const nodeId = isNodeAnchor ? identifier.slice(1) : '';
 
@@ -229,13 +252,11 @@ function CiteFootnoteReference(props: PlateElementProps) {
           {...rest}
           as="span"
           className="lab-report-cite-hidden"
-          attributes={
-            {
-              ...rest.attributes,
-              contentEditable: false,
-              style: { display: 'none' },
-            } as unknown as PlateElementProps['attributes']
-          }
+          attributes={plateAttributes({
+            ...rest.attributes,
+            contentEditable: false,
+            style: { display: 'none' },
+          })}
         >
           {children}
         </PlateElement>
@@ -246,19 +267,17 @@ function CiteFootnoteReference(props: PlateElementProps) {
         {...rest}
         as="span"
         className="lab-report-node-ref"
-        attributes={
-          {
-            ...rest.attributes,
-            contentEditable: false,
-            style: {
-              display: 'inline',
-              position: 'relative',
-              verticalAlign: 'baseline',
-              whiteSpace: 'nowrap',
-              margin: '0 2px',
-            },
-          } as unknown as PlateElementProps['attributes']
-        }
+        attributes={plateAttributes({
+          ...rest.attributes,
+          contentEditable: false,
+          style: {
+            display: 'inline',
+            position: 'relative',
+            verticalAlign: 'baseline',
+            whiteSpace: 'nowrap',
+            margin: '0 2px',
+          },
+        })}
       >
         <button
           type="button"
@@ -286,13 +305,11 @@ function CiteFootnoteReference(props: PlateElementProps) {
         {...rest}
         as="span"
         className="lab-report-cite-hidden"
-        attributes={
-          {
-            ...rest.attributes,
-            contentEditable: false,
-            style: { display: 'none' },
-          } as unknown as PlateElementProps['attributes']
-        }
+        attributes={plateAttributes({
+          ...rest.attributes,
+          contentEditable: false,
+          style: { display: 'none' },
+        })}
       >
         {children}
       </PlateElement>
@@ -305,19 +322,17 @@ function CiteFootnoteReference(props: PlateElementProps) {
       {...rest}
       as="span"
       className="lab-report-cite"
-      attributes={
-        {
-          ...rest.attributes,
-          contentEditable: false,
-          style: {
-            display: 'inline',
-            position: 'relative',
-            verticalAlign: 'baseline',
-            whiteSpace: 'nowrap',
-            margin: '0 2px',
-          },
-        } as unknown as PlateElementProps['attributes']
-      }
+      attributes={plateAttributes({
+        ...rest.attributes,
+        contentEditable: false,
+        style: {
+          display: 'inline',
+          position: 'relative',
+          verticalAlign: 'baseline',
+          whiteSpace: 'nowrap',
+          margin: '0 2px',
+        },
+      })}
     >
       <button
         type="button"
@@ -371,7 +386,7 @@ function ensureBlockIds(value: Value): Value {
   let i = 0;
   return value.map((node) => {
     if (!('type' in node)) return node;
-    const existing = (node as unknown as { id?: string }).id;
+    const existing = readLabElementField(node, 'id');
     const id = typeof existing === 'string' ? existing : `blk-${i++}`;
     const labNodeIds = collectLabNodeIds(node);
     return {

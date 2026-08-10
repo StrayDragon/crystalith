@@ -407,8 +407,6 @@ export async function runNodeWorkUnit(opts: {
             .filter(Boolean)
             .join('\n'),
           abortSignal,
-          // ToolLoopAgent settings are intentionally `any` (see node-agent.ts); options
-          // match ResearchNodeAgentCallOptions but inference rejects the bag without never.
           options: {
             mode: 'work_unit',
             role,
@@ -421,7 +419,7 @@ export async function runNodeWorkUnit(opts: {
             pageSoft,
             searchesRemaining,
             searchSoft,
-          } as never,
+          },
         });
 
         let pendingIngest: { toolName: string; output: unknown } | null = null;
