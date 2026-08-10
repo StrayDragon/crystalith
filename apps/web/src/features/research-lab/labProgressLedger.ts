@@ -30,7 +30,7 @@ export function mergeProgressBySeq(
   const bySeq = new Map<number, LabProgressLedgerItem>();
   for (const item of prev) bySeq.set(item.seq, item);
   for (const item of incoming) bySeq.set(item.seq, item);
-  return [...bySeq.values()].sort((a, b) => a.seq - b.seq);
+  return [...bySeq.values()].toSorted((a, b) => a.seq - b.seq);
 }
 
 /**

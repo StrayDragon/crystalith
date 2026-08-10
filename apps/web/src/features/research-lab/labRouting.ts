@@ -9,13 +9,13 @@ export type ResearchLabRoute =
 export function parseResearchLabPath(
   pathname: string = typeof window !== 'undefined' ? window.location.pathname : '/',
 ): ResearchLabRoute | null {
-  const reportMatch = pathname.match(/^\/research-lab\/(\d+)\/report\/?$/);
+  const reportMatch = pathname.match(/^\/research-lab\/(\d+)\/report\/?$/u);
   if (reportMatch) {
     const notebookId = Number(reportMatch[1]);
     if (!Number.isFinite(notebookId) || notebookId <= 0) return null;
     return { notebookId, view: 'report' };
   }
-  const match = pathname.match(/^\/research-lab\/(\d+)\/?$/);
+  const match = pathname.match(/^\/research-lab\/(\d+)\/?$/u);
   if (!match) return null;
   const notebookId = Number(match[1]);
   if (!Number.isFinite(notebookId) || notebookId <= 0) return null;

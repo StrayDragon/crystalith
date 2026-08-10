@@ -25,7 +25,7 @@ export function markdownToResearchReport(
   }
   const mapCiteIds = (text: string): { text: string; citeIds: string[] } => {
     const citeIds: string[] = [];
-    const cleaned = text.replace(/\[\^(\d+)\]/g, (_m, n: string) => {
+    const cleaned = text.replaceAll(/\[\^(\d+)\]/gu, (_m, n: string) => {
       const idx = Number(n) - 1;
       const id = citeOrder[idx];
       if (id && !citeIds.includes(id)) citeIds.push(id);
@@ -34,7 +34,7 @@ export function markdownToResearchReport(
     return { text: cleaned.trim(), citeIds };
   };
 
-  const lines = markdown.replace(/\r\n/g, '\n').split('\n');
+  const lines = markdown.replaceAll('\r\n', '\n').split('\n');
   let title = base?.title ?? '研究报告';
   const sections: ResearchReportSection[] = [];
   let heading: string | null = null;
@@ -63,11 +63,11 @@ export function markdownToResearchReport(
       });
     };
     for (const line of bodyLines) {
-      const listMatch = /^[-*]\s+(.*)$/.exec(line);
+      const listMatch = /^[-*]\s+(.*)$/u.exec(line);
       if (listMatch) {
         flushPara();
         const mapped = mapCiteIds(listMatch[1] ?? '');
-        const last = blocks[blocks.length - 1];
+        const last = blocks.at(-1);
         if (last?.type === 'bullets') {
           last.items.push({ text: mapped.text || ' ', citeIds: mapped.citeIds });
         } else {
@@ -95,13 +95,13 @@ export function markdownToResearchReport(
 
   for (const line of lines) {
     if (skipRest) continue;
-    const h1 = /^#\s+(.+)$/.exec(line);
+    const h1 = /^#\s+(.+)$/u.exec(line);
     if (h1 && !sawH1) {
       title = h1[1]!.trim() || title;
       sawH1 = true;
       continue;
     }
-    const h2 = /^##\s+(.+)$/.exec(line);
+    const h2 = /^##\s+(.+)$/u.exec(line);
     if (h2) {
       const label = h2[1]!.trim();
       if (label === '参考文献') {
@@ -113,7 +113,7 @@ export function markdownToResearchReport(
       heading = label;
       continue;
     }
-    if (heading === null && /^\[\^\d+\]:/.test(line.trim())) continue;
+    if (heading === null && /^\[\^\d+\]:/u.test(line.trim())) continue;
     if (heading === null && line.trim() === '---') continue;
     bodyLines.push(line);
   }

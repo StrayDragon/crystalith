@@ -24,15 +24,15 @@ function proposal(
 
 /** Lightweight intent cues — replace with model tool-calls on real API. */
 const REJECT_RE =
-  /否定|不要|没用|不对|错误|删掉|删除|剪掉|剪枝|去掉|放弃|reject|prune|useless|wrong|discard/i;
-const REWRITE_RE = /改查询|换个|重写|rewrite|换角度|重新检索|query/i;
-const FORK_RE = /分叉|对照|另开|再来一条|fork|alternative|对照支路/i;
-const FINISH_RE = /结束|出报告|生成报告|收束|finish|done|报告吧/i;
-const CONTINUE_RE = /继续|深挖|再挖|continue|dig/i;
-const REPORT_RE = /打开报告|看报告|报告页|open.?report/i;
-const STATUS_CLEAR_RE = /定为明确|标为明确|确定了|可以定稿|settle|mark\s*clear|设为明确/i;
-const STATUS_PARTIAL_RE = /待完善|还不够|标为部分|partial|设为待完善/i;
-const STATUS_MISSING_RE = /无法结论|证据不足|missing|无结论|设为无法/i;
+  /否定|不要|没用|不对|错误|删掉|删除|剪掉|剪枝|去掉|放弃|reject|prune|useless|wrong|discard/iu;
+const REWRITE_RE = /改查询|换个|重写|rewrite|换角度|重新检索|query/iu;
+const FORK_RE = /分叉|对照|另开|再来一条|fork|alternative|对照支路/iu;
+const FINISH_RE = /结束|出报告|生成报告|收束|finish|done|报告吧/iu;
+const CONTINUE_RE = /继续|深挖|再挖|continue|dig/iu;
+const REPORT_RE = /打开报告|看报告|报告页|open.?report/iu;
+const STATUS_CLEAR_RE = /定为明确|标为明确|确定了|可以定稿|settle|mark\s*clear|设为明确/iu;
+const STATUS_PARTIAL_RE = /待完善|还不够|标为部分|partial|设为待完善/iu;
+const STATUS_MISSING_RE = /无法结论|证据不足|missing|无结论|设为无法/iu;
 
 function detectStatusIntent(text: string): ResearchConclusionStatus | null {
   if (STATUS_CLEAR_RE.test(text)) return 'clear';

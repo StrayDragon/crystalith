@@ -31,7 +31,7 @@ export default function LabProgressBar({
   const pct = Math.min(100, Math.max(0, progressPct));
   const failed = phase === 'failed';
   const latestHeadline =
-    [...events].reverse().find((e) => e.headline)?.headline ?? LAB_PHASE_LABELS[phase];
+    events.toReversed().find((e) => e.headline)?.headline ?? LAB_PHASE_LABELS[phase];
   const [detailsOpen, setDetailsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const { style: layerStyle } = useLayer('dropdown');
@@ -52,7 +52,7 @@ export default function LabProgressBar({
     };
   }, [detailsOpen]);
 
-  const timeline = events.slice(-40).reverse();
+  const timeline = events.slice(-40).toReversed();
 
   return (
     <div

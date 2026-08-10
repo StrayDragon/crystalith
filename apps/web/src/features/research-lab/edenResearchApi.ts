@@ -105,10 +105,8 @@ export async function retrySynthesizeResearchRun(
   runId: number,
   body?: { modelId?: string },
 ): Promise<ResearchRun> {
-  const { data, error } = await api.v2
-    .notebooks({ nid: notebookId })
-    .research({ rid: runId })
-    ['retry-synthesize'].post(body ?? {});
+  const run = api.v2.notebooks({ nid: notebookId }).research({ rid: runId });
+  const { data, error } = await run['retry-synthesize'].post(body ?? {});
   if (error) throwEdenError(error);
   if (!data) throw new Error('重试结案失败：空响应');
   return data as ResearchRun;
@@ -129,10 +127,8 @@ export async function confirmResearchRun(
 }
 
 export async function addResearchBudget(notebookId: number, runId: number): Promise<ResearchRun> {
-  const { data, error } = await api.v2
-    .notebooks({ nid: notebookId })
-    .research({ rid: runId })
-    ['add-budget'].post({});
+  const run = api.v2.notebooks({ nid: notebookId }).research({ rid: runId });
+  const { data, error } = await run['add-budget'].post({});
   if (error) throwEdenError(error);
   if (!data) throw new Error('加购检索预算失败：空响应');
   return data as ResearchRun;
@@ -143,10 +139,8 @@ export async function requestReexpand(
   runId: number,
   body?: ResearchRequestReexpandBody,
 ): Promise<ResearchRun> {
-  const { data, error } = await api.v2
-    .notebooks({ nid: notebookId })
-    .research({ rid: runId })
-    ['request-reexpand'].post(body ?? {});
+  const run = api.v2.notebooks({ nid: notebookId }).research({ rid: runId });
+  const { data, error } = await run['request-reexpand'].post(body ?? {});
   if (error) throwEdenError(error);
   if (!data) throw new Error('请求再扩展失败：空响应');
   return data as ResearchRun;
@@ -273,9 +267,8 @@ export async function forkResearchRunFromRevision(
   revId: string,
   body?: ResearchForkRunBody,
 ): Promise<ResearchRun> {
-  const { data, error } = await researchRunPath(notebookId, runId)
-    .revisions({ revId })
-    ['fork-run'].post(body ?? {});
+  const revision = researchRunPath(notebookId, runId).revisions({ revId });
+  const { data, error } = await revision['fork-run'].post(body ?? {});
   if (error) throwEdenError(error);
   if (!data) throw new Error('派生新研究失败：空响应');
   return data as ResearchRun;
