@@ -53,13 +53,12 @@ async function streamInto(
   full: string,
   onUpdate: (partial: string, done: boolean) => void,
 ): Promise<void> {
-  const chars = [...full];
   let acc = '';
-  for (let i = 0; i < chars.length; i++) {
-    acc += chars[i];
+  for (const char of full) {
+    acc += char;
     onUpdate(acc, false);
     await new Promise<void>((resolve) => {
-      setTimeout(resolve, chars[i] === '\n' ? 18 : 8);
+      setTimeout(resolve, char === '\n' ? 18 : 8);
     });
   }
   onUpdate(acc, true);

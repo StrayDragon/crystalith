@@ -54,6 +54,8 @@ export default function SourcesPanelList({
         </div>
       ) : (
         <Virtuoso
+          // RefObject from parent matches useRef; Virtuoso ref prop is stricter.
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion
           ref={sourceListRef as Ref<VirtuosoHandle>}
           style={{ flex: 1, minHeight: 0 }}
           data={sources}

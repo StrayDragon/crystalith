@@ -9,6 +9,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+/** `Array.isArray` narrows to `any[]`; use this when indexing must stay `unknown`. */
+function asUnknownArray(value: unknown): unknown[] | null {
+  if (!Array.isArray(value)) return null;
+  return value as unknown[];
+}
+
 function asString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
 }
@@ -235,8 +241,8 @@ function isNoContentTemplate(content: Record<string, unknown>, type: string): bo
   switch (type) {
     case 'FAQ':
     case 'BULLETS': {
-      const items = content.items;
-      if (!Array.isArray(items) || items.length === 0) return false;
+      const items = asUnknownArray(content.items);
+      if (!items || items.length === 0) return false;
       const first = items[0];
       if (!isRecord(first)) return false;
       return (
@@ -246,15 +252,15 @@ function isNoContentTemplate(content: Record<string, unknown>, type: string): bo
       );
     }
     case 'TIMELINE': {
-      const events = content.events;
-      if (!Array.isArray(events) || events.length === 0) return false;
+      const events = asUnknownArray(content.events);
+      if (!events || events.length === 0) return false;
       const first = events[0];
       if (!isRecord(first)) return false;
       return hasNoContentPrefix(first.event) || hasNoContentPrefix(first.description);
     }
     case 'GUIDE': {
-      const modules = content.modules;
-      if (!Array.isArray(modules) || modules.length === 0) return false;
+      const modules = asUnknownArray(content.modules);
+      if (!modules || modules.length === 0) return false;
       const first = modules[0];
       if (!isRecord(first)) return false;
       // Objective could be {text: string} or raw string
@@ -263,8 +269,8 @@ function isNoContentTemplate(content: Record<string, unknown>, type: string): bo
       return hasNoContentPrefix(first.title) || hasNoContentPrefix(objText);
     }
     case 'BRIEFING': {
-      const sections = content.sections;
-      if (!Array.isArray(sections) || sections.length === 0) return false;
+      const sections = asUnknownArray(content.sections);
+      if (!sections || sections.length === 0) return false;
       const first = sections[0];
       if (!isRecord(first)) return false;
       return hasNoContentPrefix(first.heading);

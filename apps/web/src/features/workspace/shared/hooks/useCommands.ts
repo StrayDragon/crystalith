@@ -10,7 +10,7 @@ interface CommandItem {
   trigger: string;
   description: string | null;
   enabled: boolean;
-  kind?: 'prompt_preset' | 'nav' | string;
+  kind?: string;
   source?: 'builtin' | 'custom';
 }
 

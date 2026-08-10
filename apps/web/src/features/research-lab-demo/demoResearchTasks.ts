@@ -1,4 +1,4 @@
-import { parseJsonValue } from '../../shared/json';
+import { isRecord, parseJsonValue } from '../../shared/json';
 
 /**
  * Demo ResearchRun task list (sessionStorage).
@@ -55,6 +55,34 @@ export function bumpDemoTaskSwitchEpoch(): void {
 /** Stable empty snapshot for useSyncExternalStore (never allocate a new [] per call). */
 export const EMPTY_DEMO_RESEARCH_TASKS: DemoResearchTask[] = [];
 
+function isDemoResearchTaskStatus(value: unknown): value is DemoResearchTaskStatus {
+  return (
+    value === 'queued' ||
+    value === 'running' ||
+    value === 'awaiting_confirm' ||
+    value === 'completed' ||
+    value === 'failed'
+  );
+}
+
+function isDemoResearchTask(value: unknown): value is DemoResearchTask {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.id === 'string' &&
+    typeof value.notebookId === 'number' &&
+    typeof value.topic === 'string' &&
+    isDemoResearchTaskStatus(value.status) &&
+    typeof value.createdAt === 'number' &&
+    typeof value.updatedAt === 'number' &&
+    typeof value.scenarioId === 'string'
+  );
+}
+
+function parseDemoResearchTasks(value: unknown): DemoResearchTask[] {
+  if (!Array.isArray(value)) return EMPTY_DEMO_RESEARCH_TASKS;
+  return value.filter(isDemoResearchTask);
+}
+
 let cachedTasksRaw: string | null | undefined = undefined;
 let cachedTasksSnapshot: DemoResearchTask[] = EMPTY_DEMO_RESEARCH_TASKS;
 
@@ -90,9 +118,7 @@ export function getDemoResearchTasksSnapshot(): DemoResearchTask[] {
       return cachedTasksSnapshot;
     }
     const parsed = parseJsonValue(raw);
-    cachedTasksSnapshot = Array.isArray(parsed)
-      ? (parsed as DemoResearchTask[])
-      : EMPTY_DEMO_RESEARCH_TASKS;
+    cachedTasksSnapshot = parseDemoResearchTasks(parsed);
     return cachedTasksSnapshot;
   } catch {
     cachedTasksRaw = null;

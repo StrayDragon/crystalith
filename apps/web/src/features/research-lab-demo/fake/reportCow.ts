@@ -22,6 +22,21 @@ export interface ReportWorkingCopy {
 
 export type ReportViewSource = 'canonical' | 'working';
 
+function isReportWorkingCopy(
+  value: unknown,
+  notebookId: number,
+  scenarioId: string,
+): value is ReportWorkingCopy {
+  return (
+    isRecord(value) &&
+    value.notebookId === notebookId &&
+    value.scenarioId === scenarioId &&
+    typeof value.markdown === 'string' &&
+    typeof value.forkedFromProducedAt === 'string' &&
+    typeof value.updatedAt === 'string'
+  );
+}
+
 export function workingCopyStorageKey(notebookId: number, scenarioId: string): string {
   return `${WORKING_KEY_PREFIX}.${notebookId}.${scenarioId}`;
 }
@@ -95,15 +110,10 @@ export function readWorkingCopy(notebookId: number, scenarioId: string): ReportW
     const raw = sessionStorage.getItem(workingCopyStorageKey(notebookId, scenarioId));
     if (!raw) return null;
     const parsed = parseJsonValue(raw);
-    if (
-      !isRecord(parsed) ||
-      parsed.notebookId !== notebookId ||
-      parsed.scenarioId !== scenarioId ||
-      typeof parsed.markdown !== 'string'
-    ) {
+    if (!isReportWorkingCopy(parsed, notebookId, scenarioId)) {
       return null;
     }
-    return parsed as unknown as ReportWorkingCopy;
+    return parsed;
   } catch {
     return null;
   }
