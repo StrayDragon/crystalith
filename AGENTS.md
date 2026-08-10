@@ -226,6 +226,7 @@ Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `ope
 
 - `just test-bdd` — server BDD（CRUD 子集；见 `apps/server/tests/bdd/`）
 - `just type-aware-lint` — **advisory** type-aware oxlint（未入 qa；测试文件仍有历史债）
+  - `typescript/prefer-readonly-parameter-types` 全局关闭：大量 React/Elysia/AI SDK 等回调签名不可控，仅在自研纯 helper 上按需手写 `Readonly`。
 
 不同范围的代码有不同的严格度：
 

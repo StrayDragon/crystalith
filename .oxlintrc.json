@@ -58,6 +58,10 @@
     "typescript/no-non-null-assertion": "off",
     "typescript/consistent-type-imports": "off",
     "typescript/ban-types": "off",
+    // prefer-readonly-parameter-types: off — most params are library/framework
+    // callbacks (React, Elysia, AI SDK, Plate, Drizzle) where we cannot widen
+    // signatures to Readonly; reserve Readonly for pure helpers we author.
+    "typescript/prefer-readonly-parameter-types": "off",
     "unicorn/explicit-length-check": "off",
     "unicorn/no-negated-condition": "off",
     "unicorn/no-useless-undefined": "off",
