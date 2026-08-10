@@ -1,5 +1,11 @@
+import type {
+  LabCitation,
+  LabEdge,
+  LabGraphMutations,
+  LabNode,
+  LabScenario,
+} from '../../research-lab/model/types';
 import { buildSuggestedReportFromNodes } from './buildSuggestedReport';
-import type { LabCitation, LabEdge, LabGraphMutations, LabNode, LabScenario } from './types';
 
 /** Prefer handcrafted scenario report when graph is pristine; else synthesize from nodes. */
 export function resolveDefaultExportMarkdown(input: {

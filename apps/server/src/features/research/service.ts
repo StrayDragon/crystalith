@@ -8,16 +8,18 @@ export {
   synthesizeReport,
   retrySynthesize,
   listProgress,
-  listRevisions,
-  getRevision,
-  createRevision,
-  restoreRevision,
-  forkRunFromRevision,
   getReportView,
   putCanonicalReport,
   putWorkingReport,
   deleteWorkingReport,
 } from './report.ts';
+export {
+  listRevisions,
+  getRevision,
+  createRevision,
+  restoreRevision,
+  forkRunFromRevision,
+} from './report-revisions.ts';
 export {
   validateCreateBody,
   createRun,

@@ -53,24 +53,6 @@ import {
   type RunRow,
 } from './research-core.ts';
 
-export {
-  collectClaimedCiteIds,
-  isSynthesizeFailureReason,
-  repairResearchReportText,
-  SYNTHESIZE_FAILED_PREFIX,
-  SYNTHESIZE_MODEL_ERROR_PREFIX,
-  validateAndBindCitations,
-} from './report-citations.ts';
-
-export {
-  createRevision,
-  forkRunFromRevision,
-  getRevision,
-  listRevisions,
-  restoreRevision,
-  serializeRevision,
-} from './report-revisions.ts';
-
 function resolveSynthesizeModelConfig(modelId: string | null | undefined) {
   const id = modelId?.trim();
   if (id) return getModelById(id) ?? getDefaultChatModel();

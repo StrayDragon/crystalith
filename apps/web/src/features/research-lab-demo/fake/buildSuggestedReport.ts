@@ -1,5 +1,5 @@
+import type { LabCitation, LabEdge, LabNode } from '../../research-lab/model/types';
 import { listFailedMergeTitles, stripFailedMergeNote } from './deriveLabState';
-import type { LabCitation, LabEdge, LabNode } from './types';
 
 /**
  * Suggested report from the current thinking-graph nodes (product: default model export).

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { extractCitationIds, parseReportBlocks, parseReportSections } from './reportDocument';
+import {
+  extractCitationIds,
+  parseReportBlocks,
+  parseReportSections,
+} from '../../research-lab/model/reportDocument';
 import { answerFromChunks, retrieveReportChunks } from './reportRag';
 import { getLabScenario } from './scenarios';
 

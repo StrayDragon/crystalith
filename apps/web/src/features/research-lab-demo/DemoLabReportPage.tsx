@@ -19,6 +19,7 @@ import { useMemo, useState } from 'react';
 import { TestIds, tid } from '../../shared/testids';
 import { toast } from '../../shared/toast';
 import LabReportPlateEditor from '../research-lab/LabReportPlateEditor';
+import { extractCitationIds } from '../research-lab/model/reportDocument';
 import {
   navigateToDemoResearchLab,
   persistLabSessionSnapshot,
@@ -47,7 +48,6 @@ import {
   type ReportViewSource,
   type ReportWorkingCopy,
 } from './fake/reportCow';
-import { extractCitationIds } from './fake/reportDocument';
 import { resolveDefaultExportMarkdown } from './fake/resolveDefaultExportMarkdown';
 import { getLabScenario } from './fake/scenarios';
 

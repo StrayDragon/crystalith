@@ -74,7 +74,7 @@ import {
   SYNTHESIZE_FAILED_PREFIX,
   SYNTHESIZE_MODEL_ERROR_PREFIX,
   validateAndBindCitations,
-} from '../../src/features/research/report.ts';
+} from '../../src/features/research/report-citations.ts';
 import { createApp } from '../../src/server.ts';
 
 const BASE = 'http://test.local';

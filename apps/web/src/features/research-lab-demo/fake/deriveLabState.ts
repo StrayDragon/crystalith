@@ -1,6 +1,6 @@
 import type { ResearchConclusionStatus } from '@crystalith/shared';
 
-import { collectDescendants, collectPruneClosure } from '../../research-lab/model/pruneClosure';
+import { collectPruneClosure } from '../../research-lab/model/pruneClosure';
 import type {
   LabDerivedState,
   LabEdge,
@@ -10,8 +10,6 @@ import type {
   LabPhase,
   LabScenario,
 } from '../../research-lab/model/types';
-
-export { collectDescendants, collectPruneClosure };
 
 const DEFAULT_METRICS: LabMetrics = {
   tokensUsed: 0,
