@@ -122,7 +122,9 @@ test.describe('@p0 Eden Lab production path', () => {
       });
       const msg = error instanceof Error ? error.message : String(error);
       const rid = runId ?? 'null';
-      throw new Error(`Eden Lab e2e failed (notebook=${notebookId} rid=${rid}): ${msg}`);
+      throw new Error(`Eden Lab e2e failed (notebook=${notebookId} rid=${rid}): ${msg}`, {
+        cause: error,
+      });
     }
   });
 
@@ -197,7 +199,9 @@ test.describe('@p0 Eden Lab production path', () => {
       });
       const msg = error instanceof Error ? error.message : String(error);
       const rid = runId ?? 'null';
-      throw new Error(`Eden Lab R02 failed (notebook=${notebookId} rid=${rid}): ${msg}`);
+      throw new Error(`Eden Lab R02 failed (notebook=${notebookId} rid=${rid}): ${msg}`, {
+        cause: error,
+      });
     }
   });
 });
