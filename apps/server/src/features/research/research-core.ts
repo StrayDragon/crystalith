@@ -46,6 +46,19 @@ export const chatAbortControllers = new Map<string, AbortController>();
 
 export const TERMINAL_STATUSES = new Set(['completed', 'failed', 'cancelled']);
 
+/** Confirm kinds accepted by the run confirm gate (mirrors ResearchRunSchema.confirmKind). */
+export type ConfirmKind = 'budget' | 'reexpand' | 'expand_branch';
+
+/**
+ * Per-kind confirm actions — single SSOT for enterConfirm, command broadcasts
+ * and the SSE replay payload, so adding a kind only touches this table.
+ */
+export const CONFIRM_OPTIONS: Record<ConfirmKind, readonly string[]> = {
+  budget: ['continue', 'finish_report'],
+  reexpand: ['approve_reexpand', 'skip_reexpand'],
+  expand_branch: ['approve_branch', 'skip_branch'],
+};
+
 export function newId(prefix: string): string {
   return `${prefix}_${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`;
 }
