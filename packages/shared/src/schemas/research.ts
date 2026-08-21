@@ -520,40 +520,20 @@ export const ResearchRunSchema = z
 export type ResearchRun = z.infer<typeof ResearchRunSchema>;
 
 /** List/inbox row — no graph or report payload (task drawer SSOT). */
-export const ResearchRunSummarySchema = z
-  .object({
-    id: IdSchema.openapi({ description: desc('research.id', '研究任务唯一标识') }),
-    notebookId: IdSchema,
-    topic: z.string().openapi({ description: desc('research.topic', '研究主题') }),
-    status: ResearchRunStatusSchema,
-    useNotebookSources: z.boolean(),
-    allowWeb: z.boolean(),
-    sourceIds: z.array(IdSchema).nullable().optional(),
-    depth: ResearchDepthSchema,
-    maxSearches: z.number().int().positive(),
-    maxNodes: z.number().int().positive(),
-    searchesUsed: z.number().int().nonnegative().default(0),
-    maxPageFetches: z
-      .number()
-      .int()
-      .positive()
-      .openapi({ description: desc('research.max_page_fetches', '读页次数上限') }),
-    pagesUsed: z
-      .number()
-      .int()
-      .nonnegative()
-      .default(0)
-      .openapi({ description: desc('research.pages_used', '已成功读页次数') }),
-    confirmKind: z.enum(['budget', 'expand_branch', 'reexpand']).nullable().optional(),
-    modelId: z.string().nullable().optional(),
-    failureReason: z.string().nullable().optional(),
-    errorMessage: z.string().nullable().optional(),
-    createdAt: IsoTimestampSchema,
-    updatedAt: IsoTimestampSchema,
-  })
-  .openapi({
-    description: desc('research.run_summary', '深研 Run 列表摘要（不含图与报告）'),
-  });
+// Derived from ResearchRunSchema via .omit() so Run fields stay in sync with
+// Summary automatically (previously 18 fields were hand-copied here).
+export const ResearchRunSummarySchema = ResearchRunSchema.omit({
+  nodes: true,
+  edges: true,
+  evidences: true,
+  report: true,
+  /** Branch-scoped confirm detail is only meaningful on the full Run payload. */
+  confirmBranchNodeId: true,
+  llmActivity: true,
+  activeNodeId: true,
+}).openapi({
+  description: desc('research.run_summary', '深研 Run 列表摘要（不含图与报告）'),
+});
 export type ResearchRunSummary = z.infer<typeof ResearchRunSummarySchema>;
 
 export const ResearchRunsPageSchema = z.object({

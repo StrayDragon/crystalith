@@ -37,7 +37,7 @@ import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
-import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
+import { requireOwnedRow, resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import { runOutputPipeline } from './pipeline.ts';
 import { renderOutputToMarkdown, splitTextToChunks } from './render.ts';
 
@@ -48,11 +48,7 @@ const OutputExportResponseSchema = z.union([
 ]);
 
 function requireOutputInNotebook(id: number, notebookId: number): typeof outputs.$inferSelect {
-  const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
-  if (!row || row.notebookId !== notebookId) {
-    throw new NotFoundError(`Output ${id} not found`);
-  }
-  return row;
+  return requireOwnedRow(outputs, id, notebookId, 'Output');
 }
 
 // ---------------------------------------------------------------------------

@@ -36,7 +36,7 @@ import { notebooks, studioSlides } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
-import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
+import { requireOwnedRow, resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import {
   clearStaleRunning,
   createSseResponse,
@@ -180,11 +180,7 @@ function getSlideInNotebookOrThrow(
   id: number,
   notebookId: number,
 ): typeof studioSlides.$inferSelect {
-  const row = db().select().from(studioSlides).where(eq(studioSlides.id, id)).get();
-  if (!row || row.notebookId !== notebookId) {
-    throw new NotFoundError(`Slide ${id} not found`);
-  }
-  return row;
+  return requireOwnedRow(studioSlides, id, notebookId, 'Slide');
 }
 
 // ---------------------------------------------------------------------------
