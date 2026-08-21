@@ -21,6 +21,7 @@ import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';
 import { messages, notebooks, sessions, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { formatCitationBlock } from '../../shared/citations.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
@@ -350,27 +351,8 @@ function handleQaExport(query: QaExportQuery, pathNotebookId: number) {
     };
   }
 
-  // c48: markdown citation line — v1 _format_citation_line (api.py:599-610):
-  // [i] name · chunk N · page N · para N + blockquote snippet.
-  const citationLines = citations.map((c, i) => {
-    const cit = c as {
-      sourceName?: string;
-      chunkIndex?: number;
-      pageNumber?: number | null;
-      paragraphIndex?: number | null;
-      snippet?: string;
-    };
-    const parts = [`[${i + 1}] ${cit.sourceName ?? 'unknown'}`];
-    if (typeof cit.chunkIndex === 'number') parts.push(`chunk ${cit.chunkIndex}`);
-    if (cit.pageNumber !== null && cit.pageNumber !== undefined)
-      parts.push(`page ${cit.pageNumber}`);
-    if (cit.paragraphIndex !== null && cit.paragraphIndex !== undefined)
-      parts.push(`para ${cit.paragraphIndex}`);
-    const prefix = parts.join(' · ');
-    const snippet = cit.snippet?.trim();
-    return snippet ? `${prefix}\n> ${snippet}` : prefix;
-  });
-  const citationsBlock = citationLines.length ? citationLines.join('\n\n') : '无引用';
+  // c48: markdown citation block (shared formatter; v1 _format_citation_line).
+  const citationsBlock = formatCitationBlock(citations);
 
   // c48: add `- Notebook ID:` line (v1 api.py:698).
   const markdown = [

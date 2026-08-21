@@ -513,8 +513,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       const tagFilter = query.tag;
       const sortBy = query.sortBy ?? 'date';
       const sortOrder = query.sortOrder ?? 'desc';
-      const offset = query.offset ?? 0;
-      const limit = query.limit ?? 20;
+      const { offset, limit } = query;
 
       let rows = db().select().from(sources).where(eq(sources.notebookId, nid)).all();
 

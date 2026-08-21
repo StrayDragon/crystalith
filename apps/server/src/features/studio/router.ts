@@ -428,7 +428,7 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     '/notebooks/:nid/studio/slides',
     ({ params, query }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
-      return handleListSlides(nid, query.offset ?? 0, query.limit ?? 20);
+      return handleListSlides(nid, query.offset, query.limit);
     },
     { query: PaginationParamsSchema, response: SlidesPageSchema },
   )

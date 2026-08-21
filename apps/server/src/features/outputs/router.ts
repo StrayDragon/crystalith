@@ -34,6 +34,7 @@ import { db } from '../../db/index.ts';
 import { outputs, notebooks, sources, chunks } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
+import { formatCitationBlock } from '../../shared/citations.ts';
 import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
@@ -445,7 +446,7 @@ function handleExportOutput(id: number, notebookId: number, format: 'markdown' |
 
   // Markdown format — type-aware rendering (v1 _extract_text_from_output)
   // + Citations and Sources sections (v1 api.py:441-476). Citation line
-  // format aligns with v1 api.py:452-461:
+  // format via the shared formatter (v1 api.py:452-461):
   //   [N] source_name · chunk N[ · page N][ · para N]
   //   > snippet
   const bodyMarkdown = renderOutputToMarkdown(
@@ -453,20 +454,12 @@ function handleExportOutput(id: number, notebookId: number, format: 'markdown' |
     isRecord(row.content) ? row.content : null,
     row.prompt,
   );
-  const citationLines = citations.map((c, i) => {
-    const parts = [`[${i + 1}] ${c.sourceName}`, `chunk ${c.chunkIndex}`];
-    if (c.pageNumber !== null && c.pageNumber !== undefined) parts.push(`page ${c.pageNumber}`);
-    if (c.paragraphIndex !== null && c.paragraphIndex !== undefined)
-      parts.push(`para ${c.paragraphIndex}`);
-    const line = parts.join(' · ');
-    const snippet = (c.snippet ?? '').trim();
-    return snippet ? `${line}\n> ${snippet}` : line;
-  });
+  const citationsBlock = formatCitationBlock(citations);
   const markdown = [
     bodyMarkdown,
     '',
     '## Citations',
-    citationLines.length ? citationLines.join('\n\n') : '无引用',
+    citationsBlock,
     '',
     '## Sources',
     sourceRows.map((s) => `- ${s.filename} (${s.status})`).join('\n') || '无来源',
@@ -564,7 +557,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     '/notebooks/:nid/outputs',
     ({ params, query }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
-      return handleListOutputs(nid, query.offset ?? 0, query.limit ?? 20);
+      return handleListOutputs(nid, query.offset, query.limit);
     },
     { query: PaginationParamsSchema, response: OutputsPageSchema },
   )
