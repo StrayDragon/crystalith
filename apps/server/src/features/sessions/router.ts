@@ -129,8 +129,7 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
     '/notebooks/:nid/sessions',
     ({ params, query }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const offset = query.offset ?? 0;
-      const limit = query.limit ?? 20;
+      const { offset, limit } = query;
       const total =
         db().select({ n: count() }).from(sessions).where(eq(sessions.notebookId, nid)).get()?.n ??
         0;

@@ -94,3 +94,39 @@ export function hydrateCitations(
     };
   });
 }
+
+/**
+ * Format citation lines for markdown export (v1 _format_citation_line,
+ * api.py:599-610 / api.py:452-461):
+ *   [N] name · chunk N[ · page N][ · para N]
+ *   > snippet
+ * Defensive on optional fields so both QA and output exports share one impl.
+ */
+export function formatCitationMarkdownLines(
+  citations: Array<{
+    sourceName?: string;
+    chunkIndex?: number;
+    pageNumber?: number | null;
+    paragraphIndex?: number | null;
+    snippet?: string;
+  }>,
+): string[] {
+  return citations.map((c, i) => {
+    const parts = [`[${i + 1}] ${c.sourceName ?? 'unknown'}`];
+    if (typeof c.chunkIndex === 'number') parts.push(`chunk ${c.chunkIndex}`);
+    if (c.pageNumber !== null && c.pageNumber !== undefined) parts.push(`page ${c.pageNumber}`);
+    if (c.paragraphIndex !== null && c.paragraphIndex !== undefined)
+      parts.push(`para ${c.paragraphIndex}`);
+    const line = parts.join(' · ');
+    const snippet = c.snippet?.trim();
+    return snippet ? `${line}\n> ${snippet}` : line;
+  });
+}
+
+/** Joined citation block; `无引用` when empty. */
+export function formatCitationBlock(
+  citations: Parameters<typeof formatCitationMarkdownLines>[0],
+): string {
+  const lines = formatCitationMarkdownLines(citations);
+  return lines.length ? lines.join('\n\n') : '无引用';
+}

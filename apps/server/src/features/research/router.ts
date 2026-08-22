@@ -312,7 +312,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     '/notebooks/:nid/research',
     ({ params, query }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
-      return listRuns(nid, query.offset ?? 0, query.limit ?? 20, query.status);
+      return listRuns(nid, query.offset, query.limit, query.status);
     },
     { query: ResearchListQuerySchema, response: ResearchRunsPageSchema },
   )

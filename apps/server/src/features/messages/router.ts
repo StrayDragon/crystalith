@@ -92,8 +92,7 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
     ({ params, query }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const sid = requirePositiveIntId(params.sid, 'session id');
-      const offset = query.offset ?? 0;
-      const limit = query.limit ?? 20;
+      const { offset, limit } = query;
 
       // Verify session exists AND belongs to notebook (c39 gap fix)
       requireOwnedRow(sessions, sid, nid, 'Session');
