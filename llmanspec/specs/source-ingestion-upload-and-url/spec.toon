@@ -9,7 +9,7 @@ requirements[14]{req_id,title,statement}:
   r180,Core upload supports CSV sources,系统的核心发行版 MUST 支持通过上传方式创建 CSV 来源：`.csv` 扩展名与 `text/csv` MIME MUST 被识别并由匹配 parser 处理。
   r212,CSV sources are chunked by rows to avoid oversized single chunks,系统 MUST 将 CSV 内容按行块切分为多个可索引 chunks，以避免单个超大 chunk 导致检索与引用不稳定。
   r239,Deterministic input errors do not create source rows,空文件或无可索引内容等确定性输入错误 MUST 返回 400 且不创建来源。
-  r_upload_size_limit,"Oversized uploads are rejected deterministically with 413","当 HTTP guardrails 启用且配置了上传上限时，上传接口 MUST 对单次上传施加配置项 `upload_max_bytes` 限制；超过上限 MUST 返回 413，且 MUST 不创建来源记录。无配置时 MUST 默认 50MB。"
+  r_upload_size_limit,"Oversized uploads are rejected deterministically with 413","当 HTTP guardrails 启用时，上传接口 MUST 对单次上传施加配置项 `upload_max_bytes` 限制；超过上限 MUST 返回 413，且 MUST 不创建来源记录。未配置时的默认值 MUST 来自 config schema。"
   r269,"URL from-source supports link and fetch modes","`from-url` MUST 支持 `link|fetch`，`link` 不抓网页正文，`fetch` 抓取并分块。"
   r_ssrf,"Fetch applies SSRF validation before network calls","`fetch` MUST 在请求前做 SSRF 校验（含逐跳重定向重验）并拒绝高风险目标；SSRF 策略 MUST 从配置解析 hostAllowlist/domainAllowlist/cidrAllowlist/allowlist_only；无配置时 MUST 回退默认姿态（拒绝私网与元数据 IP）。"
   r61,"Extractor preference, fallback, and retry","系统 MUST 支持提取器指定、可控 fallback、可重试错误重试；出站 HTTP 代理合约见 architecture-core r_outbound_http。"
@@ -27,7 +27,7 @@ scenarios[18]{req_id,id,given,when,then,feature}:
   r212,"large-csv-produces-multiple-chunks","",用户上传一个包含大量行的 CSV,系统 SHALL 生成多个 chunk（每个 chunk 覆盖一段行范围）,true
   r239,"deterministic-input-error-does-not-create-source","",用户上传空文件或无可索引内容的输入,系统 SHALL 返回 400 且不创建来源,true
   r_upload_size_limit,"upload-larger-than-max-bytes-returns-413-and-does-not-create","",guardrails 启用且配置上限 10MB,系统对 20MB 上传 SHALL 返回 413 且不创建来源,true
-  r_upload_size_limit,"default-limit-applies-without-config","",guardrails 启用且未配置上传上限,系统对超过默认上限（50MB）的上传 SHALL 返回 413,true
+  r_upload_size_limit,"default-limit-applies-without-config","",guardrails 启用且未配置上传上限,系统对超过 config schema 默认上限的上传 SHALL 返回 413,true
   r269,"link-mode-does-not-fetch-content","","用户使用 `from-url` 的 `link` 模式创建来源",系统 SHALL 仅保存链接而不抓取网页正文,true
   r_ssrf,"ssrf-validation-runs-before-fetch","",用户使用 `fetch` 抓取一个高风险 URL（含重定向链）,系统 SHALL 在网络请求前执行 SSRF 校验并拒绝不安全目标,true
   r_ssrf,"allowlist_only_blocks","配置了 allowlist_only=true 且 hostAllowlist 含 trusted.com","用户从非白名单主机 fetch URL","系统 SHALL 拒绝该 fetch",true

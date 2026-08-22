@@ -13,7 +13,7 @@ requirements[13]{req_id,title,statement}:
   r277,Optional source dedup does not silently drop data,系统 MAY 支持来源去重，但在命中去重时 MUST 不得静默丢弃用户导入请求。
   "sources-reembed-requires-failed","Re-embed MUST require FAILED status","POST /sources/:id/re-embed MUST 校验 source 状态为 failed，非 failed MUST 返回 400"
   "sources-batch-per-item-results","Batch endpoints MUST return per-item results","batch re-embed 和 batch delete MUST 返回 per-item results 数组（含 errorCode/message），且 batch delete MUST 使用 DELETE 方法"
-  "tag-binding-response-and-ownership",Tag binding MUST return v1 response shape and verify ownership,"tag binding MUST 返回 {count, results:[SourceBatchItemResult]} 结构，且 DELETE binding MUST 校验 source 属于该 notebook"
+  "tag-binding-response-and-ownership",Tag binding MUST return stable batch result shape and verify ownership,"tag binding MUST 返回 {count, results:[SourceBatchItemResult]} 结构，且 DELETE binding MUST 校验 source 属于该 notebook"
   "tags-uniqueness-and-ownership",Tag operations MUST enforce uniqueness and notebook ownership,"source tag 的创建和更新 MUST 强制名称唯一性（case-insensitive，返回 409），所有 tag 操作 MUST 校验 tag 属于指定 notebook"
   "tags-assign-idempotent",Tag assign and remove MUST be idempotent,tag 的 assign 和 remove 操作 MUST 验证 source 存在且具备幂等性
 scenarios[13]{req_id,id,given,when,then,feature}:

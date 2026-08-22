@@ -15,7 +15,7 @@ requirements[13]{req_id,title,statement}:
   "studio-serialize-must-include-output-id-and-config",Studio slide serialization MUST include outputId and generationConfig,studio slide 序列化（serializeSlide）MUST 返回 outputId 与 generationConfig 字段（camelCase wire）；前端读 outputId 做 slide→output 跳转、读 generationConfig 复用配置
   "studio-sse-done-payload-must-carry-trace-id",Studio SSE done event MUST carry traceId and slideId (not full slide),"studio SSE 的 done 事件 payload MUST 为 {traceId, slideId}（camelCase），MUST NOT 直接序列化整个 slide；且所有 SSE 事件 SHALL 携带 traceId 以支持关联/可观测性；outline/markdown 各生成阶段前 SHALL 发 toolcall 事件（对齐既有语义）"
   "studio-generation-config-must-expand-to-ranges",Studio generation MUST interpret generationConfig with concrete ranges not raw tokens,"studio outline 与 markdown 生成 MUST 解读 slide.generationConfig 的 quantity/density/audience/tone/structure/language/themePreset 字段并展开为具体区间与本地化提示；quantity/density 的区间映射与 preference（quality/speed）对检索参数（topK/minScore）的调节 MUST 可配置（默认对齐既有语义）。MUST NOT 把原始字段 id（如 'standard'）直接拼进 prompt 而不做展开。"
-  "studio-frontmatter-must-align-v1-six-key-shape","Studio frontmatter MUST use the six-key template shape with override support","studio 生成的 markdown frontmatter MUST 为 6-key 结构（theme 恒为 default、colorSchema、fonts{sans,serif,mono}、transition、background、class），对齐既有模板语义；当 generationConfig.frontmatter 非空时，MUST 以该字符串作为 frontmatter body 绕过预设，仅在缺 title: 且存在标题时补一行。MUST NOT 省略 colorSchema/class/serif/mono 字段。"
+  "studio-frontmatter-six-key-shape","Studio frontmatter MUST use the six-key template shape with override support","studio 生成的 markdown frontmatter MUST 为 6-key 结构（theme 恒为 default、colorSchema、fonts{sans,serif,mono}、transition、background、class），对齐既有模板语义；当 generationConfig.frontmatter 非空时，MUST 以该字符串作为 frontmatter body 绕过预设，仅在缺 title: 且存在标题时补一行。MUST NOT 省略 colorSchema/class/serif/mono 字段。"
 scenarios[18]{req_id,id,given,when,then,feature}:
   r53,"draft-centric-stages-are-recoverable","",用户在 input/outline/markdown 任一阶段中断并稍后返回,系统 SHALL 能从 draft 恢复到最近保存的阶段状态,true
   r111,"draft-endpoints-remain-stable","",客户端调用 draft CRUD 与保存端点,系统 SHALL 保持端点与字段语义稳定以避免客户端漂移,true
@@ -23,7 +23,7 @@ scenarios[18]{req_id,id,given,when,then,feature}:
   r148,"sse-emits-stable-event-set","",outline 或 markdown 通过 SSE 流式生成,系统 SHALL 仅使用 `progress/toolcall/done/busy/error` 事件集合并保持语义稳定,true
   r148,"client-requests-stream",客户端请求 outline/markdown stream 端点,生成进行中,系统 SHALL 通过 SSE 逐个发送 progress/toolcall/done/error 事件而非同步 JSON,true
   r183,"busy-requests-are-rejected-and-stale-is-cleared","",draft 处于 `running` 且用户再次发起生成,系统 SHALL 明确拒绝并发重复（busy 事件）；若检测到 stale running，则先清理再允许继续,true
-  r183,"stale-no-error",slide 处 RUNNING 但已 stale（>10min）,系统清理 stale 状态,status=IDLE 且 errorMessage 为空（非诊断文案）,true
+  r183,"stale-no-error",slide 处 RUNNING 且已超过配置的 stale 阈值,系统清理 stale 状态,status=IDLE 且 errorMessage 为空（非诊断文案）,true
   r215,"markdown-requires-outline","",用户在未生成/保存 outline 的情况下请求 markdown stream,系统 SHALL 返回可读错误并结束连接,true
   r242,"draft-is-persisted-before-done","",生成成功并准备发送 `done`,系统 SHALL 先持久化 draft（含 chunkIds/stage/status）再发送 `done`,true
   r9,"preview-uses-latest-markdown","",用户触发预览刷新,系统 SHALL 先保存 markdown 再刷新当前 active plugin 声明的预览目标以确保一致性,true
@@ -34,4 +34,4 @@ scenarios[18]{req_id,id,given,when,then,feature}:
   "studio-sse-done-payload-must-carry-trace-id","sse-done-trace",SSE 流结束,系统发 done 事件,"done payload SHALL 为 {traceId, slideId}，所有事件 SHALL 带 traceId；阶段开始前有 toolcall 事件",true
   "studio-generation-config-must-expand-to-ranges","quantity-expands-to-range",a slide draft has generationConfig.quantity='detailed',the system builds the outline/markdown generation prompt,"the prompt MUST reference the concrete range from config (not the literal string 'detailed')",true
   "studio-generation-config-must-expand-to-ranges","preference-tunes-retrieval",a slide draft has generationConfig.preference='quality',the system retrieves context for generation,quality 配置的 topK/minScore 与 speed 不同（数值来自配置）,true
-  "studio-frontmatter-must-align-v1-six-key-shape","frontmatter-has-all-six-keys","a slide is generated with themePreset='minimal-clean'",the system writes the markdown frontmatter,"the frontmatter MUST contain theme: default, colorSchema, fonts (sans+serif+mono), transition, background, and class keys matching the preset template",true
+  "studio-frontmatter-six-key-shape","frontmatter-has-all-six-keys","a slide is generated with themePreset='minimal-clean'",the system writes the markdown frontmatter,"the frontmatter MUST contain theme: default, colorSchema, fonts (sans+serif+mono), transition, background, and class keys matching the preset template",true

@@ -1,10 +1,10 @@
 kind: llman.sdd.spec
 name: "chat-ui-envelope"
-purpose: "记录 legacy `[[crystalith-ui:v1]]` transport 已被移除。Crystalith 现在使用 server-authoritative 的 session `sharedState.ui` + Rivu mounts 表达对话内 UI，而不再把 UI 元数据嵌入 assistant `content`。"
+purpose: "对话内 UI 的当前态约束：UI 元数据由 server-authoritative 的 session `sharedState.ui` 承载，assistant `content` 保持纯文本/markdown；legacy envelope transport 已移除且 MUST NOT 回归。"
 valid_scope[2]: src/,tests/
 requirements[2]{req_id,title,statement}:
   r26,Legacy envelope is never emitted at runtime,"系统 MUST NOT 在 QA 响应、SSE 事件、消息持久化结果或导出正文中生成 `[[crystalith-ui:v1]]` delimiter 或随后的 envelope JSON。"
-  r84,Frontend does not parse legacy envelope markers,Chat 前端 MUST NOT 继续解析 assistant `content` 中的 legacy envelope marker；UI mounts MUST 仅由 Rivu kernel 根据 `sharedState.ui` 渲染。
+  r84,Frontend does not parse legacy envelope markers,Chat 前端 MUST NOT 解析 assistant `content` 中的 legacy envelope marker；UI mounts MUST 仅依据 session `sharedState.ui`（服务端权威）由前端渲染层恢复。
 scenarios[2]{req_id,id,given,when,then,feature}:
   r26,"qa-and-messages-stay-plain-text","",后端生成一条 assistant 回答并持久化到 session message,`message.content` SHALL 仅包含纯文本/markdown 回答,true
   r84,"refresh-ignores-legacy-parsing-path","",用户刷新页面并重新加载会话,前端 SHALL 通过 `/ui/state` 恢复 mounts,true

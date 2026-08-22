@@ -2,20 +2,18 @@ kind: llman.sdd.spec
 name: "openapi-and-client-generation"
 purpose: "定义一等 TypeScript client（Eden）与 OpenAPI 衍生文档面：共享 camelCase Zod SSOT；禁止再引入 hey-api / api/generated 一等 client。"
 valid_scope[2]: apps/,packages/
-requirements[8]{req_id,title,statement}:
+requirements[7]{req_id,title,statement}:
   r37,"Eden RPC is the TypeScript client for first-party apps","Crystalith Web（及未来嵌入同一 HTTP 面的 Tauri webview）MUST 使用 Elysia eden treaty 调用 server API（`import type { App }` + `treaty`）。MUST NOT 使用 @hey-api/openapi-ts 生成新的一等 client。OpenAPI/Scalar（`/openapi`）MUST 继续作为人类与外部消费者的文档面，与 Eden 并行存在。"
-  r95,"First-party apps use Eden only",一等前端 MUST 仅通过 Eden（及 `@crystalith/shared` 类型）调用 HTTP API。MUST NOT 恢复 `api/generated/` 或平行 wire DTO 目录作为 SSOT。
+  r95,"First-party apps use Eden only",一等前端 MUST 仅通过 Eden（及 `@crystalith/shared` 类型）调用 HTTP API。仓库 MUST NOT 再引入 `api/generated/`、`openapi.gen.json` 一等 client 或平行 wire DTO 目录作为 SSOT；OpenAPI 文档 MUST 由路由挂载的 Zod 在运行时导出。
   r132,Shared Zod schemas are camelCase SSOT for request and response,前后端共享 Zod schema MUST 放在 `packages/shared/` 且 API 字段 MUST 为 camelCase。Elysia 路由 MUST 挂载相同 schema 做运行时校验；前端 MUST 复用 shared 或 Eden 推断类型。
-  r168,Generated OpenAPI client artifacts stay deleted,仓库 MUST NOT 再引入 `api/generated/` 或将 `openapi.gen.json` 作为一等 client 漂移门禁。OpenAPI 文档 MUST 由路由挂载的 Zod 在运行时导出。
   "openapi-route-docs-stay-synced",OpenAPI route docs stay synced with mounted Zod,对外列表与关键读写端点的 registerApiDoc（及路由 query/response Zod 挂载）MUST 与运行时契约同步：分页列表 MUST 文档化为 PaginatedSchema；文档 path MUST 与 handler 一致。MUST NOT 以过时 apiDocs 路径或裸数组响应描述误导 Scalar/外部消费者。
   "openapi-documents-nested-canonical-paths",OpenAPI MUST document nested canonical paths,"registerApiDoc 与 OpenAPI 文档 MUST 以嵌套 /v2/notebooks/:nid/... 为 notebook-scoped 资源的唯一文档真源。MUST NOT 再登记已删除的扁平 notebook-scoped alias（如 /v2/outputs、/v2/qa、/v2/studio/slides*、扁平 /v2/sources/:id）。进程级 registry（如 GET /v2/sources/parsers）MAY 保持扁平文档。"
   "asyncapi-stream-verbs-match-handlers",AsyncAPI stream verbs MUST match handlers,AsyncAPI（及 OpenAPI 中流式端点登记）的 method/path MUST 与 Elysia handler 一致：QA stream POST；studio progress stream GET；ResearchRun stream GET。MUST NOT 文档与实现动词不一致。
-  "openapi-json-generates-without-crash",OpenAPI JSON MUST generate without crash,加载全部对外 router 后，OpenAPI 文档生成（/openapi.json 或等价 generateOpenApiDocument）MUST 在合理时间内成功完成且 MUST NOT stack overflow / hang。生成结果 MUST 包含关键 path（至少 notebooks、qa、outputs、citations context）。MUST NOT 恢复 api/generated 作为一等 TS client。
-scenarios[9]{req_id,id,given,when,then,feature}:
+  "openapi-json-generates-without-crash",OpenAPI JSON MUST generate without crash,加载全部对外 router 后，OpenAPI 文档生成（/openapi.json 或等价生成入口）MUST 在合理时间内成功完成且 MUST NOT stack overflow / hang。生成结果 MUST 包含关键 path（至少 notebooks、qa、outputs、citations context）。
+scenarios[8]{req_id,id,given,when,then,feature}:
   r37,"eden-and-openapi-coexist","",检查前端依赖与 /openapi,前端 SHALL 通过 eden 调用 API，且 OpenAPI/Scalar SHALL 可访问并反映 camelCase schema,true
   r95,"no-generated-client","",搜索 apps/web 对 api/generated 的依赖,SHALL 无此类 import,true
   r132,"openapi-reflects-camelcase","",查看 /openapi.json 或 Scalar,文档中的 schema 属性名 SHALL 为 camelCase,true
-  r168,"artifacts-stay-gone","",检查仓库树,SHALL 不存在作为一等 client 的 api/generated 目录,true
   "openapi-route-docs-stay-synced","paginated-list-documented",列表已改为 PaginatedSchema,检查对应 registerApiDoc responses,文档 SHALL 描述含 items/total 的分页信封而非仅裸数组,false
   "openapi-documents-nested-canonical-paths","outputs-nested-in-docs",outputs 已挂载嵌套路径,检查 registerApiDoc / OpenAPI,"文档 SHALL 含 /v2/notebooks/{nid}/outputs 且 MUST NOT 登记已删扁平 /v2/outputs 为可调用操作",false
   "openapi-documents-nested-canonical-paths","no-flat-alias-in-docs","flat notebook-scoped aliases 已从路由删除",检查 registerApiDoc / OpenAPI,"文档 SHALL 含嵌套 /v2/notebooks/{nid}/outputs 等且 MUST NOT 再登记已删扁平 alias 为可调用操作",false

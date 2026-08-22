@@ -17,4 +17,4 @@ scenarios[7]{req_id,id,given,when,then,feature}:
   r155,happy,"",用户请求 FAQ 类型结构化输出,generateObject SHALL 返回符合 Zod schema 的 JSON，类型推断正确,true
   r190,happy,"",前端请求流式 QA,"SSE 流 SHALL 实时推送 text-delta 和 tool-call/tool-result 事件",true
   r221,happy,"",系统计算 context window 使用量,"gpt-tokenizer encode().length 返回正确 token 数",true
-  r247,happy,"",LLM 调用失败需要重试,middleware SHALL 自动重试最多 3 次，指数退避,true
+  r247,happy,"",LLM 调用失败需要重试,middleware SHALL 按配置的有限次数自动重试并采用指数退避,true

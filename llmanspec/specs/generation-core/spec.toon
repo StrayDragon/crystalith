@@ -1,6 +1,6 @@
 kind: llman.sdd.spec
 name: "generation-core"
-purpose: 定义统一生成主链路：上下文解析、结构化生成、后处理、引用映射、持久化，以及 QA/outputs 与 preference 的一致语义（Refine HTTP 已于 c73 移除）。
+purpose: 定义统一生成主链路：上下文解析、结构化生成、后处理、引用映射、持久化，以及 QA/outputs 与 preference 的一致语义。
 valid_scope[2]: src/,tests/
 requirements[16]{req_id,title,statement}:
   r31,Output generation follows deterministic node pipeline,"结构化输出 MUST 遵循 `ResolveContext -> Generate -> Postprocess -> MapCitations -> Persist` 逻辑顺序。"
