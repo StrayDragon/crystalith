@@ -9,17 +9,11 @@
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { afterAll, afterEach, beforeAll, expect } from 'vitest';
 
-import './api/setup';
 import { server } from './test-utils/msw/server';
 
 expect.extend(matchers);
-// Mock client — minimal config stub (generated client removed in c14)
-const client: { setConfig: (opts: Record<string, unknown>) => void } = { setConfig: () => {} };
 
 beforeAll(() => {
-  client.setConfig({
-    baseUrl: 'http://localhost',
-  });
   const onUnhandledRequest = (process.env.VITEST_MSW_ON_UNHANDLED || 'error') as
     | 'bypass'
     | 'warn'

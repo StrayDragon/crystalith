@@ -2,12 +2,7 @@
 // Mirrors v1 `features.studio.schemas` + `studio.slides.config`.
 import { z } from 'zod';
 
-import {
-  IdSchema,
-  IsoTimestampSchema,
-  JsonMetadataSchema,
-  OptionalTimestampSchema,
-} from './common.js';
+import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from './common.js';
 import { desc } from './i18n.js';
 import { SlidesOutlineSchema } from './output.js';
 
@@ -200,6 +195,3 @@ export type PluginConfig = SlidesConfigSchema;
 
 /** Re-export so consumers can import slide outline shape from one place. */
 export { SlidesOutlineSchema };
-
-/** Optional marker kept for parity with v1 lastErrorAt pattern. */
-export const _SlideOptionalTimestamp = OptionalTimestampSchema;

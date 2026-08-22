@@ -5,8 +5,6 @@ export type { SseEmit } from './research-core.ts';
 export { isPruneProtectedNode, subscribeRun } from './research-core.ts';
 export { scheduleRun } from './run-loop.ts';
 export {
-  // oxlint-disable-next-line typescript/no-deprecated -- fixture-only stub; retained for isolated tests
-  synthesizeReport,
   retrySynthesize,
   listProgress,
   getReportView,

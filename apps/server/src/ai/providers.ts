@@ -28,7 +28,6 @@ const KNOWN_PROVIDERS = {
   },
   groq: { sdk: '@ai-sdk/openai-compatible', factory: 'createOpenAICompatible' },
   together: { sdk: '@ai-sdk/openai-compatible', factory: 'createOpenAICompatible' },
-  bedrock: { sdk: '@ai-sdk/amazon-bedrock', factory: 'createAmazonBedrock' },
 } as const satisfies Record<string, ProviderEntry>;
 
 type ProviderFactory = (opts: Record<string, unknown>) => unknown;

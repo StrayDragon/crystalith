@@ -327,15 +327,6 @@ export async function retrySynthesize(
   return serializeRun(requireRun(notebookId, runId));
 }
 
-/**
- * @deprecated Heuristic evidence bullet list removed from success path (c102).
- * Stub-shaped helper retained for isolated fixtures only — MUST NOT complete a Run.
- */
-export function synthesizeReport(row: RunRow): ResearchReport {
-  const evidences = listEvidences(row.id);
-  return e2eStubResearchReport(row.topic, evidences.length);
-}
-
 export function reportToMarkdown(report: ResearchReport): string {
   const citeOrder: string[] = [];
   const noteCite = (ids: string[]) => {
