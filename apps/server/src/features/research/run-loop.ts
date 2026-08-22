@@ -66,6 +66,17 @@ function shouldFinalizeCancelOnAbort(runId: number): boolean {
   return row.status !== 'awaiting_confirm';
 }
 
+/**
+ * Cancelled-or-aborted checkpoint shared by runLoop / finishWaveOrSynthesize.
+ * Returns true when the caller must stop; finalizes user-cancel unless a
+ * cooperative pause owns the abort (see shouldFinalizeCancelOnAbort).
+ */
+function bailIfAborted(runId: number, signal: AbortSignal): boolean {
+  if (!signal.aborted && !isCancelled(runId)) return false;
+  if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
+  return true;
+}
+
 /** Sleep that resolves early when AbortSignal fires (cooperative reexpand pause). */
 function sleepUnlessAborted(ms: number, signal: AbortSignal): Promise<void> {
   if (signal.aborted) return Promise.resolve();
@@ -101,10 +112,7 @@ export async function finishWaveOrSynthesize(runId: number): Promise<void> {
     }
     throw error;
   }
-  if (abort.signal.aborted || isCancelled(runId)) {
-    if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
-    return;
-  }
+  if (bailIfAborted(runId, abort.signal)) return;
   const row = requireFresh(runId);
   // Cooperative pause (request-reexpand) already owns the confirm gate.
   if (row.status === 'awaiting_confirm') return;
@@ -700,10 +708,7 @@ export async function runLoop(runId: number): Promise<void> {
     emitLog(runId, `开始研究「${row.topic}」`);
     appendProgressEvent(runId, 'unit_started', { headline: 'work_unit' });
 
-    if (isCancelled(runId) || abort.signal.aborted) {
-      if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
-      return;
-    }
+    if (bailIfAborted(runId, abort.signal)) return;
 
     // Seed single-sink DAG (question + conclusion) at start of loop (r317).
     let graph = getGraph(row);
@@ -727,10 +732,7 @@ export async function runLoop(runId: number): Promise<void> {
     // c93 / r326: auto-decompose topic into research nodes (topology only; c94 runs units).
     // r333: at most once per run — skip when live research branches already exist
     // (user-gated secondary decompose goes through request-reexpand / confirm, not here).
-    if (isCancelled(runId) || abort.signal.aborted) {
-      if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
-      return;
-    }
+    if (bailIfAborted(runId, abort.signal)) return;
     row = requireFresh(runId);
     graph = getGraph(row);
     if (!hasLiveResearchBranches(graph.nodes)) {
@@ -791,10 +793,7 @@ export async function runLoop(runId: number): Promise<void> {
     ) {
       emitLog(runId, 'e2e stub: hold 2.5s before drain for live interaction window');
       await sleepUnlessAborted(2500, abort.signal);
-      if (abort.signal.aborted || isCancelled(runId)) {
-        if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
-        return;
-      }
+      if (bailIfAborted(runId, abort.signal)) return;
     }
 
     // F1=A: live research branches → skip question work-unit; drain branches only.
@@ -836,10 +835,7 @@ export async function runLoop(runId: number): Promise<void> {
       evidenceIds.push(...work.evidenceIds);
       row = requireFresh(runId);
 
-      if (isCancelled(runId) || abort.signal.aborted) {
-        if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
-        return;
-      }
+      if (bailIfAborted(runId, abort.signal)) return;
 
       row = requireFresh(runId);
       graph = getGraph(row);
@@ -864,16 +860,10 @@ export async function runLoop(runId: number): Promise<void> {
     }
 
     // Parallel-capable work units for live research nodes (c106; N=1 ≡ serial)
-    if (isCancelled(runId) || abort.signal.aborted) {
-      if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
-      return;
-    }
+    if (bailIfAborted(runId, abort.signal)) return;
     await finishWaveOrSynthesize(runId);
   } catch (error) {
-    if (abort.signal.aborted || isCancelled(runId)) {
-      if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
-      return;
-    }
+    if (bailIfAborted(runId, abort.signal)) return;
     if (error instanceof AppHttpError && error.code === ErrorCode.RESEARCH_BUDGET) {
       emitLog(runId, '搜索预算已尽，进入预算确认');
       await enterConfirm(runId, 'budget');
