@@ -4,7 +4,7 @@ purpose: "定义来源管理与标签体系：列表、排序、过滤、chunks�
 valid_scope[2]: src/,tests/
 requirements[11]{req_id,title,statement}:
   r48,Source list query semantics are stable,来源列表 MUST 支持 tag 精确过滤与稳定排序（date/name/size/type + asc/desc）。
-  r106,"Source list can be epoch-cached","列表结果 MUST 基于 `sources_epoch` 缓存；来源集合或 tag 相关变更成功后 MUST 使缓存 O(1) 失效并在下次查询重建。"
+  r106,"Source list can be epoch-cached","列表结果 MUST 基于 `sources_epoch` 缓存；失效模型遵循 retrieval-and-cache r174（canonical），来源集合或 tag 相关变更成功后 MUST 使列表缓存失效并在下次查询重建。"
   r143,Chunks endpoint returns deterministic order,来源 chunks 接口 MUST 按 `chunk_index` 升序返回。
   r178,"Delete and re-embed keep storage and epochs consistent","删除 MUST 同时删 DB 与向量；re-embed MUST 使用既有 chunks 重算向量并维护 epoch。"
   r256,Source failures include diagnostic fields,来源在失败或不可恢复状态下 MUST 提供结构化诊断信息，以支持 UI 给出可操作的修复建议。

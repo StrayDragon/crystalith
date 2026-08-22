@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "source-ingestion-summary-and-conversion"
 purpose: 定义单来源派生能力与内容转换能力：来源摘要、来源范围 QA、来源问答转来源，以及对话/输出转来源或笔记。该规范强调转换结果可追踪且遵循来源生命周期，避免产生不可检索或不可归因的数据。
 valid_scope[2]: src/,tests/
-requirements[14]{req_id,title,statement}:
+requirements[13]{req_id,title,statement}:
   r49,"Source summary is cache-first with explicit regenerate",来源摘要 GET MUST 仅允许 ready 来源且 MUST NOT 调用 LLM：有 metadata.autoSummary 则返回缓存；无缓存时 MUST 返回 200 空态（空 summary/要点/主题，generatedAt 可空）。摘要的生成与覆盖 MUST 仅由 POST 同 path（或 ingest ready 后的异步预生成）完成并写入 metadata.autoSummary。
   r107,"Source-scoped QA is hard-bounded by sourceId",来源 QA MUST 仅在该 `sourceId` 范围内检索与回答。
   r144,Source QA conversion creates reusable source,来源问答转换 MUST 创建新来源并可立即用于后续检索。
@@ -12,12 +12,11 @@ requirements[14]{req_id,title,statement}:
   "qa-to-source-multi-turn","qa-to-source MUST accept multi-turn messages list","qa-to-source 转换 MUST 接受 messages: list[QAMessage] 多轮历史并格式化为完整 transcript 后创建 source（对齐既有语义）；MAY 另接受单轮 {question, answer}。"
   "tag-binding-must-return-per-item-diagnostics","Tag assign/remove MUST return per-item results with errorCode","tag 批量 assign/remove MUST 返回 per-item 结果 {sourceId, ok, message, errorCode}；缺失/跨 notebook source SHALL 报 SOURCE_NOT_FOUND。"
   "csv-parser-must-escape-cells","CSV parser MUST escape pipes and newlines in markdown-table cells","CSV parser MUST 转义 markdown-table 单元格中的 |（转义为 \\|）、换行，截断用 … 省略号（对齐既有语义）。"
-  "convert-embedding-no-ready-on-fail",Source conversion MUST NOT mark ready when embedding fails,"QA-to-source 和 session convert-to-source MUST 在 embedding 失败时标记 source 为 failed 而非 ready"
+  "convert-embedding-no-ready-on-fail",Source conversion MUST NOT mark ready when embedding fails,"QA-to-source 和 session convert-to-source 的 embedding 失败处理遵循 source-ingestion-core r2_sync（canonical）：MUST 标记 source 为 failed 而非 ready。"
   "per-source-qa-vector-search","Per-source QA MUST use vector retrieval","per-source QA MUST 通过 embed question + scoped vector search 检索相关 chunk，而非简单取前 N 个 chunk"
-  "from-url-link-mode","From-url MUST support link mode","from-url 端点 MUST 支持 mode=link 创建轻量 source（不 fetch URL 内容）"
   "summary-post-persists-auto-summary",POST summary MUST persist autoSummary,"POST /v2/notebooks/:nid/sources/:sid/summary MUST 对 ready 来源生成摘要结构，MUST 将结果 merge 写入 sources.metadata.autoSummary，并 MUST 返回与有缓存时 GET 相同形状的 SourceSummary。"
   "summary-async-after-ready","Ingest MUST async-pregenerate summary after ready",来源 ingest 成功标记 ready 后，系统 SHOULD 异步预生成并写入 metadata.autoSummary；预生成失败 MUST NOT 将 source 标为 failed，也 MUST NOT 阻塞 ingest 成功响应。
-scenarios[15]{req_id,id,given,when,then,feature}:
+scenarios[14]{req_id,id,given,when,then,feature}:
   r49,"get-returns-cache-without-llm",ready 来源已有 metadata.autoSummary,客户端 GET summary,系统 SHALL 返回缓存内容且不调用聊天模型,false
   r49,"get-empty-when-missing",ready 来源尚无 autoSummary,客户端 GET summary,系统 SHALL 返回 200 空态且不调用聊天模型,false
   r107,"qa-does-not-cross-source-boundary","",用户对某个 `sourceId` 发起来源范围 QA,系统 SHALL 仅在该来源范围内检索与回答,true
@@ -30,6 +29,5 @@ scenarios[15]{req_id,id,given,when,then,feature}:
   "csv-parser-must-escape-cells","csv-cell-with-pipe",CSV 单元格含 | 字符,"parser 产出 markdown-table","SHALL 转义为 \\|（不破坏 table 结构）",true
   "convert-embedding-no-ready-on-fail","qa-to-source-fail","embedding API 在 QA-to-source 过程中失败",source 状态更新,系统 SHALL 标记 source 为 failed 而非 ready,true
   "per-source-qa-vector-search","large-source-qa",一个 source 有 50 个 chunk,用户对该 source 提问,系统 SHALL 通过向量检索返回最相关的 chunk 而非前 15 个,true
-  "from-url-link-mode","link-mode",用户提供 URL 且 mode=link,"from-url 调用",系统 SHALL 创建轻量 source 不执行 HTTP fetch,true
   "summary-post-persists-auto-summary","post-writes-metadata",ready 来源无或已有 autoSummary,客户端 POST summary,系统 SHALL 生成并写入 metadata.autoSummary 且响应含完整摘要字段,false
   "summary-async-after-ready","ready-triggers-async-summary",文件 ingest 即将完成,source 被标记为 ready,系统 SHALL 在不阻塞响应的前提下尝试异步写入 autoSummary；失败不改 status,false
