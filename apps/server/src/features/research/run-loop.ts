@@ -26,6 +26,7 @@ import { computePageSoftCap, computeSearchSoftCap } from './research-budget.ts';
 import {
   activeLoops,
   appendProgressEvent,
+  CONFIRM_OPTIONS,
   broadcast,
   clearRunAbortController,
   emitGraphPatch,
@@ -958,15 +959,9 @@ export async function enterConfirm(
     checkpoint: writeCheckpoint(row, `before_confirm_${kind}`),
   });
   emitStatus(runId, 'awaiting_confirm', kind);
-  const options =
-    kind === 'budget'
-      ? ['continue', 'finish_report']
-      : kind === 'reexpand'
-        ? ['approve_reexpand', 'skip_reexpand']
-        : ['approve_branch', 'skip_branch'];
   broadcast(runId, 'confirm', {
     kind,
     branchNodeId,
-    options,
+    options: CONFIRM_OPTIONS[kind],
   });
 }

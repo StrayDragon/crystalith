@@ -32,6 +32,7 @@ import {
   abortAllChatsForRun,
   abortRunWorkUnit,
   appendProgressEvent,
+  CONFIRM_OPTIONS,
   assertLiveMutable,
   broadcast,
   emptyGraph,
@@ -561,24 +562,17 @@ export function requestReexpand(
   }
 
   // Cooperative pause: flip status before abort so runLoop does not finalizeCancel.
-  if (row.status === 'running') {
-    updateRun(runId, {
-      status: 'awaiting_confirm',
-      confirmKind: 'reexpand',
-      confirmBranchNodeId: focusNodeId,
-      llmActivity: null,
-      activeNodeId: null,
-      checkpoint: writeCheckpoint(row, 'before_confirm_reexpand'),
-    });
-    abortRunWorkUnit(runId);
-  } else {
-    updateRun(runId, {
-      status: 'awaiting_confirm',
-      confirmKind: 'reexpand',
-      confirmBranchNodeId: focusNodeId,
-      checkpoint: writeCheckpoint(row, 'before_confirm_reexpand'),
-    });
-  }
+  // running additionally clears LLM occupancy and aborts the in-flight work unit;
+  // awaiting_confirm already has llmActivity / activeNodeId cleared.
+  const wasRunning = row.status === 'running';
+  updateRun(runId, {
+    status: 'awaiting_confirm',
+    confirmKind: 'reexpand',
+    confirmBranchNodeId: focusNodeId,
+    ...(wasRunning && { llmActivity: null, activeNodeId: null }),
+    checkpoint: writeCheckpoint(row, 'before_confirm_reexpand'),
+  });
+  if (wasRunning) abortRunWorkUnit(runId);
 
   // intentionally || — empty trim becomes null
   // oxlint-disable-next-line typescript/prefer-nullish-coalescing
@@ -597,7 +591,7 @@ export function requestReexpand(
   broadcast(runId, 'confirm', {
     kind: 'reexpand',
     branchNodeId: focusNodeId ?? undefined,
-    options: ['approve_reexpand', 'skip_reexpand'],
+    options: CONFIRM_OPTIONS.reexpand,
   });
   return serializeRun(requireRun(notebookId, runId));
 }
@@ -745,7 +739,7 @@ export function forkNode(
   broadcast(runId, 'confirm', {
     kind: 'expand_branch',
     branchNodeId: nodeId,
-    options: ['approve_branch', 'skip_branch'],
+    options: CONFIRM_OPTIONS.expand_branch,
   });
   return serializeRun(requireRun(notebookId, runId));
 }
@@ -870,12 +864,7 @@ export async function streamRun(
     emit('confirm', {
       kind: row.confirmKind,
       branchNodeId: row.confirmBranchNodeId ?? undefined,
-      options:
-        row.confirmKind === 'budget'
-          ? ['continue', 'finish_report']
-          : row.confirmKind === 'reexpand'
-            ? ['approve_reexpand', 'skip_reexpand']
-            : ['approve_branch', 'skip_branch'],
+      options: row.confirmKind ? CONFIRM_OPTIONS[row.confirmKind] : [],
     });
   }
   if (row.status === 'completed') {
