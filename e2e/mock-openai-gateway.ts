@@ -15,7 +15,7 @@ function json(data: unknown, status = 200): Response {
 const server = Bun.serve({
   hostname: '127.0.0.1',
   port,
-  fetch(req) {
+  async fetch(req) {
     const url = new URL(req.url);
     if (req.method === 'GET' && (url.pathname === '/health' || url.pathname === '/v1/health')) {
       return json({ status: 'ok', service: 'e2e-mock-openai' });
@@ -45,9 +45,19 @@ const server = Bun.serve({
       });
     }
     if (req.method === 'POST' && url.pathname.includes('/embeddings')) {
+      // Dimension MUST match apps/server/src/db/vectors.ts DEFAULT_EMBEDDING_DIM (vec0 table).
+      // A mismatch makes every insert fail with EMBEDDING_FAILED.
+      // One embedding per input value — real providers return data[] aligned
+      // with the request's input array; short lists become zero-length vectors.
+      const body = (await req.json()) as { input: string | string[] };
+      const inputs = Array.isArray(body.input) ? body.input : [body.input];
       return json({
         object: 'list',
-        data: [{ object: 'embedding', index: 0, embedding: Array.from({ length: 8 }, () => 0.01) }],
+        data: inputs.map((_, i) => ({
+          object: 'embedding',
+          index: i,
+          embedding: Array.from({ length: 1024 }, () => 0.01),
+        })),
         model: 'e2e-embed',
       });
     }
