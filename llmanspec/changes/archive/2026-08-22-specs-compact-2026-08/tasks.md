@@ -1,6 +1,7 @@
 # Tasks — specs-compact-2026-08
 
 全量审计基线：37 capabilities / 420 requirements（2026-08）。
+（遗留的 type-a 去锚定与 R 组合并见 design.md「D7 后续批次」，不在本 change 完成口径内。）
 
 ## ✅ 已完成（commit 8ab5fb8c）
 
@@ -45,28 +46,3 @@
 - [x] `background-jobs-and-task-runtime` 单条守卫并入 architecture-core `r_taskqueue_retired`
 
 验证：`llman sdd validate --specs --strict --no-interactive` → **35 passed, 0 failed**
-
-## ⏳ 遗留项（后续批次）
-
-### Type-a 函数名/文件路径去锚定（约 20 条，低风险改写）
-
-- [ ] deep-research-runtime r327/r328 scenarios（writeBackNodeWork/runLoop/synthesizeAndComplete/drain）
-- [ ] deep-research-ui r425/r430/r433/r438/r451/r457
-- [ ] bdd-test-harness（run.test.ts/SKIP_FEATURE_DIRS 等测试文件名）
-- [ ] retrieval-and-cache（EpochCache/EmbedStrategy/ragRegistry.retrieveWith/searchVectors）
-- [ ] configuration-governance r158（getDataRoot() 等 accessor 名）
-- [ ] 其余散点见审计报告 R 组清单
-
-### 跨 capability 冗余合并（R 组，需逐组核对引用面）
-
-- [ ] R1 camelCase wire：workspace-api-contract r75/r284/r285 ↔ openapi r132 ↔ fm r286/r287
-- [ ] R3 OpenAPI/AsyncAPI 同步四条收敛至 openapi-and-client-generation
-- [ ] R4 notebook-scoped 四条收敛为两条（workspace-api-contract 内部）
-- [ ] R5 提取器偏好/fallback：web-extractor-plugins 作 canonical
-- [ ] R6 `/prompt:` 解析五处合一（chat-prompt-presets canonical）
-- [ ] R7 stats preset 内部三对一（chat-prompt-presets）
-- [ ] R9/R10 tag 批量结果与大小写唯一性（management-and-tags 内部）
-- [ ] R11 from-url link 模式重复条目
-- [ ] R12 embedding 失败不置 ready 引用化
-- [ ] R14 epoch 失效模型重述条目引用化
-- [ ] R17 深研 API↔UI 配对条目引用化
