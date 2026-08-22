@@ -355,7 +355,8 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       const binding = getBindingOr404(nid, bindingId);
       const syncCheckId = body.syncCheckId;
 
-      // AppHttpError (e.g. CONNECTOR_UNAVAILABLE) propagates via global onError.
+      // sync.ts throws AppHttpError (409 SYNC_CHECK_REQUIRED / SYNC_CHECK_OUTDATED)
+      // which propagates via global onError.
       return await applySyncCheckToBinding(nid, binding, syncCheckId);
     },
     {

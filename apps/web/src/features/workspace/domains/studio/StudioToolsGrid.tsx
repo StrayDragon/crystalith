@@ -206,11 +206,7 @@ export default function StudioToolsGrid({
     <>
       <div className={`grid gap-2 ${isFullscreen ? 'grid-cols-3 sm:grid-cols-4' : 'grid-cols-2'}`}>
         {tools
-          .filter(
-            (tool) =>
-              tool.outputType === 'SLIDES' ||
-              ToolOutputTypeSchema.safeParse(tool.outputType).success,
-          )
+          .filter((tool) => ToolOutputTypeSchema.safeParse(tool.outputType).success)
           .map((tool) => {
             const isDisabled = !tool.enabled || !tool.outputType || !hasSelectedSources;
             const isSlidesTool = tool.outputType === 'SLIDES';

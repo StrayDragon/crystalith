@@ -10,6 +10,7 @@ import { createPortal } from 'react-dom';
 import useSWR from 'swr';
 
 import { api } from '../../../../../api/eden';
+import { parseServerError } from '../../../../../api/parseServerError';
 import { useLayer } from '../../../../../shared/layer';
 import { TestIds, tid } from '../../../../../shared/testids';
 import { toast } from '../../../../../shared/toast';
@@ -869,10 +870,7 @@ export default function SourceConnectorsDialog({
       const { data: result, error: applyErr } = await bindingApi['sync-check'].apply.post({
         syncCheckId: syncCheck.id,
       });
-      if (applyErr)
-        throw new Error(
-          typeof applyErr === 'string' ? applyErr : typeof applyErr === 'string' ? applyErr : '',
-        );
+      if (applyErr) throw new Error(parseServerError(applyErr).message);
       if (!result) throw new Error('同步应用失败');
       setBinding(result.binding);
       setSyncApplyResult(result);

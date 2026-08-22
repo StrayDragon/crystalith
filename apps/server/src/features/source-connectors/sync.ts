@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '../../db/index.ts';
 import { sourceConnectorBindings, sources } from '../../db/schema.ts';
 import { getDedupEnabled } from '../../shared/config.ts';
+import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { checkDedup } from '../sources/dedup.ts';
 import { ingestSource } from '../sources/pipeline.ts';
 import { normalizeDirectoryPath, normalizeFilePath, pathInScope } from './paths.ts';
@@ -329,19 +330,18 @@ export async function applySyncCheckToBinding(
   syncCheckId: string,
 ): Promise<ImportScopeApplyResponse> {
   if (!binding.lastSyncCheckResult) {
-    throw Object.assign(new Error('请先执行 sync_check'), {
-      status: 409,
+    throw new AppHttpError(ErrorCode.CONFLICT, '请先执行 sync_check', {
       errorCode: 'SYNC_CHECK_REQUIRED',
     });
   }
 
   const stored = binding.lastSyncCheckResult;
   if (stored.id !== syncCheckId) {
-    throw Object.assign(new Error('sync_check 已过期'), {
-      status: 409,
+    throw new AppHttpError(ErrorCode.CONFLICT, 'sync_check 已过期', {
       errorCode: 'SYNC_CHECK_OUTDATED',
       hint: '请重新执行 sync_check 并确认后再应用。',
-      details: { expected: stored.id, got: syncCheckId },
+      expected: stored.id,
+      got: syncCheckId,
     });
   }
 
