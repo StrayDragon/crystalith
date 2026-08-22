@@ -230,7 +230,7 @@ export function useRefine() {
       }
       const selectedType = overrideType ?? s.outputType;
       if (selectedType === 'SLIDES') {
-        s.setError('outputs', '请使用演示工具进行生成。');
+        s.setError('outputs', '请使用 Slides Studio 进行生成。');
         return;
       }
       const selectedOption = outputTypeOptions.find((item) => item.id === selectedType);
@@ -282,7 +282,7 @@ export function useRefine() {
         return;
       }
       if (output.type === 'SLIDES') {
-        s.setError('outputs', '请使用演示工具进行生成。');
+        s.setError('outputs', '请使用 Slides Studio 进行生成。');
         return;
       }
       const prompt = resolveOutputPrompt(output.type, output.prompt);

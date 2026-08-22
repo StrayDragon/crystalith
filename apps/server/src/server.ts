@@ -9,7 +9,7 @@ import { Elysia, NotFoundError } from 'elysia';
 
 import { generateAsyncApiDocument } from './asyncapi.ts';
 // Feature routers — each exports an Elysia instance + registers OpenAPI docs
-// 16 routers total (removed: citations, eval, refine, tasks, strategies HTTP)
+// 15 routers total (removed: citations, eval, refine, tasks, strategies HTTP)
 import { commandsRouter } from './features/commands/router.ts';
 import { messagesRouter } from './features/messages/router.ts';
 import { modelsRouter } from './features/models/router.ts';

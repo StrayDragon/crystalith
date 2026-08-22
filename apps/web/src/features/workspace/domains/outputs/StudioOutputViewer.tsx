@@ -143,8 +143,7 @@ export default function StudioOutputViewer({
       />
       {/* position:relative so this modal content stacks ABOVE the
            absolute inset-0 backdrop sibling; without it the backdrop
-           captures all pointer events including scroll/click on content.
-           See PROGRESS.v2.e2e.md K14. */}
+           captures all pointer events including scroll/click on content. */}
       <div
         className={`relative flex flex-col overflow-hidden bg-white shadow-2xl transition-all dark:bg-slate-900 ${
           isFullscreen
@@ -166,7 +165,7 @@ export default function StudioOutputViewer({
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {researchLabOrigin ? (
-              <Tooltip content="打开深度研究报告（临时入口）">
+              <Tooltip content="打开深度研究报告">
                 <button
                   type="button"
                   className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-800 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-200"

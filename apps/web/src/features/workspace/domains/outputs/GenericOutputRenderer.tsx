@@ -69,12 +69,10 @@ function resolveOptionBool(
 }
 
 /**
- * Extract the text content from a value, handling the v1 CitedText pattern
- * `{ text: string, citations: [...] }` — when the value is an object with a
+ * Extract the text content from a value, handling the CitedText wire shape
+ * `{ text: string, citations?: [...] }` — when the value is an object with a
  * `text` string field, return that field instead of JSON-stringifying the
- * whole object. This is the primary fix for "notes show JSON instead of text"
- * after the Rivu AG-UI runtime was removed in favor of embedded JSON content
- * + GenericOutputRenderer (see PROGRESS.v2.e2e.md K12).
+ * whole object, so notes render text rather than raw JSON.
  */
 function coerceText(value: unknown): string {
   if (typeof value === 'string') return value;
