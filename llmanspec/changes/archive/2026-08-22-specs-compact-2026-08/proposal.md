@@ -1,8 +1,9 @@
 ---
 depends_on: []
 branch: sdd/specs-compact-2026-08
-base_sha: 5d0517cb128b657cc570d759eb57075569afd298
-checkpointed: false
+base_sha: e2294c7793b104e2b03a7e57c24e8a4d4c0e1c72
+checkpointed: true
+checkpoint_sha: e2294c7793b104e2b03a7e57c24e8a4d4c0e1c72
 ---
 
 ## Why
