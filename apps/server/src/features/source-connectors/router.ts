@@ -152,25 +152,16 @@ function getConnectorOr404(connectorId: string) {
   const connector = getBuiltinConnector(connectorId.trim());
   // c44: unavailable connector → 409 with install hint (v1 _get_connector_plugin_or_409)
   if (!connector) {
-    throw new ConnectorUnavailableError(connectorId);
+    throw new AppHttpError(
+      ErrorCode.CONNECTOR_UNAVAILABLE,
+      `Source connector "${connectorId}" is not available`,
+      {
+        hint: `Install or enable the "${connectorId}" connector plugin`,
+        pluginDiagnostic: { connectorId: connectorId, loaded: false },
+      },
+    );
   }
   return connector;
-}
-
-/** H3 fix: proper Error subclass instead of plain object throw. */
-class ConnectorUnavailableError extends Error {
-  status = 409;
-  body: Record<string, unknown>;
-  constructor(connectorId: string) {
-    super(`Source connector "${connectorId}" is not available`);
-    this.name = 'ConnectorUnavailableError';
-    this.body = {
-      errorCode: 'CONNECTOR_UNAVAILABLE',
-      message: `Source connector "${connectorId}" is not available`,
-      hint: `Install or enable the "${connectorId}" connector plugin`,
-      pluginDiagnostic: { connectorId: connectorId, loaded: false },
-    };
-  }
 }
 
 /**
@@ -203,20 +194,6 @@ function validateConnectionConfig(
     }
   }
   return null;
-}
-
-function throwStatusError(
-  status: number,
-  message: string,
-  details?: Record<string, unknown>,
-): never {
-  const code =
-    status === 400
-      ? ErrorCode.INVALID_REQUEST
-      : status === 409
-        ? ErrorCode.CONFLICT
-        : ErrorCode.INTERNAL_ERROR;
-  throw new AppHttpError(code, message, details);
 }
 
 async function runSyncCheck(
@@ -378,18 +355,8 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       const binding = getBindingOr404(nid, bindingId);
       const syncCheckId = body.syncCheckId;
 
-      try {
-        return await applySyncCheckToBinding(nid, binding, syncCheckId);
-      } catch (error) {
-        const err = readThrownExtras(error);
-        if (err.status) {
-          throwStatusError(err.status, err.message, {
-            ...(err.hint ? { hint: err.hint } : {}),
-            ...(err.details ? { details: err.details } : {}),
-          });
-        }
-        throw error;
-      }
+      // AppHttpError (e.g. CONNECTOR_UNAVAILABLE) propagates via global onError.
+      return await applySyncCheckToBinding(nid, binding, syncCheckId);
     },
     {
       body: SyncCheckApplyRequestSchema,
@@ -411,7 +378,11 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
         normalizeImportScope(scope);
       } catch (error) {
         const err = readThrownExtras(error);
-        throwStatusError(err.status ?? 400, err.message, err.hint ? { hint: err.hint } : undefined);
+        throw new AppHttpError(
+          ErrorCode.INVALID_REQUEST,
+          err.message,
+          err.hint ? { hint: err.hint } : undefined,
+        );
       }
 
       let currentSnapshot: Snapshot;
