@@ -105,13 +105,9 @@ export const DeprecatedEnvSchema = z
   .object({
     SEARXNG_HOST: z.string().default('').describe(desc('env.SEARXNG_HOST')),
 
-    POSTGRES_PASSWORD: z.string().default('').describe(desc('env.POSTGRES_PASSWORD')),
-
     JINA_API_KEY: z.string().default('').describe(desc('env.JINA_API_KEY')),
 
     FIRECRAWL_API_KEY: z.string().default('').describe(desc('env.FIRECRAWL_API_KEY')),
-
-    BROWSERLESS_TOKEN: z.string().default('').describe(desc('env.BROWSERLESS_TOKEN')),
   })
   .openapi({
     description: desc('env.deprecated', '已弃用环境变量（兼容保留）'),

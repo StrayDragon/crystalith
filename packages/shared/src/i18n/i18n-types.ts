@@ -193,10 +193,8 @@ export type Translation = {
   'env.CL_FIRECRAWL_API_BASE': string;
   'env.VITE_API_PROXY_TARGET': string;
   'env.SEARXNG_HOST': string;
-  'env.POSTGRES_PASSWORD': string;
   'env.JINA_API_KEY': string;
   'env.FIRECRAWL_API_KEY': string;
-  'env.BROWSERLESS_TOKEN': string;
   'env.CL_CHAT_API_KEY': string;
   'env.CL_EMBEDDING_API_KEY': string;
   'env.CL_JINA_API_KEY': string;

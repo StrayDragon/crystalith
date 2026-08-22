@@ -224,11 +224,9 @@ storage:
   data_root: "./data"
 
 database:
+  # v1-compat passthrough only — v2 runtime does NOT read this (DB path comes
+  # from CL_DB_PATH / storage.data_root). Kept so old app.yaml files still parse.
   url: "sqlite+aiosqlite:///./data/app.db"
-  # Optional: auto-select a reachable external DB when available.
-  url_candidates:
-    - "postgresql+asyncpg://crystalith:{{ env.POSTGRES_PASSWORD | default('') }}@127.0.0.1:5434/crystalith"
-    - "postgresql+asyncpg://crystalith:{{ env.POSTGRES_PASSWORD | default('') }}@postgres:5432/crystalith"
 
 cache:
   # memory|auto. auto selects a reachable redis if configured, else falls back to memory.
@@ -305,31 +303,12 @@ source_ingestion:
       max_redirects: 5
 
   web_extraction:
-    # NOTE: Extractor implementations are provided by plugins.
-    # Install: `pip install 'crystalith[official-full]'` (recommended) or the individual `crystalith-extractor-*` packages.
-    fallback_order:
-      - trafilatura
-      - jina
-      - firecrawl
-      - browserless
-    enable_fallback: true
-
-    trafilatura:
-      enabled: true
-      include_tables: true
-      include_links: true
-      output_format: "markdown"
-      timeout: 30
-      proxy:
-        <<: *default_proxy
-
+    # v2 extractors: readability (built-in) / jina / firecrawl.
+    # Availability = enabled && api_key present (readability needs neither).
     jina:
       enabled: true
       # Prefer CL_* (secret.env or shell) over deprecated JINA_API_KEY.
       api_key: "{{ secret.CL_JINA_API_KEY | default(env.CL_JINA_API_KEY | default(env.JINA_API_KEY | default(''))) }}"
-      timeout: 30
-      proxy:
-        <<: *default_proxy
 
     firecrawl:
       # Availability still requires a non-empty api_key (CL_FIRECRAWL_API_KEY).
@@ -337,12 +316,6 @@ source_ingestion:
       api_key: "{{ secret.CL_FIRECRAWL_API_KEY | default(env.CL_FIRECRAWL_API_KEY | default(env.FIRECRAWL_API_KEY | default(''))) }}"
       # Self-hosted: set CL_FIRECRAWL_API_BASE (e.g. http://127.0.0.1:3002). Empty → cloud default.
       base_url: "{{ env.CL_FIRECRAWL_API_BASE | default('') }}"
-      timeout: 60
-
-    browserless:
-      enabled: false
-      endpoint: "ws://localhost:3000"
-      token: "{{ env.BROWSERLESS_TOKEN | default('') }}"
 
 # ----------------------------------------------------------------------------
 # Deep Research

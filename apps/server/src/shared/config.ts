@@ -925,47 +925,18 @@ export const RootConfigSchema = z.object({
         .describe(desc('source_ingestion.url_fetch')),
       web_extraction: z
         .object({
-          fallback_order: z
-            .array(z.string())
-            .default(['trafilatura', 'jina', 'firecrawl', 'browserless'])
-            .optional(),
-          enable_fallback: z.boolean().default(true).optional(),
-          trafilatura: z.object({
-            enabled: z.boolean().default(true).optional(),
-            include_tables: z.boolean().default(true).optional(),
-            include_links: z.boolean().default(true).optional(),
-            output_format: z.string().default('markdown').optional(),
-            timeout: z.number().int().positive().default(30).optional(),
-            proxy: z.object({
-              enabled: z.boolean().default(false).optional(),
-              http_url: z.string().default('').nullable().optional(),
-              https_url: z.string().default('').nullable().optional(),
-              socks5_url: z.string().default('').nullable().optional(),
-              no_proxy: z.array(z.string()).default(['localhost', '127.0.0.1']).optional(),
-            }),
-          }),
+          // v2 extractors: readability (built-in) / jina / firecrawl — see
+          // shared/extraction/factory.ts. Only availability-relevant fields
+          // are read here: `enabled: false` marks an extractor unavailable,
+          // api_key/base_url feed extractor credential resolution.
           jina: z.object({
             enabled: z.boolean().default(true).optional(),
             api_key: z.string().default('').optional(),
-            timeout: z.number().int().positive().default(30).optional(),
-            proxy: z.object({
-              enabled: z.boolean().default(false).optional(),
-              http_url: z.string().default('').nullable().optional(),
-              https_url: z.string().default('').nullable().optional(),
-              socks5_url: z.string().default('').nullable().optional(),
-              no_proxy: z.array(z.string()).default(['localhost', '127.0.0.1']).optional(),
-            }),
           }),
           firecrawl: z.object({
             enabled: z.boolean().default(false).optional(),
             api_key: z.string().default('').optional(),
             base_url: z.string().default('').optional(),
-            timeout: z.number().int().positive().default(60).optional(),
-          }),
-          browserless: z.object({
-            enabled: z.boolean().default(false).optional(),
-            endpoint: z.string().default('ws://localhost:3000').optional(),
-            token: z.string().default('').optional(),
           }),
         })
         .optional()

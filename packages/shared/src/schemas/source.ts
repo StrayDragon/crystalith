@@ -342,8 +342,8 @@ export const SourceFromUrlRequestSchema = z
         (v) =>
           v === null ||
           v === undefined ||
-          ['trafilatura', 'jina', 'firecrawl', 'browserless'].includes(v.toLowerCase()),
-        { message: 'extractor must be one of: trafilatura, jina, firecrawl, browserless' },
+          ['readability', 'jina', 'firecrawl'].includes(v.toLowerCase()),
+        { message: 'extractor must be one of: readability, jina, firecrawl' },
       ),
   })
   .transform((v) => ({

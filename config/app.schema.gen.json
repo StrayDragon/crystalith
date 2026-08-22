@@ -365,58 +365,6 @@
           "description": "source_ingestion.web_extraction",
           "type": "object",
           "properties": {
-            "fallback_order": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "enable_fallback": {
-              "type": "boolean"
-            },
-            "trafilatura": {
-              "type": "object",
-              "properties": {
-                "enabled": {
-                  "type": "boolean"
-                },
-                "include_tables": {
-                  "type": "boolean"
-                },
-                "include_links": {
-                  "type": "boolean"
-                },
-                "output_format": {
-                  "type": "string"
-                },
-                "timeout": {
-                  "type": "number"
-                },
-                "proxy": {
-                  "type": "object",
-                  "properties": {
-                    "enabled": {
-                      "type": "boolean"
-                    },
-                    "http_url": {
-                      "type": "string"
-                    },
-                    "https_url": {
-                      "type": "string"
-                    },
-                    "socks5_url": {
-                      "type": "string"
-                    },
-                    "no_proxy": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    }
-                  }
-                }
-              }
-            },
             "jina": {
               "type": "object",
               "properties": {
@@ -425,32 +373,6 @@
                 },
                 "api_key": {
                   "type": "string"
-                },
-                "timeout": {
-                  "type": "number"
-                },
-                "proxy": {
-                  "type": "object",
-                  "properties": {
-                    "enabled": {
-                      "type": "boolean"
-                    },
-                    "http_url": {
-                      "type": "string"
-                    },
-                    "https_url": {
-                      "type": "string"
-                    },
-                    "socks5_url": {
-                      "type": "string"
-                    },
-                    "no_proxy": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    }
-                  }
                 }
               }
             },
@@ -464,23 +386,6 @@
                   "type": "string"
                 },
                 "base_url": {
-                  "type": "string"
-                },
-                "timeout": {
-                  "type": "number"
-                }
-              }
-            },
-            "browserless": {
-              "type": "object",
-              "properties": {
-                "enabled": {
-                  "type": "boolean"
-                },
-                "endpoint": {
-                  "type": "string"
-                },
-                "token": {
                   "type": "string"
                 }
               }
