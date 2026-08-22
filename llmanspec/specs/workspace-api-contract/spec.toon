@@ -5,7 +5,7 @@ valid_scope[2]: apps/,packages/
 requirements[40]{req_id,title,statement}:
   r56,API major version prefix is stable,对外业务 API MUST 使用 `/v2` 前缀；同一 major 内保持兼容。健康检查等运维端点 MAY 位于根路径。
   r114,"Optional API key authentication is supported for self-host",当 `app.auth.enabled` 且配置鉴权密钥时，`/v2/**` 端点 MUST 要求 Bearer token；未启用时 MAY 匿名访问。
-  r151,"Non-SSE errors use unified envelope","非 SSE 错误响应 MUST 使用统一错误信封：`errorCode`, `message`, `details?`, `retryAfter?`。所有非 SSE 错误 MUST 经共享错误 helper（sendError 或等价）返回，HTTP status→errorCode 映射 MUST 来自集中映射表；MUST NOT 返回 {error: string} 等 ad-hoc 形状。"
+  r151,"Non-SSE errors use unified envelope","非 SSE 错误响应 MUST 使用统一错误信封：`errorCode`, `message`, `details?`, `retryAfter?`。所有非 SSE 错误 MUST 经共享错误 helper（或等价入口）返回，HTTP status→errorCode 映射 MUST 来自集中映射表；MUST NOT 返回 {error: string} 等 ad-hoc 形状。"
   r186,Rate limited responses use unified envelope and retryAfter,系统 MUST 为 HTTP rate limiting 提供稳定的对外语义：返回 429，并在统一错误信封中暴露 `retryAfter` 指引。
   r218,Health endpoints remain exempt from HTTP guardrails,系统的健康检查端点 MUST 保持可用于运维探活与诊断，不应因 guardrails 被拒绝。
   r244,Notebook/session/message endpoints are stable,notebook、session、message 的范围归属与 404/400 语义 MUST 稳定。
