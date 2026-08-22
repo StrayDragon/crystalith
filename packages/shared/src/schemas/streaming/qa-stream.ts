@@ -99,14 +99,6 @@ export const QaNestedRequestSchema = QaRequestFieldsSchema.extend({
   .refine((b) => !!(b.question ?? b.content), { message: 'question is required' });
 export type QaNestedRequest = z.infer<typeof QaNestedRequestSchema>;
 
-/** @deprecated Prefer QaNestedRequestSchema. */
-export const QaRequestSchema = QaNestedRequestSchema;
-export type QaRequest = QaNestedRequest;
-
-/** @deprecated Prefer QaNestedRequestSchema. */
-export const QaStreamRequestSchema = QaNestedRequestSchema;
-export type QaStreamRequest = QaNestedRequest;
-
 /** Non-streaming QA response (POST …/qa). */
 export const QaAnswerSchema = z
   .object({

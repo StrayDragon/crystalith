@@ -7,7 +7,6 @@
 //
 // The base directory is derived from storage.data_root (see getDataRoot()).
 // Override individually via CL_STORAGE_PATH env (legacy, will be removed).
-import { existsSync } from 'node:fs';
 import { mkdir, readFile, rm, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
@@ -75,6 +74,3 @@ export class LocalStorage implements Storage {
 const DEFAULT_BASE = join(getDataRoot(), 'storage');
 
 export const contentStorage: Storage = new LocalStorage(DEFAULT_BASE);
-
-// Re-export for tests that want a throwaway instance.
-export { existsSync };

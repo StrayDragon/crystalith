@@ -96,12 +96,6 @@ export function zodSchemaToOpenApi(schema: z.ZodType): Record<string, unknown> {
   }
 }
 
-/** @deprecated No longer registers into zod-to-openapi registry; kept for call-site compat. */
-export function registerSchema(name: string, schema: z.ZodType): z.ZodType {
-  void name;
-  return schema;
-}
-
 /**
  * Register API route documentation for OpenAPI generation.
  * Converts Zod request/response schemas via `z.toJSONSchema` (c71).
