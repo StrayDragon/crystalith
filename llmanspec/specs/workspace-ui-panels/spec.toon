@@ -3,7 +3,7 @@ name: "workspace-ui-panels"
 purpose: 定义 Workspace 业务面板（Sources/Chat/Studio/Research 与引用交互）的最小 UI 契约：面板装配、流式反馈、状态与取消语义、错误可恢复路径。该规范聚焦"用户可观察行为与稳定边界"，不绑定具体组件实现。
 valid_scope[2]: src/,tests/
 requirements[19]{req_id,title,statement}:
-  r59,Panel composition stays stable with topbar search entry,"Workspace MUST 以稳定的面板集合装配 Sources/Chat/Studio 等能力，并保持各面板的基本区域划分与入口可发现；网搜添来源 MUST 经由顶栏 E1 面板（仅 Fast/直接搜索）发现，而非嵌在来源栏主搜索条；深研主表面入口 MUST 为 /research-lab（及等价烧瓶导航）。"
+  r59,Panel composition stays stable with topbar search entry,"Workspace MUST 以稳定的面板集合装配 Sources/Chat/Studio 等能力，并保持各面板的基本区域划分与入口可发现；网搜添来源 MUST 经由顶栏 E1 面板（仅 Fast/直接搜索）发现，而非嵌在来源栏主搜索条；深研主表面入口唯一性约束见 deep-research-ui r400（canonical）。"
   r117,Streaming UX supports send/chunk/done/error and cancel,涉及流式输出的面板（如 Chat/Research）MUST 显式呈现 send/chunk/done/error 状态，并 MUST 支持用户取消以停止继续追加内容。
   r154,"Chat input supports /prompt directives as user-facing commands","Workspace 的 Chat 面板 MUST 允许用户在输入框中使用 `/prompt:<preset> <query>` 指令来请求受控的预设生成模式。"
   r189,Chat input provides command autocomplete for /prompt presets,"Workspace 的 Chat 输入框 MUST 使用 `GET /v2/commands` 获取命令列表，并在用户输入 `/` 或 `/prompt:` 前缀时提供自动补全 UI。"
