@@ -8,11 +8,11 @@ requirements[12]{req_id,title,statement}:
   r138,"Multi-query retrieval is bounded","启用 multi-query 时 MUST 受 seed 上限、融合策略与去重规则约束。"
   r174,"Epoch-based cache invalidation is canonical","sources/vector 相关缓存 MUST 基于 `sources_epoch` 与 `vector_epoch` 失效；epoch 递增在并发下 MUST 原子且单调递增。"
   r234,Optional retrieval assembly cache is versioned,若启用检索组装缓存，key MUST 包含 epoch 版本信息以避免脏命中。
-  r254,Embed strategy converts distance to similarity,"EmbedStrategy MUST 将 sqlite-vec 返回的 distance 转换为 similarity score (score = 1 - distance)。过滤 MUST 使用 score >= minScore 比较（MUST NOT 直接用 distance 做 >= 比较，方向相反）。minScore 与 topK 的默认值 MUST 来自配置。"
+  r254,Embed strategy converts distance to similarity,"Embed 检索策略 MUST 将 sqlite-vec 返回的 distance 转换为 similarity score (score = 1 - distance)。过滤 MUST 使用 score >= minScore 比较（MUST NOT 直接用 distance 做 >= 比较，方向相反）。minScore 与 topK 的默认值 MUST 来自配置。"
   r267,Chunking uses sliding window with configurable params,文本分块 MUST 使用带重叠的滑动窗口（块大小 + 重叠量），分块参数 MUST 可配置（默认值对齐既有语义）；MUST NOT 使用无重叠的段落切分。
   r60,"Multi-query expansion with RRF fusion","检索 MUST 支持 multi-query 扩展：按 outputType 生成 query seeds，多查询结果 RRF 融合（融合参数来自 config schema）。MUST 受 seedCap 限制避免无界扩展。"
-  r66,EpochCache wired to strategies and source mutations,EpochCache MUST 接线到各策略 retrieve()。源增删改 MUST bump sources_epoch，向量重嵌 MUST bump vector_epoch。缓存 key MUST 包含 epoch 版本。MUST NOT 零调用（死代码）。
-  "studio-rag-through-registry",Studio retrieval MUST go through the unified RAG registry,studio 生成检索 MUST 通过统一 ragRegistry.retrieveWith 走 embed/fusion/diversity 路径，MUST NOT 用原始文本 slice 截断（对齐 qa/outputs 的检索路径一致性）
+  r66,Epoch cache wired to strategies and source mutations,epoch 缓存组件 MUST 接线到各检索策略的 retrieve 入口。源增删改 MUST bump sources_epoch，向量重嵌 MUST bump vector_epoch。缓存 key MUST 包含 epoch 版本。MUST NOT 零调用（死代码）。
+  "studio-rag-through-registry",Studio retrieval MUST go through the unified RAG registry,studio 生成检索 MUST 经统一 RAG registry 入口走 embed/fusion/diversity 路径，MUST NOT 用原始文本 slice 截断（对齐 qa/outputs 的检索路径一致性）
   "qa-retrieval-must-be-deterministic","QA retrieval MUST be deterministic single-embed (no multi-query expansion)","QA 检索 MUST 使用确定性单次 embed 检索路径（对齐既有语义），MUST NOT 在 QA 检索路径硬编码 multiQuery:true。"
   "retrieval-source-scoping","QA and vector search MUST support sourceIds filtering","QA 检索与向量 KNN MUST 支持通过 sourceIds 参数将检索范围限定到指定 source 子集；当 sourceIds 缺失或为空时 QA MUST 跳过向量检索（不得回退为全库检索）；minScore 阈值作为证据门控 MUST 可配置。"
 scenarios[17]{req_id,id,given,when,then,feature}:
@@ -24,11 +24,11 @@ scenarios[17]{req_id,id,given,when,then,feature}:
   r174,"epoch-invalidates-stale-cache","",sources 或 vector 发生变更并 bump epoch,系统 SHALL 基于 `sources_epoch`/`vector_epoch` 使相关缓存失效以避免脏命中,true
   r174,"concurrent-epoch-bumps-are-safe","",多个并发请求同时触发 epoch 递增,系统 SHALL 保证递增操作原子且单调递增,true
   r234,"retrieval-assembly-cache-key-is-versioned","",系统启用检索组装缓存并存取 cache,cache key SHALL 包含 epoch 版本信息以避免命中旧上下文,true
-  r254,"distance-to-score-conversion","sqlite-vec 返回 distance=0.3 的 chunk",EmbedStrategy 检索,score=0.7，按 score>=minScore 过滤（minScore 来自配置），score desc 排序,true
+  r254,"distance-to-score-conversion","sqlite-vec 返回 distance=0.3 的 chunk",Embed 检索策略执行,score=0.7，按 score>=minScore 过滤（minScore 来自配置），score desc 排序,true
   r267,"sliding-window-chunking",5000 字文档入库,分块,产生多个相邻重叠 chunk（块大小与重叠量由配置给出）,true
   r60,"rrf-fusion-bounded","FAQ 类型输出 + 用户查询","multi-query 扩展","生成 2-3 个 seed query，各检索后 RRF 融合 top 结果且受 seedCap 约束",true
-  r66,"epoch-cache-invalidates-on-mutation",notebook 新增源后检索,EpochCache 查询,sources_epoch 变更，缓存失效，重新检索,true
-  "studio-rag-through-registry","generation-retrieves-context",studio 生成需要上下文,检索阶段,系统 SHALL 调用 ragRegistry.retrieveWith 而非直接 join chunks+sources 后 slice,true
+  r66,"epoch-cache-invalidates-on-mutation",notebook 新增源后检索,epoch 缓存查询,sources_epoch 变更，缓存失效，重新检索,true
+  "studio-rag-through-registry","generation-retrieves-context",studio 生成需要上下文,检索阶段,系统 SHALL 调用统一 RAG registry 入口而非直接 join chunks+sources 后截断,true
   "qa-retrieval-must-be-deterministic","deterministic-retrieval",同一 question + 同一组 sourceIds + 同一 embedding,系统执行 QA 检索两次,两次产出 SHALL 完全一致（无 seed 扩张、无 RRF 归一化）,true
   "retrieval-source-scoping","empty-skips-retrieval",笔记本有多个 source,QA 请求未提供 sourceIds 或为空数组,系统 SHALL 不执行向量检索，且不得返回任何检索 hit,true
   "retrieval-source-scoping","scoped-knn","notebook 有多个 source 的向量","searchVectors 传入 sourceIds=[2,3]","系统 SHALL 仅返回 source 2 和 3 的 KNN 结果",true

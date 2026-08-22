@@ -19,9 +19,9 @@ scenarios[12]{req_id,id,given,when,then,feature}:
   r209,"deleting-a-source-removes-vectors","",用户删除一个来源,系统 SHALL 移除该来源的向量记录以避免幽灵检索结果,true
   r237,"plugin-parser-takes-precedence-over-core-fallback","",某文件类型同时匹配已启用的 parser 插件与 core 最小解析器,系统 SHALL 优先使用插件 parser,true
   r255,"core-only-profile-rejects-non-core-formats-predictably","","用户在 core-only 环境上传/导入一个非核心格式（例如 PDF/HTML/音视频）",系统 SHALL 返回稳定的“不支持”语义,true
-  r2_sync,"upload-completes-embedding-before-ready",用户上传一个文件,ingestSource 完成,系统 SHALL 在返回 ready 前完成向量写入,true
-  r2_sync,"embedding-failure-marks-failed",embedding API 抛出异常,ingestSource 处理 embedding,系统 SHALL 将来源标记为 failed 而非 ready,true
-  r2_sync,"document-parse-embeds-before-ready",document_parse 任务重新索引一个来源,worker 执行 handleDocumentParse,系统 SHALL 在标记 ready 前完成向量写入,true
+  r2_sync,"upload-completes-embedding-before-ready",用户上传一个文件,摄取完成时,系统 SHALL 在返回 ready 前完成向量写入,true
+  r2_sync,"embedding-failure-marks-failed",embedding API 抛出异常,摄取流程处理 embedding,系统 SHALL 将来源标记为 failed 而非 ready,true
+  r2_sync,"document-parse-embeds-before-ready",document_parse 任务重新索引一个来源,解析任务执行时,系统 SHALL 在标记 ready 前完成向量写入,true
   "csv-parser-markdown-table","csv-upload",客户端上传 .csv 文件,解析阶段,"系统 SHALL 产出 markdown-table 格式分块并记录 csv_row_start/csv_row_end metadata",true
   r260,"search-mode-not-researchrun",客户端发起 sources.search,传入任意 mode,服务仅执行网搜/回传结果，不得创建 ResearchRun；ResearchRun 仍仅由 /research 创建口提供,true
   r237,"parser-tie-break-is-deterministic","",两个已启用插件 parser 同时命中同一输入且无 load_order 配置,系统 SHALL 按 plugin_id 字典序选择,true

@@ -30,7 +30,7 @@ requirements[45]{req_id,title,statement}:
   r324,Align ResearchRun contract to Lab design,"系统 MUST 使命令口合约与 Lab 设计语义一致（ResearchRun Zod 与 HTTP/SSE 行为同步）；server research 测试套件 MUST 全绿；MUST NOT 删除 /v2/notebooks/:nid/research* 主路由面。"
   r325,"Lab-only extras stay documented not silent","未通过 API 暴露的研究能力，系统 MUST 在合约或能力清单中显式记录为非 API 权威，MUST NOT 用未文档化的占位响应或静默丢字段冒充已支持。"
   r326,"Topic auto-decompose after seed","seed 单结论 DAG 完成后，系统 MUST 通过结构化 LLM 规划将主题自动拆解为 research 角色节点：自 question 以 decompose/refine 边扩展，各活研究节点 MUST 以 merge 边汇入唯一 conclusion；节点总数 MUST 受 Run.maxNodes（depth→r305）约束；规划失败或输出非法时 MUST 回退为仅 question work-unit 路径且 MUST NOT 伪造多支路拓扑；拓扑权威 MUST 来自服务端 graph_patch 与 progress ledger，MUST NOT 以前端 timer/phase 为 SSOT；LLM MUST NOT 直接 mutate 图，仅允许经内核规划写回后 emit graph_patch。"
-  r327,"Parallel-capable branch work-units","系统 MUST 对图中全部非 pruned 的 research 角色节点执行 work-unit（检索/综合、writeBackNodeWork、graph_patch）；调度 MUST 跳过 conclusionStatus=pruned 节点；完成分支波次后若搜索预算未触顶 MUST 直接 synthesize 收束（或按其它非 budget 门控继续，与 r306 的确认门控一致）；MUST NOT 为收束便利删除 research→conclusion 的 merge 边；每单元 MUST 写入 progress ledger（unit_started/unit_finished/unit_skipped_pruned）。调度 MAY 同时推进最多 N 个节点（N 由配置 parallelBranchUnits 给出，N=1 时等价串行）；同一 ResearchRun 上的 LLM 调用 MUST 串行（每 Run 至多一个进行中的 LLM）。"
+  r327,"Parallel-capable branch work-units","系统 MUST 对图中全部非 pruned 的 research 角色节点执行 work-unit（检索/综合、节点工作写回、graph_patch）；调度 MUST 跳过 conclusionStatus=pruned 节点；完成分支波次后若搜索预算未触顶 MUST 直接 synthesize 收束（或按其它非 budget 门控继续，与 r306 的确认门控一致）；MUST NOT 为收束便利删除 research→conclusion 的 merge 边；每单元 MUST 写入 progress ledger（unit_started/unit_finished/unit_skipped_pruned）。调度 MAY 同时推进最多 N 个节点（N 由配置 parallelBranchUnits 给出，N=1 时等价串行）；同一 ResearchRun 上的 LLM 调用 MUST 串行（每 Run 至多一个进行中的 LLM）。"
   r328,"LLM synthesize report no heuristic success","结案 MUST 经结构化 LLM 产出 ResearchReport 并在成功时将 Run 置为 completed；当结案模型调用失败或 cite 校验判定 synthesize_failed 时 MUST 将 Run 置为 failed 并暴露 failureReason；MUST NOT 在成功路径使用启发式证据清单作为权威报告；报告正文 token MUST NOT 进入 Run SSE（仍仅 report_ready + GET）。"
   r329,"Retry synthesize with optional modelId","系统 MUST 提供对结案失败 Run 的 retry-synthesize 命令口（POST …/research/:rid/retry-synthesize 或等价）；请求 MAY 含 modelId 并 MUST 写回 Run；重试 MUST 复用已有 graph 与 evidence 且 MUST NOT 重跑 decompose 或支路 work-unit；成功 MUST completed+report，再次失败 MUST 保持 failed；对非结案失败态 MUST 拒绝（RESEARCH_INVALID_STATE 或等价）。"
   r330,"Run modelId on create and synthesize","创建 ResearchRun 时 MUST 接受可选 modelId 并持久化；结案与 retry-synthesize MUST 使用 Run.modelId（省略时回落默认 chat/config）；retry 覆盖的 modelId MUST 写回 Run；GET Run MUST 暴露 modelId（若有）。"
@@ -40,7 +40,7 @@ requirements[45]{req_id,title,statement}:
   r334,"Confirm-gated request-reexpand","系统 MUST 提供 request-reexpand 命令口（POST …/request-reexpand 或等价），使 Run 进入 awaiting_confirm 且 confirmKind=reexpand；用户 approve_reexpand MUST 经结构化规划追加 research 节点（受 maxNodes）并 graph_patch，skip_reexpand MUST 不新增支路并允许继续收束；规划失败 MUST NOT 伪造多支路；MUST NOT 在 tool execute 中静默改图。"
   r335,"Revision fork creates new Run","系统 MUST 提供从某 revision 派生新 ResearchRun 的命令口（POST …/revisions/:revId/fork-run 或等价）；新 Run MUST 拷贝该 revision 快照的 graph 与 report（若有）以及源 Run 的 topic/预算/modelId 等创建配置，searchesUsed MUST 重置为 0 且初始 status MUST 为 queued；源 Run 的图/报告/revisions MUST 保持不变；默认 MUST NOT 自动 schedule；可选 schedule 或独立 schedule 口 MAY 仅对 queued Run 启动内核；图中 evidence 引用 MUST 在新 Run 作用域内可用（拷贝并 remap 或等价）。"
   r336,"Per-run LLM queue and write lock","当 parallelBranchUnits>1 时，同一 ResearchRun 上并发的支路 work-unit MUST 经 per-Run LLM 队列串行化模型调用，并 MUST 对 persistGraph/evidence/writeBack 使用 per-Run 写锁；不同 Run 之间 MUST NOT 因此互斥；cancel/prune MUST 仍能中止进行中的单元；节点 chat 与 work-unit 互斥 MUST 保留。"
-  r337,"fetchPage via ExtractorFactory","当 allowWeb 为 true 时，ResearchNodeAgent 的 work_unit 与 node_chat MUST 暴露 fetchPage（或等价）Work 工具以读取给定 URL 正文；实现 MUST 复用既有 ExtractorFactory 回退链（readability→jina→firecrawl 或配置顺序）；MUST NOT 在 research 模块内另写第二套网页爬虫；单页抽取失败 MUST 保留已有 SERP 证据并允许单元继续，MUST NOT 仅因此将整 work-unit 或整 Run 立即 failed。"
+  r337,"fetchPage reuses extractor fallback chain","当 allowWeb 为 true 时，研究节点的 work_unit 与 node_chat MUST 暴露 fetchPage（或等价）Work 工具以读取给定 URL 正文；实现 MUST 复用既有网页抽取回退链（readability→jina→firecrawl 或配置顺序）；MUST NOT 在 research 模块内另写第二套网页爬虫；单页抽取失败 MUST 保留已有 SERP 证据并允许单元继续，MUST NOT 仅因此将整 work-unit 或整 Run 立即 failed。"
   r338,"Page fetch budget independent of searches","创建 ResearchRun 时 MUST 计算并持久化 maxPageFetches=max(1,ceil(maxSearches×pageRatio))（pageRatio 来自 config schema，实现 MUST NOT 写死默认值）且 pagesUsed 初始为 0；成功读页 MUST 递增 pagesUsed；每个 work-unit 开始时 MUST 计算每节点读页软上限 max(1,ceil(remainingPages/remainingLiveResearchNodes)) 并强制遵守；读页触顶 MUST NOT 进入 confirmKind=budget，MUST NOT 消耗 maxSearches；fork-run 时 pagesUsed MUST 重置为 0 并拷贝或按公式重算 maxPageFetches。"
   r339,"Evidence content token upgrade","web 证据在 fetchPage 成功后 MUST 在同 URL 证据上行写入截断正文 content 并保留原 snippet；节点内 web content 合计 MUST 受 nodeContentTokenBudget 约束（上限来自 config schema，使用项目既有 tokenizer）；短综合喂给模型的证据上下文 MUST 受 nodeSummaryTokenBudget 约束（上限同样来自 config schema）；短综合 MUST 能区分仅有 snippet 与已有 content；超限时 MUST 截断本页 content 而非丢弃 SERP 命中。"
   r340,"Agent-chosen page reads thin sufficiency","work_unit 工具环 MUST 由 agent 自选值得阅读的 URL 调用 fetchPage，MUST NOT 在运行时对每次 webSearch 结果自动读取 Top-N；工具环步数 MUST 取配置 workUnitMaxSteps；指令 MUST 向 agent 暴露剩余读页预算与本节点软上限，并要求在已读正文基础上薄判断是否足够再决定是否继续检索。"
@@ -70,7 +70,7 @@ scenarios[74]{req_id,id,given,when,then,feature}:
   r316,"shared-child-stays-live",图中 libs 与 perf 均指向共享子节点 stream，且 libs 另有 merge 到 conclusion,用户对 libs 执行 prune,libs 标为 pruned；stream 因仍有活父 perf 保持未剪枝；conclusion 不被剪枝；libs→conclusion 的 merge 边仍在,true
   r316,"exclusive-child-cascades",data 仅有独占子 minimize，minimize merge 到 conclusion,用户对 data 执行 prune,data 与 minimize 均标为 pruned；minimize→conclusion 的 merge 边保留；conclusion 不被剪枝,true
   r316,"reject-protected-root",Run 处于 running 且存在 node_root_*,客户端对该 root 调用 prune,请求被拒绝且图不变,true
-  r317,"seed-has-one-conclusion",Run 刚进入 running,内核完成 seed_graph,图中恰好一个 question 与一个 conclusion（或兼容前缀），且二者可被客户端识别,true
+  r317,"seed-has-one-conclusion",Run 刚进入 running,内核完成种子图构建,图中恰好一个 question 与一个 conclusion（或兼容前缀），且二者可被客户端识别,true
   r318,"skip-pruned-unit",某 research 节点已被 prune 且仍排在调度队列,调度器准备执行该节点单元,单元被跳过且不写入新摘要，SSE 可继续推进其他活节点,true
   r318,"cancel-aborts-active",Run 正在执行某节点的检索或综合,用户调用 cancel,活动单元中止，状态进入 cancelled（或协作收尾至 cancelled）且 checkpoint 已落盘,true
   r319,"approve-adds-merge",Run 处于 awaiting_confirm 且 confirmKind=expand_branch,用户 approve_branch,新 research 节点存在，并有指向唯一 conclusion 的 merge 边,true
@@ -82,13 +82,13 @@ scenarios[74]{req_id,id,given,when,then,feature}:
   r324,"research-tests-green-after-align",合约与 Lab 设计语义对齐完成,运行 server research 测试套件,全部通过且 research 路由仍可创建 Run,true
   r325,"lab-only-capability-documented",某 Lab 能力不进 API,查阅能力清单/合约,"该能力被标为 lab-only，而非伪装成功",false
   r326,"decompose-emits-branches-and-merges",Run 已 seed 且 planner 成功,内核完成拆解,graph 含多个 research 节点、question 发出 decompose 边且各活节点有 merge 至 conclusion,true
-  r326,"planner-failure-falls-back-question-only",planner 返回非法或解析失败,runLoop 继续,仅 question 路径执行工作单元且不得假装多分支已成功,true
+  r326,"planner-failure-falls-back-question-only",planner 返回非法或解析失败,运行循环继续,仅 question 路径执行工作单元且不得假装多分支已成功,true
   r326,"max-nodes-respected",Run depth=shallow 且 maxNodes=12,planner 提议超限支路,服务端裁剪或拒绝扩展且节点数不超过预算,true
-  r327,"drain-all-research-nodes",Run 经拆解含三个活 research 节点,runLoop 执行 drain,"每个节点均完成 work-unit 且 evidenceIds 写回",true
-  r327,"skip-question-when-branches",Run 已拆解出活 research 节点,runLoop 调度,"跳过 question work-unit 且各 research 完成写回",true
-  r327,"skip-pruned-branch-unit",其中一支已被 prune,调度器 drain,pruned 节点被跳过且其余节点仍执行,true
+  r327,"drain-all-research-nodes",Run 经拆解含三个活 research 节点,运行循环执行调度排空,"每个节点均完成 work-unit 且 evidenceIds 写回",true
+  r327,"skip-question-when-branches",Run 已拆解出活 research 节点,运行循环调度,"跳过 question work-unit 且各 research 完成写回",true
+  r327,"skip-pruned-branch-unit",其中一支已被 prune,调度器排空,pruned 节点被跳过且其余节点仍执行,true
   r327,"merge-edges-survive-synthesize",各支路已写回证据,Run 进入 synthesize 并完成,所有活 research 至 conclusion 的 merge 边仍存在,true
-  r328,"llm-report-on-success",结案 LLM 返回合法 ResearchReport,synthesizeAndComplete 完成,"Run status 为 completed 且 report 非证据清单启发式",true
+  r328,"llm-report-on-success",结案 LLM 返回合法 ResearchReport,结案合成完成,"Run status 为 completed 且 report 非证据清单启发式",true
   r328,"synthesize-fail-no-heuristic",结案模型调用抛错,观察 Run,"status 为 failed 且无启发式权威报告",true
   r329,"retry-synthesize-succeeds","Run 因结案失败为 failed 且已有 evidence",客户端 POST retry-synthesize,"Run 进入短窗后 completed 且含报告",true
   r329,"retry-does-not-rerun-drain",failed 结案 Run 已有支路 evidence,retry-synthesize,"不新增 research work-unit 检索进度且复用原 evidence",true
@@ -107,10 +107,10 @@ scenarios[74]{req_id,id,given,when,then,feature}:
   r335,"fork-copies-graph-report",revision 含 graph 与 report,fork 成功,新 Run 的 graph/report 与该 revision 快照一致,true
   r335,"fork-leaves-source-unchanged",fork 完成后,再次 GET 源 Run 与其 revisions 列表,与 fork 前一致,true
   r335,"fork-default-no-schedule",客户端 fork 且省略 schedule 或 schedule=false,观察新 Run,保持 queued 且不因 fork 立刻进入 running,true
-  r336,"parallel-drain-completes-all","Run 含至少两个待执行 research 节点且 parallelBranchUnits>=2",drain 完成,每个节点均写回且 merge 边仍在,true
+  r336,"parallel-drain-completes-all","Run 含至少两个待执行 research 节点且 parallelBranchUnits>=2",调度排空完成,每个节点均写回且 merge 边仍在,true
   r336,"llm-calls-serialized-per-run",同一 Run 两支路几乎同时进入短综合,观察 LLM 调用,任意时刻该 Run 至多一个 LLM 进行中,true
-  r336,"parallel-cancel-aborts",并行 drain 进行中,用户 cancel,活动单元中止且 status 进入 cancelled,true
-  r337,"fetchpage-uses-extractor-factory",allowWeb 的 work_unit 需要读某 URL,agent 调用 fetchPage,走 ExtractorFactory 且 research 内无第二套爬虫实现,true
+  r336,"parallel-cancel-aborts",并行调度排空进行中,用户 cancel,活动单元中止且 status 进入 cancelled,true
+  r337,"fetchpage-uses-extractor-factory",allowWeb 的 work_unit 需要读某 URL,agent 调用 fetchPage,走既有抽取回退链且 research 内无第二套爬虫实现,true
   r337,"fetchpage-failure-keeps-snippet",已有同 URL 的 SERP evidence 且抽取失败,fetchPage 返回,原 snippet 证据仍在且单元可继续,true
   r338,"max-page-fetches-from-ratio",创建 depth=medium 且 pageRatio=1.5 的 Run,查看 Run 字段,maxPageFetches 为按公式由 maxSearches 算出的值且 pagesUsed=0,true
   r338,"page-soft-cap-per-node",剩余 6 次读页且 3 个活 research 节点,某节点 work-unit 开始,该节点读页软上限为 2,true

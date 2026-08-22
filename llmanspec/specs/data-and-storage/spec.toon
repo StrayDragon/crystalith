@@ -8,7 +8,7 @@ requirements[7]{req_id,title,statement}:
   r124,Migrations use Drizzle Kit,"数据库变更 MUST 通过 drizzle-kit generate/migrate 管理。初始迁移 MUST 从空库生成。MUST 生产可读 SQL 文件。"
   r160,"Vector store is sqlite-vec in-process","向量检索 MUST 使用 sqlite-vec 扩展（同库零依赖）。MUST 以 `partition by notebook_id` 做多 notebook 隔离。MUST NOT 引入 ChromaDB/lancedb/Qdrant。"
   r195,Schema types exported for frontend,Drizzle schema 导出的 TS 类型 ($inferSelect/$inferInsert) MUST 通过 packages/shared 暴露给前端 eden RPC 消费。
-  r_storage_layer,Content storage abstraction,系统 MUST 提供内容存储抽象 LocalStorage 实现 saveContent 与 fetchContent 以持久化原始上传字节 使 document_parse 任务可重新解析 单二进制架构下 MUST 使用本地文件系统路径
+  r_storage_layer,Content storage abstraction,系统 MUST 提供内容存储抽象（本地文件系统实现）的写入与读取操作以持久化原始上传字节 使 document_parse 任务可重新解析 单二进制架构下 MUST 使用本地文件系统路径
   r_document_parse,document_parse task wired,任务队列 worker MUST 实现 document_parse 任务类型 从存储读取原始字节 经 parse 与 chunk 与 embed 完整流程 不再抛 stub 错误
 scenarios[7]{req_id,id,given,when,then,feature}:
   r29,happy,"",server 启动,"bun:sqlite 创建/打开 crystalith.db，WAL 模式启用",true
@@ -16,5 +16,5 @@ scenarios[7]{req_id,id,given,when,then,feature}:
   r124,happy,"",新增一个 column,"drizzle-kit generate 产出增量 SQL，apply 后数据库更新",true
   r160,happy,"",1万 chunk 向量检索,"sqlite-vec 返回 top-10，p50 < 10ms",true
   r195,happy,"",前端 import Notebook 类型,TS 编译通过，类型与 server 一致,true
-  r_storage_layer,save_then_fetch,上传一个 PDF,ingestSource 解析后,系统 SHALL saveContent 持久化原始字节 且后续 fetchContent 能取回相同字节,true
+  r_storage_layer,save_then_fetch,上传一个 PDF,摄取解析后,系统 SHALL 经存储抽象持久化原始字节 且后续读取能取回相同字节,true
   r_document_parse,parse_task_completes,存在已持久化的 source,document_parse 任务入队执行,系统 SHALL 完成 parse 与 chunk 与 embed 全流程并写入向量库,true
