@@ -96,6 +96,71 @@ function sleepUnlessAborted(ms: number, signal: AbortSignal): Promise<void> {
   ]);
 }
 
+/** c108 e2e: pre-drain hold so Playwright can fork / request-reexpand mid-run. */
+const E2E_INTERACTION_WINDOW_MS = 2500;
+
+/** Evidence snippet preview length when storing SERP hits (v1 parity). */
+const SNIPPET_PREVIEW_CHARS = 500;
+
+/**
+ * Mutable per-unit accumulators shared between the agent tool-loop stream and
+ * the module-level ingest flush below. `evidenceIds` is shared by reference.
+ */
+interface WorkUnitStreamState {
+  pendingIngest: { toolName: string; output: unknown } | null;
+  evidenceIds: string[];
+  searchesUsed: number;
+  nodeSearchesUsed: number;
+  nodePagesUsed: number;
+}
+
+/**
+ * Apply the latest pending Work-tool output (budget-aware, emits progress log).
+ * Called under the run write lock from the stream consumer.
+ */
+function flushPendingWorkIngest(
+  runId: number,
+  notebookId: number,
+  nodeId: string,
+  state: WorkUnitStreamState,
+): void {
+  const pending = state.pendingIngest;
+  if (!pending) return;
+  state.pendingIngest = null;
+  const { toolName, output } = pending;
+  const contentBudgetRemaining = remainingNodeContentBudget(runId, nodeId);
+  const ingested = ingestWorkToolResult(runId, notebookId, nodeId, toolName, output, {
+    contentTokenBudgetRemaining: contentBudgetRemaining,
+  });
+  for (const id of ingested.evidenceIds) {
+    if (!state.evidenceIds.includes(id)) state.evidenceIds.push(id);
+  }
+  if (ingested.searchesDelta > 0) {
+    const fresh = requireFresh(runId);
+    state.searchesUsed = fresh.searchesUsed + ingested.searchesDelta;
+    state.nodeSearchesUsed += ingested.searchesDelta;
+    updateRun(runId, { searchesUsed: state.searchesUsed });
+  }
+  if (ingested.pagesDelta > 0) {
+    const fresh = requireFresh(runId);
+    const pagesUsed = fresh.pagesUsed + ingested.pagesDelta;
+    state.nodePagesUsed += ingested.pagesDelta;
+    updateRun(runId, { pagesUsed });
+  }
+  emitLog(
+    runId,
+    toolName === 'webSearch'
+      ? `外网检索：${ingested.evidenceIds.length} 条`
+      : toolName === 'fetchPage'
+        ? ingested.pagesDelta > 0
+          ? `读页成功：${ingested.evidenceIds.join(', ')}`
+          : '读页失败或正文为空，保留摘要'
+        : toolName === 'retrieveSources'
+          ? `检索笔记本：${ingested.evidenceIds.length} 条`
+          : `工具 ${toolName} 完成`,
+  );
+}
+
 /** After drain: budget confirm only when truly exhausted and still need search; else synthesize. */
 export async function finishWaveOrSynthesize(runId: number): Promise<void> {
   const abort = ensureRunAbortController(runId);
@@ -191,7 +256,7 @@ export function ingestWorkToolResult(
       const ev = insertEvidence(runId, notebookId, {
         kind: 'chunk',
         title: `来源 ${sourceId ?? '?'} · chunk ${chunkIndex}`,
-        snippet: text.slice(0, 500),
+        snippet: text.slice(0, SNIPPET_PREVIEW_CHARS),
         sourceId,
         chunkId,
         collectedAtNodeId: nodeId,
@@ -338,7 +403,6 @@ export async function runNodeWorkUnit(opts: {
   } = opts;
   let searchesUsed = opts.searchesUsed;
   let nodePagesUsed = 0;
-  let nodeSearchesUsed = 0;
   const evidenceIds: string[] = [...(node.evidenceIds ?? [])];
   const role = resolveNodeRole(node);
 
@@ -411,6 +475,13 @@ export async function runNodeWorkUnit(opts: {
   let via: 'agent' | 'none' = 'none';
 
   if (agent) {
+    const streamState: WorkUnitStreamState = {
+      pendingIngest: null,
+      evidenceIds,
+      searchesUsed,
+      nodeSearchesUsed: 0,
+      nodePagesUsed: 0,
+    };
     try {
       // Hold per-run LLM lock for the tool-loop stream; Work tools release the
       // lock during execute so parallel units can overlap search/retrieve IO.
@@ -441,45 +512,6 @@ export async function runNodeWorkUnit(opts: {
           },
         });
 
-        let pendingIngest: { toolName: string; output: unknown } | null = null;
-        const flushPendingIngest = () => {
-          const pending = pendingIngest;
-          if (!pending) return;
-          pendingIngest = null;
-          const { toolName, output } = pending;
-          const contentBudgetRemaining = remainingNodeContentBudget(runId, node.id);
-          const ingested = ingestWorkToolResult(runId, notebookId, node.id, toolName, output, {
-            contentTokenBudgetRemaining: contentBudgetRemaining,
-          });
-          for (const id of ingested.evidenceIds) {
-            if (!evidenceIds.includes(id)) evidenceIds.push(id);
-          }
-          if (ingested.searchesDelta > 0) {
-            const fresh = requireFresh(runId);
-            searchesUsed = fresh.searchesUsed + ingested.searchesDelta;
-            nodeSearchesUsed += ingested.searchesDelta;
-            updateRun(runId, { searchesUsed });
-          }
-          if (ingested.pagesDelta > 0) {
-            const fresh = requireFresh(runId);
-            const pagesUsed = fresh.pagesUsed + ingested.pagesDelta;
-            nodePagesUsed += ingested.pagesDelta;
-            updateRun(runId, { pagesUsed });
-          }
-          emitLog(
-            runId,
-            toolName === 'webSearch'
-              ? `外网检索：${ingested.evidenceIds.length} 条`
-              : toolName === 'fetchPage'
-                ? ingested.pagesDelta > 0
-                  ? `读页成功：${ingested.evidenceIds.join(', ')}`
-                  : '读页失败或正文为空，保留摘要'
-                : toolName === 'retrieveSources'
-                  ? `检索笔记本：${ingested.evidenceIds.length} 条`
-                  : `工具 ${toolName} 完成`,
-          );
-        };
-
         for await (const part of result.stream) {
           if (abortSignal.aborted || isCancelled(runId)) break;
           if (part.type === 'tool-result') {
@@ -487,10 +519,13 @@ export async function runNodeWorkUnit(opts: {
             const output: unknown = 'output' in part ? part.output : undefined;
             if (toolName === 'webSearch') {
               const freshBudget = requireFresh(runId);
-              if (freshBudget.searchesUsed >= maxSearches || nodeSearchesUsed >= searchSoft) {
+              if (
+                freshBudget.searchesUsed >= maxSearches ||
+                streamState.nodeSearchesUsed >= searchSoft
+              ) {
                 emitLog(
                   runId,
-                  nodeSearchesUsed >= searchSoft
+                  streamState.nodeSearchesUsed >= searchSoft
                     ? '外网检索跳过：本节点搜索软上限已尽'
                     : '外网检索跳过：搜索预算已尽',
                 );
@@ -499,13 +534,18 @@ export async function runNodeWorkUnit(opts: {
             }
             if (toolName === 'fetchPage') {
               const freshPages = requireFresh(runId);
-              if (freshPages.pagesUsed >= freshPages.maxPageFetches || nodePagesUsed >= pageSoft) {
+              if (
+                freshPages.pagesUsed >= freshPages.maxPageFetches ||
+                streamState.nodePagesUsed >= pageSoft
+              ) {
                 emitLog(runId, '读页跳过：页面预算或节点软上限已尽（不触发 budget confirm）');
                 continue;
               }
             }
-            pendingIngest = { toolName, output };
-            await withRunWriteLock(runId, flushPendingIngest);
+            streamState.pendingIngest = { toolName, output };
+            await withRunWriteLock(runId, () =>
+              flushPendingWorkIngest(runId, notebookId, node.id, streamState),
+            );
           } else if (part.type === 'error') {
             throw new Error(
               'error' in part && part.error instanceof Error
@@ -515,6 +555,8 @@ export async function runNodeWorkUnit(opts: {
           }
         }
       });
+      searchesUsed = streamState.searchesUsed;
+      nodePagesUsed = streamState.nodePagesUsed;
       via = 'agent';
     } catch (error) {
       if (abortSignal.aborted || isCancelled(runId)) throw error;
@@ -859,8 +901,11 @@ export async function runLoop(runId: number): Promise<void> {
       !abort.signal.aborted &&
       !isCancelled(runId)
     ) {
-      emitLog(runId, 'e2e stub: hold 2.5s before drain for live interaction window');
-      await sleepUnlessAborted(2500, abort.signal);
+      emitLog(
+        runId,
+        `e2e stub: hold ${E2E_INTERACTION_WINDOW_MS}ms before drain for live interaction window`,
+      );
+      await sleepUnlessAborted(E2E_INTERACTION_WINDOW_MS, abort.signal);
       if (bailIfAborted(runId, abort.signal)) return;
     }
 
