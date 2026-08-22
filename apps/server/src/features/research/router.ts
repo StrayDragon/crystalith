@@ -63,6 +63,17 @@ import {
   scheduleRun,
 } from './service.ts';
 
+/**
+ * Parse the `:nid` + `:rid` path ids shared by every run-scoped route.
+ * Collapses the two-line `requirePositiveIntId` pair repeated per handler.
+ */
+function parseRunScope(params: { nid: string; rid: string }) {
+  return {
+    nid: requirePositiveIntId(params.nid, 'notebook id'),
+    rid: requirePositiveIntId(params.rid, 'research run id'),
+  };
+}
+
 /** OpenAPI-only query docs (runtime validation uses ResearchListQuerySchema). */
 const ResearchListStatusQueryDocSchema = z.string().optional().openapi({
   description: '按状态过滤，逗号分隔（如 running,queued）；亦接受重复 status query',
@@ -308,15 +319,13 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/notebooks/:nid/research/:rid',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return getRun(nid, rid);
     },
     { response: ResearchRunSchema },
   )
   .get('/notebooks/:nid/research/:rid/stream', ({ params, request, server }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const rid = requirePositiveIntId(params.rid, 'research run id');
+    const { nid, rid } = parseRunScope(params);
     // Bun closes quiet SSE after idleTimeout (default 10s); keep run streams alive.
     try {
       server?.timeout?.(request, 0);
@@ -328,8 +337,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/research/:rid/confirm',
     async ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return confirmRun(nid, rid, body);
     },
     { body: ResearchConfirmBodySchema, response: ResearchRunSchema },
@@ -337,8 +345,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/research/:rid/add-budget',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return addBudget(nid, rid);
     },
     { body: ResearchAddBudgetBodySchema, response: ResearchRunSchema },
@@ -346,8 +353,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/research/:rid/request-reexpand',
     ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return requestReexpand(nid, rid, body);
     },
     { body: ResearchRequestReexpandBodySchema, response: ResearchRunSchema },
@@ -355,8 +361,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/research/:rid/cancel',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return cancelRun(nid, rid);
     },
     { response: ResearchRunSchema },
@@ -364,8 +369,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/research/:rid/retry-synthesize',
     async ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return retrySynthesize(nid, rid, body);
     },
     { body: ResearchRetrySynthesizeBodySchema, response: ResearchRunSchema },
@@ -373,8 +377,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/research/:rid/nodes/:nodeId/prune',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return pruneNode(nid, rid, params.nodeId);
     },
     { response: ResearchRunSchema },
@@ -382,8 +385,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/research/:rid/nodes/:nodeId/fork',
     ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return forkNode(nid, rid, params.nodeId, body);
     },
     { body: ResearchForkBodySchema, response: ResearchRunSchema },
@@ -391,8 +393,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .patch(
     '/notebooks/:nid/research/:rid/nodes/:nodeId',
     ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return patchNode(nid, rid, params.nodeId, body);
     },
     { body: ResearchNodePatchBodySchema, response: ResearchRunSchema },
@@ -400,8 +401,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/research/:rid/nodes/:nodeId/chat',
     ({ params, body, request, server }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       // Chat TTFB often exceeds Bun's default idleTimeout; disable per-request.
       try {
         server?.timeout?.(request, 0);
@@ -415,8 +415,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/notebooks/:nid/research/:rid/progress',
     ({ params, query }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return listProgress(nid, rid, query.afterSeq ?? 0, query.limit ?? 100);
     },
     { query: ResearchProgressQuerySchema, response: ResearchProgressListSchema },
@@ -424,8 +423,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/notebooks/:nid/research/:rid/revisions',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return listRevisions(nid, rid);
     },
     { response: ResearchRevisionsListSchema },
@@ -433,8 +431,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/research/:rid/revisions',
     ({ params, body, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       const rev = createRevision(nid, rid, body);
       set.status = 201;
       return rev;
@@ -444,8 +441,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/notebooks/:nid/research/:rid/revisions/:revId',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return getRevision(nid, rid, params.revId);
     },
     { response: ResearchRevisionSchema },
@@ -453,8 +449,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/research/:rid/revisions/:revId/restore',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return restoreRevision(nid, rid, params.revId);
     },
     { response: ResearchRunSchema },
@@ -462,8 +457,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/research/:rid/revisions/:revId/fork-run',
     ({ params, body, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       const run = forkRunFromRevision(nid, rid, params.revId);
       if (body.schedule) {
         scheduleRun(run.id);
@@ -476,8 +470,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/research/:rid/schedule',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return scheduleQueuedRun(nid, rid);
     },
     { response: ResearchRunSchema },
@@ -485,8 +478,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/notebooks/:nid/research/:rid/report',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return getReportView(nid, rid);
     },
     { response: ResearchReportViewSchema },
@@ -494,8 +486,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .put(
     '/notebooks/:nid/research/:rid/report',
     ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return putCanonicalReport(nid, rid, body.report);
     },
     { body: ResearchReportPutBodySchema, response: ResearchReportViewSchema },
@@ -503,8 +494,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .put(
     '/notebooks/:nid/research/:rid/report/working',
     ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return putWorkingReport(nid, rid, body.report);
     },
     { body: ResearchReportPutBodySchema, response: ResearchReportViewSchema },
@@ -512,8 +502,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .delete(
     '/notebooks/:nid/research/:rid/report/working',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       return deleteWorkingReport(nid, rid);
     },
     { response: ResearchReportViewSchema },
@@ -521,8 +510,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/research/:rid/convert-to-note',
     ({ params, body, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       const result = convertToNote(nid, rid, body);
       set.status = 201;
       return result;
@@ -532,8 +520,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/research/:rid/convert-to-source',
     async ({ params, body, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rid = requirePositiveIntId(params.rid, 'research run id');
+      const { nid, rid } = parseRunScope(params);
       const result = await convertToSource(nid, rid, body);
       set.status = 201;
       return result;

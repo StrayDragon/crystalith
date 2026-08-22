@@ -12,13 +12,14 @@ import {
 // Supports paginated message listing and user message creation.
 // Mirrors v1 `features/messages/api.py`.
 import { count, eq } from 'drizzle-orm';
-import { Elysia, NotFoundError } from 'elysia';
+import { Elysia } from 'elysia';
 import { z } from 'zod';
 
 import { db } from '../../db/index.ts';
 import { messages, sessions } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
+import { requireOwnedRow } from '../../shared/notebook-scope.ts';
 
 // ---------------------------------------------------------------------------
 // OpenAPI doc registration
@@ -95,9 +96,7 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
       const limit = query.limit ?? 20;
 
       // Verify session exists AND belongs to notebook (c39 gap fix)
-      const session = db().select().from(sessions).where(eq(sessions.id, sid)).get();
-      if (!session || session.notebookId !== nid)
-        throw new NotFoundError(`Session ${sid} not found`);
+      requireOwnedRow(sessions, sid, nid, 'Session');
 
       const total =
         db().select({ n: count() }).from(messages).where(eq(messages.sessionId, sid)).get()?.n ?? 0;
@@ -128,9 +127,7 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
     ({ params, body, set }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const sid = requirePositiveIntId(params.sid, 'session id');
-      const session = db().select().from(sessions).where(eq(sessions.id, sid)).get();
-      if (!session || session.notebookId !== nid)
-        throw new NotFoundError(`Session ${sid} not found`);
+      requireOwnedRow(sessions, sid, nid, 'Session');
 
       const row = db()
         .insert(messages)

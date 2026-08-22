@@ -22,6 +22,7 @@ import { notebooks, sourceConnectorBindings } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
+import { requireOwnedRow } from '../../shared/notebook-scope.ts';
 import {
   BUILTIN_CONNECTORS,
   getBuiltinConnector,
@@ -144,15 +145,7 @@ function requireNotebook(notebookId: number) {
 }
 
 function getBindingOr404(notebookId: number, bindingId: number) {
-  const binding = db()
-    .select()
-    .from(sourceConnectorBindings)
-    .where(eq(sourceConnectorBindings.id, bindingId))
-    .get();
-  if (!binding || binding.notebookId !== notebookId) {
-    throw new NotFoundError(`Connector binding ${bindingId} not found`);
-  }
-  return binding;
+  return requireOwnedRow(sourceConnectorBindings, bindingId, notebookId, 'Connector binding');
 }
 
 function getConnectorOr404(connectorId: string) {

@@ -2,6 +2,10 @@
 //
 // Canonical routes use `/v2/notebooks/:nid/...` where `:nid` is the ownership
 // SSOT. Flat aliases keep c67 query/body `notebookId` requirements.
+import { eq } from 'drizzle-orm';
+import type { AnySQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
+
+import { db } from '../db/index.ts';
 import { AppHttpError, ErrorCode } from './errors.ts';
 
 /**
@@ -25,4 +29,24 @@ export function resolveNestedNotebookId(
     );
   }
   return pathNid;
+}
+
+/**
+ * Fetch a row by id and assert it lives under notebook `nid`; 404 otherwise.
+ *
+ * Collapses the per-feature ownership boilerplate
+ * (`select → !row || row.notebookId !== nid → throw`) that was duplicated
+ * across sessions/messages/sources/studio/outputs/source-connectors routers.
+ *
+ * `label` names the entity for the error message, e.g. `'Session'` →
+ * `"Session 3 not found"` (same wire shape as the previous NotFoundError throws).
+ */
+export function requireOwnedRow<
+  TTable extends SQLiteTable & { id: AnySQLiteColumn; notebookId: AnySQLiteColumn },
+>(table: TTable, id: number, nid: number, label: string) {
+  const row = db().select().from(table).where(eq(table.id, id)).get();
+  if (!row || row.notebookId !== nid) {
+    throw new AppHttpError(ErrorCode.NOT_FOUND, `${label} ${id} not found`);
+  }
+  return row;
 }
