@@ -18,6 +18,7 @@ import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';
 import { chunks, outputs, sources, studioSlides } from '../../db/schema.ts';
 import { getDataRoot, getDefaultChatModel } from '../../shared/config.ts';
+import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import {
   resolveAudienceHint,
   resolveBulletRange,
@@ -83,7 +84,10 @@ export function buildConfigHints(config: SlideGenerationConfig | null): string {
 export async function getContext(slide: typeof studioSlides.$inferSelect): Promise<string> {
   const sourceIds = (slide.sourceIds ?? []).filter((id) => id > 0);
   if (sourceIds.length === 0) {
-    throw new Error('source_ids required — select at least one source');
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      'source_ids required — select at least one source',
+    );
   }
 
   // c56: preference (quality/speed) tunes topK/minScore (v1 generation_preference.py).
@@ -217,7 +221,7 @@ export async function generateOutline(
   context: string,
 ): Promise<SlidesOutline> {
   const modelConfig = getDefaultChatModel();
-  if (!modelConfig) throw new Error('No chat model configured');
+  if (!modelConfig) throw new AppHttpError(ErrorCode.MODEL_UNAVAILABLE, 'No chat model configured');
   const model = withRetry(await resolveModel(modelConfig));
 
   // c56: interpret generation_config into concrete ranges (v1 _build_outline_prompt).
@@ -235,7 +239,7 @@ export async function generateOutline(
   });
 
   if (outline === null || outline === undefined) {
-    throw new Error('No slide outline generated');
+    throw new AppHttpError(ErrorCode.MODEL_ERROR, 'No slide outline generated');
   }
 
   return outline;
@@ -252,7 +256,7 @@ export async function generateMarkdown(
   onDelta?: (text: string) => void,
 ): Promise<string> {
   const modelConfig = getDefaultChatModel();
-  if (!modelConfig) throw new Error('No chat model configured');
+  if (!modelConfig) throw new AppHttpError(ErrorCode.MODEL_UNAVAILABLE, 'No chat model configured');
   const model = withRetry(await resolveModel(modelConfig));
 
   const config = slide.generationConfig ?? null;

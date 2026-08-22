@@ -42,6 +42,20 @@ registerApiDoc([
     tags: ['system'],
     responses: { 200: { description: '健康状态' } },
   },
+  {
+    path: '/health',
+    method: 'get',
+    summary: '进程存活探针（反向代理 /health 路由上游）',
+    tags: ['system'],
+    responses: { 200: { description: '健康状态' } },
+  },
+  {
+    path: '/health/dependencies',
+    method: 'get',
+    summary: '核心与可选依赖健康探测（SearXNG 等，含端点与降级原因）',
+    tags: ['system'],
+    responses: { 200: { description: '依赖健康明细' } },
+  },
 ]);
 
 // ---------------------------------------------------------------------------
@@ -70,6 +84,12 @@ export function createApp() {
           error instanceof Error && error.message ? error.message : 'Request validation failed';
         return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, message);
       }
+      // Fallthrough: unexpected errors still get the ErrorEnvelope shape
+      // (previously plain-text "Internal Server Error" 500s).
+      console.error('[server] unhandled error:', error);
+      const message =
+        error instanceof Error && error.message ? error.message : 'Internal server error';
+      return sendError(set, ErrorCode.INTERNAL_ERROR, message);
     })
     .use(
       openapi({
