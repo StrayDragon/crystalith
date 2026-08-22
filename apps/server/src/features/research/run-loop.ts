@@ -694,6 +694,123 @@ export async function drainResearchWorkUnits(
   }
 }
 
+/**
+ * c93 / r326 / r333: auto-decompose topic into research nodes at most once per
+ * run, only when no live research branches exist (topology only; c94 runs
+ * units). User-gated secondary decompose goes through request-reexpand /
+ * confirm, not here. Returns true when the caller loop must stop (cancelled).
+ */
+async function maybeAutoDecompose(runId: number, abortSignal: AbortSignal): Promise<boolean> {
+  if (bailIfAborted(runId, abortSignal)) return true;
+  const row = requireFresh(runId);
+  const graph = getGraph(row);
+  if (hasLiveResearchBranches(graph.nodes)) return false;
+  const occupied = graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length;
+  try {
+    const plan = await planTopicDecomposition({
+      topic: row.topic,
+      depth: row.depth ?? 'medium',
+      maxNodes: row.maxNodes,
+      occupiedNodes: occupied,
+      abortSignal,
+    });
+    if (plan && plan.branches.length > 0) {
+      const applied = applyDecomposePlanToGraph(graph, plan, newId);
+      if (applied.addedNodes.length > 0) {
+        persistGraph(runId, applied.graph, {
+          checkpoint: writeCheckpoint({ ...row, status: 'running' }, 'decompose'),
+        });
+        emitGraphPatch(runId, {
+          nodes: applied.addedNodes,
+          edges: applied.addedEdges,
+        });
+        appendProgressEvent(runId, 'graph_patched_summary', {
+          headline: `已拆解 ${applied.addedNodes.length} 个研究支路`,
+          payload: { researchNodes: applied.addedNodes.length },
+        });
+        emitLog(runId, `已拆解 ${applied.addedNodes.length} 个研究支路`);
+      } else {
+        appendProgressEvent(runId, 'unit_aborted', {
+          headline: '拆解结果未写入，改走单路径',
+        });
+        emitLog(runId, '主题拆解未写入节点，改走单路径');
+      }
+    } else {
+      appendProgressEvent(runId, 'unit_aborted', {
+        headline: '拆解跳过或为空，改走单路径',
+      });
+      emitLog(runId, '主题拆解为空或不可用，改走单路径');
+    }
+  } catch (error) {
+    appendProgressEvent(runId, 'unit_aborted', {
+      headline: '拆解失败，改走单路径',
+    });
+    emitLog(runId, `主题拆解失败：${String(error)}，改走单路径`);
+  }
+  return false;
+}
+
+/**
+ * F1=A: when live research branches exist, skip the question work-unit and go
+ * straight to branch scheduling; otherwise run the question unit and write it
+ * back (fork children / empty-decompose fallback path).
+ * Returns true when the caller loop must stop (completed / confirmed / cancelled).
+ */
+async function runQuestionPhaseOrSkip(runId: number, abortSignal: AbortSignal): Promise<boolean> {
+  const row = requireFresh(runId);
+  const graph = getGraph(row);
+  const question = findQuestionNode(graph.nodes)!;
+  if (question.conclusionStatus === 'pruned') {
+    emitLog(runId, `跳过已剪枝节点 ${question.id}`);
+    await synthesizeAndComplete(runId);
+    return true;
+  }
+
+  if (hasLiveResearchBranches(graph.nodes)) {
+    emitLog(runId, '已有研究支路，跳过问题节点检索，直接调度支路');
+    appendProgressEvent(runId, 'unit_finished', {
+      headline: '跳过问题节点，进入支路调度',
+      payload: { skipQuestion: true },
+    });
+    return false;
+  }
+
+  // Budget gate before spending search (question-only path) — true exhaustion only (c108)
+  if (row.allowWeb && row.searchesUsed >= row.maxSearches) {
+    await enterConfirm(runId, 'budget');
+    return true;
+  }
+
+  const work = await runNodeWorkUnit({
+    runId,
+    notebookId: row.notebookId,
+    node: question,
+    topic: row.topic,
+    allowWeb: row.allowWeb,
+    useNotebookSources: row.useNotebookSources,
+    sourceIds: row.sourceIds ?? null,
+    searchesUsed: row.searchesUsed,
+    maxSearches: row.maxSearches,
+    abortSignal,
+  });
+
+  if (bailIfAborted(runId, abortSignal)) return true;
+
+  const fresh = requireFresh(runId);
+  const liveQuestion = findQuestionNode(getGraph(fresh).nodes);
+  if (!liveQuestion || liveQuestion.conclusionStatus === 'pruned') {
+    emitLog(runId, '问题节点已剪枝，跳过写回');
+    await synthesizeAndComplete(runId);
+    return true;
+  }
+
+  writeBackNodeWork(runId, liveQuestion.id, work.evidenceIds, {
+    summary: work.summary,
+    conclusionStatus: work.conclusionStatus,
+  });
+  return false;
+}
+
 export async function runLoop(runId: number): Promise<void> {
   if (activeLoops.has(runId)) return;
   activeLoops.add(runId);
@@ -729,56 +846,7 @@ export async function runLoop(runId: number): Promise<void> {
       emitLog(runId, '已种子单结论 DAG');
     }
 
-    // c93 / r326: auto-decompose topic into research nodes (topology only; c94 runs units).
-    // r333: at most once per run — skip when live research branches already exist
-    // (user-gated secondary decompose goes through request-reexpand / confirm, not here).
-    if (bailIfAborted(runId, abort.signal)) return;
-    row = requireFresh(runId);
-    graph = getGraph(row);
-    if (!hasLiveResearchBranches(graph.nodes)) {
-      const occupied = graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length;
-      try {
-        const plan = await planTopicDecomposition({
-          topic: row.topic,
-          depth: row.depth ?? 'medium',
-          maxNodes: row.maxNodes,
-          occupiedNodes: occupied,
-          abortSignal: abort.signal,
-        });
-        if (plan && plan.branches.length > 0) {
-          const applied = applyDecomposePlanToGraph(graph, plan, newId);
-          if (applied.addedNodes.length > 0) {
-            row = persistGraph(runId, applied.graph, {
-              checkpoint: writeCheckpoint({ ...row, status: 'running' }, 'decompose'),
-            });
-            emitGraphPatch(runId, {
-              nodes: applied.addedNodes,
-              edges: applied.addedEdges,
-            });
-            appendProgressEvent(runId, 'graph_patched_summary', {
-              headline: `已拆解 ${applied.addedNodes.length} 个研究支路`,
-              payload: { researchNodes: applied.addedNodes.length },
-            });
-            emitLog(runId, `已拆解 ${applied.addedNodes.length} 个研究支路`);
-          } else {
-            appendProgressEvent(runId, 'unit_aborted', {
-              headline: '拆解结果未写入，改走单路径',
-            });
-            emitLog(runId, '主题拆解未写入节点，改走单路径');
-          }
-        } else {
-          appendProgressEvent(runId, 'unit_aborted', {
-            headline: '拆解跳过或为空，改走单路径',
-          });
-          emitLog(runId, '主题拆解为空或不可用，改走单路径');
-        }
-      } catch (error) {
-        appendProgressEvent(runId, 'unit_aborted', {
-          headline: '拆解失败，改走单路径',
-        });
-        emitLog(runId, `主题拆解失败：${String(error)}，改走单路径`);
-      }
-    }
+    if (await maybeAutoDecompose(runId, abort.signal)) return;
 
     // c108 e2e: mid-wave budget confirm removed — give Playwright a short live
     // window to fork / request-reexpand before stub drain finishes.
@@ -798,66 +866,7 @@ export async function runLoop(runId: number): Promise<void> {
 
     // F1=A: live research branches → skip question work-unit; drain branches only.
     // No branches → keep question → drain (fork children / empty decompose fallback).
-    row = requireFresh(runId);
-    graph = getGraph(row);
-    question = findQuestionNode(graph.nodes)!;
-    if (question.conclusionStatus === 'pruned') {
-      emitLog(runId, `跳过已剪枝节点 ${question.id}`);
-      await synthesizeAndComplete(runId);
-      return;
-    }
-
-    const skipQuestionUnit = hasLiveResearchBranches(graph.nodes);
-    if (!skipQuestionUnit) {
-      const evidenceIds: string[] = [...(question.evidenceIds ?? [])];
-
-      // Budget gate before spending search (question-only path) — true exhaustion only (c108)
-      if (row.allowWeb) {
-        if (row.searchesUsed >= row.maxSearches) {
-          await enterConfirm(runId, 'budget');
-          return;
-        }
-      }
-
-      const work = await runNodeWorkUnit({
-        runId,
-        notebookId: row.notebookId,
-        node: question,
-        topic: row.topic,
-        allowWeb: row.allowWeb,
-        useNotebookSources: row.useNotebookSources,
-        sourceIds: row.sourceIds ?? null,
-        searchesUsed: row.searchesUsed,
-        maxSearches: row.maxSearches,
-        abortSignal: abort.signal,
-      });
-      evidenceIds.length = 0;
-      evidenceIds.push(...work.evidenceIds);
-      row = requireFresh(runId);
-
-      if (bailIfAborted(runId, abort.signal)) return;
-
-      row = requireFresh(runId);
-      graph = getGraph(row);
-      const liveQuestion = findQuestionNode(graph.nodes);
-      if (!liveQuestion || liveQuestion.conclusionStatus === 'pruned') {
-        emitLog(runId, '问题节点已剪枝，跳过写回');
-        await synthesizeAndComplete(runId);
-        return;
-      }
-
-      writeBackNodeWork(runId, liveQuestion.id, evidenceIds, {
-        summary: work.summary,
-        conclusionStatus: work.conclusionStatus,
-      });
-      row = requireFresh(runId);
-    } else {
-      emitLog(runId, '已有研究支路，跳过问题节点检索，直接调度支路');
-      appendProgressEvent(runId, 'unit_finished', {
-        headline: '跳过问题节点，进入支路调度',
-        payload: { skipQuestion: true },
-      });
-    }
+    if (await runQuestionPhaseOrSkip(runId, abort.signal)) return;
 
     // Parallel-capable work units for live research nodes (c106; N=1 ≡ serial)
     if (bailIfAborted(runId, abort.signal)) return;
