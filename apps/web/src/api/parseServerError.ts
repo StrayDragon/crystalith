@@ -21,6 +21,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /**
  * Parse an eden treaty error (or any thrown value) into a stable shape.
  *
+ * Eden treaty nests the response body under `value`
+ * ({ status, value: ErrorEnvelope }), so `error.value` is read first when
+ * present; top-level fields are the fallback for legacy/alternate shapes.
  * Reads `errorCode` (the ErrorEnvelope SSOT field) first, then falls back to
  * `code` for robustness. Exposes the code as `errorCode`.
  */
@@ -32,19 +35,26 @@ export function parseServerError(error: unknown): ParsedServerError {
     }
     return { message: 'Unknown error' };
   }
+  // Eden treaty: the ErrorEnvelope lives on `.value`, not on the error itself.
+  const source = isRecord(error.value) ? { ...error, ...error.value } : error;
   const errorCode =
-    typeof error.errorCode === 'string'
-      ? error.errorCode
-      : typeof error.code === 'string'
-        ? error.code
+    typeof source.errorCode === 'string'
+      ? source.errorCode
+      : typeof source.code === 'string'
+        ? source.code
         : undefined;
   const message =
-    typeof error.message === 'string'
-      ? error.message
-      : typeof error.detail === 'string'
-        ? error.detail
+    typeof source.message === 'string'
+      ? source.message
+      : typeof source.detail === 'string'
+        ? source.detail
         : 'Unknown error';
-  const details = isRecord(error.details) ? error.details : undefined;
-  const status = typeof error.status === 'number' ? error.status : undefined;
+  const details = isRecord(source.details) ? source.details : undefined;
+  const status =
+    typeof error.status === 'number'
+      ? error.status
+      : typeof source.status === 'number'
+        ? source.status
+        : undefined;
   return { errorCode, message, details, status };
 }
