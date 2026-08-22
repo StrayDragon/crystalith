@@ -1,8 +1,0 @@
-kind: llman.sdd.spec
-name: "background-jobs-and-task-runtime"
-purpose: "统一 TaskQueue /v2/tasks* 运行时已于 c73 移除。长任务进度与取消由各域自有机制表达（如 studio SSE），本 capability 仅固化退役约束，避免无产品入口时再引入跨域任务底座。"
-valid_scope[2]: src/,tests/
-requirements[1]{req_id,title,statement}:
-  "taskqueue-runtime-retired","Unified TaskQueue HTTP runtime MUST stay retired","系统 MUST NOT 再暴露 /v2/tasks*（含 notebook tasks 列表与 cancel）或恢复已删除的跨域 TaskQueue 作为生成/导入默认底座，除非新产品需求经 SDD 重新提案。研究/幻灯片等长任务 MUST 继续使用其域内进度与取消语义（如 SSE），不得假定存在统一 tasks 表轮询 API。"
-scenarios[1]{req_id,id,given,when,then,feature}:
-  "taskqueue-runtime-retired","tasks-http-absent","",客户端请求已删除的 /v2/tasks 或 /v2/notebooks/:nid/tasks,系统 SHALL 返回 404（或等价未挂载）且 MUST NOT 再提供 TaskQueue 轮询合约,false

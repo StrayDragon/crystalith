@@ -3,8 +3,8 @@ name: "deep-research-ui"
 purpose: 定义 Deep Research 产品面（/research-lab）与 Demo 面（/demo/research-lab）的 UI 契约：入口、状态驱动主表面、命令口接线、Eden 权威态与 demo 隔离。
 valid_scope[2]: src/,tests/
 requirements[54]{req_id,title,statement}:
-  r400,"Lab is the only deep-research entry and Eden-only","深研产品主入口 MUST 为 /research-lab/:nid（工作区烧瓶导航、slash 命令与任务抽屉仅导航此产品路径）；产品路径 MUST 仅使用 Eden ResearchRun 权威（useEdenLabController 或等价），MUST NOT 经 VITE_LAB_FIXTURE 或 mode=fixture 切换为 xlsx-lib 定时回放权威；顶栏 E1 / 顶栏 deep Tab / 来源栏 Deep Research 模式（含死组件残留）MUST NOT 再作为深研主入口或主路径；MUST NOT 删除 ResearchRun 后端 API。"
-  r401,H1 create form on desk,DeepResearchDesk MUST 提供显式 useNotebookSources 与 allowWeb（默认皆开）、台内 sourceIds 多选、以及浅/中/深 depth（默认中）；当 useNotebookSources 为 true 且未选来源、或两开关皆关、或 topic 为空时 MUST 禁用开始；sourceIds MUST NOT 隐式绑定工作区勾选状态。
+  r400,"Lab is the only deep-research entry and Eden-only","深研产品主入口 MUST 为 /research-lab/:nid（工作区烧瓶导航、slash 命令与任务抽屉仅导航此产品路径）；产品路径 MUST 仅使用服务端 Eden ResearchRun 权威控制器（或等价实现），MUST NOT 经 VITE_LAB_FIXTURE 或 mode=fixture 切换为 xlsx-lib 定时回放权威；旧工作区深研模式入口 MUST NOT 再作为深研主入口或主路径；MUST NOT 删除 ResearchRun 后端 API。"
+  r401,H1 create form on desk,DeepResearchDesk MUST 提供显式 useNotebookSources 与 allowWeb 开关（表单初始均开启；创建请求 MUST 显式携带两个开关的所选值，MUST NOT 依赖服务端对省略字段的默认推断）、台内 sourceIds 多选、以及浅/中/深 depth（默认中）；当 useNotebookSources 为 true 且未选来源、或两开关皆关、或 topic 为空时 MUST 禁用开始；sourceIds MUST NOT 隐式绑定工作区勾选状态。
   r402,Queue freshness without list SSE,Desk 队列 MUST 在打开时拉取 notebook 作用域 listRuns；当存在非终态 Run 时 MUST 以短间隔轮询刷新，全终态或关闭 Desk 时 MUST 停止轮询；创建成功、关闭详情返回、以及详情内导致状态变化的操作之后 MUST 立即再拉 list；MUST NOT 引入 notebook 级 list SSE。
   r403,Run detail layer keeps the desk mounted,打开 Run 详情时 MUST 使用高于工作区顶栏 E1 的 modal Layer，且 Desk MUST 保持挂载；关闭详情后 MUST 恢复 Desk 的 tab/查询/队列原样；Escape 或点击详情遮罩 MUST 仅关闭详情；同时 MUST 最多展示一个 Run 详情（切换卡片替换当前详情）。
   r404,"Status-driven primary surface",Run 详情 MUST 按状态切换主表面：queued/running/awaiting_confirm 以研究图为主且报告草稿默认折叠；completed 以结构化报告为主且图降为只读次级入口；failed/cancelled 以状态说明为主并在可用时展示末次图或草稿；MUST NOT 提供并列的独立「研究思路」页面，也 MUST NOT 使用永久左右分栏作为唯一布局。
@@ -21,7 +21,7 @@ requirements[54]{req_id,title,statement}:
   r416,"Role-preferring graph render",研究图 UI MUST 优先依据节点 role（question|research|conclusion）区分交互与保护态展示；当 role 缺失时 MUST 回退到既有 id 前缀或 merge 目标启发式以保持兼容；MUST NOT 因缺少精致视觉规格而阻塞命令口接线。
   r417,Node chat UI wires proposals to commands,节点对话 UI MUST 消费独立 chat SSE 展示正文与提案；用户接受剪枝/分叉/改查询/定态/确认类提案时 MUST 调用对应 prune/fork/PATCH/confirm 命令口；MUST NOT 仅在本地改图作为权威；打开报告类动作可为纯前端导航。
   r418,Desk canvas prefs from Lab mechanisms,Desk 研究图 MUST 提供与 Lab 对齐的画布机制入口（至少布局方向或算法偏好、以及小地图可开关之一档）；这些偏好 MAY 仅存于客户端；MUST NOT 因此新增服务端编排 API 或改变图 SSOT。
-  r419,Revisions UI over server snapshots,Desk（或报告面）MUST 能列出并查看服务端 revisions，并 MUST 支持创建当前快照与恢复到某 revision（经 API）；MUST NOT 继续以仅 sessionStorage 的 Lab CoW 作为生产权威版本源。
+  r419,Revisions UI over server snapshots,Desk（或报告面）MUST 能列出并查看服务端 revisions，并 MUST 支持创建当前快照与恢复到某 revision（经 API）；客户端本地暂存（sessionStorage/localStorage 等）MUST NOT 作为生产权威版本源——本条为此禁令的 canonical 约束。
   r423,Lab wires via Eden and shared schemas,"Lab 对接 ResearchRun MUST 使用 Eden treaty 与 @crystalith/shared research schemas（及 ErrorEnvelope）；MUST NOT 新增与 shared 同域异形的平行 wire DTO；MUST NOT 删除或绕过 /v2/notebooks/:nid/research*。"
   r425,Lab task inbox stays fresh with Run state,"Lab 任务抽屉与 ResearchTasksTrigger badge MUST 共享 notebook 作用域 listRuns（SWR key research-tasks）；Compose 创建成功、HTTP confirm/cancel/prune/fork 成功、以及 SSE status/confirm/report_ready 之后 MUST 立即 mutate 或等效 refresh 任务列表；activeCount MUST 仅统计 status 为 queued、running 或 awaiting_confirm 的任务，completed/failed/cancelled MUST NOT 计入；打开任务抽屉时 MAY revalidate；切换 notebook MUST 丢弃旧 notebook 的 SWR 缓存。"
   r426,Lab exposes cancel for active Eden runs,"Eden 模式下当 ResearchRun status 为 queued、running 或 awaiting_confirm 时，Lab MUST 暴露取消入口（顶栏主/次操作和/或任务抽屉行操作）；用户触发后 MUST 调用 POST …/research/:rid/cancel；成功或 SSE 终态后 Run status MUST 变为 cancelled，且 MUST 按 r425 立即 refresh 任务 inbox；completed、failed、cancelled MUST NOT 再提供取消。"
@@ -38,7 +38,7 @@ requirements[54]{req_id,title,statement}:
   r438,Eden node chat uses HTTP SSE not fixture propose,"Eden 模式下 LabNodeDrawer 发送对话 MUST 调用 POST …/research/:rid/nodes/:nodeId/chat 并消费独立 chat SSE（chunk、proposal、done、error）；MUST NOT 以 proposeNodeChatTurn 作为默认权威；chat 事件 MUST NOT 混入 Run progress stream 处理器。"
   r439,Eden chat accept maps proposals to command ports,Eden 模式下用户接受节点 chat 中的 ActionProposal 时 MUST 调用对应 HTTP 命令口（prune、fork、PATCH、confirm、open_report 导航）；MUST NOT 仅在本地 mutate 图作为权威（对齐 r417）。
   r441,Eden Lab report revisions use server API,"Eden 模式下 LabReportPage MUST 经 GET/POST …/revisions 与 POST …/revisions/:revId/restore 列出、创建与恢复修订快照；恢复后画布与报告 MUST 反映服务端快照（经 GET run 或 graph_patch）；MUST NOT 以 sessionStorage labRevisions 作为 Eden 默认权威（落实 r419 Lab 路径）。"
-  r442,Eden report CoW uses server working endpoints,Eden 模式下报告编辑 working copy MUST 经 GET/PUT …/report/working 读写；提交权威报告 MUST 经 PUT …/report；丢弃副本 MUST 调用服务端 discard（或等价端点）；MUST NOT 以 reportCow localStorage 作为 Eden 默认持久化。
+  r442,Eden report CoW uses server working endpoints,Eden 模式下报告编辑 working copy MUST 经 GET/PUT …/report/working 读写；提交权威报告 MUST 经 PUT …/report；丢弃副本 MUST 调用服务端 discard（或等价端点）；本地暂存持久化禁令见 r419。
   r443,Eden convert invokes research convert endpoints,"Eden 模式下报告页与节点抽屉的转化 MUST 调用 POST …/convert-to-note 或 convert-to-source，body 使用 ResearchArtifactRef（report、node 或 evidence）；成功或失败 MUST 以 toast 反馈且无强制确认对话框（对齐 r409）。"
   r445,Lab drawer converts listed evidence via artifact ref,"当 LabNodeDrawer 信息引用源列表非空时，每条证据 MUST 提供转为笔记与转为来源入口；Eden 模式下 MUST 调用 POST …/convert-to-note 或 convert-to-source，body 使用 ResearchArtifactRef kind=evidence 与对应 evidenceId；成功或失败 MUST 以 toast 反馈且 MUST NOT 弹出强制转化确认对话框（对齐 r409/r443）；fixture 模式 MUST 仅 stub toast 且 MUST NOT 调用 Eden convert。"
   r446,Convert success toast offers workspace action link,共享 toast 组件 MUST 支持可选 action（label 与 onClick）；Eden convert 成功 toast MUST 提供可点击弱链接/动作以打开工作区（navigateToWorkspace 或等价）；既有仅传 duration 的 toast 调用 MUST 保持兼容；MUST NOT 引入强制确认对话框或平行 toast 实现。
@@ -52,7 +52,7 @@ requirements[54]{req_id,title,statement}:
   r454,Lab compose and retry expose model picker,"Lab Compose MUST 允许用户可选选择 modelId 并在 POST create 时发送（省略则服务端默认）；当 Run status 为 failed 且 failureReason 为结案类失败时 Lab MUST 展示可见错误与「重试结案」入口，并 MUST 允许更换 model 后调用 retry-synthesize；MUST NOT 在 workspace chat 本变更中新增换模 UI。"
   r455,Failed synthesize has no heuristic report UI,"当结案失败导致 Run failed 时 Lab MUST NOT 将启发式证据清单展示为权威报告正文；用户 MUST 能通过重试结案（可换模）恢复；0 证据但 completed 的诚实成稿 MUST 仍按普通报告渲染。"
   r457,Demo lab isolated under demo prefix,"xlsx-lib / fake 演示（含 proposeNodeChatTurn、labRevisions、reportCow 与 sessionStorage 修订演示）MUST 落在独立目录并经 /demo/research-lab/:nid（及 report）暴露；该路由 MUST 仅在 import.meta.env.DEV 为真或 VITE_LAB_DEMO=1 时注册；演示 MUST 可演练既定设计面（图交互、节点抽屉、报告与 cite、revisions、画布设置），但 MUST NOT 作为产品权威、MUST NOT 被误认为已接线生产态；产品入口 MUST NOT 链接到 demo；Demo 类型与 controller MUST NOT 回流为产品页 LabController|Eden 联合分支。"
-  r458,cl-prd-demo skill documents demo-first flow,"仓库 MUST 提供 .agents/skills/cl-prd-demo（或等价路径）skill 骨架，文档化「Demo 假跑定形态 → inventory → Eden 接线 propose/apply」流程；本变更以流程文档为主，MUST NOT 借此引入第二套生产编排 SSOT。"
+  r458,cl-prd-demo skill documents demo-first flow,"仓库 MUST 提供 demo-first 流程文档（skill 或等价载体），文档化「Demo 假跑定形态 → capability 盘点 → Eden 接线提案/实施」流程；流程工具 MUST NOT 引入第二套生产编排 SSOT。"
   r459,Lab surfaces request-reexpand confirm,"Lab MUST 提供显式再扩展入口并调用 request-reexpand；当 confirmKind=reexpand 时 MUST 展示批准/跳过并经 confirm 命令口执行；MUST NOT 用 timer 冒充再拆权威态。"
   r460,Lab revision fork-run entry,"Eden 报告页 MUST 提供「基于此快照新开研究」（或等价）入口，对当前选中 revision 调用 fork-run；成功后 MUST 导航至产品 Lab `/research-lab/:nid?rid=<newRunId>`；MUST NOT 改写源 Run；MUST NOT 以 sessionStorage revisions 作为 fork 权威。"
   r461,Lab proactive search budget add-on,"Eden Lab 在 Run 为 running 或 awaiting_confirm(budget) 时 MUST 在进度条旁（或等价显眼位置）提供「增加检索预算」入口；用户触发后 MUST 调用加购命令口（add-budget 或等价）按服务端公式抬高 maxSearches；agent 加购提议被用户接受后 MUST 走同一命令口；MUST NOT 仅本地改显示额度。"
@@ -137,7 +137,7 @@ scenarios[86]{req_id,id,given,when,then,feature}:
   r457,"demo-not-registered-in-prod-default","生产构建未设 VITE_LAB_DEMO",请求 /demo/research-lab/1,不注册 demo Lab 页（回落非 Lab 或不可达）,true
   r457,"product-page-no-controller-union",查阅产品 ResearchLabPage,检查 controller 分支,无 LabController|Eden 联合 as 分支,true
   r457,"default-path-not-fixture-authority",默认配置打开 Lab 主路径并开始研究,推进图状态,"权威态来自 ResearchRun 而非 xlsx-lib timer",false
-  r458,"cl-prd-demo-skill-exists",c103 完成,查阅 .agents/skills/cl-prd-demo/SKILL.md,存在且描述 demo-first→Eden 接线流程,true
+  r458,"cl-prd-demo-skill-exists",仓库已检出,查阅 demo-first 流程文档,存在且描述 demo-first→Eden 接线流程,true
   r459,"lab-request-reexpand-calls-api",Eden Lab 已加载 Run,用户点再扩展,发出 POST request-reexpand,true
   r459,"lab-reexpand-confirm-actions",Run confirmKind=reexpand,用户点批准或跳过,发出对应 confirm action,true
   r460,"lab-fork-run-calls-api",Eden 报告页已选中某 revision,用户点基于此快照新开研究,发出 POST fork-run,true

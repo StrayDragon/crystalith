@@ -2,21 +2,19 @@ kind: llman.sdd.spec
 name: "data-and-storage"
 purpose: "定义数据层技术选型与内容存储抽象。存储路径治理由 configuration-governance spec 覆盖（data_root 统一派生）。"
 valid_scope[2]: src/,tests/
-requirements[8]{req_id,title,statement}:
+requirements[7]{req_id,title,statement}:
   r29,"Database is single SQLite file via bun:sqlite","系统 MUST 使用 bun:sqlite (C 绑定同步 SQLite) 作为唯一关系数据库。MUST 启用 WAL 模式与 foreign_keys ON。MUST NOT 支持 PostgreSQL。"
   r87,"ORM is Drizzle ORM with bun-sqlite driver","Schema 定义 MUST 使用 Drizzle ORM schema-first 风格 (`sqliteTable()`)。类型推断 MUST 通过 `$inferSelect`/`$inferInsert` 自动导出供前后端共享。"
-  r124,Migrations use Drizzle Kit,"数据库变更 MUST 通过 drizzle-kit generate/migrate 管理。初始迁移从空库生成 (不迁移 alembic 历史)。MUST 生产可读 SQL 文件。"
+  r124,Migrations use Drizzle Kit,"数据库变更 MUST 通过 drizzle-kit generate/migrate 管理。初始迁移 MUST 从空库生成。MUST 生产可读 SQL 文件。"
   r160,"Vector store is sqlite-vec in-process","向量检索 MUST 使用 sqlite-vec 扩展（同库零依赖）。MUST 以 `partition by notebook_id` 做多 notebook 隔离。MUST NOT 引入 ChromaDB/lancedb/Qdrant。"
   r195,Schema types exported for frontend,Drizzle schema 导出的 TS 类型 ($inferSelect/$inferInsert) MUST 通过 packages/shared 暴露给前端 eden RPC 消费。
-  r225,"Data migration is one-time at v2 launch",历史 v1 数据 (SQLite/ChromaDB) MUST 通过一次性迁移脚本导入 v2 数据库。迁移脚本 MUST 可重复执行且记录完成标记。v2 启动后 MUST NOT 尝试读取旧格式数据。
   r_storage_layer,Content storage abstraction,系统 MUST 提供内容存储抽象 LocalStorage 实现 saveContent 与 fetchContent 以持久化原始上传字节 使 document_parse 任务可重新解析 单二进制架构下 MUST 使用本地文件系统路径
   r_document_parse,document_parse task wired,任务队列 worker MUST 实现 document_parse 任务类型 从存储读取原始字节 经 parse 与 chunk 与 embed 完整流程 不再抛 stub 错误
-scenarios[8]{req_id,id,given,when,then,feature}:
+scenarios[7]{req_id,id,given,when,then,feature}:
   r29,happy,"",server 启动,"bun:sqlite 创建/打开 crystalith.db，WAL 模式启用",true
   r87,happy,"",开发者定义 notebooks 表,Drizzle schema 类型通过 $inferSelect 自动推断 Notebook 类型,true
   r124,happy,"",新增一个 column,"drizzle-kit generate 产出增量 SQL，apply 后数据库更新",true
   r160,happy,"",1万 chunk 向量检索,"sqlite-vec 返回 top-10，p50 < 10ms",true
   r195,happy,"",前端 import Notebook 类型,TS 编译通过，类型与 server 一致,true
-  r225,happy,"",v1 用户升级到 v2,一次性迁移脚本将旧 app.db + chroma/ 数据导入新 crystalith.db,true
   r_storage_layer,save_then_fetch,上传一个 PDF,ingestSource 解析后,系统 SHALL saveContent 持久化原始字节 且后续 fetchContent 能取回相同字节,true
   r_document_parse,parse_task_completes,存在已持久化的 source,document_parse 任务入队执行,系统 SHALL 完成 parse 与 chunk 与 embed 全流程并写入向量库,true
