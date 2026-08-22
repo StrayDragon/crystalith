@@ -52,7 +52,7 @@ export const NotebookUpdateSchema = z
   });
 export type NotebookUpdate = z.infer<typeof NotebookUpdateSchema>;
 
-/** List response: `{ notebooks: Notebook[] }` (kept for v1 compat during migration). */
+/** List response: `{ notebooks: Notebook[] }` (envelope shape carried over from v1). */
 export const NotebookListSchema = z.object({
   notebooks: z.array(NotebookSchema),
 });

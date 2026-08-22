@@ -1,7 +1,7 @@
 // @crystalith/shared — Zod schema SSOT barrel.
 //
 // Server routes and the frontend eden treaty client both import from here.
-// Do NOT redefine these types elsewhere (see PROGRESS.v2.md §禁止规则).
+// Do NOT redefine these types elsewhere (see root AGENTS.md「Zod SSOT + Eden」).
 //
 // Side-effect first: enable `.openapi()` before any schema module evaluates.
 import './zod-extend.js';

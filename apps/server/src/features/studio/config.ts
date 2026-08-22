@@ -1,12 +1,8 @@
-// Studio slides config SSOT — verbatim port of v1 slides/config.py (195 lines).
-//
-// v1 keeps these tables in the slidev plugin package and exposes them via
-// SlidesWorkflowPlugin.config_schema. v2 has no plugin host yet (c13 scope),
-// so the tables live here. buildSlidesConfigSchema() produces the same
-// PluginConfigSchema shape, so c13 can later relocate the data source without
-// changing the /workspace/tools contract.
-//
-// SSOT: backend/py/src/crystalith/features/studio/slides/config.py
+// Studio slides config tables — historical origin: v1 slides/config.py
+// (deleted in c14). This file is the SSOT now; v2 has no plugin host yet
+// (c13 scope), so the tables live here. buildSlidesConfigSchema() produces
+// the same PluginConfigSchema shape, so c13 can later relocate the data
+// source without changing the /workspace/tools contract.
 import type { ConfigOption, SlidesConfigSchema, ThemePresetOption } from '@crystalith/shared';
 
 // ---------------------------------------------------------------------------

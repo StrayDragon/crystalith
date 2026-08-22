@@ -1,8 +1,9 @@
 import { isRecord, parseJsonValue } from '../../shared/json';
 
 /**
- * Demo ResearchRun task list (sessionStorage).
- * Swap for Eden GET …/research list in c82.
+ * Demo ResearchRun task list (sessionStorage fixture).
+ * Demo stays fixture-backed by design; the product Eden list lives in
+ * research-lab/useResearchTasks.
  */
 
 export type DemoResearchTaskStatus =
