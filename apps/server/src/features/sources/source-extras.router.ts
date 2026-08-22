@@ -21,6 +21,7 @@ import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
+import { requireOwnedRow } from '../../shared/notebook-scope.ts';
 import {
   generateAndPersistSourceSummary,
   getSourceSummary,
@@ -91,20 +92,18 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
     async ({ params, body }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const sid = requirePositiveIntId(params.sid, 'source id');
-      const source = db().select().from(sources).where(eq(sources.id, sid)).get();
-      if (!source) throw new NotFoundError(`Source ${sid} not found`);
-      // c44: verify notebook ownership (v1 api_qa.py:64)
-      if (source.notebookId !== nid) throw new NotFoundError(`Source ${sid} not found`);
+      const source = requireOwnedRow(sources, sid, nid, 'Source');
       // c44: "not ready" → 400 (v1 api_qa.py:67)
       if (source.status !== 'ready') {
         throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Source is not ready');
       }
 
       const question = body.question.trim();
-      if (!question) throw new NotFoundError('Question is required');
+      if (!question) throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Question is required');
 
       const modelConfig = getDefaultChatModel();
-      if (!modelConfig) throw new Error('No chat model configured');
+      if (!modelConfig)
+        throw new AppHttpError(ErrorCode.MODEL_UNAVAILABLE, 'No chat model configured');
 
       // c39: Use vector retrieval scoped to this source (v1 cached_vector_search)
       let contextChunks: Array<{ text: string; score: number }> = [];
@@ -160,10 +159,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
     async ({ params, body, set }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const sid = requirePositiveIntId(params.sid, 'source id');
-      const source = db().select().from(sources).where(eq(sources.id, sid)).get();
-      if (!source) throw new NotFoundError(`Source ${sid} not found`);
-      // c44: verify notebook ownership (v1 api_qa.py:221)
-      if (source.notebookId !== nid) throw new NotFoundError(`Source ${sid} not found`);
+      const source = requireOwnedRow(sources, sid, nid, 'Source');
 
       // Multi-turn messages list (v1) OR single-turn {question, answer} shortcut.
       const { question, answer, messages } = body;
@@ -237,7 +233,9 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
             })
             .where(eq(sources.id, newSource.id))
             .run();
-          throw new Error('Failed to embed QA source', { cause: error });
+          throw new AppHttpError(ErrorCode.INTERNAL_ERROR, 'Failed to embed QA source', {
+            reason: error instanceof Error ? error.message : String(error),
+          });
         }
       } else {
         // No chunks — safe to mark ready (no summary without content)

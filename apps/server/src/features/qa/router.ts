@@ -22,6 +22,7 @@ import { db } from '../../db/index.ts';
 import { messages, notebooks, sessions, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
+import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
 import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import { streamQa, generateQaDirect } from './handler.ts';
@@ -121,14 +122,20 @@ function assertQaOwnership(opts: {
       .where(and(eq(sources.notebookId, opts.notebookId), inArray(sources.id, opts.sourceIds)))
       .all();
     if (found.length !== opts.sourceIds.length) {
-      throw new Error('Unknown source_id in sourceIds');
+      throw new AppHttpError(ErrorCode.NOT_FOUND, 'Unknown source_id in sourceIds');
     }
   }
 }
 
 type QaBody = QaNestedRequest & { notebookId: number };
 
-async function handleQaPost(body: QaBody) {
+/**
+ * Shared QA prelude for /qa and /qa/stream:
+ * directive parse → ownership check → history → user message + auto-title →
+ * model resolve → provisional assistant placeholder.
+ * Call sites only differ in the generator invocation and onMessageSettled policy.
+ */
+async function prepareQa(body: QaBody) {
   const {
     question: rawQuestion,
     content: rawContent,
@@ -136,9 +143,6 @@ async function handleQaPost(body: QaBody) {
     sessionId,
     preset: bodyPreset,
     directive,
-    strategyId,
-    topK,
-    minScore,
     sourceIds,
   } = body;
 
@@ -147,11 +151,7 @@ async function handleQaPost(body: QaBody) {
   const resolvedQuestion = (rawQuestion ?? rawContent)!;
   const { preset, question } = parsePromptDirective(resolvedQuestion, bodyPreset);
 
-  assertQaOwnership({
-    notebookId,
-    sessionId,
-    sourceIds,
-  });
+  assertQaOwnership({ notebookId, sessionId, sourceIds });
 
   const history = sessionId ? loadHistory(sessionId) : [];
 
@@ -161,9 +161,8 @@ async function handleQaPost(body: QaBody) {
     maybeSetSessionTitle(sessionId, question);
   }
 
-  // Resolve model
   const modelConfig = getDefaultChatModel();
-  if (!modelConfig) throw new Error('No chat model configured');
+  if (!modelConfig) throw new AppHttpError(ErrorCode.MODEL_UNAVAILABLE, 'No chat model configured');
   const model = withRetry(await resolveModel(modelConfig));
   const systemPrompt = resolvePreset(preset, directive ?? 'Mixed');
 
@@ -178,25 +177,25 @@ async function handleQaPost(body: QaBody) {
     messageId = msg.id;
   }
 
+  return { model, question, notebookId, sessionId, history, systemPrompt, messageId, preset };
+}
+
+async function handleQaPost(body: QaBody) {
+  const prepared = await prepareQa(body);
+
   // H7: direct generate (no SSE re-parse) — uses generateText, not streamText
   const result = await generateQaDirect({
-    model,
-    question,
-    notebookId: notebookId,
-    history,
-    systemPrompt,
-    messageId,
-    strategyId: strategyId,
-    topK: topK,
-    minScore: minScore,
-    sourceIds: sourceIds,
-    preset,
+    ...prepared,
+    strategyId: body.strategyId,
+    topK: body.topK,
+    minScore: body.minScore,
+    sourceIds: body.sourceIds,
     onMessageSettled: (text, _failed, citations) => {
-      if (messageId) {
+      if (prepared.messageId) {
         db()
           .update(messages)
           .set({ content: text, citations: citations ?? [] })
-          .where(eq(messages.id, messageId))
+          .where(eq(messages.id, prepared.messageId))
           .run();
       }
     },
@@ -205,8 +204,8 @@ async function handleQaPost(body: QaBody) {
   return {
     answer: result.answer,
     citations: result.citations,
-    messageId: messageId ?? null,
-    sessionId,
+    messageId: prepared.messageId ?? null,
+    sessionId: prepared.sessionId,
     confidence: result.confidence,
     evidence: result.evidence,
     noEvidenceReason: result.noEvidenceReason,
@@ -214,68 +213,16 @@ async function handleQaPost(body: QaBody) {
 }
 
 async function handleQaStream(body: QaBody) {
-  const {
-    question: rawQuestion,
-    content: rawContent,
-    notebookId,
-    sessionId,
-    preset: bodyPreset,
-    directive,
-    strategyId,
-    topK,
-    minScore,
-    sourceIds,
-  } = body;
-
-  // Accept both 'question' (API canonical) and 'content' (parity with /v2/qa)
-  const resolvedQuestion = (rawQuestion ?? rawContent)!;
-
-  // c45: parse /prompt:<preset> directive from question text
-  const { preset, question } = parsePromptDirective(resolvedQuestion, bodyPreset);
-
-  assertQaOwnership({
-    notebookId: notebookId,
-    sessionId: sessionId,
-    sourceIds: sourceIds,
-  });
-
-  const history = sessionId ? loadHistory(sessionId) : [];
-
-  // Create user message + auto-title
-  if (sessionId) {
-    db().insert(messages).values({ sessionId: sessionId, role: 'user', content: question }).run();
-    maybeSetSessionTitle(sessionId, question);
-  }
-
-  const modelConfig = getDefaultChatModel();
-  if (!modelConfig) throw new Error('No chat model configured');
-  const model = withRetry(await resolveModel(modelConfig));
-  const systemPrompt = resolvePreset(preset, directive ?? 'Mixed');
-
-  // Create provisional assistant message
-  let messageId: number | undefined;
-  if (sessionId) {
-    const msg = db()
-      .insert(messages)
-      .values({ sessionId: sessionId, role: 'assistant', content: '' })
-      .returning()
-      .get();
-    messageId = msg.id;
-  }
+  const prepared = await prepareQa(body);
 
   return streamQa({
-    model,
-    question,
-    notebookId: notebookId,
-    history,
-    systemPrompt,
-    messageId,
-    strategyId: strategyId,
-    topK: topK,
-    minScore: minScore,
-    sourceIds: sourceIds,
-    preset,
+    ...prepared,
+    strategyId: body.strategyId,
+    topK: body.topK,
+    minScore: body.minScore,
+    sourceIds: body.sourceIds,
     onMessageSettled: (text, failed, citations) => {
+      const { messageId } = prepared;
       if (!messageId) return;
       if (failed || text.trim() === '') {
         db().delete(messages).where(eq(messages.id, messageId)).run();

@@ -34,7 +34,7 @@ import {
 //
 // Mirrors v1 `features/sources/api.py` + `features/sources/api_ingest.py`.
 import { and, eq, sql } from 'drizzle-orm';
-import { Elysia, NotFoundError } from 'elysia';
+import { Elysia } from 'elysia';
 import { z } from 'zod';
 
 import { db } from '../../db/index.ts';
@@ -48,26 +48,28 @@ import {
 import { deleteSourceVectors } from '../../db/vectors.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
-import {
-  config,
-  getDedupEnabled,
-  getSecurityPolicy,
-  getUploadMaxBytes,
-} from '../../shared/config.ts';
+import { config, getDedupEnabled, getUploadMaxBytes } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import {
-  extractUrl,
   extractors,
   getDefaultExtractor,
   listExtractorMetadata,
 } from '../../shared/extraction/factory.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
-import { fetchWithRedirectGuard } from '../../shared/net/fetch-with-redirect-guard.ts';
-import { validateUrlForFetch, SsrfBlockedError } from '../../shared/net/url-safety.ts';
-import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
-import { uploadDedupKey, urlDedupKey } from './dedup.ts';
+import { requireOwnedRow, resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
+import { batchDeleteSources, batchReembedSources } from './batch.service.ts';
+import { uploadDedupKey } from './dedup.ts';
+import { ingestFromUrl } from './from-url.service.ts';
 import { listParsers } from './parser-registry.ts';
 import { ingestSource } from './pipeline.ts';
+import {
+  assignSourcesToTag,
+  createTag,
+  deleteTag,
+  listNotebookTags,
+  removeSourcesFromTag,
+  renameTag,
+} from './tags.service.ts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -83,12 +85,6 @@ function uploadFileFromBody(body: unknown): File | undefined {
   }
   return undefined;
 }
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-const DedupActionSchema = z.enum(['prompt', 'reuse', 'create_new']);
 
 // ---------------------------------------------------------------------------
 // OpenAPI doc registration
@@ -162,6 +158,115 @@ const apiDocs: OpenApiRoute[] = [
     tags: ['sources'],
     responses: { 200: { description: '解析器列表' } },
   },
+
+  // ---- Tag CRUD（c39）----
+  {
+    path: '/v2/notebooks/:nid/sources/tags',
+    method: 'get',
+    summary: '列出笔记本下全部来源标签',
+    tags: ['sources'],
+    responses: { 200: { description: '标签列表', body: SourceTagSchema.array() } },
+  },
+  {
+    path: '/v2/notebooks/:nid/sources/tags',
+    method: 'post',
+    summary: '创建来源标签；同名（忽略大小写）返回 409 冲突',
+    tags: ['sources'],
+    request: { body: SourceTagCreateSchema },
+    responses: { 201: { description: '已创建的标签', body: SourceTagSchema } },
+  },
+  {
+    path: '/v2/notebooks/:nid/sources/tags/:tid',
+    method: 'patch',
+    summary: '重命名来源标签；校验笔记本归属与同 notebook 内唯一性',
+    tags: ['sources'],
+    request: { body: SourceTagCreateSchema },
+    responses: { 200: { description: '更新后的标签', body: SourceTagSchema } },
+  },
+  {
+    path: '/v2/notebooks/:nid/sources/tags/:tid',
+    method: 'delete',
+    summary: '删除来源标签及其与来源的绑定关系',
+    tags: ['sources'],
+    responses: { 204: { description: '已删除' } },
+  },
+  {
+    path: '/v2/notebooks/:nid/sources/tags/:tid/sources',
+    method: 'post',
+    summary: '批量为来源打上该标签；逐条给出成功/跳过/失败诊断（幂等）',
+    tags: ['sources'],
+    request: { body: SourceTagBindingRequestSchema },
+    responses: { 200: { description: '逐条绑定结果', body: SourceTagBindingResponseSchema } },
+  },
+  {
+    path: '/v2/notebooks/:nid/sources/tags/:tid/sources',
+    method: 'delete',
+    summary: '批量移除来源与该标签的绑定；逐条给出诊断（未绑定时记 skipped）',
+    tags: ['sources'],
+    request: { body: SourceTagBindingRequestSchema },
+    responses: { 200: { description: '逐条解绑结果', body: SourceTagBindingResponseSchema } },
+  },
+
+  // ---- 搜索 / 批量操作（c44/c53/c57）----
+  {
+    path: '/v2/notebooks/:nid/sources/search',
+    method: 'post',
+    summary: '真实联网搜索（SearXNG）返回候选结果；供前端加入搜索队列，不产生来源',
+    tags: ['sources'],
+    request: { body: SourceSearchRequestSchema },
+    responses: {
+      200: { description: '搜索结果（含无结果状态）', body: SourceSearchResponseSchema },
+    },
+  },
+  {
+    path: '/v2/notebooks/:nid/sources/batch/delete',
+    method: 'post',
+    summary: '批量删除来源及其分块与向量；逐条给出不存在/不归属诊断',
+    tags: ['sources'],
+    request: { body: SourceBatchDeleteRequestSchema },
+    responses: {
+      200: { description: '逐条删除结果', body: SourceBatchDeleteResponseSchema },
+    },
+  },
+  {
+    path: '/v2/notebooks/:nid/sources/batch/re-embed',
+    method: 'post',
+    summary: '批量对失败来源重新向量化；逐条给出 EMBEDDING_FAILED 等诊断',
+    tags: ['sources'],
+    request: { body: SourceBatchReembedRequestSchema },
+    responses: {
+      200: { description: '逐条重嵌结果', body: SourceBatchReembedResponseSchema },
+    },
+  },
+  {
+    path: '/v2/notebooks/:nid/sources/from-url',
+    method: 'post',
+    summary:
+      '从 URL 摄取来源：抓取正文入库；支持 link 链接模式与去重策略（prompt/reuse/create_new），SSRF 校验拦截内网地址',
+    tags: ['sources'],
+    request: { body: SourceFromUrlRequestSchema },
+    responses: {
+      200: { description: '摄取结果', body: SourceFromUrlResponseSchema },
+      201: { description: '摄取结果（新建）', body: SourceFromUrlResponseSchema },
+    },
+  },
+
+  // ---- 抽取器策略（c44）----
+  {
+    path: '/v2/notebooks/:nid/extractors',
+    method: 'get',
+    summary: '读取笔记本抽取器策略与可用抽取器清单',
+    tags: ['sources'],
+    responses: { 200: { description: '抽取器策略与清单', body: ExtractorsListSchema } },
+  },
+  {
+    path: '/v2/notebooks/:nid/extractors',
+    method: 'patch',
+    summary: '更新笔记本抽取器策略（mode / enabledExtractors 白名单校验）',
+    tags: ['sources'],
+    request: { body: PatchNotebookExtractorPolicySchema },
+    responses: { 200: { description: '更新后的抽取器策略与清单', body: ExtractorsListSchema } },
+  },
 ];
 // ---------------------------------------------------------------------------
 // Helpers
@@ -203,10 +308,6 @@ function serializeSource(row: {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
-}
-
-function sourceNotFound(id: number): never {
-  throw new NotFoundError(`Source ${id} not found`);
 }
 
 type UploadSet = { status?: number | string };
@@ -263,8 +364,7 @@ async function handleSourceUpload(
 }
 
 function handleGetSource(id: number, notebookId: number) {
-  const row = db().select().from(sources).where(eq(sources.id, id)).get();
-  if (!row || row.notebookId !== notebookId) sourceNotFound(id);
+  const row = requireOwnedRow(sources, id, notebookId, 'Source');
 
   const c = db()
     .select({ c: sql<number>`COUNT(*)` })
@@ -285,8 +385,7 @@ function handleGetSource(id: number, notebookId: number) {
 }
 
 function handleDeleteSource(id: number, notebookId: number, set: UploadSet) {
-  const row = db().select().from(sources).where(eq(sources.id, id)).get();
-  if (!row || row.notebookId !== notebookId) sourceNotFound(id);
+  const row = requireOwnedRow(sources, id, notebookId, 'Source');
 
   deleteSourceVectors(db(), id);
   db().delete(sources).where(eq(sources.id, id)).run();
@@ -297,8 +396,7 @@ function handleDeleteSource(id: number, notebookId: number, set: UploadSet) {
 }
 
 function handleGetSourceChunks(id: number, notebookId: number) {
-  const row = db().select().from(sources).where(eq(sources.id, id)).get();
-  if (!row || row.notebookId !== notebookId) sourceNotFound(id);
+  requireOwnedRow(sources, id, notebookId, 'Source');
   const rows = db()
     .select()
     .from(chunks)
@@ -316,8 +414,7 @@ function handleGetSourceChunks(id: number, notebookId: number) {
 }
 
 async function handleReEmbedSource(id: number, notebookId: number) {
-  const row = db().select().from(sources).where(eq(sources.id, id)).get();
-  if (!row || row.notebookId !== notebookId) sourceNotFound(id);
+  const row = requireOwnedRow(sources, id, notebookId, 'Source');
   if (row.status !== 'failed') {
     throw new AppHttpError(
       ErrorCode.INVALID_REQUEST,
@@ -528,18 +625,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     '/notebooks/:nid/sources/tags',
     ({ params }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
-      return db()
-        .select()
-        .from(sourceTags)
-        .where(eq(sourceTags.notebookId, nid))
-        .all()
-        .map((t) => ({
-          id: t.id,
-          notebookId: t.notebookId,
-          name: t.name,
-          createdAt: t.createdAt.toISOString(),
-          updatedAt: t.updatedAt.toISOString(),
-        }));
+      return listNotebookTags(nid);
     },
     { response: SourceTagSchema.array() },
   )
@@ -548,37 +634,9 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     '/notebooks/:nid/sources/tags',
     ({ params, body, set }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const rawName = body.name.trim().slice(0, 64);
-      if (!rawName) {
-        throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Tag name is required');
-      }
-      // Uniqueness check (case-insensitive, v1 api_tags.py:56-63)
-      const existing = db()
-        .select()
-        .from(sourceTags)
-        .where(eq(sourceTags.notebookId, nid))
-        .all()
-        .find((t) => t.name.toLowerCase() === rawName.toLowerCase());
-      if (existing) {
-        throw new AppHttpError(ErrorCode.CONFLICT, 'Tag name already exists', {
-          existingTagId: existing.id,
-        });
-      }
-      const row = db()
-        .insert(sourceTags)
-        .values({ notebookId: nid, name: rawName })
-        .returning()
-        .get();
-      // c57: invalidate sources cache (list-sources cache key includes tag filter)
-      bumpSourcesEpoch(nid);
+      const tag = createTag(nid, body.name);
       set.status = 201;
-      return {
-        id: row.id,
-        notebookId: row.notebookId,
-        name: row.name,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-      };
+      return tag;
     },
     { body: SourceTagCreateSchema, response: SourceTagSchema },
   )
@@ -588,40 +646,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     ({ params, body }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const tid = requirePositiveIntId(params.tid, 'tag id');
-      const rawName = body.name.trim().slice(0, 64);
-      if (!rawName) {
-        throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Tag name is required');
-      }
-      // Ownership check (v1 api_tags.py:81)
-      const existing = db()
-        .select()
-        .from(sourceTags)
-        .where(and(eq(sourceTags.id, tid), eq(sourceTags.notebookId, nid)))
-        .get();
-      if (!existing) throw new NotFoundError(`Tag ${tid} not found in notebook ${nid}`);
-      // Uniqueness check (exclude self)
-      const conflict = db()
-        .select()
-        .from(sourceTags)
-        .where(eq(sourceTags.notebookId, nid))
-        .all()
-        .find((t) => t.id !== tid && t.name.toLowerCase() === rawName.toLowerCase());
-      if (conflict) {
-        throw new AppHttpError(ErrorCode.CONFLICT, 'Tag name already exists', {
-          existingTagId: conflict.id,
-        });
-      }
-      db().update(sourceTags).set({ name: rawName }).where(eq(sourceTags.id, tid)).run();
-      // c57: invalidate sources cache
-      bumpSourcesEpoch(nid);
-      const updated = db().select().from(sourceTags).where(eq(sourceTags.id, tid)).get();
-      return {
-        id: updated!.id,
-        notebookId: updated!.notebookId,
-        name: updated!.name,
-        createdAt: updated!.createdAt.toISOString(),
-        updatedAt: updated!.updatedAt.toISOString(),
-      };
+      return renameTag(nid, tid, body.name);
     },
     { body: SourceTagCreateSchema, response: SourceTagSchema },
   )
@@ -631,16 +656,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     ({ params, set }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const tid = requirePositiveIntId(params.tid, 'tag id');
-      // Ownership check (v1 api_tags.py:110)
-      const existing = db()
-        .select()
-        .from(sourceTags)
-        .where(and(eq(sourceTags.id, tid), eq(sourceTags.notebookId, nid)))
-        .get();
-      if (!existing) throw new NotFoundError(`Tag ${tid} not found in notebook ${nid}`);
-      db().delete(sourceTags).where(eq(sourceTags.id, tid)).run();
-      // c57: invalidate sources cache
-      bumpSourcesEpoch(nid);
+      deleteTag(nid, tid);
       set.status = 204;
       return;
     },
@@ -652,43 +668,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     ({ params, body }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const tid = requirePositiveIntId(params.tid, 'tag id');
-      const { sourceIds } = body;
-      // c53: per-item diagnostics (v1 api_tags.py:142-185 SourceBatchItemResult).
-      const results: Array<{
-        sourceId: number;
-        ok: boolean;
-        message?: string;
-        errorCode?: string;
-      }> = [];
-      let applied = 0;
-      let skipped = 0;
-      for (const sid of sourceIds) {
-        const src = db()
-          .select({ id: sources.id })
-          .from(sources)
-          .where(and(eq(sources.id, sid), eq(sources.notebookId, nid)))
-          .get();
-        if (!src) {
-          results.push({ sourceId: sid, ok: false, errorCode: 'SOURCE_NOT_FOUND' });
-          continue;
-        }
-        const existing = db()
-          .select()
-          .from(sourceTagMap)
-          .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
-          .get();
-        if (existing) {
-          skipped++;
-          results.push({ sourceId: sid, ok: true, message: 'already assigned' });
-          continue;
-        }
-        db().insert(sourceTagMap).values({ sourceId: sid, tagId: tid }).run();
-        applied++;
-        results.push({ sourceId: sid, ok: true });
-      }
-      // c57: invalidate sources cache (tag binding changed)
-      if (applied > 0) bumpSourcesEpoch(nid);
-      return { tagId: tid, sourceIds, applied, skipped, results };
+      return assignSourcesToTag(nid, tid, body);
     },
     { body: SourceTagBindingRequestSchema, response: SourceTagBindingResponseSchema },
   )
@@ -698,46 +678,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     ({ params, body }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
       const tid = requirePositiveIntId(params.tid, 'tag id');
-      const { sourceIds } = body;
-      // c53: per-item diagnostics (v1 api_tags.py:142-185)
-      const results: Array<{
-        sourceId: number;
-        ok: boolean;
-        message?: string;
-        errorCode?: string;
-      }> = [];
-      let removed = 0;
-      let skipped = 0;
-      for (const sid of sourceIds) {
-        const src = db()
-          .select({ id: sources.id })
-          .from(sources)
-          .where(and(eq(sources.id, sid), eq(sources.notebookId, nid)))
-          .get();
-        if (!src) {
-          results.push({ sourceId: sid, ok: false, errorCode: 'SOURCE_NOT_FOUND' });
-          continue;
-        }
-        const existing = db()
-          .select()
-          .from(sourceTagMap)
-          .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
-          .get();
-        if (!existing) {
-          skipped++;
-          results.push({ sourceId: sid, ok: true, message: 'not assigned' });
-          continue;
-        }
-        db()
-          .delete(sourceTagMap)
-          .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
-          .run();
-        removed++;
-        results.push({ sourceId: sid, ok: true });
-      }
-      // c57: invalidate sources cache (tag unbinding changed)
-      if (removed > 0) bumpSourcesEpoch(nid);
-      return { tagId: tid, sourceIds, removed, skipped, results };
+      return removeSourcesFromTag(nid, tid, body);
     },
     { body: SourceTagBindingRequestSchema, response: SourceTagBindingResponseSchema },
   )
@@ -813,32 +754,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     '/notebooks/:nid/sources/batch/delete',
     ({ params, body }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const { sourceIds } = body;
-      const deletedIds: number[] = [];
-      const results: Array<{
-        sourceId: number;
-        ok: boolean;
-        errorCode?: string;
-        message?: string;
-      }> = [];
-      for (const sid of sourceIds) {
-        const row = db().select().from(sources).where(eq(sources.id, sid)).get();
-        if (row && row.notebookId === nid) {
-          deleteSourceVectors(db(), sid);
-          db().delete(sources).where(eq(sources.id, sid)).run();
-          deletedIds.push(sid);
-          results.push({ sourceId: sid, ok: true });
-        } else {
-          results.push({
-            sourceId: sid,
-            ok: false,
-            errorCode: 'SOURCE_NOT_FOUND',
-            message: row ? 'Source not in this notebook' : 'Source not found',
-          });
-        }
-      }
-      if (deletedIds.length) bumpSourcesEpoch(nid);
-      return { results, deletedIds, deletedCount: deletedIds.length };
+      return batchDeleteSources(nid, body);
     },
     { body: SourceBatchDeleteRequestSchema, response: SourceBatchDeleteResponseSchema },
   )
@@ -849,72 +765,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     '/notebooks/:nid/sources/batch/re-embed',
     async ({ params, body }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const { sourceIds } = body;
-      const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
-      const strategy = new EmbedStrategy();
-      const reembedded: number[] = [];
-      const failed: number[] = [];
-      const results: Array<{
-        sourceId: number;
-        ok: boolean;
-        errorCode?: string;
-        message?: string;
-      }> = [];
-      for (const sid of sourceIds) {
-        const row = db().select().from(sources).where(eq(sources.id, sid)).get();
-        if (!row || row.notebookId !== nid) {
-          failed.push(sid);
-          results.push({
-            sourceId: sid,
-            ok: false,
-            errorCode: 'SOURCE_NOT_FOUND',
-            message: 'Source not found in this notebook',
-          });
-          continue;
-        }
-        // c57: clear ALL error fields (v1 api_common.py:261-263)
-        db()
-          .update(sources)
-          .set({
-            status: 'processing',
-            errorCode: null,
-            errorMessage: null,
-            recoveryHint: null,
-            lastErrorAt: null,
-          })
-          .where(eq(sources.id, sid))
-          .run();
-        try {
-          deleteSourceVectors(db(), sid);
-          await strategy.indexSource(sid, nid);
-          db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sid)).run();
-          reembedded.push(sid);
-          results.push({ sourceId: sid, ok: true });
-          const { scheduleSourceSummary } = await import('./source-summary.ts');
-          scheduleSourceSummary(sid, { force: true });
-        } catch (error) {
-          const msg = error instanceof Error ? error.message : String(error);
-          db()
-            .update(sources)
-            .set({
-              status: 'failed',
-              errorCode: 'EMBEDDING_FAILED',
-              errorMessage: msg,
-            })
-            .where(eq(sources.id, sid))
-            .run();
-          failed.push(sid);
-          results.push({ sourceId: sid, ok: false, errorCode: 'EMBEDDING_FAILED', message: msg });
-        }
-      }
-      if (reembedded.length || failed.length) bumpSourcesEpoch(nid);
-      return {
-        results,
-        reembeddedIds: reembedded,
-        failedIds: failed,
-        reembeddedCount: reembedded.length,
-        failedCount: failed.length,
-      };
+      return batchReembedSources(nid, body);
     },
     { body: SourceBatchReembedRequestSchema, response: SourceBatchReembedResponseSchema },
   )
@@ -924,140 +775,15 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     '/notebooks/:nid/sources/from-url',
     async ({ params, body, query, set }) => {
       const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const { url, mode, title, extractor, snippet } = body;
-      const normalizedMode = mode;
-      const dedupParsed = DedupActionSchema.safeParse(
-        isRecord(query) ? (query.dedupAction ?? 'prompt') : 'prompt',
-      );
-      const dedupAction = dedupParsed.success ? dedupParsed.data : 'prompt';
-
-      // SSRF guard: validate URL before fetch.
-      try {
-        await validateUrlForFetch(url, getSecurityPolicy());
-      } catch (error) {
-        throw new AppHttpError(ErrorCode.SCHEMA_VALIDATION_FAILED, 'SSRF blocked', {
-          reason: errorMessage(error),
-        });
+      const outcome = await ingestFromUrl(nid, body, query);
+      if (outcome.kind === 'reused') {
+        return { reused: true as const, source: handleGetSource(outcome.sourceId, nid) };
       }
-
-      // c44: Dedup check — gated by config (v1 source_ingestion.dedup.enabled)
-      const dedupKey = getDedupEnabled() ? urlDedupKey(url) : undefined;
-      if (dedupKey && dedupAction !== 'create_new') {
-        const hit = db()
-          .select({ id: sources.id })
-          .from(sources)
-          .where(and(eq(sources.notebookId, nid), eq(sources.dedupKey, dedupKey)))
-          .get();
-        if (hit) {
-          if (dedupAction === 'prompt') {
-            throw new AppHttpError(ErrorCode.CONFLICT, 'Source dedup hit', {
-              existingSourceId: hit.id,
-            });
-          }
-          if (dedupAction === 'reuse') {
-            return { reused: true as const, source: handleGetSource(hit.id, nid) };
-          }
-        }
-      }
-
-      // Link mode: create a lightweight source, then embed so it is searchable (v1 still embeds)
-      if (normalizedMode === 'link') {
-        const linkTitle = title ?? url;
-        // c62: use snippet from body if provided (v1 api_ingest.py:381-390)
-        const content = snippet
-          ? `# ${linkTitle}\n\n${snippet}\n\n来源: ${url}`
-          : `# ${linkTitle}\n\n${url}\n\n来源链接（未抓取正文）`;
-        const sourceRow = db()
-          .insert(sources)
-          .values({
-            notebookId: nid,
-            filename: linkTitle,
-            mimeType: 'text/plain',
-            parserType: 'link',
-            status: 'processing',
-            dedupKey,
-            metadata: { url, mode: 'link' },
-          })
-          .returning()
-          .get();
-        db()
-          .insert(chunks)
-          .values({
-            sourceId: sourceRow.id,
-            chunkIndex: 0,
-            text: content,
-            metadata: { url, type: 'link' },
-          })
-          .run();
-
-        try {
-          const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
-          const strategy = new EmbedStrategy();
-          await strategy.indexSource(sourceRow.id, nid);
-          db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)).run();
-          const { scheduleSourceSummary } = await import('./source-summary.ts');
-          scheduleSourceSummary(sourceRow.id);
-        } catch (error) {
-          db()
-            .update(sources)
-            .set({
-              status: 'failed',
-              errorMessage: error instanceof Error ? error.message : String(error),
-            })
-            .where(eq(sources.id, sourceRow.id))
-            .run();
-        }
-        bumpSourcesEpoch(nid);
+      if (outcome.kind === 'created-link') {
         set.status = 201;
-        return { sourceId: sourceRow.id, filename: linkTitle, mode: 'link' as const };
+        return outcome.payload;
       }
-
-      // Default mode: fetch and extract URL content
-      try {
-        // c62: pass extractor order if specified (v1 preferred-extractor)
-        const order = extractor ? [extractor] : undefined;
-        const extracted = await extractUrl(url, {}, order);
-        const buffer = new TextEncoder().encode(extracted.content);
-        const result = await ingestSource({
-          buffer,
-          // intentionally || — filename fallback chain
-          // oxlint-disable-next-line typescript/prefer-nullish-coalescing
-          filename: extracted.title || title || url.split('/').pop() || 'webpage.html',
-          notebookId: nid,
-          mimeType: 'text/html',
-          dedupKey,
-        });
-        return { ...result, extractedBy: extracted.extractorUsed, title: extracted.title };
-      } catch {
-        // Fallback to raw fetch if extractors all fail.
-        // P0-3: use fetchWithRedirectGuard so the initial URL AND every redirect
-        // hop are validated against the SSRF policy (replaces the c39 single
-        // pre-check + bare fetch that followed redirects unsafely).
-        let response: Response;
-        try {
-          response = await fetchWithRedirectGuard(url, getSecurityPolicy());
-        } catch (error) {
-          throw new AppHttpError(
-            ErrorCode.SCHEMA_VALIDATION_FAILED,
-            error instanceof SsrfBlockedError
-              ? 'SSRF blocked on fallback'
-              : 'fetch failed on fallback',
-            { reason: errorMessage(error) },
-          );
-        }
-        const html = await response.text();
-        const buffer = new TextEncoder().encode(html);
-        const result = await ingestSource({
-          buffer,
-          // intentionally || — filename fallback chain
-          // oxlint-disable-next-line typescript/prefer-nullish-coalescing
-          filename: title || url.split('/').pop() || 'webpage.html',
-          notebookId: nid,
-          mimeType: 'text/html',
-          dedupKey,
-        });
-        return result;
-      }
+      return outcome.payload;
     },
     {
       body: SourceFromUrlRequestSchema,

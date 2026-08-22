@@ -54,6 +54,7 @@ import {
   subscribeRun,
   updateRun,
   writeCheckpoint,
+  type RunRow,
   type SseEmit,
 } from './research-core.ts';
 import { orderResearchNodesForWork } from './research-work-queue.ts';
@@ -253,191 +254,226 @@ export async function confirmRun(
   }
   const kind = row.confirmKind ?? 'budget';
   if (kind === 'budget') {
-    if (body.action !== 'continue' && body.action !== 'finish_report') {
-      throw new AppHttpError(
-        ErrorCode.INVALID_REQUEST,
-        'budget confirm requires continue or finish_report',
-      );
-    }
-    updateRun(runId, {
-      status: 'running',
-      confirmKind: null,
-      confirmBranchNodeId: null,
-    });
-    emitStatus(runId, 'running', body.action);
-    appendProgressEvent(runId, 'confirm_resolved', {
-      headline: body.action === 'continue' ? '已加购并继续研究' : '预算触顶后出报告',
-      payload: { action: body.action, confirmKind: 'budget' },
-    });
-    if (body.action === 'continue') {
-      // c108: raise maxSearches by K and resume drain (NOT fake one-unit then synthesize).
-      applySearchBudgetAddOn(runId);
-      scheduleRun(runId);
-      return serializeRun(requireRun(notebookId, runId));
-    }
-    markUnfinishedResearchMissing(runId);
-    await synthesizeAndComplete(runId);
+    await confirmBudgetRun(notebookId, runId, body);
   } else if (kind === 'reexpand') {
-    if (body.action !== 'approve_reexpand' && body.action !== 'skip_reexpand') {
-      throw new AppHttpError(
-        ErrorCode.INVALID_REQUEST,
-        'reexpand confirm requires approve_reexpand or skip_reexpand',
-      );
-    }
-    const focusNodeId = body.branchNodeId ?? row.confirmBranchNodeId ?? undefined;
-    const hint = readLatestReexpandHint(runId);
-    updateRun(runId, {
-      status: 'running',
-      confirmKind: null,
-      confirmBranchNodeId: null,
-      llmActivity: 'work_unit',
-    });
-    emitStatus(runId, 'running', body.action);
-    appendProgressEvent(runId, 'confirm_resolved', {
-      headline: body.action === 'approve_reexpand' ? '已批准再扩展' : '已跳过再扩展',
-      payload: { action: body.action, focusNodeId: focusNodeId ?? null },
-    });
-
-    if (body.action === 'skip_reexpand') {
-      // Locked simplest: clear confirm → synthesize.
-      // Fresh AbortController: request-reexpand aborts the prior work-unit signal;
-      // do not let a stale aborted controller poison synthesize / later schedule.
-      ensureRunAbortController(runId);
-      await synthesizeAndComplete(runId);
-      return serializeRun(requireRun(notebookId, runId));
-    }
-
-    // approve_reexpand: planner → graph_patch → drain → budget/synthesize
-    const latest = requireRun(notebookId, runId);
-    const graph = getGraph(latest);
-    const occupied = graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length;
-    const abort = ensureRunAbortController(runId);
-    try {
-      const plan = await planTopicDecomposition({
-        topic: latest.topic,
-        depth: latest.depth ?? 'medium',
-        maxNodes: latest.maxNodes,
-        occupiedNodes: occupied,
-        hint: hint ?? undefined,
-        abortSignal: abort.signal,
-      });
-      if (!plan || plan.branches.length === 0) {
-        appendProgressEvent(runId, 'unit_aborted', {
-          headline: '再扩展规划为空或失败，不伪造支路',
-          payload: { reason: 'empty_or_null_plan' },
-        });
-        emitLog(runId, '再扩展规划为空或失败，改走结案');
-        await synthesizeAndComplete(runId);
-        return serializeRun(requireRun(notebookId, runId));
-      }
-      const applied = applyDecomposePlanToGraph(graph, plan, newId, {
-        focusNodeId: focusNodeId,
-      });
-      if (applied.addedNodes.length === 0) {
-        appendProgressEvent(runId, 'unit_aborted', {
-          headline: '再扩展未写入节点，不伪造支路',
-        });
-        emitLog(runId, '再扩展未写入节点，改走结案');
-        await synthesizeAndComplete(runId);
-        return serializeRun(requireRun(notebookId, runId));
-      }
-      persistGraph(runId, applied.graph, {
-        checkpoint: writeCheckpoint(latest, 'approve_reexpand'),
-      });
-      emitGraphPatch(runId, {
-        nodes: applied.addedNodes,
-        edges: applied.addedEdges,
-      });
-      appendProgressEvent(runId, 'graph_patched_summary', {
-        headline: `再扩展新增 ${applied.addedNodes.length} 个研究支路`,
-        payload: { researchNodes: applied.addedNodes.length },
-      });
-      emitLog(runId, `再扩展新增 ${applied.addedNodes.length} 个研究支路`);
-      await finishWaveOrSynthesize(runId);
-    } catch (error) {
-      appendProgressEvent(runId, 'unit_aborted', {
-        headline: '再扩展规划失败，不伪造支路',
-        payload: { error: String(error) },
-      });
-      emitLog(runId, `再扩展失败：${String(error)}`);
-      await synthesizeAndComplete(runId);
-    }
+    await confirmReexpandRun(notebookId, runId, row, body);
   } else {
-    // expand_branch
-    if (body.action !== 'approve_branch' && body.action !== 'skip_branch') {
-      throw new AppHttpError(
-        ErrorCode.INVALID_REQUEST,
-        'expand_branch confirm requires approve_branch or skip_branch',
-      );
-    }
-    const branchNodeId = body.branchNodeId ?? row.confirmBranchNodeId;
-    if (!branchNodeId) {
-      throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'branchNodeId is required');
-    }
-    updateRun(runId, {
-      status: 'running',
-      confirmKind: null,
-      confirmBranchNodeId: null,
-    });
-    emitStatus(runId, 'running', body.action);
-    if (body.action === 'approve_branch') {
-      const latest = requireRun(notebookId, runId);
-      const graph = getGraph(latest);
-      const liveCount = graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length;
-      if (liveCount >= latest.maxNodes) {
-        throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Node budget exhausted');
-      }
-      const conclusion = findConclusionNode(graph.nodes);
-      if (!conclusion) {
-        throw new AppHttpError(
-          ErrorCode.INVALID_REQUEST,
-          'Single-sink DAG missing conclusion node',
-        );
-      }
-      const child: ResearchNode = {
-        id: newId('node'),
-        role: 'research',
-        title: `扩展：${branchNodeId}`,
-        query: latest.topic,
-        conclusionStatus: 'partial',
-        phase: 'idle',
-        summary: '支路已批准',
-        evidenceIds: [],
-      };
-      const forkEdge: ResearchEdge = {
-        id: newId('edge'),
-        source: branchNodeId,
-        target: child.id,
-        kind: 'fork',
-      };
-      const mergeEdge: ResearchEdge = {
-        id: newId('edge'),
-        source: child.id,
-        target: conclusion.id,
-        kind: 'merge',
-      };
-      graph.nodes.push(child);
-      graph.edges.push(forkEdge, mergeEdge);
-      persistGraph(runId, graph, {
-        checkpoint: writeCheckpoint(latest, 'approve_branch'),
-      });
-      emitGraphPatch(runId, { nodes: [child], edges: [forkEdge, mergeEdge] });
-
-      // Run work_unit on the new research node before report (serial kernel)
-      const abort = ensureRunAbortController(runId);
-      try {
-        await drainResearchWorkUnits(runId, abort.signal);
-      } catch (error) {
-        if (error instanceof AppHttpError && error.code === ErrorCode.RESEARCH_BUDGET) {
-          emitLog(runId, '支路工作单元跳过：预算已尽');
-        } else {
-          emitLog(runId, `支路工作单元失败：${String(error)}`);
-        }
-      }
-    }
-    await synthesizeAndComplete(runId);
+    await confirmExpandBranchRun(notebookId, runId, row, body);
   }
   return serializeRun(requireRun(notebookId, runId));
+}
+
+/** budget 确认：加购继续（c108）或预算触顶后出报告。 */
+async function confirmBudgetRun(
+  notebookId: number,
+  runId: number,
+  body: ResearchConfirmBody,
+): Promise<void> {
+  if (body.action !== 'continue' && body.action !== 'finish_report') {
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      'budget confirm requires continue or finish_report',
+    );
+  }
+  updateRun(runId, {
+    status: 'running',
+    confirmKind: null,
+    confirmBranchNodeId: null,
+  });
+  emitStatus(runId, 'running', body.action);
+  appendProgressEvent(runId, 'confirm_resolved', {
+    headline: body.action === 'continue' ? '已加购并继续研究' : '预算触顶后出报告',
+    payload: { action: body.action, confirmKind: 'budget' },
+  });
+  if (body.action !== 'continue') {
+    markUnfinishedResearchMissing(runId);
+    await synthesizeAndComplete(runId);
+    return;
+  }
+  // c108: raise maxSearches by K and resume drain (NOT fake one-unit then synthesize).
+  applySearchBudgetAddOn(runId);
+  scheduleRun(runId);
+}
+
+/** reexpand 确认：批准后 planner → graph_patch → drain；跳过或规划失败诚实结案。 */
+async function confirmReexpandRun(
+  notebookId: number,
+  runId: number,
+  row: RunRow,
+  body: ResearchConfirmBody,
+): Promise<void> {
+  if (body.action !== 'approve_reexpand' && body.action !== 'skip_reexpand') {
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      'reexpand confirm requires approve_reexpand or skip_reexpand',
+    );
+  }
+  const focusNodeId = body.branchNodeId ?? row.confirmBranchNodeId ?? undefined;
+  const hint = readLatestReexpandHint(runId);
+  updateRun(runId, {
+    status: 'running',
+    confirmKind: null,
+    confirmBranchNodeId: null,
+    llmActivity: 'work_unit',
+  });
+  emitStatus(runId, 'running', body.action);
+  appendProgressEvent(runId, 'confirm_resolved', {
+    headline: body.action === 'approve_reexpand' ? '已批准再扩展' : '已跳过再扩展',
+    payload: { action: body.action, focusNodeId: focusNodeId ?? null },
+  });
+
+  if (body.action === 'skip_reexpand') {
+    // Locked simplest: clear confirm → synthesize.
+    // Fresh AbortController: request-reexpand aborts the prior work-unit signal;
+    // do not let a stale aborted controller poison synthesize / later schedule.
+    ensureRunAbortController(runId);
+    await synthesizeAndComplete(runId);
+    return;
+  }
+
+  // approve_reexpand: planner → graph_patch → drain → budget/synthesize
+  const latest = requireRun(notebookId, runId);
+  const graph = getGraph(latest);
+  const occupied = graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length;
+  const abort = ensureRunAbortController(runId);
+  try {
+    const plan = await planTopicDecomposition({
+      topic: latest.topic,
+      depth: latest.depth ?? 'medium',
+      maxNodes: latest.maxNodes,
+      occupiedNodes: occupied,
+      hint: hint ?? undefined,
+      abortSignal: abort.signal,
+    });
+    if (!plan || plan.branches.length === 0) {
+      await abortReexpandToSynthesize(runId, '再扩展规划为空或失败，不伪造支路', {
+        reason: 'empty_or_null_plan',
+      });
+      return;
+    }
+    const applied = applyDecomposePlanToGraph(graph, plan, newId, {
+      focusNodeId: focusNodeId,
+    });
+    if (applied.addedNodes.length === 0) {
+      await abortReexpandToSynthesize(runId, '再扩展未写入节点，不伪造支路');
+      return;
+    }
+    persistGraph(runId, applied.graph, {
+      checkpoint: writeCheckpoint(latest, 'approve_reexpand'),
+    });
+    emitGraphPatch(runId, {
+      nodes: applied.addedNodes,
+      edges: applied.addedEdges,
+    });
+    appendProgressEvent(runId, 'graph_patched_summary', {
+      headline: `再扩展新增 ${applied.addedNodes.length} 个研究支路`,
+      payload: { researchNodes: applied.addedNodes.length },
+    });
+    emitLog(runId, `再扩展新增 ${applied.addedNodes.length} 个研究支路`);
+    await finishWaveOrSynthesize(runId);
+  } catch (error) {
+    await abortReexpandToSynthesize(
+      runId,
+      '再扩展规划失败，不伪造支路',
+      {
+        error: String(error),
+      },
+      `再扩展失败：${String(error)}`,
+    );
+  }
+}
+
+/** reexpand 三胞胎兜底出口：记录 unit_aborted + 日志后诚实结案（不伪造支路）。 */
+async function abortReexpandToSynthesize(
+  runId: number,
+  headline: string,
+  payload?: Record<string, unknown>,
+  logMessage?: string,
+): Promise<void> {
+  appendProgressEvent(runId, 'unit_aborted', { headline, payload });
+  emitLog(runId, logMessage ?? headline);
+  await synthesizeAndComplete(runId);
+}
+
+/** expand_branch 确认：批准后 fork 新支路并串行跑工作单元，随后结案。 */
+async function confirmExpandBranchRun(
+  notebookId: number,
+  runId: number,
+  row: RunRow,
+  body: ResearchConfirmBody,
+): Promise<void> {
+  if (body.action !== 'approve_branch' && body.action !== 'skip_branch') {
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      'expand_branch confirm requires approve_branch or skip_branch',
+    );
+  }
+  const branchNodeId = body.branchNodeId ?? row.confirmBranchNodeId;
+  if (!branchNodeId) {
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'branchNodeId is required');
+  }
+  updateRun(runId, {
+    status: 'running',
+    confirmKind: null,
+    confirmBranchNodeId: null,
+  });
+  emitStatus(runId, 'running', body.action);
+  if (body.action !== 'approve_branch') {
+    await synthesizeAndComplete(runId);
+    return;
+  }
+
+  const latest = requireRun(notebookId, runId);
+  const graph = getGraph(latest);
+  const liveCount = graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length;
+  if (liveCount >= latest.maxNodes) {
+    throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Node budget exhausted');
+  }
+  const conclusion = findConclusionNode(graph.nodes);
+  if (!conclusion) {
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Single-sink DAG missing conclusion node');
+  }
+  const child: ResearchNode = {
+    id: newId('node'),
+    role: 'research',
+    title: `扩展：${branchNodeId}`,
+    query: latest.topic,
+    conclusionStatus: 'partial',
+    phase: 'idle',
+    summary: '支路已批准',
+    evidenceIds: [],
+  };
+  const forkEdge: ResearchEdge = {
+    id: newId('edge'),
+    source: branchNodeId,
+    target: child.id,
+    kind: 'fork',
+  };
+  const mergeEdge: ResearchEdge = {
+    id: newId('edge'),
+    source: child.id,
+    target: conclusion.id,
+    kind: 'merge',
+  };
+  graph.nodes.push(child);
+  graph.edges.push(forkEdge, mergeEdge);
+  persistGraph(runId, graph, {
+    checkpoint: writeCheckpoint(latest, 'approve_branch'),
+  });
+  emitGraphPatch(runId, { nodes: [child], edges: [forkEdge, mergeEdge] });
+
+  // Run work_unit on the new research node before report (serial kernel)
+  const abort = ensureRunAbortController(runId);
+  try {
+    await drainResearchWorkUnits(runId, abort.signal);
+  } catch (error) {
+    if (error instanceof AppHttpError && error.code === ErrorCode.RESEARCH_BUDGET) {
+      emitLog(runId, '支路工作单元跳过：预算已尽');
+    } else {
+      emitLog(runId, `支路工作单元失败：${String(error)}`);
+    }
+  }
+  await synthesizeAndComplete(runId);
 }
 
 /**
