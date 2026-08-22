@@ -13,6 +13,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { db } from '../../db/index.ts';
 import { chunks, outputs, sources } from '../../db/schema.ts';
 import type { ChunkResult } from '../../rag/types.ts';
+import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import {
   buildCitationMap,
   mapCitationsIntoContent,
@@ -96,8 +97,9 @@ export async function runOutputPipeline(input: PipelineInput): Promise<PipelineR
         return row?.notebookId === input.notebookId;
       });
     if (owned.length !== input.sourceIds.length) {
-      throw new Error(
-        'Output retrieval failed: Unknown source_id in source_ids (not in this notebook)',
+      throw new AppHttpError(
+        ErrorCode.NOT_FOUND,
+        'Unknown source_id in source_ids (not in this notebook)',
       );
     }
   }
@@ -133,9 +135,9 @@ export async function runOutputPipeline(input: PipelineInput): Promise<PipelineR
       });
     } catch (error) {
       // c42: RAG failure MUST propagate — do NOT dump all chunks (v1 has no such fallback)
-      throw new Error(
+      throw new AppHttpError(
+        ErrorCode.INTERNAL_ERROR,
         `Output retrieval failed: ${error instanceof Error ? error.message : String(error)}`,
-        { cause: error },
       );
     }
 

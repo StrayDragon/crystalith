@@ -14,6 +14,8 @@ import {
 import { generateText, Output } from 'ai';
 import type { z } from 'zod';
 
+import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
+
 export type { OutputMeta, RenderDescriptor };
 
 // ---------------------------------------------------------------------------
@@ -259,7 +261,7 @@ export async function generateOutputByType(
   });
 
   if (output === null || output === undefined) {
-    throw new Error(`No structured ${type} output generated`);
+    throw new AppHttpError(ErrorCode.MODEL_ERROR, `No structured ${type} output generated`);
   }
 
   return output;

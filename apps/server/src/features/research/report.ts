@@ -125,7 +125,10 @@ export async function generateLlmResearchReport(
 
   const modelConfig = resolveSynthesizeModelConfig(row.modelId);
   if (!modelConfig) {
-    throw new Error('No chat model configured for research synthesize');
+    throw new AppHttpError(
+      ErrorCode.MODEL_UNAVAILABLE,
+      'No chat model configured for research synthesize',
+    );
   }
 
   const model = withRetry(await resolveModel(modelConfig));
@@ -168,7 +171,10 @@ export async function generateLlmResearchReport(
 
     const parsed = ResearchReportSchema.safeParse(object);
     if (!parsed.success) {
-      throw new Error(`Invalid ResearchReport from model: ${parsed.error.message}`);
+      throw new AppHttpError(
+        ErrorCode.MODEL_ERROR,
+        `Invalid ResearchReport from model: ${parsed.error.message}`,
+      );
     }
     return parsed.data;
   } catch (error) {
