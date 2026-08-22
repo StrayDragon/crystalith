@@ -37,10 +37,7 @@ const apiDocs: OpenApiRoute[] = [
     summary: '分页列出笔记本下的会话',
     tags: ['sessions'],
     request: {
-      query: {
-        offset: PaginationParamsSchema.shape.offset,
-        limit: PaginationParamsSchema.shape.limit,
-      },
+      query: PaginationParamsSchema,
     },
     responses: { 200: { description: '会话列表', body: SessionsPageSchema } },
   },

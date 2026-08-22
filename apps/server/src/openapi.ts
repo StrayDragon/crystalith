@@ -57,7 +57,11 @@ export interface OpenApiRoute {
   request?: {
     body?: z.ZodType;
     params?: Record<string, z.ZodType>;
-    query?: Record<string, z.ZodType>;
+    /**
+     * Whole Zod object schema (expanded automatically), or a per-field record
+     * for mixed / doc-only entries (e.g. preprocess-wrapped runtime schemas).
+     */
+    query?: z.ZodType | Record<string, z.ZodType>;
   };
   responses: Record<
     number,
@@ -139,7 +143,12 @@ export function registerApiDoc(routes: OpenApiRoute[]): void {
     }
 
     if (route.request?.query) {
-      for (const [name, schema] of Object.entries(route.request.query)) {
+      const querySpec = route.request.query;
+      const fields: Record<string, z.ZodType> =
+        querySpec instanceof z.ZodObject
+          ? (querySpec as unknown as { shape: Record<string, z.ZodType> }).shape
+          : (querySpec as Record<string, z.ZodType>);
+      for (const [name, schema] of Object.entries(fields)) {
         parameters.push({
           name,
           in: 'query',

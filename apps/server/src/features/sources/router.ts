@@ -104,13 +104,7 @@ const apiDocs: OpenApiRoute[] = [
     summary: '分页列出笔记本下来源；可按标签筛选与排序',
     tags: ['sources'],
     request: {
-      query: {
-        offset: PaginationParamsSchema.shape.offset,
-        limit: PaginationParamsSchema.shape.limit,
-        tag: SourceListQuerySchema.shape.tag,
-        sortBy: SourceListQuerySchema.shape.sortBy,
-        sortOrder: SourceListQuerySchema.shape.sortOrder,
-      },
+      query: SourceListQuerySchema,
     },
     responses: {
       200: { description: '来源列表', body: SourcesPageSchema },

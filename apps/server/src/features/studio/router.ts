@@ -69,10 +69,7 @@ const apiDocs: OpenApiRoute[] = [
     summary: '分页列出笔记本下的幻灯片草稿',
     tags: ['studio'],
     request: {
-      query: {
-        offset: PaginationParamsSchema.shape.offset,
-        limit: PaginationParamsSchema.shape.limit,
-      },
+      query: PaginationParamsSchema,
     },
     responses: { 200: { description: '草稿列表', body: SlidesPageSchema } },
   },

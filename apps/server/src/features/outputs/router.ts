@@ -71,10 +71,7 @@ const apiDocs: OpenApiRoute[] = [
     summary: '分页列出笔记本下的产出',
     tags: ['outputs'],
     request: {
-      query: {
-        offset: PaginationParamsSchema.shape.offset,
-        limit: PaginationParamsSchema.shape.limit,
-      },
+      query: PaginationParamsSchema,
     },
     responses: { 200: { description: '产出列表', body: OutputsPageSchema } },
   },
