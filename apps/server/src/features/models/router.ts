@@ -32,6 +32,13 @@ const apiDocs: OpenApiRoute[] = [
     tags: ['models'],
     responses: { 200: { description: 'Provider 列表', body: ModelProvidersResponseSchema } },
   },
+  {
+    path: '/v2/models/:modelId',
+    method: 'get',
+    summary: '按 id 获取单个模型配置（provider 不可用时视为不存在）',
+    tags: ['models'],
+    responses: { 200: { description: '模型配置', body: ModelConfigSchema } },
+  },
 ];
 
 registerApiDoc(apiDocs);
