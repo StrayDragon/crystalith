@@ -36,10 +36,7 @@ const apiDocs: OpenApiRoute[] = [
     summary: '分页列出会话消息',
     tags: ['messages'],
     request: {
-      query: {
-        offset: PaginationParamsSchema.shape.offset,
-        limit: PaginationParamsSchema.shape.limit,
-      },
+      query: PaginationParamsSchema,
     },
     responses: {
       200: { description: '消息列表', body: MessagesPageSchema },
