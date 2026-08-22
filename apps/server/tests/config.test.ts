@@ -47,7 +47,8 @@ models:
       roles: [chat]
 `,
     );
-    process.env.MY_CHAT = undefined;
+    // Bun 1.4 / Node semantics: assigning undefined stores "undefined" — delete instead.
+    delete process.env.MY_CHAT;
     const cfg = loadConfig(TMP);
     expect(cfg.models.defaults.chat).toBe('fallback-chat');
   });
