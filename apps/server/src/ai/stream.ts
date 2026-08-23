@@ -11,6 +11,8 @@ import type { ChatTurn, Citation, ContextStats } from '@crystalith/shared';
 import { streamText, isStepCount } from 'ai';
 import type { Tool } from 'ai';
 
+import { sseFrame, sseResponse } from '../shared/sse-response.ts';
+
 export interface StreamQaOptions {
   model: LanguageModelV4;
   systemPrompt: string;
@@ -54,9 +56,9 @@ export interface StreamQaOptions {
   onMessageSettled?: (accumulatedText: string, failed: boolean, citations?: Citation[]) => void;
 }
 
-/** SSE-encode a single event. */
+/** SSE-encode a single event. Delegates to the shared SSE helper. */
 export function sseEvent(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  return sseFrame(event, data);
 }
 
 /**
@@ -141,11 +143,5 @@ export function streamQaResponse(opts: StreamQaOptions): Response {
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    },
-  });
+  return sseResponse(stream);
 }

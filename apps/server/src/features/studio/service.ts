@@ -19,6 +19,7 @@ import { db } from '../../db/index.ts';
 import { chunks, outputs, sources, studioSlides } from '../../db/schema.ts';
 import { getDataRoot, getDefaultChatModel } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
+import { SSE_HEADERS, sseFrame, sseResponse } from '../../shared/sse-response.ts';
 import {
   resolveAudienceHint,
   resolveBulletRange,
@@ -320,17 +321,13 @@ export function createSseResponse(
       typeof data === 'object' && data !== null && !Array.isArray(data)
         ? { traceId, ...Object.fromEntries(Object.entries(data)) }
         : { traceId, data };
-    return `event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`;
+    return sseFrame(event, payload);
   };
 
   // Check busy guard before starting stream
   if (!clearStaleRunning(slideId)) {
     return new Response(sse('busy', { message: '演示正在生成中，请稍后重试。', slideId }), {
-      headers: {
-        'content-type': 'text/event-stream',
-        'cache-control': 'no-cache',
-        'x-accel-buffering': 'no',
-      },
+      headers: SSE_HEADERS,
     });
   }
 
@@ -364,11 +361,5 @@ export function createSseResponse(
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      'content-type': 'text/event-stream',
-      'cache-control': 'no-cache',
-      'x-accel-buffering': 'no',
-    },
-  });
+  return sseResponse(stream);
 }

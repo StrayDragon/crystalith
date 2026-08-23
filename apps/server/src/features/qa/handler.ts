@@ -4,6 +4,7 @@ import { generateText } from 'ai';
 
 import { streamQaResponse } from '../../ai/stream.ts';
 import { countTokens } from '../../ai/tokenizer.ts';
+import { sseFrame, sseResponse } from '../../shared/sse-response.ts';
 import { parseStatsPresetOutput } from './presets.ts';
 // QA handler — deterministic retrieval + streamText generation.
 //
@@ -167,7 +168,7 @@ function streamNoEvidence(answer: string, judgment: JudgeResult, opts: QaHandler
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       const emit = (event: string, data: unknown) => {
-        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        controller.enqueue(encoder.encode(sseFrame(event, data)));
       };
 
       try {
@@ -198,13 +199,7 @@ function streamNoEvidence(answer: string, judgment: JudgeResult, opts: QaHandler
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    },
-  });
+  return sseResponse(stream);
 }
 
 /**
@@ -223,7 +218,7 @@ function streamStatsAnswer(
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       const emit = (event: string, data: unknown) => {
-        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        controller.enqueue(encoder.encode(sseFrame(event, data)));
       };
 
       try {
@@ -252,13 +247,7 @@ function streamStatsAnswer(
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    },
-  });
+  return sseResponse(stream);
 }
 
 /** c48: real token count via gpt-tokenizer (was char estimate). */
