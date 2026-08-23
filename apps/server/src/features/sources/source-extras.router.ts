@@ -12,6 +12,7 @@ import {
 import { generateText } from 'ai';
 import { eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
+import { z } from 'zod';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
@@ -20,7 +21,7 @@ import { chunks, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
-import { requirePositiveIntId } from '../../shared/ids.ts';
+import { PathId } from '../../shared/ids.ts';
 import { requireOwnedRow } from '../../shared/notebook-scope.ts';
 import {
   generateAndPersistSourceSummary,
@@ -70,28 +71,28 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/notebooks/:nid/sources/:sid/summary',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const sid = requirePositiveIntId(params.sid, 'source id');
+      const nid = params.nid;
+      const sid = params.sid;
       return getSourceSummary(nid, sid);
     },
-    { response: SourceSummarySchema },
+    { params: z.object({ nid: PathId, sid: PathId }), response: SourceSummarySchema },
   )
   .post(
     '/notebooks/:nid/sources/:sid/summary',
     async ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const sid = requirePositiveIntId(params.sid, 'source id');
+      const nid = params.nid;
+      const sid = params.sid;
       return generateAndPersistSourceSummary(nid, sid);
     },
-    { response: SourceSummarySchema },
+    { params: z.object({ nid: PathId, sid: PathId }), response: SourceSummarySchema },
   )
 
   // Per-source QA (c39: vector retrieval instead of first-N chunks — v1 api_qa.py:82-119)
   .post(
     '/notebooks/:nid/sources/:sid/qa',
     async ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const sid = requirePositiveIntId(params.sid, 'source id');
+      const nid = params.nid;
+      const sid = params.sid;
       const source = requireOwnedRow(sources, sid, nid, 'Source');
       // c44: "not ready" → 400 (v1 api_qa.py:67)
       if (source.status !== 'ready') {
@@ -150,15 +151,19 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
         answer: text,
       };
     },
-    { body: SourceQARequestSchema, response: SourceQAResponseSchema },
+    {
+      params: z.object({ nid: PathId, sid: PathId }),
+      body: SourceQARequestSchema,
+      response: SourceQAResponseSchema,
+    },
   )
 
   // Convert per-source QA to a source (v1 api_qa.py:204 parity)
   .post(
     '/notebooks/:nid/sources/:sid/qa-to-source',
     async ({ params, body, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const sid = requirePositiveIntId(params.sid, 'source id');
+      const nid = params.nid;
+      const sid = params.sid;
       const source = requireOwnedRow(sources, sid, nid, 'Source');
 
       // Multi-turn messages list (v1) OR single-turn {question, answer} shortcut.
@@ -250,6 +255,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
       };
     },
     {
+      params: z.object({ nid: PathId, sid: PathId }),
       body: ConvertSourceQAToSourceRequestSchema,
       response: ConvertSourceQAToSourceResponseSchema,
     },

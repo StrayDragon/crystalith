@@ -15,12 +15,13 @@ import {
 // Mirrors v1 `features/sessions/api.py` on Elysia + Drizzle.
 import { count, desc, eq } from 'drizzle-orm';
 import { Elysia } from 'elysia';
+import { z } from 'zod';
 
 import { db } from '../../db/index.ts';
 import { sessions } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
-import { requirePositiveIntId } from '../../shared/ids.ts';
+import { NidParamsSchema, PathId } from '../../shared/ids.ts';
 import { requireOwnedRow } from '../../shared/notebook-scope.ts';
 import { convertSessionToOutput, convertSessionToSource } from './convert.ts';
 
@@ -125,7 +126,7 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/notebooks/:nid/sessions',
     ({ params, query }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       const { offset, limit } = query;
       const total =
         db().select({ n: count() }).from(sessions).where(eq(sessions.notebookId, nid)).get()?.n ??
@@ -145,25 +146,25 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
         limit,
       };
     },
-    { query: PaginationParamsSchema, response: SessionsPageSchema },
+    { params: NidParamsSchema, query: PaginationParamsSchema, response: SessionsPageSchema },
   )
 
   // Get a single session (c39: v1 api.py:200-209)
   .get(
     '/notebooks/:nid/sessions/:sid',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const sid = requirePositiveIntId(params.sid, 'session id');
+      const nid = params.nid;
+      const sid = params.sid;
       return serializeSession(requireOwnedRow(sessions, sid, nid, 'Session'));
     },
-    { response: SessionSchema },
+    { params: z.object({ nid: PathId, sid: PathId }), response: SessionSchema },
   )
 
   // Create a session
   .post(
     '/notebooks/:nid/sessions',
     ({ params, body, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       const row = db()
         .insert(sessions)
         .values({
@@ -175,15 +176,15 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
       set.status = 201;
       return serializeSession(row);
     },
-    { body: SessionCreateSchema, response: SessionSchema },
+    { params: NidParamsSchema, body: SessionCreateSchema, response: SessionSchema },
   )
 
   // Update a session (c39: notebook ownership check)
   .patch(
     '/notebooks/:nid/sessions/:sid',
     ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const sid = requirePositiveIntId(params.sid, 'session id');
+      const nid = params.nid;
+      const sid = params.sid;
       const existing = requireOwnedRow(sessions, sid, nid, 'Session');
 
       const updateData: Record<string, unknown> = {};
@@ -211,47 +212,59 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
         .get();
       return serializeSession(updated);
     },
-    { body: SessionUpdateSchema, response: SessionSchema },
+    {
+      params: z.object({ nid: PathId, sid: PathId }),
+      body: SessionUpdateSchema,
+      response: SessionSchema,
+    },
   )
 
   // Delete a session (c39: notebook ownership check)
   .delete(
     '/notebooks/:nid/sessions/:sid',
     ({ params, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const sid = requirePositiveIntId(params.sid, 'session id');
+      const nid = params.nid;
+      const sid = params.sid;
       requireOwnedRow(sessions, sid, nid, 'Session');
       db().delete(sessions).where(eq(sessions.id, sid)).run();
       set.status = 204;
       return;
     },
-    { response: { 204: Empty204Schema } },
+    { params: z.object({ nid: PathId, sid: PathId }), response: { 204: Empty204Schema } },
   )
 
   // Convert session to source (c34: chunk + embed + vector — v1 behavior; c39: ownership + 201)
   .post(
     '/notebooks/:nid/sessions/:sid/convert-to-source',
     async ({ params, body, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const sid = requirePositiveIntId(params.sid, 'session id');
+      const nid = params.nid;
+      const sid = params.sid;
       const result = await convertSessionToSource(nid, sid, body);
       set.status = 201;
       return result;
     },
-    { body: SessionConvertToSourceRequestSchema, response: SessionConvertToSourceResponseSchema },
+    {
+      params: z.object({ nid: PathId, sid: PathId }),
+      body: SessionConvertToSourceRequestSchema,
+      response: SessionConvertToSourceResponseSchema,
+    },
   )
 
   // Convert session to output (c34: v1 parity; c39: ownership + 201 + chunk_ids)
   .post(
     '/notebooks/:nid/sessions/:sid/convert-to-output',
     ({ params, body, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const sid = requirePositiveIntId(params.sid, 'session id');
+      const nid = params.nid;
+      const sid = params.sid;
       const result = convertSessionToOutput(nid, sid, body);
       set.status = 201;
       return result;
     },
-    { body: SessionConvertToOutputRequestSchema, response: SessionConvertToOutputResponseSchema },
+    {
+      params: z.object({ nid: PathId, sid: PathId }),
+      body: SessionConvertToOutputRequestSchema,
+      response: SessionConvertToOutputResponseSchema,
+    },
   );
 
 registerApiDoc(apiDocs);

@@ -55,7 +55,7 @@ import {
   getDefaultExtractor,
   listExtractorMetadata,
 } from '../../shared/extraction/factory.ts';
-import { requirePositiveIntId } from '../../shared/ids.ts';
+import { PathId, NidParamsSchema } from '../../shared/ids.ts';
 import { requireOwnedRow, resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import { batchDeleteSources, batchReembedSources } from './batch.service.ts';
 import { uploadDedupKey } from './dedup.ts';
@@ -503,7 +503,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/notebooks/:nid/sources',
     ({ params, query }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       const tagFilter = query.tag;
       const sortBy = query.sortBy ?? 'date';
       const sortOrder = query.sortOrder ?? 'desc';
@@ -563,40 +563,48 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
 
       return paginateItems(enrichSources(rows), offset, limit);
     },
-    { query: SourceListQuerySchema, response: SourcesPageSchema },
+    {
+      params: z.object({ nid: PathId }),
+      query: SourceListQuerySchema,
+      response: SourcesPageSchema,
+    },
   )
 
   // Upload + ingest a file (nested canonical)
   .post(
     '/notebooks/:nid/sources/upload',
     async ({ params, body, query }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       const notebookId = resolveNestedNotebookId(nid, query.notebookId);
       return handleSourceUpload(notebookId, body, query.dedupAction);
     },
-    { query: SourceUploadNestedQuerySchema, response: SourceUploadResponseSchema },
+    {
+      params: z.object({ nid: PathId }),
+      query: SourceUploadNestedQuerySchema,
+      response: SourceUploadResponseSchema,
+    },
   )
 
   // Get a source by ID (nested canonical)
   .get(
     '/notebooks/:nid/sources/:sid',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const sid = requirePositiveIntId(params.sid, 'source id');
+      const nid = params.nid;
+      const sid = params.sid;
       return handleGetSource(sid, nid);
     },
-    { response: SourceSchema },
+    { params: z.object({ nid: PathId, sid: PathId }), response: SourceSchema },
   )
 
   // Delete a source (nested canonical)
   .delete(
     '/notebooks/:nid/sources/:sid',
     ({ params, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const sid = requirePositiveIntId(params.sid, 'source id');
+      const nid = params.nid;
+      const sid = params.sid;
       handleDeleteSource(sid, nid, set);
     },
-    { response: { 204: Empty204Schema } },
+    { params: z.object({ nid: PathId, sid: PathId }), response: { 204: Empty204Schema } },
   )
 
   // List available parsers (global flat — do not nest)
@@ -617,85 +625,97 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/notebooks/:nid/sources/tags',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       return listNotebookTags(nid);
     },
-    { response: SourceTagSchema.array() },
+    { params: z.object({ nid: PathId }), response: SourceTagSchema.array() },
   )
 
   .post(
     '/notebooks/:nid/sources/tags',
     ({ params, body, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       const tag = createTag(nid, body.name);
       set.status = 201;
       return tag;
     },
-    { body: SourceTagCreateSchema, response: SourceTagSchema },
+    { params: z.object({ nid: PathId }), body: SourceTagCreateSchema, response: SourceTagSchema },
   )
 
   .patch(
     '/notebooks/:nid/sources/tags/:tid',
     ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const tid = requirePositiveIntId(params.tid, 'tag id');
+      const nid = params.nid;
+      const tid = params.tid;
       return renameTag(nid, tid, body.name);
     },
-    { body: SourceTagCreateSchema, response: SourceTagSchema },
+    {
+      params: z.object({ nid: PathId, tid: PathId }),
+      body: SourceTagCreateSchema,
+      response: SourceTagSchema,
+    },
   )
 
   .delete(
     '/notebooks/:nid/sources/tags/:tid',
     ({ params, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const tid = requirePositiveIntId(params.tid, 'tag id');
+      const nid = params.nid;
+      const tid = params.tid;
       deleteTag(nid, tid);
       set.status = 204;
       return;
     },
-    { response: { 204: Empty204Schema } },
+    { params: z.object({ nid: PathId, tid: PathId }), response: { 204: Empty204Schema } },
   )
 
   .post(
     '/notebooks/:nid/sources/tags/:tid/sources',
     ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const tid = requirePositiveIntId(params.tid, 'tag id');
+      const nid = params.nid;
+      const tid = params.tid;
       return assignSourcesToTag(nid, tid, body);
     },
-    { body: SourceTagBindingRequestSchema, response: SourceTagBindingResponseSchema },
+    {
+      params: z.object({ nid: PathId, tid: PathId }),
+      body: SourceTagBindingRequestSchema,
+      response: SourceTagBindingResponseSchema,
+    },
   )
 
   .delete(
     '/notebooks/:nid/sources/tags/:tid/sources',
     ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const tid = requirePositiveIntId(params.tid, 'tag id');
+      const nid = params.nid;
+      const tid = params.tid;
       return removeSourcesFromTag(nid, tid, body);
     },
-    { body: SourceTagBindingRequestSchema, response: SourceTagBindingResponseSchema },
+    {
+      params: z.object({ nid: PathId, tid: PathId }),
+      body: SourceTagBindingRequestSchema,
+      response: SourceTagBindingResponseSchema,
+    },
   )
 
   // Get source chunks (nested canonical)
   .get(
     '/notebooks/:nid/sources/:sid/chunks',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const sid = requirePositiveIntId(params.sid, 'source id');
+      const nid = params.nid;
+      const sid = params.sid;
       return handleGetSourceChunks(sid, nid);
     },
-    { response: ChunkListSchema },
+    { params: z.object({ nid: PathId, sid: PathId }), response: ChunkListSchema },
   )
 
   // Re-embed a source (nested canonical)
   .post(
     '/notebooks/:nid/sources/:sid/re-embed',
     async ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const sid = requirePositiveIntId(params.sid, 'source id');
+      const nid = params.nid;
+      const sid = params.sid;
       return handleReEmbedSource(sid, nid);
     },
-    { response: SourceReembedResponseSchema },
+    { params: z.object({ nid: PathId, sid: PathId }), response: SourceReembedResponseSchema },
   )
 
   // c44: Search sources via real web search (v1 run_search_graph + SearXNG)
@@ -746,10 +766,14 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/sources/batch/delete',
     ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       return batchDeleteSources(nid, body);
     },
-    { body: SourceBatchDeleteRequestSchema, response: SourceBatchDeleteResponseSchema },
+    {
+      params: z.object({ nid: PathId }),
+      body: SourceBatchDeleteRequestSchema,
+      response: SourceBatchDeleteResponseSchema,
+    },
   )
 
   // Batch re-embed sources
@@ -757,17 +781,21 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/sources/batch/re-embed',
     async ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       return batchReembedSources(nid, body);
     },
-    { body: SourceBatchReembedRequestSchema, response: SourceBatchReembedResponseSchema },
+    {
+      params: z.object({ nid: PathId }),
+      body: SourceBatchReembedRequestSchema,
+      response: SourceBatchReembedResponseSchema,
+    },
   )
 
   // Ingest from URL (c39: dedup default prompt + link mode + SSRF fallback fix)
   .post(
     '/notebooks/:nid/sources/from-url',
     async ({ params, body, query, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       const outcome = await ingestFromUrl(nid, body, query);
       if (outcome.kind === 'reused') {
         return { reused: true as const, source: handleGetSource(outcome.sourceId, nid) };
@@ -779,6 +807,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       return outcome.payload;
     },
     {
+      params: NidParamsSchema,
       body: SourceFromUrlRequestSchema,
       response: { 200: SourceFromUrlResponseSchema, 201: SourceFromUrlResponseSchema },
     },
@@ -788,7 +817,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/notebooks/:nid/extractors',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       const policy = db()
         .select()
         .from(notebookExtractorPolicies)
@@ -813,12 +842,12 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         fallbackEnabled: mode === 'inherit_global',
       };
     },
-    { response: ExtractorsListSchema },
+    { params: z.object({ nid: PathId }), response: ExtractorsListSchema },
   )
   .patch(
     '/notebooks/:nid/extractors',
     ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       const mode = body.mode;
       const enabledExtractorsBody = body.enabledExtractors ?? undefined;
       // Business check: enabledExtractors entries against registered set
@@ -878,7 +907,11 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         fallbackEnabled: resolvedMode === 'inherit_global',
       };
     },
-    { body: PatchNotebookExtractorPolicySchema, response: ExtractorsListSchema },
+    {
+      params: z.object({ nid: PathId }),
+      body: PatchNotebookExtractorPolicySchema,
+      response: ExtractorsListSchema,
+    },
   );
 
 registerApiDoc(apiDocs);

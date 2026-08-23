@@ -18,7 +18,7 @@ import { z } from 'zod';
 import { db } from '../../db/index.ts';
 import { messages, sessions } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
-import { requirePositiveIntId } from '../../shared/ids.ts';
+import { PathId } from '../../shared/ids.ts';
 import { requireOwnedRow } from '../../shared/notebook-scope.ts';
 
 // ---------------------------------------------------------------------------
@@ -87,8 +87,8 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/notebooks/:nid/sessions/:sid/messages',
     ({ params, query }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const sid = requirePositiveIntId(params.sid, 'session id');
+      const nid = params.nid;
+      const sid = params.sid;
       const { offset, limit } = query;
 
       // Verify session exists AND belongs to notebook (c39 gap fix)
@@ -114,15 +114,19 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
         limit,
       };
     },
-    { query: PaginationParamsSchema, response: MessagesPageSchema },
+    {
+      params: z.object({ nid: PathId, sid: PathId }),
+      query: PaginationParamsSchema,
+      response: MessagesPageSchema,
+    },
   )
 
   // Create a user message
   .post(
     '/notebooks/:nid/sessions/:sid/messages',
     ({ params, body, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const sid = requirePositiveIntId(params.sid, 'session id');
+      const nid = params.nid;
+      const sid = params.sid;
       requireOwnedRow(sessions, sid, nid, 'Session');
 
       const row = db()
@@ -143,7 +147,11 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
       set.status = 201;
       return serializeMessage(row);
     },
-    { body: MessageCreateSchema, response: MessageSchema },
+    {
+      params: z.object({ nid: PathId, sid: PathId }),
+      body: MessageCreateSchema,
+      response: MessageSchema,
+    },
   );
 
 registerApiDoc(apiDocs);

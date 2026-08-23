@@ -24,7 +24,7 @@ import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { formatCitationBlock } from '../../shared/citations.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
-import { requirePositiveIntId } from '../../shared/ids.ts';
+import { PathId } from '../../shared/ids.ts';
 import { resolveNestedNotebookId, requireNotebook } from '../../shared/notebook-scope.ts';
 import { streamQa, generateQaDirect } from './handler.ts';
 import { resolvePreset, parsePromptDirective } from './presets.ts';
@@ -391,28 +391,36 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/qa',
     async ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       const notebookId = resolveNestedNotebookId(nid, body.notebookId);
       return handleQaPost({ ...body, notebookId });
     },
-    { body: QaNestedRequestSchema, response: { 200: QaAnswerSchema } },
+    {
+      params: z.object({ nid: PathId }),
+      body: QaNestedRequestSchema,
+      response: { 200: QaAnswerSchema },
+    },
   )
   .post(
     '/notebooks/:nid/qa/stream',
     async ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       const notebookId = resolveNestedNotebookId(nid, body.notebookId);
       return handleQaStream({ ...body, notebookId });
     },
-    { body: QaNestedRequestSchema },
+    { params: z.object({ nid: PathId }), body: QaNestedRequestSchema },
   )
   .get(
     '/notebooks/:nid/qa/export',
     ({ params, query }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       return handleQaExport(query, nid);
     },
-    { query: QaExportQuerySchema, response: QaExportResponseSchema },
+    {
+      params: z.object({ nid: PathId }),
+      query: QaExportQuerySchema,
+      response: QaExportResponseSchema,
+    },
   );
 
 registerApiDoc(apiDocs);
