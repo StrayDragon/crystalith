@@ -4,9 +4,22 @@
 // SSOT. Flat aliases keep c67 query/body `notebookId` requirements.
 import { eq } from 'drizzle-orm';
 import type { AnySQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
+import { NotFoundError } from 'elysia';
 
 import { db } from '../db/index.ts';
+import { notebooks } from '../db/schema.ts';
 import { AppHttpError, ErrorCode } from './errors.ts';
+
+/**
+ * Require a notebook to exist (404 otherwise) and return its row.
+ * Shared single implementation — previously duplicated across
+ * research-core / source-connectors / qa ownership asserts.
+ */
+export function requireNotebook(notebookId: number) {
+  const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
+  if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
+  return nb;
+}
 
 /**
  * Resolve notebook id for a nested route.

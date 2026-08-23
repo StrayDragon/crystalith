@@ -18,11 +18,11 @@ import { eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
-import { notebooks, sourceConnectorBindings } from '../../db/schema.ts';
+import { sourceConnectorBindings } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
-import { requireOwnedRow } from '../../shared/notebook-scope.ts';
+import { requireOwnedRow, requireNotebook } from '../../shared/notebook-scope.ts';
 import {
   BUILTIN_CONNECTORS,
   getBuiltinConnector,
@@ -137,12 +137,6 @@ const apiDocs: OpenApiRoute[] = [
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function requireNotebook(notebookId: number) {
-  const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
-  if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
-  return nb;
-}
 
 function getBindingOr404(notebookId: number, bindingId: number) {
   return requireOwnedRow(sourceConnectorBindings, bindingId, notebookId, 'Connector binding');

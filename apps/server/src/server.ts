@@ -59,7 +59,7 @@ registerApiDoc([
 ]);
 
 // ---------------------------------------------------------------------------
-// App — 16 feature routers
+// App — 15 feature routers
 //
 // `createApp()` builds the Elysia instance without listening; the production
 // entry calls `.listen()` below, while tests import `createApp` to run

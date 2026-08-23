@@ -18,7 +18,6 @@ import { NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
 import {
-  notebooks,
   researchEvidences,
   researchProgressEvents,
   researchRuns,
@@ -267,10 +266,7 @@ export function serializeRunSummary(row: RunRow): ResearchRunSummary {
   };
 }
 
-export function requireNotebook(notebookId: number): void {
-  const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
-  if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
-}
+export { requireNotebook } from '../../shared/notebook-scope.ts';
 
 export function requireRun(notebookId: number, runId: number): RunRow {
   const row = db()
