@@ -17,13 +17,13 @@ const ROOT = import.meta.dir + '/..';
 const SCHEMAS_DIR = join(ROOT, 'packages/shared/src/schemas');
 const DICT_PATH = join(ROOT, 'packages/shared/src/i18n/zh/index.json');
 
-const DESC_CALL_RE = /\bdesc\(\s*(['"])([^'"]+)\1/g;
+const DESC_CALL_RE = /\bdesc\(\s*(['"])([^'"]+)\1/gu;
 
 /** Strip // line comments and /* … *​/ block comments so doc examples don't count. */
 function stripComments(src: string): string {
   return src
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
-    .replace(/^\s*\/\/.*$/gm, '');
+    .replaceAll(/\/\*[\s\S]*?\*\//gu, (m) => m.replaceAll(/[^\n]/gu, ' '))
+    .replaceAll(/^\s*\/\/.*$/gmu, '');
 }
 
 async function listTsFiles(dir: string): Promise<string[]> {
