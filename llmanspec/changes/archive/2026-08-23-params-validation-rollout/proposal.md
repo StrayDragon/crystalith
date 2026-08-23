@@ -2,7 +2,8 @@
 depends_on: []
 branch: sdd/params-validation-rollout
 base_sha: e2294c7793b104e2b03a7e57c24e8a4d4c0e1c72
-checkpointed: false
+checkpointed: true
+checkpoint_sha: e2294c7793b104e2b03a7e57c24e8a4d4c0e1c72
 ---
 
 ## Why
