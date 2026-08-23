@@ -19,13 +19,13 @@ import { z } from 'zod';
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';
-import { messages, notebooks, sessions, sources } from '../../db/schema.ts';
+import { messages, sessions, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { formatCitationBlock } from '../../shared/citations.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { requirePositiveIntId } from '../../shared/ids.ts';
-import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
+import { resolveNestedNotebookId, requireNotebook } from '../../shared/notebook-scope.ts';
 import { streamQa, generateQaDirect } from './handler.ts';
 import { resolvePreset, parsePromptDirective } from './presets.ts';
 
@@ -106,8 +106,7 @@ function assertQaOwnership(opts: {
   sessionId?: number;
   sourceIds?: number[];
 }): void {
-  const nb = db().select().from(notebooks).where(eq(notebooks.id, opts.notebookId)).get();
-  if (!nb) throw new NotFoundError(`Notebook ${opts.notebookId} not found`);
+  requireNotebook(opts.notebookId);
 
   if (opts.sessionId !== undefined) {
     const session = db().select().from(sessions).where(eq(sessions.id, opts.sessionId)).get();
