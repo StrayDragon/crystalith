@@ -24,6 +24,7 @@ import { chunks, outputs, researchProgressEvents, researchRuns, sources } from '
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { getPageRatio, getSearchAddOnSettings } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
+import { sseFrame, sseResponse } from '../../shared/sse-response.ts';
 import { splitTextToChunks } from '../outputs/render.ts';
 import { applyDecomposePlanToGraph, planTopicDecomposition } from './decompose.ts';
 import { resolveArtifactMarkdown, synthesizeAndComplete } from './report.ts';
@@ -875,8 +876,6 @@ export async function streamRun(
 
 export function createResearchSseResponse(notebookId: number, runId: number): Response {
   requireRun(notebookId, runId);
-  const sse = (event: string, data: unknown): string =>
-    `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 
   let unsub: (() => void) | undefined;
   let closed = false;
@@ -886,7 +885,7 @@ export function createResearchSseResponse(notebookId: number, runId: number): Re
       const emit: SseEmit = (event, data) => {
         if (closed) return;
         try {
-          controller.enqueue(encoder.encode(sse(event, data)));
+          controller.enqueue(encoder.encode(sseFrame(event, data)));
         } catch {
           closed = true;
         }
@@ -938,11 +937,5 @@ export function createResearchSseResponse(notebookId: number, runId: number): Re
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      'content-type': 'text/event-stream',
-      'cache-control': 'no-cache',
-      'x-accel-buffering': 'no',
-    },
-  });
+  return sseResponse(stream);
 }

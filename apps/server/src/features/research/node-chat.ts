@@ -11,6 +11,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '../../db/index.ts';
 import { researchRuns } from '../../db/schema.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
+import { sseFrame, sseResponse } from '../../shared/sse-response.ts';
 import { createResearchNodeAgent, proposalFromStructureToolCall } from './node-agent.ts';
 import {
   activeLoops,
@@ -139,9 +140,6 @@ export function createNodeChatSseResponse(
     throw new AppHttpError(ErrorCode.RESEARCH_INVALID_STATE, '该 Run 已有节点对话进行中');
   }
 
-  const sse = (event: string, data: unknown): string =>
-    `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-
   const key = chatKey(runId, nodeId);
   const ac = new AbortController();
   chatAbortControllers.set(key, ac);
@@ -171,7 +169,7 @@ export function createNodeChatSseResponse(
       const emit = (event: string, data: unknown) => {
         if (closed || ac.signal.aborted) return;
         try {
-          controller.enqueue(encoder.encode(sse(event, data)));
+          controller.enqueue(encoder.encode(sseFrame(event, data)));
         } catch {
           closed = true;
         }
@@ -327,11 +325,5 @@ export function createNodeChatSseResponse(
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      'content-type': 'text/event-stream',
-      'cache-control': 'no-cache',
-      'x-accel-buffering': 'no',
-    },
-  });
+  return sseResponse(stream);
 }
