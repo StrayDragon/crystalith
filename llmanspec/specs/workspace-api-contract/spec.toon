@@ -86,7 +86,7 @@ scenarios[55]{req_id,id,given,when,then,feature}:
   "nested-path-nid-is-ownership-ssot","nested-paths-accepted",notebook N 存在,客户端 POST /v2/notebooks/N/outputs,请求 SHALL 命中嵌套路由并以 N 为归属,true
   "process-registries-remain-global-flat","registry-flat","",客户端请求 GET /v2/sources/parsers,系统 SHALL 返回全局扁平结果且路径不嵌套,true
   "nested-path-nid-is-ownership-ssot","flat-outputs-gone",嵌套 outputs 已挂载且扁平 alias 已删除,客户端请求 GET /v2/outputs?notebookId=N,系统 SHALL 不命中业务 handler（404 或等价未挂载）,false
-  "param-format-validation-envelope","non-numeric-path-id","",客户端以非数字 path id 请求 notebook-scoped 资源,系统返回错误,响应 SHALL 为统一 ErrorEnvelope 且 errorCode 为 SCHEMA_VALIDATION_FAILED,true
+  "param-format-validation-envelope","non-numeric-path-id",客户端以非数字 path id 请求 notebook-scoped 资源,发送请求,响应 SHALL 为统一 ErrorEnvelope 且 errorCode 为 SCHEMA_VALIDATION_FAILED,true
   "nested-path-nid-is-ownership-ssot","nested-post-without-body-notebook-id",存在 notebook N,客户端 POST /v2/notebooks/N/outputs 且 body 省略 notebookId,请求 SHALL 被接受（其余字段合法时）并以 N 为归属,false
   "qa-stream-remains-post-with-body","qa-stream-post",notebook 与 sources 就绪,"客户端 POST /v2/notebooks/:nid/qa/stream（或等价 canonical）携带 body",服务端 SHALL 以 SSE 流式返回且 MUST NOT 要求 GET+query 传全文,false
   "progress-streams-use-get","research-stream-get",资源已创建,客户端 GET .../stream,服务端 SHALL 以 SSE 推送进度且文档 method SHALL 为 GET,false
