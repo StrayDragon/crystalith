@@ -75,6 +75,11 @@ bun preview              # Preview production build
 
 ## Coding Style & Naming Conventions
 
+**i18n 双字典（有意为之，D4 决策记录）**：UI 文案走本包 `src/shared/i18n.ts` 手写字典；
+Zod schema 描述走 `@crystalith/shared` 的 `desc()`（zh/index.json SSOT）。两套键空间
+互不重叠、各自类型安全。出现第二语言需求时再做运行时 locale 切换与字典合并设计，
+当前单 zh 场景不引入 i18n 运行时框架。
+
 - TypeScript/React: 2-space indentation
 - Components: `PascalCase`
 - Hooks: `useX`
