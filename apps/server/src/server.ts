@@ -26,10 +26,9 @@ import { studioRouter } from './features/studio/router.ts';
 import { templatesRouter } from './features/templates/router.ts';
 import { workspaceRouter } from './features/workspace/router.ts';
 import { generateOpenApiDocument, registerApiDoc } from './openapi.ts';
-import { getOptionalServices } from './shared/config.ts';
 import { ErrorCode, sendError, AppHttpError } from './shared/errors.ts';
+import { probeHealthDependencies } from './shared/health.ts';
 import { logger } from './shared/logger.ts';
-import { outboundFetch } from './shared/net/outbound-fetch.ts';
 
 // ---------------------------------------------------------------------------
 // Scaffold OpenAPI docs
@@ -158,60 +157,7 @@ export function createApp() {
     })
     .get(
       '/health/dependencies',
-      async (): Promise<HealthDependencies> => {
-        const opt = getOptionalServices();
-        const now = new Date().toISOString();
-
-        // Probe SearXNG via same host as searchWeb (getSearxngHost SSOT).
-        let searxngStatus: string;
-        let searxngHealthy: boolean | null;
-        if (opt.searxng.enabled && opt.searxng.endpoint) {
-          try {
-            const res = await outboundFetch(opt.searxng.endpoint, {
-              method: 'GET',
-              signal: AbortSignal.timeout((opt.searxng.timeout_s ?? 3) * 1000),
-            });
-            searxngStatus = res.ok ? 'healthy' : 'degraded';
-            searxngHealthy = res.ok;
-          } catch {
-            searxngStatus = 'degraded';
-            searxngHealthy = false;
-          }
-        } else {
-          searxngStatus = 'disabled';
-          searxngHealthy = null;
-        }
-
-        return {
-          status: 'ok',
-          generatedAt: now,
-          lastProbe: now,
-          core: {
-            backend: { service: 'api', healthy: true },
-            frontend: {
-              service: 'web',
-              healthy: null,
-              note: 'frontend health is validated through reverse-proxy route /health',
-            },
-          },
-          optional: {
-            cacheRedis: {
-              service: 'Redis (Cache)',
-              enabled: false,
-              endpoint: null,
-              status: 'disabled',
-              healthy: null,
-            },
-            searchSearxng: {
-              service: 'SearXNG (Search)',
-              enabled: opt.searxng.enabled,
-              endpoint: opt.searxng.enabled ? (opt.searxng.endpoint ?? null) : null,
-              status: searxngStatus,
-              healthy: searxngHealthy,
-            },
-          },
-        };
-      },
+      async (): Promise<HealthDependencies> => probeHealthDependencies(),
       { response: HealthDependenciesSchema },
     )
     .get('/openapi.json', () => generateOpenApiDocument())
