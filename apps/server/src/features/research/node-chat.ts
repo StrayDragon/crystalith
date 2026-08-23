@@ -11,6 +11,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '../../db/index.ts';
 import { researchRuns } from '../../db/schema.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
+import { logger } from '../../shared/logger.ts';
 import { sseFrame, sseResponse } from '../../shared/sse-response.ts';
 import { createResearchNodeAgent, proposalFromStructureToolCall } from './node-agent.ts';
 import {
@@ -264,7 +265,7 @@ export function createNodeChatSseResponse(
             // Fall back to deterministic stub when model/mock is unavailable
             usedAgent = false;
             if (ac.signal.aborted) throw agentError;
-            console.warn('[research] node chat agent failed; using stub:', agentError);
+            logger.warn('[research] node chat agent failed; using stub:', agentError);
           }
         }
 

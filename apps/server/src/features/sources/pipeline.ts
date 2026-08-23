@@ -11,6 +11,7 @@ import { db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { chunkText } from '../../rag/chunker.ts';
+import { logger } from '../../shared/logger.ts';
 import { contentStorage } from '../../shared/storage.ts';
 import { guessMimeType, registerParser, selectParser } from './parser-registry.ts';
 import { csvParser } from './parsers/csv.ts';
@@ -105,7 +106,7 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
   // Persist raw bytes so document_parse can re-parse later (fire-and-forget
   // best-effort: a failed save is logged, not fatal — parsing still works).
   contentStorage.save(sourceRow.id, input.buffer).catch((error) => {
-    console.error(`[pipeline] contentStorage.save failed for source ${sourceRow.id}:`, error);
+    logger.error(`[pipeline] contentStorage.save failed for source ${sourceRow.id}:`, error);
   });
 
   // c57: 4-stage error tracking (v1 api_ingest.py:893-924):

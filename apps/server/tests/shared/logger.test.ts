@@ -72,4 +72,26 @@ describe('structured logger', () => {
     setLogLevel('error');
     expect(getLogLevel()).toBe('error');
   });
+
+  it('auto-attaches requestId from requestContext (D3)', async () => {
+    const { requestContext } = await import('../../src/shared/logger.ts');
+    await requestContext.run({ requestId: 'als-42' }, () => {
+      logger.warn('deep-service');
+      logger.error('explicit-wins', { requestId: 'manual' });
+    });
+    logger.info('outside-context');
+    const deep = entries.find((e) => e.msg === 'deep-service');
+    const explicit = entries.find((e) => e.msg === 'explicit-wins');
+    const outside = entries.find((e) => e.msg === 'outside-context');
+    expect(deep?.requestId).toBe('als-42');
+    expect(explicit?.requestId).toBe('manual');
+    expect(outside?.requestId).toBeUndefined();
+  });
+
+  it('folds legacy varargs (string tail + Error)', () => {
+    logger.error('[sessions] convert embedding failed:', new Error('boom'));
+    const e = entries[0]!;
+    expect(e.msg).toContain('[sessions] convert embedding failed: — boom');
+    expect(e.errMessage ?? e.errorMessage).toBeDefined();
+  });
 });

@@ -13,6 +13,7 @@ import type { z } from 'zod';
 import { db } from '../../db/index.ts';
 import { chunks, messages, outputs, sessions, sources } from '../../db/schema.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
+import { logger } from '../../shared/logger.ts';
 import { requireOwnedRow } from '../../shared/notebook-scope.ts';
 
 type ConvertToSourceBody = z.infer<typeof SessionConvertToSourceRequestSchema>;
@@ -135,7 +136,7 @@ export async function convertSessionToSource(
       // Only set ready after successful embedding (c39: fix ready-before-vectors race)
       db().update(sources).set({ status: 'ready' }).where(eq(sources.id, source.id)).run();
     } catch (error) {
-      console.error('[sessions] convert embedding failed:', error);
+      logger.error('[sessions] convert embedding failed:', error);
       db()
         .update(sources)
         .set({

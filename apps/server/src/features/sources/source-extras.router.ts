@@ -22,6 +22,7 @@ import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { PathId } from '../../shared/ids.ts';
+import { logger } from '../../shared/logger.ts';
 import { requireOwnedRow } from '../../shared/notebook-scope.ts';
 import {
   generateAndPersistSourceSummary,
@@ -229,7 +230,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
           db().update(sources).set({ status: 'ready' }).where(eq(sources.id, newSource.id)).run();
           scheduleSourceSummary(newSource.id);
         } catch (error) {
-          console.error('[source-extras] qa-to-source embedding failed:', error);
+          logger.error('[source-extras] qa-to-source embedding failed:', error);
           db()
             .update(sources)
             .set({

@@ -18,6 +18,7 @@ import {
   getParallelBranchUnits,
 } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
+import { logger } from '../../shared/logger.ts';
 import { applyDecomposePlanToGraph, planTopicDecomposition } from './decompose.ts';
 import { e2eStubNodeSummary, e2eStubWebHits, isResearchE2eStub } from './e2e-stub.ts';
 import { createResearchNodeAgent } from './node-agent.ts';
@@ -360,7 +361,7 @@ async function shortSynthesizeNodeSummary(opts: {
     };
   } catch (error) {
     if (abortSignal.aborted || isCancelled(runId)) throw error;
-    console.warn('[research] node short synthesis failed:', error);
+    logger.warn('[research] node short synthesis failed:', error);
     emitLog(runId, `节点 ${node.id} 短综合失败：${String(error)}`);
     return {
       summary: evidenceIds.length ? `已收集 ${evidenceIds.length} 条证据（综合失败）` : '综合失败',
@@ -561,7 +562,7 @@ export async function runNodeWorkUnit(opts: {
       via = 'agent';
     } catch (error) {
       if (abortSignal.aborted || isCancelled(runId)) throw error;
-      console.warn('[research] work_unit agent failed (no fake-hit fallback):', error);
+      logger.warn('[research] work_unit agent failed (no fake-hit fallback):', error);
       emitLog(runId, `节点 ${node.id} 工具环失败，保留已收集证据继续短综合`);
       via = evidenceIds.length ? 'agent' : 'none';
     }
@@ -710,7 +711,7 @@ export async function drainResearchWorkUnits(
     for (const result of settled) {
       if (result.status === 'rejected') {
         if (abortSignal.aborted || isCancelled(runId)) return;
-        console.warn('[research] parallel work-unit rejected:', result.reason);
+        logger.warn('[research] parallel work-unit rejected:', result.reason);
         continue;
       }
       const { node, work } = result.value;

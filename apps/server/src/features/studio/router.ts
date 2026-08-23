@@ -37,6 +37,7 @@ import { notebooks, studioSlides } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { PathId } from '../../shared/ids.ts';
+import { logger } from '../../shared/logger.ts';
 import { requireOwnedRow, resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import {
   clearStaleRunning,
@@ -338,7 +339,7 @@ function handlePutMarkdown(id: number, notebookId: number, body: StudioMarkdownP
   try {
     writeSlideFile(slide.notebookId, id, markdown);
   } catch (error) {
-    console.error('[studio] slidev file write failed:', error);
+    logger.error('[studio] slidev file write failed:', error);
   }
   syncSlideOutput(slide, markdown);
   db()

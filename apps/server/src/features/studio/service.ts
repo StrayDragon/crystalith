@@ -19,6 +19,7 @@ import { db } from '../../db/index.ts';
 import { chunks, outputs, sources, studioSlides } from '../../db/schema.ts';
 import { getDataRoot, getDefaultChatModel } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
+import { logger } from '../../shared/logger.ts';
 import { SSE_HEADERS, sseFrame, sseResponse } from '../../shared/sse-response.ts';
 import {
   resolveAudienceHint,
@@ -110,7 +111,7 @@ export async function getContext(slide: typeof studioSlides.$inferSelect): Promi
     }
   } catch (error) {
     // H5 fix: log degradation instead of silent swallow
-    console.warn('[studio] RAG unavailable, falling back to direct query:', error);
+    logger.warn('[studio] RAG unavailable, falling back to direct query:', error);
   }
 
   const chunkRows = db()
