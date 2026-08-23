@@ -40,6 +40,8 @@ From repo root:
 ## Conventions
 
 - One Elysia router per feature under `features/*/router.ts`
+- **鉴权预留（c13）**：Bearer 鉴权落地时 MUST 经 Elysia `.macro({ auth })` 承载（路由级
+  `{ auth: true }` 声明），MUST NOT 在各 handler 内手工插鉴权调用；归属校验类横切逻辑同理优先 guard/derive
 - OpenAPI: shared Zod → `z.toJSONSchema` in `openapi.ts` (Scalar `/openapi`); `extendZodWithOpenApi` only for `.openapi()` metadata — **no** `@elysiajs/swagger` / `t.*`
 - OpenAPI 路由文案：`registerApiDoc` 的 `summary` 用中文业务说明（Scalar 标题仍是 path）；tag 说明维护在 `OPENAPI_TAG_DESCRIPTIONS`；细则见根 `AGENTS.md`「OpenAPI / Scalar 路由文档」
 - AsyncAPI（`asyncapi.ts`）SSE 通道/事件描述同样用中文业务说明，与上条同一文风
