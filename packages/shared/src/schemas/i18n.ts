@@ -1,7 +1,7 @@
 // @crystalith/shared — i18n-aware schema description helper.
 //
 // Chinese-first, i18n-ready description helper for Zod schemas.
-// Uses typesafe-i18n's `L` object for type-safe key lookups.
+// Uses the locale dictionary `L` (zh/index.json SSOT) for key lookups.
 //
 // Usage:
 //   z.string().describe(desc('ai.timeout'))
@@ -11,12 +11,8 @@
 // of a new field), the fallback string is used. This ensures the code always
 // compiles even if the locale hasn't been updated yet.
 //
-// Future migration path:
-//   1. Add locale files (en/index.json, ja/index.json, etc.)
-//   2. Automate key detection: `scripts/check-i18n-keys.ts` validates all
-//      `desc('...')` calls have matching keys in zh/index.json
-//   3. Run typesafe-i18n codegen (if bun/TS compat issue is resolved)
-//      or update i18n-types.ts + i18n-util.ts manually
+// Drift gate: `bun scripts/check-i18n-keys.ts`（挂于 just qa）validates all
+// `desc('...')` calls have matching keys in zh/index.json.
 
 import { L } from '../i18n/i18n-util.js';
 
