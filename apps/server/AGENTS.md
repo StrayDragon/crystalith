@@ -40,6 +40,9 @@ From repo root:
 ## Conventions
 
 - One Elysia router per feature under `features/*/router.ts`
+- **日志**：统一走 `shared/logger.ts`（JSON 行、CL_LOG_LEVEL 控制级别）；HTTP 层自动产出
+  access log 与 `x-request-id` 关联（onRequest 注入/回显，onError 结构化输出）。
+  service 层新代码优先 logger；requestId 深度传播待上下文机制落地后再接
 - **鉴权预留（c13）**：Bearer 鉴权落地时 MUST 经 Elysia `.macro({ auth })` 承载（路由级
   `{ auth: true }` 声明），MUST NOT 在各 handler 内手工插鉴权调用；归属校验类横切逻辑同理优先 guard/derive
 - OpenAPI: shared Zod → `z.toJSONSchema` in `openapi.ts` (Scalar `/openapi`); `extendZodWithOpenApi` only for `.openapi()` metadata — **no** `@elysiajs/swagger` / `t.*`

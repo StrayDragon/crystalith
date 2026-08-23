@@ -28,6 +28,7 @@ import { workspaceRouter } from './features/workspace/router.ts';
 import { generateOpenApiDocument, registerApiDoc } from './openapi.ts';
 import { getOptionalServices } from './shared/config.ts';
 import { ErrorCode, sendError, AppHttpError } from './shared/errors.ts';
+import { logger } from './shared/logger.ts';
 import { outboundFetch } from './shared/net/outbound-fetch.ts';
 
 // ---------------------------------------------------------------------------
@@ -67,8 +68,41 @@ registerApiDoc([
 // ---------------------------------------------------------------------------
 
 export function createApp() {
+  // Per-request start times for the access log (Request objects are unique).
+  const requestStart = new WeakMap<object, number>();
+  // Probes & generated docs are polled constantly — never access-log them.
+  const SKIP_ACCESS_LOG = new Set([
+    '/health',
+    '/health/dependencies',
+    '/v2',
+    '/v2/health',
+    '/openapi.json',
+    '/asyncapi.json',
+  ]);
+
   return new Elysia()
-    .onError(({ error, set, code }) => {
+    .onRequest(({ request, set }) => {
+      // Correlation id: honor upstream (reverse proxy) or mint one.
+      const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
+      set.headers['x-request-id'] = requestId;
+      requestStart.set(request, performance.now());
+    })
+    .onAfterResponse(({ request, set }) => {
+      const path = new URL(request.url).pathname;
+      if (SKIP_ACCESS_LOG.has(path)) return;
+      const t0 = requestStart.get(request);
+      const durationMs = t0 === undefined ? null : Math.round(performance.now() - t0);
+      const status = typeof set.status === 'number' ? set.status : 200;
+      const level = status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info';
+      logger[level]('http', {
+        requestId: set.headers['x-request-id'],
+        method: request.method,
+        path,
+        status,
+        durationMs,
+      });
+    })
+    .onError(({ error, set, code, request }) => {
       if (error instanceof AppHttpError) {
         return sendError(set, error.code, error.message, error.details, error.retryAfter);
       }
@@ -86,7 +120,14 @@ export function createApp() {
       }
       // Fallthrough: unexpected errors still get the ErrorEnvelope shape
       // (previously plain-text "Internal Server Error" 500s).
-      console.error('[server] unhandled error:', error);
+      logger.error('unhandled-error', {
+        requestId: set.headers['x-request-id'],
+        method: request.method,
+        path: new URL(request.url).pathname,
+        errCode: code,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       const message =
         error instanceof Error && error.message ? error.message : 'Internal server error';
       return sendError(set, ErrorCode.INTERNAL_ERROR, message);
