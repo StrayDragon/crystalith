@@ -31,7 +31,7 @@ import { Elysia } from 'elysia';
 import { z } from 'zod';
 
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
-import { requirePositiveIntId } from '../../shared/ids.ts';
+import { PathId } from '../../shared/ids.ts';
 import { resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import {
   addBudget,
@@ -65,13 +65,10 @@ import {
 
 /**
  * Parse the `:nid` + `:rid` path ids shared by every run-scoped route.
- * Collapses the two-line `requirePositiveIntId` pair repeated per handler.
+ * Collapses the run-scoped path ids (validated by the route params schema).
  */
-function parseRunScope(params: { nid: string; rid: string }) {
-  return {
-    nid: requirePositiveIntId(params.nid, 'notebook id'),
-    rid: requirePositiveIntId(params.rid, 'research run id'),
-  };
+function parseRunScope(params: { nid: number; rid: number }) {
+  return { nid: params.nid, rid: params.rid };
 }
 
 /** OpenAPI-only query docs (runtime validation uses ResearchListQuerySchema). */
@@ -300,21 +297,29 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/research',
     ({ params, body, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       const notebookId = resolveNestedNotebookId(nid, body.notebookId);
       const run = createRun(notebookId, body);
       set.status = 201;
       return run;
     },
-    { body: ResearchCreateNestedRequestSchema, response: ResearchRunSchema },
+    {
+      params: z.object({ nid: PathId }),
+      body: ResearchCreateNestedRequestSchema,
+      response: ResearchRunSchema,
+    },
   )
   .get(
     '/notebooks/:nid/research',
     ({ params, query }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       return listRuns(nid, query.offset, query.limit, query.status);
     },
-    { query: ResearchListQuerySchema, response: ResearchRunsPageSchema },
+    {
+      params: z.object({ nid: PathId }),
+      query: ResearchListQuerySchema,
+      response: ResearchRunsPageSchema,
+    },
   )
   .get(
     '/notebooks/:nid/research/:rid',
@@ -322,25 +327,33 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return getRun(nid, rid);
     },
-    { response: ResearchRunSchema },
+    { params: z.object({ nid: PathId, rid: PathId }), response: ResearchRunSchema },
   )
-  .get('/notebooks/:nid/research/:rid/stream', ({ params, request, server }) => {
-    const { nid, rid } = parseRunScope(params);
-    // Bun closes quiet SSE after idleTimeout (default 10s); keep run streams alive.
-    try {
-      server?.timeout?.(request, 0);
-    } catch {
-      // app.handle / non-Bun — no-op
-    }
-    return createResearchSseResponse(nid, rid);
-  })
+  .get(
+    '/notebooks/:nid/research/:rid/stream',
+    ({ params, request, server }) => {
+      const { nid, rid } = parseRunScope(params);
+      // Bun closes quiet SSE after idleTimeout (default 10s); keep run streams alive.
+      try {
+        server?.timeout?.(request, 0);
+      } catch {
+        // app.handle / non-Bun — no-op
+      }
+      return createResearchSseResponse(nid, rid);
+    },
+    { params: z.object({ nid: PathId, rid: PathId }) },
+  )
   .post(
     '/notebooks/:nid/research/:rid/confirm',
     async ({ params, body }) => {
       const { nid, rid } = parseRunScope(params);
       return confirmRun(nid, rid, body);
     },
-    { body: ResearchConfirmBodySchema, response: ResearchRunSchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId }),
+      body: ResearchConfirmBodySchema,
+      response: ResearchRunSchema,
+    },
   )
   .post(
     '/notebooks/:nid/research/:rid/add-budget',
@@ -348,7 +361,11 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return addBudget(nid, rid);
     },
-    { body: ResearchAddBudgetBodySchema, response: ResearchRunSchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId }),
+      body: ResearchAddBudgetBodySchema,
+      response: ResearchRunSchema,
+    },
   )
   .post(
     '/notebooks/:nid/research/:rid/request-reexpand',
@@ -356,7 +373,11 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return requestReexpand(nid, rid, body);
     },
-    { body: ResearchRequestReexpandBodySchema, response: ResearchRunSchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId }),
+      body: ResearchRequestReexpandBodySchema,
+      response: ResearchRunSchema,
+    },
   )
   .post(
     '/notebooks/:nid/research/:rid/cancel',
@@ -364,7 +385,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return cancelRun(nid, rid);
     },
-    { response: ResearchRunSchema },
+    { params: z.object({ nid: PathId, rid: PathId }), response: ResearchRunSchema },
   )
   .post(
     '/notebooks/:nid/research/:rid/retry-synthesize',
@@ -372,7 +393,11 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return retrySynthesize(nid, rid, body);
     },
-    { body: ResearchRetrySynthesizeBodySchema, response: ResearchRunSchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId }),
+      body: ResearchRetrySynthesizeBodySchema,
+      response: ResearchRunSchema,
+    },
   )
   .post(
     '/notebooks/:nid/research/:rid/nodes/:nodeId/prune',
@@ -380,7 +405,10 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return pruneNode(nid, rid, params.nodeId);
     },
-    { response: ResearchRunSchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId, nodeId: z.string().min(1) }),
+      response: ResearchRunSchema,
+    },
   )
   .post(
     '/notebooks/:nid/research/:rid/nodes/:nodeId/fork',
@@ -388,7 +416,11 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return forkNode(nid, rid, params.nodeId, body);
     },
-    { body: ResearchForkBodySchema, response: ResearchRunSchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId, nodeId: z.string().min(1) }),
+      body: ResearchForkBodySchema,
+      response: ResearchRunSchema,
+    },
   )
   .patch(
     '/notebooks/:nid/research/:rid/nodes/:nodeId',
@@ -396,7 +428,11 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return patchNode(nid, rid, params.nodeId, body);
     },
-    { body: ResearchNodePatchBodySchema, response: ResearchRunSchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId, nodeId: z.string().min(1) }),
+      body: ResearchNodePatchBodySchema,
+      response: ResearchRunSchema,
+    },
   )
   .post(
     '/notebooks/:nid/research/:rid/nodes/:nodeId/chat',
@@ -410,7 +446,10 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       }
       return createNodeChatSseResponse(nid, rid, params.nodeId, body, request.signal);
     },
-    { body: ResearchNodeChatBodySchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId, nodeId: z.string().min(1) }),
+      body: ResearchNodeChatBodySchema,
+    },
   )
   .get(
     '/notebooks/:nid/research/:rid/progress',
@@ -418,7 +457,11 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return listProgress(nid, rid, query.afterSeq ?? 0, query.limit ?? 100);
     },
-    { query: ResearchProgressQuerySchema, response: ResearchProgressListSchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId }),
+      query: ResearchProgressQuerySchema,
+      response: ResearchProgressListSchema,
+    },
   )
   .get(
     '/notebooks/:nid/research/:rid/revisions',
@@ -426,7 +469,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return listRevisions(nid, rid);
     },
-    { response: ResearchRevisionsListSchema },
+    { params: z.object({ nid: PathId, rid: PathId }), response: ResearchRevisionsListSchema },
   )
   .post(
     '/notebooks/:nid/research/:rid/revisions',
@@ -436,7 +479,11 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       set.status = 201;
       return rev;
     },
-    { body: ResearchRevisionCreateBodySchema, response: ResearchRevisionSchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId }),
+      body: ResearchRevisionCreateBodySchema,
+      response: ResearchRevisionSchema,
+    },
   )
   .get(
     '/notebooks/:nid/research/:rid/revisions/:revId',
@@ -444,7 +491,10 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return getRevision(nid, rid, params.revId);
     },
-    { response: ResearchRevisionSchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId, revId: z.string().min(1) }),
+      response: ResearchRevisionSchema,
+    },
   )
   .post(
     '/notebooks/:nid/research/:rid/revisions/:revId/restore',
@@ -452,7 +502,10 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return restoreRevision(nid, rid, params.revId);
     },
-    { response: ResearchRunSchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId, revId: z.string().min(1) }),
+      response: ResearchRunSchema,
+    },
   )
   .post(
     '/notebooks/:nid/research/:rid/revisions/:revId/fork-run',
@@ -465,7 +518,11 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       set.status = 201;
       return run;
     },
-    { body: ResearchForkRunBodySchema, response: ResearchRunSchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId, revId: z.string().min(1) }),
+      body: ResearchForkRunBodySchema,
+      response: ResearchRunSchema,
+    },
   )
   .post(
     '/notebooks/:nid/research/:rid/schedule',
@@ -473,7 +530,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return scheduleQueuedRun(nid, rid);
     },
-    { response: ResearchRunSchema },
+    { params: z.object({ nid: PathId, rid: PathId }), response: ResearchRunSchema },
   )
   .get(
     '/notebooks/:nid/research/:rid/report',
@@ -481,7 +538,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return getReportView(nid, rid);
     },
-    { response: ResearchReportViewSchema },
+    { params: z.object({ nid: PathId, rid: PathId }), response: ResearchReportViewSchema },
   )
   .put(
     '/notebooks/:nid/research/:rid/report',
@@ -489,7 +546,11 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return putCanonicalReport(nid, rid, body.report);
     },
-    { body: ResearchReportPutBodySchema, response: ResearchReportViewSchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId }),
+      body: ResearchReportPutBodySchema,
+      response: ResearchReportViewSchema,
+    },
   )
   .put(
     '/notebooks/:nid/research/:rid/report/working',
@@ -497,7 +558,11 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return putWorkingReport(nid, rid, body.report);
     },
-    { body: ResearchReportPutBodySchema, response: ResearchReportViewSchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId }),
+      body: ResearchReportPutBodySchema,
+      response: ResearchReportViewSchema,
+    },
   )
   .delete(
     '/notebooks/:nid/research/:rid/report/working',
@@ -505,7 +570,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       const { nid, rid } = parseRunScope(params);
       return deleteWorkingReport(nid, rid);
     },
-    { response: ResearchReportViewSchema },
+    { params: z.object({ nid: PathId, rid: PathId }), response: ResearchReportViewSchema },
   )
   .post(
     '/notebooks/:nid/research/:rid/convert-to-note',
@@ -515,7 +580,11 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       set.status = 201;
       return result;
     },
-    { body: ResearchConvertBodySchema, response: ResearchConvertToNoteResponseSchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId }),
+      body: ResearchConvertBodySchema,
+      response: ResearchConvertToNoteResponseSchema,
+    },
   )
   .post(
     '/notebooks/:nid/research/:rid/convert-to-source',
@@ -525,5 +594,9 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       set.status = 201;
       return result;
     },
-    { body: ResearchConvertBodySchema, response: ResearchConvertToSourceResponseSchema },
+    {
+      params: z.object({ nid: PathId, rid: PathId }),
+      body: ResearchConvertBodySchema,
+      response: ResearchConvertToSourceResponseSchema,
+    },
   );

@@ -30,12 +30,13 @@ import {
 } from '@crystalith/shared';
 import { count, desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
+import { z } from 'zod';
 
 import { db } from '../../db/index.ts';
 import { notebooks, studioSlides } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
-import { requirePositiveIntId } from '../../shared/ids.ts';
+import { PathId } from '../../shared/ids.ts';
 import { requireOwnedRow, resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import {
   clearStaleRunning,
@@ -414,93 +415,121 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/studio/slides',
     ({ params, body, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       const notebookId = resolveNestedNotebookId(nid, body.notebookId);
       set.status = 201;
       return handleCreateSlide(notebookId, body);
     },
-    { body: SlideDraftCreateNestedRequestSchema, response: StudioSlideSchema },
+    {
+      params: z.object({ nid: PathId }),
+      body: SlideDraftCreateNestedRequestSchema,
+      response: StudioSlideSchema,
+    },
   )
   .get(
     '/notebooks/:nid/studio/slides',
     ({ params, query }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       return handleListSlides(nid, query.offset, query.limit);
     },
-    { query: PaginationParamsSchema, response: SlidesPageSchema },
+    {
+      params: z.object({ nid: PathId }),
+      query: PaginationParamsSchema,
+      response: SlidesPageSchema,
+    },
   )
   // Static /latest before /:id
   .get(
     '/notebooks/:nid/studio/slides/latest',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       return handleLatestSlide(nid);
     },
-    { response: StudioSlideSchema },
+    { params: z.object({ nid: PathId }), response: StudioSlideSchema },
   )
   .get(
     '/notebooks/:nid/studio/slides/:id',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const id = requirePositiveIntId(params.id, 'slide id');
+      const nid = params.nid;
+      const id = params.id;
       return handleGetSlide(id, nid);
     },
-    { response: StudioSlideSchema },
+    { params: z.object({ nid: PathId, id: PathId }), response: StudioSlideSchema },
   )
   .patch(
     '/notebooks/:nid/studio/slides/:id',
     ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const id = requirePositiveIntId(params.id, 'slide id');
+      const nid = params.nid;
+      const id = params.id;
       return handlePatchSlide(id, nid, body);
     },
-    { body: SlideDraftUpdateSchema, response: StudioSlideSchema },
+    {
+      params: z.object({ nid: PathId, id: PathId }),
+      body: SlideDraftUpdateSchema,
+      response: StudioSlideSchema,
+    },
   )
   .post(
     '/notebooks/:nid/studio/slides/:id/outline',
     async ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const id = requirePositiveIntId(params.id, 'slide id');
+      const nid = params.nid;
+      const id = params.id;
       return handleGenerateOutline(id, nid);
     },
-    { response: StudioSlideSchema },
+    { params: z.object({ nid: PathId, id: PathId }), response: StudioSlideSchema },
   )
   .put(
     '/notebooks/:nid/studio/slides/:id/outline',
     ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const id = requirePositiveIntId(params.id, 'slide id');
+      const nid = params.nid;
+      const id = params.id;
       return handlePutOutline(id, nid, body);
     },
-    { body: StudioOutlinePutSchema, response: StudioSlideSchema },
+    {
+      params: z.object({ nid: PathId, id: PathId }),
+      body: StudioOutlinePutSchema,
+      response: StudioSlideSchema,
+    },
   )
   .post(
     '/notebooks/:nid/studio/slides/:id/markdown',
     async ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const id = requirePositiveIntId(params.id, 'slide id');
+      const nid = params.nid;
+      const id = params.id;
       return handleGenerateMarkdown(id, nid);
     },
-    { response: StudioSlideSchema },
+    { params: z.object({ nid: PathId, id: PathId }), response: StudioSlideSchema },
   )
   .put(
     '/notebooks/:nid/studio/slides/:id/markdown',
     ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const id = requirePositiveIntId(params.id, 'slide id');
+      const nid = params.nid;
+      const id = params.id;
       return handlePutMarkdown(id, nid, body);
     },
-    { body: StudioMarkdownPutSchema, response: StudioSlideSchema },
+    {
+      params: z.object({ nid: PathId, id: PathId }),
+      body: StudioMarkdownPutSchema,
+      response: StudioSlideSchema,
+    },
   )
-  .get('/notebooks/:nid/studio/slides/:id/outline/stream', ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const id = requirePositiveIntId(params.id, 'slide id');
-    return handleOutlineStream(id, nid);
-  })
-  .get('/notebooks/:nid/studio/slides/:id/markdown/stream', ({ params }) => {
-    const nid = requirePositiveIntId(params.nid, 'notebook id');
-    const id = requirePositiveIntId(params.id, 'slide id');
-    return handleMarkdownStream(id, nid);
-  });
+  .get(
+    '/notebooks/:nid/studio/slides/:id/outline/stream',
+    ({ params }) => {
+      const nid = params.nid;
+      const id = params.id;
+      return handleOutlineStream(id, nid);
+    },
+    { params: z.object({ nid: PathId, id: PathId }) },
+  )
+  .get(
+    '/notebooks/:nid/studio/slides/:id/markdown/stream',
+    ({ params }) => {
+      const nid = params.nid;
+      const id = params.id;
+      return handleMarkdownStream(id, nid);
+    },
+    { params: z.object({ nid: PathId, id: PathId }) },
+  );
 
 registerApiDoc(apiDocs);

@@ -10,12 +10,13 @@ import {
 // generation presets. Used by slides generation and other output workflows.
 import { desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
+import { z } from 'zod';
 
 import { db } from '../../db/index.ts';
 import { templates } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
-import { requirePositiveIntId } from '../../shared/ids.ts';
+import { PathId } from '../../shared/ids.ts';
 
 const apiDocs: OpenApiRoute[] = [
   {
@@ -95,17 +96,17 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/templates/:id',
     ({ params }) => {
-      const id = requirePositiveIntId(params.id, 'template id');
+      const id = params.id;
       const row = db().select().from(templates).where(eq(templates.id, id)).get();
       if (!row) throw new NotFoundError(`Template ${id} not found`);
       return serializeTemplate(row);
     },
-    { response: TemplateSchema },
+    { params: z.object({ id: PathId }), response: TemplateSchema },
   )
   .patch(
     '/templates/:id',
     ({ params, body }) => {
-      const id = requirePositiveIntId(params.id, 'template id');
+      const id = params.id;
       const existing = db().select().from(templates).where(eq(templates.id, id)).get();
       if (!existing) throw new NotFoundError(`Template ${id} not found`);
       // c61: builtin templates cannot be modified (v1 service.py:110-111)
@@ -126,12 +127,16 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
         .get();
       return serializeTemplate(updated);
     },
-    { body: TemplateCreateSchema.partial(), response: TemplateSchema },
+    {
+      params: z.object({ id: PathId }),
+      body: TemplateCreateSchema.partial(),
+      response: TemplateSchema,
+    },
   )
   .delete(
     '/templates/:id',
     ({ params, set }) => {
-      const id = requirePositiveIntId(params.id, 'template id');
+      const id = params.id;
       const existing = db().select().from(templates).where(eq(templates.id, id)).get();
       if (!existing) throw new NotFoundError(`Template ${id} not found`);
       // c61: builtin templates cannot be deleted (v1 service.py:126-127)
@@ -142,7 +147,7 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
       set.status = 204;
       return;
     },
-    { response: { 204: Empty204Schema } },
+    { params: z.object({ id: PathId }), response: { 204: Empty204Schema } },
   );
 
 registerApiDoc(apiDocs);

@@ -1,9 +1,28 @@
+import { z } from 'zod';
+
 /**
- * Parse a path/query identifier as a positive integer.
- * Rejects NaN, floats, zero, negatives, and non-numeric strings so callers
- * can return INVALID_REQUEST instead of `"… NaN not found"`.
+ * Parse a query/body identifier as a positive integer where loose semantics
+ * are wanted (INVALID_REQUEST with custom label). Path params SHOULD prefer
+ * the `PathId` coerced schema instead — see workspace-api-contract
+ * param-format-validation-envelope.
  */
 import { AppHttpError, ErrorCode } from './errors.ts';
+
+/**
+ * Coerced path-id field for route `params` schemas — path segments arrive as
+ * strings on the wire. Mounting these gives runtime validation (422 unified
+ * envelope, see workspace-api-contract param-format-validation-envelope),
+ * narrow Eden types (number), and removes per-handler manual parsing.
+ */
+export const PathId = z.coerce.number().int().positive();
+
+/** Ready-made param objects for the common single-id route shapes. */
+export const NidParamsSchema = z.object({ nid: PathId });
+export const IdParamsSchema = z.object({ id: PathId });
+export const SidParamsSchema = z.object({ sid: PathId });
+export const TidParamsSchema = z.object({ tid: PathId });
+export const RidParamsSchema = z.object({ rid: PathId });
+export const BindingIdParamsSchema = z.object({ bindingId: PathId });
 
 export function parsePositiveIntId(raw: unknown): number | null {
   if (typeof raw === 'number') {

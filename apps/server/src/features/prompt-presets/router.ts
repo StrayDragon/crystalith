@@ -6,12 +6,13 @@ import { Empty204Schema, PromptPresetCreateSchema, PromptPresetSchema } from '@c
 // (short name), description, and system_prompt.
 import { desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
+import { z } from 'zod';
 
 import { db } from '../../db/index.ts';
 import { promptPresets } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
-import { requirePositiveIntId } from '../../shared/ids.ts';
+import { PathId } from '../../shared/ids.ts';
 import { listPresets } from '../qa/presets.ts';
 
 /** c61: builtin preset trigger set for conflict detection. */
@@ -121,7 +122,7 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
   .patch(
     '/prompt-presets/:id',
     ({ params, body }) => {
-      const id = requirePositiveIntId(params.id, 'preset id');
+      const id = params.id;
       const existing = db().select().from(promptPresets).where(eq(promptPresets.id, id)).get();
       if (!existing) throw new NotFoundError(`Preset ${id} not found`);
 
@@ -147,19 +148,23 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
         .get();
       return serializePreset(updated);
     },
-    { body: PromptPresetCreateSchema.partial(), response: PromptPresetSchema },
+    {
+      params: z.object({ id: PathId }),
+      body: PromptPresetCreateSchema.partial(),
+      response: PromptPresetSchema,
+    },
   )
   .delete(
     '/prompt-presets/:id',
     ({ params, set }) => {
-      const id = requirePositiveIntId(params.id, 'preset id');
+      const id = params.id;
       const existing = db().select().from(promptPresets).where(eq(promptPresets.id, id)).get();
       if (!existing) throw new NotFoundError(`Preset ${id} not found`);
       db().delete(promptPresets).where(eq(promptPresets.id, id)).run();
       set.status = 204;
       return;
     },
-    { response: { 204: Empty204Schema } },
+    { params: z.object({ id: PathId }), response: { 204: Empty204Schema } },
   );
 
 registerApiDoc(apiDocs);

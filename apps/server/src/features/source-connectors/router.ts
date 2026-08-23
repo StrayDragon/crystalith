@@ -16,12 +16,13 @@ import {
 } from '@crystalith/shared';
 import { eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
+import { z } from 'zod';
 
 import { db } from '../../db/index.ts';
 import { sourceConnectorBindings } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
-import { requirePositiveIntId } from '../../shared/ids.ts';
+import { PathId } from '../../shared/ids.ts';
 import { requireOwnedRow, requireNotebook } from '../../shared/notebook-scope.ts';
 import {
   BUILTIN_CONNECTORS,
@@ -258,7 +259,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/notebooks/:nid/source-connectors',
     async ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       requireNotebook(nid);
 
       const connectors = await Promise.all(
@@ -270,13 +271,13 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
 
       return { connectors };
     },
-    { response: SourceConnectorsListResponseSchema },
+    { params: z.object({ nid: PathId }), response: SourceConnectorsListResponseSchema },
   )
 
   .post(
     '/notebooks/:nid/source-connectors/:connectorId/bindings',
     ({ params, body, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       requireNotebook(nid);
 
       const connectorId = (params.connectorId ?? '').trim();
@@ -305,6 +306,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       return serializeBinding(binding);
     },
     {
+      params: z.object({ nid: PathId, connectorId: z.string() }),
       body: SourceConnectorBindingCreateRequestSchema,
       response: SourceConnectorBindingSchema,
     },
@@ -312,8 +314,8 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/source-connector-bindings/:bindingId/snapshot',
     async ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const bindingId = requirePositiveIntId(params.bindingId, 'binding id');
+      const nid = params.nid;
+      const bindingId = params.bindingId;
       const binding = getBindingOr404(nid, bindingId);
       getConnectorOr404(binding.connectorId);
 
@@ -327,25 +329,25 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
         });
       }
     },
-    { response: SnapshotSchema },
+    { params: z.object({ nid: PathId, bindingId: PathId }), response: SnapshotSchema },
   )
 
   .post(
     '/notebooks/:nid/source-connector-bindings/:bindingId/sync-check',
     async ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const bindingId = requirePositiveIntId(params.bindingId, 'binding id');
+      const nid = params.nid;
+      const bindingId = params.bindingId;
       const binding = getBindingOr404(nid, bindingId);
       return runSyncCheck(nid, binding);
     },
-    { response: SyncCheckResultSchema },
+    { params: z.object({ nid: PathId, bindingId: PathId }), response: SyncCheckResultSchema },
   )
 
   .post(
     '/notebooks/:nid/source-connector-bindings/:bindingId/sync-check/apply',
     async ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const bindingId = requirePositiveIntId(params.bindingId, 'binding id');
+      const nid = params.nid;
+      const bindingId = params.bindingId;
       const binding = getBindingOr404(nid, bindingId);
       const syncCheckId = body.syncCheckId;
 
@@ -354,6 +356,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       return await applySyncCheckToBinding(nid, binding, syncCheckId);
     },
     {
+      params: z.object({ nid: PathId, bindingId: PathId }),
       body: SyncCheckApplyRequestSchema,
       response: ImportScopeApplyResponseSchema,
     },
@@ -362,8 +365,8 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/source-connector-bindings/:bindingId/import-scope',
     async ({ params, body }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const bindingId = requirePositiveIntId(params.bindingId, 'binding id');
+      const nid = params.nid;
+      const bindingId = params.bindingId;
       const binding = getBindingOr404(nid, bindingId);
       getConnectorOr404(binding.connectorId);
 
@@ -397,6 +400,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       return applyImportScopeToBinding(nid, binding, scope, currentSnapshot);
     },
     {
+      params: z.object({ nid: PathId, bindingId: PathId }),
       body: ImportScopeSchema,
       response: ImportScopeApplyResponseSchema,
     },
@@ -404,7 +408,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/source-connector-bindings/:id/sync',
     async ({ params }) => {
-      const bindingId = requirePositiveIntId(params.id, 'binding id');
+      const bindingId = params.id;
       const binding = db()
         .select()
         .from(sourceConnectorBindings)
@@ -413,13 +417,13 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       if (!binding) throw new NotFoundError(`Connector binding ${bindingId} not found`);
       return runSyncCheck(binding.notebookId, binding);
     },
-    { response: SyncCheckResultSchema },
+    { params: z.object({ id: PathId }), response: SyncCheckResultSchema },
   )
 
   .delete(
     '/source-connector-bindings/:id',
     ({ params, set }) => {
-      const id = requirePositiveIntId(params.id, 'binding id');
+      const id = params.id;
       const existing = db()
         .select()
         .from(sourceConnectorBindings)
@@ -431,7 +435,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
       set.status = 204;
       return;
     },
-    { response: { 204: Empty204Schema } },
+    { params: z.object({ id: PathId }), response: { 204: Empty204Schema } },
   );
 
 registerApiDoc(apiDocs);

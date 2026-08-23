@@ -37,7 +37,7 @@ import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { formatCitationBlock } from '../../shared/citations.ts';
 import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
-import { requirePositiveIntId } from '../../shared/ids.ts';
+import { PathId } from '../../shared/ids.ts';
 import { requireOwnedRow, resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import { runOutputPipeline } from './pipeline.ts';
 import { renderOutputToMarkdown, splitTextToChunks } from './render.ts';
@@ -544,55 +544,70 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/outputs',
     async ({ params, body, set, request }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       const notebookId = resolveNestedNotebookId(nid, body.notebookId);
       return handleGenerateOutput(notebookId, body, set, request);
     },
-    { body: OutputGenerateNestedRequestSchema, response: OutputSchema },
+    {
+      params: z.object({ nid: PathId }),
+      body: OutputGenerateNestedRequestSchema,
+      response: OutputSchema,
+    },
   )
   .get(
     '/notebooks/:nid/outputs',
     ({ params, query }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
+      const nid = params.nid;
       return handleListOutputs(nid, query.offset, query.limit);
     },
-    { query: PaginationParamsSchema, response: OutputsPageSchema },
+    {
+      params: z.object({ nid: PathId }),
+      query: PaginationParamsSchema,
+      response: OutputsPageSchema,
+    },
   )
   .get(
     '/notebooks/:nid/outputs/:id',
     ({ params }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const id = requirePositiveIntId(params.id, 'output id');
+      const nid = params.nid;
+      const id = params.id;
       return handleGetOutput(id, nid);
     },
-    { response: OutputSchema },
+    { params: z.object({ nid: PathId, id: PathId }), response: OutputSchema },
   )
   .delete(
     '/notebooks/:nid/outputs/:id',
     ({ params, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const id = requirePositiveIntId(params.id, 'output id');
+      const nid = params.nid;
+      const id = params.id;
       handleDeleteOutput(id, nid, set);
     },
-    { response: { 204: Empty204Schema } },
+    { params: z.object({ nid: PathId, id: PathId }), response: { 204: Empty204Schema } },
   )
   .get(
     '/notebooks/:nid/outputs/:id/export',
     ({ params, query }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const id = requirePositiveIntId(params.id, 'output id');
+      const nid = params.nid;
+      const id = params.id;
       return handleExportOutput(id, nid, query.format);
     },
-    { query: OutputExportFormatQuerySchema, response: OutputExportResponseSchema },
+    {
+      params: z.object({ nid: PathId, id: PathId }),
+      query: OutputExportFormatQuerySchema,
+      response: OutputExportResponseSchema,
+    },
   )
   .post(
     '/notebooks/:nid/outputs/:id/convert-to-source',
     async ({ params, set }) => {
-      const nid = requirePositiveIntId(params.nid, 'notebook id');
-      const id = requirePositiveIntId(params.id, 'output id');
+      const nid = params.nid;
+      const id = params.id;
       return handleConvertOutputToSource(id, nid, set);
     },
-    { response: OutputConvertToSourceResponseSchema },
+    {
+      params: z.object({ nid: PathId, id: PathId }),
+      response: OutputConvertToSourceResponseSchema,
+    },
   );
 
 registerApiDoc(apiDocs);

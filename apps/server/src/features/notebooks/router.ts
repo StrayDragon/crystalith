@@ -14,11 +14,12 @@ import {
 // returns a serialized Notebook matching the shared Zod schema.
 import { desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
+import { z } from 'zod';
 
 import { db } from '../../db/index.ts';
 import { notebooks, sessions, sourceTags, templates } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
-import { requirePositiveIntId } from '../../shared/ids.ts';
+import { PathId } from '../../shared/ids.ts';
 
 // ---------------------------------------------------------------------------
 // OpenAPI doc registration (manual spec — @elysiajs/openapi auto-gen uses
@@ -176,19 +177,19 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/notebooks/:nid',
     ({ params }) => {
-      const id = requirePositiveIntId(params.nid, 'notebook id');
+      const id = params.nid;
       const row = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
       if (!row) notFound(id);
       return serializeNotebook(row);
     },
-    { response: NotebookSchema },
+    { params: z.object({ nid: PathId }), response: NotebookSchema },
   )
 
   // Update a notebook
   .patch(
     '/notebooks/:nid',
     ({ params, body }) => {
-      const id = requirePositiveIntId(params.nid, 'notebook id');
+      const id = params.nid;
       const existing = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
       if (!existing) notFound(id);
       const updated = db()
@@ -199,21 +200,21 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
         .get();
       return serializeNotebook(updated);
     },
-    { body: NotebookUpdateSchema, response: NotebookSchema },
+    { params: z.object({ nid: PathId }), body: NotebookUpdateSchema, response: NotebookSchema },
   )
 
   // Delete a notebook
   .delete(
     '/notebooks/:nid',
     ({ params, set }) => {
-      const id = requirePositiveIntId(params.nid, 'notebook id');
+      const id = params.nid;
       const existing = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
       if (!existing) notFound(id);
       db().delete(notebooks).where(eq(notebooks.id, id)).run();
       set.status = 204;
       return;
     },
-    { response: { 204: Empty204Schema } },
+    { params: z.object({ nid: PathId }), response: { 204: Empty204Schema } },
   );
 
 // Register OpenAPI docs
