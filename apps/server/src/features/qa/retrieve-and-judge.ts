@@ -19,6 +19,7 @@ import { truncateToTokenBudget } from '../../rag/context-window.ts';
 import { ragRegistry } from '../../rag/registry.ts';
 import { hydrateCitations } from '../../shared/citations.ts';
 import { getContextWindowSettings } from '../../shared/config.ts';
+import { logger } from '../../shared/logger.ts';
 import { computeConfidence } from './confidence.ts';
 
 export const EVIDENCE_THRESHOLD_DEFAULT = 0.2;
@@ -177,7 +178,7 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
     });
   } catch (error) {
     // Embedding/search failure — log underlying cause for diagnostics.
-    console.error(
+    logger.error(
       '[qa] retrieve failed (embedding_empty):',
       error instanceof Error ? error.message : error,
     );

@@ -3,14 +3,10 @@
  */
 import type {
   ResearchConfirmBody,
-  ResearchConvertBody,
   ResearchCreateBody,
   ResearchDepth,
   ResearchEdge,
-  ResearchForkBody,
-  ResearchGraphPatch,
   ResearchNode,
-  ResearchNodePatchBody,
   ResearchRequestReexpandBody,
   ResearchRun,
   ResearchRunStatus,
@@ -20,21 +16,17 @@ import { RESEARCH_DEPTH_BUDGETS } from '@crystalith/shared';
 import { and, count, desc, eq, inArray } from 'drizzle-orm';
 
 import { db } from '../../db/index.ts';
-import { chunks, outputs, researchProgressEvents, researchRuns, sources } from '../../db/schema.ts';
-import { bumpSourcesEpoch } from '../../rag/cache.ts';
+import { researchProgressEvents, researchRuns } from '../../db/schema.ts';
 import { getPageRatio, getSearchAddOnSettings } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
-import { sseFrame, sseResponse } from '../../shared/sse-response.ts';
-import { splitTextToChunks } from '../outputs/render.ts';
 import { applyDecomposePlanToGraph, planTopicDecomposition } from './decompose.ts';
-import { resolveArtifactMarkdown, synthesizeAndComplete } from './report.ts';
+import { synthesizeAndComplete } from './report.ts';
 import { computeMaxPageFetches, computeSearchAddOnK } from './research-budget.ts';
 import {
   abortAllChatsForRun,
   abortRunWorkUnit,
   appendProgressEvent,
   CONFIRM_OPTIONS,
-  assertLiveMutable,
   broadcast,
   emptyGraph,
   emitGraphPatch,
@@ -44,7 +36,6 @@ import {
   findConclusionNode,
   finalizeCancel,
   getGraph,
-  isPruneProtectedNode,
   isTerminalStatus,
   newId,
   persistGraph,
@@ -53,11 +44,9 @@ import {
   requireRun,
   serializeRun,
   serializeRunSummary,
-  subscribeRun,
   updateRun,
   writeCheckpoint,
   type RunRow,
-  type SseEmit,
 } from './research-core.ts';
 import { orderResearchNodesForWork } from './research-work-queue.ts';
 import {
@@ -597,345 +586,13 @@ export function requestReexpand(
   return serializeRun(requireRun(notebookId, runId));
 }
 
-export function isPruneProtectedNodeId(nodeId: string, nodes: ResearchNode[] = []): boolean {
-  const node = nodes.find((n) => n.id === nodeId);
-  return isPruneProtectedNode(node, nodeId);
-}
-
-/**
- * Prune closure (r316 / update-research-prune-cascade) — keep in sync with
- * Lab `collectPruneClosure` in apps/web/.../research-lab/model/pruneClosure.ts.
- * - never includes protected sink/root nodes (role first, then id prefix)
- * - does not walk `merge` edges (failed merges stay attached)
- * - cascades only when every non-protected inbound parent is already in the
- *   closure or already pruned (shared children with a live parent stay live)
- */
-export function collectResearchPruneClosure(
-  rootId: string,
-  nodes: ResearchNode[],
-  edges: ResearchEdge[],
-): Set<string> {
-  const byId = new Map(nodes.map((n) => [n.id, n]));
-  if (!byId.has(rootId) || isPruneProtectedNodeId(rootId, nodes)) return new Set();
-
-  const children = new Map<string, string[]>();
-  const parents = new Map<string, string[]>();
-  for (const e of edges) {
-    if (e.kind === 'merge') continue;
-    const outs = children.get(e.source) ?? [];
-    outs.push(e.target);
-    children.set(e.source, outs);
-    const inns = parents.get(e.target) ?? [];
-    inns.push(e.source);
-    parents.set(e.target, inns);
-  }
-
-  const out = new Set<string>([rootId]);
-  const stack = [rootId];
-  while (stack.length) {
-    const id = stack.pop()!;
-    for (const childId of children.get(id) ?? []) {
-      if (out.has(childId)) continue;
-      if (isPruneProtectedNodeId(childId, nodes)) continue;
-      const blocking = (parents.get(childId) ?? []).some((pid) => {
-        if (out.has(pid)) return false;
-        if (isPruneProtectedNodeId(pid, nodes)) return false;
-        if (byId.get(pid)?.conclusionStatus === 'pruned') return false;
-        return true;
-      });
-      if (blocking) continue;
-      out.add(childId);
-      stack.push(childId);
-    }
-  }
-  return out;
-}
-
-export function pruneNode(notebookId: number, runId: number, nodeId: string): ResearchRun {
-  const row = requireRun(notebookId, runId);
-  assertLiveMutable(row.status);
-  const graph = getGraph(row);
-  const target = graph.nodes.find((n) => n.id === nodeId);
-  if (!target) {
-    throw new AppHttpError(ErrorCode.NOT_FOUND, `Node ${nodeId} not found`);
-  }
-  if (isPruneProtectedNode(target, nodeId)) {
-    throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Cannot prune protected node ${nodeId}`);
-  }
-  const toPrune = collectResearchPruneClosure(nodeId, graph.nodes, graph.edges);
-  for (const n of graph.nodes) {
-    if (toPrune.has(n.id)) {
-      n.conclusionStatus = 'pruned';
-      n.phase = 'idle';
-    }
-  }
-  persistGraph(runId, graph, {
-    checkpoint: writeCheckpoint(row, `prune_${nodeId}`),
-  });
-  emitGraphPatch(runId, {
-    nodes: graph.nodes.filter((n) => toPrune.has(n.id)),
-  });
-  emitLog(runId, `已剪枝节点 ${nodeId}${toPrune.size > 1 ? `（级联 ${toPrune.size}）` : ''}`);
-  return serializeRun(requireRun(notebookId, runId));
-}
-
-export function patchNode(
-  notebookId: number,
-  runId: number,
-  nodeId: string,
-  body: ResearchNodePatchBody,
-): ResearchRun {
-  const row = requireRun(notebookId, runId);
-  assertLiveMutable(row.status);
-  const graph = getGraph(row);
-  const node = graph.nodes.find((n) => n.id === nodeId);
-  if (!node) {
-    throw new AppHttpError(ErrorCode.NOT_FOUND, `Node ${nodeId} not found`);
-  }
-  if (node.conclusionStatus === 'pruned') {
-    throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Cannot patch pruned node ${nodeId}`);
-  }
-  if (isPruneProtectedNode(node, nodeId)) {
-    throw new AppHttpError(
-      ErrorCode.INVALID_REQUEST,
-      `Cannot patch protected question/conclusion node ${nodeId}`,
-    );
-  }
-  if (body.title !== undefined) node.title = body.title;
-  if (body.query !== undefined) node.query = body.query;
-  if (body.conclusionStatus !== undefined) node.conclusionStatus = body.conclusionStatus;
-  persistGraph(runId, graph, {
-    checkpoint: writeCheckpoint(row, `patch_${nodeId}`),
-  });
-  emitGraphPatch(runId, { nodes: [node] });
-  return serializeRun(requireRun(notebookId, runId));
-}
-
-export function forkNode(
-  notebookId: number,
-  runId: number,
-  nodeId: string,
-  body: ResearchForkBody,
-): ResearchRun {
-  const row = requireRun(notebookId, runId);
-  assertLiveMutable(row.status);
-  const graph = getGraph(row);
-  if (!graph.nodes.some((n) => n.id === nodeId)) {
-    throw new AppHttpError(ErrorCode.NOT_FOUND, `Node ${nodeId} not found`);
-  }
-  if (graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length >= row.maxNodes) {
-    throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Node budget exhausted');
-  }
-  // Enter expand_branch confirm (same capability surface as M1)
-  emitLog(runId, `fork 请求${body.hint ? `：${body.hint}` : ''}`);
-  // Synchronous status flip so caller sees awaiting_confirm immediately
-  const current = requireRun(notebookId, runId);
-  updateRun(runId, {
-    status: 'awaiting_confirm',
-    confirmKind: 'expand_branch',
-    confirmBranchNodeId: nodeId,
-    checkpoint: writeCheckpoint(current, 'before_confirm_expand_branch'),
-  });
-  emitStatus(runId, 'awaiting_confirm', 'expand_branch');
-  broadcast(runId, 'confirm', {
-    kind: 'expand_branch',
-    branchNodeId: nodeId,
-    options: CONFIRM_OPTIONS.expand_branch,
-  });
-  return serializeRun(requireRun(notebookId, runId));
-}
-
-export function convertToNote(
-  notebookId: number,
-  runId: number,
-  body: ResearchConvertBody,
-): { outputId: number; type: 'PARAGRAPH' } {
-  const { title, markdown } = resolveArtifactMarkdown(notebookId, runId, body.artifact);
-  const output = db()
-    .insert(outputs)
-    .values({
-      notebookId,
-      type: 'PARAGRAPH',
-      prompt: title,
-      chunkIds: [],
-      content: {
-        title,
-        text: markdown,
-        // 兜底：笔记栏可跳回 Lab 报告页（正式产品导航另案设计）
-        researchLab: {
-          notebookId,
-          runId,
-          artifactKind: body.artifact.kind,
-        },
-      },
-    })
-    .returning()
-    .get();
-  return { outputId: output.id, type: 'PARAGRAPH' };
-}
-
-export async function convertToSource(
-  notebookId: number,
-  runId: number,
-  body: ResearchConvertBody,
-): Promise<{ sourceId: number; filename: string; chunkCount: number }> {
-  const { title, markdown } = resolveArtifactMarkdown(notebookId, runId, body.artifact);
-  const chunkTexts = splitTextToChunks(markdown, 500, 50);
-  const filename = `research-${runId}-${body.artifact.kind}.md`;
-
-  const sourceRow = db()
-    .insert(sources)
-    .values({
-      notebookId,
-      filename,
-      mimeType: 'text/markdown',
-      parserType: 'text',
-      status: 'processing',
-      metadata: {
-        type: 'research_conversion',
-        source: 'research_conversion',
-        runId,
-        artifact: body.artifact,
-        title,
-      },
-    })
-    .returning()
-    .get();
-
-  let offset = 0;
-  for (const [i, text] of chunkTexts.entries()) {
-    db()
-      .insert(chunks)
-      .values({
-        sourceId: sourceRow.id,
-        chunkIndex: i,
-        text,
-        startOffset: offset,
-        endOffset: offset + text.length,
-      })
-      .run();
-    offset += text.length + 2;
-  }
-
-  try {
-    const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
-    const strategy = new EmbedStrategy();
-    await strategy.indexSource(sourceRow.id, sourceRow.notebookId);
-    db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)).run();
-    bumpSourcesEpoch(sourceRow.notebookId);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[research] convertToSource embed failed for source ${sourceRow.id}:`, message);
-    db()
-      .update(sources)
-      .set({
-        status: 'failed',
-        errorMessage: message.slice(0, 2000),
-        errorCode: 'EMBEDDING_FAILED',
-      })
-      .where(eq(sources.id, sourceRow.id))
-      .run();
-    bumpSourcesEpoch(sourceRow.notebookId);
-  }
-
-  return {
-    sourceId: sourceRow.id,
-    filename: sourceRow.filename,
-    chunkCount: chunkTexts.length,
-  };
-}
-
-/** Replay current state to a new SSE subscriber, then keep listening. */
-export async function streamRun(
-  notebookId: number,
-  runId: number,
-  emit: SseEmit,
-): Promise<() => void> {
-  const row = requireRun(notebookId, runId);
-  const unsub = subscribeRun(runId, emit);
-  emit('status', { status: row.status });
-  const graph = getGraph(row);
-  if (graph.nodes.length || graph.edges.length) {
-    emit('graph_patch', {
-      nodes: graph.nodes,
-      edges: graph.edges,
-    } satisfies ResearchGraphPatch);
-  }
-  if (row.status === 'awaiting_confirm' && row.confirmKind) {
-    emit('confirm', {
-      kind: row.confirmKind,
-      branchNodeId: row.confirmBranchNodeId ?? undefined,
-      options: row.confirmKind ? CONFIRM_OPTIONS[row.confirmKind] : [],
-    });
-  }
-  if (row.status === 'completed') {
-    emit('report_ready', { runId });
-  }
-  return unsub;
-}
-
-export function createResearchSseResponse(notebookId: number, runId: number): Response {
-  requireRun(notebookId, runId);
-
-  let unsub: (() => void) | undefined;
-  let closed = false;
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const encoder = new TextEncoder();
-      const emit: SseEmit = (event, data) => {
-        if (closed) return;
-        try {
-          controller.enqueue(encoder.encode(sseFrame(event, data)));
-        } catch {
-          closed = true;
-        }
-      };
-      try {
-        unsub = await streamRun(notebookId, runId, emit);
-        // Keep connection open until client cancels or run reaches terminal
-        // and a short grace period. Poll status for terminal close.
-        await new Promise<void>((resolve) => {
-          const tick = () => {
-            if (closed) {
-              resolve();
-              return;
-            }
-            const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
-            if (
-              row &&
-              (row.status === 'completed' || row.status === 'failed' || row.status === 'cancelled')
-            ) {
-              // Allow final events to flush
-              setTimeout(() => {
-                resolve();
-              }, 50);
-              return;
-            }
-            setTimeout(tick, 100);
-          };
-          tick();
-        });
-      } catch (error) {
-        emit('error', {
-          errorCode: error instanceof AppHttpError ? error.code : ErrorCode.INTERNAL_ERROR,
-          message: String(error),
-        });
-      } finally {
-        unsub?.();
-        if (!closed) {
-          try {
-            controller.close();
-          } catch {
-            // already closed
-          }
-        }
-      }
-    },
-    cancel() {
-      closed = true;
-      unsub?.();
-    },
-  });
-
-  return sseResponse(stream);
-}
+// --- Facade re-exports: implementations split into single-concern modules (B1) ---
+export {
+  isPruneProtectedNodeId,
+  collectResearchPruneClosure,
+  pruneNode,
+  patchNode,
+  forkNode,
+} from './node-actions.ts';
+export { convertToNote, convertToSource } from './convert.ts';
+export { streamRun, createResearchSseResponse } from './run-sse.ts';

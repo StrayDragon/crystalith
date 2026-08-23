@@ -14,6 +14,7 @@ import { generateObject } from 'ai';
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
 import { getResearchDecomposeModelConfig } from '../../shared/config.ts';
+import { logger } from '../../shared/logger.ts';
 import { e2eStubDecomposePlan, isResearchE2eStub } from './e2e-stub.ts';
 
 export type ResearchGraphJson = { nodes: ResearchNode[]; edges: ResearchEdge[] };
@@ -217,7 +218,7 @@ export async function planTopicDecomposition(input: {
       depth: input.depth,
     });
   } catch (error) {
-    console.warn('[research] planTopicDecomposition failed:', error);
+    logger.warn('[research] planTopicDecomposition failed:', error);
     return null;
   }
 }

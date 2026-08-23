@@ -28,7 +28,7 @@ import { workspaceRouter } from './features/workspace/router.ts';
 import { generateOpenApiDocument, registerApiDoc } from './openapi.ts';
 import { ErrorCode, sendError, AppHttpError } from './shared/errors.ts';
 import { probeHealthDependencies } from './shared/health.ts';
-import { logger } from './shared/logger.ts';
+import { logger, requestContext } from './shared/logger.ts';
 
 // ---------------------------------------------------------------------------
 // Scaffold OpenAPI docs
@@ -85,6 +85,9 @@ export function createApp() {
       const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
       set.headers['x-request-id'] = requestId;
       requestStart.set(request, performance.now());
+      // Propagate to every async continuation (handlers, services, SSE ticks)
+      // so service-layer logger calls carry the same requestId.
+      requestContext.enterWith({ requestId });
     })
     .onAfterResponse(({ request, set }) => {
       const path = new URL(request.url).pathname;

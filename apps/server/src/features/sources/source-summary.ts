@@ -11,6 +11,7 @@ import { db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
+import { logger } from '../../shared/logger.ts';
 
 export const AUTO_SUMMARY_KEY = 'autoSummary';
 
@@ -221,7 +222,7 @@ export function scheduleSourceSummary(sourceId: number, opts?: { force?: boolean
       if (!opts?.force && readCached(source)) return;
       await generateAndPersistSourceSummary(source.notebookId, sourceId);
     } catch (error) {
-      console.error(`[source-summary] async pregenerate failed for source ${sourceId}:`, error);
+      logger.error(`[source-summary] async pregenerate failed for source ${sourceId}:`, error);
     }
   })();
 }

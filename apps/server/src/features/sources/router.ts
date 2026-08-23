@@ -56,6 +56,7 @@ import {
   listExtractorMetadata,
 } from '../../shared/extraction/factory.ts';
 import { PathId, NidParamsSchema } from '../../shared/ids.ts';
+import { logger } from '../../shared/logger.ts';
 import { requireOwnedRow, resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import { batchDeleteSources, batchReembedSources } from './batch.service.ts';
 import { uploadDedupKey } from './dedup.ts';
@@ -743,7 +744,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         }
       } catch (error) {
         // SearXNG unavailable — return error info, not a crash
-        console.error('[sources/search] web search failed:', error);
+        logger.error('[sources/search] web search failed:', error);
       }
 
       // mode is web-search channel metadata (echo); not Deep Research / ResearchRun.
