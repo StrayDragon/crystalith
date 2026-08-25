@@ -27,7 +27,7 @@
 
   @req:r250 @human
   场景: Postprocessing is deterministic and citation-safe
-    - 后处理 MUST 先于引用映射，且对非法 citation 索引做清洗并保持非阻塞。
+    - 后处理 MUST 先于引用映射，且对非法 citation 索引做清洗并保持非阻塞。本条为 citation 清洗 postprocess 的 canonical 约束（其他 capability 以引用表达，如 typed-generation-framework outputs-citations-must-be-sanitized）。
 
   @req:r265 @human
   场景: Tool output types require a corresponding OutputTypePlugin
@@ -59,7 +59,7 @@
 
   @req:qa-retrieve-before-generate @human
   场景: QA MUST gate retrieval then optionally generate
-    - QA 管线 MUST 在进入 LLM 之前先解析 sourceIds：当 sourceIds 非空时 MUST 先做确定性检索并判定 evidence；当 sourceIds 缺失或为空且笔记本仍有来源时 MUST 跳过检索并以无引用（citations=[]）进入 LLM 生成；当笔记本无任何来源时 MUST 返回 evidence=false 且 reason=no_sources 且不进入 LLM。
+    - QA 管线 MUST 在进入 LLM 之前先解析 sourceIds：当 sourceIds 非空时 MUST 先做确定性检索并判定 evidence；当 sourceIds 缺失或为空且笔记本仍有来源时 MUST 跳过检索并以无引用（citations=[]）进入 LLM 生成；当笔记本无任何来源时 MUST 返回 evidence=false 且 reason=no_sources 且不进入 LLM。本条持有“空 selection→ungrounded”断言的 canonical 表述。
 
   @req:qa-no-evidence-reasons @human
   场景: QA MUST produce 5 distinct no-evidence reasons
@@ -67,145 +67,4 @@
 
   @req:qa-confidence-score @human
   场景: QA MUST compute and return confidence score
-    - 当 evidence 为 true 时系统 MUST 计算并返回 confidence 置信度分数
-
-  @req:r31 @human
-  场景: generation-pipeline-order-is-stable
-    - 必须成立：当 系统处理一次结构化输出生成请求；那么 各阶段 SHALL 按 `ResolveContext -> Generate -> Postprocess -> MapCitations -> Persist` 的顺序执行
-    当 系统处理一次结构化输出生成请求
-    那么 各阶段 SHALL 按 `ResolveContext -> Generate -> Postprocess -> MapCitations -> Persist` 的顺序执行
-
-  @req:r89 @human
-  场景: empty-source-ids-means-ungrounded-qa
-    - 必须成立：假如 QA 请求 sourceIds 缺失或为空且笔记本有来源；当 系统处理该请求；那么 系统 SHALL 按 ungrounded 路径生成且不因空 scope 拒绝请求
-    假如 QA 请求 sourceIds 缺失或为空且笔记本有来源
-    当 系统处理该请求
-    那么 系统 SHALL 按 ungrounded 路径生成且不因空 scope 拒绝请求
-
-  @req:r126 @human
-  场景: preference-maps-to-defaults
-    - 必须成立：当 请求选择某个 `preference`；那么 系统 SHALL 从集中 tuning 表加载对应的检索与重试默认值
-    当 请求选择某个 `preference`
-    那么 系统 SHALL 从集中 tuning 表加载对应的检索与重试默认值
-
-  @req:r162 @human
-  场景: request-knobs-override-tuning
-    - 必须成立：当 请求同时提供 `preference` 与显式 `topK/minScore` 等参数；那么 系统 SHALL 以显式参数覆盖 tuning 默认值
-    当 请求同时提供 `preference` 与显式 `topK/minScore` 等参数
-    那么 系统 SHALL 以显式参数覆盖 tuning 默认值
-
-  @req:r197 @human
-  场景: stream-and-non-stream-responses-are-consistent
-    - 必须成立：当 同一输入分别使用流式与非流式 QA 路径；那么 系统 SHALL 在完成阶段返回一致的 citations/evidence/confidence 语义
-    当 同一输入分别使用流式与非流式 QA 路径
-    那么 系统 SHALL 在完成阶段返回一致的 citations/evidence/confidence 语义
-
-  @req:r250 @human
-  场景: invalid-citations-are-sanitized
-    - 必须成立：当 模型输出包含非法 citation 索引或越界引用；那么 系统 SHALL 在后处理阶段清洗并保持流程非阻塞
-    当 模型输出包含非法 citation 索引或越界引用
-    那么 系统 SHALL 在后处理阶段清洗并保持流程非阻塞
-
-  @req:r265 @human
-  场景: missing-plugin-blocks-tool-output-generation
-    - 必须成立：当 客户端请求生成某工具输出类型但服务器未安装/未启用对应插件；那么 系统 SHALL 返回失败响应
-    当 客户端请求生成某工具输出类型但服务器未安装/未启用对应插件
-    那么 系统 SHALL 返回失败响应
-
-  @req:outputs-citation-mapping @human
-  场景: llm-selects-subset
-    - 必须成立：假如 LLM 输出 citations 为 [1,3]；当 管线映射 citation；那么 系统 SHALL 只附加第 1 和第 3 个检索 chunk 的 citation 而非全部
-    假如 LLM 输出 citations 为 [1,3]
-    当 管线映射 citation
-    那么 系统 SHALL 只附加第 1 和第 3 个检索 chunk 的 citation 而非全部
-
-  @req:outputs-citation-mapping @human
-  场景: persisted-citation-dicts-are-camelcase
-    - 必须成立：假如 content 树中某节点含 citations:[1]；当 管线持久化；那么 写入的 Citation dict SHALL 使用 sourceId/sourceName/chunkId 等 camelCase 键
-    假如 content 树中某节点含 citations:[1]
-    当 管线持久化
-    那么 写入的 Citation dict SHALL 使用 sourceId/sourceName/chunkId 等 camelCase 键
-
-  @req:outputs-rag @human
-  场景: large_notebook
-    - 必须成立：假如 notebook 含大量 chunk；当 用户生成输出；那么 系统 SHALL 仅检索 topK 相关 chunk 进入 prompt
-    假如 notebook 含大量 chunk
-    当 用户生成输出
-    那么 系统 SHALL 仅检索 topK 相关 chunk 进入 prompt
-
-  @req:outputs-rag @human
-  场景: retrieval-throws
-    - 必须成立：假如 retrieveWith 抛出错误；当 管线处理；那么 系统 SHALL 传播错误使请求失败，而非 dump 全量 chunk
-    假如 retrieveWith 抛出错误
-    当 管线处理
-    那么 系统 SHALL 传播错误使请求失败，而非 dump 全量 chunk
-
-  @req:outputs-postprocess @human
-  场景: guide-missing-examples
-    - 必须成立：假如 LLM 输出 GUIDE 类型但 examples 为空；当 后处理阶段；那么 系统 SHALL 为 examples 字段补默认值而非整体替换为 fallback
-    假如 LLM 输出 GUIDE 类型但 examples 为空
-    当 后处理阶段
-    那么 系统 SHALL 为 examples 字段补默认值而非整体替换为 fallback
-
-  @req:outputs-postprocess @human
-  场景: generation-fails
-    - 必须成立：假如 LLM 生成抛出异常；当 postprocess 阶段处理；那么 系统 SHALL 产出类型化 fallback 内容而非空结果
-    假如 LLM 生成抛出异常
-    当 postprocess 阶段处理
-    那么 系统 SHALL 产出类型化 fallback 内容而非空结果
-
-  @req:qa-context-stats @human
-  场景: client-reads-context
-    - 必须成立：假如 客户端读取 done 事件的 context 字段；当 响应构建；那么 系统 SHALL 使用 totalTokens/systemTokens 等 camelCase 字段名并含 compressed 布尔
-    假如 客户端读取 done 事件的 context 字段
-    当 响应构建
-    那么 系统 SHALL 使用 totalTokens/systemTokens 等 camelCase 字段名并含 compressed 布尔
-
-  @req:qa-context-stats @human
-  场景: no-server-local-duplication
-    - 必须成立：假如 retrieval 阶段计算 token 预算；当 server 构造 ContextStats 对象；那么 它 MUST 使用 shared 类型且 MUST NOT 在 server 本地重声明同域接口
-    假如 retrieval 阶段计算 token 预算
-    当 server 构造 ContextStats 对象
-    那么 它 MUST 使用 shared 类型且 MUST NOT 在 server 本地重声明同域接口
-
-  @req:qa-inline-citation-fallback @human
-  场景: answer-no-brackets
-    - 必须成立：假如 LLM answer 不含 [N]；当 后处理；那么 系统 SHALL 追加 [1] 兜底
-    假如 LLM answer 不含 [N]
-    当 后处理
-    那么 系统 SHALL 追加 [1] 兜底
-
-  @req:qa-low-similarity-empty @human
-  场景: low-similarity
-    - 必须成立：假如 检索 score 低于阈值；当 判定 no-evidence；那么 系统 SHALL 返回 citations=[]
-    假如 检索 score 低于阈值
-    当 判定 no-evidence
-    那么 系统 SHALL 返回 citations=[]
-
-  @req:qa-no-evidence-reasons @human
-  场景: five-reasons
-    - 必须成立：假如 检索结果空或无效；当 证据判定；那么 系统 SHALL 从 5 种 reason 中确定一个并返回对应本地化回答
-    假如 检索结果空或无效
-    当 证据判定
-    那么 系统 SHALL 从 5 种 reason 中确定一个并返回对应本地化回答
-
-  @req:qa-retrieve-before-generate @human
-  场景: ungrounded-empty-selection
-    - 必须成立：假如 笔记本有已索引来源但请求未提供 sourceIds（或为空数组）；当 用户提问；那么 系统 SHALL 跳过 RAG 检索进入 LLM 生成，且返回 citations=[]
-    假如 笔记本有已索引来源但请求未提供 sourceIds（或为空数组）
-    当 用户提问
-    那么 系统 SHALL 跳过 RAG 检索进入 LLM 生成，且返回 citations=[]
-
-  @req:qa-retrieve-before-generate @human
-  场景: no-sources-case
-    - 必须成立：假如 笔记本中无任何 source；当 用户提问；那么 系统 SHALL 返回 evidence=false 且 reason=no_sources 的标准化回答，不进入 LLM 生成
-    假如 笔记本中无任何 source
-    当 用户提问
-    那么 系统 SHALL 返回 evidence=false 且 reason=no_sources 的标准化回答，不进入 LLM 生成
-
-  @req:qa-confidence-score @human
-  场景: high-evidence-case
-    - 必须成立：假如 检索返回多个高相似度 chunk 跨越多 source；当 用户提问；那么 系统 SHALL 返回 evidence=true 且 confidence 为 0-1 分数
-    假如 检索返回多个高相似度 chunk 跨越多 source
-    当 用户提问
-    那么 系统 SHALL 返回 evidence=true 且 confidence 为 0-1 分数
+    - 当 evidence 为 true 时系统 MUST 计算并返回 confidence 置信度分数（0–1 区间）

@@ -23,34 +23,4 @@
 
   @req:r287 @human
   场景: Web Vitest fixtures MUST use camelCase wire
-    - apps/web Vitest/MSW 夹具与断言 MUST 使用 camelCase HTTP/SSE JSON 字段名。MUST NOT 以 snake_case wire 键作为正式期望。
-
-  @req:fm2 @human
-  场景: streaming-uses-v2
-    - 必须成立：当 发起 QA/studio 等流式请求；那么 请求 URL SHALL 使用 /v2/ 前缀
-    当 发起 QA/studio 等流式请求
-    那么 请求 URL SHALL 使用 /v2/ 前缀
-
-  @req:frontend-sources-must-pass-notebook-id-query @human
-  场景: delete-passes-notebookId
-    - 必须成立：当 用户在 notebook A 删除来源；那么 DELETE /sources/:id SHALL 包含 ?notebookId=A
-    当 用户在 notebook A 删除来源
-    那么 DELETE /sources/:id SHALL 包含 ?notebookId=A
-
-  @req:frontend-error-envelope-must-use-shared-parser @human
-  场景: dedup-error-parsed-via-helper
-    - 必须成立：当 eden 返回 SOURCE_DEDUP_HIT；那么 前端 SHALL 经共享错误解析入口提取 errorCode
-    当 eden 返回 SOURCE_DEDUP_HIT
-    那么 前端 SHALL 经共享错误解析入口提取 errorCode
-
-  @req:r286 @human
-  场景: normalize-snake-maps-removed
-    - 必须成立：当 审查 apps/web normalize*；那么 SHALL 不存在 notebook_id→notebookId 这类 API 字段重命名逻辑
-    当 审查 apps/web normalize*
-    那么 SHALL 不存在 notebook_id→notebookId 这类 API 字段重命名逻辑
-
-  @req:r287 @human
-  场景: vitest-camel-fixtures
-    - 必须成立：当 运行 just test-web；那么 SHALL 全绿且 mock/断言使用 camelCase 字段
-    当 运行 just test-web
-    那么 SHALL 全绿且 mock/断言使用 camelCase 字段
+    - apps/web Vitest/MSW 夹具与断言 MUST 使用 camelCase HTTP/SSE JSON 字段名，MUST NOT 以 snake_case wire 键作为正式期望；just test-web 门禁运行时 MUST 全绿通过。
