@@ -43,7 +43,7 @@
 
   @req:r409 @human
   场景: Convert feedback is toast only
-    - 显式 convertToNote/convertToSource 成功或失败 MUST 以 toast（或同等非模态反馈）通知用户；MUST NOT 弹出强制转化确认对话框；成功反馈 MAY 提供打开笔记或来源的弱链接。
+    - 显式 convertToNote/convertToSource 成功或失败 MUST 以 toast（或同等非模态反馈）通知用户；MUST NOT 弹出强制转化确认对话框；成功反馈 MAY 提供打开笔记或来源的弱链接；Eden 模式下成功 toast 提供可点击打开工作区动作为 MUST（见 r446）。
 
   @req:r410 @human
   场景: Research error surfacing
@@ -51,7 +51,7 @@
 
   @req:r412 @human
   场景: No run URL deep link in v1
-    - 深研 UI MUST NOT 依赖 URL query/path 深链打开特定 Run（报告页 ?rid= 除外）；打开详情 MUST 由会话内 UI 状态驱动。
+    - 深研 UI MUST NOT 被动依赖 URL query/path 深链恢复特定 Run 状态（报告页 ?rid= 及用户显式动作 / slash 命令发起的 ?rid=/topic 导航除外，见 r452/r460）；被动刷新/直达时打开详情 MUST 由会话内 UI 状态驱动。
 
   @req:r413 @human
   场景: i18n and reachable Lab entry

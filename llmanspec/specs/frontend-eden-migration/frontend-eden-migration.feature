@@ -11,7 +11,7 @@
 
   @req:frontend-sources-must-pass-notebook-id-query @human
   场景: Frontend sources single-item calls MUST pass notebookId query for ownership check
-    - 前端调用 sources 单 source 路由（GET/DELETE/re-embed/chunks）MUST 传递 notebookId query 以激活归属校验，notebookId 取自前端会话中当前激活 notebook。
+    - 前端调用 sources 单 source 路由（GET/DELETE/re-embed/chunks）MUST 使用嵌套 canonical 路径 `/v2/notebooks/:nid/sources/...` 携带归属上下文（`:nid` 取自前端会话中当前激活 notebook），MUST NOT 附加 notebookId query 平行参数；归属校验语义见 workspace-api-contract nested-path-nid-is-ownership-ssot（canonical）。
 
   @req:frontend-error-envelope-must-use-shared-parser @human
   场景: Frontend eden error handling MUST use the shared error parser

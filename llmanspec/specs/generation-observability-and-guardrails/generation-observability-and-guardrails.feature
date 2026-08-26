@@ -39,4 +39,4 @@
 
   @req:retry-timeout-budget @human
   场景: Retry MUST enforce timeout budget and max delay
-    - AI 调用重试 MUST 实施 total timeout 预算和 max delay 上限（退避延迟不超过 max_delay、总时间不超过 total timeout），避免无限退避
+    - AI 调用重试 MUST 实施 total timeout 预算和 max delay 上限（退避延迟不超过 max_delay、总时间不超过 total timeout），避免无限退避。本条与 retry-honors-retry-after 共为 AI 调用重试策略的 canonical 约束（职责承载见 architecture-plugin-and-agent r247）。

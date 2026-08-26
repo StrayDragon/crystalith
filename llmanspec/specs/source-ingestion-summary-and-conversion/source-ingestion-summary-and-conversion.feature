@@ -35,7 +35,7 @@
 
   @req:tag-binding-must-return-per-item-diagnostics @human
   场景: Tag assign/remove MUST return per-item results with errorCode
-    - tag 批量 assign/remove 的逐项结果形状（{sourceId, ok, message, errorCode}）与缺失/跨 notebook source 的 SOURCE_NOT_FOUND 诊断 MUST 遵循 source-ingestion-management-and-tags r268 与 tag-binding-response-and-ownership（canonical）。
+    - tag 批量 assign/remove MUST 返回可逐项判定成功/失败的结果；逐项结果形状与缺失/跨 notebook source 的诊断语义 MUST 遵循 source-ingestion-management-and-tags tag-binding-response-and-ownership 与 r268（canonical）。
 
   @req:convert-embedding-no-ready-on-fail @human
   场景: Source conversion MUST NOT mark ready when embedding fails

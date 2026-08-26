@@ -43,7 +43,7 @@
 
   @req:outputs-citations-must-be-sanitized @human
   场景: Outputs pipeline MUST sanitize citation indices (range/dup/int) with warnings
-    - outputs pipeline MUST 递归剥离越界、重复、非整数 citation 索引，并设置 _warnings / citations_sanitized / _postprocessed 标记；清洗行为与管线阶段的 canonical 见 generation-core r250。
+    - outputs pipeline MUST 递归剥离越界、重复、非整数 citation 索引，并设置 _warnings / citations_sanitized / _postprocessed 标记。本条为 generation-core r250（canonical）行为的实现级细化：剥离准则与内容标记命名归此承载，管线阶段顺序以 canonical 为准。
 
   @req:outputs-quality-preference-must-trigger-llm-repair @human
   场景: Outputs pipeline with preference=quality MUST run LLM repair loop for salvageable output

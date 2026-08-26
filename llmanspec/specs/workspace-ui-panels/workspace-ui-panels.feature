@@ -71,7 +71,7 @@
 
   @req:workspace-sources-bar-gating @human
   场景: Sources workflows are gated by ready/error states with actionable recovery
-    - Sources 栏内每个来源条目 MUST 按状态展示：`ready` 正常（含 source 显示信息）、`failed` 错误信息与可执行恢复提示、`loading`（等待 embedding/解析完成）旋转指示器且不阻塞其它来源的操作；来源列表条目 MUST 提供“移除”与“重新生成摘要”等操作，且仅当操作真实可用时呈现。
+    - Sources 栏内每个来源条目 MUST 按状态展示：`ready` 正常（含 source 显示信息）、`failed` 错误信息与可执行恢复提示、`loading`（`processing` 状态的展示别名，等待 embedding/解析完成）旋转指示器且不阻塞其它来源的操作；来源列表条目 MUST 提供“移除”与“重新生成摘要”等操作，且仅当操作真实可用时呈现。
 
   @req:workspace-sources-panel-error-snapshot @human
   场景: Sources panel MUST expose error snapshot at panel level

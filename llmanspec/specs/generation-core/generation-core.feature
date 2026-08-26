@@ -51,7 +51,7 @@
 
   @req:qa-inline-citation-fallback @human
   场景: QA MUST ensure inline citations when missing
-    - QA answer 无 [N] 形式内联引用时 MUST 追加 [1] 兜底标记（对齐既有语义）
+    - 有证据路径（citations 非空）下，QA answer 无 [N] 形式内联引用时 MUST 追加 [1] 兜底标记（对齐既有语义）；无证据路径 MUST 保持 citations 为空且不注入兜底标记。
 
   @req:qa-low-similarity-empty @human
   场景: Low similarity no-evidence MUST return empty citations
