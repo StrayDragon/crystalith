@@ -3,7 +3,8 @@ depends_on: []
 rules_edit_acked: true
 branch: sdd/specs-compact-2026-08-b3
 base_sha: 87490d370df30fc4f69e9fd68c1f05aa53fc47e7
-checkpointed: false
+checkpointed: true
+checkpoint_sha: 87490d370df30fc4f69e9fd68c1f05aa53fc47e7
 ---
 
 # Proposal — specs-compact-2026-08-b3

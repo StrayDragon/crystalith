@@ -39,7 +39,7 @@
 
   @req:r408 @human
   场景: CitationsControl adapter for report
-    - 报告面 MUST 复用 CitationsControl 展示引用；前端 MUST 将 Run 全局 citation map 适配为 CitationsControl 所需 Citation 形；MUST NOT 为深研另建平行的引用弹层组件（除非复用组件无法满足最小字段再做最小扩展）。
+    - 报告面 MUST 复用 CitationsControl 展示引用；前端 MUST 将 Run 全局 citation map 适配为 CitationsControl 所需 Citation 形；MUST NOT 为深研另建平行的引用弹层组件（除非复用组件无法满足最小字段再做最小扩展）。本条为此约束的 canonical 场景（Eden 报告面对齐见 r432）。
 
   @req:r409 @human
   场景: Convert feedback is toast only
@@ -71,7 +71,7 @@
 
   @req:r417 @human
   场景: Node chat UI wires proposals to commands
-    - 节点对话 UI MUST 消费独立 chat SSE 展示正文与提案；用户接受剪枝/分叉/改查询/定态/确认类提案时 MUST 调用对应 prune/fork/PATCH/confirm 命令口；MUST NOT 仅在本地改图作为权威；打开报告类动作可为纯前端导航。
+    - 节点对话 UI MUST 消费独立 chat SSE 展示正文与提案；用户接受剪枝/分叉/改查询/定态/确认类提案（含 Eden ActionProposal 的 open_report 导航）时 MUST 调用对应 prune/fork/PATCH/confirm 命令口；MUST NOT 仅在本地改图作为权威；打开报告类动作可为纯前端导航。本条为此约束的 canonical 场景（Eden 侧对齐见 r439）。
 
   @req:r418 @human
   场景: Desk canvas prefs from Lab mechanisms
@@ -79,7 +79,7 @@
 
   @req:r419 @human
   场景: Revisions UI over server snapshots
-    - Desk（或报告面）MUST 能列出并查看服务端 revisions，并 MUST 支持创建当前快照与恢复到某 revision（经 API）；客户端本地暂存（sessionStorage/localStorage 等）MUST NOT 作为生产权威版本源——本条为此禁令的 canonical 约束。
+    - Desk（或报告面）MUST 能列出并查看服务端 revisions，并 MUST 支持创建当前快照与恢复到某 revision（经 API）；恢复成功后画布与报告 MUST 反映服务端快照内容（经 GET run 或 graph_patch 对齐）；客户端本地暂存（sessionStorage/localStorage 等）MUST NOT 作为生产权威版本源——本条为此禁令的 canonical 约束。
 
   @req:r423 @human
   场景: Lab wires via Eden and shared schemas
@@ -115,7 +115,7 @@
 
   @req:r433 @human
   场景: Eden export reads Run report not stub toast
-    - Eden 模式下 「从图导出建议报告」（或等价能力）MUST 从当前 Run 的 report 或等价结构化数据生成导出；MUST NOT toast「Eden 报告导出待接」；无 report 时 MUST 展示可见错误。
+    - Eden 模式下 「从图导出建议报告」（或等价能力）MUST 从当前 Run 的 report 或等价结构化数据生成导出（如 markdown）；MUST NOT toast「Eden 报告导出待接」；无 report 时 MUST 展示可见错误。
 
   @req:r434 @human
   场景: Eden node drawer shows Run evidence citations
@@ -131,7 +131,7 @@
 
   @req:r437 @human
   场景: awaiting_confirm progress does not contradict playing
-    - 当 Run status 为 awaiting_confirm 时，Lab MUST NOT 同时展示「多源探索」playing 横幅与「已暂停」类矛盾文案；playing 推导 MUST 仅对 queued 或 running 为 true；进度条 phase MUST 为 awaiting_confirm。
+    - 当 Run status 为 awaiting_confirm 时，Lab MUST NOT 同时展示「多源探索」playing 横幅与「已暂停」类矛盾文案；playing 推断 MUST 仅对 queued 或 running 为 true；进度条 phase MUST 为 awaiting_confirm。
 
   @req:r438 @human
   场景: Eden node chat uses HTTP SSE not fixture propose
@@ -139,15 +139,15 @@
 
   @req:r439 @human
   场景: Eden chat accept maps proposals to command ports
-    - Eden 模式下用户接受节点 chat 中的 ActionProposal 时 MUST 调用对应 HTTP 命令口（prune、fork、PATCH、confirm、open_report 导航）；MUST NOT 仅在本地 mutate 图作为权威（对齐 r417）。
+    - Eden 模式下用户接受节点 chat 中的 ActionProposal 时 MUST 调用对应 HTTP 命令口（prune、fork、PATCH、confirm、open_report 导航）；MUST NOT 仅在本地 mutate 图作为权威（对齐 r417 canonical）。
 
   @req:r441 @human
   场景: Eden Lab report revisions use server API
-    - Eden 模式下 LabReportPage MUST 经 GET/POST …/revisions 与 POST …/revisions/:revId/restore 列出、创建与恢复修订快照；恢复后画布与报告 MUST 反映服务端快照（经 GET run 或 graph_patch）；MUST NOT 以 sessionStorage labRevisions 作为 Eden 默认权威（落实 r419 Lab 路径）。
+    - Eden 模式下 LabReportPage MUST 经 GET/POST …/revisions 与 POST …/revisions/:revId/restore 列出、创建与恢复修订快照；恢复后画布与报告反映服务端快照的语义见 r419 canonical；MUST NOT 以 sessionStorage labRevisions 作为 Eden 默认权威。
 
   @req:r442 @human
   场景: Eden report CoW uses server working endpoints
-    - Eden 模式下报告编辑 working copy MUST 经 GET/PUT …/report/working 读写；提交权威报告 MUST 经 PUT …/report；丢弃副本 MUST 调用服务端 discard（或等价端点）；本地暂存持久化禁令见 r419。
+    - Eden 模式下报告编辑 working copy MUST 经 GET/PUT …/report/working 读写；提交权威报告 MUST 经 PUT …/report；丢弃副本 MUST 调用服务端 discard（或等价端点）并回到权威报告视图；本地暂存持久化禁令见 r419。
 
   @req:r443 @human
   场景: Eden convert invokes research convert endpoints
@@ -163,7 +163,7 @@
 
   @req:r447 @human
   场景: Lab Compose depth tier
-    - Lab Compose（LabComposePanel）MUST 暴露浅/中/深三档研究深度且默认 MUST 为中；用户提交创建时 Eden 路径 MUST 在 POST …/research body 中发送所选 depth，且该档位到预算参数（如 maxNodes/maxSearches）的映射 MUST 可配置（默认对齐既有语义）；MUST NOT 隐式省略 depth 导致与 UI 选择不一致。
+    - Lab Compose 用户提交创建时，Eden 路径 MUST 在 POST …/research body 中显式携带所选 depth，且 MUST NOT 隐式省略 depth 导致与 UI 选择不一致；深度档位集合与默认档位、以及档位到预算参数（如 maxNodes/maxSearches）的映射属服务端规则，见 deep-research-runtime r305。
 
   @req:r448 @human
   场景: Lab progress ledger panel
@@ -179,7 +179,7 @@
 
   @req:r451 @human
   场景: Eden revision restore reloads graph on return
-    - Eden 模式下用户经 revisions API 恢复快照后，返回图作业台时 MUST 经 GET ResearchRun 重载并应用 nodes/edges，使画布与 restored 快照一致；恢复成功时 MUST 刷新本地 Run 图态；MUST NOT 在报告已恢复而图仍显示旧态的情况下以本地切片恢复函数静默吞掉刷新。
+    - Eden 模式下用户经 revisions API 恢复快照后，返回图作业台时 MUST 经 GET ResearchRun 重载并应用 nodes/edges，使画布与 restored 快照一致（恢复即刷新的 canonical 语义见 r419）；MUST NOT 在报告已恢复而图仍显示旧态的情况下以本地切片恢复函数静默吞掉刷新。
 
   @req:r452 @human
   场景: Workspace chat deep research commands
@@ -222,603 +222,81 @@
     - 当 Run 因预算触顶后 finish_report 完成且图中仍有 missing/未覆盖 research 节点时，Lab MUST 展示「预算用尽·部分完成」（或等价）可见提示；报告面 MUST 不掩盖该缺口。
 
   @req:r400 @human
-  场景: lab-route-is-deep-entry
-    - 必须成立：假如 用户要从工作区进入深研；当 打开深研；那么 进入 /research-lab/:nid 而非顶栏 E1 / DeepResearchDesk
-    假如 用户要从工作区进入深研
-    当 打开深研
-    那么 进入 /research-lab/:nid 而非顶栏 E1 / DeepResearchDesk
-
-  @req:r400 @human
-  场景: product-lab-ignores-vite-lab-fixture
-    - 必须成立：假如 构建未设 VITE_LAB_DEMO 且误设旧 VITE_LAB_FIXTURE；当 打开 /research-lab/:nid；那么 仍走 Eden 控制器而非 xlsx fixture 回放
-    假如 构建未设 VITE_LAB_DEMO 且误设旧 VITE_LAB_FIXTURE
-    当 打开 /research-lab/:nid
-    那么 仍走 Eden 控制器而非 xlsx fixture 回放
-
-  @req:r400 @human
   场景: sources-has-no-deep-mode-toggle
-    - 必须成立：假如 用户打开来源面板；当 查看搜索/模式 UI；那么 不见 Fast/Deep 深研模式切换与深研队列主入口
-    假如 用户打开来源面板
-    当 查看搜索/模式 UI
-    那么 不见 Fast/Deep 深研模式切换与深研队列主入口
+    - 工作区来源面板的搜索/模式 UI MUST NOT 出现 Fast/Deep 深研模式切换或深研队列主入口等旧深研模式残留。
 
   @req:r401 @human
   场景: empty-sources-disables-start
-    - 必须成立：假如 用来源开关开启且台内未选任何来源；当 用户尝试开始深研；那么 开始控件保持禁用且不得发出创建请求
-    假如 用来源开关开启且台内未选任何来源
-    当 用户尝试开始深研
-    那么 开始控件保持禁用且不得发出创建请求
-
-  @req:r402 @human
-  场景: polling-stops-when-terminal
-    - 必须成立：假如 Desk 打开且队列仅含 completed/failed/cancelled；当 等待超过一个轮询间隔；那么 客户端不再为 list 发起定时轮询请求
-    假如 Desk 打开且队列仅含 completed/failed/cancelled
-    当 等待超过一个轮询间隔
-    那么 客户端不再为 list 发起定时轮询请求
-
-  @req:r403 @human
-  场景: escape-closes-detail-keeps-desk
-    - 必须成立：假如 deep tab 与某 Run 详情同时打开；当 用户按下 Escape；那么 详情关闭且 Desk 仍保持打开与原 tab
-    假如 deep tab 与某 Run 详情同时打开
-    当 用户按下 Escape
-    那么 详情关闭且 Desk 仍保持打开与原 tab
-
-  @req:r404 @human
-  场景: completed-shows-report-primary
-    - 必须成立：假如 Run 状态为 completed 且已有报告；当 用户查看详情主表面；那么 结构化报告为主内容且图不作为唯一主画布
-    假如 Run 状态为 completed 且已有报告
-    当 用户查看详情主表面
-    那么 结构化报告为主内容且图不作为唯一主画布
-
-  @req:r405 @human
-  场景: graph-patch-updates-canvas
-    - 必须成立：假如 详情已订阅 SSE 且图已渲染；当 收到含新节点的 graph_patch；那么 ResearchGraph 上出现对应节点且不经过 MindmapViewer
-    假如 详情已订阅 SSE 且图已渲染
-    当 收到含新节点的 graph_patch
-    那么 ResearchGraph 上出现对应节点且不经过 MindmapViewer
-
-  @req:r406 @human
-  场景: prune-requires-light-confirm
-    - 必须成立：假如 Run 为 running 且某节点可选中；当 用户在 inspector 触发剪枝；那么 须先通过轻量二次确认才会调用 prune API
-    假如 Run 为 running 且某节点可选中
-    当 用户在 inspector 触发剪枝
-    那么 须先通过轻量二次确认才会调用 prune API
-
-  @req:r407 @human
-  场景: m1-bar-on-awaiting-confirm
-    - 必须成立：假如 Run 进入 awaiting_confirm；当 用户查看详情；那么 顶栏出现 M1 确认条且可执行继续或出报告等动作
-    假如 Run 进入 awaiting_confirm
-    当 用户查看详情
-    那么 顶栏出现 M1 确认条且可执行继续或出报告等动作
-
-  @req:r408 @human
-  场景: report-uses-citations-control
-    - 必须成立：假如 终局报告含 citation map；当 用户打开引用入口；那么 复用 CitationsControl 弹层展示适配后的引用
-    假如 终局报告含 citation map
-    当 用户打开引用入口
-    那么 复用 CitationsControl 弹层展示适配后的引用
-
-  @req:r409 @human
-  场景: convert-success-toast
-    - 必须成立：假如 用户从节点或报告触发 convertToNote 且服务成功；当 观察反馈；那么 出现成功 toast 且无强制转化对话框
-    假如 用户从节点或报告触发 convertToNote 且服务成功
-    当 观察反馈
-    那么 出现成功 toast 且无强制转化对话框
-
-  @req:r410 @human
-  场景: budget-error-visible
-    - 必须成立：假如 API 返回 RESEARCH_BUDGET；当 用户在 Desk 或详情中操作；那么 界面展示可见错误提示而非静默失败
-    假如 API 返回 RESEARCH_BUDGET
-    当 用户在 Desk 或详情中操作
-    那么 界面展示可见错误提示而非静默失败
-
-  @req:r412 @human
-  场景: no-query-deep-link-required
-    - 必须成立：假如 用户仅通过 Desk 卡片打开详情；当 不修改 URL；那么 详情仍可打开且不依赖 researchRun query
-    假如 用户仅通过 Desk 卡片打开详情
-    当 不修改 URL
-    那么 详情仍可打开且不依赖 researchRun query
+    - 当 useNotebookSources 开启且台内未选任何来源时，用户尝试开始深研 MUST 保持开始控件禁用，且 MUST NOT 发出创建请求。
 
   @req:r413 @human
   场景: topbar-fast-only-and-lab-reachable
-    - 必须成立：假如 e2e 或 Vitest 进入工作区；当 打开顶栏搜索并检查深研入口；那么 顶栏无 deep Desk；Lab 入口仍可发现
-    假如 e2e 或 Vitest 进入工作区
-    当 打开顶栏搜索并检查深研入口
-    那么 顶栏无 deep Desk；Lab 入口仍可发现
-
-  @req:r414 @human
-  场景: prune-keeps-failed-merge-on-canvas
-    - 必须成立：假如 详情图已渲染且某研究节点有 merge 到结论；当 用户确认剪枝该节点后 graph_patch 到达；那么 该节点呈 pruned 弱化态，其 merge 边仍可见且弱化，结论侧出现部分汇入失败提示
-    假如 详情图已渲染且某研究节点有 merge 到结论
-    当 用户确认剪枝该节点后 graph_patch 到达
-    那么 该节点呈 pruned 弱化态，其 merge 边仍可见且弱化，结论侧出现部分汇入失败提示
-
-  @req:r415 @human
-  场景: lab-prune-calls-http
-    - 必须成立：假如 Lab 已订阅 Run SSE 且用户确认剪枝；当 执行剪枝；那么 发出 POST prune 并以返回或 graph_patch 更新画布
-    假如 Lab 已订阅 Run SSE 且用户确认剪枝
-    当 执行剪枝
-    那么 发出 POST prune 并以返回或 graph_patch 更新画布
+    - 工作区顶栏 MUST NOT 呈现旧深研 Desk 入口，且仓库回归（e2e 或 Vitest）MUST 能断言 Lab 入口仍可发现。
 
   @req:r416 @human
   场景: role-or-prefix-protects-sink
-    - 必须成立：假如 图中 conclusion 带 role=conclusion（或 node_conclusion_ 前缀）；当 用户查看剪枝入口；那么 结论节点不可作为可剪枝研究支路入口（与服务端保护一致）
-    假如 图中 conclusion 带 role=conclusion（或 node_conclusion_ 前缀）
-    当 用户查看剪枝入口
-    那么 结论节点不可作为可剪枝研究支路入口（与服务端保护一致）
-
-  @req:r417 @human
-  场景: accept-prune-proposal-calls-api
-    - 必须成立：假如 节点 chat 展示 pending prune 提案；当 用户点击接受；那么 客户端调用 POST prune（而非只改本地节点状态）
-    假如 节点 chat 展示 pending prune 提案
-    当 用户点击接受
-    那么 客户端调用 POST prune（而非只改本地节点状态）
+    - 图中 conclusion 节点带 role=conclusion（或既有 id 前缀识别）时 MUST NOT 作为可剪枝研究支路入口展示，与服务端剪枝保护一致。
 
   @req:r418 @human
   场景: canvas-pref-does-not-call-graph-api
-    - 必须成立：假如 用户切换画布布局方向或小地图；当 偏好生效；那么 未因此发出修改 research graph 的命令口请求
-    假如 用户切换画布布局方向或小地图
-    当 偏好生效
-    那么 未因此发出修改 research graph 的命令口请求
-
-  @req:r419 @human
-  场景: restore-revision-refreshes-graph
-    - 必须成立：假如 用户选择恢复某 revision；当 恢复成功；那么 画布与报告反映该快照内容（经 GET 或 graph_patch）
-    假如 用户选择恢复某 revision
-    当 恢复成功
-    那么 画布与报告反映该快照内容（经 GET 或 graph_patch）
-
-  @req:r423 @human
-  场景: lab-uses-eden-not-parallel-dto
-    - 必须成立：假如 Lab 创建或刷新 Run；当 查看客户端实现；那么 经 Eden + shared 类型，无平行 research DTO 文件
-    假如 Lab 创建或刷新 Run
-    当 查看客户端实现
-    那么 经 Eden + shared 类型，无平行 research DTO 文件
+    - 用户切换画布布局方向或小地图偏好生效时，MUST NOT 因此发出修改 research graph 的命令口请求。
 
   @req:r425 @human
   场景: compose-create-increments-badge
-    - 必须成立：假如 Lab 已接线 Eden 且当前 activeCount 为 0；当 用户 Compose 创建 Run 成功；那么 任务列表含新 Run 且 badge activeCount 增加
-    假如 Lab 已接线 Eden 且当前 activeCount 为 0
-    当 用户 Compose 创建 Run 成功
-    那么 任务列表含新 Run 且 badge activeCount 增加
+    - 当 Lab 已接线 Eden 且当前 activeCount 为 0 时，用户 Compose 创建 Run 成功后任务列表 MUST 包含新 Run 且 badge activeCount MUST 相应增加。
 
   @req:r425 @human
   场景: run-terminal-clears-badge
-    - 必须成立：假如 列表有一项 awaiting_confirm 且 badge 为 1；当 用户 confirm 完成或 SSE 将 Run 变为 completed；那么 列表 status 更新且 badge 归零
-    假如 列表有一项 awaiting_confirm 且 badge 为 1
-    当 用户 confirm 完成或 SSE 将 Run 变为 completed
-    那么 列表 status 更新且 badge 归零
+    - 当列表中一项 awaiting_confirm 的 Run 经用户 confirm 或 SSE 变为 completed 后，任务列表 status MUST 更新且 badge activeCount MUST 归零。
 
   @req:r426 @human
   场景: cancel-from-header-running
-    - 必须成立：假如 Eden Lab 已打开且 Run status 为 running；当 用户点顶栏取消并确认；那么 POST cancel 成功且 Run 变为 cancelled
-    假如 Eden Lab 已打开且 Run status 为 running
-    当 用户点顶栏取消并确认
-    那么 POST cancel 成功且 Run 变为 cancelled
+    - 当 Eden Lab 打开且 Run status 为 running 时，用户从顶栏触发取消并确认后 MUST 调用 POST …/research/:rid/cancel，成功后 Run status MUST 变为 cancelled。
 
   @req:r426 @human
   场景: cancel-from-drawer-awaiting-confirm
-    - 必须成立：假如 任务抽屉有一项 awaiting_confirm；当 用户从抽屉触发取消；那么 cancel 成功且列表 status 为 cancelled
-    假如 任务抽屉有一项 awaiting_confirm
-    当 用户从抽屉触发取消
-    那么 cancel 成功且列表 status 为 cancelled
-
-  @req:r427 @human
-  场景: running-primary-is-cancel
-    - 必须成立：假如 Eden Run 为 running 且顶栏展示主操作；当 用户查看主按钮标签与行为；那么 映射 cancel 而非空 pause
-    假如 Eden Run 为 running 且顶栏展示主操作
-    当 用户查看主按钮标签与行为
-    那么 映射 cancel 而非空 pause
-
-  @req:r427 @human
-  场景: awaiting-confirm-keeps-finish-dig
-    - 必须成立：假如 Eden Run 为 awaiting_confirm；当 用户查看顶栏；那么 主操作为生成结论且次操作为继续深挖
-    假如 Eden Run 为 awaiting_confirm
-    当 用户查看顶栏
-    那么 主操作为生成结论且次操作为继续深挖
-
-  @req:r428 @human
-  场景: eden-compose-no-fixture-authority
-    - 必须成立：假如 Lab Compose 以 eden 模式打开；当 用户阅读说明与 hint；那么 文案不提 xlsx fixture 或演示回放为权威
-    假如 Lab Compose 以 eden 模式打开
-    当 用户阅读说明与 hint
-    那么 文案不提 xlsx fixture 或演示回放为权威
-
-  @req:r428 @human
-  场景: fixture-compose-keeps-demo-copy
-    - 必须成立：假如 Lab Compose 以 fixture 模式打开；当 用户阅读说明；那么 MAY 保留 fixture 演示回放说明
-    假如 Lab Compose 以 fixture 模式打开
-    当 用户阅读说明
-    那么 MAY 保留 fixture 演示回放说明
-
-  @req:r430 @human
-  场景: eden-open-report-no-stub-toast
-    - 必须成立：假如 Eden Lab 已加载 completed Run 且 report 存在；当 用户点「打开独立报告页」；那么 导航至 /research-lab/:nid/report?rid= 且无 stub toast
-    假如 Eden Lab 已加载 completed Run 且 report 存在
-    当 用户点「打开独立报告页」
-    那么 导航至 /research-lab/:nid/report?rid= 且无 stub toast
-
-  @req:r431 @human
-  场景: report-page-loads-run-report
-    - 必须成立：假如 报告页以 eden 模式打开且 rid 有效；当 页面加载完成；那么 展示 GET run 返回的 report 标题与章节
-    假如 报告页以 eden 模式打开且 rid 有效
-    当 页面加载完成
-    那么 展示 GET run 返回的 report 标题与章节
+    - 当任务抽屉存在 awaiting_confirm 任务时，用户从抽屉行触发取消 MUST 成功，且列表中该任务 status MUST 显示为 cancelled。
 
   @req:r431 @human
   场景: eden-report-not-sessionstorage
-    - 必须成立：假如 Eden 报告页打开；当 sessionStorage 无 labRevisions；那么 仍以 Run.report 渲染正文
-    假如 Eden 报告页打开
-    当 sessionStorage 无 labRevisions
-    那么 仍以 Run.report 渲染正文
-
-  @req:r432 @human
-  场景: eden-citations-control
-    - 必须成立：假如 Eden 报告含 citation map；当 用户打开引用入口；那么 CitationsControl 展示适配后的引用
-    假如 Eden 报告含 citation map
-    当 用户打开引用入口
-    那么 CitationsControl 展示适配后的引用
-
-  @req:r433 @human
-  场景: eden-export-from-report
-    - 必须成立：假如 Eden Run 已有 report；当 用户触发从图导出；那么 生成 markdown 且无「待接」toast
-    假如 Eden Run 已有 report
-    当 用户触发从图导出
-    那么 生成 markdown 且无「待接」toast
+    - 当 sessionStorage 无 labRevisions 时，Eden 报告页 MUST 仍以 Run.report 渲染正文。
 
   @req:r433 @human
   场景: eden-export-no-report-error
-    - 必须成立：假如 Eden Run 无 report；当 用户触发导出；那么 可见错误提示且无 fixture revision 写入
-    假如 Eden Run 无 report
-    当 用户触发导出
-    那么 可见错误提示且无 fixture revision 写入
+    - 当 Eden Run 无 report 时用户触发导出，MUST 展示可见错误提示，且 MUST NOT 写入 fixture revision。
 
   @req:r434 @human
   场景: drawer-shows-evidence-when-ids-present
-    - 必须成立：假如 Eden Run completed 且某节点 evidenceIds 非空；当 用户打开该节点抽屉；那么 引用列表展示至少一条证据摘要
-    假如 Eden Run completed 且某节点 evidenceIds 非空
-    当 用户打开该节点抽屉
-    那么 引用列表展示至少一条证据摘要
-
-  @req:r434 @human
-  场景: eden-not-scenario-citations
-    - 必须成立：假如 Eden Lab 已加载 Run；当 查看 LabNodeDrawer citations 来源；那么 来自 Run 证据映射而非 scenario.citations
-    假如 Eden Lab 已加载 Run
-    当 查看 LabNodeDrawer citations 来源
-    那么 来自 Run 证据映射而非 scenario.citations
-
-  @req:r435 @human
-  场景: conclusion-not-queued-after-complete
-    - 必须成立：假如 Run 已 completed；当 用户查看结论节点卡片；那么 非「排队…」终态文案
-    假如 Run 已 completed
-    当 用户查看结论节点卡片
-    那么 非「排队…」终态文案
-
-  @req:r436 @human
-  场景: terminal-status-triggers-full-refresh
-    - 必须成立：假如 SSE 将 Run 变为 completed；当 客户端处理事件；那么 经 GET run 对齐节点 phase 与 evidenceIds
-    假如 SSE 将 Run 变为 completed
-    当 客户端处理事件
-    那么 经 GET run 对齐节点 phase 与 evidenceIds
-
-  @req:r437 @human
-  场景: awaiting-confirm-no-playing-banner
-    - 必须成立：假如 Run 为 awaiting_confirm；当 用户查看作业台横幅；那么 示等待确认且无探索 playing 横幅
-    假如 Run 为 awaiting_confirm
-    当 用户查看作业台横幅
-    那么 示等待确认且无探索 playing 横幅
+    - 当 Eden Run completed 且某节点 evidenceIds 非空时，打开该节点抽屉 MUST 展示至少一条证据摘要（标题或 snippet 至少其一）。
 
   @req:r437 @human
   场景: running-shows-playing
-    - 必须成立：假如 Run 为 running；当 用户查看 playing 状态；那么 playing 为 true 且无「已暂停」横幅
-    假如 Run 为 running
-    当 用户查看 playing 状态
-    那么 playing 为 true 且无「已暂停」横幅
-
-  @req:r438 @human
-  场景: eden-send-calls-chat-api
-    - 必须成立：假如 Eden Lab 已加载 Run 且节点抽屉打开；当 用户发送一条消息；那么 发出 POST chat 且 SSE 增量展示助手回复
-    假如 Eden Lab 已加载 Run 且节点抽屉打开
-    当 用户发送一条消息
-    那么 发出 POST chat 且 SSE 增量展示助手回复
-
-  @req:r438 @human
-  场景: eden-not-propose-node-chat
-    - 必须成立：假如 Eden 模式默认配置；当 用户发送消息；那么 MUST NOT 调用 fixture 专用节点对话函数
-    假如 Eden 模式默认配置
-    当 用户发送消息
-    那么 MUST NOT 调用 fixture 专用节点对话函数
-
-  @req:r439 @human
-  场景: accept-prune-via-http
-    - 必须成立：假如 Eden chat 展示 prune 提案；当 用户确认接受；那么 调用 POST prune 而非仅本地改图
-    假如 Eden chat 展示 prune 提案
-    当 用户确认接受
-    那么 调用 POST prune 而非仅本地改图
-
-  @req:r441 @human
-  场景: eden-list-revisions-from-api
-    - 必须成立：假如 Eden 报告页已打开且 Run 有 revisions；当 用户查看修订列表；那么 数据来自 GET revisions 而非 sessionStorage
-    假如 Eden 报告页已打开且 Run 有 revisions
-    当 用户查看修订列表
-    那么 数据来自 GET revisions 而非 sessionStorage
-
-  @req:r441 @human
-  场景: restore-revision-refreshes-lab
-    - 必须成立：假如 用户恢复某 revision；当 恢复成功；那么 图与报告反映快照内容
-    假如 用户恢复某 revision
-    当 恢复成功
-    那么 图与报告反映快照内容
-
-  @req:r442 @human
-  场景: eden-save-working-via-put
-    - 必须成立：假如 用户在 Eden 报告页编辑；当 保存草稿；那么 PUT report/working 成功且无 localStorage CoW
-    假如 用户在 Eden 报告页编辑
-    当 保存草稿
-    那么 PUT report/working 成功且无 localStorage CoW
-
-  @req:r442 @human
-  场景: eden-discard-working-via-api
-    - 必须成立：假如 Eden 报告存在 working 副本；当 用户丢弃；那么 调用服务端 discard 且 UI 回权威报告
-    假如 Eden 报告存在 working 副本
-    当 用户丢弃
-    那么 调用服务端 discard 且 UI 回权威报告
-
-  @req:r443 @human
-  场景: convert-report-to-note-toast
-    - 必须成立：假如 Eden 报告页用户转笔记且 API 成功；当 观察反馈；那么 成功 toast 且无强制对话框
-    假如 Eden 报告页用户转笔记且 API 成功
-    当 观察反馈
-    那么 成功 toast 且无强制对话框
+    - 当 Run status 为 running 时，playing 推断 MUST 为 true，且 MUST NOT 出现「已暂停」类矛盾文案。
 
   @req:r443 @human
   场景: convert-node-via-artifact-ref
-    - 必须成立：假如 Eden 节点抽屉用户转来源；当 API 成功；那么 请求体含 kind=node 与 nodeId
-    假如 Eden 节点抽屉用户转来源
-    当 API 成功
-    那么 请求体含 kind=node 与 nodeId
+    - Eden 节点抽屉内将节点转为来源时，请求体 MUST 含 ResearchArtifactRef kind=node 与对应 nodeId。
 
   @req:r445 @human
   场景: evidence-convert-note-calls-api
-    - 必须成立：假如 Eden 节点抽屉已列出至少一条证据；当 用户点该证据转为笔记；那么 请求体含 kind=evidence 与 evidenceId 且出现成功或失败 toast
-    假如 Eden 节点抽屉已列出至少一条证据
-    当 用户点该证据转为笔记
-    那么 请求体含 kind=evidence 与 evidenceId 且出现成功或失败 toast
-
-  @req:r445 @human
-  场景: fixture-evidence-convert-stubs
-    - 必须成立：假如 Lab 抽屉为 fixture 模式且有引用列表；当 用户点证据转为笔记；那么 仅 stub toast 且不调用 Eden convert API
-    假如 Lab 抽屉为 fixture 模式且有引用列表
-    当 用户点证据转为笔记
-    那么 仅 stub toast 且不调用 Eden convert API
+    - Eden 节点抽屉内将已列出证据转为笔记时，请求体 MUST 含 ResearchArtifactRef kind=evidence 与对应 evidenceId，且 MUST 出现成功或失败 toast。
 
   @req:r446 @human
   场景: toast-action-clickable
-    - 必须成立：假如 toast 以 success 与 action 展示；当 用户点击 action 标签；那么 执行 onClick（如打开工作区）
-    假如 toast 以 success 与 action 展示
-    当 用户点击 action 标签
-    那么 执行 onClick（如打开工作区）
-
-  @req:r446 @human
-  场景: convert-success-includes-workspace-action
-    - 必须成立：假如 Eden convertToNote 成功；当 观察成功 toast；那么 含打开工作区类可点击动作
-    假如 Eden convertToNote 成功
-    当 观察成功 toast
-    那么 含打开工作区类可点击动作
-
-  @req:r447 @human
-  场景: compose-default-medium-depth
-    - 必须成立：假如 Lab Compose 以 eden 模式打开且用户未改深度；当 查看深度控件；那么 默认选中中档
-    假如 Lab Compose 以 eden 模式打开且用户未改深度
-    当 查看深度控件
-    那么 默认选中中档
-
-  @req:r447 @human
-  场景: compose-create-sends-depth
-    - 必须成立：假如 用户将深度设为深并提交合法 Compose；当 Eden 创建 ResearchRun；那么 POST body 含 depth=deep
-    假如 用户将深度设为深并提交合法 Compose
-    当 Eden 创建 ResearchRun
-    那么 POST body 含 depth=deep
-
-  @req:r447 @human
-  场景: depth-budget-mapping-configurable
-    - 必须成立：假如 浅档预算映射需要调整；当 运维修改预算配置；那么 新档位映射生效且无需改前端
-    假如 浅档预算映射需要调整
-    当 运维修改预算配置
-    那么 新档位映射生效且无需改前端
-
-  @req:r448 @human
-  场景: eden-shows-progress-timeline
-    - 必须成立：假如 Eden Lab 已加载 running Run 且服务端有 progress 事件；当 用户打开进度面板；那么 可见结构化事件列表而非仅 console log 文本
-    假如 Eden Lab 已加载 running Run 且服务端有 progress 事件
-    当 用户打开进度面板
-    那么 可见结构化事件列表而非仅 console log 文本
-
-  @req:r448 @human
-  场景: sse-appends-to-ledger-panel
-    - 必须成立：假如 客户端已订阅 Run SSE；当 收到 progress 事件；那么 进度面板追加对应条目且 seq 单调
-    假如 客户端已订阅 Run SSE
-    当 收到 progress 事件
-    那么 进度面板追加对应条目且 seq 单调
-
-  @req:r449 @human
-  场景: budget-kind-copy-and-actions
-    - 必须成立：假如 Eden Run 为 awaiting_confirm 且 confirmKind=budget；当 用户查看确认条；那么 展示预算触顶可加购类文案且提供 continue 与 finish_report
-    假如 Eden Run 为 awaiting_confirm 且 confirmKind=budget
-    当 用户查看确认条
-    那么 展示预算触顶可加购类文案且提供 continue 与 finish_report
-
-  @req:r449 @human
-  场景: expand-branch-highlight-and-actions
-    - 必须成立：假如 Eden Run 为 awaiting_confirm、confirmKind=expand_branch 且 confirmBranchNodeId 已设；当 用户查看图与确认条；那么 对应节点高亮且可见 approve_branch 与 skip_branch
-    假如 Eden Run 为 awaiting_confirm、confirmKind=expand_branch 且 confirmBranchNodeId 已设
-    当 用户查看图与确认条
-    那么 对应节点高亮且可见 approve_branch 与 skip_branch
-
-  @req:r449 @human
-  场景: no-step-plan-approval-ui
-    - 必须成立：假如 Eden Lab 处于 awaiting_confirm；当 用户浏览作业台；那么 不出现逐步计划审批 UI
-    假如 Eden Lab 处于 awaiting_confirm
-    当 用户浏览作业台
-    那么 不出现逐步计划审批 UI
-
-  @req:r450 @human
-  场景: eden-progress-maps-evaluate
-    - 必须成立：假如 Eden Run 进行中且 SSE progress 上报 evaluate 类 unit_finished；当 用户查看顶栏相位；那么 展示 evaluate 或产品等价标签而非仅 running
-    假如 Eden Run 进行中且 SSE progress 上报 evaluate 类 unit_finished
-    当 用户查看顶栏相位
-    那么 展示 evaluate 或产品等价标签而非仅 running
+    - 共享 toast 以 success 与 action 展示时，用户点击 action 标签 MUST 执行其 onClick（如打开工作区）。
 
   @req:r450 @human
   场景: eden-no-progress-stays-explore
-    - 必须成立：假如 Eden Run 为 running 且尚无 progress 事件；当 用户查看顶栏相位；那么 展示 explore（不按节点 phase 众数猜测）
-    假如 Eden Run 为 running 且尚无 progress 事件
-    当 用户查看顶栏相位
-    那么 展示 explore（不按节点 phase 众数猜测）
-
-  @req:r451 @human
-  场景: restore-then-graph-reloads-run
-    - 必须成立：假如 Eden 报告页已恢复某 revision 且用户持有 rid；当 用户返回 /research-lab 图视图；那么 画布节点/边与 GET run 返回的 restored 图一致
-    假如 Eden 报告页已恢复某 revision 且用户持有 rid
-    当 用户返回 /research-lab 图视图
-    那么 画布节点/边与 GET run 返回的 restored 图一致
-
-  @req:r451 @human
-  场景: restore-triggers-get
-    - 必须成立：假如 Eden restore API 成功；当 客户端处理响应；那么 触发等效 GET 全量刷新
-    假如 Eden restore API 成功
-    当 客户端处理响应
-    那么 触发等效 GET 全量刷新
-
-  @req:r452 @human
-  场景: slash-opens-lab
-    - 必须成立：假如 用户在工作区 chat；当 输入 /research 或 /深研 并确认发送；那么 导航至 /research-lab/:nid Compose，且该文本未作为 QA 发出
-    假如 用户在工作区 chat
-    当 输入 /research 或 /深研 并确认发送
-    那么 导航至 /research-lab/:nid Compose，且该文本未作为 QA 发出
+    - 当 Eden Run 为 running 且尚无 progress 事件时，顶栏相位 MUST 展示基础相位（如 explore），MUST NOT 以节点 phase 众数猜测富化相位。
 
   @req:r452 @human
   场景: slash-compose-prefills-topic
-    - 必须成立：假如 用户在工作区 chat；当 输入 /research <topic> 并确认发送；那么 打开 Lab Compose 且 topic 预填，不立即 createResearchRun
-    假如 用户在工作区 chat
-    当 输入 /research <topic> 并确认发送
-    那么 打开 Lab Compose 且 topic 预填，不立即 createResearchRun
-
-  @req:r452 @human
-  场景: flask-entry-still-primary
-    - 必须成立：假如 用户在工作区；当 查找深研主入口；那么 烧瓶与 Lab Compose 仍可达且未因 chat 独占
-    假如 用户在工作区
-    当 查找深研主入口
-    那么 烧瓶与 Lab Compose 仍可达且未因 chat 独占
-
-  @req:r453 @human
-  场景: eden-e2e-compose-to-convert
-    - 必须成立：假如 e2e 环境 VITE_LAB_FIXTURE 未设且 server 可用；当 执行 @p0 Eden Lab 用例；那么 走完 Compose→图→confirm→报告→convert 且无 fixture 权威态
-    假如 e2e 环境 VITE_LAB_FIXTURE 未设且 server 可用
-    当 执行 @p0 Eden Lab 用例
-    那么 走完 Compose→图→confirm→报告→convert 且无 fixture 权威态
+    - 当用户在工作区 chat 输入带 topic 的深研 slash 并确认发送时，Lab Compose MUST 打开且 topic MUST 预填，MUST NOT 立即创建 ResearchRun。
 
   @req:r453 @human
   场景: eden-graph-has-nodes-edges
-    - 必须成立：假如 Eden Run 由 e2e Compose 创建；当 等待图稳定；那么 research-lab-graph 可见且含至少一条边与一个研究节点
-    假如 Eden Run 由 e2e Compose 创建
-    当 等待图稳定
-    那么 research-lab-graph 可见且含至少一条边与一个研究节点
-
-  @req:r454 @human
-  场景: compose-sends-model-id
-    - 必须成立：假如 用户在 Compose 选择某 model 并创建；当 查看 POST body；那么 含对应 modelId
-    假如 用户在 Compose 选择某 model 并创建
-    当 查看 POST body
-    那么 含对应 modelId
-
-  @req:r454 @human
-  场景: failed-shows-retry-with-model
-    - 必须成立：假如 Run 为结案 failed；当 用户查看作业台；那么 可见错误与重试结案及换模控件
-    假如 Run 为结案 failed
-    当 用户查看作业台
-    那么 可见错误与重试结案及换模控件
-
-  @req:r455 @human
-  场景: failed-no-heuristic-report
-    - 必须成立：假如 Run 结案 failed 且无权威 report；当 用户打开报告面或主表面；那么 不展示证据清单冒充报告
-    假如 Run 结案 failed 且无权威 report
-    当 用户打开报告面或主表面
-    那么 不展示证据清单冒充报告
-
-  @req:r457 @human
-  场景: demo-route-under-prefix
-    - 必须成立：假如 DEV 或 VITE_LAB_DEMO=1；当 打开 /demo/research-lab/:nid；那么 渲染 demo/fixture 作业台
-    假如 DEV 或 VITE_LAB_DEMO=1
-    当 打开 /demo/research-lab/:nid
-    那么 渲染 demo/fixture 作业台
+    - @p0 Eden Lab 用例 MUST 经稳定锚点（如 research-lab-graph testid）断言画布可见且至少渲染一个研究节点与一条边。
 
   @req:r457 @human
   场景: demo-not-registered-in-prod-default
-    - 必须成立：假如 生产构建未设 VITE_LAB_DEMO；当 请求 /demo/research-lab/1；那么 不注册 demo Lab 页（回落非 Lab 或不可达）
-    假如 生产构建未设 VITE_LAB_DEMO
-    当 请求 /demo/research-lab/1
-    那么 不注册 demo Lab 页（回落非 Lab 或不可达）
-
-  @req:r457 @human
-  场景: product-page-no-controller-union
-    - 必须成立：假如 查阅产品 ResearchLabPage；当 检查 controller 分支；那么 无 fixture/eden 双模联合 as 分支
-    假如 查阅产品 ResearchLabPage
-    当 检查 controller 分支
-    那么 无 fixture/eden 双模联合 as 分支
-
-  @req:r457 @human
-  场景: default-path-not-fixture-authority
-    - 必须成立：假如 默认配置打开 Lab 主路径并开始研究；当 推进图状态；那么 权威态来自 ResearchRun 而非 xlsx-lib timer
-    假如 默认配置打开 Lab 主路径并开始研究
-    当 推进图状态
-    那么 权威态来自 ResearchRun 而非 xlsx-lib timer
-
-  @req:r458 @human
-  场景: cl-prd-demo-skill-exists
-    - 必须成立：假如 仓库已检出；当 查阅 demo-first 流程文档；那么 存在且描述 demo-first→Eden 接线流程
-    假如 仓库已检出
-    当 查阅 demo-first 流程文档
-    那么 存在且描述 demo-first→Eden 接线流程
-
-  @req:r459 @human
-  场景: lab-request-reexpand-calls-api
-    - 必须成立：假如 Eden Lab 已加载 Run；当 用户点再扩展；那么 发出 POST request-reexpand
-    假如 Eden Lab 已加载 Run
-    当 用户点再扩展
-    那么 发出 POST request-reexpand
-
-  @req:r459 @human
-  场景: lab-reexpand-confirm-actions
-    - 必须成立：假如 Run confirmKind=reexpand；当 用户点批准或跳过；那么 发出对应 confirm action
-    假如 Run confirmKind=reexpand
-    当 用户点批准或跳过
-    那么 发出对应 confirm action
-
-  @req:r460 @human
-  场景: lab-fork-run-calls-api
-    - 必须成立：假如 Eden 报告页已选中某 revision；当 用户点基于此快照新开研究；那么 发出 POST fork-run
-    假如 Eden 报告页已选中某 revision
-    当 用户点基于此快照新开研究
-    那么 发出 POST fork-run
-
-  @req:r461 @human
-  场景: add-budget-button-calls-api
-    - 必须成立：假如 Eden Run 为 running；当 用户点增加检索预算；那么 发出加购命令口请求
-    假如 Eden Run 为 running
-    当 用户点增加检索预算
-    那么 发出加购命令口请求
-
-  @req:r461 @human
-  场景: agent-addon-same-port
-    - 必须成立：假如 节点 chat 提出加购且用户接受；当 客户端执行接受；那么 调用与常驻按钮同一加购命令口
-    假如 节点 chat 提出加购且用户接受
-    当 客户端执行接受
-    那么 调用与常驻按钮同一加购命令口
-
-  @req:r462 @human
-  场景: partial-completion-banner
-    - 必须成立：假如 Run completed 且仍有 missing 研究节点；当 用户查看 Lab；那么 可见部分完成或预算用尽提示
-    假如 Run completed 且仍有 missing 研究节点
-    当 用户查看 Lab
-    那么 可见部分完成或预算用尽提示
+    - 生产构建未设 VITE_LAB_DEMO 时 /demo/research-lab/* 路由 MUST NOT 注册，请求回落非 Lab 页面或不可达。

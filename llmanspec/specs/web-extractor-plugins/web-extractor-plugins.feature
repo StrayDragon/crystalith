@@ -13,6 +13,14 @@
   场景: Extractor selection supports preference and controlled fallback
     - 系统 MUST 支持对单次 fetch 指定 `preferredExtractor`，并 MUST 支持按配置定义的 fallback order；fallback MUST 仅在显式开启时发生，且每次尝试都必须可观测（日志/诊断信息）。
 
+  @req:r113 @human
+  场景: preferred-extractor-is-attempted-first
+    - 用户指定 `preferredExtractor=X` 且 X 可用时，系统 SHALL 首先尝试 X。
+
+  @req:r113 @human
+  场景: no-extractors-available-produces-a-stable-failure
+    - 当前配置与插件集合下没有任何可用提取器时，fetch 模式 SHALL 失败并返回稳定的错误码与恢复提示（例如「安装/启用官方 extractor 插件」）。
+
   @req:r150 @human
   场景: Extractor availability is checkable and listable
     - 系统 MUST 提供对外可查询的"提取器可用性清单"，包含：提取器类型、是否启用、是否可用、不可用原因与恢复提示（如适用）。
@@ -28,52 +36,3 @@
   @req:extractors-full-response @human
   场景: GET extractors MUST return full ExtractorsListResponse
     - GET /extractors MUST 返回完整 ExtractorsListResponse（每提取器 available/displayName/priority/requiresApiKey/recoveryHint + defaultExtractor + fallbackEnabled），MUST NOT 只返回存储的策略行
-
-  @req:r55 @human
-  场景: extractor-availability-depends-on-installed-enabled-plugins
-    - 必须成立：当 运维未安装某提取器插件或在 `plugins.disabled` 中禁用它；那么 系统 SHALL 不将该提取器计为可用
-    当 运维未安装某提取器插件或在 `plugins.disabled` 中禁用它
-    那么 系统 SHALL 不将该提取器计为可用
-
-  @req:r113 @human
-  场景: preferred-extractor-is-attempted-first
-    - 必须成立：当 用户指定 `preferredExtractor=X` 且 X 可用；那么 系统 SHALL 首先尝试 X
-    当 用户指定 `preferredExtractor=X` 且 X 可用
-    那么 系统 SHALL 首先尝试 X
-
-  @req:r113 @human
-  场景: no-extractors-available-produces-a-stable-failure
-    - 必须成立：当 系统在当前配置与插件集合下没有任何可用提取器；那么 fetch 模式 SHALL 失败并返回稳定的错误码与恢复提示（例如“安装/启用官方 extractor 插件”）
-    当 系统在当前配置与插件集合下没有任何可用提取器
-    那么 fetch 模式 SHALL 失败并返回稳定的错误码与恢复提示（例如“安装/启用官方 extractor 插件”）
-
-  @req:r150 @human
-  场景: frontend-displays-extractor-diagnostics
-    - 必须成立：当 前端请求提取器清单端点；那么 响应 SHALL 包含每个提取器的 enabled/available 状态
-    当 前端请求提取器清单端点
-    那么 响应 SHALL 包含每个提取器的 enabled/available 状态
-
-  @req:r185 @human
-  场景: user-disables-an-extractor-for-a-notebook
-    - 必须成立：当 用户在 UI 中对某 notebook 关闭某 extractor；那么 后端 SHALL 持久化该覆盖并在 extractor 清单中反映 `enabled=false`
-    当 用户在 UI 中对某 notebook 关闭某 extractor
-    那么 后端 SHALL 持久化该覆盖并在 extractor 清单中反映 `enabled=false`
-
-  @req:r185 @human
-  场景: notebook-overrides-are-writable-via-api
-    - 必须成立：当 客户端通过 `PATCH /v2/notebooks/{notebookId}/sources/extractors` 更新某 notebook 的 extractor 策略（mode 与启用/禁用覆盖）；那么 后端 SHALL 持久化该覆盖
-    当 客户端通过 `PATCH /v2/notebooks/{notebookId}/sources/extractors` 更新某 notebook 的 extractor 策略（mode 与启用/禁用覆盖）
-    那么 后端 SHALL 持久化该覆盖
-
-  @req:r217 @human
-  场景: retryable-extractor-errors-are-detected
-    - 必须成立：当 提取器因网络/服务不可用导致失败；那么 系统 SHALL 能将该错误判定为可重试并按策略重试
-    当 提取器因网络/服务不可用导致失败
-    那么 系统 SHALL 能将该错误判定为可重试并按策略重试
-
-  @req:extractors-full-response @human
-  场景: client-lists-extractors
-    - 必须成立：假如 客户端请求 GET /extractors；当 构建响应；那么 系统 SHALL 返回每提取器的 available/displayName/priority/requiresApiKey/recoveryHint 字段
-    假如 客户端请求 GET /extractors
-    当 构建响应
-    那么 系统 SHALL 返回每提取器的 available/displayName/priority/requiresApiKey/recoveryHint 字段

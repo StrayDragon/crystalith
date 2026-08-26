@@ -7,7 +7,7 @@
 
   @req:r27 @human
   场景: Configuration source priority chain
-    - 系统 MUST 支持三级配置源优先级链：1) 环境变量（CL_* 前缀）最高优先级；2) YAML 配置文件（config/app.yaml）中间优先级；3) 硬编码默认值最低优先级。高优先级源 MUST 覆盖低优先级源的对应键。MUST NOT 出现配置源绕过优先级链直接生效的行为。
+    - 系统 MUST 支持三级配置源优先级链：1) 环境变量（CL_* 前缀）最高优先级；2) YAML 配置文件（config/app.yaml）中间优先级；3) 硬编码默认值最低优先级。高优先级源 MUST 覆盖低优先级源的对应键（如 storage.data_root 配置为 ./data_local 且环境变量 CL_DATA_ROOT=/prod 并存时，数据根 accessor SHALL 返回 /prod）。MUST NOT 出现配置源绕过优先级链直接生效的行为。
 
   @req:r85 @human
   场景: CL_* environment variable naming convention
@@ -36,72 +36,3 @@
   @req:r8 @human
   场景: Configuration must be deterministic
     - 同一组环境变量 + 同一份 config/app.yaml MUST 产生完全相同的 AppConfig 对象。配置加载 MUST 是纯函数（无随机、无网络 I/O、无时间依赖）。secret.env 的缺失 MUST 不改变行为（仅日志警告），应用继续以环境变量提供的值运行。
-
-  @req:r27 @human
-  场景: happy
-    - 必须成立：当 设置 CL_DATA_ROOT=/custom，同时 config 中 storage.data_root=./data；那么 数据根 accessor 返回 /custom
-    当 设置 CL_DATA_ROOT=/custom，同时 config 中 storage.data_root=./data
-    那么 数据根 accessor 返回 /custom
-
-  @req:r27 @human
-  场景: precedence_env_overrides_yaml
-    - 必须成立：假如 storage.data_root 设为 ./data_local；当 设置 CL_DATA_ROOT=/prod；那么 数据根 accessor 返回 /prod（env 优先）
-    假如 storage.data_root 设为 ./data_local
-    当 设置 CL_DATA_ROOT=/prod
-    那么 数据根 accessor 返回 /prod（env 优先）
-
-  @req:r85 @human
-  场景: naming_new_config
-    - 必须成立：假如 新增某个功能的 CL_ 配置；当 检查命名；那么 前缀为 CL_，SCREAMING_SNAKE_CASE
-    假如 新增某个功能的 CL_ 配置
-    当 检查命名
-    那么 前缀为 CL_，SCREAMING_SNAKE_CASE
-
-  @req:r122 @human
-  场景: loading_failure
-    - 必须成立：假如 config/app.yaml 语法错误；当 启动 server；那么 服务拒绝启动，抛出可读错误
-    假如 config/app.yaml 语法错误
-    当 启动 server
-    那么 服务拒绝启动，抛出可读错误
-
-  @req:r158 @human
-  场景: typed_accessor_in_code
-    - 必须成立：假如 需要读取 embedding chunk_size；当 调用 getEmbeddingSettings()；那么 返回 typed EmbeddingSettings 对象
-    假如 需要读取 embedding chunk_size
-    当 调用 getEmbeddingSettings()
-    那么 返回 typed EmbeddingSettings 对象
-
-  @req:r193 @human
-  场景: storage_alignment
-    - 必须成立：假如 内容存储默认基目录；当 检查默认值；那么 派生自数据根 accessor，非 ~/.crystalith/storage
-    假如 内容存储默认基目录
-    当 检查默认值
-    那么 派生自数据根 accessor，非 ~/.crystalith/storage
-
-  @req:r193 @human
-  场景: data_root_env
-    - 必须成立：假如 CL_DATA_ROOT 设为 /mnt/data；当 读取数据根 accessor；那么 返回 /mnt/data
-    假如 CL_DATA_ROOT 设为 /mnt/data
-    当 读取数据根 accessor
-    那么 返回 /mnt/data
-
-  @req:r224 @human
-  场景: timeout_in_config
-    - 必须成立：假如 新增一个 HTTP 调用超时；当 在 config 中定义并设置默认值；那么 业务代码通过 accessor 读取，无硬编码数字
-    假如 新增一个 HTTP 调用超时
-    当 在 config 中定义并设置默认值
-    那么 业务代码通过 accessor 读取，无硬编码数字
-
-  @req:r249 @human
-  场景: section_naming
-    - 必须成立：假如 新增一个配置段落；当 检查段落名；那么 snake_case 且与 Zod schema 名一致
-    假如 新增一个配置段落
-    当 检查段落名
-    那么 snake_case 且与 Zod schema 名一致
-
-  @req:r8 @human
-  场景: deterministic_load
-    - 必须成立：假如 同一份 YAML + 同一组 env；当 两次调用 loadConfig()；那么 返回完全相同的 AppConfig 对象
-    假如 同一份 YAML + 同一组 env
-    当 两次调用 loadConfig()
-    那么 返回完全相同的 AppConfig 对象

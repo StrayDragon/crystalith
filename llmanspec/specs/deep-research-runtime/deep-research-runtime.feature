@@ -185,520 +185,70 @@
   场景: Partial completion honesty on budget finish
     - 当用户在搜索预算触顶后选择 finish_report（或等价出报告）且仍存在未完成/missing 的 research 节点时，权威报告 MUST 明示预算用尽与未覆盖主题（或部分完成），MUST NOT 将残缺研究包装为已完整覆盖；已有证据仍 MUST 正常综合。
 
-  @req:r300 @human
-  场景: run-holds-graph-and-report
-    - 必须成立：假如 用户已创建一次深研 Run；当 系统推进研究并生成报告；那么 图与权威报告及 citation map 均挂在该 ResearchRun 上，而非仅存在于 Output 行
-    假如 用户已创建一次深研 Run
-    当 系统推进研究并生成报告
-    那么 图与权威报告及 citation map 均挂在该 ResearchRun 上，而非仅存在于 Output 行
-
-  @req:r301 @human
-  场景: create-returns-run-id
-    - 必须成立：假如 notebook 存在且请求合法；当 客户端 POST 创建深研；那么 系统返回 ResearchRun id 与初始状态
-    假如 notebook 存在且请求合法
-    当 客户端 POST 创建深研
-    那么 系统返回 ResearchRun id 与初始状态
-
-  @req:r302 @human
-  场景: list-requires-notebook
-    - 必须成立：假如 系统中存在多个 notebook 的 Run；当 客户端省略 notebook 作用域调用 list；那么 系统拒绝全表列举
-    假如 系统中存在多个 notebook 的 Run
-    当 客户端省略 notebook 作用域调用 list
-    那么 系统拒绝全表列举
-
-  @req:r303 @human
-  场景: websearch-shared
-    - 必须成立：假如 顶栏直接搜索与深研均需外网检索；当 深研 Runtime 发起 web 搜索；那么 走与 sources 网搜相同的 searchWeb 实现
-    假如 顶栏直接搜索与深研均需外网检索
-    当 深研 Runtime 发起 web 搜索
-    那么 走与 sources 网搜相同的 searchWeb 实现
-
-  @req:r304 @human
-  场景: toggles-require-explicit-selection
-    - 必须成立：假如 用户打开用来源开关但未在深研台勾选来源；当 尝试创建深研 Run；那么 系统拒绝创建且不得静默改为仅外网
-    假如 用户打开用来源开关但未在深研台勾选来源
-    当 尝试创建深研 Run
-    那么 系统拒绝创建且不得静默改为仅外网
-
-  @req:r304 @human
-  场景: omit-defaults-web-first
-    - 必须成立：假如 客户端仅传 topic、省略通道字段；当 POST 创建深研；那么 Run 的 useNotebookSources=false 且 allowWeb=true
-    假如 客户端仅传 topic、省略通道字段
-    当 POST 创建深研
-    那么 Run 的 useNotebookSources=false 且 allowWeb=true
-
-  @req:r305 @human
-  场景: default-medium-tier
-    - 必须成立：假如 用户未指定深度档位；当 创建深研 Run；那么 系统使用默认中档预算（数值来自配置的默认映射）
-    假如 用户未指定深度档位
-    当 创建深研 Run
-    那么 系统使用默认中档预算（数值来自配置的默认映射）
-
-  @req:r306 @human
-  场景: budget-confirm
-    - 必须成立：假如 Run 外网搜索预算已触顶且仍需搜索；当 主控需要继续消耗搜索额度；那么 进入待确认并提供加购继续或出报告动作
-    假如 Run 外网搜索预算已触顶且仍需搜索
-    当 主控需要继续消耗搜索额度
-    那么 进入待确认并提供加购继续或出报告动作
-
   @req:r306 @human
   场景: no-mid-wave-budget-confirm
-    - 必须成立：假如 波次结束且 searchesUsed 大于 0 但小于 maxSearches；当 观察 Run 状态；那么 不因剩余额度进入 confirmKind=budget
-    假如 波次结束且 searchesUsed 大于 0 但小于 maxSearches
-    当 观察 Run 状态
-    那么 不因剩余额度进入 confirmKind=budget
-
-  @req:r307 @human
-  场景: convert-note-footnotes
-    - 必须成立：假如 Run 已有带 citation map 的终稿；当 用户显式 convertToNote；那么 写入 PARAGRAPH 且正文含 GFM 脚注投影
-    假如 Run 已有带 citation map 的终稿
-    当 用户显式 convertToNote
-    那么 写入 PARAGRAPH 且正文含 GFM 脚注投影
-
-  @req:r308 @human
-  场景: convert-source-rag
-    - 必须成立：假如 用户将证据或报告转为来源；当 转化完成并完成索引；那么 对话检索可以命中转化内容
-    假如 用户将证据或报告转为来源
-    当 转化完成并完成索引
-    那么 对话检索可以命中转化内容
-
-  @req:r309 @human
-  场景: structured-report-ssot
-    - 必须成立：假如 报告已合成；当 客户端读取 Run 报告；那么 返回结构化章节与全局 citation map
-    假如 报告已合成
-    当 客户端读取 Run 报告
-    那么 返回结构化章节与全局 citation map
-
-  @req:r310 @human
-  场景: prune-while-running-keeps-merge
-    - 必须成立：假如 Run 处于 running 且某研究节点有 merge 到结论；当 用户对该节点执行剪枝；那么 该节点（及 r316 闭包内独占下游）标为 pruned，后续编排不再扩展该支路，且 merge 边保留为失败汇入
-    假如 Run 处于 running 且某研究节点有 merge 到结论
-    当 用户对该节点执行剪枝
-    那么 该节点（及 r316 闭包内独占下游）标为 pruned，后续编排不再扩展该支路，且 merge 边保留为失败汇入
-
-  @req:r311 @human
-  场景: stream-status-events
-    - 必须成立：假如 客户端已订阅 Run 的 SSE stream；当 Run 从 queued 进入 running；那么 客户端收到 status 事件且可继续接收 graph_patch、log 与 progress
-    假如 客户端已订阅 Run 的 SSE stream
-    当 Run 从 queued 进入 running
-    那么 客户端收到 status 事件且可继续接收 graph_patch、log 与 progress
-
-  @req:r312 @human
-  场景: cancel-persists-checkpoint
-    - 必须成立：假如 Run 正在 running 且已有节点完成；当 用户调用 cancel；那么 状态变为 cancelled 且最近 checkpoint 已落盘
-    假如 Run 正在 running 且已有节点完成
-    当 用户调用 cancel
-    那么 状态变为 cancelled 且最近 checkpoint 已落盘
-
-  @req:r313 @human
-  场景: evidence-row-for-convert
-    - 必须成立：假如 Run 已收集一条 web 证据；当 用户以 kind=evidence 调用 convertToSource；那么 转化引用该 evidence 稳定 id 且入库可检索
-    假如 Run 已收集一条 web 证据
-    当 用户以 kind=evidence 调用 convertToSource
-    那么 转化引用该 evidence 稳定 id 且入库可检索
+    - 若波次结束且 searchesUsed 大于 0 但小于 maxSearches，则不得因剩余搜索额度而进入 confirmKind=budget
 
   @req:r314 @human
   场景: invalid-state-code
-    - 必须成立：假如 Run 已 completed；当 客户端对该 Run 调用 prune；那么 返回 RESEARCH_INVALID_STATE 且图保持只读
-    假如 Run 已 completed
-    当 客户端对该 Run 调用 prune
-    那么 返回 RESEARCH_INVALID_STATE 且图保持只读
-
-  @req:r315 @human
-  场景: graph-patch-upsert
-    - 必须成立：假如 客户端已订阅 stream；当 主控新增一节点与一条边；那么 收到 graph_patch 含对应 nodes 与 edges upsert
-    假如 客户端已订阅 stream
-    当 主控新增一节点与一条边
-    那么 收到 graph_patch 含对应 nodes 与 edges upsert
+    - 若 Run 已 completed，则对其调用 prune 必须返回 RESEARCH_INVALID_STATE 且图保持只读
 
   @req:r316 @human
   场景: shared-child-stays-live
-    - 必须成立：假如 图中 libs 与 perf 均指向共享子节点 stream，且 libs 另有 merge 到 conclusion；当 用户对 libs 执行 prune；那么 libs 标为 pruned；stream 因仍有活父 perf 保持未剪枝；conclusion 不被剪枝；libs→conclusion 的 merge 边仍在
-    假如 图中 libs 与 perf 均指向共享子节点 stream，且 libs 另有 merge 到 conclusion
-    当 用户对 libs 执行 prune
-    那么 libs 标为 pruned；stream 因仍有活父 perf 保持未剪枝；conclusion 不被剪枝；libs→conclusion 的 merge 边仍在
+    - 若 libs 与 perf 均指向共享子节点 stream 且 libs 另有 merge 到 conclusion，则对 libs 执行 prune 后：libs 必须标为 pruned；stream 因仍有活父 perf 必须保持未剪枝；conclusion 不得被剪枝；libs→conclusion 的 merge 边必须仍在
 
   @req:r316 @human
   场景: exclusive-child-cascades
-    - 必须成立：假如 data 仅有独占子 minimize，minimize merge 到 conclusion；当 用户对 data 执行 prune；那么 data 与 minimize 均标为 pruned；minimize→conclusion 的 merge 边保留；conclusion 不被剪枝
-    假如 data 仅有独占子 minimize，minimize merge 到 conclusion
-    当 用户对 data 执行 prune
-    那么 data 与 minimize 均标为 pruned；minimize→conclusion 的 merge 边保留；conclusion 不被剪枝
+    - 若 data 仅有独占子 minimize 且 minimize merge 到 conclusion，则对 data 执行 prune 后 data 与 minimize 必须均标为 pruned；minimize→conclusion 的 merge 边必须保留；conclusion 不得被剪枝
 
   @req:r316 @human
   场景: reject-protected-root
-    - 必须成立：假如 Run 处于 running 且存在 node_root_*；当 客户端对该 root 调用 prune；那么 请求被拒绝且图不变
-    假如 Run 处于 running 且存在 node_root_*
-    当 客户端对该 root 调用 prune
-    那么 请求被拒绝且图不变
-
-  @req:r317 @human
-  场景: seed-has-one-conclusion
-    - 必须成立：假如 Run 刚进入 running；当 内核完成种子图构建；那么 图中恰好一个 question 与一个 conclusion（或兼容前缀），且二者可被客户端识别
-    假如 Run 刚进入 running
-    当 内核完成种子图构建
-    那么 图中恰好一个 question 与一个 conclusion（或兼容前缀），且二者可被客户端识别
-
-  @req:r318 @human
-  场景: skip-pruned-unit
-    - 必须成立：假如 某 research 节点已被 prune 且仍排在调度队列；当 调度器准备执行该节点单元；那么 单元被跳过且不写入新摘要，SSE 可继续推进其他活节点
-    假如 某 research 节点已被 prune 且仍排在调度队列
-    当 调度器准备执行该节点单元
-    那么 单元被跳过且不写入新摘要，SSE 可继续推进其他活节点
+    - 若 Run 处于 running 且存在 node_root_* 节点，则对该 root 的 prune 请求必须被拒绝且图保持不变
 
   @req:r318 @human
   场景: cancel-aborts-active
-    - 必须成立：假如 Run 正在执行某节点的检索或综合；当 用户调用 cancel；那么 活动单元中止，状态进入 cancelled（或协作收尾至 cancelled）且 checkpoint 已落盘
-    假如 Run 正在执行某节点的检索或综合
-    当 用户调用 cancel
-    那么 活动单元中止，状态进入 cancelled（或协作收尾至 cancelled）且 checkpoint 已落盘
-
-  @req:r319 @human
-  场景: approve-adds-merge
-    - 必须成立：假如 Run 处于 awaiting_confirm 且 confirmKind=expand_branch；当 用户 approve_branch；那么 新 research 节点存在，并有指向唯一 conclusion 的 merge 边
-    假如 Run 处于 awaiting_confirm 且 confirmKind=expand_branch
-    当 用户 approve_branch
-    那么 新 research 节点存在，并有指向唯一 conclusion 的 merge 边
+    - 若某节点的检索或综合正在进行时用户调用 cancel，则活动单元必须中止、状态进入 cancelled（或协作收尾至 cancelled）且 checkpoint 已落盘
 
   @req:r320 @human
   场景: reject-client-authored-closure
-    - 必须成立：假如 客户端试图用非命令口方式提交任意节点集合为权威剪枝结果；当 调用未合约化的整图写入或等价接口；那么 请求被拒绝或不存在该接口，图仅能经 prune 等命令口变更
-    假如 客户端试图用非命令口方式提交任意节点集合为权威剪枝结果
-    当 调用未合约化的整图写入或等价接口
-    那么 请求被拒绝或不存在该接口，图仅能经 prune 等命令口变更
-
-  @req:r321 @human
-  场景: patch-query-on-research-node
-    - 必须成立：假如 Run 为 running 且存在可编辑 research 节点；当 客户端 PATCH 其 query；那么 返回更新后的 Run 或随后 graph_patch 含新 query
-    假如 Run 为 running 且存在可编辑 research 节点
-    当 客户端 PATCH 其 query
-    那么 返回更新后的 Run 或随后 graph_patch 含新 query
-
-  @req:r322 @human
-  场景: chat-does-not-auto-prune
-    - 必须成立：假如 节点 chat 流提出 prune 提案；当 用户尚未确认；那么 图上该节点仍未 pruned
-    假如 节点 chat 流提出 prune 提案
-    当 用户尚未确认
-    那么 图上该节点仍未 pruned
+    - 客户端以非命令口方式提交任意节点集合作为权威剪枝结果时，请求必须被拒绝（或该接口不存在），图必须仅能经 prune 等命令口变更
 
   @req:r322 @human
   场景: chat-separate-from-run-stream
-    - 必须成立：假如 客户端已订阅 Run stream；当 发起节点 chat；那么 chat 正文事件不出现在 Run stream 事件名集合中
-    假如 客户端已订阅 Run stream
-    当 发起节点 chat
-    那么 chat 正文事件不出现在 Run stream 事件名集合中
-
-  @req:r323 @human
-  场景: create-and-list-revision
-    - 必须成立：假如 Run 已有 graph 与 report；当 用户创建 revision 后列表；那么 列表含新快照且可读回 graph/report 内容
-    假如 Run 已有 graph 与 report
-    当 用户创建 revision 后列表
-    那么 列表含新快照且可读回 graph/report 内容
-
-  @req:r324 @human
-  场景: research-tests-green-after-align
-    - 必须成立：假如 合约与 Lab 设计语义对齐完成；当 运行 server research 测试套件；那么 全部通过且 research 路由仍可创建 Run
-    假如 合约与 Lab 设计语义对齐完成
-    当 运行 server research 测试套件
-    那么 全部通过且 research 路由仍可创建 Run
-
-  @req:r325 @human
-  场景: lab-only-capability-documented
-    - 必须成立：假如 某 Lab 能力不进 API；当 查阅能力清单/合约；那么 该能力被标为 lab-only，而非伪装成功
-    假如 某 Lab 能力不进 API
-    当 查阅能力清单/合约
-    那么 该能力被标为 lab-only，而非伪装成功
-
-  @req:r326 @human
-  场景: decompose-emits-branches-and-merges
-    - 必须成立：假如 Run 已 seed 且 planner 成功；当 内核完成拆解；那么 graph 含多个 research 节点、question 发出 decompose 边且各活节点有 merge 至 conclusion
-    假如 Run 已 seed 且 planner 成功
-    当 内核完成拆解
-    那么 graph 含多个 research 节点、question 发出 decompose 边且各活节点有 merge 至 conclusion
-
-  @req:r326 @human
-  场景: planner-failure-falls-back-question-only
-    - 必须成立：假如 planner 返回非法或解析失败；当 运行循环继续；那么 仅 question 路径执行工作单元且不得假装多分支已成功
-    假如 planner 返回非法或解析失败
-    当 运行循环继续
-    那么 仅 question 路径执行工作单元且不得假装多分支已成功
+    - 已订阅 Run stream 的客户端发起节点 chat 时，chat 正文事件必须不出现在 Run stream 的事件名集合中
 
   @req:r326 @human
   场景: max-nodes-respected
-    - 必须成立：假如 Run depth=shallow 且 maxNodes=12；当 planner 提议超限支路；那么 服务端裁剪或拒绝扩展且节点数不超过预算
-    假如 Run depth=shallow 且 maxNodes=12
-    当 planner 提议超限支路
-    那么 服务端裁剪或拒绝扩展且节点数不超过预算
-
-  @req:r327 @human
-  场景: drain-all-research-nodes
-    - 必须成立：假如 Run 经拆解含三个活 research 节点；当 运行循环执行调度排空；那么 每个节点均完成 work-unit 且 evidenceIds 写回
-    假如 Run 经拆解含三个活 research 节点
-    当 运行循环执行调度排空
-    那么 每个节点均完成 work-unit 且 evidenceIds 写回
+    - 若 planner 提议的支路会使节点数超过 Run.maxNodes 预算，则服务端必须裁剪或拒绝扩展，节点数不得超过预算
 
   @req:r327 @human
   场景: skip-question-when-branches
-    - 必须成立：假如 Run 已拆解出活 research 节点；当 运行循环调度；那么 跳过 question work-unit 且各 research 完成写回
-    假如 Run 已拆解出活 research 节点
-    当 运行循环调度
-    那么 跳过 question work-unit 且各 research 完成写回
-
-  @req:r327 @human
-  场景: skip-pruned-branch-unit
-    - 必须成立：假如 其中一支已被 prune；当 调度器排空；那么 pruned 节点被跳过且其余节点仍执行
-    假如 其中一支已被 prune
-    当 调度器排空
-    那么 pruned 节点被跳过且其余节点仍执行
-
-  @req:r327 @human
-  场景: merge-edges-survive-synthesize
-    - 必须成立：假如 各支路已写回证据；当 Run 进入 synthesize 并完成；那么 所有活 research 至 conclusion 的 merge 边仍存在
-    假如 各支路已写回证据
-    当 Run 进入 synthesize 并完成
-    那么 所有活 research 至 conclusion 的 merge 边仍存在
-
-  @req:r328 @human
-  场景: llm-report-on-success
-    - 必须成立：假如 结案 LLM 返回合法 ResearchReport；当 结案合成完成；那么 Run status 为 completed 且 report 非证据清单启发式
-    假如 结案 LLM 返回合法 ResearchReport
-    当 结案合成完成
-    那么 Run status 为 completed 且 report 非证据清单启发式
+    - 若 Run 已拆解出活 research 节点，则运行循环调度必须跳过 question work-unit，且各 research 节点完成写回
 
   @req:r328 @human
   场景: synthesize-fail-no-heuristic
-    - 必须成立：假如 结案模型调用抛错；当 观察 Run；那么 status 为 failed 且无启发式权威报告
-    假如 结案模型调用抛错
-    当 观察 Run
-    那么 status 为 failed 且无启发式权威报告
-
-  @req:r329 @human
-  场景: retry-synthesize-succeeds
-    - 必须成立：假如 Run 因结案失败为 failed 且已有 evidence；当 客户端 POST retry-synthesize；那么 Run 进入短窗后 completed 且含报告
-    假如 Run 因结案失败为 failed 且已有 evidence
-    当 客户端 POST retry-synthesize
-    那么 Run 进入短窗后 completed 且含报告
+    - 若结案模型调用抛错，则 Run status 必须为 failed 且不得存在启发式权威报告
 
   @req:r329 @human
   场景: retry-does-not-rerun-drain
-    - 必须成立：假如 failed 结案 Run 已有支路 evidence；当 retry-synthesize；那么 不新增 research work-unit 检索进度且复用原 evidence
-    假如 failed 结案 Run 已有支路 evidence
-    当 retry-synthesize
-    那么 不新增 research work-unit 检索进度且复用原 evidence
+    - 对已因结案失败而 failed 且已有支路 evidence 的 Run 执行 retry-synthesize 时，必须复用原 evidence 且不得新增 research work-unit 检索进度
 
   @req:r329 @human
   场景: retry-rejects-completed
-    - 必须成立：假如 Run 已 completed；当 调用 retry-synthesize；那么 返回 RESEARCH_INVALID_STATE 或等价
-    假如 Run 已 completed
-    当 调用 retry-synthesize
-    那么 返回 RESEARCH_INVALID_STATE 或等价
-
-  @req:r330 @human
-  场景: create-persists-model-id
-    - 必须成立：假如 客户端 POST create 含 modelId；当 GET Run；那么 返回相同 modelId
-    假如 客户端 POST create 含 modelId
-    当 GET Run
-    那么 返回相同 modelId
-
-  @req:r331 @human
-  场景: zero-evidence-honest-complete
-    - 必须成立：假如 Run 证据为 0 且结案 LLM 产出无 cite 报告；当 synthesize 完成；那么 status 为 completed
-    假如 Run 证据为 0 且结案 LLM 产出无 cite 报告
-    当 synthesize 完成
-    那么 status 为 completed
-
-  @req:r331 @human
-  场景: all-illegal-cites-fail
-    - 必须成立：假如 结案 LLM 输出的 cite key 均不在证据映射；当 校验后；那么 Run failed 且可 retry
-    假如 结案 LLM 输出的 cite key 均不在证据映射
-    当 校验后
-    那么 Run failed 且可 retry
-
-  @req:r332 @human
-  场景: empty-evidence-node-ok
-    - 必须成立：假如 research 节点检索无命中；当 短综合完成；那么 节点可有摘要且 evidenceIds 可空
-    假如 research 节点检索无命中
-    当 短综合完成
-    那么 节点可有摘要且 evidenceIds 可空
-
-  @req:r332 @human
-  场景: node-model-fail-missing
-    - 必须成立：假如 节点短综合模型失败；当 写回；那么 该节点 conclusionStatus 为 missing 且其它支路可继续
-    假如 节点短综合模型失败
-    当 写回
-    那么 该节点 conclusionStatus 为 missing 且其它支路可继续
-
-  @req:r333 @human
-  场景: no-auto-second-decompose
-    - 必须成立：假如 Run 已完成首次拆解并进入预算确认或结案前；当 等待且无 request-reexpand；那么 图上 research 节点数不因内核自动再拆而增加
-    假如 Run 已完成首次拆解并进入预算确认或结案前
-    当 等待且无 request-reexpand
-    那么 图上 research 节点数不因内核自动再拆而增加
-
-  @req:r334 @human
-  场景: request-reexpand-awaits-confirm
-    - 必须成立：假如 Run 为 running 或 awaiting_confirm；当 客户端 POST request-reexpand；那么 status 为 awaiting_confirm 且 confirmKind=reexpand
-    假如 Run 为 running 或 awaiting_confirm
-    当 客户端 POST request-reexpand
-    那么 status 为 awaiting_confirm 且 confirmKind=reexpand
-
-  @req:r334 @human
-  场景: approve-reexpand-adds-branches
-    - 必须成立：假如 confirmKind=reexpand；当 用户 approve_reexpand 且 planner 成功；那么 图新增 research 节点与 merge 边
-    假如 confirmKind=reexpand
-    当 用户 approve_reexpand 且 planner 成功
-    那么 图新增 research 节点与 merge 边
-
-  @req:r334 @human
-  场景: skip-reexpand-no-nodes
-    - 必须成立：假如 confirmKind=reexpand；当 用户 skip_reexpand；那么 research 节点数不增加
-    假如 confirmKind=reexpand
-    当 用户 skip_reexpand
-    那么 research 节点数不增加
-
-  @req:r334 @human
-  场景: reexpand-planner-failure
-    - 必须成立：假如 confirmKind=reexpand 且 planner 失败；当 approve 处理完成；那么 不得伪造多支路拓扑
-    假如 confirmKind=reexpand 且 planner 失败
-    当 approve 处理完成
-    那么 不得伪造多支路拓扑
-
-  @req:r335 @human
-  场景: fork-creates-new-run-id
-    - 必须成立：假如 源 Run 已有 revision 快照；当 客户端 POST fork-run；那么 返回新 ResearchRun id 且 status=queued
-    假如 源 Run 已有 revision 快照
-    当 客户端 POST fork-run
-    那么 返回新 ResearchRun id 且 status=queued
-
-  @req:r335 @human
-  场景: fork-copies-graph-report
-    - 必须成立：假如 revision 含 graph 与 report；当 fork 成功；那么 新 Run 的 graph/report 与该 revision 快照一致
-    假如 revision 含 graph 与 report
-    当 fork 成功
-    那么 新 Run 的 graph/report 与该 revision 快照一致
+    - 若 Run 已 completed，则调用 retry-synthesize 必须返回 RESEARCH_INVALID_STATE 或等价错误
 
   @req:r335 @human
   场景: fork-leaves-source-unchanged
-    - 必须成立：假如 fork 完成后；当 再次 GET 源 Run 与其 revisions 列表；那么 与 fork 前一致
-    假如 fork 完成后
-    当 再次 GET 源 Run 与其 revisions 列表
-    那么 与 fork 前一致
-
-  @req:r335 @human
-  场景: fork-default-no-schedule
-    - 必须成立：假如 客户端 fork 且省略 schedule 或 schedule=false；当 观察新 Run；那么 保持 queued 且不因 fork 立刻进入 running
-    假如 客户端 fork 且省略 schedule 或 schedule=false
-    当 观察新 Run
-    那么 保持 queued 且不因 fork 立刻进入 running
-
-  @req:r336 @human
-  场景: parallel-drain-completes-all
-    - 必须成立：假如 Run 含至少两个待执行 research 节点且 parallelBranchUnits>=2；当 调度排空完成；那么 每个节点均写回且 merge 边仍在
-    假如 Run 含至少两个待执行 research 节点且 parallelBranchUnits>=2
-    当 调度排空完成
-    那么 每个节点均写回且 merge 边仍在
-
-  @req:r336 @human
-  场景: llm-calls-serialized-per-run
-    - 必须成立：假如 同一 Run 两支路几乎同时进入短综合；当 观察 LLM 调用；那么 任意时刻该 Run 至多一个 LLM 进行中
-    假如 同一 Run 两支路几乎同时进入短综合
-    当 观察 LLM 调用
-    那么 任意时刻该 Run 至多一个 LLM 进行中
-
-  @req:r336 @human
-  场景: parallel-cancel-aborts
-    - 必须成立：假如 并行调度排空进行中；当 用户 cancel；那么 活动单元中止且 status 进入 cancelled
-    假如 并行调度排空进行中
-    当 用户 cancel
-    那么 活动单元中止且 status 进入 cancelled
-
-  @req:r337 @human
-  场景: fetchpage-uses-extractor-factory
-    - 必须成立：假如 allowWeb 的 work_unit 需要读某 URL；当 agent 调用 fetchPage；那么 走既有抽取回退链且 research 内无第二套爬虫实现
-    假如 allowWeb 的 work_unit 需要读某 URL
-    当 agent 调用 fetchPage
-    那么 走既有抽取回退链且 research 内无第二套爬虫实现
-
-  @req:r337 @human
-  场景: fetchpage-failure-keeps-snippet
-    - 必须成立：假如 已有同 URL 的 SERP evidence 且抽取失败；当 fetchPage 返回；那么 原 snippet 证据仍在且单元可继续
-    假如 已有同 URL 的 SERP evidence 且抽取失败
-    当 fetchPage 返回
-    那么 原 snippet 证据仍在且单元可继续
-
-  @req:r338 @human
-  场景: max-page-fetches-from-ratio
-    - 必须成立：假如 创建 depth=medium 且 pageRatio=1.5 的 Run；当 查看 Run 字段；那么 maxPageFetches 为按公式由 maxSearches 算出的值且 pagesUsed=0
-    假如 创建 depth=medium 且 pageRatio=1.5 的 Run
-    当 查看 Run 字段
-    那么 maxPageFetches 为按公式由 maxSearches 算出的值且 pagesUsed=0
+    - fork 完成后再次读取源 Run 及其 revisions 列表，其内容必须与 fork 前一致
 
   @req:r338 @human
   场景: page-soft-cap-per-node
-    - 必须成立：假如 剩余 6 次读页且 3 个活 research 节点；当 某节点 work-unit 开始；那么 该节点读页软上限为 2
-    假如 剩余 6 次读页且 3 个活 research 节点
-    当 某节点 work-unit 开始
-    那么 该节点读页软上限为 2
-
-  @req:r338 @human
-  场景: page-cap-no-budget-confirm
-    - 必须成立：假如 pagesUsed 已达 maxPageFetches；当 agent 再请求读页；那么 拒绝或跳过读页且 Run 不因读页进入 confirmKind=budget
-    假如 pagesUsed 已达 maxPageFetches
-    当 agent 再请求读页
-    那么 拒绝或跳过读页且 Run 不因读页进入 confirmKind=budget
-
-  @req:r339 @human
-  场景: content-upgrades-same-url
-    - 必须成立：假如 webSearch 已写入某 URL snippet 后 fetchPage 成功；当 查看证据；那么 同 URL 证据含 content 且 snippet 仍在
-    假如 webSearch 已写入某 URL snippet 后 fetchPage 成功
-    当 查看证据
-    那么 同 URL 证据含 content 且 snippet 仍在
-
-  @req:r339 @human
-  场景: content-token-truncate
-    - 必须成立：假如 单页正文超过节点剩余 token 预算；当 写入 content；那么 content 被截断至预算内且 SERP 命中保留
-    假如 单页正文超过节点剩余 token 预算
-    当 写入 content
-    那么 content 被截断至预算内且 SERP 命中保留
-
-  @req:r340 @human
-  场景: no-auto-top-n-fetch
-    - 必须成立：假如 webSearch 返回多条命中；当 运行时未另配置自动读；那么 系统不自动对其 Top-N 调用 fetchPage
-    假如 webSearch 返回多条命中
-    当 运行时未另配置自动读
-    那么 系统不自动对其 Top-N 调用 fetchPage
-
-  @req:r341 @human
-  场景: continue-raises-max-searches
-    - 必须成立：假如 confirmKind=budget 且当前 maxSearches=50；当 用户 continue；那么 maxSearches 按公式增加 K 且 Run 恢复推进而非立即 completed
-    假如 confirmKind=budget 且当前 maxSearches=50
-    当 用户 continue
-    那么 maxSearches 按公式增加 K 且 Run 恢复推进而非立即 completed
+    - 若剩余 6 次读页且有 3 个活 research 节点，则该节点 work-unit 开始时的读页软上限必须为 2
 
   @req:r341 @human
   场景: addon-does-not-raise-max-nodes
-    - 必须成立：假如 budget 加购前 maxNodes=60；当 用户 continue 加购；那么 maxNodes 仍为 60
-    假如 budget 加购前 maxNodes=60
-    当 用户 continue 加购
-    那么 maxNodes 仍为 60
+    - 当 budget 加购发生时，maxNodes 必须保持不变，不得随加购抬高
 
   @req:r342 @human
   场景: search-soft-cap-even-split
-    - 必须成立：假如 剩余 9 次搜索且 3 个活 research 节点；当 某节点 work-unit 开始；那么 该节点搜索软上限为 3
-    假如 剩余 9 次搜索且 3 个活 research 节点
-    当 某节点 work-unit 开始
-    那么 该节点搜索软上限为 3
-
-  @req:r343 @human
-  场景: proactive-add-budget
-    - 必须成立：假如 Run 为 running 且未触顶；当 用户调用 add-budget；那么 maxSearches 按同一公式增加 K
-    假如 Run 为 running 且未触顶
-    当 用户调用 add-budget
-    那么 maxSearches 按同一公式增加 K
-
-  @req:r344 @human
-  场景: partial-report-lists-gaps
-    - 必须成立：假如 触顶后 finish_report 且存在 missing 研究节点；当 读取权威报告；那么 报告明示预算用尽或部分完成并提及未覆盖主题
-    假如 触顶后 finish_report 且存在 missing 研究节点
-    当 读取权威报告
-    那么 报告明示预算用尽或部分完成并提及未覆盖主题
+    - 若剩余 9 次搜索且有 3 个活 research 节点，则该节点 work-unit 开始时的搜索软上限必须为 3，且仍受 Run.maxSearches 硬顶约束
