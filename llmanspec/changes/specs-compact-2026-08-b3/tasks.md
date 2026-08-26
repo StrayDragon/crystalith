@@ -1,0 +1,27 @@
+# Tasks — specs-compact-2026-08-b3
+
+## T0 基线
+
+- [x] 盘点：35 capability / 950 场景 / 542 双写（`llman sdd list --specs` + grep 计数）
+- [x] 决策：全量压缩；@executable 标签先行（runner 闭环另立 change）；r268 改 spec 对齐实现
+- [x] Branch binding：`sdd/specs-compact-2026-08-b3`
+
+## T1 执行批次（按文件分派，规则见 design.md D1–D4）
+
+| 批  | 文件                                                                                                                                                                                                                                                                                               | 基线→目标                                                         | 特殊处置                                                                                   |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| E1  | deep-research-ui                                                                                                                                                                                                                                                                                   | 140→~82                                                           | 孤立簇 r417/r439、r408/r432、r419/r441/r451；G11 dr-ui 侧                                  |
+| E2  | deep-research-runtime                                                                                                                                                                                                                                                                              | 119→~62                                                           | G11 canonical（r305 保持）；保留 r316 三实例等高价值分解                                   |
+| E3  | workspace-api-contract                                                                                                                                                                                                                                                                             | 94→~44                                                            | G2/G13/G3 侧、r114/r218、r69/r73；executable X4–X7；r268 同族方法子句裁决先例              |
+| E4  | workspace-ui-panels · workspace-ui-core · generation-core · retrieval-and-cache · output-rendering-and-typing · typed-generation-framework · generation-presets-and-constraints · studio-slides-workflow                                                                                           | 42→19 · 29→15 · 37→16 · 29→13 · 23→12 · 20→11 · 10→5 · 31→13      | G8/G10 canonical 与 typed-gen/out-render 引用侧；ui-core 空态三实例折叠                    |
+| E5  | source-ingestion-core · source-ingestion-upload-and-url · source-ingestion-management-and-tags · source-ingestion-summary-and-conversion · web-extractor-plugins                                                                                                                                   | 21→9 · 32→16 · 24→12 · 27→13 · 14→8                               | G1/G4/G5/G6 全组；csv-escape 迁移；executable X1–X3；r268 方法子句删除                     |
+| E6a | architecture-core · architecture-plugin-and-agent · bdd-test-harness · quality-and-regression · public-repo-hygiene · frontend-eden-migration · configuration-governance · chat-prompt-presets · chat-ui-envelope                                                                                  | 19→10 · 14→7 · 8→4 · 24→11 · 8→4 · 10→5 · 18→8 · 17→9 · 4→2       | G12 全组、G9 r247 侧、G3 presets/envelope 侧；r118 语气消解；bdd s1/s2/s3/qa_unit_dir 清理 |
+| E6b | generation-observability-and-guardrails · knowledge-curation-and-freshness · openapi-and-client-generation · slides-workflow-plugins · source-aware-generation-modes · studio-output-types · cross-type-result-transformations · source-connectors · data-and-storage · workspace-command-registry | 18→9 · 13→7 · 15→7 · 6→3 · 14→7 · 17→8 · 14→7 · 16→8 · 14→7 · 9→5 | G2/G7/G9 canonical 侧；r37/r95 去重互引；sqlitevec 魔法数字修复；executable X8–X10         |
+
+## T2 汇总验证
+
+- [ ] `grep -rh "@req:" llmanspec/specs --include="*.feature" | wc -l` ∈ [453,503]；`@executable` = 10
+- [ ] 逐文件计数对照台账（允许 ±2/文件，总量守区间）
+- [ ] `llman sdd validate --specs --strict --no-interactive` 全绿
+- [ ] 被删场景标题 / 被删 req 子句 grep 无跨 spec 残留引用
+- [ ] `just test-bdd` 通过集不缩水（runner 未动）
