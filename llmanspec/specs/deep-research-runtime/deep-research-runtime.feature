@@ -1,6 +1,6 @@
 # language: zh-CN
 # capability: deep-research-runtime
-# purpose: ResearchRun HTTP/SSE 运行时：创建/列表/图命令口/报告/revisions 与编排约束（对齐 Lab Compose 外网优先默认）
+# purpose: ResearchRun HTTP/SSE 运行时：创建/列表/图命令口/报告/revisions 与编排约束（省略字段时外网优先默认）
 # scope: src/, tests/
 
 功能: deep-research-runtime
@@ -23,7 +23,7 @@
 
   @req:r304 @human
   场景: H1 explicit source and web toggles
-    - 创建 ResearchRun 时 MUST 接受显式 useNotebookSources 与 allowWeb；省略时默认 useNotebookSources=false、allowWeb=true（外网优先，对齐 Lab Compose）；sourceIds MUST 仅表示深研配置台内选择、MUST NOT 隐式绑定工作区勾选状态；当 useNotebookSources 为 true 且 sourceIds 为空时 MUST 拒绝创建；当 useNotebookSources 与 allowWeb 皆为 false 时 MUST 拒绝创建；需要笔记本来源时客户端 MUST 显式传 useNotebookSources=true。
+    - 创建 ResearchRun 时 MUST 接受显式 useNotebookSources 与 allowWeb；省略时默认 useNotebookSources=false、allowWeb=true（外网优先）；sourceIds MUST 仅表示深研配置台内选择、MUST NOT 隐式绑定工作区勾选状态；当 useNotebookSources 为 true 且 sourceIds 为空时 MUST 拒绝创建；当 useNotebookSources 与 allowWeb 皆为 false 时 MUST 拒绝创建；需要笔记本来源时客户端 MUST 显式传 useNotebookSources=true。
 
   @req:r305 @human
   场景: L1 depth tiers
@@ -79,7 +79,7 @@
 
   @req:r318 @human
   场景: Serial work-unit kernel CP1 and abort
-    - 深研编排 MUST 以 ResearchRun 上的串行 work-unit 内核推进（种子图、节点检索/综合、结案出报告）；每完成一单元以及进入 awaiting_confirm 前 MUST 落盘 checkpoint（CP1）；开始单元前 MUST 重读图并跳过 conclusionStatus=pruned 的节点（discard-if-pruned）；cancel 与剪除当前活动节点时 MUST 中止进行中的单元（AbortSignal 或等价）并保持图 SSOT 在服务端；若存在进行中的节点 chat MUST 一并中止。
+    - 深研编排 MUST 以 ResearchRun 上的 work-unit 内核推进——单元级串行或受配置约束的有界并行（并行度上限与同 Run 模型调用串行化分别见 r327/r336）（种子图、节点检索/综合、结案出报告）；每完成一单元以及进入 awaiting_confirm 前 MUST 落盘 checkpoint（CP1）；开始单元前 MUST 重读图并跳过 conclusionStatus=pruned 的节点（discard-if-pruned）；cancel 与剪除当前活动节点时 MUST 中止进行中的单元（AbortSignal 或等价）并保持图 SSOT 在服务端；若存在进行中的节点 chat MUST 一并中止。
 
   @req:r319 @human
   场景: Fork approve merges into conclusion

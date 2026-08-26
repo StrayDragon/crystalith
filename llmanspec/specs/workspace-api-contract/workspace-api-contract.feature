@@ -62,7 +62,7 @@
 
   @req:r73 @human
   场景: QA endpoints provide stable stream and non-stream contracts
-    - `/qa` 与 `/qa/stream` MUST 保持稳定字段语义，stream 至少包含 `chunk|done|error` 事件。
+    - QA 端点族（canonical 嵌套路径 `/v2/notebooks/:nid/qa` 与 `/v2/notebooks/:nid/qa/stream`）MUST 保持稳定字段语义，stream 至少包含 `chunk|done|error` 事件。
 
   @req:r75 @human
   场景: Citation model remains camelCase within the global camelCase wire
@@ -78,7 +78,7 @@
 
   @req:r17 @human
   场景: Workspace tools list returns available tools only
-    - `/v2/workspace/tools` 返回的 tools 列表 MUST 仅包含"当前可用"的工具项（可用 = core 内置能力 + 已安装且已启用、并通过兼容性门禁的插件能力）。对于 `SLIDES`，其可用性 MUST 由当前 active `SlidesWorkflowPlugin` 决定（候选不存在或不唯一时视为不可用），而不是由 core 默认内置。
+    - `/v2/workspace/tools` 返回的 tools 列表 MUST 由 core 输出类型注册表驱动：包括 `SLIDES` 在内的内置输出类型 MUST 随列表给出且不从列表中隐藏；对当前不可用的能力（插件缺失/禁用/加载失败），客户端 MUST 能呈现不可用原因与可执行恢复提示。生成侧的可用性门禁（OutputTypePlugin 存在性校验、候选唯一性）见 generation-core r31 与 slides-workflow-plugins。
 
   @req:r18 @human
   场景: Tools endpoint exposes diagnostics in a machine-readable form
@@ -147,7 +147,7 @@
 
   @req:nested-path-nid-is-ownership-ssot @human
   场景: Nested path :nid is ownership SSOT
-    - 嵌套 canonical 路由上，path :nid MUST 为归属唯一真源；请求 body MUST NOT 再要求必填 notebookId。若 body 携带 notebookId：等于 :nid 时 MUST 忽略；不等于时 MUST 返回 400。响应实体 MAY/SHOULD 继续包含 notebookId 字段。笔记本作用域资源 MUST NOT 再提供扁平 query/body notebookId 平行面。notebook 作用域资源（至少包括 outputs CRUD、qa（含 stream/export）、studio/slides、sources 单资源与 upload）的 canonical HTTP path MUST 为 /v2/notebooks/:nid/<domain>/...，跨 notebook 访问 MUST 返回 404。非嵌套的归属校验端点 MUST 要求显式归属参数（query 或 path）；资源存在但不属于该 notebook 时 MUST 返回 404 且 MUST NOT 按全局 id 返回数据。
+    - 嵌套 canonical 路由上，path :nid MUST 为归属唯一真源；请求 body MUST NOT 再要求必填 notebookId。若 body 携带 notebookId：等于 :nid 时 MUST 忽略；不等于时 MUST 返回 400。响应实体 SHOULD 继续包含 notebookId 字段（兼容读取）。笔记本作用域资源 MUST NOT 再提供扁平 query/body notebookId 平行面。notebook 作用域资源（至少包括 outputs CRUD、qa（含 stream/export）、studio/slides、sources 单资源与 upload）的 canonical HTTP path MUST 为 /v2/notebooks/:nid/<domain>/...，跨 notebook 访问 MUST 返回 404。非嵌套的归属校验端点 MUST 要求显式归属参数（query 或 path）；资源存在但不属于该 notebook 时 MUST 返回 404 且 MUST NOT 按全局 id 返回数据。
 
   @req:nested-path-nid-is-ownership-ssot @human
   场景: cross-notebook-source-get-404
@@ -186,7 +186,7 @@
 
   @req:r285 @human
   场景: HTTP JSON wire fields MUST be camelCase end-to-end
-    - 除 URL path 与 SSE event 名称外，对外 HTTP/SSE JSON（请求体、查询参数键、响应体、流式 done/error data）的字段名 MUST 为 camelCase，并以 packages/shared Zod 为 SSOT；MUST NOT 再使用 notebook_id/source_ids/created_at/error_code 等 snake_case wire 别名。对 snake_case 输入系统 SHALL 按校验失败或忽略未知键处理，MUST NOT 同时接受两套字段名作为正式合约。DB 列名不受本要求约束。
+    - 除 URL path 与 SSE event 名称外，对外 HTTP/SSE JSON（请求体、查询参数键、响应体、流式 done/error data）的字段名 MUST 为 camelCase，并以 packages/shared Zod 为 SSOT；MUST NOT 再使用 notebook_id/source_ids/created_at/error_code 等 snake_case wire 别名。对 snake_case 输入系统 SHALL 按校验失败或忽略未知键处理，MUST NOT 同时接受两套字段名作为正式合约。DB 列名不受本要求约束；结构化 content payload 内部的标记键（如 `_postprocessed`、`citations_sanitized` 等 LLM 产出内容内标记）同样不属于 wire 合约字段，不在本约束范围内。
 
   @req:notebook-scoped-list-forbid-global @human
   场景: Notebook-scoped lists MUST NOT dump all notebooks

@@ -31,7 +31,7 @@
 
   @req:outputs-response-contract @human
   场景: POST outputs MUST return OutputRead contract
-    - POST /v2/notebooks/:nid/outputs MUST 返回 camelCase OutputRead 实体（id/notebookId/type/prompt/chunkIds/content/createdAt/updatedAt），与 packages/shared Zod wire 契约一致；MUST NOT 返回 snake_case 或裸 PipelineResult；扁平 /v2/outputs 的登记禁令见 openapi openapi-documents-nested-canonical-paths（canonical）
+    - POST /v2/notebooks/:nid/outputs MUST 返回 camelCase OutputRead 实体（id/notebookId/type/prompt/chunkIds/content/createdAt/updatedAt），与 packages/shared Zod wire 契约一致；MUST NOT 返回 snake_case 或裸 PipelineResult；扁平 /v2/outputs 的登记禁令见 openapi-and-client-generation openapi-documents-nested-canonical-paths（canonical）
 
   @req:outputs-export-fields @human
   场景: Export JSON citations and sources MUST match camelCase wire

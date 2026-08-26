@@ -31,4 +31,4 @@
 
   @req:r247 @human
   场景: Middleware handles retry and logging
-    - AI SDK middleware MUST 承载 LLM 调用的自动重试与结构化日志；OpenTelemetry tracer MAY 后续接入。重试策略细节（次数、指数退避）见 generation-observability-and-guardrails retry-* 规则（canonical）。
+    - AI SDK middleware MUST 承载 LLM 调用的自动重试与结构化日志；OpenTelemetry tracer MAY 后续接入。重试策略细节（次数、指数退避）见 generation-observability-and-guardrails retry-honors-retry-after / retry-timeout-budget（canonical）。

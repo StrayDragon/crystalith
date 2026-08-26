@@ -7,7 +7,7 @@
 
   @req:r50 @human
   场景: Upload endpoint returns created source on success
-    - 上传成功 MUST 返回 201 与来源对象；失败语义区分 400/415/500。
+    - 上传成功 MUST 返回 201 与来源对象；失败语义区分 400/413/415/500（至少；413 对应超限拒绝，见 size-limit 条）。
 
   @req:r108 @human
   场景: Supported formats are parser-driven

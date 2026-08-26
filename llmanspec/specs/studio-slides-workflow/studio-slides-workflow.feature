@@ -19,7 +19,7 @@
 
   @req:r183 @human
   场景: Busy and stale-running handling is explicit
-    - draft `running` 时 MUST 防并发重复（返回 busy 事件而非覆盖）；stale running（超过阈值，默认 10min，可配置）MUST 先清理再继续；清理 MUST 将 status 置为 IDLE、清空 errorMessage（置 null）并返回 bool，MUST NOT 写入非空诊断文案。
+    - draft `running` 时 MUST 防并发重复（返回 busy 事件而非覆盖）；stale running（超过阈值；默认值来自 config schema）MUST 先清理再继续；清理 MUST 将 status 置为 IDLE、清空 errorMessage（置 null）并返回 bool，MUST NOT 写入非空诊断文案。
 
   @req:r215 @human
   场景: Markdown generation requires existing outline
@@ -55,4 +55,4 @@
 
   @req:studio-frontmatter-six-key-shape @human
   场景: Studio frontmatter MUST use the six-key template shape with override support
-    - studio 生成的 markdown frontmatter MUST 为 6-key 结构（theme 恒为 default、colorSchema、fonts{sans,serif,mono}、transition、background、class），对齐既有模板语义；当 generationConfig.frontmatter 非空时，MUST 以该字符串作为 frontmatter body 绕过预设，仅在缺 title: 且存在标题时补一行。MUST NOT 省略 colorSchema/class/serif/mono 字段。
+    - studio 生成的 markdown frontmatter MUST 为 6-key 结构（theme 恒为 default、colorSchema、fonts{sans,serif,mono}、transition、background、class），对齐既有模板语义；当 generationConfig.frontmatter 非空时，MUST 以该字符串作为 frontmatter body 绕过预设，仅在缺 title: 且存在标题时补一行。预设路径（generationConfig.frontmatter 为空）MUST NOT 省略 colorSchema/class/serif/mono 字段；override 模式以用户提供的字符串为准，不适用该补全约束。

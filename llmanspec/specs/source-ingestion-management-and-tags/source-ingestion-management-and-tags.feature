@@ -49,7 +49,7 @@
 
   @req:tag-binding-response-and-ownership @human
   场景: Tag binding MUST return stable batch result shape and verify ownership
-    - tag binding MUST 返回 {count, results:[SourceBatchItemResult]} 结构，且 DELETE binding MUST 校验 source 属于该 notebook，跨 notebook 时 SHALL 拒绝（404 或 400）。本条为 tag 绑定响应与归属校验的 canonical 约束。
+    - tag binding MUST 返回 {count, results:[SourceBatchItemResult]} 结构，且 DELETE binding MUST 校验 source 属于该 notebook，跨 notebook 时 MUST 返回 404（归属 SSOT 见 workspace-api-contract nested-path-nid-is-ownership-ssot）。本条为 tag 绑定响应与归属校验的 canonical 约束。
 
   @req:tags-uniqueness-and-ownership @human
   场景: Tag operations MUST enforce uniqueness and notebook ownership
