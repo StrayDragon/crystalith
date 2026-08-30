@@ -25,6 +25,7 @@
     "bun.lock",
     "*.generated.ts",
     "*.gen.ts",
-    "openapi.gen.json"
+    "openapi.gen.json",
+    ".agents/skills/"
   ]
 }
