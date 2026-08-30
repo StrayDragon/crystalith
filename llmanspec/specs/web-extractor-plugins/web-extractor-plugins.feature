@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: web-extractor-plugins
 # purpose: 定义网页提取器插件化契约：实现来源、可用性清单、选择与降级、全局/Notebook 级启用策略，以及结构化错误模型，使 URL fetch 能在 core-only 与官方插件套件形态下保持可预测与可诊断。
-# scope: src/, tests/
+# scope: apps/server/src/shared/extraction/, apps/server/src/features/sources/
 
 功能: web-extractor-plugins
 

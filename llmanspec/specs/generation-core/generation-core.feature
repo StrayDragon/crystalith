@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: generation-core
 # purpose: 定义统一生成主链路：上下文解析、结构化生成、后处理、引用映射、持久化，以及 QA/outputs 与 preference 的一致语义。
-# scope: src/, tests/
+# scope: apps/server/src/features/outputs/, packages/shared/src/schemas/
 
 功能: generation-core
 

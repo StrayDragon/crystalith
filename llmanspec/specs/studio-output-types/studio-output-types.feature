@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: studio-output-types
 # purpose: 定义非 slides 的 Studio 输出类型交互基线（briefing/guide/flashcard/mindmap/quiz/timeline）。该规范以"最小可用交互"约束各类型的前端呈现，保证输出可浏览、可操作与可导出。
-# scope: src/, tests/
+# scope: apps/server/src/features/studio/, packages/crystalith-slidev/
 
 功能: studio-output-types
 

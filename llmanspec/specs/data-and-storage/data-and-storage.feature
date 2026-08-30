@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: data-and-storage
 # purpose: 定义数据层技术选型与内容存储抽象。存储路径治理由 configuration-governance spec 覆盖（data_root 统一派生）。
-# scope: src/, tests/
+# scope: apps/server/src/db/, apps/server/src/shared/storage.ts
 
 功能: data-and-storage
 

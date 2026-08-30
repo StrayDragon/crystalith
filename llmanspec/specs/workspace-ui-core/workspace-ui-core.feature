@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: workspace-ui-core
 # purpose: 定义 Workspace 顶层体验的不变量：模块化布局、头部入口、响应式策略、全局 UX 基线。该规范只覆盖"顶层框架与跨面板约束"，避免与各业务面板的交互细节耦合。
-# scope: src/, tests/
+# scope: apps/web/src/features/workspace/
 
 功能: workspace-ui-core
 

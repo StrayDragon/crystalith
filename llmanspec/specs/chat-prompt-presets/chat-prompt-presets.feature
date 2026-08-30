@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: chat-prompt-presets
 # purpose: 定义 Chat 输入中的 `/prompt:*` 指令与后端 preset registry（built-in + custom）的稳定行为：如何解析指令、如何选择生成策略，以及各 preset 的最小输出契约（包含纯文本回答与可选的 session `sharedState.ui` 更新）。
-# scope: src/, tests/
+# scope: apps/server/src/features/prompt-presets/, apps/server/src/features/qa/
 
 功能: chat-prompt-presets
 

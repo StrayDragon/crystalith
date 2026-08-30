@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: source-ingestion-core
 # purpose: 定义 Source 摄取生命周期不变量：状态机、ready 语义、删除语义与 epoch 失效规则。该规范用于保证摄取与检索之间的因果一致性，避免出现"状态 ready 但不可检索"的漂移。
-# scope: src/, tests/
+# scope: apps/server/src/features/sources/, apps/server/src/shared/extraction/
 
 功能: source-ingestion-core
 

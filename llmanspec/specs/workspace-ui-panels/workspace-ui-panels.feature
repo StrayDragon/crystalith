@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: workspace-ui-panels
 # purpose: 定义 Workspace 业务面板（Sources/Chat/Studio/Research 与引用交互）的最小 UI 契约：面板装配、流式反馈、状态与取消语义、错误可恢复路径。该规范聚焦"用户可观察行为与稳定边界"，不绑定具体组件实现。
-# scope: src/, tests/
+# scope: apps/web/src/features/workspace/
 
 功能: workspace-ui-panels
 

@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: deep-research-ui
 # purpose: 定义 Deep Research 产品面（/research-lab）与 Demo 面（/demo/research-lab）的 UI 契约：入口、状态驱动主表面、命令口接线、Eden 权威态与 demo 隔离。
-# scope: src/, tests/
+# scope: apps/web/src/features/research-lab/, apps/web/src/api/
 
 功能: deep-research-ui
 

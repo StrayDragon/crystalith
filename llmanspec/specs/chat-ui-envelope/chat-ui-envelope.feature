@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: chat-ui-envelope
 # purpose: 对话内 UI 的当前态约束：UI 元数据由 server-authoritative 的 session `sharedState.ui` 承载，assistant `content` 保持纯文本/markdown；legacy envelope transport 已移除且 MUST NOT 回归。
-# scope: src/, tests/
+# scope: apps/server/src/features/sessions/, apps/server/src/features/messages/
 
 功能: chat-ui-envelope
 

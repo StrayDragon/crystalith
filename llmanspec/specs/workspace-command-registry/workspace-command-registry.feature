@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: workspace-command-registry
 # purpose: 定义前端可发现的“命令/指令” registry：客户端如何获取结构化命令定义，以驱动输入自动补全与 UI 展示，并为未来扩展更多 `/*` 命令族提供稳定接口。
-# scope: src/, tests/
+# scope: apps/web/src/features/workspace/
 
 功能: workspace-command-registry
 

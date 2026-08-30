@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: source-ingestion-summary-and-conversion
 # purpose: 定义单来源派生能力与内容转换能力：来源摘要、来源范围 QA、来源问答转来源，以及对话/输出转来源或笔记。该规范强调转换结果可追踪且遵循来源生命周期，避免产生不可检索或不可归因的数据。
-# scope: src/, tests/
+# scope: apps/server/src/features/sources/
 
 功能: source-ingestion-summary-and-conversion
 

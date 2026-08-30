@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: source-connectors
 # purpose: 把外部知识源接入统一为宿主框架能力：连接器发现、notebook-scoped binding、快照优先与选择性导入、显式 sync_check 与确认应用边界，为后续官方/第三方 connectors 提供稳定宿主语义。
-# scope: src/, tests/
+# scope: apps/server/src/features/source-connectors/
 
 功能: source-connectors
 

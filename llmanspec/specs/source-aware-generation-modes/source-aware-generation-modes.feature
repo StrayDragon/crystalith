@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: source-aware-generation-modes
 # purpose: 为不同生成类型定义清晰、可解释的来源使用模式（source_mode），让检索、citation 预期、来源展示与结果元数据形成一致语义，并避免把内部策略术语直接暴露为产品标签。
-# scope: src/, tests/
+# scope: apps/server/src/features/qa/, apps/server/src/features/outputs/
 
 功能: source-aware-generation-modes
 

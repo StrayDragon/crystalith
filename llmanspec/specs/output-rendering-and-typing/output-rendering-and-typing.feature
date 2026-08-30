@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: output-rendering-and-typing
 # purpose: 定义输出在前端的类型建模与渲染契约：typed payload 判别联合、运行时 guard、通用渲染器与回退路径。该规范确保新输出类型不会破坏渲染链路，并为未知输出提供安全降级。
-# scope: src/, tests/
+# scope: apps/server/src/features/outputs/, packages/shared/src/schemas/, apps/web/src/features/workspace/
 
 功能: output-rendering-and-typing
 

@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: typed-generation-framework
 # purpose: 把"生成类型"提升为一等对象：定义最小公共词汇、注册与发现语义、请求/结果的类型绑定，以及对下游扩展的边界与扩展位。
-# scope: src/, tests/
+# scope: packages/shared/src/schemas/, apps/server/src/features/outputs/
 
 功能: typed-generation-framework
 
