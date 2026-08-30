@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: studio-slides-workflow
 # purpose: 定义 SLIDES 的端到端工作流：draft 单一事实源、outline/markdown SSE、保存同步与预览链路。该规范用于保证断线重连、重试与预览刷新时的状态一致性。
-# scope: src/, tests/
+# scope: apps/server/src/features/studio/, packages/crystalith-slidev/
 
 功能: studio-slides-workflow
 

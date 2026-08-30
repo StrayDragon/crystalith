@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: source-ingestion-management-and-tags
 # purpose: 定义来源管理与标签体系：列表、排序、过滤、chunks、删除、re-embed、tag CRUD 与绑定关系。该规范强调查询语义与失效规则可预测，避免因缓存或排序漂移导致 UI/服务不一致。
-# scope: src/, tests/
+# scope: apps/server/src/features/sources/
 
 功能: source-ingestion-management-and-tags
 

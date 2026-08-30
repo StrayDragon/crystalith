@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: retrieval-and-cache
 # purpose: 定义共享检索策略与缓存失效模型，覆盖 outputs/slides/qa 等路径的统一检索行为。该规范强调检索上下文一致性与可预测缓存失效，避免跨路径出现"同输入不同上下文"的漂移。
-# scope: src/, tests/
+# scope: apps/server/src/rag/
 
 功能: retrieval-and-cache
 

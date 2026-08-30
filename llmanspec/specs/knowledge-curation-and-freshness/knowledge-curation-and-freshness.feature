@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: knowledge-curation-and-freshness
 # purpose: 为长期知识库提供治理信号与维护建议：freshness（新鲜度/过时风险）、duplicate candidates（重复候选）、maintenance suggestions（维护建议）与显式动作（ignore/re_ingest/re_embed/review），避免知识库随时间劣化。
-# scope: src/, tests/
+# scope: apps/server/src/features/sources/
 
 功能: knowledge-curation-and-freshness
 

@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: generation-presets-and-constraints
 # purpose: 为不同生成类型提供可理解、可复用的预设（presets）与显式约束覆盖（constraints/knobs），使"能生成"升级为"能按意图生成"，并与类型契约保持一致。
-# scope: src/, tests/
+# scope: apps/server/src/features/qa/, apps/server/src/features/outputs/
 
 功能: generation-presets-and-constraints
 

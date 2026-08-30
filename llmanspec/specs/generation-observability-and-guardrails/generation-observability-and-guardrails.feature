@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: generation-observability-and-guardrails
 # purpose: 定义生成链路的可观测性与运行护栏：trace 关联、阶段耗时、错误分类、并发限制、重试边界与任务队列行为。
-# scope: src/, tests/
+# scope: apps/server/src/features/outputs/, packages/shared/src/schemas/
 
 功能: generation-observability-and-guardrails
 

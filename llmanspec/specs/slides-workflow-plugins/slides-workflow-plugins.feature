@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: slides-workflow-plugins
 # purpose: 定义 slides workflow plugin 的宿主/插件契约：生成阶段边界、active plugin 选择、预览与前端声明模型，以及官方参考插件的稳定样板。
-# scope: src/, tests/
+# scope: packages/crystalith-slidev/
 
 功能: slides-workflow-plugins
 

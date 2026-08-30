@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: cross-type-result-transformations
 # purpose: 支持有限、明确、可解释的跨类型结果演化路径：从已有结果触发转换，保留 lineage 与映射边界（保留/重建），并在不支持的路径上回退为重新生成，避免“万物互转”的脆弱承诺。
-# scope: src/, tests/
+# scope: apps/server/src/features/outputs/, apps/web/src/features/workspace/
 
 功能: cross-type-result-transformations
 

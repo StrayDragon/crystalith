@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: source-ingestion-upload-and-url
 # purpose: 定义通过上传文件与 URL 创建来源的契约：格式支持、校验、异常语义、网页抓取安全与提取器策略。该规范强调输入错误可预测且安全默认值优先，避免在抓取路径引入 SSRF 风险。
-# scope: src/, tests/
+# scope: apps/server/src/features/sources/, apps/server/src/shared/net/
 
 功能: source-ingestion-upload-and-url
 
