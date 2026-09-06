@@ -77,6 +77,13 @@ export const BuildRunEnvSchema = z
     // --- Search ---
     CL_SEARXNG_HOST: z.string().default('').describe(desc('env.CL_SEARXNG_HOST')),
 
+    // --- Outbound proxy ---
+    CL_PROXY_ENABLED: z.string().default('').describe(desc('env.CL_PROXY_ENABLED')),
+
+    CL_PROXY_HTTP_URL: z.string().default('').describe(desc('env.CL_PROXY_HTTP_URL')),
+
+    CL_PROXY_HTTPS_URL: z.string().default('').describe(desc('env.CL_PROXY_HTTPS_URL')),
+
     // --- Observability ---
     CL_LOG_LEVEL: z
       .enum(['debug', 'info', 'warn', 'error'])
