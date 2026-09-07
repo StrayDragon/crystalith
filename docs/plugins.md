@@ -59,3 +59,41 @@ plugins:
 - 仓库内置插件（如 `slides-slidev`、`extractor-*`）与外部插件走**同一条
   registry 注册路径**，可作为外部插件的参考实现（源码见
   `apps/server/src/plugins/builtin/`）。
+
+## 路线：榜样插件与暴露面（先窄，需求驱动）
+
+> 原则：**宁可暂时没有外部插件，也不为"证明可扩展"造 demo 插件**——榜样必须
+> 踩在真实需求上，否则接口会朝着假需求腐烂（slop）。
+
+### 暴露面现状（有意收窄）
+
+| kind              | 宿主接线                                                   | 对外承诺                       |
+| ----------------- | ---------------------------------------------------------- | ------------------------------ |
+| `extractor`       | ✅ 全链路（registry → fallback 编排 → diagnostics → 策略） | **v1 唯一开放的外部插件 kind** |
+| `slides-workflow` | ⏳ 半接线（discovery/catalog 已通；生成链路未接 registry） | 暂不对外                       |
+| `parser`          | ❌ 未接线（ingestion 不消费 parser 插件）                  | 暂不对外                       |
+| `output-type`     | ❌ 按 r7 DEFERRED（OUTPUT_META 过渡）                      | 长期不开（前端 bundle 成本高） |
+
+接口 union 里保留全部四个 kind = **兼容与扩展的口子**；但文档、指南、catalog
+宣传只覆盖 `extractor`——「能扩展」不等于「到处都能挂」。
+
+### 第一个榜样：`@crystalith-plugin/extractor-youtube`
+
+- **需求**：把视频（讲解/播客/会议录屏）变成笔记本来源——字幕是唯一入口，
+  readability 抽不到、jina/firecrawl 也不解决，是现有三个提取器的真实盲区
+- **形态**：纯 JS，无 key 起步（transcript 端点拉取，失败即走 fallback/skip），
+  可选 key 增强；`isAvailable` 按 URL host 判定，非目标站点空内容自然降级
+- **为什么它是指榜样**：零新增宿主面（extractor 是唯一全链路 kind）；
+  一次开发同时验证外部插件全流程——scope 发现、动态 import、fallback 链、
+  `plugins.*` 策略、`diagnostics.plugins.skipped`、official catalog
+- **开发故事**：monorepo 内 `packages/plugin-extractor-youtube`（包名
+  `@crystalith-plugin/extractor-youtube`），bun workspaces 会把它 symlink 进
+  根 node_modules → discovery 直接命中，无需发包即可联调；成熟后独立发 npm
+
+### 后续（每个都要先有宿主 change，再谈插件）
+
+1. `parser` 宿主接线（ingestion 按扩展名 consult parser 插件）→ 榜样
+   `parser-docx`（mammoth，纯 JS；讲义/论文上传是真实需求）
+2. `slides-workflow` 生成链路接 registry → 第二个 slides 插件（解锁 r102
+   「多候选 → 结构化诊断」的真实验证）
+3. `output-type`：维持关闭，等出现反复出现的、现有六类型表达不了的真实产出需求
