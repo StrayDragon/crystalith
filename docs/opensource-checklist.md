@@ -4,13 +4,13 @@
 
 ## P0 — 发布阻塞项
 
-- [ ] **Git 历史清洗（密钥泄露）**
+- [x] **Git 历史清洗（密钥泄露）**（2026-09-07 完成）
   - 泄露内容：`sk-WeJOLb…`（局域网 llama.cpp 网关 key，对应 host `gateway.lan:50256/v1`，即现 tufa 那台机器，非云服务凭据）
   - 涉及提交：`cbbeed87`（2026-01-13，写入 `config/app.yaml`）→ `20a7fa9d`（2026-02-11，改为 env 注入时移除）
-  - 已核查：当前在用的 `CL_CHAT_API_KEY` / `CL_EMBEDDING_API_KEY` **均未进过历史**；tracked 文件无密钥；`data/`、`.env`、`config/secret.env` 均被正确 ignore
-  - 步骤：
-    1. 若那台 llama-server 仍配置该 `--api-key`，先轮换
-    2. `git filter-repo --replace-text`（replace 规则含该 key 与 `gateway.lan`），或以全新 squash 历史发布
+  - 已执行：`git filter-repo --replace-text` 全量改写（1071 commits，含 stash），并 force-push `main` / `v1` / `v2-dev` / `v0.1.0`；pickaxe 全 refs 复查为空，旧对象已 gc
+  - 决定：**无需轮换 key**（纯局域网凭据，出网不可达）
+  - 改写前全量备份：仓库旁 `crystalith-pre-rewrite-backup.bundle`（确认无误后可删）
+  - 注意：其他机器上的旧 clone 与远端历史已不兼容，需重新 clone
 - [ ] **README 重写**（已决定延后到发布前最后梳理）
   - 现状仅 4 行占位；需补：项目简介 / 截图 / quickstart / 环境要求（Bun、overmind+tmux、LLM 网关配置指引）
   - 语言：**中文优先**（已决定）；i18n 留口子，后续交社区
@@ -22,7 +22,7 @@
 
 - [ ] `CONTRIBUTING.md` / `SECURITY.md` / `CHANGELOG.md`（与 README 同批延后）
 - [ ] CI：**已决定暂不添加**（开源前不消耗 Actions 额度）；开源后建议 `oven-sh/setup-bun`（支持 `bun-version-file: package.json`）跑 `just qa` 等效子集——e2e 全程 mock 网关，可离线跑
-- [ ] （可选）root `package.json` 增加 `"engines": { "bun": ">=<当前版本>" }`
+- [x] root `package.json` 增加 `"engines": { "bun": ">=1.4.0" }`
   - Bun 自身目前不强制 `engines`（[oven-sh/bun#12566](https://github.com/oven-sh/bun/issues/12566)、[#5846](https://github.com/oven-sh/bun/issues/5846) 仍为 open feature），但 setup-bun / npm 等外部工具会读取；属低成本文档化最佳实践
 - [x] 代理改为环境变量控制：`CL_PROXY_ENABLED`（'true'/'false'）/ `CL_PROXY_HTTP_URL` / `CL_PROXY_HTTPS_URL`，留空跟随 `config/app.yaml`（默认开，保持自托管一致性）
 - [x] `CL_CHAT_MODEL` 未设置时启动 preflight fail-fast（server 入口，附配置指引文案；e2e 显式钉住 mock 模型名）
