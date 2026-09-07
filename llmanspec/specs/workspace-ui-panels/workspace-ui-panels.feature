@@ -84,3 +84,7 @@
   @req:workspace-sources-drag-drop-add @human
   场景: Sources drag-and-drop MUST add to source list without upload
     - 将文件拖入 Sources 栏/面板非上传区时，系统 MUST 仅把该文件加入来源列表（等待后续上传或转换为可检索来源），MUST NOT 自动触发上传或解析。
+
+  @req:url-import-extractor-hints @human
+  场景: URL import dialog hints extractors from pasted URL in fetch mode
+    - URL 导入对话框在 fetch（获取内容）模式 SHALL 对用户粘贴的 URL 本地匹配 extractors 元数据中的 `urlPatterns`；命中时 SHALL 呈现推荐提取器并默认预选，用户 MUST 能取消或恢复勾选；未命中或未选择时 MUST 以 `extractor: null` 走既有默认提取链；link 模式 MUST NOT 展示任何提取器选择 UI。
