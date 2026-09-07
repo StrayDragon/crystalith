@@ -65,6 +65,7 @@ dev-connect process='server':
 # Gracefully stop Overmind (same as Ctrl-C on the start session)
 dev-quit:
     overmind quit
+    sleep 3
 
 alias dev-stop := dev-quit
 

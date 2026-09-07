@@ -25,6 +25,12 @@ export interface StreamQaOptions {
   messageId?: number;
   /** Citations computed after retrieval (attached to the done event). */
   citationsResolver?: () => Citation[] | Promise<Citation[]>;
+  /**
+   * Optional localized notice emitted as a trailing chunk after generation
+   * settles and appended to the persisted answer text (e.g. weak-grounding
+   * tips). No effect on the generated content itself.
+   */
+  settleNotice?: string;
   /** Confidence score in [0,1] computed from evidence (attached to done). */
   confidenceResolver?: () => number | Promise<number> | undefined;
   /**
@@ -113,6 +119,13 @@ export function streamQaResponse(opts: StreamQaOptions): Response {
                   : 'Generation error';
             emit('error', { message });
           }
+        }
+
+        // Trailing localized notice (weak-grounding tips): emitted as its own
+        // chunk AND folded into the persisted text so stream and storage agree.
+        if (opts.settleNotice) {
+          accumulated += opts.settleNotice;
+          emit('chunk', { text: opts.settleNotice });
         }
 
         const citations = opts.citationsResolver ? await opts.citationsResolver() : [];

@@ -24,6 +24,12 @@ import { computeConfidence } from './confidence.ts';
 
 export const EVIDENCE_THRESHOLD_DEFAULT = 0.2;
 
+// Low-similarity pass-through (allow-low-similarity-qa): retrieved chunks
+// below the evidence threshold no longer short-circuit the QA — the answer is
+// generated ungrounded and this localized notice is appended after it.
+export const WEAK_GROUNDING_TIP =
+  '\n\n---\n*提示：未在勾选来源中找到与问题高度相关的内容，以上回答主要基于模型通用知识，未引用来源。*';
+
 // Localized no-evidence answers (v1 service.py:27-32, 62-69)
 export const NO_EVIDENCE_ANSWER = '来源中未找到相关证据';
 export const NO_SOURCES_ANSWER = '当前笔记本还没有来源，请先导入后再提问';
@@ -60,16 +66,24 @@ export type NoEvidenceReason =
   | 'low_similarity';
 
 export interface JudgeResult {
-  /** True when sufficient evidence was found — proceed to LLM generation. */
+  /** True when generation should proceed (grounded, ungrounded, or weak-grounded). */
   evidence: boolean;
-  /** Set when evidence is false — determines the localized short-circuit answer. */
+  /**
+   * Set only when `evidence` is false — determines the localized
+   * short-circuit answer. Weak-grounding pass-through keeps this undefined.
+   */
   reason?: NoEvidenceReason;
-  /** Citations for the retrieved evidence (empty when no evidence). */
+  /** Citations for the retrieved evidence (empty when no/unreliable evidence). */
   citations: Citation[];
   /** Formatted context string injected into the LLM prompt. */
   context: string;
-  /** Confidence score [0,1] (0 when no evidence). */
+  /** Confidence score [0,1] (0 when no/unreliable evidence). */
   confidence: number;
+  /**
+   * Set on low-similarity pass-through: generation proceeds ungrounded and
+   * this localized tip is appended after the answer.
+   */
+  groundingNotice?: string;
   /** Token/context stats (mirrors v1 ContextStats). */
   contextStats: ContextStats;
 }
@@ -112,7 +126,8 @@ export interface RetrieveAndJudgeOptions {
  *  7. Filter: source.status==ready, chunk non-empty
  *  8. If no valid → no_valid_chunks
  *  9. Build context
- * 10. If similarity_avg < threshold → low_similarity
+ * 10. If similarity_avg < threshold → weak-grounding pass-through
+ *     (evidence=true, empty context/citations, groundingNotice set)
  * 11. Compute confidence
  * 12. evidence=true
  */
@@ -260,12 +275,20 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
     return `[${i + 1}] Source: ${name} (chunk ${r.chunkIndex + 1})\n${chunk.text}`;
   });
 
-  // Step 10: Low similarity check (v1: similarity_avg < max(min_score, threshold))
+  // Step 10: Low similarity (v1: similarity_avg < max(min_score, threshold)).
+  // allow-low-similarity-qa: no longer a short-circuit — proceed UNGROUNDED
+  // (no low-quality context, no citations) and surface a weak-grounding tip.
   const similarityAvg = avg(validResults.map((r) => r.score));
   const evidenceThreshold = Math.max(minScore, EVIDENCE_THRESHOLD_DEFAULT);
-  // c45: low_similarity MUST return empty citations (v1 service.py:455-464)
   if (similarityAvg < evidenceThreshold) {
-    return noEvidence('low_similarity', emptyStats, []);
+    return {
+      evidence: true,
+      citations: [],
+      context: '',
+      confidence: 0,
+      groundingNotice: WEAK_GROUNDING_TIP,
+      contextStats: emptyStats,
+    };
   }
 
   // Step 11: Confidence
