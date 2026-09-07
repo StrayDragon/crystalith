@@ -83,6 +83,21 @@ test('only shows markdown for timeline export', async () => {
   expect(screen.queryByRole('menuitem', { name: '导出为 JSON' })).not.toBeInTheDocument();
 });
 
+test('renders timeline when Eden coerces event dates to Date', () => {
+  const output = createOutput('TIMELINE', {
+    events: [{ date: new Date(2017, 5, 12), event: 'Paper published', description: 'On arXiv' }],
+  });
+
+  render(
+    <TestProviders>
+      <OutputContent output={output} />
+    </TestProviders>,
+  );
+
+  expect(screen.getByText('2017-06-12')).toBeInTheDocument();
+  expect(screen.getByText('Paper published')).toBeInTheDocument();
+});
+
 test('falls back to raw JSON renderer when payload shape is invalid', () => {
   const output = createOutput('QUIZ', {
     wrong: true,

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { formatOutputFieldText } from '../../shared/outputPayload';
+
 export interface TimelineEvent {
   date?: string | null;
   event?: string | null;
@@ -58,7 +60,7 @@ export default function TimelineViewer({ events, className }: TimelineViewerProp
                 <div className="text-xs font-semibold text-gray-500 dark:text-slate-400">
                   {/* intentionally || — empty string is missing */}
                   {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
-                  {item.date || '时间'}
+                  {formatOutputFieldText(item.date) || '时间'}
                 </div>
                 <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">
                   {/* intentionally || — empty string is missing */}
