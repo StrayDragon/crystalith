@@ -26,6 +26,7 @@ import { studioRouter } from './features/studio/router.ts';
 import { templatesRouter } from './features/templates/router.ts';
 import { workspaceRouter } from './features/workspace/router.ts';
 import { generateOpenApiDocument, registerApiDoc } from './openapi.ts';
+import { getDefaultChatModel } from './shared/config.ts';
 import { ErrorCode, sendError, AppHttpError } from './shared/errors.ts';
 import { probeHealthDependencies } from './shared/health.ts';
 import { logger, requestContext } from './shared/logger.ts';
@@ -189,8 +190,26 @@ export function createApp() {
     .use(workspaceRouter);
 }
 
+// app.yaml renders gateway-chat-primary's model to the literal 'NOT-SET'
+// placeholder when CL_CHAT_MODEL is unset; catch it here with an actionable
+// message instead of a cryptic gateway error on the first chat call.
+function preflightDefaultChatModel(): void {
+  const model = getDefaultChatModel();
+  const name = model?.model.trim();
+  if (name && name !== 'NOT-SET') return;
+  console.error(
+    [
+      '❌ 启动 preflight 失败：默认聊天模型未配置。',
+      `   models.defaults.chat '${model?.id ?? '(无可用 chat 模型)'}' 的 model 字段为${name ? `占位符 '${name}'` : '空'}。`,
+      '   请设置 CL_CHAT_MODEL（及 CL_CHAT_API_BASE / CL_CHAT_API_KEY）后重启；参见 .env.example 与 config/app.yaml 的 models 段。',
+    ].join('\n'),
+  );
+  process.exit(1);
+}
+
 // Only listen when run as the entry point (not when imported by tests).
 if (import.meta.main) {
+  preflightDefaultChatModel();
   // Bind loopback by default (parity with v1 `_DEFAULT_LISTEN_HOST = "127.0.0.1"`).
   // v2 has no auth yet (c13 scope), so loopback binding is the primary network
   // exposure guard. Override with CL_SERVER_HOST=0.0.0.0 for docker/LAN once

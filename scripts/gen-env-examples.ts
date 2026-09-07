@@ -44,7 +44,9 @@ function generateBuildRunExample(descriptors: EnvEntryDescriptor[]): string {
   lines.push('# DO NOT EDIT MANUALLY — edit the schema and run `just gen-env-examples`.');
   lines.push('# ============================================================================');
   lines.push('#');
-  lines.push('# Quick start:  cp .env.example .env && just upsert-env-configs');
+  lines.push(
+    '# Quick start:  cp .env.example .env  (secrets: cp config/secret.env.example config/secret.env)',
+  );
   lines.push('# Then:         just dev   # overmind: server :8032 + web :3000 + slidev :3030');
   lines.push('# Requires:     overmind + tmux on PATH');
   lines.push('# ============================================================================');

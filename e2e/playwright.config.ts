@@ -65,6 +65,10 @@ function e2eServerEnv(): NodeJS.ProcessEnv {
     CL_EMBEDDING_API_BASE: MOCK_GATEWAY_URL,
     CL_CHAT_API_KEY: 'e2e-mock',
     CL_EMBEDDING_API_KEY: 'e2e-mock',
+    // Server startup preflight rejects the app.yaml 'NOT-SET' placeholder —
+    // pin the mock model name explicitly instead of inheriting nothing.
+    CL_CHAT_MODEL: 'e2e-mock',
+    CL_EMBEDDING_MODEL: 'e2e-embed',
     CL_RESEARCH_E2E_STUB: '1',
   };
 }

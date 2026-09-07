@@ -600,7 +600,26 @@ export function getSearxngHost(): string {
 
 /** Global outbound proxy (`proxy_settings`). socks5_url is ignored by outboundFetch (c109). */
 export function getProxySettings(): ProxySettings {
-  return parseSection(ProxySettingsSchema, config().raw.proxy_settings);
+  return overlayProxyEnv(parseSection(ProxySettingsSchema, config().raw.proxy_settings));
+}
+
+/**
+ * CL_PROXY_* env overlay on the yaml `proxy_settings` section (precedent:
+ * getSearxngHost). `CL_PROXY_ENABLED` accepts 'true'/'false'; unset, empty,
+ * or any other value keeps the yaml setting. URLs override only when
+ * non-empty, so app.yaml stays the single place describing default topology.
+ */
+function overlayProxyEnv(settings: ProxySettings): ProxySettings {
+  const enabledEnv = process.env.CL_PROXY_ENABLED?.trim().toLowerCase();
+  const enabled = enabledEnv === 'true' ? true : enabledEnv === 'false' ? false : settings.enabled;
+  const httpEnv = process.env.CL_PROXY_HTTP_URL?.trim();
+  const httpsEnv = process.env.CL_PROXY_HTTPS_URL?.trim();
+  return {
+    ...settings,
+    enabled,
+    http_url: httpEnv ? httpEnv : settings.http_url,
+    https_url: httpsEnv ? httpsEnv : settings.https_url,
+  };
 }
 
 /** Completion options from `completion_options` config section (optional fields). */

@@ -114,9 +114,9 @@ models:
         maxTokens: 4096
 
     # -------------------- OpenAI-compatible gateway (chat) --------------------
-    # NOTE: @ai-sdk/openai v4 uses Responses API by default. Gateway models
-    # (tufa, coral) only support Chat Completions API, so they use
-    # 'openai-compatible' provider (createOpenAICompatible).
+    # NOTE: @ai-sdk/openai v4 uses Responses API by default. Many local
+    # gateways (llama.cpp, OMLX, ...) only support Chat Completions API, so
+    # they use 'openai-compatible' provider (createOpenAICompatible).
     - id: "deepseek-chat-via-gateway"
       provider: "openai-compatible"
       model: "deepseek-chat"
@@ -273,6 +273,8 @@ optional_services: {}
 # Outbound non-LLM HTTP (search / URL fetch / extractors) reads this via
 # apps/server/src/shared/net/outbound-fetch.ts. socks5_url is ignored for now.
 # LLM / embedding providers do NOT use this by default (c109).
+# Env overrides: CL_PROXY_ENABLED ('true'/'false'), CL_PROXY_HTTP_URL,
+# CL_PROXY_HTTPS_URL (unset/empty keeps the values below).
 # ----------------------------------------------------------------------------
 proxy_settings: &default_proxy
   enabled: true
