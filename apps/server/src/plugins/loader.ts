@@ -39,8 +39,17 @@ export function discoverExternalPluginIds(nodeModuleDirs: readonly string[]): st
  */
 export function nodeModuleDirCandidates(): string[] {
   const dirs = [join(process.cwd(), 'node_modules')];
-  // import.meta.dirname = <root>/apps/server/src/plugins → root/node_modules
-  dirs.push(join(import.meta.dirname, '..', '..', '..', 'node_modules'));
+  // Walk up from this module (…/apps/server/src/plugins) to the repo root so
+  // both bun's per-package layout (apps/server/node_modules) and a hoisted
+  // root node_modules are covered; self-hosted installs `bun add` plugins
+  // next to the server entry and get discovered the same way.
+  let dir = import.meta.dirname;
+  for (let i = 0; i < 5; i++) {
+    dirs.push(join(dir, 'node_modules'));
+    const parent = join(dir, '..');
+    if (parent === dir) break;
+    dir = parent;
+  }
   return [...new Set(dirs)];
 }
 

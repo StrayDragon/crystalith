@@ -1,5 +1,10 @@
 ---
 depends_on: []
+skip_specs_landing: true
+branch: sdd/add-extractor-arxiv
+base_sha: 6837c848a0b2bb1640880fbc8d20c4ff27b10892
+checkpointed: true
+checkpoint_sha: 6837c848a0b2bb1640880fbc8d20c4ff27b10892
 ---
 
 # Proposal — add-extractor-arxiv（首个榜样外部插件，DRAFT）

@@ -122,10 +122,13 @@ describe('extractor metadata over the registry', () => {
     const { pluginRegistry: live } = await import('../../src/plugins/registry.ts');
     await live.ensureLoaded();
     const meta = listExtractorMetadata({});
-    expect(meta.map((m) => m.name)).toEqual(['readability', 'jina', 'firecrawl']);
-    expect(meta.map((m) => m.priority)).toEqual([10, 20, 30]);
+    // Built-ins in registration (fallback) order; external exemplar plugin
+    // (workspace symlink) lands after built-ins.
+    expect(meta.map((m) => m.name)).toEqual(['readability', 'jina', 'firecrawl', 'arxiv']);
+    expect(meta.map((m) => m.priority)).toEqual([10, 20, 30, 40]);
     expect(meta[0]?.requiresApiKey).toBeFalse();
     expect(meta[1]?.requiresApiKey).toBeTrue();
     expect(meta[2]?.recoveryHint).toContain('CL_FIRECRAWL_API_KEY');
+    expect(meta[3]?.enabled).toBeTrue();
   });
 });

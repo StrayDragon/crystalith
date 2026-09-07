@@ -1,0 +1,14 @@
+{
+  "name": "@crystalith-plugin/extractor-arxiv",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "try": "bun scripts/try.ts"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  }
+}
