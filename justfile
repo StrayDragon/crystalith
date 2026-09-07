@@ -157,13 +157,7 @@ e2e-all:
 # Config
 # --------------------------------------------------------------------------
 
-# Initialize .env and config/secret.env from shell environment variables.
-# LEGACY: prefer `cp .env.example .env` + SSOT (`just gen-env-examples`). See script header.
-upsert-env-configs:
-    @echo "⚠️  upsert-env-configs is legacy; prefer .env.example / secret.env.example (CL_* SSOT)"
-    bash ./scripts/init_config.sh
-
-# Regenerate .env.example, config/secret.env.example, and app.schema.gen.json
+# Regenerate .env.example and app.schema.gen.json
 gen-env-examples:
     bun scripts/gen-env-examples.ts
 

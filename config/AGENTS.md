@@ -1,7 +1,7 @@
 # config — Crystalith v2 Runtime Configuration
 
 > Runtime/business config lives in `config/app.yaml` (SSOT).
-> Secrets go in `config/secret.env` (gitignored).
+> API keys go in `CL_*` environment variables (shell export or gitignored `.env`).
 
 ## v2 Changes from v1
 
@@ -24,14 +24,16 @@
 
 ## Template Variables
 
-`config/app.yaml` supports `{{ env.KEY }}` and `{{ secret.KEY }}` placeholders:
+`config/app.yaml` supports `{{ env.KEY }}` placeholders:
 
 - `env.*` — from environment variables (`.env` overrides)
-- `secret.*` — from `config/secret.env`
+
+The legacy `{{ secret.* }}` namespace (`config/secret.env`) was removed and now
+throws at load time — use `env.*` only.
 
 Env file SSOT: `packages/shared/src/schemas/env.ts` → `just gen-env-examples`
-(produces `.env.example` and `config/secret.env.example` with `CL_*` keys).
-Prefer copying those examples. `just upsert-env-configs` / `scripts/init_config.sh` is **legacy** (subset + some old key names).
+(produces `.env.example` with all `CL_*` keys incl. API keys).
+Prefer copying that example; set keys via shell export or `.env`.
 
 Example:
 
@@ -39,7 +41,7 @@ Example:
 models:
   default:
     provider: openai
-    api_key: '{{ secret.OPENAI_API_KEY }}'
+    api_key: '{{ env.OPENAI_API_KEY }}'
     base_url: '{{ env.OPENAI_BASE_URL }}'
 ```
 
@@ -47,7 +49,5 @@ models:
 
 ```
 config/
-├── app.yaml              # SSOT — runtime/business config (Nunjucks templates)
-├── secret.env            # Secrets (gitignored)
-└── secret.env.example    # Template for secret.env
+└── app.yaml              # SSOT — runtime/business config (template-rendered)
 ```

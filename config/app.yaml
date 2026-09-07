@@ -3,10 +3,10 @@
 # Crystalith Configuration (safe defaults for public repo)
 # ============================================================================
 # Notes:
-# - Do NOT commit secrets. Export them in your shell or set in `.env` (gitignored).
-# - This file is rendered as a template before YAML parsing:
-#   - `{% raw %}{{ env.KEY }}{% endraw %}` reads from `os.environ` overlaid by `.env`
-#   - `{% raw %}{{ secret.KEY }}{% endraw %}` reads from `config/secret.env` (optional; Docker deployments)
+# - Do NOT commit secrets. Export CL_* keys in your shell or set in `.env` (gitignored).
+# - This file is rendered as a template before YAML parsing; `env.KEY`-style
+#   expressions read from os.environ overlaid by `.env`.
+# - The legacy `secret.*` namespace (config/secret.env) was removed and throws.
 %YAML 1.1
 ---
 # ----------------------------------------------------------------------------
@@ -29,7 +29,7 @@ app:
     # Optional API key auth for self-host deployments.
     # When enabled, all /v1/** endpoints require `Authorization: Bearer <token>`.
     enabled: false
-    # api_key: "{% raw %}{{ secret.CRYSTALITH_API_KEY }}{% endraw %}"
+    # api_key: "env.CRYSTALITH_API_KEY" (template-rendered)
 
   cors:
     # Allowed origins for browser clients (CORS).
@@ -72,19 +72,19 @@ plugins:
 providers:
   # OpenAI-compatible API (general-purpose: chat, embeddings via external API)
   openai_default: &openai_default
-    apiKey: "{{ secret.CL_CHAT_API_KEY | default(env.CL_CHAT_API_KEY | default('')) }}"
+    apiKey: "{{ env.CL_CHAT_API_KEY | default('') }}"
     baseUrl: "{{ env.CL_CHAT_API_BASE | default('http://127.0.0.1:50256/v1') }}"
 
   # OpenAI-compatible embedding gateway (dedicated embedding server, e.g. OMLX)
   embed_gateway: &embed_gateway
-    apiKey: "{{ secret.CL_EMBEDDING_API_KEY | default(env.CL_EMBEDDING_API_KEY | default('sk-local')) }}"
+    apiKey: "{{ env.CL_EMBEDDING_API_KEY | default('sk-local') }}"
     baseUrl: "{{ env.CL_EMBEDDING_API_BASE | default('http://127.0.0.1:50256/v1') }}"
 
   # OpenAI-compatible primary chat gateway (routed via CL_CHAT_API_BASE by default)
   # llamacpp / many local gateways reject AI SDK grammar constrained decoding
   # ("failed to parse grammar") — keep false so generateObject uses JSON prompt mode.
   chat_gateway: &chat_gateway
-    apiKey: "{{ secret.CL_CHAT_API_KEY | default(env.CL_CHAT_API_KEY | default('sk-local')) }}"
+    apiKey: "{{ env.CL_CHAT_API_KEY | default('sk-local') }}"
     baseUrl: "{{ env.CL_CHAT_API_BASE | default('http://127.0.0.1:50256/v1') }}"
     supportsStructuredOutputs: false
 
@@ -309,13 +309,13 @@ source_ingestion:
     # Availability = enabled && api_key present (readability needs neither).
     jina:
       enabled: true
-      # Prefer CL_* (secret.env or shell) over deprecated JINA_API_KEY.
-      api_key: "{{ secret.CL_JINA_API_KEY | default(env.CL_JINA_API_KEY | default(env.JINA_API_KEY | default(''))) }}"
+      # Prefer CL_* (shell or .env) over deprecated JINA_API_KEY.
+      api_key: "{{ env.CL_JINA_API_KEY | default(env.JINA_API_KEY | default('')) }}"
 
     firecrawl:
       # Availability still requires a non-empty api_key (CL_FIRECRAWL_API_KEY).
       enabled: true
-      api_key: "{{ secret.CL_FIRECRAWL_API_KEY | default(env.CL_FIRECRAWL_API_KEY | default(env.FIRECRAWL_API_KEY | default(''))) }}"
+      api_key: "{{ env.CL_FIRECRAWL_API_KEY | default(env.FIRECRAWL_API_KEY | default('')) }}"
       # Self-hosted: set CL_FIRECRAWL_API_BASE (e.g. http://127.0.0.1:3002). Empty → cloud default.
       base_url: "{{ env.CL_FIRECRAWL_API_BASE | default('') }}"
 

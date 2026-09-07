@@ -5,7 +5,7 @@
  * Scenarios (order matters for prune):
  *   create_and_stream → node_chat_proposal → accept_prune → budget_finish → progress_revisions
  *
- * Usage (server already on :8032 with secret.env loaded):
+ * Usage (server already on :8032 with CL_* env loaded):
  *   bun scripts/smoke-research-live.ts
  *
  * Env:

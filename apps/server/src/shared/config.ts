@@ -1,13 +1,14 @@
-// Configuration loader — reads config/app.yaml, renders `{{ env.* }}` /
-// `{{ secret.* }}` template expressions, and validates against the shared
-// Zod schemas. The result is a typed `AppConfig` consumed by the AI runtime
-// (provider registry) and the models management endpoint.
+// Configuration loader — reads config/app.yaml, renders `{{ env.* }}` template
+// expressions, and validates against the shared Zod schemas. The result is a
+// typed `AppConfig` consumed by the AI runtime (provider registry) and the
+// models management endpoint.
 //
 // Template syntax (simplified Jinja2 subset, matching v1 app.yaml):
-//   {{ env.KEY }}                              — process.env + .env overlay
-//   {{ secret.KEY }}                           — config/secret.env
-//   {{ env.KEY | default('fallback') }}        — with default
-//   {{ secret.KEY | default(env.KEY | default('')) }}  — chained defaults
+//   {{ env.KEY }}                        — process.env + .env overlay
+//   {{ env.KEY | default('fallback') }}  — with default
+//
+// The legacy `{{ secret.* }}` namespace (config/secret.env) was removed;
+// resolveLookup throws if a template still references it.
 //
 // YAML anchors (&name / <<: *name) are handled natively by the `yaml` parser.
 import { readFileSync, existsSync } from 'node:fs';
@@ -33,24 +34,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function getConfigPath(): string {
   return envValue('CL_CONFIG_PATH') ?? 'config/app.yaml';
 }
-export function getSecretPath(): string {
-  return envValue('CL_SECRET_PATH') ?? 'config/secret.env';
-}
 
 // Lazy init — resolve paths after env overlay is ready.
 let _configPath: string | null = null;
-let _secretPath: string | null = null;
 export function configPath(): string {
   _configPath ??= getConfigPath();
   return _configPath;
 }
-export function secretPath(): string {
-  _secretPath ??= getSecretPath();
-  return _secretPath;
-}
 
 // ---------------------------------------------------------------------------
-// Secret + env loading
+// Env loading
 // ---------------------------------------------------------------------------
 
 /** Parse a dotenv file into a record (does not mutate process.env). */
@@ -72,12 +65,6 @@ function parseDotenv(path: string): Record<string, string> {
     out[key] = val;
   }
   return out;
-}
-
-let _secrets: Record<string, string> | null = null;
-function secrets(): Record<string, string> {
-  _secrets ??= parseDotenv(secretPath());
-  return _secrets;
 }
 
 let _envOverlay: Record<string, string> | null = null;
@@ -173,13 +160,17 @@ function splitTopLevel(s: string, sep: string): string[] {
   return parts;
 }
 
-/** Resolve `env.KEY` or `secret.KEY` or a bare string literal. */
+/** Resolve `env.KEY` or a bare string literal. */
 function resolveLookup(head: string): unknown {
   const envMatch = head.match(/^env\.([A-Za-z_][A-Za-z0-9_]*)$/u);
   if (envMatch) return envValue(envMatch[1]);
 
   const secretMatch = head.match(/^secret\.([A-Za-z_][A-Za-z0-9_]*)$/u);
-  if (secretMatch) return secrets()[secretMatch[1]];
+  if (secretMatch) {
+    throw new Error(
+      `config template references '${head}' — the secret.* namespace (config/secret.env) was removed; use env.${secretMatch[1]} (shell export or .env)`,
+    );
+  }
 
   // Bare quoted string literal.
   if (
@@ -243,7 +234,6 @@ export function config(): AppConfig {
 /** Force a reload (tests / config hot-reload). */
 export function resetConfig(cfg: AppConfig | null = null): void {
   _config = cfg;
-  _secrets = null;
   _envOverlay = null;
 }
 
