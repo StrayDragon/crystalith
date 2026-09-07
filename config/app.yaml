@@ -49,20 +49,17 @@ app:
     cleanup_failed_sources: false
 
 # ----------------------------------------------------------------------------
-# Plugins (Python entry points)
+# Plugin discovery (CrystalithPlugin registry)
 # ----------------------------------------------------------------------------
-# Plugins are discovered via Python entry points (group: `crystalith.plugins`).
-#
-# Install profiles:
-# - core-only: `pip install crystalith` (default docker image)
-# - official-full (recommended): `pip install 'crystalith[official-full]'`
+# Built-in plugins register in-box; external plugins are npm packages under
+# the `@crystalith-plugin/*` scope, loaded at startup (restart to apply).
 #
 # Tips:
 # - `enabled` (allowlist) overrides default enablement (only listed ids load).
 # - `disabled` (denylist) always takes precedence.
 # - `load_order` makes conflict resolution deterministic (loaded last wins).
 plugins:
-  # enabled: ["output-faq", "parser-pdf", "extractor-trafilatura"]
+  # enabled: ["extractor-jina", "slides-slidev"]
   disabled: []
   load_order: []
 

@@ -1,8 +1,8 @@
 // Studio slides config tables — historical origin: v1 slides/config.py
-// (deleted in c14). This file is the SSOT now; v2 has no plugin host yet
-// (c13 scope), so the tables live here. buildSlidesConfigSchema() produces
-// the same PluginConfigSchema shape, so c13 can later relocate the data
-// source without changing the /workspace/tools contract.
+// (deleted in c14). These tables are the implementation behind the built-in
+// `slides-slidev` plugin (apps/server/src/plugins/builtin/slides-slidev.ts);
+// discovery/registration goes through the plugin registry (r7) — import this
+// module only as the plugin's implementation detail.
 import type { ConfigOption, SlidesConfigSchema, ThemePresetOption } from '@crystalith/shared';
 
 // ---------------------------------------------------------------------------

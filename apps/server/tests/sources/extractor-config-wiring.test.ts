@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it } from 'bun:test';
+import { afterEach, beforeAll, describe, expect, it } from 'bun:test';
 
+import { pluginRegistry } from '../../src/plugins/registry.ts';
 import {
   DEFAULT_FIRECRAWL_API_BASE,
   isWebExtractorEnabled,
@@ -14,6 +15,10 @@ const CL_KEYS = ['CL_JINA_API_KEY', 'CL_FIRECRAWL_API_KEY', 'CL_FIRECRAWL_API_BA
 
 afterEach(() => {
   for (const key of CL_KEYS) delete process.env[key];
+});
+
+beforeAll(async () => {
+  await pluginRegistry.ensureLoaded();
 });
 
 describe('extractor config wiring (source_ingestion.web_extraction)', () => {

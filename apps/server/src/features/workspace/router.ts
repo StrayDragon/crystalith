@@ -12,8 +12,9 @@ import {
 import { Elysia, NotFoundError } from 'elysia';
 
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import type { SlidesWorkflowImpl } from '../../plugins/builtin/slides-slidev.ts';
+import { pluginRegistry } from '../../plugins/registry.ts';
 import { OUTPUT_META, FRONTEND_BUNDLES } from '../outputs/generator.ts';
-import { buildSlidesConfigSchema } from '../studio/config.ts';
 
 const FRONTEND_BUNDLE_BY_TYPE: Record<
   string,
@@ -46,7 +47,9 @@ registerApiDoc(apiDocs);
 export const workspaceRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/workspace/tools',
-    () => {
+    async () => {
+      await pluginRegistry.ensureLoaded();
+      const slidesImpl = pluginRegistry.implOf<SlidesWorkflowImpl>('slides-slidev');
       const tools = Object.entries(OUTPUT_META).map(([type, meta]) => ({
         id: type.toLowerCase(),
         kind: 'outputType' as const,
@@ -58,18 +61,31 @@ export const workspaceRouter = new Elysia({ prefix: '/v2' })
         isTool: meta.isTool,
         enabled: true,
         // c56: SLIDES tool MUST carry configSchema to drive the frontend config UI
-        configSchema: type === 'SLIDES' ? buildSlidesConfigSchema() : null,
+        configSchema: type === 'SLIDES' ? (slidesImpl?.buildSlidesConfigSchema() ?? null) : null,
         // renderDescriptor tells frontend GenericOutputRenderer how to display
         // structured output content (FAQ→cards, GUIDE→sections, MINDMAP→tree, etc.)
         renderDescriptor: meta.renderDescriptor,
         frontendBundle: FRONTEND_BUNDLE_BY_TYPE[type] ?? null,
       }));
 
+      const report = pluginRegistry.loadReport();
+      // r18: official catalog covers every registered official plugin
+      // (built-ins ship in-box; @crystalith-plugin/* installs report their source)
+      const official = Object.fromEntries(
+        pluginRegistry.allRegistrations().map(({ plugin, source }) => [
+          plugin.id,
+          {
+            status: source === 'builtin' ? 'builtin' : 'installed',
+            message: plugin.displayName,
+          },
+        ]),
+      );
+
       return {
         tools,
         diagnostics: {
-          plugins: { loaded: tools.map((t) => t.id), skipped: {} },
-          official: {},
+          plugins: report,
+          official,
           slides: null,
         },
       };
@@ -79,17 +95,21 @@ export const workspaceRouter = new Elysia({ prefix: '/v2' })
 
   .get(
     '/workspace/tools/:id/config',
-    ({ params }) => {
+    async ({ params }) => {
+      await pluginRegistry.ensureLoaded();
       const type = params.id.toUpperCase();
       const meta = OUTPUT_META[type];
       if (!meta) throw new NotFoundError(`Tool ${params.id} not found`);
       // c56: /tools/:id/config MUST be consistent with the tools list configSchema
       if (type === 'SLIDES') {
-        return {
-          toolId: params.id,
-          toolLabel: meta.displayText,
-          ...buildSlidesConfigSchema(),
-        };
+        const slidesImpl = pluginRegistry.implOf<SlidesWorkflowImpl>('slides-slidev');
+        if (slidesImpl) {
+          return {
+            toolId: params.id,
+            toolLabel: meta.displayText,
+            ...slidesImpl.buildSlidesConfigSchema(),
+          };
+        }
       }
       return {
         toolId: params.id,
