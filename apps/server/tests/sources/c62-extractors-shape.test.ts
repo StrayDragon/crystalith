@@ -30,6 +30,14 @@ describe('c62: listExtractorMetadata field shape', () => {
     expect(jina.requiresService).toBe(true);
     expect(firecrawl.requiresService).toBe(true);
   });
+
+  it('arxiv exposes urlPatterns; generic builtins do not', () => {
+    const meta = listExtractorMetadata({});
+    const arxiv = meta.find((e) => e.name === 'arxiv');
+    const readability = meta.find((e) => e.name === 'readability')!;
+    expect(arxiv?.urlPatterns?.length).toBeGreaterThan(0);
+    expect(readability.urlPatterns).toBeNull();
+  });
 });
 
 describe('c62: getDefaultExtractor by availability', () => {

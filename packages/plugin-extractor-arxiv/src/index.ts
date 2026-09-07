@@ -144,6 +144,7 @@ export const extractorArxiv: CrystalithPlugin = {
   recoveryHint: '检查目标是否为 arxiv.org/abs/* 页面；网络问题请配置 CL_PROXY_* 或 proxy_settings',
   configSchema: z.object({}),
   capabilities: [],
+  urlPatterns: [ARXIV_ABS_URL.source],
   factory: async (ctx: CrystalithPluginContext): Promise<Extractor> => ({
     name: 'arxiv',
     isAvailable: () => true,

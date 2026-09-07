@@ -338,13 +338,9 @@ export const SourceFromUrlRequestSchema = z
       .string()
       .nullable()
       .optional()
-      .refine(
-        (v) =>
-          v === null ||
-          v === undefined ||
-          ['readability', 'jina', 'firecrawl'].includes(v.toLowerCase()),
-        { message: 'extractor must be one of: readability, jina, firecrawl' },
-      ),
+      .refine((v) => v === null || v === undefined || /^[a-z][a-z0-9_-]*$/u.test(v.toLowerCase()), {
+        message: 'extractor must be a lowercase identifier',
+      }),
   })
   .transform((v) => ({
     ...v,
@@ -471,6 +467,11 @@ export const ExtractorInfoSchema = z.object({
   message: z.string().nullable().optional(),
   recoveryHint: z.string().nullable().optional(),
   details: JsonMetadataSchema.nullable().optional(),
+  urlPatterns: z
+    .array(z.string())
+    .nullable()
+    .optional()
+    .describe(desc('source.extractor_url_patterns', 'URL 正则源列表，仅用于导入对话框预选提示')),
 });
 export type ExtractorInfo = z.infer<typeof ExtractorInfoSchema>;
 

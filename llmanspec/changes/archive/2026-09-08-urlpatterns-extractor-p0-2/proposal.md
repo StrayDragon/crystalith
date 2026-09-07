@@ -2,7 +2,8 @@
 depends_on: []
 branch: sdd/urlpatterns-extractor-p0-2
 base_sha: 88e420481b9cf3a0ac9d9e0628e5355f8266cdb3
-checkpointed: false
+checkpointed: true
+checkpoint_sha: 88e420481b9cf3a0ac9d9e0628e5355f8266cdb3
 ---
 
 # URL 导入按粘贴链接自动勾选排序提取器（urlPatterns 元数据透出）
