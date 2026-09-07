@@ -1,5 +1,5 @@
 // @crystalith/gen-env-examples
-// Regenerate .env.example and config/secret.env.example from the Zod SSOT.
+// Regenerate .env.example from the Zod SSOT.
 //
 // Usage:
 //   bun scripts/gen-env-examples.ts           # generate files
@@ -25,7 +25,6 @@ import {
 const ROOT = process.cwd();
 
 const BUILD_RUN_FILE = join(ROOT, '.env.example');
-const SECRETS_FILE = join(ROOT, 'config', 'secret.env.example');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -44,14 +43,12 @@ function generateBuildRunExample(descriptors: EnvEntryDescriptor[]): string {
   lines.push('# DO NOT EDIT MANUALLY — edit the schema and run `just gen-env-examples`.');
   lines.push('# ============================================================================');
   lines.push('#');
-  lines.push(
-    '# Quick start:  cp .env.example .env  (secrets: cp config/secret.env.example config/secret.env)',
-  );
+  lines.push('# Quick start:  cp .env.example .env');
   lines.push('# Then:         just dev   # overmind: server :8032 + web :3000 + slidev :3030');
   lines.push('# Requires:     overmind + tmux on PATH');
   lines.push('# ============================================================================');
   lines.push('#');
-  lines.push('# Runtime/business config lives in `config/app.yaml` (and `config/secret.env`).');
+  lines.push('# Runtime/business config lives in `config/app.yaml`.');
   lines.push('# This file controls build/run parameters.');
   lines.push('# ============================================================================');
   lines.push('');
@@ -95,36 +92,6 @@ function generateBuildRunExample(descriptors: EnvEntryDescriptor[]): string {
   return lines.join('\n');
 }
 
-function generateSecretsExample(descriptors: EnvEntryDescriptor[]): string {
-  const lines: string[] = [];
-
-  // Header
-  lines.push('# Crystalith v2 secrets (dotenv format)');
-  lines.push('# Copy to config/secret.env and fill in values.');
-  lines.push('# This file is gitignored. Do NOT commit.');
-  lines.push('#');
-  lines.push('# Auto-generated from packages/shared/src/schemas/env.ts.');
-  lines.push('# DO NOT EDIT MANUALLY — edit the schema and run `just gen-env-examples`.');
-  lines.push('#');
-  lines.push('# NOTE: The recommended way is to set CL_CHAT_API_KEY and');
-  lines.push('# CL_EMBEDDING_API_KEY via environment variables (~/.bashrc),');
-  lines.push('# not via this secrets file.');
-  lines.push('#');
-  lines.push('# Regenerate hints:');
-  lines.push('#   just gen-env-examples');
-  lines.push('');
-
-  for (const desc of descriptors) {
-    if (desc.description) {
-      lines.push(`# ${desc.description}`);
-    }
-    lines.push(`${desc.key}=`);
-    lines.push('');
-  }
-
-  return lines.join('\n');
-}
-
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -134,10 +101,8 @@ function main(): void {
   const allDescs = getAllEnvDescriptors();
 
   const buildRunDescs = allDescs.filter((d) => d.target === EnvTarget.BuildRun);
-  const secretsDescs = allDescs.filter((d) => d.target === EnvTarget.Secrets);
 
   const buildRunContent = generateBuildRunExample(buildRunDescs);
-  const secretsContent = generateSecretsExample(secretsDescs);
 
   if (isCheck) {
     // Generate to tempdir and diff
@@ -145,9 +110,7 @@ function main(): void {
     mkdirSync(tmpDir, { recursive: true });
 
     const tmpBuildRun = join(tmpDir, '.env.example');
-    const tmpSecrets = join(tmpDir, 'secret.env.example');
     writeFileSync(tmpBuildRun, buildRunContent, 'utf-8');
-    writeFileSync(tmpSecrets, secretsContent, 'utf-8');
 
     let hasDiff = false;
 
@@ -167,24 +130,6 @@ function main(): void {
       hasDiff = true;
     }
 
-    // Check secret.env.example
-    if (existsSync(SECRETS_FILE)) {
-      const existing = readFileSync(SECRETS_FILE, 'utf-8');
-      if (existing !== secretsContent) {
-        console.error(
-          '[check] config/secret.env.example differs from SSOT — run `just gen-env-examples` to regenerate',
-        );
-        hasDiff = true;
-      } else {
-        console.log('[check] config/secret.env.example is up to date.');
-      }
-    } else {
-      console.error(
-        '[check] config/secret.env.example is MISSING — run `just gen-env-examples` to create it',
-      );
-      hasDiff = true;
-    }
-
     process.exit(hasDiff ? 1 : 0);
   }
 
@@ -192,10 +137,6 @@ function main(): void {
   mkdirSync(dirname(BUILD_RUN_FILE), { recursive: true });
   writeFileSync(BUILD_RUN_FILE, buildRunContent, 'utf-8');
   console.log(`[gen] Wrote ${BUILD_RUN_FILE}`);
-
-  mkdirSync(dirname(SECRETS_FILE), { recursive: true });
-  writeFileSync(SECRETS_FILE, secretsContent, 'utf-8');
-  console.log(`[gen] Wrote ${SECRETS_FILE}`);
 }
 
 main();

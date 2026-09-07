@@ -2,8 +2,7 @@
 //
 // Single source of truth for all environment variables used by Crystalith v2.
 // The gen-env-examples.ts script consumes this to auto-generate:
-//   - .env.example              (build-run group → .env file)
-//   - config/secret.env.example  (secrets group → config/secret.env)
+//   - .env.example              (all CL_* keys → .env file)
 //
 // When adding a new env var:
 //   1. Add it here with .describe() and an appropriate default
@@ -23,18 +22,17 @@ import { desc } from './i18n.js';
 
 /**
  * Target file for each env var group.
- * - `build-run`: non-secret build/run parameters → `.env`
- * - `secrets`: API keys and tokens → `config/secret.env`
+ * - `build-run`: all CL_* parameters incl. API keys → `.env` (keys also via shell export)
  */
 export const EnvTarget = {
   BuildRun: 'build-run',
-  Secrets: 'secrets',
 } as const;
 export type EnvTarget = (typeof EnvTarget)[keyof typeof EnvTarget];
 
 // ---------------------------------------------------------------------------
 // Build-run env vars (→ .env)
 // Non-secret parameters controlling server, build, and runtime behavior.
+// API keys live here too: set them via shell export or a gitignored `.env`.
 // ---------------------------------------------------------------------------
 
 export const BuildRunEnvSchema = z
@@ -51,14 +49,32 @@ export const BuildRunEnvSchema = z
 
     CL_CONFIG_PATH: z.string().default('config/app.yaml').describe(desc('env.CL_CONFIG_PATH')),
 
-    CL_SECRET_PATH: z.string().default('config/secret.env').describe(desc('env.CL_SECRET_PATH')),
-
     // --- API endpoints ---
     CL_CHAT_API_BASE: z.string().default('').describe(desc('env.CL_CHAT_API_BASE')),
 
     CL_EMBEDDING_API_BASE: z.string().default('').describe(desc('env.CL_EMBEDDING_API_BASE')),
 
     OPENAI_BASE_URL: z.string().default('').describe(desc('env.OPENAI_BASE_URL')),
+
+    // --- API keys ---
+    CL_CHAT_API_KEY: z.string().default('').describe(desc('env.CL_CHAT_API_KEY')),
+
+    CL_EMBEDDING_API_KEY: z.string().default('').describe(desc('env.CL_EMBEDDING_API_KEY')),
+
+    CL_JINA_API_KEY: z.string().default('').describe(desc('env.CL_JINA_API_KEY')),
+
+    CL_FIRECRAWL_API_KEY: z.string().default('').describe(desc('env.CL_FIRECRAWL_API_KEY')),
+
+    CRYSTALITH_API_KEY: z.string().default('').describe(desc('env.CRYSTALITH_API_KEY')),
+
+    OPENAI_API_KEY: z.string().default('').describe(desc('env.OPENAI_API_KEY')),
+
+    ANTHROPIC_API_KEY: z.string().default('').describe(desc('env.ANTHROPIC_API_KEY')),
+
+    GOOGLE_GENERATIVE_AI_API_KEY: z
+      .string()
+      .default('')
+      .describe(desc('env.GOOGLE_GENERATIVE_AI_API_KEY')),
 
     // --- Model overrides ---
     CL_DEFAULT_CHAT_MODEL: z.string().default('').describe(desc('env.CL_DEFAULT_CHAT_MODEL')),
@@ -116,6 +132,8 @@ export type BuildRunEnv = z.infer<typeof BuildRunEnvSchema>;
 
 export const DeprecatedEnvSchema = z
   .object({
+    CL_SECRET_PATH: z.string().default('').describe(desc('env.CL_SECRET_PATH')),
+
     SEARXNG_HOST: z.string().default('').describe(desc('env.SEARXNG_HOST')),
 
     JINA_API_KEY: z.string().default('').describe(desc('env.JINA_API_KEY')),
@@ -129,38 +147,6 @@ export const DeprecatedEnvSchema = z
 export type DeprecatedEnv = z.infer<typeof DeprecatedEnvSchema>;
 
 // ---------------------------------------------------------------------------
-// Secrets env vars (→ config/secret.env)
-// API keys and tokens. This file is gitignored.
-// ---------------------------------------------------------------------------
-
-export const SecretsEnvSchema = z
-  .object({
-    CL_CHAT_API_KEY: z.string().default('').describe(desc('env.CL_CHAT_API_KEY')),
-
-    CL_EMBEDDING_API_KEY: z.string().default('').describe(desc('env.CL_EMBEDDING_API_KEY')),
-
-    CL_JINA_API_KEY: z.string().default('').describe(desc('env.CL_JINA_API_KEY')),
-
-    CL_FIRECRAWL_API_KEY: z.string().default('').describe(desc('env.CL_FIRECRAWL_API_KEY')),
-
-    CRYSTALITH_API_KEY: z.string().default('').describe(desc('env.CRYSTALITH_API_KEY')),
-
-    OPENAI_API_KEY: z.string().default('').describe(desc('env.OPENAI_API_KEY')),
-
-    ANTHROPIC_API_KEY: z.string().default('').describe(desc('env.ANTHROPIC_API_KEY')),
-
-    GOOGLE_GENERATIVE_AI_API_KEY: z
-      .string()
-      .default('')
-      .describe(desc('env.GOOGLE_GENERATIVE_AI_API_KEY')),
-  })
-  .openapi({
-    description: desc('env.secrets', '密钥环境变量（→ config/secret.env）'),
-  });
-
-export type SecretsEnv = z.infer<typeof SecretsEnvSchema>;
-
-// ---------------------------------------------------------------------------
 // Composite schema (combined for validation or bulk operations)
 // ---------------------------------------------------------------------------
 
@@ -168,9 +154,7 @@ export type SecretsEnv = z.infer<typeof SecretsEnvSchema>;
  * All env vars merged into one flat schema.
  * Useful for runtime validation of the full environment.
  */
-export const AllEnvSchema = BuildRunEnvSchema.extend(DeprecatedEnvSchema.shape).extend(
-  SecretsEnvSchema.shape,
-);
+export const AllEnvSchema = BuildRunEnvSchema.extend(DeprecatedEnvSchema.shape);
 export type AllEnv = z.infer<typeof AllEnvSchema>;
 
 // ---------------------------------------------------------------------------
@@ -216,13 +200,12 @@ function extractDescriptors(
 }
 
 /**
- * Complete list of all env var descriptors, ordered: build-run → deprecated → secrets.
+ * Complete list of all env var descriptors, ordered: build-run → deprecated.
  * Consumed by gen-env-examples.ts.
  */
 export function getAllEnvDescriptors(): EnvEntryDescriptor[] {
   return [
     ...extractDescriptors(BuildRunEnvSchema, EnvTarget.BuildRun),
     ...extractDescriptors(DeprecatedEnvSchema, EnvTarget.BuildRun, true),
-    ...extractDescriptors(SecretsEnvSchema, EnvTarget.Secrets),
   ];
 }

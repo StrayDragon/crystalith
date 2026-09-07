@@ -42,7 +42,7 @@ crystalith/
 │   │   └── src/schemas/   # notebook, session, message, source, qa, output,
 │   │                      # studio, model, research (ResearchRun wire SSOT)；refine HTTP 已于 c73 移除
 │   └── crystalith-slidev/ # Slidev integration
-├── config/                # Runtime config (app.yaml + secret.env)
+├── config/                # Runtime config (app.yaml; keys via CL_* env)
 ├── llmanspec/             # Spec-driven development specs + changes
 ├── data/                  # Runtime DB + uploads (gitignored)
 └── scripts/               # Maintenance scripts
@@ -87,7 +87,7 @@ From repo root:
 - `just e2e-install` — install Playwright Chromium (optional; local defaults to system Chrome)
 - `just qa` — **primary PR gate**: typecheck + lint + format + schema drift + **server/shared unit** + **web Vitest** + **e2e @p0**
   - **Not in `just qa`**: `just test-bdd` · `just type-aware-lint`
-- Env setup: prefer `cp .env.example .env` and `cp config/secret.env.example config/secret.env` (`CL_*` SSOT via `just gen-env-examples`). `just upsert-env-configs` is **legacy**.
+- Env setup: prefer `cp .env.example .env` (`CL_*` SSOT via `just gen-env-examples`). API keys go in shell env (e.g. `~/.bashrc`) or the gitignored `.env`; `config/secret.env` is no longer read.
 
 Fast path:
 
