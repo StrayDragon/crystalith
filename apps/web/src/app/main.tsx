@@ -1,6 +1,7 @@
 import { ThemeProvider as MTThemeProvider } from '@material-tailwind/react';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import 'streamdown/styles.css';
 
 import './tailwind.css';
 import App from './App';

@@ -29,6 +29,7 @@ import { exportQaJsonDownload, exportQaMarkdownDownload } from '../../shared/evi
 import { useCommands } from '../../shared/hooks/useCommands';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { ChatMessage, Citation, OutputTypeId } from '../../shared/types';
+import AssistantMarkdown from './AssistantMarkdown';
 interface ChatPanelProps {
   messages: ChatMessage[];
   draft: string;
@@ -248,10 +249,8 @@ function ChatPanel({
             .map((chunkId) => citationIndexMap.get(chunkId))
             .filter((entry): entry is { citation: Citation; index: number } => Boolean(entry));
 
-    const typingCursor =
-      message.role === 'assistant' && isStreaming && streamingMessageId === message.id ? (
-        <span className="TypingCursor" aria-hidden="true" />
-      ) : null;
+    const isMessageStreaming =
+      message.role === 'assistant' && isStreaming && streamingMessageId === message.id;
 
     return (
       <div
@@ -265,10 +264,11 @@ function ChatPanel({
               : 'w-full text-gray-800 dark:text-slate-100'
           }`}
         >
-          <div className="whitespace-pre-wrap">
-            {message.role === 'assistant' ? message.content : message.content}
-            {typingCursor}
-          </div>
+          {message.role === 'assistant' ? (
+            <AssistantMarkdown content={message.content} streaming={isMessageStreaming} />
+          ) : (
+            <div className="whitespace-pre-wrap">{message.content}</div>
+          )}
         </div>
         {message.role === 'assistant' && message.content ? (
           <div className="flex items-center gap-1 mt-1 flex-wrap">

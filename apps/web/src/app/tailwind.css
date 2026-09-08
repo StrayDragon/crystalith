@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* streamdown（聊天 assistant markdown 渲染）的 utility classes 在其 dist 内，需显式收录 */
+@source "../../node_modules/streamdown/dist/*.js";
+
 @layer base {
   :root {
     color-scheme: light;
@@ -103,17 +106,6 @@
     height: 100dvh;
   }
 
-  .TypingCursor {
-    display: inline-block;
-    width: 8px;
-    height: 1.1em;
-    margin-left: 4px;
-    vertical-align: -2px;
-    border-radius: 2px;
-    background-color: currentColor;
-    animation: typing-cursor-blink 0.9s steps(1) infinite;
-  }
-
   .ux-fade-in {
     animation: ux-fade-in 150ms ease-out;
   }
@@ -140,17 +132,6 @@
   .dark .ux-source-locate-flash {
     animation-name: ux-source-locate-flash-dark;
     border-color: rgb(59 130 246); /* blue-500 */
-  }
-}
-
-@keyframes typing-cursor-blink {
-  0%,
-  50% {
-    opacity: 1;
-  }
-  50.01%,
-  100% {
-    opacity: 0;
   }
 }
 
@@ -373,7 +354,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .TypingCursor,
   .ux-fade-in,
   .ux-slide-in,
   .ux-modal-in,
