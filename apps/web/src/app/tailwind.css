@@ -2,20 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
-/* streamdown（聊天 assistant markdown 渲染）的 utility classes 在其 dist 内，需显式收录 */
-@source "../../node_modules/streamdown/dist/*.js";
-
 @layer base {
   :root {
     color-scheme: light;
     --cl-bg: #f3f4f6;
     --cl-text: #111827;
+
+    /*
+     * streamdown（shadcn token 体系）语义色，RGB 三元组供 tailwind.config
+     * 以 `rgb(var() / <alpha-value>)` 消费（支持 bg-muted/80 等透明度修饰）。
+     * 取值对齐仓库配色：light = gray，dark = slate。
+     */
+    --sd-background: 255 255 255;
+    --sd-foreground: 17 24 39; /* gray-900 */
+    --sd-muted: 243 244 246; /* gray-100 */
+    --sd-muted-foreground: 107 114 128; /* gray-500 */
+    --sd-border: 229 231 235; /* gray-200 */
+    --sd-sidebar: 249 250 251; /* gray-50 */
+    --sd-primary: 17 24 39; /* gray-900 */
+    --sd-primary-foreground: 255 255 255;
   }
 
   :root.dark {
     color-scheme: dark;
     --cl-bg: #020617;
     --cl-text: #e2e8f0;
+
+    --sd-background: 2 6 23; /* slate-950 */
+    --sd-foreground: 241 245 249; /* slate-100 */
+    --sd-muted: 30 41 59; /* slate-800 */
+    --sd-muted-foreground: 148 163 184; /* slate-400 */
+    --sd-border: 51 65 85; /* slate-700 */
+    --sd-sidebar: 15 23 42; /* slate-900 */
+    --sd-primary: 241 245 249; /* slate-100 */
+    --sd-primary-foreground: 2 6 23; /* slate-950 */
   }
 
   html,
