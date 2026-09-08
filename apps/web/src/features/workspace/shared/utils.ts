@@ -8,7 +8,12 @@ import type {
   Source as WireSource,
 } from '@crystalith/shared';
 
-import { decodeOutputItem, normalizeOutputPayload, pickTextValue } from './outputPayload';
+import {
+  decodeOutputItem,
+  formatOutputFieldText,
+  normalizeOutputPayload,
+  pickTextValue,
+} from './outputPayload';
 import type {
   Citation,
   CitationScopeMode,
@@ -220,9 +225,11 @@ export function formatStructuredOutputForCopy(output: OutputItem): string {
     case 'TIMELINE':
       return typed.content.events
         .map((event) =>
-          [event.date || '时间', event.event || '事件', event.description || '暂无描述'].join(
-            ' · ',
-          ),
+          [
+            formatOutputFieldText(event.date) || '时间',
+            event.event || '事件',
+            event.description || '暂无描述',
+          ].join(' · '),
         )
         .join('\n');
     case 'MINDMAP':

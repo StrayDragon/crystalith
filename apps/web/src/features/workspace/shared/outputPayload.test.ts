@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  decodeOutputContent,
   decodeOutputItem,
+  formatOutputFieldText,
   getOutputPayloadWarnings,
   getOutputTitle,
   getSlideIdFromOutput,
@@ -86,5 +88,13 @@ describe('outputPayload decoder', () => {
       content: { sections: [] },
     });
     expect(getOutputTitle(fallback)).toBe('BRIEFING 输出');
+  });
+
+  it('normalizes Eden Date coercion in timeline event dates', () => {
+    const decoded = decodeOutputContent('TIMELINE', {
+      events: [{ date: new Date(2017, 5, 12), event: 'Launch', description: 'Paper' }],
+    });
+    expect(decoded?.events[0]?.date).toBe('2017-06-12');
+    expect(formatOutputFieldText(new Date(2017, 5, 12))).toBe('2017-06-12');
   });
 });

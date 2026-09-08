@@ -135,7 +135,7 @@ export function decodeOutputContent(
     case 'GUIDE':
       return isGuideContent(content) ? content : null;
     case 'TIMELINE':
-      return isTimelineContent(content) ? content : null;
+      return isTimelineContent(content) ? normalizeTimelineContent(content) : null;
     case 'MINDMAP':
       return isMindmapContent(content) ? content : null;
     case 'QUIZ':
@@ -198,7 +198,7 @@ export function decodeOutputItem(output: OutputItem): TypedOutputItem | null {
     }
     case 'TIMELINE': {
       if (!isTimelineContent(output.content)) return null;
-      return { ...output, type: 'TIMELINE', content: output.content };
+      return { ...output, type: 'TIMELINE', content: normalizeTimelineContent(output.content) };
     }
     case 'MINDMAP': {
       if (!isMindmapContent(output.content)) return null;
@@ -279,4 +279,34 @@ export function pickTextValue(value: string | { text?: string | null } | null | 
   if (typeof value === 'string') return value;
   if (!value || typeof value !== 'object') return '';
   return typeof value.text === 'string' ? value.text : '';
+}
+
+/** Eden may coerce ISO-like date strings into `Date`; stringify before React render. */
+export function formatOutputFieldText(value: unknown): string {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return '';
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  if (typeof value === 'object') {
+    return pickTextValue(value as { text?: string | null });
+  }
+  return '';
+}
+
+function normalizeTimelineContent(
+  content: OutputContentByType['TIMELINE'],
+): OutputContentByType['TIMELINE'] {
+  return {
+    ...content,
+    events: content.events.map((event) => ({
+      ...event,
+      date: event.date instanceof Date ? formatOutputFieldText(event.date) || null : event.date,
+    })),
+  };
 }
