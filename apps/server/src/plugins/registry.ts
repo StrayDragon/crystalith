@@ -187,11 +187,17 @@ export class PluginRegistry {
     return this.impls.get(id) as T | undefined;
   }
 
-  /** Loaded plugins of a kind, in load order. */
+  /** Loaded plugins of a kind, in instantiation order (plugins.load_order aware). */
   loadedByKind(kind: CrystalithPluginKind): PluginRegistration[] {
-    return [...this.registrations.values()].filter(
-      ({ plugin }) => plugin.kind === kind && this.impls.has(plugin.id),
-    );
+    // Order by the actual instantiation sequence (impls insertion = load_order
+    // aware), NOT registration order — otherwise load_order would not affect
+    // consumer-facing chains like the extractor fallback order.
+    const loadedIndex = new Map(this.report.loaded.map((id, i) => [id, i]));
+    return [...this.registrations.values()]
+      .filter(({ plugin }) => plugin.kind === kind && this.impls.has(plugin.id))
+      .toSorted(
+        (a, b) => (loadedIndex.get(a.plugin.id) ?? 0) - (loadedIndex.get(b.plugin.id) ?? 0),
+      );
   }
 
   /** All registered (builtin + installed external) plugins — the official catalog face. */
