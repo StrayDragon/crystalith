@@ -3,7 +3,8 @@ depends_on: []
 skip_specs_landing: true
 branch: sdd/allow-low-similarity-qa
 base_sha: a415382c634b5ed38fe5140cf2529fab78d59076
-checkpointed: false
+checkpointed: true
+checkpoint_sha: a415382c634b5ed38fe5140cf2529fab78d59076
 ---
 
 # Proposal — allow-low-similarity-qa（低相似度放行 + 弱接地提示）
