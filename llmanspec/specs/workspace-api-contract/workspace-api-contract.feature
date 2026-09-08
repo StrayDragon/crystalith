@@ -82,7 +82,7 @@
 
   @req:r18 @human
   场景: Tools endpoint exposes diagnostics in a machine-readable form
-    - `/v2/workspace/tools` 响应 MUST 暴露 `diagnostics` 字段，用于解释插件能力为什么可用/不可用，并为 UI 与自托管排障提供可执行提示。 `diagnostics` MUST 至少包含： - `diagnostics.plugins.loaded: string[]`：本次启动加载成功的插件 id 列表 - `diagnostics.plugins.skipped: { [pluginId: string]: { errorCode: string, message: string, hint?: string, details?: object } }`：加载被跳过的插件与稳定 skip detail 为覆盖“官方插件未安装（无 entry point，因此不会出现在 skipped）”的场景，`diagnostics` MUST 额外包含一个轻量的 official catalog（仅字符串/提示，不引入重依赖），用于给出明确的安装/启用指引。 official catalog MUST 覆盖当前版本所定义的**全部官方插件**，包括开箱即用的内置能力与需要显式安装/启用的扩展；当不存在需额外安装的官方扩展时，catalog 允许为空集合。
+    - `/v2/workspace/tools` 响应 MUST 暴露 `diagnostics` 字段，用于解释插件能力为什么可用/不可用，并为 UI 与自托管排障提供可执行提示。 `diagnostics` MUST 至少包含： - `diagnostics.plugins.loaded: string[]`：本次启动加载成功的插件 id 列表 - `diagnostics.plugins.skipped: { [pluginId: string]: { errorCode: string, message: string, hint?: string, details?: object } }`：加载被跳过的插件与稳定 skip detail 为覆盖“官方插件未安装（不在 node_modules 的 `@crystalith-plugin/*` scope 内，因此不会被动态 import，也不会出现在 skipped）”的场景，`diagnostics` MUST 额外包含一个轻量的 official catalog（仅字符串/提示，不引入重依赖），用于给出明确的安装/启用指引。 official catalog MUST 覆盖当前版本所定义的**全部官方插件**，包括开箱即用的内置能力与需要显式安装/启用的扩展；当不存在需额外安装的官方扩展时，catalog 允许为空集合。
 
   @req:r19 @human
   场景: Workspace tools can expose frontendBundle descriptor
