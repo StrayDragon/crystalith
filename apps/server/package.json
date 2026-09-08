@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "bun --watch src/server.ts",
-    "build": "bun build --compile --outfile=crystalith-server ./src/server.ts",
+    "build": "bun scripts/build-binary.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "echo '@crystalith/server lint is managed by root; run bun lint from repo root'",

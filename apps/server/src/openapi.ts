@@ -8,6 +8,8 @@
 import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
 
+import { SERVER_VERSION } from './shared/version.ts';
+
 extendZodWithOpenApi(z);
 
 const _allTags = new Set<string>();
@@ -206,7 +208,7 @@ export function generateOpenApiDocument(info?: {
 }): Record<string, unknown> {
   const {
     title = 'Crystalith v2 API',
-    version = '2.0.0-dev',
+    version = SERVER_VERSION,
     description = 'RAG-powered knowledge notebook — v2 API',
   } = info ?? {};
 

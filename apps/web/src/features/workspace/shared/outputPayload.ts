@@ -299,6 +299,11 @@ export function formatOutputFieldText(value: unknown): string {
   return '';
 }
 
+/** Runtime shape check: the wire type says string, but Eden may coerce ISO-like dates into `Date`. */
+function isEdenCoercedDate(value: unknown): value is Date {
+  return value instanceof Date;
+}
+
 function normalizeTimelineContent(
   content: OutputContentByType['TIMELINE'],
 ): OutputContentByType['TIMELINE'] {
@@ -306,7 +311,7 @@ function normalizeTimelineContent(
     ...content,
     events: content.events.map((event) => ({
       ...event,
-      date: event.date instanceof Date ? formatOutputFieldText(event.date) || null : event.date,
+      date: isEdenCoercedDate(event.date) ? formatOutputFieldText(event.date) || null : event.date,
     })),
   };
 }

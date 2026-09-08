@@ -7,7 +7,6 @@ import { Database } from 'bun:sqlite';
 // instance used across the server.
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { sql } from 'drizzle-orm';
 import { drizzle, type BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
@@ -26,10 +25,49 @@ export function getDbPath(): string {
   return process.env.CL_DB_PATH ?? join(getDataRoot(), 'crystalith.db');
 }
 
-// Migrations folder is resolved relative to this source file so tests and
-// production both find it regardless of CWD.
-const __dirname = import.meta.dirname;
-const MIGRATIONS_FOLDER = fileURLToPath(new URL('../../drizzle', import.meta.url));
+// Migrations folder resolution order:
+//   1. source tree, relative to this file (dev / tests — CWD-independent)
+//   2. beside the executable (release archive layout: crystalith-server + web/dist + drizzle/)
+//   3. CWD (manual deploys)
+// In a compiled binary `import.meta.url` points into Bun's virtual FS, so the
+// source-relative candidate misses and the release layout wins. Each candidate
+// must contain `meta/_journal.json` to count.
+function resolveMigrationsFolder(): string | null {
+  const candidates = [
+    import.meta.dirname ? join(import.meta.dirname, '..', '..', 'drizzle') : null,
+    join(dirname(process.execPath), 'drizzle'),
+    join(process.cwd(), 'drizzle'),
+  ];
+  for (const candidate of candidates) {
+    if (candidate && existsSync(join(candidate, 'meta', '_journal.json'))) return candidate;
+  }
+  return null;
+}
+
+const MIGRATIONS_FOLDER = resolveMigrationsFolder();
+
+/** sqlite-vec platform entry file name for the host platform. */
+function sqliteVecEntryName(): string {
+  if (process.platform === 'win32') return 'vec0.dll';
+  if (process.platform === 'darwin') return 'vec0.dylib';
+  return 'vec0.so';
+}
+
+/**
+ * Locate the sqlite-vec native extension for compiled-binary fallback:
+ * `CL_SQLITE_VEC_PATH` first, then `native/` beside the executable (release
+ * archive layout). Returns null when neither exists.
+ */
+export function resolveSqliteVecNativePath(): string | null {
+  const candidates = [
+    process.env.CL_SQLITE_VEC_PATH,
+    join(dirname(process.execPath), 'native', sqliteVecEntryName()),
+  ];
+  for (const candidate of candidates) {
+    if (candidate && existsSync(candidate)) return candidate;
+  }
+  return null;
+}
 
 /** Typed Drizzle ORM instance bound to the full schema map. */
 export type Orm = BunSQLiteDatabase<typeof schema>;
@@ -48,19 +86,34 @@ export function createDb(path?: string): Orm {
   db.run('PRAGMA synchronous = NORMAL;');
 
   // sqlite-vec: load native extension into the bun:sqlite connection.
-  sqliteVec.load(db);
+  // `sqliteVec.load` resolves the platform package via import.meta.resolve,
+  // which cannot see node_modules inside a compiled single binary — on failure
+  // fall back to `native/<vec0 ext>` beside the executable (release archive
+  // layout; see scripts/build-release.ts) or CL_SQLITE_VEC_PATH.
+  try {
+    sqliteVec.load(db);
+  } catch (error) {
+    const nativePath = resolveSqliteVecNativePath();
+    if (!nativePath) {
+      throw new Error('[db] sqlite-vec native extension not found', { cause: error });
+    }
+    db.loadExtension(nativePath);
+  }
 
   const orm = drizzle({ client: db, schema });
 
   // Apply pending Drizzle migrations (idempotent).
-  // Path is CWD-independent — resolved relative to this source file.
-  try {
-    migrate(orm, { migrationsFolder: MIGRATIONS_FOLDER });
-  } catch (error) {
-    // Migrations may not exist yet on a fresh checkout before `drizzle-kit
-    // generate`; the schema is still usable for in-memory tests. Surface the
-    // warning but keep the ORM alive so dev servers can boot.
-    console.warn('[db] migration skipped:', (error as Error).message);
+  if (MIGRATIONS_FOLDER === null) {
+    console.warn('[db] migrations folder not found; migration skipped');
+  } else {
+    try {
+      migrate(orm, { migrationsFolder: MIGRATIONS_FOLDER });
+    } catch (error) {
+      // Migrations may not exist yet on a fresh checkout before `drizzle-kit
+      // generate`; the schema is still usable for in-memory tests. Surface the
+      // warning but keep the ORM alive so dev servers can boot.
+      console.warn('[db] migration skipped:', (error as Error).message);
+    }
   }
 
   // Provision the sqlite-vec virtual table (not managed by Drizzle).

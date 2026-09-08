@@ -6,6 +6,8 @@
 // Paths are notebook-nested after c69.
 //
 // 文案约定与 OpenAPI 一致：中文、干脆，写稳定业务语义；不写 REST/状态码废话。
+import { SERVER_VERSION } from './shared/version.ts';
+
 export interface AsyncApiChannel {
   name: string;
   description: string;
@@ -206,7 +208,7 @@ export function generateAsyncApiDocument(info?: {
 }): Record<string, unknown> {
   const {
     title = 'Crystalith v2 Streaming API',
-    version = '2.0.0-dev',
+    version = SERVER_VERSION,
     description = 'QA / Studio / Research 的 SSE 通道（c70 动词约定）',
   } = info ?? {};
   const channels: Record<string, unknown> = {};

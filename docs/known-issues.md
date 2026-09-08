@@ -17,6 +17,26 @@
 - **现象**：`nohup ... &` 启动的 dev server 在 agent 会话命令超时后被 SIGTERM（exit 143）。
 - **缓解**：用 `setsid nohup … < /dev/null &` 完全脱离进程组。
 
+## 单二进制构建（`bun build --compile` / Bun.build compile）
+
+### 运行时 require 的 JSON / 平台包不会被内嵌（已缓解）
+
+- **现象**：CLI `bun build --compile` 产物启动即报
+  `Cannot find module '../data/patch.json'` / `Cannot find module 'mdn-data/css/at-rules.json'`；
+  绕过启动后笔记本接口 500，报 `Cannot find package 'sqlite-vec-linux-x64'`。
+- **根因**：jsdom → `@asamuzakjp/dom-selector` → css-tree 的 `lib/data-patch.js`
+  与 `lib/data.js`（`createRequire(import.meta.url)`）在模块顶层**运行时** require
+  JSON，Bun 的编译产物不内嵌这类运行期解析；sqlite-vec 的 `load()` 同理，用
+  `import.meta.resolve` 定位平台包里的 `.so`，在 `$bunfs` 虚拟文件系统内不可见。
+- **缓解**：构建统一走 `apps/server/scripts/build-binary.ts`（Bun.build API：
+  插件把 css-tree 内字面量 JSON require 内联为字面量；注入 `CL_BUILD_VERSION`）；
+  sqlite-vec 回退加载二进制旁 `native/vec0.*`（`CL_SQLITE_VEC_PATH` 可覆盖；
+  `just release` 打包时附带）。Drizzle 迁移目录同理按「源码树 → 二进制旁 → CWD」
+  顺序解析，release 布局附带 `drizzle/`。
+- **守则**：新依赖若在模块顶层 `createRequire` / `require` JSON 或原生文件，
+  编译产物会挂——接入后必须 `just build-binary` + 启动冒烟（`/health` + 一次建
+  笔记本）验证。
+
 ## 工具链兼容性（TypeScript 7 / tsgo）
 
 背景：TypeScript 7 是 Go 原生编译器，npm 包**不再附带经典 JS 编译器 API**
