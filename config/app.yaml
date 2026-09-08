@@ -61,7 +61,8 @@ app:
 plugins:
   # enabled: ["extractor-jina", "slides-slidev"]
   disabled: []
-  load_order: []
+  # 试用：arxiv 提取器排在 fallback 链首（非 arxiv URL 空内容自动降级，无副作用）
+  load_order: ["extractor-arxiv"]
 
 # ----------------------------------------------------------------------------
 # Providers (use YAML anchors for reuse)

@@ -124,17 +124,17 @@ packages/plugin-extractor-arxiv/scripts/try.ts …`（对遵循标准代理变�
 接口 union 里保留全部四个 kind = **兼容与扩展的口子**；但文档、指南、catalog
 宣传只覆盖 `extractor`——「能扩展」不等于「到处都能挂」。
 
-### 第一梯队榜样：`@crystalith-plugin/extractor-arxiv`（draft：`add-extractor-arxiv`）
+### 第一梯队榜样：`@crystalith-plugin/extractor-arxiv`（已实现，`add-extractor-arxiv`）
 
 - **需求**：arXiv 是研究者用户最高频来源；abs 页经 readability 抽取后混杂
   导航/引用噪声，作者/摘要/分类等元数据无法结构化保留
-- **形态（极简）**：export.arxiv.org Atom API 稳定、无 key、纯 JS；
+- **形态**：Atom API（无 key）→ 结构化元数据 + 摘要 markdown；再 best-effort
+  拉 `arxiv.org/pdf/<id>` 用 unpdf 解析**全文**追加（失败自动降级为仅摘要）；
   `isAvailable` 恒定可用 + `extract` 内按 host（`arxiv.org/abs/*`）判定，
-  非目标 URL 返回空内容 → 编排层自然降级；目标 URL → markdown + 结构化
-  元数据（title/authors/abstract/published/primary_category）
-- **为什么它当第一榜样**：~百行、确定性输出、零外部脆弱依赖——同时完整踩过
-  外部插件全流程（scope 发现、动态 import、host 门控、fallback 链、
-  `plugins.*` 策略、`diagnostics.plugins.skipped`、official catalog），
+  非目标 URL 返回空内容 → 编排层自然降级
+- **为什么它当第一榜样**：~两百行、输出确定——同时完整踩过外部插件全流程
+  （scope 发现、动态 import、host 门控、fallback 链、`plugins.*` 策略、
+  `diagnostics.plugins.skipped`、official catalog、`ctx.fetch` 代理复用），
   且因为输出确定，它天然就是后续给插件写验收测试的**标准测试夹具**
 - **开发故事**：monorepo 内 `packages/plugin-extractor-arxiv`（包名
   `@crystalith-plugin/extractor-arxiv`），bun workspaces symlink 进根

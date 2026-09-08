@@ -9,6 +9,7 @@
     "try": "bun scripts/try.ts"
   },
   "dependencies": {
+    "unpdf": "^1.6.2",
     "zod": "^4.4.3"
   }
 }

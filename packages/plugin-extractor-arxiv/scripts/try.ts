@@ -31,10 +31,13 @@ for (const url of urls) {
       console.log('（空内容 → 编排层会降级到下一个提取器）');
       continue;
     }
+    const headings = [...result.content.matchAll(/^## .+$/gmu)].map((m) => m[0]);
     console.log(`title: ${result.title}`);
     console.log(`extractorUsed: ${result.extractorUsed}`);
+    console.log(`content length: ${result.content.length} chars`);
+    console.log(`sections: ${headings.join(' | ') || '(none)'}`);
     console.log('---');
-    console.log(result.content.slice(0, 800));
+    console.log(result.content.slice(0, 600));
   } catch (error) {
     console.error(`✗ ${error instanceof Error ? error.message : String(error)}`);
   }

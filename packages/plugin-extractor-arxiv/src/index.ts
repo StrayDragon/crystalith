@@ -10,6 +10,7 @@
 // - Outbound HTTP goes through `ctx.fetch` — the host transport that honors
 //   the global proxy SSOT (proxy_settings + CL_PROXY_* overlay). Plugins must
 //   not use global fetch directly.
+import { extractText, getDocumentProxy } from 'unpdf';
 import { z } from 'zod';
 
 import type {
@@ -102,20 +103,44 @@ async function extract(ctx: CrystalithPluginContext, url: string): Promise<Extra
     throw new Error(`arXiv API returned no entry for '${arxivId}'`);
   }
 
+  // Full paper text via the PDF endpoint; best-effort — any failure degrades
+  // to abstract-only (the chain still returns a usable source).
+  const content = entryToMarkdown(url, entry);
+  const fullText = await fetchFullText(ctx, arxivId);
+  const finalContent = fullText ? `${content}\n\n## Full Text\n\n${fullText}` : content;
+
   return {
     title: entry.title,
-    content: entryToMarkdown(url, entry),
+    content: finalContent,
     description: entry.summary,
     publishedDate: entry.published || undefined,
     extractorUsed: 'arxiv',
   };
 }
 
+/** Fetch + parse the camera-ready PDF. Best-effort: null on any failure. */
+async function fetchFullText(
+  ctx: CrystalithPluginContext,
+  arxivId: string,
+): Promise<string | null> {
+  try {
+    const res = await ctx.fetch(`https://arxiv.org/pdf/${arxivId}`);
+    if (!res.ok) return null;
+    const buf = new Uint8Array(await res.arrayBuffer());
+    const pdf = await getDocumentProxy(buf);
+    const { text } = await extractText(pdf, { mergePages: true });
+    const full = (Array.isArray(text) ? text.join('\n\n') : text).trim();
+    return full.length > 0 ? full : null;
+  } catch {
+    return null;
+  }
+}
+
 export const extractorArxiv: CrystalithPlugin = {
   id: 'extractor-arxiv',
   kind: 'extractor',
   displayName: 'arXiv',
-  description: 'arXiv abs 页结构化抽取（Atom API，无需 key）',
+  description: 'arXiv 论文抽取：abs 元数据/摘要（Atom API）+ PDF 全文（unpdf），无需 key',
   recoveryHint: '检查目标是否为 arxiv.org/abs/* 页面；网络问题请配置 CL_PROXY_* 或 proxy_settings',
   configSchema: z.object({}),
   capabilities: [],
