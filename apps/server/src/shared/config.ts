@@ -593,6 +593,20 @@ export function getProxySettings(): ProxySettings {
   return overlayProxyEnv(parseSection(ProxySettingsSchema, config().raw.proxy_settings));
 }
 
+/** Plugin discovery settings (`plugins` section), normalized to arrays. */
+export function getPluginsSettings(): {
+  enabled: string[];
+  disabled: string[];
+  load_order: string[];
+} {
+  const raw = parseSection(PluginsSettingsSchema, config().raw.plugins);
+  return {
+    enabled: raw.enabled ?? [],
+    disabled: raw.disabled ?? [],
+    load_order: raw.load_order ?? [],
+  };
+}
+
 /**
  * CL_PROXY_* env overlay on the yaml `proxy_settings` section (precedent:
  * getSearxngHost). `CL_PROXY_ENABLED` accepts 'true'/'false'; unset, empty,

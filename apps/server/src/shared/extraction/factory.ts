@@ -1,30 +1,17 @@
-import { firecrawlExtractor } from './firecrawl.ts';
-import { jinaExtractor } from './jina.ts';
-import { readabilityExtractor } from './readability.ts';
-// ExtractorFactory — fallback chain for web content extraction.
+// Extractor orchestration — fallback chain for web content extraction.
 // Mirrors v1 shared/extraction/factory.py.
 //
-// Tries extractors in priority order (configurable per notebook). Returns
-// the first non-empty result. Throws ExtractionError if all fail.
+// Since plugin-interface-ssot (r7), the extractor implementations register as
+// built-in `CrystalithPlugin`s (kind: 'extractor'); this module keeps only the
+// kind-level orchestration required by web-extractor-plugins r55: ordered
+// fallback, availability gating and the metadata/availability report.
+// Wire extractor names ('readability' | 'jina' | 'firecrawl') are derived from
+// plugin ids by stripping the `extractor-` prefix.
+import { pluginRegistry } from '../../plugins/registry.ts';
+import type { CrystalithPlugin } from '../../plugins/types.ts';
 import type { ExtractedContent, Extractor } from './types.ts';
 
-// ---------------------------------------------------------------------------
-// Registry
-// ---------------------------------------------------------------------------
-
-/** All registered extractors keyed by name. */
-export const extractors: Record<string, Extractor> = {
-  readability: readabilityExtractor,
-  jina: jinaExtractor,
-  firecrawl: firecrawlExtractor,
-};
-
-/** Default fallback order (all readable/jina require no key beyond availability check). */
-const DEFAULT_ORDER = ['readability', 'jina', 'firecrawl'];
-
-// ---------------------------------------------------------------------------
-// Factory
-// ---------------------------------------------------------------------------
+const EXTRACTOR_ID_PREFIX = 'extractor-';
 
 export class ExtractionError extends Error {
   constructor(
@@ -35,10 +22,6 @@ export class ExtractionError extends Error {
     this.name = 'ExtractionError';
   }
 }
-
-// ---------------------------------------------------------------------------
-// Metadata / availability report (v1 ExtractorsListResponse)
-// ---------------------------------------------------------------------------
 
 export interface ExtractorMetadata {
   name: string;
@@ -53,53 +36,55 @@ export interface ExtractorMetadata {
   recoveryHint: string | null;
 }
 
-const DISPLAY_NAMES: Record<string, string> = {
-  readability: 'Readability (built-in)',
-  jina: 'Jina Reader',
-  firecrawl: 'Firecrawl',
-};
+function wireName(plugin: CrystalithPlugin): string {
+  return plugin.id.startsWith(EXTRACTOR_ID_PREFIX)
+    ? plugin.id.slice(EXTRACTOR_ID_PREFIX.length)
+    : plugin.id;
+}
 
-const DESCRIPTIONS: Record<string, string> = {
-  readability: '基于 @mozilla/readability 的本地正文提取，无需外部服务',
-  jina: 'Jina Reader API，适合 JS 重渲染页面',
-  firecrawl: 'Firecrawl API，浏览器渲染级提取',
-};
-
-const RECOVERY_HINTS: Record<string, string> = {
-  jina: 'Set CL_JINA_API_KEY (shell / .env); falls back to JINA_API_KEY',
-  firecrawl: 'Set CL_FIRECRAWL_API_KEY (+ optional CL_FIRECRAWL_API_BASE for self-hosted)',
-};
+/** Loaded extractor plugins in fallback order (registration order). */
+function loadedExtractorEntries(): {
+  name: string;
+  plugin: CrystalithPlugin;
+  extractor: Extractor;
+}[] {
+  return pluginRegistry.loadedByKind('extractor').map(({ plugin }) => ({
+    name: wireName(plugin),
+    plugin,
+    extractor: pluginRegistry.implOf<Extractor>(plugin.id)!,
+  }));
+}
 
 /**
  * List all extractors with availability + metadata (v1 ExtractorsListResponse).
- * Uses each extractor's isAvailable() against the real config object, not env vars.
- * c62: adds type/enabled/description/requiresService fields + derives default.
+ * Availability uses each extractor's isAvailable() against the real config
+ * object; `enabled` reflects the plugin registry load state (plugins
+ * allowlist/denylist).
  */
 export function listExtractorMetadata(config: unknown): ExtractorMetadata[] {
-  return DEFAULT_ORDER.map((name, index) => {
-    const ext = extractors[name];
-    return {
-      name,
-      // c62: v1 uses `type`; `name` is the v2 alias
-      type: name,
-      available: ext ? ext.isAvailable(config) : false,
-      // v2 has no per-extractor disable config (monolithic)
-      enabled: true,
-      displayName: DISPLAY_NAMES[name] ?? name,
-      description: DESCRIPTIONS[name] ?? '',
-      priority: (index + 1) * 10,
-      requiresApiKey: name !== 'readability',
-      // jina/firecrawl call external services
-      requiresService: name !== 'readability',
-      recoveryHint: RECOVERY_HINTS[name] ?? null,
-    };
-  });
+  return loadedExtractorEntries().map(({ name, plugin, extractor }, index) => ({
+    name,
+    // v1 uses `type`; `name` is the v2 alias
+    type: name,
+    available: extractor.isAvailable(config),
+    enabled: pluginRegistry.isLoaded(plugin.id),
+    displayName: plugin.displayName,
+    description: plugin.description ?? '',
+    priority: (index + 1) * 10,
+    requiresApiKey: plugin.capabilities.includes('requires-api-key'),
+    requiresService: plugin.capabilities.includes('requires-service'),
+    recoveryHint: plugin.recoveryHint ?? null,
+  }));
 }
 
-/** c62: derive defaultExtractor by availability (first available), v1 parity. */
+/** Derive defaultExtractor by availability (first available), v1 parity. */
 export function getDefaultExtractor(config: unknown): string {
-  const meta = listExtractorMetadata(config);
-  return meta.find((e) => e.available)?.name ?? 'readability';
+  return listExtractorMetadata(config).find((e) => e.available)?.name ?? 'readability';
+}
+
+/** Loaded extractor wire names in fallback order (policy validation, etc.). */
+export function extractorNames(): string[] {
+  return loadedExtractorEntries().map((entry) => entry.name);
 }
 
 /**
@@ -111,11 +96,14 @@ export async function extractUrl(
   config: unknown,
   order?: string[],
 ): Promise<ExtractedContent> {
-  const extractorOrder = order && order.length > 0 ? order : DEFAULT_ORDER;
+  await pluginRegistry.ensureLoaded();
+  const entries = loadedExtractorEntries();
+  const byName = new Map(entries.map((entry) => [entry.name, entry.extractor]));
+  const extractorOrder = order && order.length > 0 ? order : entries.map((entry) => entry.name);
   const failures: string[] = [];
 
   for (const name of extractorOrder) {
-    const ext = extractors[name];
+    const ext = byName.get(name);
     if (!ext) {
       failures.push(`${name}: unknown extractor`);
       continue;

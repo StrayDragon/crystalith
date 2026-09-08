@@ -47,11 +47,12 @@ import {
 } from '../../db/schema.ts';
 import { deleteSourceVectors } from '../../db/vectors.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { pluginRegistry } from '../../plugins/registry.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { config, getDedupEnabled, getUploadMaxBytes } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import {
-  extractors,
+  extractorNames,
   getDefaultExtractor,
   listExtractorMetadata,
 } from '../../shared/extraction/factory.ts';
@@ -817,7 +818,8 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   // c44: Extractor policy routes — GET returns full ExtractorsListResponse (v1 api_ingest.py:79-153)
   .get(
     '/notebooks/:nid/extractors',
-    ({ params }) => {
+    async ({ params }) => {
+      await pluginRegistry.ensureLoaded();
       const nid = params.nid;
       const policy = db()
         .select()
@@ -847,12 +849,13 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   )
   .patch(
     '/notebooks/:nid/extractors',
-    ({ params, body }) => {
+    async ({ params, body }) => {
+      await pluginRegistry.ensureLoaded();
       const nid = params.nid;
       const mode = body.mode;
       const enabledExtractorsBody = body.enabledExtractors ?? undefined;
       // Business check: enabledExtractors entries against registered set
-      const validExtractors = Object.keys(extractors);
+      const validExtractors = extractorNames();
       if (
         enabledExtractorsBody !== undefined &&
         enabledExtractorsBody !== null &&

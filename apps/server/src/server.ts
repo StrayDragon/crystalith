@@ -26,6 +26,7 @@ import { studioRouter } from './features/studio/router.ts';
 import { templatesRouter } from './features/templates/router.ts';
 import { workspaceRouter } from './features/workspace/router.ts';
 import { generateOpenApiDocument, registerApiDoc } from './openapi.ts';
+import { pluginRegistry } from './plugins/registry.ts';
 import { getDefaultChatModel } from './shared/config.ts';
 import { ErrorCode, sendError, AppHttpError } from './shared/errors.ts';
 import { probeHealthDependencies } from './shared/health.ts';
@@ -210,6 +211,8 @@ function preflightDefaultChatModel(): void {
 // Only listen when run as the entry point (not when imported by tests).
 if (import.meta.main) {
   preflightDefaultChatModel();
+  // Load plugins (built-ins + @crystalith-plugin/* externals) before serving.
+  await pluginRegistry.ensureLoaded();
   // Bind loopback by default (parity with v1 `_DEFAULT_LISTEN_HOST = "127.0.0.1"`).
   // v2 has no auth yet (c13 scope), so loopback binding is the primary network
   // exposure guard. Override with CL_SERVER_HOST=0.0.0.0 for docker/LAN once

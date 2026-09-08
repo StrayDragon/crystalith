@@ -2,7 +2,8 @@
 depends_on: []
 branch: sdd/plugin-interface-ssot
 base_sha: 0bdb013b41325c461c2028e8afcf7ac88dff68a8
-checkpointed: false
+checkpointed: true
+checkpoint_sha: 0bdb013b41325c461c2028e8afcf7ac88dff68a8
 ---
 
 # Proposal — Plugin Interface SSOT
