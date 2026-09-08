@@ -69,6 +69,10 @@
   场景: Frontend MUST derive message status from fetcher/session snapshot
     - 前端消息气泡状态（pending/streaming/done/error）MUST 派生自 fetcher/session snapshot 而非本地临时布尔标记，以保证多 tab 一致性与重连语义。
 
+  @req:frontend-assistant-markdown-streaming @human
+  场景: Chat panel renders assistant content as streaming-safe markdown
+    - Chat 面板 SHALL 以流式安全的 markdown 渲染 assistant `message.content`（至少覆盖 GFM 的标题、列表、代码块、表格与引用块），流式中间态（未闭合语法）MUST NOT 破版或以原始围栏字符闪现；user 消息 MUST 保持纯文本渲染。渲染器替换 MUST NOT 改变消息 wire 协议与 sharedState mounts 契约。
+
   @req:workspace-sources-bar-gating @human
   场景: Sources workflows are gated by ready/error states with actionable recovery
     - Sources 栏内每个来源条目 MUST 按状态展示：`ready` 正常（含 source 显示信息）、`failed` 错误信息与可执行恢复提示、`loading`（`processing` 状态的展示别名，等待 embedding/解析完成）旋转指示器且不阻塞其它来源的操作；来源列表条目 MUST 提供“移除”与“重新生成摘要”等操作，且仅当操作真实可用时呈现。
