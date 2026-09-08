@@ -123,6 +123,7 @@
   "output.research_lab_origin": "深度研究转化来源（可选）",
   "output.session_id": "所属会话 ID",
   "output.slide_id": "SLIDES 类型关联的草稿 ID（列表用）",
+  "output.source_ids": "生成时选中的来源 ID 列表",
   "output.title": "列表展示标题（由正文/prompt 派生）",
   "output.type": "输出类型",
   "plugins.disabled": "禁用的插件 ID 列表（黑名单，优先）",

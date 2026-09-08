@@ -53,9 +53,13 @@ export function resolveNoteMeta(output: OutputItem): string {
   if (origin) {
     return `深度研究 Run #${origin.runId} · ${relative}`;
   }
-  const count = output.chunkIds?.length ?? 0;
-  if (count > 0) {
-    return `${count} 个来源 · ${relative}`;
+  const sourceCount = output.sourceIds?.length ?? 0;
+  if (sourceCount > 0) {
+    return `基于 ${sourceCount} 个来源 · ${relative}`;
+  }
+  const chunkCount = output.chunkIds?.length ?? 0;
+  if (chunkCount > 0) {
+    return `基于 ${chunkCount} 个片段 · ${relative}`;
   }
   return `未选择来源 · ${relative}`;
 }

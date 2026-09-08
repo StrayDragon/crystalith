@@ -8,12 +8,13 @@ import type { Citation } from '@crystalith/shared';
 //
 // source_ids filtering is now wired through (c27 was incomplete — it called
 // RAG but never passed source_ids to the retrieval layer).
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import { db } from '../../db/index.ts';
 import { chunks, outputs, sources } from '../../db/schema.ts';
 import type { ChunkResult } from '../../rag/types.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
+import { logger } from '../../shared/logger.ts';
 import {
   buildCitationMap,
   mapCitationsIntoContent,
@@ -26,6 +27,109 @@ import { generateFallbackContent, needsRepair, postprocessOutput } from './postp
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** Direct chunk fetch when scoped RAG misses (studio slides parity). */
+export function fetchChunksBySourceIds(notebookId: number, sourceIds: number[]): ChunkRow[] {
+  const rows = db()
+    .select({
+      id: chunks.id,
+      text: chunks.text,
+      sourceId: chunks.sourceId,
+      chunkIndex: chunks.chunkIndex,
+    })
+    .from(chunks)
+    .innerJoin(sources, eq(chunks.sourceId, sources.id))
+    .where(and(eq(sources.notebookId, notebookId), inArray(sources.id, sourceIds)))
+    .orderBy(chunks.sourceId, chunks.chunkIndex)
+    .all();
+  return rows.map((row) => ({ ...row, score: 1 }));
+}
+
+/** Resolve retrieval rows for the output pipeline (test seam). */
+export async function resolvePipelineContextChunks(input: PipelineInput): Promise<ChunkRow[]> {
+  if (input.sourceIds && input.sourceIds.length > 0) {
+    const owned = db()
+      .select({ id: sources.id })
+      .from(sources)
+      .where(inArray(sources.id, input.sourceIds))
+      .all()
+      .filter((s) => {
+        const row = db()
+          .select({ notebookId: sources.notebookId })
+          .from(sources)
+          .where(eq(sources.id, s.id))
+          .get();
+        return row?.notebookId === input.notebookId;
+      });
+    if (owned.length !== input.sourceIds.length) {
+      throw new AppHttpError(
+        ErrorCode.NOT_FOUND,
+        'Unknown source_id in source_ids (not in this notebook)',
+      );
+    }
+  }
+
+  if (input.chunkIds && input.chunkIds.length > 0) {
+    const rows = db()
+      .select({
+        id: chunks.id,
+        text: chunks.text,
+        sourceId: chunks.sourceId,
+        chunkIndex: chunks.chunkIndex,
+      })
+      .from(chunks)
+      .where(inArray(chunks.id, input.chunkIds))
+      .all();
+    return rows.map((row) => ({ ...row, score: 1 }));
+  }
+
+  const topK = input.topK ?? PREF_TOPK[input.preference ?? 'quality'];
+  const minScore = input.minScore ?? 0.2;
+  const query = buildOutputQuery(input.type, input.prompt);
+  const { ragRegistry } = await import('../../rag/registry.ts');
+
+  let searchResults: ChunkResult[];
+  try {
+    searchResults = await ragRegistry.retrieveWith('embed', input.notebookId, query, {
+      topK,
+      minScore,
+      sourceIds: input.sourceIds,
+    });
+  } catch (error) {
+    if (input.sourceIds?.length) {
+      logger.warn('[outputs] scoped RAG failed — falling back to direct source fetch', {
+        notebookId: input.notebookId,
+        sourceIds: input.sourceIds,
+        type: input.type,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return fetchChunksBySourceIds(input.notebookId, input.sourceIds);
+    }
+    throw new AppHttpError(
+      ErrorCode.INTERNAL_ERROR,
+      `Output retrieval failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+
+  let chunkRows = searchResults.map((result) => ({
+    id: result.chunkId,
+    text: result.text,
+    sourceId: result.sourceId,
+    chunkIndex: result.chunkIndex,
+    score: result.score,
+  }));
+
+  if (chunkRows.length === 0 && input.sourceIds?.length) {
+    logger.warn('[outputs] scoped RAG returned no chunks — falling back to direct source fetch', {
+      notebookId: input.notebookId,
+      sourceIds: input.sourceIds,
+      type: input.type,
+    });
+    chunkRows = fetchChunksBySourceIds(input.notebookId, input.sourceIds);
+  }
+
+  return chunkRows;
 }
 
 export type GenerationPreference = 'quality' | 'speed';
@@ -77,79 +181,7 @@ export interface PipelineResult {
  *  - No chunkIds, no sourceIds → RAG across whole notebook (c27)
  */
 export async function runOutputPipeline(input: PipelineInput): Promise<PipelineResult> {
-  // c50: validate source_id ownership before retrieval (v1 _validate_source_ids,
-  // output_graph.py:151-176 — unknown/foreign source_id → ValueError → 400).
-  // Done here (not the router) so the typed 400 path in router.ts catches the
-  // "retrieval" keyword in the thrown message.
-  if (input.sourceIds && input.sourceIds.length > 0) {
-    const owned = db()
-      .select({ id: sources.id })
-      .from(sources)
-      .where(inArray(sources.id, input.sourceIds))
-      .all()
-      .filter((s) => {
-        // sources table has notebookId; we filtered by id, now check notebook
-        const row = db()
-          .select({ notebookId: sources.notebookId })
-          .from(sources)
-          .where(eq(sources.id, s.id))
-          .get();
-        return row?.notebookId === input.notebookId;
-      });
-    if (owned.length !== input.sourceIds.length) {
-      throw new AppHttpError(
-        ErrorCode.NOT_FOUND,
-        'Unknown source_id in source_ids (not in this notebook)',
-      );
-    }
-  }
-
-  let chunkRows: ChunkRow[];
-
-  if (input.chunkIds && input.chunkIds.length > 0) {
-    // Explicit selection — direct fetch
-    const rows = db()
-      .select({
-        id: chunks.id,
-        text: chunks.text,
-        sourceId: chunks.sourceId,
-        chunkIndex: chunks.chunkIndex,
-      })
-      .from(chunks)
-      .where(inArray(chunks.id, input.chunkIds))
-      .all();
-    chunkRows = rows.map((r) => ({ ...r, score: 1 }));
-  } else {
-    // Semantic search via RAG registry (c27 + c38 source_ids scoping)
-    const topK = input.topK ?? PREF_TOPK[input.preference ?? 'quality'];
-    const minScore = input.minScore ?? 0.2;
-    const query = buildOutputQuery(input.type, input.prompt);
-    const { ragRegistry } = await import('../../rag/registry.ts');
-
-    let searchResults: ChunkResult[];
-    try {
-      searchResults = await ragRegistry.retrieveWith('embed', input.notebookId, query, {
-        topK,
-        minScore,
-        sourceIds: input.sourceIds,
-      });
-    } catch (error) {
-      // c42: RAG failure MUST propagate — do NOT dump all chunks (v1 has no such fallback)
-      throw new AppHttpError(
-        ErrorCode.INTERNAL_ERROR,
-        `Output retrieval failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-
-    chunkRows = searchResults.map((r) => ({
-      id: r.chunkId,
-      text: r.text,
-      sourceId: r.sourceId,
-      chunkIndex: r.chunkIndex,
-      score: r.score,
-    }));
-  }
-
+  const chunkRows = await resolvePipelineContextChunks(input);
   return finishPipeline(input, chunkRows);
 }
 
@@ -218,6 +250,12 @@ async function finishPipeline(
     finalContent = {
       ...finalContent,
       citations_sanitized: true,
+    };
+  }
+  if (input.sourceIds?.length && isRecord(finalContent)) {
+    finalContent = {
+      ...finalContent,
+      _sourceIds: input.sourceIds,
     };
   }
 

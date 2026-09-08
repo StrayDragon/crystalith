@@ -112,12 +112,15 @@ const apiDocs: OpenApiRoute[] = [
 type SetStatus = { status?: number | string; headers: Record<string, string | number> };
 
 function serializeOutput(row: typeof outputs.$inferSelect) {
+  const content = isRecord(row.content) ? row.content : null;
+  const sourceIds = readSourceIdsFromContent(content);
   return {
     id: row.id,
     notebookId: row.notebookId,
     type: row.type,
     prompt: row.prompt,
     chunkIds: row.chunkIds,
+    ...(sourceIds ? { sourceIds } : {}),
     content: row.content,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -128,6 +131,14 @@ const PREVIEW_MAX = 160;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function readSourceIdsFromContent(content: Record<string, unknown> | null): number[] | undefined {
+  if (!content) return undefined;
+  const raw = content._sourceIds;
+  if (!Array.isArray(raw)) return undefined;
+  const ids = raw.filter((id): id is number => typeof id === 'number' && Number.isFinite(id));
+  return ids.length > 0 ? ids : undefined;
 }
 
 /** Thin list projection — no full content (c72). */
@@ -177,6 +188,8 @@ function serializeOutputListItem(row: typeof outputs.$inferSelect) {
     }
   }
 
+  const listSourceIds = readSourceIdsFromContent(content);
+
   return {
     id: row.id,
     notebookId: row.notebookId,
@@ -186,6 +199,7 @@ function serializeOutputListItem(row: typeof outputs.$inferSelect) {
     preview,
     slideId,
     chunkIds: row.chunkIds,
+    ...(listSourceIds ? { sourceIds: listSourceIds } : {}),
     ...(researchLab ? { researchLab } : {}),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

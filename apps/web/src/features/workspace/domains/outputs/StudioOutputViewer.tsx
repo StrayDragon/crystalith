@@ -28,7 +28,8 @@ import { getOutputTitle } from '../../shared/outputPayload';
 import { readResearchLabOrigin } from '../../shared/researchLabOrigin';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { Citation, OutputItem } from '../../shared/types';
-import { collectOutputCitations, formatRelativeTime } from '../../shared/utils';
+import { collectOutputCitations } from '../../shared/utils';
+import { resolveNoteMeta } from '../studio/studioUtils';
 import OutputContent from './OutputContent';
 
 interface StudioOutputViewerProps {
@@ -49,20 +50,7 @@ interface StudioOutputViewerProps {
 }
 
 function resolveOutputMeta(output: OutputItem): string {
-  const origin = readResearchLabOrigin(output, output.researchLab);
-  const relative =
-    formatRelativeTime(output.createdAtRaw ?? output.updatedAtRaw) ||
-    output.createdAt ||
-    output.updatedAt ||
-    '刚刚';
-  if (origin) {
-    return `深度研究 Run #${origin.runId} · ${relative}`;
-  }
-  const count = output.chunkIds?.length ?? 0;
-  if (count > 0) {
-    return `基于 ${count} 个来源 · ${relative}`;
-  }
-  return `未选择来源 · ${relative}`;
+  return resolveNoteMeta(output);
 }
 
 export default function StudioOutputViewer({
