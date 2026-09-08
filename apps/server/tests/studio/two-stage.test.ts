@@ -56,6 +56,7 @@ import {
   teardownIntegrationEnv,
   getOrm,
   seedChatModel,
+  stubEmbedding,
 } from '../helpers/integration.ts';
 
 const BASE = 'http://test.local';
@@ -63,9 +64,10 @@ let app: Elysia;
 let notebookId: number;
 let sourceId: number;
 
-beforeAll(() => {
+beforeAll(async () => {
   setupIntegrationEnv();
   seedChatModel();
+  await stubEmbedding();
   app = createApp();
 
   // Seed a notebook + source + chunk so getContext() returns non-empty text.
