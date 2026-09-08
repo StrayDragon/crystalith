@@ -95,6 +95,8 @@ describe('PluginRegistry load semantics', () => {
     });
     const report = await registry.ensureLoaded();
     expect(report.loaded).toEqual(['z', 'y', 'x']);
+    // Consumer-facing chains follow the instantiation order, not registration.
+    expect(registry.loadedByKind('parser').map((r) => r.plugin.id)).toEqual(['z', 'y', 'x']);
   });
 
   test('same-id registration: later wins', async () => {
