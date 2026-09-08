@@ -27,11 +27,17 @@ official catalog（r7/r11 全流程）。
   （`arxiv.org/abs/*`、`export.arxiv.org`）判定，非目标 URL 返回空内容 →
   编排层自然降级到下一个提取器；目标 URL 走 Atom API → markdown +
   结构化元数据（title/authors/abstract/primary_category/published）
+- 宿主唯一改动：`CrystalithPluginContext` 增加必填 `fetch`（注入
+  outboundFetch）——插件出站 HTTP 统一走全局代理 SSOT，不引入第二套代理逻辑
+- 本地调试：免启服运行器 `scripts/try.ts` + workspace symlink 说明（见
+  docs/plugins.md 教程）
 - wire 零改动：不新增端点、不改任何既有响应形状（`ExtractorMetadata`/
   `ExtractedContent` 既有字段承载）
 
 ## 非目标
 
-- 不做宿主改动（不碰 ingestion / registry / workspace tools 逻辑）
+- 除 `ctx.fetch` 注入点外不做宿主改动（不碰 ingestion / fallback 编排 /
+  workspace tools 逻辑）
 - 不做 PDF 全文抽取（属 parser 域，等 parser 宿主接线）
+- 不做 URL 感知优先级（isAvailable 加 url 参数属 kind 契约扩展，见 design D3）
 - 不同步做 github 提取器（优先级更低，选型见 `docs/plugins.md` 梯队表）
