@@ -1,7 +1,7 @@
 ---
 depends_on: []
-branch:
-base_sha: null
+branch: sdd/plugin-interface-ssot
+base_sha: 0bdb013b41325c461c2028e8afcf7ac88dff68a8
 checkpointed: false
 ---
 

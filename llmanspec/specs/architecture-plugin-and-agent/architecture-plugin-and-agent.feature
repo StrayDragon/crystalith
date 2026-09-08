@@ -1,6 +1,6 @@
 # language: zh-CN
 # capability: architecture-plugin-and-agent
-# purpose: 定义 v2 AI 运行时边界：Vercel AI SDK v7、@ai-sdk/* providers、generateObject/streamText、gpt-tokenizer；完整 ToolLoopAgent / maxSteps 产品化 MAY 延后（见 r118）。
+# purpose: 定义 v2 AI 运行时边界：Vercel AI SDK v7、@ai-sdk/* providers、generateObject/streamText、gpt-tokenizer；完整 ToolLoopAgent / maxSteps 产品化 MAY 延后（见 r118）；插件宿主以单一 CrystalithPlugin 接口承载注册/发现/配置（r7/r11）。
 # scope: apps/server/src/ai/, apps/server/src/features/
 
 功能: architecture-plugin-and-agent
@@ -32,3 +32,11 @@
   @req:r247 @human
   场景: Middleware handles retry and logging
     - AI SDK middleware MUST 承载 LLM 调用的自动重试与结构化日志；OpenTelemetry tracer MAY 后续接入。重试策略细节（次数、指数退避）见 generation-observability-and-guardrails retry-honors-retry-after / retry-timeout-budget（canonical）。
+
+  @req:r7 @human
+  场景: Plugin contracts share a single CrystalithPlugin SSOT
+    - 宿主 MUST 通过单一 `CrystalithPlugin` 接口（id / kind / displayName / configSchema（Zod） / capabilities / factory）承载全部插件种类（output-type | extractor | parser | slides-workflow）的注册、发现与配置解析；内置插件（含 studio slides config 表与网页提取器 factory）MUST 经同一 registry 注册路径生效，MUST NOT 存在绕过 registry 的平行内置注册形状。per-kind 行为契约（web-extractor-plugins、slides-workflow-plugins）作为 kind 层细化保持有效，MUST NOT 被本接口取代。
+
+  @req:r11 @human
+  场景: External plugins load from npm dependencies with restart semantics
+    - 外部插件 MUST 以 npm 依赖形式分发（官方插件约定 scope `@crystalith-plugin/*`，MUST 为纯 JS 且不依赖 native addon），宿主在启动时按 `plugins.enabled`（allowlist）/ `plugins.disabled`（denylist）/ `plugins.load_order`（后加载者优先消解冲突）从 node_modules 动态 import 加载。系统 MUST NOT 提供运行时热插拔：安装、升级与禁用 MUST 以重启 server 生效。单个插件加载失败 MUST 记入 `/v2/workspace/tools` 的 `diagnostics.plugins.skipped`（含 errorCode/message/hint）并 MUST NOT 阻断启动。
