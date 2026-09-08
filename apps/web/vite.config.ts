@@ -113,6 +113,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      '@brand': path.resolve(__dirname, '../../assets'),
       '@crystalith/shared': path.resolve(__dirname, '../../packages/shared/src'),
       '@crystalith-slidev': path.resolve(__dirname, '../../packages/crystalith-slidev/src'),
       react: reactRoot,
@@ -134,7 +135,7 @@ export default defineConfig({
     // Match Slidev: avoid [::1]-only bind so 127.0.0.1:3000 also works.
     host: true,
     fs: {
-      allow: [path.resolve(__dirname, '..')],
+      allow: [path.resolve(__dirname, '..'), path.resolve(__dirname, '../../assets')],
     },
     proxy: {
       '/v1': {

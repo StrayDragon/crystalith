@@ -1,7 +1,9 @@
+import crystalithLogo from '@brand/logo.webp';
 import { Menu, MenuHandler, MenuItem, MenuList, Tooltip } from '@material-tailwind/react';
 import {
   DarkMode as DarkModeIcon,
   Close as CloseIcon,
+  KeyboardCommandKey as CommandMenuIcon,
   LightMode as LightModeIcon,
   Lock as LockIcon,
   LockOpen as LockOpenIcon,
@@ -157,24 +159,18 @@ export default function WorkspaceHeader({
         {...tid(TestIds.workspaceHeader)}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white dark:bg-slate-800 shadow-sm border border-gray-100 dark:border-slate-700 text-gray-900 dark:text-gray-100">
-            <svg viewBox="0 0 24 24" width="18" height="18" focusable="false">
-              <path
-                d="M6 12a6 6 0 0 1 10.8-3.6"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                fill="none"
-              />
-              <path
-                d="M8.5 12a3.5 3.5 0 0 1 6.2-2.1"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                fill="none"
-              />
-              <circle cx="12" cy="14.5" r="1.4" fill="currentColor" />
-            </svg>
+          <div
+            className="flex shrink-0 items-center justify-center w-8 h-8 overflow-hidden"
+            aria-hidden="true"
+          >
+            <img
+              src={crystalithLogo}
+              alt=""
+              className="w-6 h-6 object-contain"
+              width={24}
+              height={24}
+              draggable={false}
+            />
           </div>
 
           <NotebookSwitcher
@@ -219,16 +215,16 @@ export default function WorkspaceHeader({
                 onClick={onToggleLock}
                 aria-label={locked ? '解锁布局' : '锁定布局'}
                 {...tid(TestIds.layoutLockToggle)}
-                className={`flex items-center justify-center w-7 h-7 rounded-md transition-all ${
+                className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
                   locked
-                    ? 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800'
-                    : 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
+                    ? 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+                    : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
                 }`}
               >
                 {locked ? (
-                  <LockIcon sx={{ fontSize: 16 }} />
+                  <LockIcon sx={{ fontSize: 18 }} />
                 ) : (
-                  <LockOpenIcon sx={{ fontSize: 16 }} />
+                  <LockOpenIcon sx={{ fontSize: 18 }} />
                 )}
               </button>
             </Tooltip>
@@ -242,17 +238,16 @@ export default function WorkspaceHeader({
             }}
           />
 
-          {/* Avatar dropdown — consolidates all controls */}
+          {/* Workspace menu — settings, commands, theme */}
           <Menu placement="bottom-end">
             <MenuHandler>
               <button
                 type="button"
-                className="p-0.5 border-2 border-gray-100 dark:border-slate-700 rounded-full cursor-pointer hover:border-gray-300 dark:hover:border-slate-500 transition-colors"
+                aria-label="工作区菜单"
+                className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 dark:text-slate-300 cursor-pointer hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-slate-800 dark:hover:text-slate-100 transition-colors"
                 {...tid(TestIds.userMenuTrigger)}
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
-                  CL
-                </div>
+                <CommandMenuIcon sx={{ fontSize: 18 }} />
               </button>
             </MenuHandler>
             <MenuList className="p-1.5 min-w-[200px] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 rounded-xl shadow-lg">

@@ -15,6 +15,7 @@
     "types": ["vitest/globals", "@testing-library/jest-dom"],
     "paths": {
       "*": ["./*"],
+      "@brand/*": ["../../assets/*"],
       "@crystalith-slidev": ["../../packages/crystalith-slidev/src/index.ts"],
       "@crystalith-slidev/*": ["../../packages/crystalith-slidev/src/*"]
     }
