@@ -79,8 +79,9 @@ providers:
     baseUrl: "{{ env.CL_EMBEDDING_API_BASE | default('http://127.0.0.1:50256/v1') }}"
 
   # OpenAI-compatible primary chat gateway (routed via CL_CHAT_API_BASE by default)
-  # llamacpp / many local gateways reject AI SDK grammar constrained decoding
-  # ("failed to parse grammar") — keep false so generateObject uses JSON prompt mode.
+  # Default false: some think/grammar gateways reject json_schema ("failed to parse grammar").
+  # gateway-chat-primary overrides to true when the gateway supports response_format json_schema
+  # (required for Studio structured outputs — MINDMAP/TIMELINE/etc.).
   chat_gateway: &chat_gateway
     apiKey: "{{ env.CL_CHAT_API_KEY | default('sk-local') }}"
     baseUrl: "{{ env.CL_CHAT_API_BASE | default('http://127.0.0.1:50256/v1') }}"
@@ -188,6 +189,7 @@ models:
       capabilities: [tool_use]
       providerConfig:
         <<: *chat_gateway
+        supportsStructuredOutputs: true
       completionOptions:
         temperature: 0.7
         maxTokens: 8192
