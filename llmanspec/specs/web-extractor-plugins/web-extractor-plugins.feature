@@ -36,3 +36,7 @@
   @req:extractors-full-response @human
   场景: GET extractors MUST return full ExtractorsListResponse
     - GET /extractors MUST 返回完整 ExtractorsListResponse（每提取器 available/displayName/priority/requiresApiKey/recoveryHint + defaultExtractor + fallbackEnabled），MUST NOT 只返回存储的策略行
+
+  @req:extractor-url-patterns @human
+  场景: Extractor plugins MAY declare urlPatterns for UI hints
+    - 提取器插件 MAY 声明可选 `urlPatterns`（regex source 字符串数组）；系统 SHALL 在 extractors 元数据响应中透出该字段；`urlPatterns` 仅作 UI 预选提示，MUST NOT 改变提取执行链的 fall-through 语义（见 r55）。
