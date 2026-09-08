@@ -149,6 +149,9 @@ export async function streamQa(opts: QaHandlerOptions): Promise<Response> {
     citationsResolver: async () => judgment.citations,
     confidenceResolver: async () => judgment.confidence,
     noEvidenceResolver: async () => judgment.reason,
+    // allow-low-similarity-qa: weak-grounding pass-through appends a localized
+    // tip after the answer (stream chunk + persisted text).
+    settleNotice: judgment.groundingNotice,
     contextStats: judgment.contextStats,
     onMessageSettled: (text, failed, citations) => {
       // c45: apply inline citation fallback before persisting
