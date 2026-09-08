@@ -14,7 +14,10 @@ const arxivExtractor = {
   priority: 10,
   requiresApiKey: false,
   requiresService: false,
-  urlPatterns: ['^https?:\\/\\/(?:www\\.|export\\.)?arxiv\\.org\\/abs\\/'],
+  urlPatterns: [
+    '^https?:\\/\\/(?:www\\.|export\\.)?arxiv\\.org\\/abs\\/',
+    '^https?:\\/\\/(?:www\\.|export\\.)?arxiv\\.org\\/pdf\\/',
+  ],
 };
 
 test('fetch mode shows arxiv hint and passes selected extractor on submit', async () => {

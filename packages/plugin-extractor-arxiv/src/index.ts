@@ -23,12 +23,15 @@ import type {
 } from '../../../apps/server/src/shared/extraction/types.ts';
 
 const ARXIV_ABS_URL = /^https?:\/\/(?:www\.|export\.)?arxiv\.org\/abs\/([^\s?#]+?)\/?$/iu;
+const ARXIV_PDF_URL = /^https?:\/\/(?:www\.|export\.)?arxiv\.org\/pdf\/([^\s?#]+?)\/?$/iu;
 const ATOM_API = 'http://export.arxiv.org/api/query';
 
-/** arXiv abs URL → id (e.g. '1706.03762' / '2401.12345v2'), or null. */
+/** arXiv abs/pdf URL → id (e.g. '1706.03762' / '2401.12345v2'), or null. */
 export function parseArxivId(url: string): string | null {
-  const match = url.match(ARXIV_ABS_URL);
-  return match ? match[1] : null;
+  const absMatch = url.match(ARXIV_ABS_URL);
+  if (absMatch) return absMatch[1];
+  const pdfMatch = url.match(ARXIV_PDF_URL);
+  return pdfMatch ? pdfMatch[1] : null;
 }
 
 function decodeXmlEntities(text: string): string {
@@ -141,10 +144,11 @@ export const extractorArxiv: CrystalithPlugin = {
   kind: 'extractor',
   displayName: 'arXiv',
   description: 'arXiv 论文抽取：abs 元数据/摘要（Atom API）+ PDF 全文（unpdf），无需 key',
-  recoveryHint: '检查目标是否为 arxiv.org/abs/* 页面；网络问题请配置 CL_PROXY_* 或 proxy_settings',
+  recoveryHint:
+    '检查目标是否为 arxiv.org/abs/* 或 /pdf/* 页面；网络问题请配置 CL_PROXY_* 或 proxy_settings',
   configSchema: z.object({}),
   capabilities: [],
-  urlPatterns: [ARXIV_ABS_URL.source],
+  urlPatterns: [ARXIV_ABS_URL.source, ARXIV_PDF_URL.source],
   factory: async (ctx: CrystalithPluginContext): Promise<Extractor> => ({
     name: 'arxiv',
     isAvailable: () => true,
