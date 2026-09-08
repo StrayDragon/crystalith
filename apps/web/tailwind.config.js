@@ -5,7 +5,14 @@ const scrollbar = require('tailwind-scrollbar');
 /** @type {import('tailwindcss').Config} */
 module.exports = withMT({
   darkMode: 'class',
-  content: ['./src/**/*.{js,jsx,ts,tsx}', '../packages/crystalith-slidev/src/**/*.{js,jsx,ts,tsx}'],
+  content: [
+    './src/**/*.{js,jsx,ts,tsx}',
+    '../packages/crystalith-slidev/src/**/*.{js,jsx,ts,tsx}',
+    // streamdown（聊天 markdown 渲染）的 utility classes 在其 dist 内；
+    // v3 没有 @source，只能走 content 扫描（精确到 dist，勿放宽）
+    'node_modules/streamdown/dist/*.js',
+    'node_modules/@streamdown/code/dist/*.js',
+  ],
   theme: {
     extend: {
       // Use system fonts - no external font loading needed
@@ -39,6 +46,17 @@ module.exports = withMT({
       },
       colors: {
         slate: colors.slate || colors.gray,
+        // ===== streamdown（聊天 markdown 渲染）shadcn token 体系 =====
+        // 仅由 streamdown dist 内的 utility classes 消费；变量取值见 tailwind.css
+        // 的 --sd-*（light=gray / dark=slate）。`<alpha-value>` 支持 bg-muted/80 等。
+        background: 'rgb(var(--sd-background) / <alpha-value>)',
+        foreground: 'rgb(var(--sd-foreground) / <alpha-value>)',
+        muted: 'rgb(var(--sd-muted) / <alpha-value>)',
+        'muted-foreground': 'rgb(var(--sd-muted-foreground) / <alpha-value>)',
+        border: 'rgb(var(--sd-border) / <alpha-value>)',
+        sidebar: 'rgb(var(--sd-sidebar) / <alpha-value>)',
+        primary: 'rgb(var(--sd-primary) / <alpha-value>)',
+        'primary-foreground': 'rgb(var(--sd-primary-foreground) / <alpha-value>)',
         brand: {
           50: '#eff6ff',
           100: '#dbeafe',
