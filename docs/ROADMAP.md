@@ -23,6 +23,13 @@
 1. **分发形态**：二进制方向。产物矩阵 = `crystalith-server` 单二进制（bun compile，headless/自托管/Docker 的必要内核）+ `Crystalith` 桌面应用（Tauri v2，sidecar 内嵌 server 二进制 + 静态 web 资源）。**server 是唯一内核；app 是可选分发壳**。
 2. **插件分发**：**npm 优先**（理由见下）。
 
+### ✅ 已拍板（2026-09-08 确认）
+
+- **首版（c13 v1）只做 web 模式的 server 单二进制**：API + 静态 web 资源一个二进制交付；headless 优先——**裸 CLI/TUI 用户与第三方 client 直接对接 server HTTP API 是一等场景**
+- **Tauri 桌面端 delay**：不进首版；待 web 单二进制形态稳定后另起 change（sidecar 内嵌 server）
+- **插件分发 = npm**："npm 依赖 + 重启加载"，不搞运行时热插拔；官方插件内嵌为 built-in 实现并同时发 npm 样例
+- 落地变更：`plugin-interface-ssot`（接口 SSOT，转正式 propose）+ `ship-server-binary`（c13 v1 分发，proposal/design 就绪，实施排在 A 线收尾后）
+
 ### npm 优于内嵌的理由
 
 - 分发/版本/依赖解析免费获得；内嵌方案每加一个插件都要重编译整包，与"插件"语义矛盾
