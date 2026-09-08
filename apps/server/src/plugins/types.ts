@@ -12,6 +12,13 @@ export interface CrystalithPluginContext {
   config: Record<string, unknown>;
   /** CL_DATA_ROOT-derived absolute path (configuration-governance). */
   dataRoot: string;
+  /**
+   * Host-provided network transport honoring the global proxy SSOT
+   * (`proxy_settings` + CL_PROXY_* overlay). Plugins MUST use this for
+   * outbound HTTP instead of global fetch so proxy/no-proxy semantics stay
+   * in one place.
+   */
+  fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 }
 
 export interface CrystalithPlugin {

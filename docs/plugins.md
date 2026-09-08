@@ -53,6 +53,53 @@ plugins:
 恢复提示）；`diagnostics.official` 列出全部已注册官方插件及其来源
 （`builtin` / `installed`）。
 
+## 本地快速调试（以 extractor-arxiv 为样例）
+
+**开发形态**：monorepo 内 `packages/plugin-extractor-arxiv`（包名
+`@crystalith-plugin/extractor-arxiv`）。根 `package.json` 的 devDependencies
+用 `workspace:*` 引用它 → `bun install` 后 symlink 进
+`node_modules/@crystalith-plugin/` → registry discovery 直接命中，**无需发包**。
+
+**调试循环（免启服，最快）**：
+
+```bash
+# 仓库根目录运行；网络走宿主同款出站链路（见下节代理）
+bun packages/plugin-extractor-arxiv/scripts/try.ts https://arxiv.org/abs/1706.03762
+# 非 arxiv URL → 观察空内容降级语义
+bun packages/plugin-extractor-arxiv/scripts/try.ts https://example.com
+```
+
+**server 内联调**：`just dev` 启动后插件即被加载（`GET /v2/workspace/tools`
+的 `diagnostics.plugins.loaded` 应含 `extractor-arxiv`）。编辑插件代码后，
+按加载语义**重启 server 生效**（`just dev-quit && just dev`；插件是
+restart-loaded，没有热重载）。
+
+**链路位置**：外部插件默认注册在内置之后（链尾）。想让 arxiv 在 fallback
+链里优先（它对非 arxiv URL 返回空内容、无副作用）：
+
+```yaml
+plugins:
+  load_order: ['extractor-arxiv']
+```
+
+或单次摄入指定 `preferredExtractor: arxiv`（r113）。
+
+## 代理配置（网络问题）
+
+插件 **不出 own 网络逻辑**：factory 收到的 `ctx.fetch` 就是宿主的
+`outboundFetch`，与 URL 导入/网页搜索共用同一条代理 SSOT。网络不通时按
+优先级排查：
+
+1. `config/app.yaml` 的 `proxy_settings`（`enabled` / `http_url` /
+   `https_url`）；
+2. 环境变量覆盖：`CL_PROXY_ENABLED` / `CL_PROXY_HTTP_URL` /
+   `CL_PROXY_HTTPS_URL`（留空跟随 yaml）；
+3. 临时一次性调试：命令前缀 `HTTPS_PROXY=http://<proxy> bun
+packages/plugin-extractor-arxiv/scripts/try.ts …`（对遵循标准代理变量
+   的工具同样适用）。
+
+`localhost` / `127.0.0.1` 默认在 `no_proxy` 内，不受影响。
+
 ## 官方 scope 与收编
 
 - `@crystalith-plugin/*` scope 下的包自动进入 official catalog 候选。

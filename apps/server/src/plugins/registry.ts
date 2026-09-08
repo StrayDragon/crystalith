@@ -8,6 +8,7 @@
 // ids instantiate in list order; later position wins determinism for
 // same-id conflicts at registration time — later registration overwrites).
 import { getDataRoot, getPluginsSettings } from '../shared/config.ts';
+import { outboundFetch } from '../shared/net/outbound-fetch.ts';
 import { builtinPlugins } from './builtin/index.ts';
 import {
   discoverExternalPluginIds,
@@ -132,7 +133,16 @@ export class PluginRegistry {
         continue;
       }
       try {
-        impls.set(plugin.id, await plugin.factory({ config: {}, dataRoot: this.deps.dataRoot() }));
+        impls.set(
+          plugin.id,
+          await plugin.factory({
+            config: {},
+            dataRoot: this.deps.dataRoot(),
+            // Proxy-aware transport (proxy_settings + CL_PROXY_* overlay):
+            // one network SSOT for built-ins and external plugins alike.
+            fetch: outboundFetch,
+          }),
+        );
       } catch (error: unknown) {
         skipped[plugin.id] = {
           errorCode: 'PLUGIN_FACTORY_FAILED',
