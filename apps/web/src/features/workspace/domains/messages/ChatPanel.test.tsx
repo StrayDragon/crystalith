@@ -54,7 +54,7 @@ function renderChatPanel(overrides?: ChatPanelOverrides) {
   return render(buildChatPanelElement(overrides));
 }
 
-test('chat messages render assistant content as plain text', async () => {
+test('chat messages render assistant content as markdown', async () => {
   const messages: ChatMessage[] = [
     {
       id: 'assistant-1',
@@ -69,9 +69,10 @@ test('chat messages render assistant content as plain text', async () => {
     },
   ];
 
-  renderChatPanel({ messages });
+  const { container } = renderChatPanel({ messages });
 
-  expect(await screen.findByText('Answer **markdown**')).toBeInTheDocument();
+  await screen.findByText('markdown');
+  expect(container.querySelector('[data-streamdown="strong"]')?.textContent).toBe('markdown');
 });
 
 test('chat panel virtualizes large message list', async () => {

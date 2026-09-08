@@ -1,5 +1,9 @@
 ---
 depends_on: []
+branch: sdd/streamdown-markdown-assistant-p0-1
+base_sha: 88e420481b9cf3a0ac9d9e0628e5355f8266cdb3
+checkpointed: true
+checkpoint_sha: 88e420481b9cf3a0ac9d9e0628e5355f8266cdb3
 ---
 
 # 聊天 AI 消息接入 streamdown 流式 Markdown 渲染
