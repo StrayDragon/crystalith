@@ -36,3 +36,7 @@
   @req:r8 @human
   场景: Configuration must be deterministic
     - 同一组环境变量 + 同一份 config/app.yaml MUST 产生完全相同的 AppConfig 对象。配置加载 MUST 是纯函数（无随机、无网络 I/O、无时间依赖）。secret.env 的缺失 MUST 不改变行为（仅日志警告），应用继续以环境变量提供的值运行。
+
+  @req:r463 @human
+  场景: Compiled distribution config resolution semantics
+    - 二进制分发形态下，配置解析 MUST 与源码运行保持同一 CL_* 优先级语义：配置文件默认按 CWD 相对定位（CL_CONFIG_PATH 可覆盖）；Drizzle 迁移目录 MUST 按「源码树 → 可执行文件旁 → CWD」顺序解析；sqlite-vec 原生扩展 MUST 支持以可执行文件旁 native/ 目录（或 CL_SQLITE_VEC_PATH）加载作为包解析回退；静态 web 资源根 MUST 由 CL_WEB_DIST 或可执行文件旁 web/dist 定位，两者均缺席时 server MUST 以纯 API 模式运行（headless），MUST NOT 因资源缺席拒绝启动。MUST NOT 假设源码仓库布局存在。

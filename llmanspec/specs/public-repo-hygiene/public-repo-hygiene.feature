@@ -20,3 +20,7 @@
   @req:r170 @human
   场景: Project metadata is not placeholder and is consistent
     - 项目元数据（README、包描述、文档首页等）MUST 避免占位文本，并对“项目是什么/如何运行/如何获取帮助”给出一致表述。
+
+  @req:r464 @human
+  场景: Release artifacts are self-contained and key-free
+    - 发布工件（just release 产出的压缩包）MUST 包含运行所需的最小资源集（server 二进制、web 静态资源、数据库迁移、sqlite-vec 平台扩展、config/app.yaml），MUST NOT 包含任何密钥文件（如 config/secret.env）；README 的获取/运行说明 MUST 与工件实际布局保持一致；版本号 MUST 以发布 git tag 为单一来源并注入 /health 与 OpenAPI 文档。

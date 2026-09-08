@@ -1,6 +1,9 @@
 ---
 depends_on: []
 blocks: []
+branch: sdd/ship-server-binary
+base_sha: f903d1abff5d775c295c67d5ed1217bbbb191bba
+checkpointed: false
 ---
 
 # Proposal — ship-server-binary（c13 v1：web 模式单二进制分发）
