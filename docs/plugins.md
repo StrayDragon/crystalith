@@ -77,26 +77,26 @@ plugins:
 接口 union 里保留全部四个 kind = **兼容与扩展的口子**；但文档、指南、catalog
 宣传只覆盖 `extractor`——「能扩展」不等于「到处都能挂」。
 
-### 第一梯队榜样：`@crystalith-plugin/extractor-github`
+### 第一梯队榜样：`@crystalith-plugin/extractor-arxiv`（draft：`add-extractor-arxiv`）
 
-- **需求**：开发者把仓库/README/文档存进笔记本——dev 工具的高频动作；
-  readability 抽 github.com 页面 DOM 噪声很大，raw 源才是干净的 markdown
-- **形态（极简）**：`isAvailable` 恒定可用 + `extract` 内按 host（github.com /
-  raw.githubusercontent.com / gist）判定，非目标 URL 返回空内容 → 编排层
-  自然降级到下一个提取器；取数走 raw.githubusercontent / GitHub API（无 key，
-  匿名限额足够自托管）→ markdown 直出
+- **需求**：arXiv 是研究者用户最高频来源；abs 页经 readability 抽取后混杂
+  导航/引用噪声，作者/摘要/分类等元数据无法结构化保留
+- **形态（极简）**：export.arxiv.org Atom API 稳定、无 key、纯 JS；
+  `isAvailable` 恒定可用 + `extract` 内按 host（`arxiv.org/abs/*`）判定，
+  非目标 URL 返回空内容 → 编排层自然降级；目标 URL → markdown + 结构化
+  元数据（title/authors/abstract/published/primary_category）
 - **为什么它当第一榜样**：~百行、确定性输出、零外部脆弱依赖——同时完整踩过
   外部插件全流程（scope 发现、动态 import、host 门控、fallback 链、
   `plugins.*` 策略、`diagnostics.plugins.skipped`、official catalog），
   且因为输出确定，它天然就是后续给插件写验收测试的**标准测试夹具**
-- **开发故事**：monorepo 内 `packages/plugin-extractor-github`（包名
-  `@crystalith-plugin/extractor-github`），bun workspaces symlink 进根
+- **开发故事**：monorepo 内 `packages/plugin-extractor-arxiv`（包名
+  `@crystalith-plugin/extractor-arxiv`），bun workspaces symlink 进根
   node_modules → discovery 直接命中，无需发包即可联调；成熟后独立发 npm
 
 ### 第二梯队（按序）
 
-1. `extractor-arxiv`：export.arxiv.org API 稳定、无 key，abs → 结构化
-   摘要/元数据；研究者用户真实需求（第二优先）
+1. `extractor-github`：raw 源取 README/文档，markdown 直出；优先级低于
+   arxiv（readability 对 github 页面尚可用，增益相对小）
 2. `parser` 宿主接线（ingestion 按扩展名 consult parser 插件）→ 榜样
    `parser-docx`（mammoth，纯 JS；讲义/论文上传是真实需求）
 3. `slides-workflow` 生成链路接 registry → 第二个 slides 插件（解锁 r102
