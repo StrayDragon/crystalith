@@ -77,23 +77,36 @@ plugins:
 接口 union 里保留全部四个 kind = **兼容与扩展的口子**；但文档、指南、catalog
 宣传只覆盖 `extractor`——「能扩展」不等于「到处都能挂」。
 
-### 第一个榜样：`@crystalith-plugin/extractor-youtube`
+### 第一梯队榜样：`@crystalith-plugin/extractor-github`
 
-- **需求**：把视频（讲解/播客/会议录屏）变成笔记本来源——字幕是唯一入口，
-  readability 抽不到、jina/firecrawl 也不解决，是现有三个提取器的真实盲区
-- **形态**：纯 JS，无 key 起步（transcript 端点拉取，失败即走 fallback/skip），
-  可选 key 增强；`isAvailable` 按 URL host 判定，非目标站点空内容自然降级
-- **为什么它是指榜样**：零新增宿主面（extractor 是唯一全链路 kind）；
-  一次开发同时验证外部插件全流程——scope 发现、动态 import、fallback 链、
-  `plugins.*` 策略、`diagnostics.plugins.skipped`、official catalog
-- **开发故事**：monorepo 内 `packages/plugin-extractor-youtube`（包名
-  `@crystalith-plugin/extractor-youtube`），bun workspaces 会把它 symlink 进
-  根 node_modules → discovery 直接命中，无需发包即可联调；成熟后独立发 npm
+- **需求**：开发者把仓库/README/文档存进笔记本——dev 工具的高频动作；
+  readability 抽 github.com 页面 DOM 噪声很大，raw 源才是干净的 markdown
+- **形态（极简）**：`isAvailable` 恒定可用 + `extract` 内按 host（github.com /
+  raw.githubusercontent.com / gist）判定，非目标 URL 返回空内容 → 编排层
+  自然降级到下一个提取器；取数走 raw.githubusercontent / GitHub API（无 key，
+  匿名限额足够自托管）→ markdown 直出
+- **为什么它当第一榜样**：~百行、确定性输出、零外部脆弱依赖——同时完整踩过
+  外部插件全流程（scope 发现、动态 import、host 门控、fallback 链、
+  `plugins.*` 策略、`diagnostics.plugins.skipped`、official catalog），
+  且因为输出确定，它天然就是后续给插件写验收测试的**标准测试夹具**
+- **开发故事**：monorepo 内 `packages/plugin-extractor-github`（包名
+  `@crystalith-plugin/extractor-github`），bun workspaces symlink 进根
+  node_modules → discovery 直接命中，无需发包即可联调；成熟后独立发 npm
 
-### 后续（每个都要先有宿主 change，再谈插件）
+### 第二梯队（按序）
 
-1. `parser` 宿主接线（ingestion 按扩展名 consult parser 插件）→ 榜样
+1. `extractor-arxiv`：export.arxiv.org API 稳定、无 key，abs → 结构化
+   摘要/元数据；研究者用户真实需求（第二优先）
+2. `parser` 宿主接线（ingestion 按扩展名 consult parser 插件）→ 榜样
    `parser-docx`（mammoth，纯 JS；讲义/论文上传是真实需求）
-2. `slides-workflow` 生成链路接 registry → 第二个 slides 插件（解锁 r102
+3. `slides-workflow` 生成链路接 registry → 第二个 slides 插件（解锁 r102
    「多候选 → 结构化诊断」的真实验证）
-3. `output-type`：维持关闭，等出现反复出现的、现有六类型表达不了的真实产出需求
+4. `output-type`：维持关闭，等出现反复出现的、现有六类型表达不了的真实产出需求
+
+### 已评估并暂缓
+
+- `extractor-youtube`：需求最大（视频→笔记），但**难度/脆弱度不成比例**——
+  timedtext 端点反爬、播放器签名演进、区域锁，第三方 transcript 方案维护
+  状态普遍差；做榜样会把"最不稳的依赖"放进"最需要稳定的示范位"。
+  **暂缓**，等出现维护良好的 transcript 方案，或以 connector 形态（带
+  sync_check 的拉取型来源）另议。
