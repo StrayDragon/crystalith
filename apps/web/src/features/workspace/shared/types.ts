@@ -235,6 +235,7 @@ export interface OutputItem {
   type: OutputTypeId;
   prompt: string;
   chunkIds: number[];
+  sourceIds?: number[] | null;
   /** Full payload when loaded; null for list-only rows (c72). */
   content: OutputPayload | null;
   /** True after detail GET or generate response with body (c72). */

@@ -273,6 +273,11 @@ export const OutputSchema = z
     type: OutputTypeSchema.describe(desc('output.type')),
     prompt: z.string().nullable().optional(),
     chunkIds: z.array(IdSchema).nullable().optional(),
+    sourceIds: z
+      .array(IdSchema)
+      .nullable()
+      .optional()
+      .describe(desc('output.source_ids', '生成时选中的来源 ID 列表')),
     content: OutputContentSchema.describe(desc('output.content')),
     createdAt: IsoTimestampSchema.describe(desc('output.created_at')),
     updatedAt: IsoTimestampSchema,
@@ -320,6 +325,11 @@ export const OutputListItemSchema = z
       .optional()
       .describe(desc('output.slide_id', 'SLIDES 类型关联的草稿 ID（列表用）')),
     chunkIds: z.array(IdSchema).nullable().optional(),
+    sourceIds: z
+      .array(IdSchema)
+      .nullable()
+      .optional()
+      .describe(desc('output.source_ids', '生成时选中的来源 ID 列表')),
     researchLab: ResearchLabOriginSchema.optional().describe(
       desc('output.list_research_lab', '深度研究转化来源（列表兜底跳转）'),
     ),

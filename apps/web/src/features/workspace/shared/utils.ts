@@ -354,6 +354,7 @@ export function normalizeOutput(
     type: row.type,
     prompt: row.prompt ?? '',
     chunkIds: row.chunkIds ?? [],
+    sourceIds: 'sourceIds' in row && Array.isArray(row.sourceIds) ? row.sourceIds : null,
     content: hasContent ? normalizeOutputPayload(row.type, row.content) : null,
     contentLoaded: hasContent,
     title: 'title' in row ? (row.title ?? null) : null,
