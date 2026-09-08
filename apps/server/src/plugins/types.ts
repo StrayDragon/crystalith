@@ -33,6 +33,11 @@ export interface CrystalithPlugin {
   configSchema: z.ZodObject;
   /** Feature flags consumed by kind-level orchestration (e.g. 'requires-api-key'). */
   capabilities: readonly string[];
+  /**
+   * Optional URL regex sources for UI pre-selection hints (extractor plugins only).
+   * MUST NOT affect server-side fall-through extraction semantics.
+   */
+  urlPatterns?: readonly string[];
   factory: (ctx: CrystalithPluginContext) => Promise<unknown>;
 }
 

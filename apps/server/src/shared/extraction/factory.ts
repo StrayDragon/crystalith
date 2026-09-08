@@ -34,6 +34,7 @@ export interface ExtractorMetadata {
   requiresApiKey: boolean;
   requiresService: boolean;
   recoveryHint: string | null;
+  urlPatterns: string[] | null;
 }
 
 function wireName(plugin: CrystalithPlugin): string {
@@ -74,6 +75,7 @@ export function listExtractorMetadata(config: unknown): ExtractorMetadata[] {
     requiresApiKey: plugin.capabilities.includes('requires-api-key'),
     requiresService: plugin.capabilities.includes('requires-service'),
     recoveryHint: plugin.recoveryHint ?? null,
+    urlPatterns: plugin.urlPatterns ? [...plugin.urlPatterns] : null,
   }));
 }
 

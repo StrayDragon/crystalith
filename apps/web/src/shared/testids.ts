@@ -77,6 +77,8 @@ export const TestIds = {
   urlImportModeFetch: 'url-import-mode-fetch',
   urlImportSubmit: 'url-import-submit',
   urlImportCancel: 'url-import-cancel',
+  urlImportExtractorHints: 'url-import-extractor-hints',
+  urlImportExtractorChip: (type: string) => `url-import-extractor-chip-${type}`,
 
   // Chat / sessions
   chatPanel: 'chat-panel',

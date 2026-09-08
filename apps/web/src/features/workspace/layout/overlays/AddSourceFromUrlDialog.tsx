@@ -1,3 +1,4 @@
+import type { ExtractorInfo } from '@crystalith/shared';
 import {
   Close as CloseIcon,
   Link as LinkIcon,
@@ -9,14 +10,17 @@ import { createPortal } from 'react-dom';
 import { useLayer } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
+import { matchExtractorsForUrl, pickSelectedExtractor } from './matchExtractorsForUrl';
 
 type SourceFromUrlMode = 'link' | 'fetch';
 
 interface AddSourceFromUrlDialogProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (url: string, mode: SourceFromUrlMode) => Promise<void>;
+  onAdd: (url: string, mode: SourceFromUrlMode, options?: { extractor?: string }) => Promise<void>;
   defaultMode?: SourceFromUrlMode;
+  extractors?: ExtractorInfo[];
+  extractorsLoading?: boolean;
 }
 
 function normalizeUrl(value: string): string {
@@ -28,19 +32,45 @@ function isLikelyHttpUrl(value: string): boolean {
   return url.startsWith('http://') || url.startsWith('https://');
 }
 
+function recommendationText(matches: readonly ExtractorInfo[]): string {
+  if (matches.length === 1) {
+    return `检测到 ${matches[0].displayName} 链接，将使用 ${matches[0].displayName} 提取器`;
+  }
+  return '检测到匹配的提取器，将使用已勾选项（按优先级）';
+}
+
 export default function AddSourceFromUrlDialog({
   open,
   onClose,
   onAdd,
   defaultMode = 'link',
+  extractors = [],
+  extractorsLoading = false,
 }: AddSourceFromUrlDialogProps) {
   const [url, setUrl] = useState('');
   const [mode, setMode] = useState<SourceFromUrlMode>(defaultMode);
   const [error, setError] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(() => new Set());
   const { style: modalStyle } = useLayer('modal');
   const modalRef = useRef<HTMLDivElement | null>(null);
   const urlInputRef = useRef<HTMLInputElement | null>(null);
+
+  const matchedExtractors = useMemo(() => {
+    if (mode !== 'fetch') return [];
+    return matchExtractorsForUrl(url, extractors);
+  }, [extractors, mode, url]);
+
+  const matchKey = matchedExtractors.map((entry) => entry.type).join(',');
+
+  useEffect(() => {
+    setSelectedTypes(new Set(matchedExtractors.map((entry) => entry.type)));
+  }, [matchKey]);
+
+  const selectedExtractor = useMemo(
+    () => pickSelectedExtractor(matchedExtractors, selectedTypes),
+    [matchedExtractors, selectedTypes],
+  );
 
   const canSubmit = useMemo(() => {
     const normalized = normalizeUrl(url);
@@ -52,8 +82,21 @@ export default function AddSourceFromUrlDialog({
     setUrl('');
     setError('');
     setMode(defaultMode);
+    setSelectedTypes(new Set());
     onClose();
   }, [defaultMode, isAdding, onClose]);
+
+  const toggleExtractor = useCallback((type: string) => {
+    setSelectedTypes((current) => {
+      const next = new Set(current);
+      if (next.has(type)) {
+        next.delete(type);
+      } else {
+        next.add(type);
+      }
+      return next;
+    });
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
@@ -61,7 +104,9 @@ export default function AddSourceFromUrlDialog({
     setIsAdding(true);
     setError('');
     try {
-      await onAdd(normalized, mode);
+      const extractor =
+        mode === 'fetch' && selectedExtractor ? { extractor: selectedExtractor } : undefined;
+      await onAdd(normalized, mode, extractor);
       handleClose();
     } catch (error) {
       const message = error instanceof Error ? error.message : '添加失败';
@@ -69,7 +114,7 @@ export default function AddSourceFromUrlDialog({
     } finally {
       setIsAdding(false);
     }
-  }, [canSubmit, handleClose, mode, onAdd, url]);
+  }, [canSubmit, handleClose, mode, onAdd, selectedExtractor, url]);
 
   useFocusTrap({
     active: open,
@@ -176,6 +221,43 @@ export default function AddSourceFromUrlDialog({
           {url.trim().length > 0 && !isLikelyHttpUrl(url) ? (
             <div className="mt-2 text-[11px] text-amber-700 dark:text-amber-300">
               请输入以 http:// 或 https:// 开头的 URL。
+            </div>
+          ) : null}
+
+          {mode === 'fetch' && matchedExtractors.length > 0 ? (
+            <div className="mt-2" {...tid(TestIds.urlImportExtractorHints)}>
+              <div className="text-[11px] text-gray-600 dark:text-slate-300">
+                {recommendationText(matchedExtractors)}
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {matchedExtractors.map((entry) => {
+                  const selected = selectedTypes.has(entry.type);
+                  return (
+                    <button
+                      key={entry.type}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => {
+                        toggleExtractor(entry.type);
+                      }}
+                      {...tid(TestIds.urlImportExtractorChip(entry.type))}
+                      className={`px-2 py-0.5 rounded-full border text-[11px] transition-colors ${
+                        selected
+                          ? 'border-gray-900 bg-gray-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900'
+                          : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {entry.displayName}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          {mode === 'fetch' && extractorsLoading ? (
+            <div className="mt-2 text-[11px] text-gray-500 dark:text-slate-400">
+              正在加载提取器信息…
             </div>
           ) : null}
 

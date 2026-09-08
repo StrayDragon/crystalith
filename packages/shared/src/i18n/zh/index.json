@@ -259,6 +259,7 @@
   "source.created_at": "创建时间（ISO 8601）",
   "source.entity": "来源实体",
   "source.extractors_list": "笔记本提取器策略与可用列表",
+  "source.extractor_url_patterns": "URL 正则源列表，仅用于导入对话框预选提示",
   "source.from_url": "从 URL 导入来源",
   "source.from_url_fetch": "抓取模式导入结果",
   "source.from_url_link": "链接模式导入结果",

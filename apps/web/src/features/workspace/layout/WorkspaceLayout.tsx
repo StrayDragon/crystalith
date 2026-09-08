@@ -433,8 +433,12 @@ export default function WorkspaceLayout() {
   const addSourceFromUrl = sources.addSourceFromUrl;
 
   const handleAddSourceFromUrl = useCallback(
-    async (url: string, mode: Parameters<typeof addSourceFromUrl>[1]) => {
-      await addSourceFromUrl(url, mode);
+    async (
+      url: string,
+      mode: Parameters<typeof addSourceFromUrl>[1],
+      options?: { extractor?: string },
+    ) => {
+      await addSourceFromUrl(url, mode, options);
       toast.success('已添加来源');
     },
     [addSourceFromUrl],
@@ -843,6 +847,8 @@ export default function WorkspaceLayout() {
         open={addSourceFromUrlOpen}
         onClose={handleCloseAddSourceFromUrl}
         onAdd={handleAddSourceFromUrl}
+        extractors={sources.extractors}
+        extractorsLoading={sources.extractorsLoading}
       />
 
       <DiagnosticsDialog

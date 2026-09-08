@@ -166,10 +166,6 @@ describe('source dedup', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// SSRF guard (URL ingest)
-// ---------------------------------------------------------------------------
-
 describe('SSRF guard on URL ingest', () => {
   it('blocks file:// scheme with 422', async () => {
     const nb = makeNotebook('ssrf-file');
@@ -198,5 +194,25 @@ describe('SSRF guard on URL ingest', () => {
     expect(res.status).toBe(422);
     const body = (await res.json()) as { message: string };
     expect(body.message).toBe('SSRF blocked');
+  });
+});
+
+describe('from-url extractor validation', () => {
+  it('rejects unknown extractor at business layer', async () => {
+    const nb = makeNotebook('from-url-extractor');
+    const res = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${nb}/sources/from-url`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          url: 'https://example.com/article',
+          mode: 'fetch',
+          extractor: 'not-a-real-extractor',
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { errorCode: string };
+    expect(body.errorCode).toBe('INVALID_REQUEST');
   });
 });

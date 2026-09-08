@@ -83,7 +83,19 @@ describe('domain schemas', () => {
       extractor: 'JINA',
     });
     expect(ok.extractor).toBe('jina');
+    const arxiv = S.SourceFromUrlRequestSchema.parse({
+      url: 'https://arxiv.org/abs/1706.03762',
+      mode: 'fetch',
+      extractor: 'arxiv',
+    });
+    expect(arxiv.extractor).toBe('arxiv');
     expect(S.SourceFromUrlRequestSchema.safeParse({ url: 'ftp://x' }).success).toBe(false);
+    expect(
+      S.SourceFromUrlRequestSchema.safeParse({
+        url: 'https://example.com',
+        extractor: 'Bad Name',
+      }).success,
+    ).toBe(false);
   });
 
   it('qa nested request requires question/content; notebookId optional', () => {
