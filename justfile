@@ -158,6 +158,10 @@ e2e-all:
 # Config
 # --------------------------------------------------------------------------
 
+# Regenerate favicon / PWA icons from assets/logo.webp
+gen-brand-icons:
+    bash scripts/gen-brand-icons.sh
+
 # Regenerate .env.example and app.schema.gen.json
 gen-env-examples:
     bun scripts/gen-env-examples.ts
