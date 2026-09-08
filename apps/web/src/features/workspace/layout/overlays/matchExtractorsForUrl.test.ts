@@ -22,7 +22,10 @@ describe('matchExtractorsForUrl', () => {
     type: 'arxiv',
     displayName: 'arXiv',
     priority: 5,
-    urlPatterns: ['^https?:\\/\\/(?:www\\.|export\\.)?arxiv\\.org\\/abs\\/'],
+    urlPatterns: [
+      '^https?:\\/\\/(?:www\\.|export\\.)?arxiv\\.org\\/abs\\/',
+      '^https?:\\/\\/(?:www\\.|export\\.)?arxiv\\.org\\/pdf\\/',
+    ],
   });
   const readability = extractor({
     type: 'readability',
@@ -44,6 +47,11 @@ describe('matchExtractorsForUrl', () => {
       arxiv,
       disabled,
     ]);
+    expect(matches.map((entry) => entry.type)).toEqual(['arxiv']);
+  });
+
+  it('returns arxiv for pdf URLs', () => {
+    const matches = matchExtractorsForUrl('https://arxiv.org/pdf/1706.03762', [readability, arxiv]);
     expect(matches.map((entry) => entry.type)).toEqual(['arxiv']);
   });
 

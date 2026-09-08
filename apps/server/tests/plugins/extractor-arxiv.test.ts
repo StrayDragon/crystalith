@@ -54,7 +54,8 @@ describe('parseArxivId', () => {
     expect(parseArxivId('https://arxiv.org/abs/1706.03762')).toBe('1706.03762');
     expect(parseArxivId('http://arxiv.org/abs/2401.12345v2')).toBe('2401.12345v2');
     expect(parseArxivId('https://export.arxiv.org/abs/1706.03762')).toBe('1706.03762');
-    expect(parseArxivId('https://arxiv.org/pdf/1706.03762')).toBeNull();
+    expect(parseArxivId('https://arxiv.org/pdf/1706.03762')).toBe('1706.03762');
+    expect(parseArxivId('https://export.arxiv.org/pdf/2401.12345v2')).toBe('2401.12345v2');
     expect(parseArxivId('https://example.com')).toBeNull();
   });
 });
