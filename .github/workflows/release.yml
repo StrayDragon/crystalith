@@ -130,7 +130,7 @@ jobs:
           cat > release-notes.md <<'EOF'
           自托管单二进制发布。压缩包 = `crystalith-server` + `web/dist` + `drizzle` + `native` + `config`，解压后 `CL_CHAT_MODEL=… ./crystalith-server` 即可运行（详见 README「部署」）。
 
-          _windows 产物为实验性（未签名，首次运行可能被 SmartScreen 提示）。_
+          _当前发布目标为 Linux（x64 / arm64）；macOS / Windows 因上游 Bun 限制暂缓，见 `docs/known-issues.md`。_
           EOF
           gh release create "${GITHUB_REF_NAME}" dist/* \
             --repo "${GITHUB_REPOSITORY}" \
