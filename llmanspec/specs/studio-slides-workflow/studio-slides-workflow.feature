@@ -1,7 +1,7 @@
 # language: zh-CN
 # capability: studio-slides-workflow
 # purpose: 定义 SLIDES 的端到端工作流：draft 单一事实源、outline/markdown SSE、保存同步与预览链路。该规范用于保证断线重连、重试与预览刷新时的状态一致性。
-# scope: apps/server/src/features/studio/, packages/crystalith-slidev/
+# scope: apps/server/src/features/studio/, apps/server/src/features/workspace/, apps/server/src/shared/, apps/web/src/features/workspace/, packages/crystalith-slidev/
 
 功能: studio-slides-workflow
 
@@ -56,3 +56,11 @@
   @req:studio-frontmatter-six-key-shape @human
   场景: Studio frontmatter MUST use the six-key template shape with override support
     - studio 生成的 markdown frontmatter MUST 为 6-key 结构（theme 恒为 default、colorSchema、fonts{sans,serif,mono}、transition、background、class），对齐既有模板语义；当 generationConfig.frontmatter 非空时，MUST 以该字符串作为 frontmatter body 绕过预设，仅在缺 title: 且存在标题时补一行。预设路径（generationConfig.frontmatter 为空）MUST NOT 省略 colorSchema/class/serif/mono 字段；override 模式以用户提供的字符串为准，不适用该补全约束。
+
+  @req:slides-preview-availability-determined @human
+  场景: SLIDES availability is determined by config and probe, not hardcoded
+    - server MUST 依据「active slides workflow 插件已加载 ∧ 预览进程探测可达」判定 SLIDES 可用性；探测目标与超时 MUST 经 config schema（slides_preview.base_url / probe_timeout_ms，env 覆盖 CL_SLIDEV_BASE_URL）声明，探测结果 MUST 短 TTL 缓存且失败 MUST 降级为结构化诊断而非异常。`/v2/workspace/tools` MUST 将结果填入 `diagnostics.slides`（available/message/hint/activePluginId/engine/errorCode），SLIDES tool 的 `enabled` MUST 反映该可用性；MUST NOT 硬编码 enabled=true。不可用时 errorCode MUST 取稳定值（SLIDES_PREVIEW_UNREACHABLE / SLIDES_PLUGIN_MISSING）且 hint MUST 可执行。
+
+  @req:slides-ui-removes-unavailable-entry @human
+  场景: Studio generate entry removes SLIDES when unavailable
+    - 当 `/v2/workspace/tools` 的 `diagnostics.slides.available === false` 时，Studio 生成入口（工具弹层）MUST 移除 SLIDES 卡片；不可用原因与恢复提示 MUST 仍可经诊断面板（diagnostics.slides）呈现。MUST NOT 影响其余输出类型工具的渲染。
