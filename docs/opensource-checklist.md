@@ -23,7 +23,7 @@
 ## P1 — 强烈建议
 
 - [ ] ~~`CONTRIBUTING.md` / `SECURITY.md` / `CHANGELOG.md`~~ — **已决定暂不做**（2026-09-09：从发布准备中移除；README 已含开发门禁与文档索引，够用）
-- [x] CI（2026-09-09 落地）：`.github/workflows/ci.yml`（静态检查 + server/shared/web/e2e @p0，`oven-sh/setup-bun@v2` + `bun-version-file: package.json`，e2e 全程 mock 可离线）；`.github/workflows/release.yml`（推送 `v*.*.*` tag → 五平台原生矩阵构建 + 冒烟 + 自动 GitHub Release，产出 tar.gz + sha256）
+- [x] CI（2026-09-09 落地）：`.github/workflows/ci.yml`（静态检查 + server/shared/web/e2e @p0，`oven-sh/setup-bun@v2` + `.bun-version` 钉版，e2e 全程 mock 可离线）；`.github/workflows/release.yml`（推送 `v*.*.*` tag → 五平台原生矩阵构建 + 冒烟 + 自动 GitHub Release，产出 tar.gz + sha256）
 - [x] root `package.json` 增加 `"engines": { "bun": ">=1.4.0" }`
   - Bun 自身目前不强制 `engines`（[oven-sh/bun#12566](https://github.com/oven-sh/bun/issues/12566)、[#5846](https://github.com/oven-sh/bun/issues/5846) 仍为 open feature），但 setup-bun / npm 等外部工具会读取；属低成本文档化最佳实践
 - [x] 代理改为环境变量控制：`CL_PROXY_ENABLED`（'true'/'false'）/ `CL_PROXY_HTTP_URL` / `CL_PROXY_HTTPS_URL`，留空跟随 `config/app.yaml`（默认开，保持自托管一致性）

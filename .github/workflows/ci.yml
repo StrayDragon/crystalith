@@ -28,8 +28,9 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          # Reads engines.bun from package.json (repo SSOT for the Bun floor).
-          bun-version-file: package.json
+          # .bun-version pins the exact Bun for reproducible CI (bun.lock was
+          # generated with it); engines.bun in package.json stays the npm floor.
+          bun-version-file: .bun-version
 
       - name: Cache bun install
         uses: actions/cache@v4
@@ -60,7 +61,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: package.json
+          bun-version-file: .bun-version
 
       - name: Cache bun install
         uses: actions/cache@v4
