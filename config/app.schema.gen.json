@@ -602,7 +602,7 @@
       "type": "object",
       "properties": {
         "base_url": {
-          "description": "Slidev 预览进程基地址；空串 = 显式禁用",
+          "description": "Slidev 预览进程基地址；在 app.yaml 中字面量置空可显式禁用探测（CL_SLIDEV_BASE_URL 留空 = 使用默认值）",
           "default": "http://127.0.0.1:3030",
           "type": "string"
         },

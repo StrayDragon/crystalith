@@ -22,7 +22,7 @@ jobs:
     name: Static checks (typecheck / lint / format / drift)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -33,7 +33,7 @@ jobs:
           bun-version-file: .bun-version
 
       - name: Cache bun install
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
@@ -55,7 +55,7 @@ jobs:
     name: Tests (server / shared / web / e2e @p0)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -64,17 +64,17 @@ jobs:
           bun-version-file: .bun-version
 
       - name: Cache bun install
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
           restore-keys: bun-${{ runner.os }}-
 
       - name: Cache Playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('e2e/bun.lock', 'e2e/package.json') }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock', 'e2e/package.json') }}
 
       - run: bun install --frozen-lockfile
 
@@ -88,4 +88,8 @@ jobs:
       # Playwright @p0 critical path (same as `just e2e` / `bun run e2e`)
       - run: bunx playwright install --with-deps chromium
         working-directory: e2e
+      # Use the Playwright chromium above, not the runner's system Chrome
+      # (playwright.config channels to `chrome` unless this is '0').
       - run: bun run e2e
+        env:
+          CL_E2E_USE_SYSTEM_CHROME: '0'

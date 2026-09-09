@@ -32,11 +32,11 @@ jobs:
           - { os: ubuntu-latest, target: linux-x64 }
           - { os: ubuntu-24.04-arm, target: linux-arm64 }
           - { os: macos-latest, target: darwin-arm64 }
-          # Intel macOS runner (design D3 darwin-x64; migrate to macos-15-intel if retired)
-          - { os: macos-13, target: darwin-x64 }
+          # Last Intel macOS image (macos-13 retired 2025-12; available until 2027-08)
+          - { os: macos-15-intel, target: darwin-x64 }
           - { os: windows-latest, target: win32-x64 }
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           # Full history + tags so `git describe --tags --exact-match` sees the release tag.
           fetch-depth: 0
@@ -47,7 +47,7 @@ jobs:
           bun-version-file: .bun-version
 
       - name: Cache bun install
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ matrix.target }}-${{ hashFiles('**/bun.lock') }}
@@ -78,7 +78,7 @@ jobs:
             -H 'Content-Type: application/json' -d '{"name":"ci-smoke"}'
           echo
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.target }}
           path: |
@@ -94,7 +94,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true

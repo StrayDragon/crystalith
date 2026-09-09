@@ -97,4 +97,25 @@ describe('web static routes', () => {
     const res = await app.handle(new Request(`${BASE}/..%2f..%2fetc%2fpasswd`));
     expect(res.status).toBe(404);
   });
+
+  it('rejects double-encoded traversal (no double decode)', async () => {
+    const res = await app.handle(new Request(`${BASE}/%252e%252e%252f.env`));
+    expect(res.status).toBe(404);
+  });
+
+  it('rejects windows drive-letter paths', async () => {
+    const res = await app.handle(new Request(`${BASE}/C:/windows/win.ini`));
+    expect(res.status).toBe(404);
+  });
+
+  it('never serves dotfiles, even inside the asset root', async () => {
+    writeFileSync(join(distRoot, '.env'), 'SECRET=1');
+    mkdirSync(join(distRoot, '.git'));
+    writeFileSync(join(distRoot, '.git', 'config'), '[core]');
+
+    const env = await app.handle(new Request(`${BASE}/.env`));
+    expect(env.status).toBe(404);
+    const dotSegment = await app.handle(new Request(`${BASE}/.git/config`));
+    expect(dotSegment.status).toBe(404);
+  });
 });

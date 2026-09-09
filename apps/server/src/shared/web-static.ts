@@ -60,6 +60,11 @@ export function webStaticRoutes(root: string | null) {
     if (root === null) throw new NotFoundError();
 
     const relPath = pathname.replace(/^\/+/u, '');
+    // Dotfiles (and any dot-segment) are never served — a misconfigured
+    // CL_WEB_DIST pointing at a repo root must not expose .env/.git content.
+    if (relPath.split('/').some((segment) => segment.startsWith('.'))) {
+      throw new NotFoundError();
+    }
     const filePath = resolve(root, relPath);
     // Traversal guard: the resolved path must stay inside the asset root.
     if (filePath !== root && !filePath.startsWith(root + sep)) throw new NotFoundError();
