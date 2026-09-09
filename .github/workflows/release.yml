@@ -63,13 +63,21 @@ jobs:
           set -euo pipefail
           cd target/release/stage/crystalith-server-*/
           BIN="$(ls crystalith-server* | head -n1)"
-          CL_CHAT_MODEL=smoke CL_CHAT_API_BASE=http://127.0.0.1:9/v1 CL_SERVER_PORT=18099 "./$BIN" &
+          CL_CHAT_MODEL=smoke CL_CHAT_API_BASE=http://127.0.0.1:9/v1 CL_SERVER_PORT=18099 "./$BIN" > server-smoke.log 2>&1 &
           PID=$!
           trap 'kill "$PID" 2>/dev/null || true' EXIT
-          for _ in $(seq 1 30); do
-            curl -sf http://127.0.0.1:18099/health >/dev/null 2>&1 && break
-            sleep 0.5
+          # Windows runners may spend ~30s in Defender's first-run scan of the
+          # fresh unsigned binary — allow up to 60s before giving up.
+          ok=0
+          for _ in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:18099/health >/dev/null 2>&1; then ok=1; break; fi
+            sleep 1
           done
+          if [ "$ok" != 1 ]; then
+            echo "— server did not become healthy within 60s; log:"
+            cat server-smoke.log
+            exit 1
+          fi
           echo "— /health:"
           curl -sf http://127.0.0.1:18099/health
           echo

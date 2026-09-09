@@ -104,7 +104,21 @@ function findSqliteVecEntry(): string {
   throw new Error(`sqlite-vec platform entry not found (looked for ${vecRel})`);
 }
 mkdirSync(path.join(stageDir, 'native'));
-cpSync(findSqliteVecEntry(), path.join(stageDir, 'native', `vec0.${vecExt}`));
+const stagedVec = path.join(stageDir, 'native', `vec0.${vecExt}`);
+cpSync(findSqliteVecEntry(), stagedVec);
+if (os === 'darwin') {
+  // arm64 macOS refuses unsigned dylibs at dlopen time — ad-hoc re-sign the
+  // shipped extension and strip any quarantine xattr (best-effort).
+  const codesign = Bun.which('codesign');
+  if (codesign) {
+    const proc = Bun.spawnSync([codesign, '--force', '--sign', '-', stagedVec], {
+      stdout: 'inherit',
+      stderr: 'inherit',
+    });
+    if (proc.exitCode !== 0) console.warn('⚠️ codesign failed — dylib may not load');
+  }
+  Bun.spawnSync(['xattr', '-cr', stagedVec]);
+}
 
 // 4. Pack + checksum (Bun-native hashing — sha256sum is not on Windows PATH).
 await sh(['tar', '-czf', path.join(outDir, `${name}.tar.gz`), name], {
