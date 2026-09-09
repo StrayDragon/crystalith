@@ -2,10 +2,9 @@
 
 Describe what changed and why.
 
-## Linked issues / specs / 关联 Issue / Spec
+## Linked issues / 关联 Issue
 
 - Issue:
-- llman spec change (if any):
 
 ## Changes / 变更内容
 

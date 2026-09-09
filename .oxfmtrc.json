@@ -20,7 +20,6 @@
     "coverage/",
     "node_modules/",
     "vendor/",
-    "backend/",
     "config/",
     "bun.lock",
     "*.generated.ts",

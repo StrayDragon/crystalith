@@ -8,7 +8,7 @@ body:
       value: |
         Thanks for taking the time to report a bug.
 
-        Security note: if this is a security issue, please follow SECURITY.md instead of filing a public issue.
+        Security note: please do **not** report security vulnerabilities in a public issue. Use GitHub's "Report a vulnerability" (Security tab) or contact the maintainer directly.
 
   - type: textarea
     id: what-happened
@@ -38,8 +38,8 @@ body:
     attributes:
       label: How are you running Crystalith? / 运行方式
       options:
-        - Desktop app (Tauri)
-        - CLI binary (crystalith-server)
+        - Release archive (crystalith-server + web/dist)
+        - CLI binary (crystalith-server, headless)
         - Browser (web deployment)
         - Local dev (bun dev)
         - Other (please describe below)

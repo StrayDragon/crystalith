@@ -15,12 +15,16 @@
 
 ## Key Config Paths (v2)
 
-- `app.server.port` — HTTP listen port (default: 8032)
-- `app.models.*` — LLM model configurations (provider + modelId)
-- `app.database.path` — SQLite database file path
-- `app.rag.*` — RAG strategy configurations
-- `app.source_ingestion.*` — PDF/HTML/URL extraction settings
+Top-level keys in `config/app.yaml` (schema SSOT: `apps/server/src/shared/config.ts`,
+generated snapshot `config/app.schema.gen.json`):
+
+- `models` — LLM providers / model ids / defaults（chat / lightweight / embedding 分别指定）
+- `database` — SQLite 数据库设置（v1 兼容）
+- `embedding` / `concurrency` — RAG chunking、批大小与并发
 - `search.searxng.host` — SearXNG SSOT (`CL_SEARXNG_HOST`); used by `searchWeb` **and** `/health/dependencies` diagnostics. Empty host disables both. Do not configure a separate `optional_services.searxng.endpoint`.
+- `source_ingestion` — 摄入去重等抽取设置
+- `plugins` — 插件发现与加载（`@crystalith-plugin/*`）
+- HTTP 监听端口不在 yaml —— 走 `CL_SERVER_PORT`（默认 8032）
 
 ## Template Variables
 

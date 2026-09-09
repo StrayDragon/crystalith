@@ -1,8 +1,3 @@
-# .gitignore file created for free with Tower (https://www.git-tower.com/)
-# For suggestions or improvements please contact us using support@git-tower.com
-# Generated on 2026-01-12
-# Includes: python, pnpm, node, go, rust, javascript, typescript, next_js, react, vue
-
 ### Universal ###
 # Common files that should be ignored in all projects
 
@@ -40,7 +35,6 @@ llmanspec/.context/pageindex/
 config/secret.env
 
 # Local runtime data (databases/uploads)
-backend/py/data/
 apps/server/data/
 apps/server/slides/
 
@@ -258,9 +252,6 @@ e2e/playwright-report/
 e2e/test-results/
 # Build output
 
-# Crystalith-specific artifacts
-frontend/packages/crystalith-slidev/lib/
-
 dist/
 build/
 .next/
@@ -350,10 +341,6 @@ coverage/
 # Local app data (ignore all contents, keep README)
 data/*
 !data/README.md
-
-# Allow workspace refine template data to be tracked.
-!apps/web/src/features/workspace/data/
-!apps/web/src/features/workspace/data/refineTemplates.ts
 
 # Slidev runtime output (generated at repo root)
 slides/
