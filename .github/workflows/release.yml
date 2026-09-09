@@ -82,9 +82,15 @@ jobs:
           curl -sf http://127.0.0.1:18099/health
           echo
           echo "— create notebook (migrations + sqlite-vec):"
-          curl -sf -X POST http://127.0.0.1:18099/v2/notebooks \
-            -H 'Content-Type: application/json' -d '{"name":"ci-smoke"}'
+          status="$(curl -s -o post-body.json -w '%{http_code}' -X POST http://127.0.0.1:18099/v2/notebooks \
+            -H 'Content-Type: application/json' -d '{"name":"ci-smoke"}')"
+          cat post-body.json
           echo
+          if [ "$status" != "201" ]; then
+            echo "— notebook POST returned HTTP $status; server log:"
+            cat server-smoke.log
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v7
         with:
