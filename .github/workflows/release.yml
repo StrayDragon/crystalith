@@ -44,7 +44,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: package.json
+          bun-version-file: .bun-version
 
       - name: Cache bun install
         uses: actions/cache@v4
