@@ -259,6 +259,10 @@ export function seedChatModel(): void {
 export async function stubEmbedding(): Promise<void> {
   const { EmbedStrategy } = await import('../../src/rag/embed-strategy.ts');
   EmbedStrategy.prototype.indexSource = async () => {};
+  // Query-time KNN must never touch the network either: bun 1.4's mock.module
+  // does not cover modules first loaded via dynamic import (ragRegistry), so
+  // the real SDK could otherwise leak into RAG search and hang tests.
+  EmbedStrategy.prototype.retrieve = async () => [];
 }
 
 // Re-export beforeAll/afterAll so test files can import everything from here.
