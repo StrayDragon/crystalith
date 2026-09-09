@@ -357,3 +357,7 @@ data/*
 
 # Slidev runtime output (generated at repo root)
 slides/
+
+# Compiled server single binary + release staging (c13 ship-server-binary)
+apps/server/crystalith-server
+apps/server/crystalith-server.exe

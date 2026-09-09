@@ -11,16 +11,18 @@
   - 决定：**无需轮换 key**（纯局域网凭据，出网不可达）
   - 改写前全量备份：仓库旁 `crystalith-pre-rewrite-backup.bundle`（确认无误后可删）
   - 注意：其他机器上的旧 clone 与远端历史已不兼容，需重新 clone
-- [ ] **README 重写**（已决定延后到发布前最后梳理）
-  - 现状仅 4 行占位；需补：项目简介 / 截图 / quickstart / 环境要求（Bun、overmind+tmux、LLM 网关配置指引）
+- [x] **README 重写**（2026-09-09 完成）
+  - 已补：项目简介 / 核心特性 / quickstart（Bun、overmind+tmux、LLM 网关配置）/ 部署（`just release` 产物布局）/ 开发门禁 / 文档索引；风格对齐 `../lspz`（居中 logo + badges + 表格化特性）
   - 语言：**中文优先**（已决定）；i18n 留口子，后续交社区
+  - 未含：产品截图（可在发布前补一张 workspace 视图）；CI badge（CI 暂不接）
+  - 分发管线随本批次落地：`just build-binary` / `just release` + server 静态托管（c13 v1 部分，见 `llmanspec/changes/ship-server-binary`）
 - [ ] **内部 SDD 机制清理**（已决定清理，发布时执行）
   - 涉及：`llmanspec/`、`_archive/`、`.agents/skills/`、`CLAUDE.md`、`skills-lock.json`
   - 注意：AGENTS.md 开头托管块引用 `llmanspec/`，移除时需同步改写；这些目录在发布日之前仍是活跃工作流，勿提前删
 
 ## P1 — 强烈建议
 
-- [ ] `CONTRIBUTING.md` / `SECURITY.md` / `CHANGELOG.md`（与 README 同批延后）
+- [ ] ~~`CONTRIBUTING.md` / `SECURITY.md` / `CHANGELOG.md`~~ — **已决定暂不做**（2026-09-09：从发布准备中移除；README 已含开发门禁与文档索引，够用）
 - [ ] CI：**已决定暂不添加**（开源前不消耗 Actions 额度）；开源后建议 `oven-sh/setup-bun`（支持 `bun-version-file: package.json`）跑 `just qa` 等效子集——e2e 全程 mock 网关，可离线跑
 - [x] root `package.json` 增加 `"engines": { "bun": ">=1.4.0" }`
   - Bun 自身目前不强制 `engines`（[oven-sh/bun#12566](https://github.com/oven-sh/bun/issues/12566)、[#5846](https://github.com/oven-sh/bun/issues/5846) 仍为 open feature），但 setup-bun / npm 等外部工具会读取；属低成本文档化最佳实践

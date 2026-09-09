@@ -31,6 +31,8 @@ import { getDefaultChatModel } from './shared/config.ts';
 import { ErrorCode, sendError, AppHttpError } from './shared/errors.ts';
 import { probeHealthDependencies } from './shared/health.ts';
 import { logger, requestContext } from './shared/logger.ts';
+import { SERVER_VERSION } from './shared/version.ts';
+import { resolveWebDistRoot, webStaticRoutes } from './shared/web-static.ts';
 
 // ---------------------------------------------------------------------------
 // Scaffold OpenAPI docs
@@ -81,114 +83,119 @@ export function createApp() {
     '/asyncapi.json',
   ]);
 
-  return new Elysia()
-    .onRequest(({ request, set }) => {
-      // Correlation id: honor upstream (reverse proxy) or mint one.
-      const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
-      set.headers['x-request-id'] = requestId;
-      requestStart.set(request, performance.now());
-      // Propagate to every async continuation (handlers, services, SSE ticks)
-      // so service-layer logger calls carry the same requestId.
-      requestContext.enterWith({ requestId });
-    })
-    .onAfterResponse(({ request, set }) => {
-      const path = new URL(request.url).pathname;
-      if (SKIP_ACCESS_LOG.has(path)) return;
-      const t0 = requestStart.get(request);
-      const durationMs = t0 === undefined ? null : Math.round(performance.now() - t0);
-      const status = typeof set.status === 'number' ? set.status : 200;
-      const level = status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info';
-      logger[level]('http', {
-        requestId: set.headers['x-request-id'],
-        method: request.method,
-        path,
-        status,
-        durationMs,
-      });
-    })
-    .onError(({ error, set, code, request }) => {
-      if (error instanceof AppHttpError) {
-        return sendError(set, error.code, error.message, error.details, error.retryAfter);
-      }
-      // Normalize Elysia NotFoundError / NOT_FOUND into ErrorEnvelope (c65).
-      if (code === 'NOT_FOUND' || error instanceof NotFoundError) {
+  return (
+    new Elysia()
+      .onRequest(({ request, set }) => {
+        // Correlation id: honor upstream (reverse proxy) or mint one.
+        const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
+        set.headers['x-request-id'] = requestId;
+        requestStart.set(request, performance.now());
+        // Propagate to every async continuation (handlers, services, SSE ticks)
+        // so service-layer logger calls carry the same requestId.
+        requestContext.enterWith({ requestId });
+      })
+      .onAfterResponse(({ request, set }) => {
+        const path = new URL(request.url).pathname;
+        if (SKIP_ACCESS_LOG.has(path)) return;
+        const t0 = requestStart.get(request);
+        const durationMs = t0 === undefined ? null : Math.round(performance.now() - t0);
+        const status = typeof set.status === 'number' ? set.status : 200;
+        const level = status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info';
+        logger[level]('http', {
+          requestId: set.headers['x-request-id'],
+          method: request.method,
+          path,
+          status,
+          durationMs,
+        });
+      })
+      .onError(({ error, set, code, request }) => {
+        if (error instanceof AppHttpError) {
+          return sendError(set, error.code, error.message, error.details, error.retryAfter);
+        }
+        // Normalize Elysia NotFoundError / NOT_FOUND into ErrorEnvelope (c65).
+        if (code === 'NOT_FOUND' || error instanceof NotFoundError) {
+          const message =
+            error instanceof Error && error.message ? error.message : 'Resource not found';
+          return sendError(set, ErrorCode.NOT_FOUND, message);
+        }
+        // Validation failures → structured envelope instead of plain text.
+        if (code === 'VALIDATION') {
+          const message =
+            error instanceof Error && error.message ? error.message : 'Request validation failed';
+          return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, message);
+        }
+        // Fallthrough: unexpected errors still get the ErrorEnvelope shape
+        // (previously plain-text "Internal Server Error" 500s).
+        logger.error('unhandled-error', {
+          requestId: set.headers['x-request-id'],
+          method: request.method,
+          path: new URL(request.url).pathname,
+          errCode: code,
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
         const message =
-          error instanceof Error && error.message ? error.message : 'Resource not found';
-        return sendError(set, ErrorCode.NOT_FOUND, message);
-      }
-      // Validation failures → structured envelope instead of plain text.
-      if (code === 'VALIDATION') {
-        const message =
-          error instanceof Error && error.message ? error.message : 'Request validation failed';
-        return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, message);
-      }
-      // Fallthrough: unexpected errors still get the ErrorEnvelope shape
-      // (previously plain-text "Internal Server Error" 500s).
-      logger.error('unhandled-error', {
-        requestId: set.headers['x-request-id'],
-        method: request.method,
-        path: new URL(request.url).pathname,
-        errCode: code,
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-      const message =
-        error instanceof Error && error.message ? error.message : 'Internal server error';
-      return sendError(set, ErrorCode.INTERNAL_ERROR, message);
-    })
-    .use(
-      openapi({
-        provider: 'scalar',
-        path: '/openapi',
-        specPath: '/openapi.json',
-        scalar: {
-          showSidebar: true,
-          hideModels: true,
-          // Use path as endpoint heading (summary is now the path via registerApiDoc)
-          defaultOpenAllTags: false,
-          customCss: `:root { --scalar-radius: 6px; }`,
-        },
-        documentation: {
-          info: {
-            title: 'Crystalith v2 API',
-            version: '2.0.0-dev',
-            description: 'RAG-powered knowledge notebook — v2 API',
+          error instanceof Error && error.message ? error.message : 'Internal server error';
+        return sendError(set, ErrorCode.INTERNAL_ERROR, message);
+      })
+      .use(
+        openapi({
+          provider: 'scalar',
+          path: '/openapi',
+          specPath: '/openapi.json',
+          scalar: {
+            showSidebar: true,
+            hideModels: true,
+            // Use path as endpoint heading (summary is now the path via registerApiDoc)
+            defaultOpenAllTags: false,
+            customCss: `:root { --scalar-radius: 6px; }`,
           },
-        },
-      }),
-    )
-    .get('/health', () => ({ status: 'ok', version: '2.0.0-dev' }), {
-      response: HealthResponseSchema,
-    })
-    .get(
-      '/health/dependencies',
-      async (): Promise<HealthDependencies> => probeHealthDependencies(),
-      { response: HealthDependenciesSchema },
-    )
-    .get('/openapi.json', () => generateOpenApiDocument())
-    .get('/asyncapi.json', () => generateAsyncApiDocument())
+          documentation: {
+            info: {
+              title: 'Crystalith v2 API',
+              version: SERVER_VERSION,
+              description: 'RAG-powered knowledge notebook — v2 API',
+            },
+          },
+        }),
+      )
+      .get('/health', () => ({ status: 'ok', version: SERVER_VERSION }), {
+        response: HealthResponseSchema,
+      })
+      .get(
+        '/health/dependencies',
+        async (): Promise<HealthDependencies> => probeHealthDependencies(),
+        { response: HealthDependenciesSchema },
+      )
+      .get('/openapi.json', () => generateOpenApiDocument())
+      .get('/asyncapi.json', () => generateAsyncApiDocument())
 
-    .group('/v2', (app) =>
-      app
-        .get('/', () => ({ message: 'Crystalith v2 API' }), { response: ApiRootSchema })
-        .get('/health', () => ({ status: 'ok' }), { response: HealthResponseSchema }),
-    )
+      .group('/v2', (app) =>
+        app
+          .get('/', () => ({ message: 'Crystalith v2 API' }), { response: ApiRootSchema })
+          .get('/health', () => ({ status: 'ok' }), { response: HealthResponseSchema }),
+      )
 
-    .use(notebooksRouter)
-    .use(sessionsRouter)
-    .use(messagesRouter)
-    .use(sourcesRouter)
-    .use(sourceExtrasRouter)
-    .use(qaRouter)
-    .use(researchRouter)
-    .use(outputsRouter)
-    .use(modelsRouter)
-    .use(studioRouter)
-    .use(templatesRouter)
-    .use(promptPresetsRouter)
-    .use(sourceConnectorsRouter)
-    .use(commandsRouter)
-    .use(workspaceRouter);
+      .use(notebooksRouter)
+      .use(sessionsRouter)
+      .use(messagesRouter)
+      .use(sourcesRouter)
+      .use(sourceExtrasRouter)
+      .use(qaRouter)
+      .use(researchRouter)
+      .use(outputsRouter)
+      .use(modelsRouter)
+      .use(studioRouter)
+      .use(templatesRouter)
+      .use(promptPresetsRouter)
+      .use(sourceConnectorsRouter)
+      .use(commandsRouter)
+      .use(workspaceRouter)
+      // Static SPA hosting (single-binary web mode). Registered last so every
+      // API route wins over the `/*` catch-all; null root → API-only headless.
+      .use(webStaticRoutes(resolveWebDistRoot()))
+  );
 }
 
 // app.yaml renders gateway-chat-primary's model to the literal 'NOT-SET'

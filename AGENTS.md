@@ -14,7 +14,7 @@
 # Crystalith v2 — AI Agent Guidelines
 
 > Bun + TypeScript rewrite (Elysia + React). **v1 Python SSOT (`backend/py/`) has been removed as of c14** — all behavior is now parity-confirmed in TypeScript.
-> **Status**: c00–c62 DONE, c14 DONE；Deep Research runtime + Eden Lab 已落地（约 c80–c110）；c13 BLOCKED（distribution）。
+> **Status**: c00–c62 DONE, c14 DONE；Deep Research runtime + Eden Lab 已落地（约 c80–c110）；c13 v1（web 模式 server 单二进制分发管线）已落地，跨平台矩阵发布待 CI。
 
 ## Project Structure
 
@@ -55,8 +55,8 @@ crystalith/
 - ✅ Frontend: all output renderers aligned with v1 interactive components
 - 🔬 **Research Lab**：产品 `research-lab/`（Eden）；演示 `research-lab-demo/`（`/demo/research-lab`，DEV / `VITE_LAB_DEMO`）；细则 `apps/web/AGENTS.md`
 - ✅ c14: `backend/py/` + `api/generated/` deleted；wire 类型走 Eden + `@crystalith/shared`（`shared-types.ts` 已移除）
-- ⏸️ **c13** distribution (Tauri / single-binary) — blocked on human auth
-- 📦 阶段性收敛台账已归档：`_archive/2026-07-19-ssot-qa-progress.md`；作业法见 `.agents/skills/crystalith-ssot-qa-batches/`
+- 🚧 **c13** distribution — v1（web 模式 server 单二进制）已落地：`just build-binary` / `just release`、静态 web 托管（`CL_WEB_DIST` 或二进制旁 `web/dist`）、tag 版本注入；Tauri 桌面端 delay，跨平台矩阵待 CI（见 `llmanspec/changes/ship-server-binary`）
+- 📦 作业法见 `.agents/skills/crystalith-ssot-qa-batches/`
 
 ## v2 Stack
 

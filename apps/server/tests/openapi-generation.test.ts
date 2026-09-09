@@ -45,6 +45,8 @@ const INFRA_ROUTE_ALLOWLIST = new Set([
   'GET /asyncapi.json',
   // Bare API index message (`{ message: 'Crystalith v2 API' }`).
   'GET /v2/',
+  // SPA static catch-all (single-binary web mode) — not an API operation.
+  'GET /*',
 ]);
 
 function collectRouteKeys(app: ReturnType<typeof createApp>): string[] {

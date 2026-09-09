@@ -73,9 +73,15 @@ alias dev-stop := dev-quit
 # Build
 # --------------------------------------------------------------------------
 
-# TODO: Enable when v2 server core is wired up
-# build-server:
-#     cd apps/server && bun build --compile --outfile=crystalith-server ./src/server.ts
+# Compile the server single binary (API + static web host) with version
+# injection + bundling workarounds (see apps/server/scripts/build-binary.ts)
+build-binary:
+    cd apps/server && bun scripts/build-binary.ts
+
+# Assemble the c13 v1 release archive for the current platform into
+# target/release/ (binary + web/dist + drizzle; see scripts/build-release.ts)
+release:
+    bun scripts/build-release.ts
 
 # --------------------------------------------------------------------------
 # Code Quality (delegated to root bun scripts)
