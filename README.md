@@ -97,7 +97,7 @@ CL_CHAT_MODEL=… CL_CHAT_API_BASE=… ./crystalith-server   # :8032，API + Web
 - 目录里没有 `web/dist/` 时即**纯 API 模式**（headless）：适合裸 CLI / TUI / 第三方 client 直接对接 HTTP API，类型从 `/openapi.json` 衍生。
 - 版本号来自发布 tag，注入 `/health` 与 OpenAPI 文档。
 - **Slidev 幻灯片**：server 自动探测预览进程（`slides_preview.base_url`，默认 `http://127.0.0.1:3030`，env `CL_SLIDEV_BASE_URL` 覆盖）；不可达时 Studio 生成入口自动移除 SLIDES 选项，原因与恢复提示见「诊断」面板。需要幻灯片能力时，把 base_url 指向任一可达的 Slidev 实例即可。
-- 跨平台产物（linux / macOS / windows，x64 + arm64）由 tag 驱动的 Release 工作流原生构建并逐平台冒烟（推送 `v*.*.*` tag 即自动发版）。
+- 当前发布目标：**Linux x64 / arm64**（由 tag 驱动的 Release 工作流原生构建并逐平台冒烟，推送 `v*.*.*` tag 即自动发版）。macOS / Windows 产物暂缓：Bun 编译产物在 macOS 链接的 Apple SQLite 禁用扩展加载，向量检索不可用（见 `docs/known-issues.md`）；Windows 待排查。
 
 **从源码运行**：`bun run build`（前端）+ `just build-binary`（编译二进制），运行方式同上。
 

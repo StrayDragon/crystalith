@@ -18,11 +18,15 @@
 
 ## B 线：c13 分发 + 插件架构（分叉点）
 
-> **2026-09-09 进展**：c13 v1 的本地管线已提前落地——`apps/server/scripts/build-binary.ts`
-> （css-tree JSON 内联插件 + tag 版本注入）、server 静态托管（`CL_WEB_DIST` / 二进制旁
-> `web/dist`，SPA fallback，API 404 语义保持）、`just release` 产物
-> （二进制 + web/dist + drizzle + native/vec0 + config）。剩余：tag 发布 + CI 矩阵
-> 构建（macOS/Linux/Windows 冒烟）、`ship-server-binary` 走 SDD 正式化归档。
+> **2026-09-09 进展**：c13 v1 已随 `v2.0.0-pre` 首发——linux-x64/arm64 原生构建
+>
+> - 冒烟 + GitHub Release 自动化；darwin/win32 暂缓（Bun 上游 SQLite 扩展限制，
+>   见 `docs/known-issues.md`）。落地内容
+>   旧记录：c13 v1 的本地管线已提前落地——`apps/server/scripts/build-binary.ts`
+>   （css-tree JSON 内联插件 + tag 版本注入）、server 静态托管（`CL_WEB_DIST` / 二进制旁
+>   `web/dist`，SPA fallback，API 404 语义保持）、`just release` 产物
+>   （二进制 + web/dist + drizzle + native/vec0 + config）。剩余：tag 发布 + CI 矩阵
+>   构建（macOS/Linux/Windows 冒烟）、`ship-server-binary` 走 SDD 正式化归档。
 
 ### 倾向（2026-09-07，待 propose 正式化）
 
