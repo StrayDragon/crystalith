@@ -106,6 +106,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Tags with a suffix (v2.0.0-pre) publish as prereleases.
+          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then FLAGS="--prerelease"; fi
           cat > release-notes.md <<'EOF'
           自托管单二进制发布。压缩包 = `crystalith-server` + `web/dist` + `drizzle` + `native` + `config`，解压后 `CL_CHAT_MODEL=… ./crystalith-server` 即可运行（详见 README「部署」）。
 
@@ -115,4 +117,4 @@ jobs:
             --repo "${GITHUB_REPOSITORY}" \
             --title "${GITHUB_REF_NAME}" \
             --notes-file release-notes.md \
-            --generate-notes
+            --generate-notes ${FLAGS:-}
