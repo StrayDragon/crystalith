@@ -720,6 +720,30 @@ export const CacheSettingsSchema = z.object({
 });
 export type CacheSettings = z.infer<typeof CacheSettingsSchema>;
 
+/**
+ * Slides preview (Slidev) probe — SSOT for SLIDES availability diagnostics
+ * (probe-slides-availability). Empty base_url = explicitly disabled: the probe
+ * never runs and SLIDES reports unavailable.
+ */
+export const SlidesPreviewSchema = z.object({
+  base_url: z
+    .string()
+    .default('http://127.0.0.1:3030')
+    .describe(desc('slides_preview.base_url', 'Slidev 预览进程基地址；空串 = 显式禁用')),
+  probe_timeout_ms: z
+    .number()
+    .int()
+    .positive()
+    .default(1500)
+    .describe(desc('slides_preview.probe_timeout_ms', '预览可达性探测超时（毫秒）')),
+});
+export type SlidesPreviewConfig = z.infer<typeof SlidesPreviewSchema>;
+
+/** Typed accessor for the `slides_preview` section (r158). */
+export function getSlidesPreview(): SlidesPreviewConfig {
+  return parseSection(SlidesPreviewSchema, config().raw.slides_preview);
+}
+
 /** Database settings — v1 SQLAlchemy URL; v2 uses bun:sqlite. */
 export const DatabaseSettingsSchema = z.object({
   url: z
@@ -974,6 +998,12 @@ export const RootConfigSchema = z.object({
     .default({})
     .describe(desc('root.providers', 'AI 提供商配置：name → API key、base URL')),
   cache: CacheSettingsSchema.describe(desc('root.cache', '缓存设置：provider、TTL、最大条目数')),
+  slides_preview: SlidesPreviewSchema.describe(
+    desc(
+      'root.slides_preview',
+      'Slidev 预览可达性探测：SLIDES 工具可用性诊断（/v2/workspace/tools diagnostics.slides）的唯一数据源',
+    ),
+  ),
   database: DatabaseSettingsSchema.describe(desc('root.database', '数据库设置（v1 兼容）')),
   plugins: PluginsSettingsSchema.describe(desc('root.plugins', '插件发现与加载配置')),
   proxy_settings: ProxySettingsSchema.describe(desc('root.proxy_settings', '出站代理设置')),

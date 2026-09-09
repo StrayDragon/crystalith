@@ -443,25 +443,31 @@ export default function DiagnosticsDialog({
                     <div
                       className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                         toneForPluginStatus(
-                          slidesDiagnostic?.activePluginId
+                          slidesDiagnostic?.available === true
                             ? 'loaded'
-                            : (slidesOfficial?.status ?? 'not_installed'),
+                            : slidesDiagnostic
+                              ? 'skipped'
+                              : (slidesOfficial?.status ?? 'not_installed'),
                         ).bg
                       } ${
                         toneForPluginStatus(
-                          slidesDiagnostic?.activePluginId
+                          slidesDiagnostic?.available === true
                             ? 'loaded'
-                            : (slidesOfficial?.status ?? 'not_installed'),
+                            : slidesDiagnostic
+                              ? 'skipped'
+                              : (slidesOfficial?.status ?? 'not_installed'),
                         ).text
                       }`}
                     >
-                      {slidesDiagnostic?.activePluginId
+                      {slidesDiagnostic?.available === true
                         ? '可用'
-                        : slidesOfficial?.status === 'loaded'
-                          ? '待配置'
-                          : slidesOfficial?.status === 'skipped'
-                            ? '已跳过'
-                            : '未安装'}
+                        : slidesDiagnostic
+                          ? '不可用'
+                          : slidesOfficial?.status === 'loaded'
+                            ? '待配置'
+                            : slidesOfficial?.status === 'skipped'
+                              ? '已跳过'
+                              : '未安装'}
                     </div>
                   </div>
                   {slidesDiagnostic?.errorCode ? (

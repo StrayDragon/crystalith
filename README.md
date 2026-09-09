@@ -94,7 +94,8 @@ CL_CHAT_MODEL=… CL_CHAT_API_BASE=… ./crystalith-server   # :8032，API + Web
 
 - 目录里没有 `web/dist/` 时即**纯 API 模式**（headless）：适合裸 CLI / TUI / 第三方 client 直接对接 HTTP API，类型从 `/openapi.json` 衍生。
 - 版本号来自发布 tag，注入 `/health` 与 OpenAPI 文档。
-- 已知限制：Studio 的 Slidev 幻灯片预览目前依赖 dev 模式的 Slidev 进程（:3030），单二进制形态暂不可用；跨平台矩阵构建（macOS / Linux / Windows）待开源后接入 CI。
+- **Slidev 幻灯片**：server 自动探测预览进程（`slides_preview.base_url`，默认 `http://127.0.0.1:3030`，env `CL_SLIDEV_BASE_URL` 覆盖）；不可达时 Studio 生成入口自动移除 SLIDES 选项，原因与恢复提示见「诊断」面板。需要幻灯片能力时，把 base_url 指向任一可达的 Slidev 实例即可。
+- 跨平台矩阵构建（macOS / Linux / Windows）待开源后接入 CI。
 
 **从源码运行**：`bun run build`（前端）+ `just build-binary`（编译二进制），运行方式同上。
 

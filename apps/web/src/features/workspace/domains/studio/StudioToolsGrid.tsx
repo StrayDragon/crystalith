@@ -34,6 +34,18 @@ const FALLBACK_QUANTITY_OPTIONS: ConfigOption[] = [
   { id: 'more', label: '更多', isDefault: false },
 ];
 
+/**
+ * Card renderability — r272: the tools contract is the availability SSOT.
+ * SLIDES disappears from the generate entry entirely while the server reports
+ * the preview unavailable (`enabled: false`); reason + hint stay visible in
+ * the diagnostics dialog.
+ */
+export function isToolRenderable(tool: WorkspaceTool): boolean {
+  if (ToolOutputTypeSchema.safeParse(tool.outputType).success !== true) return false;
+  if (tool.outputType === 'SLIDES' && tool.enabled === false) return false;
+  return true;
+}
+
 interface StudioToolsGridProps {
   tools: WorkspaceTool[];
   toolsLoading?: boolean;
@@ -205,85 +217,83 @@ export default function StudioToolsGrid({
   return (
     <>
       <div className={`grid gap-2 ${isFullscreen ? 'grid-cols-3 sm:grid-cols-4' : 'grid-cols-2'}`}>
-        {tools
-          .filter((tool) => ToolOutputTypeSchema.safeParse(tool.outputType).success)
-          .map((tool) => {
-            const isDisabled = !tool.enabled || !tool.outputType || !hasSelectedSources;
-            const isSlidesTool = tool.outputType === 'SLIDES';
-            const tone = tool.tone ?? 'slate';
-            const colors =
-              Object.entries(TONE_COLORS).find(([id]) => id === tone)?.[1] ?? TONE_COLORS.slate;
+        {tools.filter(isToolRenderable).map((tool) => {
+          const isDisabled = !tool.enabled || !tool.outputType || !hasSelectedSources;
+          const isSlidesTool = tool.outputType === 'SLIDES';
+          const tone = tool.tone ?? 'slate';
+          const colors =
+            Object.entries(TONE_COLORS).find(([id]) => id === tone)?.[1] ?? TONE_COLORS.slate;
 
-            const tooltipContent = !hasSelectedSources
-              ? '请先选择来源'
-              : tool.description || tool.label;
+          const tooltipContent = !hasSelectedSources
+            ? '请先选择来源'
+            : tool.description || tool.label;
 
-            return (
-              <Tooltip
-                key={tool.id}
-                content={tooltipContent}
-                placement="top"
-                className="max-w-[200px] text-xs bg-gray-900 text-white px-2 py-1 rounded"
-                animate={{
-                  mount: { opacity: 1, scale: 1 },
-                  unmount: { opacity: 0, scale: 0.95 },
+          return (
+            <Tooltip
+              key={tool.id}
+              content={tooltipContent}
+              placement="top"
+              className="max-w-[200px] text-xs bg-gray-900 text-white px-2 py-1 rounded"
+              animate={{
+                mount: { opacity: 1, scale: 1 },
+                unmount: { opacity: 0, scale: 0.95 },
+              }}
+            >
+              <div
+                className={`group flex items-center gap-2 px-2 py-1.5 min-h-[34px] w-full rounded-lg border text-left font-semibold text-[11px] transition-all hover:shadow-sm hover:-translate-y-[1px] ${
+                  isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                }`}
+                style={{
+                  backgroundColor: colors.bg,
+                  borderColor: colors.border,
+                  color: colors.text,
                 }}
               >
-                <div
-                  className={`group flex items-center gap-2 px-2 py-1.5 min-h-[34px] w-full rounded-lg border text-left font-semibold text-[11px] transition-all hover:shadow-sm hover:-translate-y-[1px] ${
-                    isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                  }`}
-                  style={{
-                    backgroundColor: colors.bg,
-                    borderColor: colors.border,
-                    color: colors.text,
+                <button
+                  type="button"
+                  disabled={isDisabled}
+                  className="flex flex-1 min-w-0 items-center gap-2 text-left bg-transparent"
+                  onClick={() => {
+                    if (isDisabled) return;
+                    if (isSlidesTool) {
+                      onOpenSlides?.({ mode: 'config' });
+                      return;
+                    }
+                    onGenerateOutput(tool.outputType);
                   }}
                 >
-                  <button
-                    type="button"
-                    disabled={isDisabled}
-                    className="flex flex-1 min-w-0 items-center gap-2 text-left bg-transparent"
-                    onClick={() => {
-                      if (isDisabled) return;
-                      if (isSlidesTool) {
-                        onOpenSlides?.({ mode: 'config' });
-                        return;
-                      }
-                      onGenerateOutput(tool.outputType);
+                  <div
+                    className="flex items-center justify-center w-5 h-5 rounded border flex-shrink-0"
+                    style={{
+                      backgroundColor: colors.icon,
+                      borderColor: colors.border,
                     }}
                   >
-                    <div
-                      className="flex items-center justify-center w-5 h-5 rounded border flex-shrink-0"
-                      style={{
-                        backgroundColor: colors.icon,
-                        borderColor: colors.border,
-                      }}
-                    >
-                      {getToolIcon(tool.outputType)}
-                    </div>
-                    <span className="leading-tight flex-1 min-w-0">{tool.label}</span>
-                    {tool.badge && (
-                      <span className="h-3 px-1 text-[8px] bg-gray-900 text-white rounded leading-none flex items-center flex-shrink-0">
-                        {tool.badge}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isDisabled}
-                    className="flex-shrink-0 h-4 w-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-opacity"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleToolConfigOpen(e, tool.outputType);
-                    }}
-                    aria-label="自定义工具参数"
-                  >
-                    <EditIcon sx={{ fontSize: 10 }} />
-                  </button>
-                </div>
-              </Tooltip>
-            );
-          })}
+                    {getToolIcon(tool.outputType)}
+                  </div>
+                  <span className="leading-tight flex-1 min-w-0">{tool.label}</span>
+                  {tool.badge && (
+                    <span className="h-3 px-1 text-[8px] bg-gray-900 text-white rounded leading-none flex items-center flex-shrink-0">
+                      {tool.badge}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  disabled={isDisabled}
+                  className="flex-shrink-0 h-4 w-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-opacity"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleToolConfigOpen(e, tool.outputType);
+                  }}
+                  aria-label="自定义工具参数"
+                >
+                  <EditIcon sx={{ fontSize: 10 }} />
+                </button>
+              </div>
+            </Tooltip>
+          );
+        })}
       </div>
 
       <Dialog
