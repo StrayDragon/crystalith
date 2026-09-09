@@ -240,8 +240,9 @@ cache:
 # ----------------------------------------------------------------------------
 # `/v2/workspace/tools` probes `<base_url>/slidev/` (short TTL cache) and fills
 # `diagnostics.slides`; the frontend hides the SLIDES generate entry while the
-# preview process is unreachable. Empty base_url = explicitly disabled.
-# Override via CL_SLIDEV_BASE_URL (repo-root `.env` or shell).
+# preview process is unreachable. Overriding with an empty env var falls back
+# to the default below; writing a literal empty string (`base_url: ""`) is the
+# explicit kill switch.
 slides_preview:
   base_url: "{{ env.CL_SLIDEV_BASE_URL | default('http://127.0.0.1:3030') }}"
   probe_timeout_ms: 1500

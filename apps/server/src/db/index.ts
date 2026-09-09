@@ -97,7 +97,17 @@ export function createDb(path?: string): Orm {
     if (!nativePath) {
       throw new Error('[db] sqlite-vec native extension not found', { cause: error });
     }
-    db.loadExtension(nativePath);
+    try {
+      db.loadExtension(nativePath);
+    } catch (loadError) {
+      // Readable failure for the usual culprits (macOS quarantine on the
+      // downloaded dylib, ABI mismatch) instead of a raw dlopen error.
+      throw new Error(
+        `[db] sqlite-vec native extension failed to load from ${nativePath} — ` +
+          'point CL_SQLITE_VEC_PATH at a working vec0 entry for this platform',
+        { cause: loadError },
+      );
+    }
   }
 
   const orm = drizzle({ client: db, schema });

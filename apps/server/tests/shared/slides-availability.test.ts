@@ -11,6 +11,7 @@ import { createApp } from '../../src/server.ts';
 import { resetConfig } from '../../src/shared/config.ts';
 import {
   buildSlidesDiagnostic,
+  getSlidesDiagnostic,
   resetSlidesProbeCache,
 } from '../../src/shared/slides-availability.ts';
 
@@ -93,6 +94,32 @@ describe('buildSlidesDiagnostic (pure branches)', () => {
     expect(d.errorCode).toBeNull();
     expect(d.message).toBeNull();
     expect(d.hint).toBeNull();
+  });
+});
+
+describe('getSlidesDiagnostic cache semantics', () => {
+  it('serves the cached diagnostic within TTL (same object identity)', async () => {
+    resetConfig({
+      models: SEED_MODELS,
+      raw: { slides_preview: { base_url: `http://127.0.0.1:${fakePort}`, probe_timeout_ms: 500 } },
+    });
+    resetSlidesProbeCache();
+    const first = await getSlidesDiagnostic({ pluginLoaded: true });
+    const second = await getSlidesDiagnostic({ pluginLoaded: true });
+    expect(second).toBe(first);
+  });
+
+  it('dedups concurrent probes into one in-flight request', async () => {
+    resetConfig({
+      models: SEED_MODELS,
+      raw: { slides_preview: { base_url: `http://127.0.0.1:${fakePort}`, probe_timeout_ms: 500 } },
+    });
+    resetSlidesProbeCache();
+    const [a, b] = await Promise.all([
+      getSlidesDiagnostic({ pluginLoaded: true }),
+      getSlidesDiagnostic({ pluginLoaded: true }),
+    ]);
+    expect(b).toBe(a);
   });
 });
 

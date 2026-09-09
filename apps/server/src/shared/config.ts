@@ -722,14 +722,20 @@ export type CacheSettings = z.infer<typeof CacheSettingsSchema>;
 
 /**
  * Slides preview (Slidev) probe — SSOT for SLIDES availability diagnostics
- * (probe-slides-availability). Empty base_url = explicitly disabled: the probe
- * never runs and SLIDES reports unavailable.
+ * (probe-slides-availability). A literal empty string in app.yaml explicitly
+ * disables the probe (SLIDES reports unavailable); leaving
+ * CL_SLIDEV_BASE_URL unset falls back to the yaml default.
  */
 export const SlidesPreviewSchema = z.object({
   base_url: z
     .string()
     .default('http://127.0.0.1:3030')
-    .describe(desc('slides_preview.base_url', 'Slidev 预览进程基地址；空串 = 显式禁用')),
+    .describe(
+      desc(
+        'slides_preview.base_url',
+        'Slidev 预览进程基地址；在 app.yaml 中字面量置空可显式禁用探测（CL_SLIDEV_BASE_URL 留空 = 使用默认值）',
+      ),
+    ),
   probe_timeout_ms: z
     .number()
     .int()

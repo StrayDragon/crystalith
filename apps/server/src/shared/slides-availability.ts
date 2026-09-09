@@ -2,7 +2,6 @@ import type { WorkspaceToolsSlidesDiagnostic } from '@crystalith/shared';
 
 import { getSlidesPreview } from './config.ts';
 import { logger } from './logger.ts';
-import { outboundFetch } from './net/outbound-fetch.ts';
 
 // SLIDES availability probe (probe-slides-availability).
 //
@@ -60,7 +59,7 @@ export function buildSlidesDiagnostic(input: {
     return {
       available: false,
       message: 'slides_preview.base_url 为空，预览可用性探测已显式禁用',
-      hint: '在 config/app.yaml 的 slides_preview.base_url 配置 Slidev 实例地址（或清除 CL_SLIDEV_BASE_URL 覆盖）',
+      hint: '在 config/app.yaml 的 slides_preview.base_url 填入可达的 Slidev 实例地址即可重新启用 SLIDES 工具',
       activePluginId,
       engine: 'slidev',
       errorCode: SlidesErrorCode.PREVIEW_DISABLED,
@@ -86,11 +85,18 @@ export function buildSlidesDiagnostic(input: {
   };
 }
 
-/** GET `<base_url>/slidev/` — any 2xx counts as reachable. */
+/**
+ * GET `<base_url>/slidev/` — any 2xx counts as reachable.
+ *
+ * Deliberately plain `fetch`, NOT `outboundFetch`: the preview is a local /
+ * sidecar service, so it must stay direct even when `proxy_settings` is on —
+ * routing loopback through an outbound proxy would silently fail the probe
+ * unless the operator's no_proxy happens to cover it.
+ */
 async function probeSlidevReachable(baseUrl: string, timeoutMs: number): Promise<boolean> {
   const url = `${baseUrl.replace(/\/+$/u, '')}/slidev/`;
   try {
-    const res = await outboundFetch(url, {
+    const res = await fetch(url, {
       method: 'GET',
       signal: AbortSignal.timeout(timeoutMs),
     });
