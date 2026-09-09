@@ -1,12 +1,14 @@
 // plugin-interface-ssot tests — registry policy/load semantics (r7/r11) and
 // extractor metadata derivation over the registry-backed factory.
 import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll } from 'bun:test';
 
 import { z } from 'zod';
 
-import { PluginRegistry } from '../../src/plugins/registry.ts';
+import { pluginRegistry, PluginRegistry } from '../../src/plugins/registry.ts';
 import type { PluginSettings, RegistryDeps } from '../../src/plugins/registry.ts';
 import type { CrystalithPlugin } from '../../src/plugins/types.ts';
+import { resetConfig } from '../../src/shared/config.ts';
 import { listExtractorMetadata } from '../../src/shared/extraction/factory.ts';
 
 function fakePlugin(id: string, opts: { fail?: boolean } = {}): CrystalithPlugin {
@@ -120,9 +122,23 @@ describe('PluginRegistry load semantics', () => {
 });
 
 describe('extractor metadata over the registry', () => {
+  // The live singleton snapshots plugin policy on first ensureLoaded — seed an
+  // explicit default-order config FIRST so repo app.yaml extras (e.g. the
+  // `load_order: ["extractor-arxiv"]` trial) cannot leak into the assertion.
+  beforeAll(() => {
+    resetConfig({
+      models: { defaults: { chat: 'test-chat' }, available: [] },
+      raw: {},
+    });
+    pluginRegistry.reset();
+  });
+
+  afterAll(() => {
+    pluginRegistry.reset();
+  });
+
   test('built-in extractors keep v1/v2 wire names and fallback order', async () => {
-    const { pluginRegistry: live } = await import('../../src/plugins/registry.ts');
-    await live.ensureLoaded();
+    await pluginRegistry.ensureLoaded();
     const meta = listExtractorMetadata({});
     // Built-ins in registration (fallback) order; external exemplar plugin
     // (workspace symlink) lands after built-ins.
