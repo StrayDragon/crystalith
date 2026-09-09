@@ -1,0 +1,90 @@
+name: CI
+
+# Test-acceptance gate — the CI equivalent of `just qa` (see justfile):
+# static checks + schema-drift gates + server/shared unit + web Vitest + e2e @p0.
+# e2e is fully mocked (mock-openai-gateway, isolated ports/DB) and needs no
+# network or LLM keys.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Static checks (typecheck / lint / format / drift)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          # Reads engines.bun from package.json (repo SSOT for the Bun floor).
+          bun-version-file: package.json
+
+      - name: Cache bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun typecheck
+      - run: bun lint
+      - run: bun format:check
+
+      # Generated-artifact drift gates (same as `just check-env-examples` / `check-app-schema`)
+      - run: bun scripts/gen-env-examples.ts --check
+      - run: bun scripts/gen-app-schema.ts --check
+      - run: bun scripts/check-i18n-keys.ts
+      - run: bun scripts/check-provider-deps.ts
+
+  test:
+    name: Tests (server / shared / web / e2e @p0)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Cache bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('e2e/bun.lock', 'e2e/package.json') }}
+
+      - run: bun install --frozen-lockfile
+
+      # Server + shared unit/integration (same as `just test`)
+      - run: bun test apps/server/tests/ packages/shared/test/
+
+      # Frontend Vitest CI suite (same as `just test-web`)
+      - run: bun run test:ci
+        working-directory: apps/web
+
+      # Playwright @p0 critical path (same as `just e2e` / `bun run e2e`)
+      - run: bunx playwright install --with-deps chromium
+        working-directory: e2e
+      - run: bun run e2e
