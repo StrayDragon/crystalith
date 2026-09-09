@@ -265,11 +265,14 @@ export function useOutputQueue({
       prompt,
       sourceIds,
       modelId,
+      title,
     }: {
       type: OutputTypeId;
       prompt: string;
       sourceIds: number[];
       modelId?: string;
+      /** Display title (e.g. tool label) for default-prompt generations. */
+      title?: string;
     }) => {
       if (sourceIds.length === 0) {
         store.getState().setError('outputs', '请先选择来源。');
@@ -291,6 +294,7 @@ export function useOutputQueue({
         createdAtLabel: formatTimestamp(createdAt),
         notebookId: activeNotebookId,
         modelId,
+        title,
         preference,
       };
       updateOutputQueueJobs((prev) => [job, ...prev]);
@@ -446,9 +450,11 @@ export function useOutputQueue({
           const preference = job.preference;
           const body = {
             type: job.type,
-            // intentionally || — empty prompt/modelId become undefined
+            // intentionally || — empty prompt/modelId/title become undefined
             // oxlint-disable-next-line typescript/prefer-nullish-coalescing
             prompt: job.prompt || undefined,
+            // oxlint-disable-next-line typescript/prefer-nullish-coalescing
+            title: job.title || undefined,
             sourceIds: job.sourceIds.length ? job.sourceIds : undefined,
             // intentionally || — empty modelId becomes undefined
             // oxlint-disable-next-line typescript/prefer-nullish-coalescing

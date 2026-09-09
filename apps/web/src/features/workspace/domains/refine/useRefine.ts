@@ -162,6 +162,17 @@ export function useRefine() {
     [outputTypeOptions],
   );
 
+  // Default-prompt generations title the note with the tool's label instead of
+  // the (long, English) default prompt; custom prompts stay prompt-titled.
+  const resolveOutputTitle = useCallback(
+    (type: OutputTypeId, prompt: string) => {
+      const option = outputTypeOptions.find((item) => item.id === type);
+      if (option && prompt.trim() === option.prompt.trim()) return option.label;
+      return undefined;
+    },
+    [outputTypeOptions],
+  );
+
   const resetQueueSummary = useCallback(() => {
     setQueueSummary({ total: 0, done: 0 });
   }, []);
@@ -252,6 +263,7 @@ export function useRefine() {
       enqueueOutputJob({
         type: selectedType,
         prompt,
+        title: resolveOutputTitle(selectedType, prompt),
         sourceIds: resolvedSourceIds.length ? resolvedSourceIds : [],
         modelId: modelId ?? undefined,
       });
@@ -265,6 +277,7 @@ export function useRefine() {
       isConnected,
       outputTypeOptions,
       resolveOutputPrompt,
+      resolveOutputTitle,
       resolveSelectedSourceIds,
       store,
     ],
@@ -307,11 +320,12 @@ export function useRefine() {
       enqueueOutputJob({
         type: output.type,
         prompt,
+        title: resolveOutputTitle(output.type, prompt),
         sourceIds: outputSourceIds,
       });
       s.setActivePanel('refine');
     },
-    [enqueueOutputJob, isConnected, resolveOutputPrompt, store],
+    [enqueueOutputJob, isConnected, resolveOutputPrompt, resolveOutputTitle, store],
   );
 
   const saveContentAsNote = useCallback(

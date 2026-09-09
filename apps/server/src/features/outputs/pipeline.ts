@@ -29,6 +29,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+/**
+ * Merge a caller-supplied display title (e.g. the tool label) into generated
+ * content as `content.title`. Existing non-empty titles win — never clobber a
+ * title the model or fallback content already produced.
+ */
+export function applyCallerTitle(
+  content: Record<string, unknown>,
+  title: string,
+): Record<string, unknown> {
+  const existing = content.title;
+  if (typeof existing === 'string' && existing.trim()) return content;
+  return { ...content, title };
+}
+
 /** Direct chunk fetch when scoped RAG misses (studio slides parity). */
 export function fetchChunksBySourceIds(notebookId: number, sourceIds: number[]): ChunkRow[] {
   const rows = db()
@@ -150,6 +164,8 @@ export interface PipelineInput {
   sourceIds?: number[];
   /** Custom prompt override. */
   prompt?: string;
+  /** Display title persisted into content.title when the generated content lacks one. */
+  title?: string;
   /** Retrieval preference: quality (topK=10) or speed (topK=3). Default: quality. */
   preference?: GenerationPreference;
   /** Retrieval top-K override (v1 top_k). */
@@ -257,6 +273,12 @@ async function finishPipeline(
       ...finalContent,
       _sourceIds: input.sourceIds,
     };
+  }
+
+  // Caller-supplied display title (e.g. the tool label) — stored into
+  // content.title so list/detail renderers pick it up over the prompt fallback.
+  if (input.title && isRecord(finalContent)) {
+    finalContent = applyCallerTitle(finalContent, input.title);
   }
 
   if (input.abortSignal?.aborted) {
