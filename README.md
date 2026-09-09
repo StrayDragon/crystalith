@@ -5,6 +5,8 @@
 
 [![](https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square)](./LICENSE)
 [![](https://img.shields.io/badge/bun-%3E%3D1.4-f472b6?style=flat-square&logo=bun)](https://bun.sh)
+[![](https://img.shields.io/github/actions/workflow/status/StrayDragon/crystalith/ci.yml?style=flat-square&logo=github&label=CI)](https://github.com/StrayDragon/crystalith/actions/workflows/ci.yml)
+[![](https://img.shields.io/github/actions/workflow/status/StrayDragon/crystalith/release.yml?style=flat-square&logo=github&label=Release)](https://github.com/StrayDragon/crystalith/actions/workflows/release.yml)
 [![](https://img.shields.io/github/stars/StrayDragon/crystalith?style=flat-square&logo=github)](https://github.com/StrayDragon/crystalith/stargazers)
 [![](https://img.shields.io/github/last-commit/StrayDragon/crystalith/main?style=flat-square&logo=github&label=last%20commit)](https://github.com/StrayDragon/crystalith/commits/main)
 
@@ -95,7 +97,7 @@ CL_CHAT_MODEL=… CL_CHAT_API_BASE=… ./crystalith-server   # :8032，API + Web
 - 目录里没有 `web/dist/` 时即**纯 API 模式**（headless）：适合裸 CLI / TUI / 第三方 client 直接对接 HTTP API，类型从 `/openapi.json` 衍生。
 - 版本号来自发布 tag，注入 `/health` 与 OpenAPI 文档。
 - **Slidev 幻灯片**：server 自动探测预览进程（`slides_preview.base_url`，默认 `http://127.0.0.1:3030`，env `CL_SLIDEV_BASE_URL` 覆盖）；不可达时 Studio 生成入口自动移除 SLIDES 选项，原因与恢复提示见「诊断」面板。需要幻灯片能力时，把 base_url 指向任一可达的 Slidev 实例即可。
-- 跨平台矩阵构建（macOS / Linux / Windows）待开源后接入 CI。
+- 跨平台产物（linux / macOS / windows，x64 + arm64）由 tag 驱动的 Release 工作流原生构建并逐平台冒烟（推送 `v*.*.*` tag 即自动发版）。
 
 **从源码运行**：`bun run build`（前端）+ `just build-binary`（编译二进制），运行方式同上。
 
