@@ -597,6 +597,22 @@
         }
       }
     },
+    "slides_preview": {
+      "description": "Slidev 预览可达性探测：SLIDES 工具可用性诊断（/v2/workspace/tools diagnostics.slides）的唯一数据源",
+      "type": "object",
+      "properties": {
+        "base_url": {
+          "description": "Slidev 预览进程基地址；空串 = 显式禁用",
+          "default": "http://127.0.0.1:3030",
+          "type": "string"
+        },
+        "probe_timeout_ms": {
+          "description": "预览可达性探测超时（毫秒）",
+          "default": 1500,
+          "type": "number"
+        }
+      }
+    },
     "database": {
       "description": "数据库设置（v1 兼容）",
       "type": "object",

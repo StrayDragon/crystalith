@@ -236,6 +236,17 @@ cache:
   max_size: 2048
 
 # ----------------------------------------------------------------------------
+# Slides preview (Slidev) — SSOT for SLIDES availability diagnostics
+# ----------------------------------------------------------------------------
+# `/v2/workspace/tools` probes `<base_url>/slidev/` (short TTL cache) and fills
+# `diagnostics.slides`; the frontend hides the SLIDES generate entry while the
+# preview process is unreachable. Empty base_url = explicitly disabled.
+# Override via CL_SLIDEV_BASE_URL (repo-root `.env` or shell).
+slides_preview:
+  base_url: "{{ env.CL_SLIDEV_BASE_URL | default('http://127.0.0.1:3030') }}"
+  probe_timeout_ms: 1500
+
+# ----------------------------------------------------------------------------
 # Context window
 # ----------------------------------------------------------------------------
 context_window:

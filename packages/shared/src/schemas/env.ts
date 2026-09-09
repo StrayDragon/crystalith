@@ -93,6 +93,9 @@ export const BuildRunEnvSchema = z
     // --- Search ---
     CL_SEARXNG_HOST: z.string().default('').describe(desc('env.CL_SEARXNG_HOST')),
 
+    // --- Slides preview (Slidev) availability probe ---
+    CL_SLIDEV_BASE_URL: z.string().default('').describe(desc('env.CL_SLIDEV_BASE_URL')),
+
     // --- Outbound proxy ---
     CL_PROXY_ENABLED: z.string().default('').describe(desc('env.CL_PROXY_ENABLED')),
 

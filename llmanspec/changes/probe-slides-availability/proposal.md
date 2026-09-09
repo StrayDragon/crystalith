@@ -1,5 +1,8 @@
 ---
 depends_on: []
+branch: sdd/probe-slides-availability
+base_sha: f903d1abff5d775c295c67d5ed1217bbbb191bba
+checkpointed: false
 ---
 
 # Proposal — probe-slides-availability（SLIDES 可用性自动发现 + 前端自动移除）

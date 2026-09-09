@@ -59,7 +59,7 @@
 
   @req:slides-preview-availability-determined @human
   场景: SLIDES availability is determined by config and probe, not hardcoded
-    - server MUST 依据「active slides workflow 插件已加载 ∧ 预览进程探测可达」判定 SLIDES 可用性；探测目标与超时 MUST 经 config schema（slides_preview.base_url / probe_timeout_ms，env 覆盖 CL_SLIDEV_BASE_URL）声明，探测结果 MUST 短 TTL 缓存且失败 MUST 降级为结构化诊断而非异常。`/v2/workspace/tools` MUST 将结果填入 `diagnostics.slides`（available/message/hint/activePluginId/engine/errorCode），SLIDES tool 的 `enabled` MUST 反映该可用性；MUST NOT 硬编码 enabled=true。不可用时 errorCode MUST 取稳定值（SLIDES_PREVIEW_UNREACHABLE / SLIDES_PLUGIN_MISSING）且 hint MUST 可执行。
+    - server MUST 依据「active slides workflow 插件已加载 ∧ 预览进程探测可达」判定 SLIDES 可用性；探测目标与超时 MUST 经 config schema（slides_preview.base_url / probe_timeout_ms，env 覆盖 CL_SLIDEV_BASE_URL）声明，探测结果 MUST 短 TTL 缓存且失败 MUST 降级为结构化诊断而非异常。`/v2/workspace/tools` MUST 将结果填入 `diagnostics.slides`（available/message/hint/activePluginId/engine/errorCode），SLIDES tool 的 `enabled` MUST 反映该可用性；MUST NOT 硬编码 enabled=true。不可用时 errorCode MUST 取稳定值（SLIDES_PREVIEW_UNREACHABLE / SLIDES_PLUGIN_MISSING / SLIDES_PREVIEW_DISABLED）且 hint MUST 可执行。
 
   @req:slides-ui-removes-unavailable-entry @human
   场景: Studio generate entry removes SLIDES when unavailable

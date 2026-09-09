@@ -14,6 +14,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import type { SlidesWorkflowImpl } from '../../plugins/builtin/slides-slidev.ts';
 import { pluginRegistry } from '../../plugins/registry.ts';
+import { getSlidesDiagnostic } from '../../shared/slides-availability.ts';
 import { OUTPUT_META, FRONTEND_BUNDLES } from '../outputs/generator.ts';
 
 const FRONTEND_BUNDLE_BY_TYPE: Record<
@@ -50,6 +51,11 @@ export const workspaceRouter = new Elysia({ prefix: '/v2' })
     async () => {
       await pluginRegistry.ensureLoaded();
       const slidesImpl = pluginRegistry.implOf<SlidesWorkflowImpl>('slides-slidev');
+      // probe-slides-availability: fill the reserved diagnostics.slides slot and
+      // drive the SLIDES tool's enabled flag from real availability
+      // (plugin loaded ∧ preview process reachable), never a hardcoded true.
+      const slidesDiagnostic = await getSlidesDiagnostic({ pluginLoaded: slidesImpl !== null });
+      const slidesAvailable = slidesDiagnostic.available === true;
       const tools = Object.entries(OUTPUT_META).map(([type, meta]) => ({
         id: type.toLowerCase(),
         kind: 'outputType' as const,
@@ -59,7 +65,7 @@ export const workspaceRouter = new Elysia({ prefix: '/v2' })
         outputType: OutputTypeSchema.parse(type),
         prompt: meta.prompt,
         isTool: meta.isTool,
-        enabled: true,
+        enabled: type === 'SLIDES' ? slidesAvailable : true,
         // c56: SLIDES tool MUST carry configSchema to drive the frontend config UI
         configSchema: type === 'SLIDES' ? (slidesImpl?.buildSlidesConfigSchema() ?? null) : null,
         // renderDescriptor tells frontend GenericOutputRenderer how to display
@@ -86,7 +92,7 @@ export const workspaceRouter = new Elysia({ prefix: '/v2' })
         diagnostics: {
           plugins: report,
           official,
-          slides: null,
+          slides: slidesDiagnostic,
         },
       };
     },

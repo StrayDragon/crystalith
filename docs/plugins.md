@@ -124,6 +124,10 @@ packages/plugin-extractor-arxiv/scripts/try.ts …`（对遵循标准代理变�
 接口 union 里保留全部四个 kind = **兼容与扩展的口子**；但文档、指南、catalog
 宣传只覆盖 `extractor`——「能扩展」不等于「到处都能挂」。
 
+> 注（probe-slides-availability）：`slides-workflow` 的**预览可用性探测**暂由宿主
+> 承担（`slides_preview` 配置 → `diagnostics.slides`），待生成链路接 registry
+> （下文路线 3）后下沉为 impl 的 `isAvailable()`（extractor 先例）。
+
 ### 第一梯队榜样：`@crystalith-plugin/extractor-arxiv`（已实现，`add-extractor-arxiv`）
 
 - **需求**：arXiv 是研究者用户最高频来源；abs 页经 readability 抽取后混杂
