@@ -53,6 +53,7 @@
   "env.CL_PROXY_HTTPS_URL": "出站 HTTPS 代理 URL。留空跟随 config/app.yaml 的 proxy_settings.https_url。",
   "env.CL_PROXY_HTTP_URL": "出站 HTTP 代理 URL。留空跟随 config/app.yaml 的 proxy_settings.http_url。",
   "env.CL_SEARXNG_HOST": "SearXNG 实例 URL。覆盖 config/app.yaml 中 search.searxng.host。留空禁用。",
+  "env.CL_SLIDEV_BASE_URL": "Slidev 预览进程基地址。覆盖 config/app.yaml 中 slides_preview.base_url。留空使用默认值。",
   "env.CL_SECRET_PATH": "[DEPRECATED] 已忽略：config/secret.env 机制已移除，密钥请直接用 CL_* 环境变量（shell 或 .env）。",
   "env.CL_SERVER_HOST": "Elysia 服务器监听地址。默认 127.0.0.1（仅本地）。生产部署设为 0.0.0.0。",
   "env.CL_SERVER_PORT": "Elysia 服务器监听端口。默认 8032。",
