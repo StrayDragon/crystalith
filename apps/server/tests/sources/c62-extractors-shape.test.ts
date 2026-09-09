@@ -1,11 +1,23 @@
 // c62 tests — extractors response field shape + default by availability.
-import { beforeAll, describe, expect, it } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 
 import { pluginRegistry } from '../../src/plugins/registry.ts';
+import { resetConfig } from '../../src/shared/config.ts';
 import { getDefaultExtractor, listExtractorMetadata } from '../../src/shared/extraction/factory.ts';
 
+// Seed default-order plugin policy BEFORE first ensureLoaded — repo app.yaml
+// carries a `load_order: ["extractor-arxiv"]` trial that must not leak here.
 beforeAll(async () => {
+  resetConfig({
+    models: { defaults: { chat: 'test-chat' }, available: [] },
+    raw: {},
+  });
+  pluginRegistry.reset();
   await pluginRegistry.ensureLoaded();
+});
+
+afterAll(() => {
+  pluginRegistry.reset();
 });
 
 describe('c62: listExtractorMetadata field shape', () => {
