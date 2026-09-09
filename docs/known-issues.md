@@ -37,6 +37,23 @@
   编译产物会挂——接入后必须 `just build-binary` + 启动冒烟（`/health` + 一次建
   笔记本）验证。
 
+## 单二进制分发（`bun build --compile` / Bun.build compile）
+
+### macOS / Windows 产物暂缓：Bun 的 SQLite 不支持扩展加载（上游，未解决）
+
+- **现象**：编译产物在 macOS 上 `db.loadExtension(native/vec0.dylib)` 报
+  "This build of sqlite3 does not support dynamic extension loading"，RAG 向量
+  检索完全不可用（/health 正常，写库即 500）。Linux 产物不受影响（Bun 自带
+  SQLite，扩展可用——linux-x64/arm64 冒烟通过）。
+- **根因**：Bun 在 macOS 链接 Apple 系统 SQLite（编译期 `SQLITE_OMIT_LOAD_
+EXTENSION`），上游见 [oven-sh/bun#5756](https://github.com/oven-sh/bun/issues/5756)。
+  与代码签名无关（ad-hoc codesign 已验证无效）。
+- **处置**：Release 矩阵暂缓 darwin/win32 leg（D3 冒烟 = 产物质量门禁，不发布
+  RAG 残缺产物）；恢复条件 = Bun 上游放开 macOS/Windows 的扩展加载，或实现
+  纯 TS 向量检索降级（vec0 不可用时的暴力扫描路径，需先落数据模型）。
+- **注意**：`native/vec0.*` 随包 + `CL_SQLITE_VEC_PATH` 回退机制保留（Linux 上
+  必需；darwin codesign 步骤同样保留，上游放开后即需）。
+
 ## 工具链兼容性（TypeScript 7 / tsgo）
 
 背景：TypeScript 7 是 Go 原生编译器，npm 包**不再附带经典 JS 编译器 API**

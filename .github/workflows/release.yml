@@ -28,13 +28,18 @@ jobs:
       fail-fast: false
       matrix:
         # Native runners so each artifact gets a real smoke test (design D3).
+        # darwin/win32 are SUSPENDED until RAG works there — see
+        # docs/known-issues.md ("Bun compiled binaries: sqlite-vec"):
+        #   - darwin: Bun links Apple's system SQLite, compiled without
+        #     extension loading (oven-sh/bun#5756) -> vec0.dylib cannot load.
+        #   - win32: compiled binary never becomes healthy in the smoke
+        #     (empty log) — needs a Windows machine to diagnose.
         include:
           - { os: ubuntu-latest, target: linux-x64 }
           - { os: ubuntu-24.04-arm, target: linux-arm64 }
-          - { os: macos-latest, target: darwin-arm64 }
-          # Last Intel macOS image (macos-13 retired 2025-12; available until 2027-08)
-          - { os: macos-15-intel, target: darwin-x64 }
-          - { os: windows-latest, target: win32-x64 }
+          # - { os: macos-latest, target: darwin-arm64 }
+          # - { os: macos-15-intel, target: darwin-x64 }
+          # - { os: windows-latest, target: win32-x64 }
     steps:
       - uses: actions/checkout@v7
         with:
