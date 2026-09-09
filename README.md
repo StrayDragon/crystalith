@@ -75,6 +75,8 @@ bun run dev:web      # 仅前端 :3000
 
 可选增强：SearXNG 实例（联网搜索，`CL_SEARXNG_HOST`）、Jina / Firecrawl key（网页抽取增强）、出站代理（`CL_PROXY_*`）。全部环境变量见 [.env.example](.env.example)。
 
+> **注意**：默认 `config/app.yaml` 开启了出站代理（指向 `http://127.0.0.1:20171`）。本机没有对应代理时，请在 `.env` 中设置 `CL_PROXY_ENABLED=false`，否则 URL 抓取 / 网页抽取等出站请求会因代理不可达而失败（LLM / 嵌入网关调用不受影响）。
+
 ## 部署
 
 **发布压缩包**（推荐）— `just release` 在 `target/release/` 产出当前平台的
