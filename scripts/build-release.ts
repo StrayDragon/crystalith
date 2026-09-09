@@ -58,14 +58,21 @@ if (!existsSync(path.join(webDist, 'index.html'))) {
 
 // 2. Server single binary (includes version injection + bundling workarounds).
 await sh(['bun', 'scripts/build-binary.ts'], { cwd: path.join(repoRoot, 'apps', 'server') });
+// bun compile appends .exe on win32 hosts — accept both layouts.
+const builtBinary =
+  [
+    path.join(repoRoot, 'apps', 'server', 'crystalith-server'),
+    path.join(repoRoot, 'apps', 'server', 'crystalith-server.exe'),
+  ].find((p) => existsSync(p)) ??
+  (() => {
+    throw new Error('server binary missing after build');
+  })();
 const binaryName = os === 'win32' ? 'crystalith-server.exe' : 'crystalith-server';
-const binary = path.join(repoRoot, 'apps', 'server', 'crystalith-server');
-if (!existsSync(binary)) throw new Error('server binary missing after build');
 
 // 3. Stage the archive layout.
 rmSync(path.join(outDir, 'stage'), { recursive: true, force: true });
 mkdirSync(stageDir, { recursive: true });
-cpSync(binary, path.join(stageDir, binaryName));
+cpSync(builtBinary, path.join(stageDir, binaryName));
 cpSync(webDist, path.join(stageDir, 'web', 'dist'), { recursive: true });
 cpSync(path.join(repoRoot, 'apps', 'server', 'drizzle'), path.join(stageDir, 'drizzle'), {
   recursive: true,
@@ -99,10 +106,13 @@ function findSqliteVecEntry(): string {
 mkdirSync(path.join(stageDir, 'native'));
 cpSync(findSqliteVecEntry(), path.join(stageDir, 'native', `vec0.${vecExt}`));
 
-// 4. Pack + checksum.
+// 4. Pack + checksum (Bun-native hashing — sha256sum is not on Windows PATH).
 await sh(['tar', '-czf', path.join(outDir, `${name}.tar.gz`), name], {
   cwd: path.join(outDir, 'stage'),
 });
-await sh(['sha256sum', `${name}.tar.gz`], { cwd: outDir });
+const hasher = new Bun.CryptoHasher('sha256');
+hasher.update(await Bun.file(path.join(outDir, `${name}.tar.gz`)).arrayBuffer());
+const digest = hasher.digest('hex');
+await Bun.write(path.join(outDir, `${name}.tar.gz.sha256`), `${digest}  ${name}.tar.gz\n`);
 
-console.log(`✅ target/release/${name}.tar.gz`);
+console.log(`✅ target/release/${name}.tar.gz (sha256 ${digest.slice(0, 12)}…)`);
