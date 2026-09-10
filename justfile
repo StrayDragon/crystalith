@@ -83,6 +83,14 @@ build-binary:
 release:
     bun scripts/build-release.ts
 
+# Compute and create the next v<base>-pre.N tag at HEAD (never moves tags).
+# Creating is local-only; pushing the tag triggers the Release workflow.
+#   just release-next-pre            # auto-detect base from the latest v*-pre* tag
+#   just release-next-pre 2.0.0      # explicit base
+#   just release-next-pre --dry-run  # print the tag without creating it
+release-next-pre *args:
+    bun scripts/release-next-pre-tag.ts {{args}}
+
 # --------------------------------------------------------------------------
 # Code Quality (delegated to root bun scripts)
 # --------------------------------------------------------------------------
