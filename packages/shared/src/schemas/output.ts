@@ -351,6 +351,8 @@ export const OutputGenerateBodySchema = z
     /** Output type id; accepts lower/upper case (normalized server-side). */
     type: z.string().min(1),
     prompt: z.string().nullable().optional(),
+    /** Display title persisted into content.title (e.g. the caller's tool label). */
+    title: z.string().min(1).max(120).nullable().optional().describe(desc('output.generate_title')),
     content: OutputContentSchema.nullable().optional(),
     sourceIds: z.array(IdSchema).optional(),
     chunkIds: z.array(IdSchema).optional(),
