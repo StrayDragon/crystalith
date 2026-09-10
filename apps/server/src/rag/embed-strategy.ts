@@ -72,6 +72,7 @@ export class EmbedStrategy implements RAGStrategy {
   /**
    * Retrieve top-K chunks by KNN search on the query embedding.
    *
+   * vec_chunks declares `distance_metric=cosine` (see initVecChunks), so
    * sqlite-vec returns cosine `distance` (0 = identical, lower = closer).
    * We convert to a similarity `score = 1 - distance` (higher = better) so the
    * filter direction (`score >= minScore`) is consistent across all strategies.
