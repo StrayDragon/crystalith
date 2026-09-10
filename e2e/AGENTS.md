@@ -10,7 +10,7 @@ Lab compose smoke (e.g. S06b) is **not** a substitute.
 just e2e-install   # once (optional if using system Chrome)
 just e2e           # @p0 gate
 just e2e-all       # full suite (@p0|@p1)
-just qa            # primary PR gate (includes e2e @p0 + web Vitest)
+just qa            # primary PR gate (includes e2e @p0 + web Rstest)
 ```
 
 ## Isolation from `just dev`

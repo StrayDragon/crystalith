@@ -14,7 +14,7 @@
  *   for await (const event of stream) { ... }
  */
 
-import { viteApiBaseUrl } from './viteEnv';
+import { resolveApiBaseUrl } from './apiEnv';
 
 export interface SseEvent {
   event: string;
@@ -60,11 +60,11 @@ export function parseSseBlock(block: string): SseEvent | null {
 
 function getBaseUrl(): string {
   if (typeof window !== 'undefined') {
-    // Browser: use same origin (Vite proxy handles forwarding in dev)
+    // Browser: use same origin (dev-server proxy handles forwarding)
     return window.location.origin;
   }
   // Server-side or env override
-  return viteApiBaseUrl();
+  return resolveApiBaseUrl();
 }
 
 const BASE_URL = getBaseUrl();
@@ -77,7 +77,7 @@ export interface StreamRequestOptions {
 }
 
 /**
- * undici's `fetch` (used under Vitest/MSW) rejects jsdom `AbortSignal` instances
+ * undici's `fetch` (used under Rstest/MSW) rejects jsdom `AbortSignal` instances
  * (`instanceof` fails across realms). Real browsers accept the page's signal.
  * Probe once; if incompatible, omit signal (callers still cancel via their own flags).
  */

@@ -1,7 +1,7 @@
 name: CI
 
 # Test-acceptance gate — the CI equivalent of `just qa` (see justfile):
-# static checks + schema-drift gates + server/shared unit + web Vitest + e2e @p0.
+# static checks + schema-drift gates + server/shared unit + web Rstest + e2e @p0.
 # e2e is fully mocked (mock-openai-gateway, isolated ports/DB) and needs no
 # network or LLM keys.
 
@@ -81,7 +81,7 @@ jobs:
       # Server + shared unit/integration (same as `just test`)
       - run: bun test apps/server/tests/ packages/shared/test/
 
-      # Frontend Vitest CI suite (same as `just test-web`)
+      # Frontend Rstest CI suite (same as `just test-web`)
       - run: bun run test:ci
         working-directory: apps/web
 

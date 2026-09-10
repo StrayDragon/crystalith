@@ -231,7 +231,7 @@
 
   @req:r413 @human
   场景: topbar-fast-only-and-lab-reachable
-    - 工作区顶栏 MUST NOT 呈现旧深研 Desk 入口，且仓库回归（e2e 或 Vitest）MUST 能断言 Lab 入口仍可发现。
+    - 工作区顶栏 MUST NOT 呈现旧深研 Desk 入口，且仓库回归（e2e 或 Rstest）MUST 能断言 Lab 入口仍可发现。
 
   @req:r416 @human
   场景: role-or-prefix-protects-sink

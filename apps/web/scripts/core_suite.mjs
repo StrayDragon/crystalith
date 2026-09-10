@@ -39,7 +39,7 @@ function uniqueStable(values) {
   return out;
 }
 
-function loadCoreVitestFiles() {
+function loadCoreTestFiles() {
   if (!fs.existsSync(manifestPath)) {
     throw new Error(`Core suite manifest not found: ${manifestPath}`);
   }
@@ -47,9 +47,9 @@ function loadCoreVitestFiles() {
   const manifest = readJson(manifestPath);
   const corePaths = Array.isArray(manifest.corePaths) ? manifest.corePaths : [];
 
-  const extra = asStringArray(manifest.frontend?.extraVitestFiles, 'frontend.extraVitestFiles');
+  const extra = asStringArray(manifest.frontend?.extraRstestFiles, 'frontend.extraRstestFiles');
   const domainFiles = corePaths.flatMap((entry) =>
-    asStringArray(entry?.frontend?.vitestFiles, `corePaths[].frontend.vitestFiles (${entry?.id})`),
+    asStringArray(entry?.frontend?.rstestFiles, `corePaths[].frontend.rstestFiles (${entry?.id})`),
   );
 
   const files = uniqueStable([...extra, ...domainFiles]);
@@ -57,7 +57,7 @@ function loadCoreVitestFiles() {
   for (const file of files) {
     const absPath = path.resolve(frontendDir, file);
     if (!fs.existsSync(absPath)) {
-      throw new Error(`Core suite vitest file missing: ${file}`);
+      throw new Error(`Core suite test file missing: ${file}`);
     }
   }
 
@@ -67,7 +67,7 @@ function loadCoreVitestFiles() {
 function usage() {
   console.error('Usage:');
   console.error('  node scripts/core_suite.mjs print');
-  console.error('  node scripts/core_suite.mjs run [-- <vitest args>]');
+  console.error('  node scripts/core_suite.mjs run [-- <rstest args>]');
 }
 
 const argv = process.argv.slice(2);
@@ -78,7 +78,7 @@ if (forwarded[0] === '--') forwarded = forwarded.slice(1);
 
 let files;
 try {
-  files = loadCoreVitestFiles();
+  files = loadCoreTestFiles();
 } catch (error) {
   console.error(String(error instanceof Error ? error.message : error));
   process.exit(2);

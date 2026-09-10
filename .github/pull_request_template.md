@@ -12,7 +12,7 @@ Describe what changed and why.
 
 ## Testing / 测试
 
-- [ ] `just qa`（主门禁：typecheck + lint + format + schema + **server/shared unit** + **web Vitest** + **e2e @p0**）
+- [ ] `just qa`（主门禁：typecheck + lint + format + schema + **server/shared unit** + **web Rstest** + **e2e @p0**）
 - [ ] 相关时另跑：`just test-bdd` / `just type-aware-lint`
 - [ ] `bun typecheck`（跨包时）
 

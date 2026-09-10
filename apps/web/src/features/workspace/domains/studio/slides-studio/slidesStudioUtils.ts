@@ -98,7 +98,7 @@ export function buildSlidesPreviewUrl(
 }
 
 /**
- * Slidev full-restarts when preview markdown/frontmatter changes; the Vite
+ * Slidev full-restarts when preview markdown/frontmatter changes; the dev
  * `/slidev` proxy returns 500 until listen() returns. Poll before mounting
  * the iframe so the dialog does not flash the browser "refused / 500" page.
  */

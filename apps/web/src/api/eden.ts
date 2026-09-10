@@ -9,24 +9,24 @@ import type { App } from '@crystalith/server';
 // + compile-time validation on every path/body/response.
 import { treaty } from '@elysiajs/eden';
 
-import { viteApiBaseUrl } from './viteEnv';
+import { resolveApiBaseUrl } from './apiEnv';
 
 /**
  * API base URL:
- * - Browser: routes through Vite proxy (same-origin, default '')
+ * - Browser: routes through the dev-server proxy (same-origin, default '')
  * - Override via VITE_API_BASE_URL env
  *
- * Note: In development, the Vite proxy at :3000 forwards /v1, /v2 etc. to :8032.
- * Eden treaty with empty baseUrl generates relative paths that resolve to the
- * current page origin, which goes through the Vite proxy.
+ * Note: In development, the rsbuild dev proxy at :3000 forwards /v1, /v2 etc.
+ * to :8032. Eden treaty with empty baseUrl generates relative paths that
+ * resolve to the current page origin, which goes through that proxy.
  */
 function getBaseUrl(): string {
   if (typeof window !== 'undefined') {
-    // Browser: use same origin (Vite proxy handles forwarding in dev)
+    // Browser: use same origin (dev-server proxy handles forwarding)
     return window.location.origin;
   }
   // Server-side or env override
-  return viteApiBaseUrl();
+  return resolveApiBaseUrl();
 }
 
 const baseUrl = getBaseUrl();

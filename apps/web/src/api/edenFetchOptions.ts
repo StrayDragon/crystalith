@@ -1,6 +1,6 @@
 /**
  * Attach AbortSignal to Eden treaty calls when the runtime accepts it.
- * jsdom's AbortSignal is a different realm from Node/undici `fetch` (Vitest+MSW),
+ * jsdom's AbortSignal is a different realm from Node/undici `fetch` (Rstest+MSW),
  * so `new Request(..., { signal })` throws there — omit the signal and rely on
  * cooperative cancellation instead.
  */
