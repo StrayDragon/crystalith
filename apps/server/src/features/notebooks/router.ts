@@ -17,7 +17,8 @@ import { Elysia, NotFoundError } from 'elysia';
 import { z } from 'zod';
 
 import { db } from '../../db/index.ts';
-import { notebooks, sessions, sourceTags, templates } from '../../db/schema.ts';
+import { notebooks, sessions, sourceTags, sources, templates } from '../../db/schema.ts';
+import { deleteSourceVectors } from '../../db/vectors.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { PathId } from '../../shared/ids.ts';
 
@@ -210,6 +211,14 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
       const id = params.nid;
       const existing = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
       if (!existing) notFound(id);
+      // vec_chunks has no FK — cascade only cleans relational rows, so source
+      // vectors must be dropped explicitly or they leak forever.
+      const notebookSources = db()
+        .select({ id: sources.id })
+        .from(sources)
+        .where(eq(sources.notebookId, id))
+        .all();
+      for (const s of notebookSources) deleteSourceVectors(db(), s.id);
       db().delete(notebooks).where(eq(notebooks.id, id)).run();
       set.status = 204;
       return;
