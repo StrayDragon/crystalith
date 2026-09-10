@@ -21,18 +21,67 @@ export interface VectorHit {
   chunk_index: number;
 }
 
-/** Create the vec_chunks virtual table if it does not already exist. */
+/**
+ * Create the vec_chunks virtual table if it does not already exist.
+ *
+ * The embedding column MUST declare `distance_metric=cosine`: sqlite-vec's
+ * default is L2, which mis-scores normalized embedding-model vectors (bge-m3,
+ * OpenAI, …) — an exact-content match lands around 0.85 L2, so the strategy's
+ * `score = 1 - distance` conversion pushed every hit below the evidence
+ * threshold and grounded QA silently degraded to ungrounded. With cosine,
+ * `distance` IS cosine distance ∈ [0,2] and `score = 1 - distance` is cosine
+ * similarity, matching the retrieval spec's formula semantics.
+ *
+ * Tables created before the cosine declaration are rebuilt in place from
+ * their own rows (vectors are preserved — no re-embed needed).
+ */
 export function initVecChunks(orm: Orm, dim = DEFAULT_EMBEDDING_DIM): void {
-  // `dim` is an internal constant, never user input — safe in a raw string.
-  orm.run(
-    sql.raw(
-      `CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(
-        embedding float[${dim}],
+  const createDdl = `CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(
+        embedding float[${dim}] distance_metric=cosine,
         notebook_id integer partition by,
         source_id integer partition by
-      );`,
-    ),
-  );
+      );`;
+
+  const existing = orm.all<{ sql: string | null }>(
+    sql`SELECT sql FROM sqlite_master WHERE type='table' AND name='vec_chunks'`,
+  )[0];
+  if (!existing?.sql) {
+    orm.run(sql.raw(createDdl));
+    return;
+  }
+  if (existing.sql.includes('distance_metric=cosine')) return;
+
+  // Legacy L2 table — rebuild from its own rows inside a transaction so the
+  // metric switch keeps every stored vector. On failure keep the old table
+  // (retrieval stays legacy-correct-but-low-scored) instead of blocking boot.
+  try {
+    const rows = orm.all<{
+      rowid: number;
+      embedding: Uint8Array;
+      notebook_id: number;
+      source_id: number;
+    }>(sql`SELECT rowid, embedding, notebook_id, source_id FROM vec_chunks`);
+    orm.run(sql`BEGIN IMMEDIATE`);
+    orm.run(sql`DROP TABLE vec_chunks`);
+    orm.run(sql.raw(createDdl));
+    for (const r of rows) {
+      orm.run(
+        sql`INSERT INTO vec_chunks(rowid, embedding, notebook_id, source_id)
+            VALUES (${r.rowid}, ${r.embedding}, ${r.notebook_id}, ${r.source_id});`,
+      );
+    }
+    orm.run(sql`COMMIT`);
+    console.warn(
+      `[db] vec_chunks rebuilt with distance_metric=cosine (${rows.length} vectors migrated)`,
+    );
+  } catch (error) {
+    try {
+      orm.run(sql`ROLLBACK`);
+    } catch {
+      // no active transaction — BEGIN itself failed; nothing to unwind
+    }
+    console.warn('[db] vec_chunks cosine rebuild failed; keeping legacy table:', error);
+  }
 }
 
 /** Encode a vector as the little-endian f32 byte buffer sqlite-vec expects. */

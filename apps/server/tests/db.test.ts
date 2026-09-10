@@ -11,6 +11,7 @@ import { chunks, notebooks, sources } from '../src/db/schema.ts';
 import {
   countVectors,
   deleteChunkVector,
+  initVecChunks,
   insertChunkVector,
   searchVectors,
 } from '../src/db/vectors.ts';
@@ -157,5 +158,90 @@ describe('db: sqlite-vec virtual table', () => {
     expect(scoped).toHaveLength(1);
     expect(scoped[0].rowid).toBe(smallChk.id);
     expect(scoped[0].text).toContain('needle');
+  });
+
+  it('ranks by cosine, not L2 — normalized-vector regression', async () => {
+    // B points in the query direction but is LONGER ([1.5, 0, …]); C is a
+    // shorter 0.9-cosine neighbor. L2 ranks C first (0.447 < 0.5) while
+    // cosine ranks B first (0 < 0.1) — guards the distance_metric=cosine
+    // declaration (default L2 mis-converts to `score = 1 - distance` and
+    // pushed real bge-m3 hits below the evidence threshold).
+    const [nb] = orm.insert(notebooks).values({ name: 'Cosine NB' }).returning().all();
+    const notebookId = nb.id;
+    const [src] = orm
+      .insert(sources)
+      .values({ notebookId, filename: 'cos.txt', status: 'ready' })
+      .returning()
+      .all();
+
+    const mk = (dims: [number, number]) => {
+      const v = new Float32Array(1024);
+      v[0] = dims[0];
+      v[1] = dims[1];
+      return v;
+    };
+
+    let nextChunkIndex = 0;
+    const insert = async (text: string, vec: Float32Array) => {
+      const [chk] = orm
+        .insert(chunks)
+        .values({ sourceId: src.id, chunkIndex: nextChunkIndex++, text })
+        .returning()
+        .all();
+      insertChunkVector(orm, chk.id, notebookId, src.id, vec);
+      return chk.id;
+    };
+    const bId = await insert('same direction, longer', mk([1.5, 0]));
+    const cId = await insert('0.9 cosine neighbor', mk([0.9, Math.sqrt(1 - 0.81)]));
+
+    const hits = searchVectors(orm, mk([1, 0]), notebookId, 2);
+    expect(hits.map((h) => h.rowid)).toEqual([bId, cId]);
+    // cosine distance ≈ 1 − cos similarity
+    expect(hits[0].distance).toBeCloseTo(0, 3);
+    expect(hits[1].distance).toBeCloseTo(0.1, 3);
+  });
+
+  it('initVecChunks rebuilds a legacy L2 table in place (cosine migration)', () => {
+    // Simulate a pre-cosine DB: create the old declaration, insert a vector,
+    // then run initVecChunks — the table must come back with cosine semantics
+    // and all rows preserved (no re-embed required).
+    orm.run(sql`DROP TABLE vec_chunks`);
+    orm.run(
+      sql.raw(`CREATE VIRTUAL TABLE vec_chunks USING vec0(
+        embedding float[1024],
+        notebook_id integer partition by,
+        source_id integer partition by
+      );`),
+    );
+    const [nb] = orm.insert(notebooks).values({ name: 'Legacy NB' }).returning().all();
+    const notebookId = nb.id;
+    const [src] = orm
+      .insert(sources)
+      .values({ notebookId, filename: 'legacy.txt', status: 'ready' })
+      .returning()
+      .all();
+    const [chk] = orm
+      .insert(chunks)
+      .values({ sourceId: src.id, chunkIndex: 0, text: 'legacy vector' })
+      .returning()
+      .all();
+    const v0 = new Float32Array(1024);
+    v0[0] = 1;
+    insertChunkVector(orm, chk.id, notebookId, src.id, v0);
+
+    initVecChunks(orm);
+
+    const ddl = orm.all<{ sql: string }>(
+      sql`SELECT sql FROM sqlite_master WHERE name='vec_chunks'`,
+    )[0].sql;
+    expect(ddl).toContain('distance_metric=cosine');
+    expect(countVectors(orm, notebookId)).toBe(1);
+
+    // Identical query vector → cosine distance ≈ 0 (L2 would also give 0, so
+    // also assert the orthogonal case: distance must be exactly 1, not √1).
+    const ortho = new Float32Array(1024);
+    ortho[1] = 1;
+    const [hit] = searchVectors(orm, ortho, notebookId, 1);
+    expect(hit.distance).toBeCloseTo(1, 5);
   });
 });
