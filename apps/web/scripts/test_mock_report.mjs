@@ -10,7 +10,7 @@ const scriptsDir = path.resolve(frontendDir, 'scripts');
 const argv = process.argv.slice(2);
 const checkMockReasons = argv.includes('--check-mock-reasons');
 
-const VI_OPS = {
+const RS_OPS = {
   mock: 0,
   spyOn: 0,
   stubGlobal: 0,
@@ -49,12 +49,12 @@ function analyzeFile(filePath) {
   const isExperimental = isExperimentalTestFile(filePath);
 
   /** @type {Record<string, number>} */
-  const opCounts = { ...VI_OPS };
+  const opCounts = { ...RS_OPS };
 
   // Regex scan: TS 7 no longer exposes classic createSourceFile/forEachChild on
-  // `import * as ts from 'typescript'`, and this gate only needs vi.* call counts.
+  // `import * as ts from 'typescript'`, and this gate only needs rs.* call counts.
   for (const name of Object.keys(opCounts)) {
-    const re = new RegExp(`\\bvi\\.${name}\\s*\\(`, 'gu');
+    const re = new RegExp(`\\brs\\.${name}\\s*\\(`, 'gu');
     opCounts[name] = text.match(re)?.length ?? 0;
   }
 
@@ -86,16 +86,16 @@ const gatedFilesMissingReason = checkMockReasons
 console.log('== Frontend Test Doubles / Mock Usage Report ==');
 console.log(`Test files: ${testFiles.length}`);
 console.log(
-  `vi patch ops: ${filesWithOps.length} (${((filesWithOps.length / Math.max(1, testFiles.length)) * 100).toFixed(2)}%)`,
+  `rs patch ops: ${filesWithOps.length} (${((filesWithOps.length / Math.max(1, testFiles.length)) * 100).toFixed(2)}%)`,
 );
 console.log('');
 console.log('== Mock Reason Coverage ==');
 console.log(`"Mock reason:" hits: ${reasonHits}`);
-console.log(`vi ops: ${totalOps}`);
-console.log(`reasons per vi op: ${(reasonHits / Math.max(1, totalOps)).toFixed(2)}`);
+console.log(`rs ops: ${totalOps}`);
+console.log(`reasons per rs op: ${(reasonHits / Math.max(1, totalOps)).toFixed(2)}`);
 
 console.log('');
-console.log('== Hotspots (by vi-op count) ==');
+console.log('== Hotspots (by rs-op count) ==');
 const hotspots = [...filesWithOps]
   .toSorted((a, b) => b.totalOps - a.totalOps || a.filePath.localeCompare(b.filePath))
   .slice(0, 15);
@@ -111,14 +111,14 @@ if (checkMockReasons) {
     console.log('');
     console.log('== Mock Reason Gate ==');
     console.log(
-      'OK: All stable test files that use vi patch ops contain at least one `Mock reason:`.',
+      'OK: All stable test files that use rs patch ops contain at least one `Mock reason:`.',
     );
     process.exit(0);
   }
 
   console.error('');
   console.error('== Mock Reason Gate ==');
-  console.error('FAIL: Missing `Mock reason:` in stable test files using vi patch ops:');
+  console.error('FAIL: Missing `Mock reason:` in stable test files using rs patch ops:');
   for (const result of gatedFilesMissingReason) {
     console.error(`- ${path.relative(frontendDir, result.filePath)}`);
   }

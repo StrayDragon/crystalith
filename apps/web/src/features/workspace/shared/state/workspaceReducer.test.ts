@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from 'vitest';
+import { beforeEach, expect, test } from '@rstest/core';
 
 import { useWorkspaceStore } from './workspaceStore';
 

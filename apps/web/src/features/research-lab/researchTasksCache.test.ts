@@ -1,12 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 
 // Mock reason: isolate SWR global mutate so cache helpers stay unit-testable without a provider.
-const { mutateMock } = vi.hoisted(() => ({
-  mutateMock: vi.fn(() => Promise.resolve(undefined)),
+const { mutateMock } = rs.hoisted(() => ({
+  mutateMock: rs.fn(() => Promise.resolve(undefined)),
 }));
 
 // Mock reason: replace swr.mutate with the hoisted spy for assertion.
-vi.mock('swr', () => ({
+rs.mock('swr', () => ({
   mutate: mutateMock,
 }));
 

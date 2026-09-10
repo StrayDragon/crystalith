@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from '@rstest/core';
 
 import { stripFootnoteDefinitions, withFootnoteDefinitions } from './reportFootnotes';
 import type { LabCitation } from './types';

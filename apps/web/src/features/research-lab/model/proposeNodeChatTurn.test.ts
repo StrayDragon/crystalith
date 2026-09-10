@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from '@rstest/core';
 
 import { deriveLabState } from '../../research-lab-demo/fake/deriveLabState';
 import { getLabScenario } from '../../research-lab-demo/fake/scenarios';

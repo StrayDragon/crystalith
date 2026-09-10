@@ -1,7 +1,7 @@
 // isToolRenderable — the generate-entry filter behind r272 (tools contract is
 // the availability SSOT). SLIDES disappears while the server reports the
 // preview unavailable; every other valid output type renders.
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from '@rstest/core';
 
 import type { WorkspaceTool } from '../../shared/types';
 import { isToolRenderable } from './StudioToolsGrid';

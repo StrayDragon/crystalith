@@ -1,5 +1,5 @@
+import { beforeEach, expect, test, rs } from '@rstest/core';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, expect, test, vi } from 'vitest';
 
 import { TestProviders } from '../../../../test-utils/providers';
 import type { OutputItem } from '../../shared/types';
@@ -7,11 +7,11 @@ import OutputContent from './OutputContent';
 import { useExport } from './useExport';
 
 // Mock reason: isolate OutputContent menu/dispatch behavior from export implementation side effects.
-vi.mock('./useExport', () => ({
-  useExport: vi.fn(),
+rs.mock('./useExport', () => ({
+  useExport: rs.fn(),
 }));
 
-const useExportMock = vi.mocked(useExport);
+const useExportMock = rs.mocked(useExport);
 
 function createOutput(type: OutputItem['type'], content: Record<string, unknown>): OutputItem {
   return {
@@ -31,12 +31,12 @@ beforeEach(() => {
     isExporting: false,
     activeFormat: null,
     getSupportedFormats: (type) => (type === 'QUIZ' ? ['markdown', 'json'] : ['markdown']),
-    exportOutput: vi.fn(),
+    exportOutput: rs.fn(),
   });
 });
 
 test('shows export menu and triggers selected format export', async () => {
-  const exportOutput = vi.fn();
+  const exportOutput = rs.fn();
   useExportMock.mockReturnValue({
     isExporting: false,
     activeFormat: null,

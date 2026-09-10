@@ -7,7 +7,7 @@
 #
 # Ports are owned by each app:
 #   server  CL_SERVER_PORT (default 8032)
-#   web     Vite :3000
+#   web     Rsbuild :3000
 #   slidev  CL_SLIDEV_PORT (default 3030)
 # Always start with -N (--no-port) so Overmind does not inject $PORT.
 # `-c slidev` lets the optional preview die without killing server/web.

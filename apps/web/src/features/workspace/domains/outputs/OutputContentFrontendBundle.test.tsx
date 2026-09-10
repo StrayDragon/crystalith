@@ -1,6 +1,6 @@
+import { afterEach, beforeEach, expect, test, rs } from '@rstest/core';
 import { act, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { TestProviders } from '../../../../test-utils/providers';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
@@ -9,15 +9,15 @@ import OutputContent from './OutputContent';
 import { useExport } from './useExport';
 
 // Mock reason: isolate OutputContent menu/dispatch behavior from export implementation side effects.
-vi.mock('./useExport', () => ({
-  useExport: vi.fn(),
+rs.mock('./useExport', () => ({
+  useExport: rs.fn(),
 }));
 
 let resolveBundleModule: ((value: { render: () => ReactNode }) => void) | null = null;
 let bundleModulePromise: Promise<{ render: () => ReactNode }> | null = null;
 
 // Mock reason: avoid relying on actual dynamic imports in unit tests.
-vi.mock('../../../../plugins/official/registry', () => ({
+rs.mock('../../../../plugins/official/registry', () => ({
   getBuiltinBundleLoader: (id: string) => {
     if (id !== 'output-quiz') return null;
     if (!bundleModulePromise) {
@@ -29,7 +29,7 @@ vi.mock('../../../../plugins/official/registry', () => ({
   },
 }));
 
-const useExportMock = vi.mocked(useExport);
+const useExportMock = rs.mocked(useExport);
 
 function createOutput(type: OutputItem['type'], content: Record<string, unknown>): OutputItem {
   return {
@@ -52,7 +52,7 @@ beforeEach(() => {
     isExporting: false,
     activeFormat: null,
     getSupportedFormats: () => ['markdown'],
-    exportOutput: vi.fn(),
+    exportOutput: rs.fn(),
   });
 
   useWorkspaceStore.getState().setOutputTypeRenderDescriptors({});

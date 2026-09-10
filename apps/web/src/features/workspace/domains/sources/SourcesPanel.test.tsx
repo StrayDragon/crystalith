@@ -1,5 +1,6 @@
+import { beforeEach, expect, test, rs } from '@rstest/core';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { forwardRef } from 'react';
 
 import { toast } from '../../../../shared/toast';
 import { TestProviders } from '../../../../test-utils/providers';
@@ -7,8 +8,7 @@ import type { SourceItem } from '../../shared/types';
 import SourcesPanel from './SourcesPanel';
 
 // Mock reason: react-virtuoso depends on layout/observer behaviors that are unstable in jsdom.
-vi.mock('react-virtuoso', async () => {
-  const { forwardRef } = await import('react');
+rs.mock('react-virtuoso', () => {
   return {
     Virtuoso: forwardRef(function VirtuosoMock(
       { data, itemContent }: { data: any[]; itemContent: (index: number, item: any) => any },
@@ -26,25 +26,25 @@ vi.mock('react-virtuoso', async () => {
 });
 
 // Mock reason: isolate panel interaction tests from child component rendering details.
-vi.mock('./SearchResultsQueue', () => ({
+rs.mock('./SearchResultsQueue', () => ({
   default: () => null,
 }));
 
 // Mock reason: isolate panel interaction tests from child component rendering details.
-vi.mock('./AddSearchResultDialog', () => ({
+rs.mock('./AddSearchResultDialog', () => ({
   default: () => null,
 }));
 
-let toastWarningSpy: ReturnType<typeof vi.spyOn>;
+let toastWarningSpy: ReturnType<typeof rs.spyOn>;
 
 beforeEach(() => {
   // Mock reason: suppress visual toast side effects while asserting notification calls.
-  toastWarningSpy = vi.spyOn(toast, 'warning').mockImplementation(() => {});
-  vi.spyOn(toast, 'error').mockImplementation(() => {});
-  vi.spyOn(toast, 'success').mockImplementation(() => {});
-  vi.spyOn(toast, 'info').mockImplementation(() => {});
+  toastWarningSpy = rs.spyOn(toast, 'warning').mockImplementation(() => {});
+  rs.spyOn(toast, 'error').mockImplementation(() => {});
+  rs.spyOn(toast, 'success').mockImplementation(() => {});
+  rs.spyOn(toast, 'info').mockImplementation(() => {});
 
-  vi.clearAllMocks();
+  rs.clearAllMocks();
   window.localStorage.removeItem('crystalith_search_mode');
 });
 
@@ -87,15 +87,15 @@ const baseSources: SourceItem[] = [
 function createProps(overrides: Record<string, unknown> = {}) {
   return {
     sources: baseSources,
-    onUpload: vi.fn(),
+    onUpload: rs.fn(),
     uploadState: 'idle' as const,
     uploadQueue: [],
     searchState: 'idle' as const,
-    onSearch: vi.fn(),
-    onAddSourceFromUrl: vi.fn().mockResolvedValue(undefined),
-    onRemoveSources: vi.fn().mockResolvedValue(true),
-    onRemoveSource: vi.fn().mockResolvedValue(true),
-    onBatchReembedSources: vi.fn().mockResolvedValue(true),
+    onSearch: rs.fn(),
+    onAddSourceFromUrl: rs.fn().mockResolvedValue(undefined),
+    onRemoveSources: rs.fn().mockResolvedValue(true),
+    onRemoveSource: rs.fn().mockResolvedValue(true),
+    onBatchReembedSources: rs.fn().mockResolvedValue(true),
     sourceTags: [
       {
         id: 11,
@@ -113,15 +113,15 @@ function createProps(overrides: Record<string, unknown> = {}) {
       },
     ],
     tagMutationState: 'idle' as const,
-    onCreateSourceTag: vi.fn().mockResolvedValue(null),
-    onAssignTagToSources: vi.fn().mockResolvedValue(true),
-    onRemoveTagFromSources: vi.fn().mockResolvedValue(true),
+    onCreateSourceTag: rs.fn().mockResolvedValue(null),
+    onAssignTagToSources: rs.fn().mockResolvedValue(true),
+    onRemoveTagFromSources: rs.fn().mockResolvedValue(true),
     sortBy: 'date' as const,
     sortOrder: 'desc' as const,
     tagFilter: '',
-    onSortByChange: vi.fn(),
-    onSortOrderChange: vi.fn(),
-    onTagFilterChange: vi.fn(),
+    onSortByChange: rs.fn(),
+    onSortOrderChange: rs.fn(),
+    onTagFilterChange: rs.fn(),
     isConnected: true,
     isLoading: false,
     removeState: 'idle' as const,
@@ -134,8 +134,8 @@ function createProps(overrides: Record<string, unknown> = {}) {
 }
 
 test('supports ctrl/shift multi-select and batch re-embed', async () => {
-  const selectedSpy = vi.fn();
-  const batchReembedSpy = vi.fn().mockResolvedValue(true);
+  const selectedSpy = rs.fn();
+  const batchReembedSpy = rs.fn().mockResolvedValue(true);
   const props = createProps({
     onSelectedSourceIdsChange: selectedSpy,
     onBatchReembedSources: batchReembedSpy,
@@ -169,10 +169,10 @@ test('supports ctrl/shift multi-select and batch re-embed', async () => {
 });
 
 test('supports sort/filter controls and multi-file upload', async () => {
-  const uploadSpy = vi.fn();
-  const sortBySpy = vi.fn();
-  const sortOrderSpy = vi.fn();
-  const tagFilterSpy = vi.fn();
+  const uploadSpy = rs.fn();
+  const sortBySpy = rs.fn();
+  const sortOrderSpy = rs.fn();
+  const tagFilterSpy = rs.fn();
 
   const props = createProps({
     onUpload: uploadSpy,
@@ -221,7 +221,7 @@ test('sources panel no longer hosts primary web search', () => {
 });
 
 test('filters unsupported upload files and shows warning', () => {
-  const uploadSpy = vi.fn();
+  const uploadSpy = rs.fn();
   const props = createProps({ onUpload: uploadSpy });
 
   render(
@@ -245,7 +245,7 @@ test('filters unsupported upload files and shows warning', () => {
 });
 
 test('accepts PDF upload via drag-and-drop', () => {
-  const uploadSpy = vi.fn();
+  const uploadSpy = rs.fn();
   const props = createProps({ onUpload: uploadSpy });
 
   render(

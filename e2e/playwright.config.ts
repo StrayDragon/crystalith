@@ -121,7 +121,7 @@ export default defineConfig({
       env: e2eServerEnv(),
     },
     {
-      command: `bunx vite --host 127.0.0.1 --port ${WEB_PORT} --strictPort`,
+      command: `bunx rsbuild dev --host 127.0.0.1 --port ${WEB_PORT}`,
       url: WEB_URL,
       reuseExistingServer: reuse,
       timeout: 120_000,

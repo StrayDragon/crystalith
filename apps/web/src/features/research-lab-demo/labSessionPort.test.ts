@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from '@rstest/core';
 
 import { setActiveDemoResearchTaskId } from './demoResearchTasks';
 import { fixtureLabSessionPort, LAB_DEFAULT_FIXTURE_SCENARIO_ID } from './labSessionPort';

@@ -1,6 +1,6 @@
+import { afterAll, beforeEach, expect, test, rs } from '@rstest/core';
 import { render, screen } from '@testing-library/react';
 import { SWRConfig } from 'swr';
-import { afterAll, beforeEach, expect, test, vi } from 'vitest';
 
 import { TestProviders } from '../test-utils/providers';
 import App from './App';
@@ -18,7 +18,7 @@ function renderWorkspace() {
 }
 
 beforeEach(() => {
-  globalThis.fetch = vi
+  globalThis.fetch = rs
     .fn(() => Promise.reject(new Error('network')))
     .mockName('fetch') as unknown as typeof fetch;
 });

@@ -1,18 +1,18 @@
+import { beforeEach, expect, test, rs } from '@rstest/core';
 import { act, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { SWRConfig } from 'swr';
-import { beforeEach, expect, test, vi } from 'vitest';
 
 import { server } from '../../../../test-utils/msw/server';
 import { renderHook } from '../../../../test-utils/renderHook';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import { useChat } from './useChat';
 
-const streamRequestMock = vi.fn();
+const streamRequestMock = rs.fn();
 
 // Mock reason: deterministic SSE events for streaming chat path without real fetch streams.
-vi.mock('../../../../api/stream', () => ({
+rs.mock('../../../../api/stream', () => ({
   streamRequest: (...args: unknown[]) => streamRequestMock(...args),
 }));
 
@@ -104,15 +104,15 @@ beforeEach(() => {
 });
 
 test('sendMessage swallows /research slash and does not call QA (c99)', async () => {
-  const qaSpy = vi.fn();
+  const qaSpy = rs.fn();
   server.use(
     http.post('*/v2/notebooks/*/qa', async () => {
       qaSpy();
       return HttpResponse.json({ answer: 'nope' });
     }),
   );
-  const pushState = vi.spyOn(window.history, 'pushState');
-  const ensureSession = vi.fn().mockResolvedValue(123);
+  const pushState = rs.spyOn(window.history, 'pushState');
+  const ensureSession = rs.fn().mockResolvedValue(123);
   const { result } = renderHook(() => useChat({ ensureSession, enableStreaming: false }), {
     wrapper: wrapSWR,
   });
@@ -141,7 +141,7 @@ test('sendMessage swallows /research slash and does not call QA (c99)', async ()
 });
 
 test('sendMessage returns error when no notebook is active', async () => {
-  const ensureSession = vi.fn().mockResolvedValue(1);
+  const ensureSession = rs.fn().mockResolvedValue(1);
   const { result } = renderHook(() => useChat({ ensureSession, enableStreaming: false }), {
     wrapper: wrapSWR,
   });
@@ -174,7 +174,7 @@ test('sendMessage non-streaming path stores assistant message and shared_state m
     }),
   );
 
-  const ensureSession = vi.fn().mockResolvedValue(123);
+  const ensureSession = rs.fn().mockResolvedValue(123);
   const { result } = renderHook(() => useChat({ ensureSession, enableStreaming: false }), {
     wrapper: wrapSWR,
   });
@@ -222,7 +222,7 @@ test('sendMessage passes selected source ids', async () => {
     }),
   );
 
-  const ensureSession = vi.fn().mockResolvedValue(456);
+  const ensureSession = rs.fn().mockResolvedValue(456);
   const { result } = renderHook(() => useChat({ ensureSession, enableStreaming: false }), {
     wrapper: wrapSWR,
   });
@@ -262,7 +262,7 @@ test('sendMessage omits sourceIds when nothing is selected (ungrounded)', async 
     }),
   );
 
-  const ensureSession = vi.fn().mockResolvedValue(789);
+  const ensureSession = rs.fn().mockResolvedValue(789);
   const { result } = renderHook(() => useChat({ ensureSession, enableStreaming: false }), {
     wrapper: wrapSWR,
   });
@@ -341,7 +341,7 @@ test('streaming path applies snapshot and delta with backend message id', async 
     };
   });
 
-  const ensureSession = vi.fn().mockResolvedValue(123);
+  const ensureSession = rs.fn().mockResolvedValue(123);
   const { result } = renderHook(() => useChat({ ensureSession, enableStreaming: true }), {
     wrapper: wrapSWR,
   });
@@ -407,7 +407,7 @@ test('stopStreaming rolls back provisional assistant message before done', async
     }
   });
 
-  const ensureSession = vi.fn().mockResolvedValue(123);
+  const ensureSession = rs.fn().mockResolvedValue(123);
   const { result } = renderHook(() => useChat({ ensureSession, enableStreaming: true }), {
     wrapper: wrapSWR,
   });

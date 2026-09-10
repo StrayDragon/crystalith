@@ -90,7 +90,7 @@ if (subcommand === 'print') {
 }
 
 if (subcommand === 'run') {
-  const result = spawnSync('vitest', ['run', ...files, ...forwarded], {
+  const result = spawnSync('rstest', ['run', ...files, ...forwarded], {
     stdio: 'inherit',
     cwd: frontendDir,
     env: process.env,

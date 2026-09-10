@@ -21,6 +21,9 @@ beforeAll(() => {
   writeFileSync(join(distRoot, 'index.html'), '<html>crystalith-spa</html>');
   mkdirSync(join(distRoot, 'assets'));
   writeFileSync(join(distRoot, 'assets', 'app-abc123.js'), 'console.log("bundle");');
+  // Rsbuild dist layout: content-hashed assets under static/.
+  mkdirSync(join(distRoot, 'static'));
+  writeFileSync(join(distRoot, 'static', 'app-abc123.js'), 'console.log("bundle");');
 
   prevEnv = process.env.CL_WEB_DIST;
   process.env.CL_WEB_DIST = distRoot;
@@ -68,6 +71,12 @@ describe('web static routes', () => {
     const res = await app.handle(new Request(`${BASE}/assets/app-abc123.js`));
     expect(res.status).toBe(200);
     expect(await res.text()).toBe('console.log("bundle");');
+    expect(res.headers.get('cache-control')).toContain('immutable');
+  });
+
+  it('treats Rsbuild static/ assets as immutable too', async () => {
+    const res = await app.handle(new Request(`${BASE}/static/app-abc123.js`));
+    expect(res.status).toBe(200);
     expect(res.headers.get('cache-control')).toContain('immutable');
   });
 

@@ -1,5 +1,5 @@
+import { afterEach, describe, expect, it, rs } from '@rstest/core';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { LayerProvider } from '../../shared/layer';
 import LabProgressBar from './LabProgressBar';
@@ -51,7 +51,7 @@ describe('LabProgressBar ledger (c95)', () => {
   });
 
   it('clicking nodeId selects graph node', () => {
-    const onSelect = vi.fn();
+    const onSelect = rs.fn();
     render(
       <LayerProvider>
         <LabProgressBar

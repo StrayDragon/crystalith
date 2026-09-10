@@ -1,19 +1,22 @@
+import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const streamNodeChat = vi.hoisted(() => vi.fn());
-const proposeNodeChatTurn = vi.hoisted(() => vi.fn());
+import * as proposeNodeChatTurnActual from './model/proposeNodeChatTurn' with {
+  rstest: 'importActual',
+};
+
+const streamNodeChat = rs.hoisted(() => rs.fn());
+const proposeNodeChatTurn = rs.hoisted(() => rs.fn());
 
 // Mock reason: assert Eden drawer uses HTTP chat SSE, not fixture propose.
-vi.mock('./edenResearchApi', () => ({
+rs.mock('./edenResearchApi', () => ({
   streamNodeChat: (...args: unknown[]) => streamNodeChat(...args),
 }));
 
 // Mock reason: detect accidental fixture propose on Eden path (r438/r440).
-vi.mock('./model/proposeNodeChatTurn', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./model/proposeNodeChatTurn')>();
+rs.mock('./model/proposeNodeChatTurn', () => {
   return {
-    ...actual,
+    ...proposeNodeChatTurnActual,
     proposeNodeChatTurn: (...args: unknown[]) => proposeNodeChatTurn(...args),
   };
 });
@@ -134,7 +137,7 @@ describe('LabNodeDrawer chat mode (c88)', () => {
         data: { errorCode: 'X', message: '对话被拒绝' },
       };
     });
-    const onChatError = vi.fn();
+    const onChatError = rs.fn();
 
     render(
       <LabNodeDrawer

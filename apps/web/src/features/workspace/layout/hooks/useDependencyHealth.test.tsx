@@ -1,8 +1,8 @@
+import { beforeEach, expect, test } from '@rstest/core';
 import { act, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { SWRConfig } from 'swr';
-import { beforeEach, expect, test } from 'vitest';
 
 import { server } from '../../../../test-utils/msw/server';
 import { renderHook } from '../../../../test-utils/renderHook';

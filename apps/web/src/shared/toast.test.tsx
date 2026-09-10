@@ -1,5 +1,5 @@
+import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LayerProvider } from './layer';
 import { toast, ToastContainer, useToastStore } from './toast';
@@ -12,7 +12,7 @@ describe('toast action (c91 / r446)', () => {
   });
 
   it('renders optional action and invokes onClick', () => {
-    const onClick = vi.fn();
+    const onClick = rs.fn();
     render(
       <LayerProvider>
         <ToastContainer />

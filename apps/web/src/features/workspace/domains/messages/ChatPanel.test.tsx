@@ -1,9 +1,9 @@
+import { beforeEach, expect, test, rs } from '@rstest/core';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { createRef } from 'react';
 import type { ComponentProps } from 'react';
 import { SWRConfig } from 'swr';
-import { beforeEach, expect, test, vi } from 'vitest';
 
 import { server } from '../../../../test-utils/msw/server';
 import { TestProviders } from '../../../../test-utils/providers';
@@ -27,8 +27,8 @@ function buildChatPanelElement(overrides?: ChatPanelOverrides) {
           <ChatPanel
             messages={defaultMessages}
             draft=""
-            onDraftChange={vi.fn()}
-            onSend={vi.fn()}
+            onDraftChange={rs.fn()}
+            onSend={rs.fn()}
             isSending={false}
             notice=""
             isBlocked={false}
@@ -37,10 +37,10 @@ function buildChatPanelElement(overrides?: ChatPanelOverrides) {
             citations={defaultCitations}
             isLoadingMessages={false}
             messagesError=""
-            onRetryMessages={vi.fn()}
-            onSaveToNote={vi.fn()}
-            onConvertToSource={vi.fn()}
-            onConvertToOutput={vi.fn((_outputType: OutputTypeId) => Promise.resolve())}
+            onRetryMessages={rs.fn()}
+            onSaveToNote={rs.fn()}
+            onConvertToSource={rs.fn()}
+            onConvertToOutput={rs.fn((_outputType: OutputTypeId) => Promise.resolve())}
             isConverting={false}
             {...overrides}
           />
@@ -99,7 +99,7 @@ test('chat panel virtualizes large message list', async () => {
 });
 
 test('chat panel shows retry send button when notice exists', () => {
-  const onRetrySend = vi.fn();
+  const onRetrySend = rs.fn();
 
   renderChatPanel({
     notice: '发送失败，请稍后重试',
@@ -114,7 +114,7 @@ test('chat panel shows retry send button when notice exists', () => {
 });
 
 test('chat panel shows stop streaming button', () => {
-  const onStopStreaming = vi.fn();
+  const onStopStreaming = rs.fn();
 
   renderChatPanel({
     isStreaming: true,

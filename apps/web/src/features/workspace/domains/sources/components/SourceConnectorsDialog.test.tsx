@@ -1,6 +1,6 @@
+import { beforeEach, expect, test, rs } from '@rstest/core';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, expect, test, vi } from 'vitest';
 
 import { toast } from '../../../../../shared/toast';
 import { server } from '../../../../../test-utils/msw/server';
@@ -31,13 +31,13 @@ const BINDING = {
 
 beforeEach(() => {
   // Mock reason: suppress visual toast side effects while asserting notification calls.
-  vi.spyOn(toast, 'success').mockImplementation(() => {});
-  vi.spyOn(toast, 'error').mockImplementation(() => {});
-  vi.spyOn(toast, 'warning').mockImplementation(() => {});
-  vi.spyOn(toast, 'info').mockImplementation(() => {});
+  rs.spyOn(toast, 'success').mockImplementation(() => {});
+  rs.spyOn(toast, 'error').mockImplementation(() => {});
+  rs.spyOn(toast, 'warning').mockImplementation(() => {});
+  rs.spyOn(toast, 'info').mockImplementation(() => {});
   // Mock reason: auto-confirm unbind dialog so the DELETE path is exercised in jsdom.
-  vi.spyOn(window, 'confirm').mockReturnValue(true);
-  vi.clearAllMocks();
+  rs.spyOn(window, 'confirm').mockReturnValue(true);
+  rs.clearAllMocks();
 });
 
 test('unbind deletes binding and shows success toast', async () => {
@@ -74,7 +74,7 @@ test('unbind deletes binding and shows success toast', async () => {
 
   render(
     <TestProvidersWithSWR>
-      <SourceConnectorsDialog open onClose={vi.fn()} notebookId={1} isConnected />
+      <SourceConnectorsDialog open onClose={rs.fn()} notebookId={1} isConnected />
     </TestProvidersWithSWR>,
   );
 

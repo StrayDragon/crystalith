@@ -1,23 +1,23 @@
+import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const runConvertToNote = vi.hoisted(() => vi.fn());
-const runConvertToSource = vi.hoisted(() => vi.fn());
-const toastInfo = vi.hoisted(() => vi.fn());
-const toastSuccess = vi.hoisted(() => vi.fn());
+const runConvertToNote = rs.hoisted(() => rs.fn());
+const runConvertToSource = rs.hoisted(() => rs.fn());
+const toastInfo = rs.hoisted(() => rs.fn());
+const toastSuccess = rs.hoisted(() => rs.fn());
 
 // Mock reason: assert evidence convert calls helpers without hitting convert HTTP.
-vi.mock('./edenConvertActions', () => ({
+rs.mock('./edenConvertActions', () => ({
   runConvertToNote: (...args: unknown[]) => runConvertToNote(...args),
   runConvertToSource: (...args: unknown[]) => runConvertToSource(...args),
 }));
 
-vi.mock('../../shared/toast', () => ({
+rs.mock('../../shared/toast', () => ({
   toast: {
     success: toastSuccess,
-    error: vi.fn(),
+    error: rs.fn(),
     info: toastInfo,
-    warning: vi.fn(),
+    warning: rs.fn(),
   },
 }));
 

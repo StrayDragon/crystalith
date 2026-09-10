@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from '@rstest/core';
 
 import { EMPTY_MUTATIONS } from './fake/deriveLabState';
 import {

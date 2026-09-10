@@ -1,4 +1,4 @@
-# apps/web — Vite + React + TypeScript SPA
+# apps/web — Rsbuild (Rspack) + React + TypeScript SPA
 
 ## Project Structure & Module Organization
 
@@ -53,9 +53,9 @@
 
 ```bash
 bun install              # Install dependencies
-bun dev                  # Vite dev server (HMR on :3000)
-bun test                 # Vitest (watch mode)
-bun run test:ci          # Frontend Vitest CI suite (also via root `just test-web` / `just qa`)
+bun dev                  # Rsbuild dev server (:3000; chunk-level HMR)
+bun test                 # Rstest (watch mode)
+bun run test:ci          # Frontend Rstest CI suite (also via root `just test-web` / `just qa`)
 bun run test:core        # Minimal UI core regression suite
 bun run lint             # Incremental oxlint
 bun run lint:all         # Full oxlint
@@ -116,7 +116,7 @@ import { LAYER_LEVELS } from '../shared/layer';
 
 ## Testing Guidelines
 
-- Vitest + React Testing Library
+- Rstest + React Testing Library (`rstest.config.ts` extends `rsbuild.config.ts`)
 - Colocate tests with `*.test.tsx` naming
 - Run targeted tests for changed areas
 - `test:ci` runs deterministic quality gate; `test:core` covers critical paths

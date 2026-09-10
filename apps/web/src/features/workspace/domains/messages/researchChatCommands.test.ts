@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, rs } from '@rstest/core';
 
 import {
   executeResearchChatCommand,
@@ -42,7 +42,7 @@ describe('researchChatCommands (c99)', () => {
   });
 
   it('execute navigates compose and run', () => {
-    const navigate = vi.fn();
+    const navigate = rs.fn();
     expect(executeResearchChatCommand({ type: 'open_compose', topic: null }, 7, navigate)).toEqual({
       ok: true,
       message: '已打开深研 Compose',
