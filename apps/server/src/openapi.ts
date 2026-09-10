@@ -142,7 +142,7 @@ export function registerApiDoc(routes: OpenApiRoute[]): void {
     // is documented even when a router doesn't hand-write request.params.
     // Explicit request.params entries above win (they may carry descriptions).
     const documentedNames = new Set(parameters.map((p) => p.name));
-    for (const seg of route.path.match(/:([A-Za-z_]\w*)/g) ?? []) {
+    for (const seg of route.path.match(/:([A-Za-z_]\w*)/gu) ?? []) {
       const name = seg.slice(1);
       if (!documentedNames.has(name)) {
         parameters.push({
