@@ -20,6 +20,11 @@
 
 Crystalith 是一个本地优先的笔记本研究和提炼应用：每个笔记本聚集一组资料源（PDF、网页、arXiv、Obsidian Vault、本地目录），基于本地向量检索做**带引用的问答**，一键产出六类学习输出（简报、指南、闪卡、思维导图、测验、时间线）；**Deep Research** 模式还能在预算内多轮取证、综合成一份研究报告。
 
+https://github.com/user-attachments/assets/69d8238b-b015-47c4-9852-31ce71de496d
+
+<!-- 演示媒体不入库：上方为 user-attachments 托管的 mp4（裸链接 GitHub 会渲染成内联播放器）。
+     重录：just dev 后运行 bun e2e/capture-demo.ts 录制章节，再执行 e2e/build-demo-media.sh 合成。 -->
+
 数据落在单个本地 SQLite 文件里，模型走你自己的 OpenAI 兼容网关（llama.cpp / Ollama / vLLM / 云 API 均可）——资料和 key 都不经过第三方。
 
 ```text
