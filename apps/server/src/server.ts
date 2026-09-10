@@ -125,6 +125,15 @@ export function createApp() {
             error instanceof Error && error.message ? error.message : 'Request validation failed';
           return sendError(set, ErrorCode.SCHEMA_VALIDATION_FAILED, message);
         }
+        // Malformed request body (invalid JSON / wrong encoding) is a client
+        // error — 400 with the envelope, not the 500 fallthrough.
+        if (code === 'PARSE') {
+          const message =
+            error instanceof Error && error.message
+              ? error.message
+              : 'Request body could not be parsed';
+          return sendError(set, ErrorCode.INVALID_REQUEST, message);
+        }
         // Fallthrough: unexpected errors still get the ErrorEnvelope shape
         // (previously plain-text "Internal Server Error" 500s).
         logger.error('unhandled-error', {
