@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from '@rstest/core';
 
 import { DEFAULT_LAB_COMPOSE_DEPTH } from './labComposeDepth';
 import { LAB_COMPOSE_BLOCK_MESSAGES, resolveLabComposeBlockReason } from './labComposeGate';

@@ -1,5 +1,5 @@
+import { expect, test, rs } from '@rstest/core';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { expect, test, vi } from 'vitest';
 
 import { TestProviders } from '../../../../test-utils/providers';
 import AddSearchResultDialog from './AddSearchResultDialog';
@@ -11,7 +11,7 @@ const sampleResult = {
 };
 
 test('dialog supports retrying failed source import', async () => {
-  const onAddSource = vi
+  const onAddSource = rs
     .fn()
     .mockRejectedValueOnce(new Error('抓取失败'))
     .mockResolvedValueOnce(undefined);
@@ -20,11 +20,11 @@ test('dialog supports retrying failed source import', async () => {
     <TestProviders>
       <AddSearchResultDialog
         open
-        onClose={vi.fn()}
+        onClose={rs.fn()}
         results={[sampleResult]}
         mode="fetch"
         onAddSource={onAddSource}
-        onComplete={vi.fn()}
+        onComplete={rs.fn()}
       />
     </TestProviders>,
   );
@@ -46,7 +46,7 @@ test('dialog supports retrying failed source import', async () => {
 
 test('dialog shows progress text while batch adding sources', async () => {
   let releaseFirst: ((value?: void) => void) | undefined;
-  const onAddSource = vi
+  const onAddSource = rs
     .fn()
     .mockImplementationOnce(
       () =>
@@ -60,7 +60,7 @@ test('dialog shows progress text while batch adding sources', async () => {
     <TestProviders>
       <AddSearchResultDialog
         open
-        onClose={vi.fn()}
+        onClose={rs.fn()}
         results={[
           sampleResult,
           { ...sampleResult, url: 'https://example.com/article-2', title: 'Title 2' },
@@ -68,7 +68,7 @@ test('dialog shows progress text while batch adding sources', async () => {
         ]}
         mode="fetch"
         onAddSource={onAddSource}
-        onComplete={vi.fn()}
+        onComplete={rs.fn()}
       />
     </TestProviders>,
   );

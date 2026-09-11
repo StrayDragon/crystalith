@@ -1,8 +1,8 @@
+import { beforeEach, expect, test, rs } from '@rstest/core';
 import { act, waitFor } from '@testing-library/react';
 import { delay, http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { SWRConfig } from 'swr';
-import { beforeEach, expect, test, vi } from 'vitest';
 
 import { server } from '../../../../test-utils/msw/server';
 import { renderHook } from '../../../../test-utils/renderHook';
@@ -18,10 +18,10 @@ function wrapSWR({ children }: { children: ReactNode }) {
   );
 }
 
-const onQueueReset = vi.fn();
-const onQueueTotal = vi.fn();
-const onQueueDone = vi.fn();
-const markJobCompleted = vi.fn();
+const onQueueReset = rs.fn();
+const onQueueTotal = rs.fn();
+const onQueueDone = rs.fn();
+const markJobCompleted = rs.fn();
 
 beforeEach(() => {
   window.localStorage.removeItem(GENERATION_PREFERENCE_STORAGE_KEY);
@@ -202,7 +202,7 @@ test('enqueueOutputJob propagates generation preference', async () => {
 
 test('cancelOutputJob aborts running output job', async () => {
   // Mock reason: simulate in-flight request timing deterministically without wall-clock sleeps.
-  vi.useFakeTimers();
+  rs.useFakeTimers();
   let deleteCalled = false;
   try {
     server.use(
@@ -258,15 +258,15 @@ test('cancelOutputJob aborts running output job', async () => {
     expect(result.current.outputQueueJobs[0]?.status).toBe('cancelled');
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(200);
+      await rs.advanceTimersByTimeAsync(200);
     });
 
     // AbortSignal should prevent a completed response from sticking; if a late
     // response still arrives after cancel, cleanup deletes the server row.
     expect(deleteCalled || result.current.outputQueueJobs[0]?.status === 'cancelled').toBe(true);
   } finally {
-    vi.clearAllTimers();
-    vi.useRealTimers();
+    rs.clearAllTimers();
+    rs.useRealTimers();
   }
 });
 

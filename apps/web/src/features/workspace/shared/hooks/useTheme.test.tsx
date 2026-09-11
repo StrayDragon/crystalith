@@ -1,5 +1,5 @@
+import { beforeEach, expect, test, rs } from '@rstest/core';
 import { act, waitFor } from '@testing-library/react';
-import { beforeEach, expect, test, vi } from 'vitest';
 
 import { renderHook } from '../../../../test-utils/renderHook';
 import { THEME_STORAGE_KEY, useTheme } from './useTheme';
@@ -59,7 +59,7 @@ let mediaController = createMatchMediaController(false);
 beforeEach(() => {
   mediaController = createMatchMediaController(false);
   // Mock reason: control system theme change events deterministically in jsdom.
-  vi.spyOn(window, 'matchMedia').mockImplementation(() => mediaController.mediaQueryList);
+  rs.spyOn(window, 'matchMedia').mockImplementation(() => mediaController.mediaQueryList);
   window.localStorage.clear();
   document.documentElement.className = 'h-full';
   delete document.documentElement.dataset.theme;

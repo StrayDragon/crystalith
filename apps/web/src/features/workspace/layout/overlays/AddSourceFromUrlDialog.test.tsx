@@ -1,5 +1,5 @@
+import { expect, test, rs } from '@rstest/core';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { expect, test, vi } from 'vitest';
 
 import { TestIds } from '../../../../shared/testids';
 import { TestProviders } from '../../../../test-utils/providers';
@@ -21,14 +21,14 @@ const arxivExtractor = {
 };
 
 test('fetch mode shows arxiv hint and passes selected extractor on submit', async () => {
-  const onAdd = vi.fn().mockResolvedValue(undefined);
+  const onAdd = rs.fn().mockResolvedValue(undefined);
 
   render(
     <TestProviders>
       <AddSourceFromUrlDialog
         open
         defaultMode="fetch"
-        onClose={vi.fn()}
+        onClose={rs.fn()}
         onAdd={onAdd}
         extractors={[arxivExtractor]}
       />
@@ -52,14 +52,14 @@ test('fetch mode shows arxiv hint and passes selected extractor on submit', asyn
 });
 
 test('unchecking matched extractor submits without explicit extractor', async () => {
-  const onAdd = vi.fn().mockResolvedValue(undefined);
+  const onAdd = rs.fn().mockResolvedValue(undefined);
 
   render(
     <TestProviders>
       <AddSourceFromUrlDialog
         open
         defaultMode="fetch"
-        onClose={vi.fn()}
+        onClose={rs.fn()}
         onAdd={onAdd}
         extractors={[arxivExtractor]}
       />
@@ -84,8 +84,8 @@ test('link mode does not show extractor hints', () => {
       <AddSourceFromUrlDialog
         open
         defaultMode="link"
-        onClose={vi.fn()}
-        onAdd={vi.fn()}
+        onClose={rs.fn()}
+        onAdd={rs.fn()}
         extractors={[arxivExtractor]}
       />
     </TestProviders>,

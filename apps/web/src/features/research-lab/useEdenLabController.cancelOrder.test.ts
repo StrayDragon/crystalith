@@ -1,9 +1,11 @@
+import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 import { act, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const callOrder = vi.hoisted(() => [] as string[]);
-const cancelActiveEdenRun = vi.hoisted(() =>
-  vi.fn(async () => {
+import * as edenResearchApiActual from './edenResearchApi' with { rstest: 'importActual' };
+
+const callOrder = rs.hoisted(() => [] as string[]);
+const cancelActiveEdenRun = rs.hoisted(() =>
+  rs.fn(async () => {
     callOrder.push('cancelActiveEdenRun');
     return {
       id: 9,
@@ -24,8 +26,8 @@ const cancelActiveEdenRun = vi.hoisted(() =>
     };
   }),
 );
-const createResearchRun = vi.hoisted(() =>
-  vi.fn(async () => ({
+const createResearchRun = rs.hoisted(() =>
+  rs.fn(async () => ({
     id: 9,
     notebookId: 62,
     topic: 't',
@@ -45,25 +47,24 @@ const createResearchRun = vi.hoisted(() =>
 );
 
 // Mock reason: isolate cancel ordering without live SSE.
-vi.mock('../../api/stream', () => ({
-  streamRequest: vi.fn(async function* () {
+rs.mock('../../api/stream', () => ({
+  streamRequest: rs.fn(async function* () {
     await new Promise(() => undefined);
     yield undefined as never;
   }),
 }));
 
 // Mock reason: assert stopStream-before-cancel without HTTP.
-vi.mock('./edenCancelFlow', () => ({
+rs.mock('./edenCancelFlow', () => ({
   cancelActiveEdenRun,
 }));
 
-vi.mock('./edenResearchApi', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./edenResearchApi')>();
+rs.mock('./edenResearchApi', () => {
   return {
-    ...actual,
+    ...edenResearchApiActual,
     createResearchRun,
-    listProgress: vi.fn(async () => ({ items: [], nextAfterSeq: 0 })),
-    getResearchRun: vi.fn(async (_nid: number, rid: number) => ({
+    listProgress: rs.fn(async () => ({ items: [], nextAfterSeq: 0 })),
+    getResearchRun: rs.fn(async (_nid: number, rid: number) => ({
       id: rid,
       notebookId: 62,
       topic: 't',
@@ -83,8 +84,8 @@ vi.mock('./edenResearchApi', async (importOriginal) => {
   };
 });
 
-vi.mock('./researchTasksCache', () => ({
-  refreshResearchTasks: vi.fn(),
+rs.mock('./researchTasksCache', () => ({
+  refreshResearchTasks: rs.fn(),
 }));
 
 import { renderHook } from '@testing-library/react';
@@ -113,7 +114,7 @@ describe('useEdenLabController cancel SSE order', () => {
 
     callOrder.length = 0;
     const origAbort = AbortController.prototype.abort;
-    const abortSpy = vi.spyOn(AbortController.prototype, 'abort').mockImplementation(function (
+    const abortSpy = rs.spyOn(AbortController.prototype, 'abort').mockImplementation(function (
       this: AbortController,
       reason?: unknown,
     ) {

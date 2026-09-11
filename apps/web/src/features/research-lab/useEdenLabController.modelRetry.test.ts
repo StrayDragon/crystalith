@@ -1,25 +1,26 @@
+import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 import { act, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const createResearchRun = vi.fn();
-const retrySynthesizeResearchRun = vi.fn();
+import * as edenResearchApiActual from './edenResearchApi' with { rstest: 'importActual' };
+
+const createResearchRun = rs.fn();
+const retrySynthesizeResearchRun = rs.fn();
 
 // Mock reason: isolate compose/retry without live SSE.
-vi.mock('../../api/stream', () => ({
-  streamRequest: vi.fn(async function* () {
+rs.mock('../../api/stream', () => ({
+  streamRequest: rs.fn(async function* () {
     /* no events */
   }),
 }));
 
 // Mock reason: assert create/retry API payloads without HTTP.
-vi.mock('./edenResearchApi', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./edenResearchApi')>();
+rs.mock('./edenResearchApi', () => {
   return {
-    ...actual,
+    ...edenResearchApiActual,
     createResearchRun: (...args: unknown[]) => createResearchRun(...args),
     retrySynthesizeResearchRun: (...args: unknown[]) => retrySynthesizeResearchRun(...args),
-    listProgress: vi.fn(async () => ({ items: [], nextAfterSeq: 0 })),
-    getResearchRun: vi.fn(async (_nid: number, rid: number) => ({
+    listProgress: rs.fn(async () => ({ items: [], nextAfterSeq: 0 })),
+    getResearchRun: rs.fn(async (_nid: number, rid: number) => ({
       id: rid,
       notebookId: 62,
       topic: 't',
@@ -41,8 +42,8 @@ vi.mock('./edenResearchApi', async (importOriginal) => {
 });
 
 // Mock reason: avoid task-cache side effects in unit test.
-vi.mock('./researchTasksCache', () => ({
-  refreshResearchTasks: vi.fn(),
+rs.mock('./researchTasksCache', () => ({
+  refreshResearchTasks: rs.fn(),
 }));
 
 import { renderHook } from '@testing-library/react';

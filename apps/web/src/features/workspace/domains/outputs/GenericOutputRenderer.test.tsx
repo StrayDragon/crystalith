@@ -1,5 +1,5 @@
+import { expect, test, rs } from '@rstest/core';
 import { render, screen } from '@testing-library/react';
-import { expect, test, vi } from 'vitest';
 
 import type { RenderDescriptor } from '../../shared/types';
 import GenericOutputRenderer from './GenericOutputRenderer';
@@ -149,7 +149,7 @@ test('falls back to JSON when renderDescriptor is missing', () => {
 
 test('falls back to JSON for unsupported layout and logs warning', () => {
   // Mock reason: silence expected warning output while asserting unsupported layout fallback.
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  const warn = rs.spyOn(console, 'warn').mockImplementation(() => {});
   render(
     <GenericOutputRenderer
       content={{ x: 1 }}

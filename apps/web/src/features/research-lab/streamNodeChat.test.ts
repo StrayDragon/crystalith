@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 
-const streamRequest = vi.hoisted(() => vi.fn());
+const streamRequest = rs.hoisted(() => rs.fn());
 
 // Mock reason: deterministic SSE events for streamNodeChat without real fetch.
-vi.mock('../../api/stream', () => ({
+rs.mock('../../api/stream', () => ({
   streamRequest: (...args: unknown[]) => streamRequest(...args),
 }));
 

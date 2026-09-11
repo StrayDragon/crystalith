@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, rs } from '@rstest/core';
 
 import { renderHook } from '../../../../test-utils/renderHook';
 import { matchShortcut, useKeyboardShortcuts } from './useKeyboardShortcuts';
@@ -8,11 +8,11 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  rs.restoreAllMocks();
 });
 
 test('dispatches global shortcut when focus is outside inputs', () => {
-  const onSearch = vi.fn();
+  const onSearch = rs.fn();
 
   renderHook(() =>
     useKeyboardShortcuts([
@@ -38,7 +38,7 @@ test('dispatches global shortcut when focus is outside inputs', () => {
 });
 
 test('ignores global shortcut when input has focus', () => {
-  const onSearch = vi.fn();
+  const onSearch = rs.fn();
 
   renderHook(() =>
     useKeyboardShortcuts([
@@ -68,7 +68,7 @@ test('ignores global shortcut when input has focus', () => {
 });
 
 test('ignores global shortcut when activeElement is input even if event targets window', () => {
-  const onSearch = vi.fn();
+  const onSearch = rs.fn();
 
   renderHook(() =>
     useKeyboardShortcuts([
@@ -98,7 +98,7 @@ test('ignores global shortcut when activeElement is input even if event targets 
 });
 
 test('supports allowInInput for Ctrl+K command palette from textarea', () => {
-  const onPalette = vi.fn();
+  const onPalette = rs.fn();
 
   renderHook(() =>
     useKeyboardShortcuts([
@@ -129,7 +129,7 @@ test('supports allowInInput for Ctrl+K command palette from textarea', () => {
 });
 
 test('supports allowInInput shortcuts like Ctrl+Enter', () => {
-  const onSend = vi.fn();
+  const onSend = rs.fn();
 
   renderHook(() =>
     useKeyboardShortcuts([
@@ -161,12 +161,12 @@ test('supports allowInInput shortcuts like Ctrl+Enter', () => {
 
 test('detects duplicate shortcut conflicts', () => {
   // Mock reason: silence expected warning output while asserting duplicate detection behavior.
-  const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  const warnSpy = rs.spyOn(console, 'warn').mockImplementation(() => {});
 
   renderHook(() =>
     useKeyboardShortcuts([
-      { id: 'first', combo: 'Ctrl+K', handler: vi.fn() },
-      { id: 'second', combo: 'Ctrl+K', handler: vi.fn() },
+      { id: 'first', combo: 'Ctrl+K', handler: rs.fn() },
+      { id: 'second', combo: 'Ctrl+K', handler: rs.fn() },
     ]),
   );
 

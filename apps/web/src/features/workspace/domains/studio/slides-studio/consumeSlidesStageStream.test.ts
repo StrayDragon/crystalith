@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, rs } from '@rstest/core';
 
 import { consumeSlidesStageStream, slidesStageStreamPath } from './consumeSlidesStageStream';
 
@@ -14,7 +14,7 @@ describe('consumeSlidesStageStream (c70 GET SSE)', () => {
 
   it('resolves on done and forwards progress events', async () => {
     // Mock reason: stub fetch to assert GET SSE path/verb without a live server.
-    const fetchMock = vi
+    const fetchMock = rs
       .fn()
       .mockResolvedValue(
         new Response(
@@ -22,7 +22,7 @@ describe('consumeSlidesStageStream (c70 GET SSE)', () => {
           { status: 200, headers: { 'Content-Type': 'text/event-stream' } },
         ),
       );
-    vi.stubGlobal('fetch', fetchMock);
+    rs.stubGlobal('fetch', fetchMock);
 
     const events: string[] = [];
     await consumeSlidesStageStream(1, 1, 'outline', {
@@ -35,14 +35,14 @@ describe('consumeSlidesStageStream (c70 GET SSE)', () => {
     expect(init.method ?? 'GET').toBe('GET');
     expect(events).toEqual(['progress', 'done']);
 
-    vi.unstubAllGlobals();
+    rs.unstubAllGlobals();
   });
 
   it('throws on error event', async () => {
     // Mock reason: stub fetch SSE error event without spinning up studio pipeline.
-    vi.stubGlobal(
+    rs.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(
+      rs.fn().mockResolvedValue(
         new Response('event: error\ndata: {"message":"boom"}\n\n', {
           status: 200,
           headers: { 'Content-Type': 'text/event-stream' },
@@ -51,6 +51,6 @@ describe('consumeSlidesStageStream (c70 GET SSE)', () => {
     );
 
     await expect(consumeSlidesStageStream(1, 1, 'markdown')).rejects.toThrow('boom');
-    vi.unstubAllGlobals();
+    rs.unstubAllGlobals();
   });
 });

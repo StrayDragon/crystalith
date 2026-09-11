@@ -1,8 +1,8 @@
+import { beforeEach, expect, test, rs } from '@rstest/core';
 import { act, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { SWRConfig } from 'swr';
-import { beforeEach, expect, test, vi } from 'vitest';
 
 import { server } from '../../../../test-utils/msw/server';
 import { renderHook } from '../../../../test-utils/renderHook';
@@ -10,21 +10,21 @@ import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import { useRefine } from './useRefine';
 
 // Mock reason: isolate workspace tools normalization from output queue scheduler.
-vi.mock('../../shared/hooks/useOutputQueue', () => ({
+rs.mock('../../shared/hooks/useOutputQueue', () => ({
   useOutputQueue: () => ({
     outputQueueJobs: [],
-    enqueueOutputJob: vi.fn(),
-    enqueueSlidesJob: vi.fn(),
+    enqueueOutputJob: rs.fn(),
+    enqueueSlidesJob: rs.fn(),
     hasPendingJobs: () => false,
     outputsLoading: false,
     outputsError: '',
-    retryOutputs: vi.fn(),
-    retryOutputJob: vi.fn(),
-    cancelOutputJob: vi.fn(),
-    deleteOutput: vi.fn(),
-    clearOutputs: vi.fn(),
-    fetchOutput: vi.fn(),
-    ensureOutputDetail: vi.fn(),
+    retryOutputs: rs.fn(),
+    retryOutputJob: rs.fn(),
+    cancelOutputJob: rs.fn(),
+    deleteOutput: rs.fn(),
+    clearOutputs: rs.fn(),
+    fetchOutput: rs.fn(),
+    ensureOutputDetail: rs.fn(),
   }),
 }));
 

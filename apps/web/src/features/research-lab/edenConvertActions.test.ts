@@ -1,27 +1,27 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 
-const convertResearchToNote = vi.hoisted(() => vi.fn());
-const convertResearchToSource = vi.hoisted(() => vi.fn());
-const toastSuccess = vi.hoisted(() => vi.fn());
-const toastError = vi.hoisted(() => vi.fn());
-const navigateToWorkspace = vi.hoisted(() => vi.fn());
+const convertResearchToNote = rs.hoisted(() => rs.fn());
+const convertResearchToSource = rs.hoisted(() => rs.fn());
+const toastSuccess = rs.hoisted(() => rs.fn());
+const toastError = rs.hoisted(() => rs.fn());
+const navigateToWorkspace = rs.hoisted(() => rs.fn());
 
 // Mock reason: stub convert Eden calls + toast to assert r409/r446 feedback without HTTP.
-vi.mock('./edenResearchApi', () => ({
+rs.mock('./edenResearchApi', () => ({
   convertResearchToNote,
   convertResearchToSource,
 }));
 
-vi.mock('../../shared/toast', () => ({
+rs.mock('../../shared/toast', () => ({
   toast: {
     success: toastSuccess,
     error: toastError,
-    info: vi.fn(),
-    warning: vi.fn(),
+    info: rs.fn(),
+    warning: rs.fn(),
   },
 }));
 
-vi.mock('./labRouting', () => ({
+rs.mock('./labRouting', () => ({
   navigateToWorkspace,
 }));
 

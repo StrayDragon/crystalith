@@ -1,5 +1,5 @@
+import { afterEach, beforeEach, expect, test, rs } from '@rstest/core';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import ErrorBoundary from './ErrorBoundary';
 
@@ -10,15 +10,15 @@ function CrashComponent() {
 
 beforeEach(() => {
   // Mock reason: suppress React error boundary logging noise for intentional crash test.
-  vi.spyOn(console, 'error').mockImplementation(() => {});
+  rs.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  rs.restoreAllMocks();
 });
 
 test('error boundary shows fallback and supports retry action', () => {
-  const onRetry = vi.fn();
+  const onRetry = rs.fn();
 
   render(
     <ErrorBoundary title="对话面板异常" description="对话面板渲染失败，请重试。" onRetry={onRetry}>

@@ -50,6 +50,9 @@
     → Rspack `splitChunks.cacheGroups`（`test: /[\\/]node_modules[\\/]@mui[\\/]/` 等命名分组 +
     `preset:'per-package'` 兜底）。**Rspack 官方警告函数式 `test` 显著拖慢构建**（JS↔Rust
     跨语言调用），应尽量用正则。
+  - ⚠️ apply 实测补充：Rsbuild ≥2.0 该配置位于**顶层 `splitChunks`**（v1 的
+    `performance.splitChunks` 会被静默忽略）；`preset:'per-package'` 兜底 chunk 命名为
+    `npm-*`（与 Vite `vendor-*` 前缀不同，属预期）。
   - 产出 chunk 名/数量/顺序会变 ⇒ 一次性产物回归（见 Behavior 回归清单）。
 
 ### 🟡 P1（必改的配套）
@@ -101,10 +104,21 @@ timers(若干)，Rstest 0.11.12 均已提供 `rs.*` 等价 API。
 - 本地技能：`.agents/skills/` 下 `migrate-to-rsbuild` / `rsbuild-best-practices` /
   `rspack-split-chunks` / `migrate-to-rstest`（rstackjs.agent-skills 子模块）
 
-## 6. 遗留疑问（apply 前需决策/验证）
+## 6. 遗留疑问（apply 前需决策/验证）→ apply 后复核结论（2026-09-11）
 
-1. pptxgenjs 上游是否已修 `node:` 导入？修了则 B1 降级为「升级依赖」。
-2. Phase 2 选 A 还是 B（见 §4 建议）。
-3. `per-package` preset + 命名 cacheGroups 的最终分包，需与现有 `vendor-*` 分组做一次
-   关键页首屏体积对比（elkjs 1.4MB / shikijs langs 7.4MB 等大 chunk 是否保持独立）。
-4. dev 阶段 `/slidev` ws 代理在真实 Studio 回放场景的连通性（本 PoC 未覆盖交互路径）。
+1. pptxgenjs 上游是否已修 `node:` 导入？→ **未修**：4.0.1（latest，2025-06-26 发布）dist 内仍含
+   `import('node:fs')`×2 / `import('node:https')`×1；按原方案落地 NormalModuleReplacementPlugin
+   补丁（构建产物 0 处 `node:` 引用，导出链路由单元 + e2e 双回归）。
+2. Phase 2 选 A 还是 B？→ **选 B（全面 Rstest）**（apply 决策门用户确认，2026-09-11）；
+   81 文件 codemod + labDemoMode 注入式改写 + runner 接线后 `test:ci` 80 文件/310 用例全绿。
+3. `per-package` + 命名 cacheGroups 最终分包对比 → **实测不劣化**：首屏 Vite ~170 请求
+   （含 elkjs 1.4M 同步）vs Rsbuild 10 个 JS 请求（index 604K + 共享 chunk 3.3M + vendor-*）；
+   JS gzip 总量 3560K vs 3341K（+6.5%）；shiki langs/themes 两侧均异步加载。
+4. dev 阶段 `/slidev` ws 代理真实 Studio 回放 → **已复核关闭（2026-09-11，内置浏览器实测，
+   overmind 全栈 server:8032 / rsbuild dev:3000 / slidev:3030）**：
+   ① `/slidev/` 经代理 200 + Slidev 完整 UI；② ws 升级经代理握手 OPEN 并收
+   `{"type":"connected"}`（`ws://host/slidev/?token=<hmr>` + 子协议 `vite-hmr`，与直连
+   :3030 行为一致）；③ 键盘翻页 1/2→2/2、过渡动画渲染正常（截图）；④ Studio 同款
+   `waitForSlidevPreviewReady` 轮询 + 同源 iframe 挂载 → deck title 可读；⑤ 页面无
+   `vite-error-overlay`。注意：ws 探测须带**尾斜杠**路径与子协议，否则超时（探测姿势，
+   非代理缺陷）。

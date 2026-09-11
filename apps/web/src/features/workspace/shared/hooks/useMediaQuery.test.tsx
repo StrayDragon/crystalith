@@ -1,5 +1,5 @@
+import { beforeEach, expect, test } from '@rstest/core';
 import { act, waitFor } from '@testing-library/react';
-import { beforeEach, expect, test } from 'vitest';
 
 import { renderHook } from '../../../../test-utils/renderHook';
 import { useMediaQuery } from './useMediaQuery';

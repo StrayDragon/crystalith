@@ -1,12 +1,14 @@
+import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const confirmResearchRun = vi.hoisted(() => vi.fn());
-const createResearchRun = vi.hoisted(() => vi.fn());
-const getResearchRun = vi.hoisted(() => vi.fn());
-const requestReexpand = vi.hoisted(() => vi.fn());
+import * as edenResearchApiActual from './edenResearchApi' with { rstest: 'importActual' };
 
-const expandRun = vi.hoisted(() => ({
+const confirmResearchRun = rs.hoisted(() => rs.fn());
+const createResearchRun = rs.hoisted(() => rs.fn());
+const getResearchRun = rs.hoisted(() => rs.fn());
+const requestReexpand = rs.hoisted(() => rs.fn());
+
+const expandRun = rs.hoisted(() => ({
   id: 7,
   notebookId: 1,
   topic: 't',
@@ -26,35 +28,34 @@ const expandRun = vi.hoisted(() => ({
   updatedAt: '2026-07-24T00:00:00.000Z',
 }));
 
-const reexpandRun = vi.hoisted(() => ({
+const reexpandRun = rs.hoisted(() => ({
   ...expandRun,
   confirmKind: 'reexpand' as const,
   confirmBranchNodeId: null as string | null,
 }));
 
 // Mock reason: assert skip/approve confirm bodies without HTTP.
-vi.mock('./edenResearchApi', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./edenResearchApi')>();
+rs.mock('./edenResearchApi', () => {
   return {
-    ...actual,
+    ...edenResearchApiActual,
     confirmResearchRun: (...args: unknown[]) => confirmResearchRun(...args),
     createResearchRun: (...args: unknown[]) => createResearchRun(...args),
     getResearchRun: (...args: unknown[]) => getResearchRun(...args),
     requestReexpand: (...args: unknown[]) => requestReexpand(...args),
-    listProgress: vi.fn(async () => ({ items: [] })),
+    listProgress: rs.fn(async () => ({ items: [] })),
   };
 });
 
 // Mock reason: no live SSE in confirm action unit tests.
-vi.mock('../../api/stream', () => ({
-  streamRequest: vi.fn(async function* () {
+rs.mock('../../api/stream', () => ({
+  streamRequest: rs.fn(async function* () {
     /* empty */
   }),
 }));
 
 // Mock reason: avoid task-cache side effects.
-vi.mock('./researchTasksCache', () => ({
-  refreshResearchTasks: vi.fn(),
+rs.mock('./researchTasksCache', () => ({
+  refreshResearchTasks: rs.fn(),
 }));
 
 import { useEdenLabController } from './useEdenLabController';

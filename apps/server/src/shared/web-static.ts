@@ -31,8 +31,14 @@ export function resolveWebDistRoot(): string | null {
 }
 
 function cacheControlFor(relPath: string): string {
-  // Vite emits content-hashed filenames under assets/ — safe to cache forever.
-  if (relPath.startsWith(`assets${sep}`) || relPath.startsWith('assets/')) {
+  // Bundlers emit content-hashed filenames under their asset dirs
+  // (Vite: assets/, Rsbuild: static/) — safe to cache forever.
+  if (
+    relPath.startsWith(`assets${sep}`) ||
+    relPath.startsWith('assets/') ||
+    relPath.startsWith(`static${sep}`) ||
+    relPath.startsWith('static/')
+  ) {
     return 'public, max-age=31536000, immutable';
   }
   return 'no-cache';

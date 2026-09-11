@@ -1,15 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 
-const cancelResearchRun = vi.hoisted(() => vi.fn());
-const refreshResearchTasks = vi.hoisted(() => vi.fn());
+const cancelResearchRun = rs.hoisted(() => rs.fn());
+const refreshResearchTasks = rs.hoisted(() => rs.fn());
 
 // Mock reason: stub Eden cancel POST so the flow unit-tests refresh without HTTP.
-vi.mock('./edenResearchApi', () => ({
+rs.mock('./edenResearchApi', () => ({
   cancelResearchRun,
 }));
 
 // Mock reason: assert inbox refresh is invoked after successful cancel (r425/r426).
-vi.mock('./researchTasksCache', () => ({
+rs.mock('./researchTasksCache', () => ({
   refreshResearchTasks,
 }));
 

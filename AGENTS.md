@@ -29,7 +29,7 @@ crystalith/
 │   │       ├── rag/                # Chunk/embed/search + strategy registry
 │   │       ├── shared/             # Config, queue, net, extraction
 │   │       └── db/                 # Drizzle schema + migrations
-│   └── web/               # Vite + React + TypeScript SPA（见 apps/web/AGENTS.md）
+│   └── web/               # Rsbuild (Rspack) + React + TypeScript SPA（见 apps/web/AGENTS.md）
 │       ├── DESIGN.md               # Web 设计系统 token / 原则
 │       └── src/
 │           ├── features/workspace/ # Main workspace UI（烧瓶入口 → Research Lab）
@@ -79,20 +79,20 @@ From repo root:
 - `bun install` — install all dependencies
 - `bun dev` / `just dev` — Overmind (`Procfile`: server + web + slidev)
 - `bun run dev:server` / `just dev-server` — server only (:8032)
-- `bun run dev:web` / `just dev-web` — Vite only (:3000)
+- `bun run dev:web` / `just dev-web` — Rsbuild web only (:3000)
 - `just test` — server (`apps/server/tests/`) + shared unit/integration tests
-- `just test-web` — frontend Vitest CI (`apps/web` `test:ci`)
+- `just test-web` — frontend Rstest CI (`apps/web` `test:ci`)
 - `bun typecheck` — typecheck everything
 - `just e2e` / `bun run e2e` — Playwright critical browser gate (`@p0`, testid-based)
 - `just e2e-install` — install Playwright Chromium (optional; local defaults to system Chrome)
-- `just qa` — **primary PR gate**: typecheck + lint + format + schema drift + **server/shared unit** + **web Vitest** + **e2e @p0**
+- `just qa` — **primary PR gate**: typecheck + lint + format + schema drift + **server/shared unit** + **web Rstest** + **e2e @p0**
   - **Not in `just qa`**: `just test-bdd` · `just type-aware-lint`
 - Env setup: prefer `cp .env.example .env` (`CL_*` SSOT via `just gen-env-examples`). API keys go in shell env (e.g. `~/.bashrc`) or the gitignored `.env`; `config/secret.env` is no longer read.
 
 Fast path:
 
 - `cd apps/server && bun dev` — Elysia server (port 8032)
-- `cd apps/web && bun dev` — Vite (port 3000)
+- `cd apps/web && bun dev` — Rsbuild (port 3000)
 - `just dev-connect server` — attach to Overmind process
 - `just dev-quit` — stop Overmind session
 
@@ -217,7 +217,7 @@ Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `ope
 
 ## just qa Tolerance Levels
 
-`just qa`（typecheck + lint + format-check + env/schema drift + **server/shared** tests + **web Vitest** + **e2e @p0**）必须全员通过才算一次成功的 PR。
+`just qa`（typecheck + lint + format-check + env/schema drift + **server/shared** tests + **web Rstest** + **e2e @p0**）必须全员通过才算一次成功的 PR。
 
 **门禁组成（与 `justfile` 一致）**：
 `check` → `check-env-examples` → `check-app-schema` → `check-i18n-keys` → `check-provider-deps` → `test`（`apps/server/tests/` + `packages/shared/test/`）→ `test-web`（`apps/web` `test:ci`）→ `e2e`。
@@ -236,7 +236,7 @@ Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `ope
 
 - **lint error** — 立即修复（指 `just qa` 内的非 type-aware `oxlint`）
 - **lint warning** — 具体分析，优先重构代码消除 warning；仅在极少数工具误报（如 oxlint 的 `no-unexpected-multiline` vs Eden Treaty 链式调用）时允许 inline disable
-- **tests failure** — 必须修复 **门禁内** 的失败（server/shared unit + web Vitest + e2e @p0）；BDD 不在 `just qa` 内但仍应在相关 PR 自行跑绿
+- **tests failure** — 必须修复 **门禁内** 的失败（server/shared unit + web Rstest + e2e @p0）；BDD 不在 `just qa` 内但仍应在相关 PR 自行跑绿
 
 ### Tier 1 — 可忽略（谨慎使用）
 

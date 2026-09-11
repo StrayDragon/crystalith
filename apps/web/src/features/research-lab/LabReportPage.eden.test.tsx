@@ -1,24 +1,25 @@
+import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LayerProvider } from '../../shared/layer';
+import * as labRoutingActual from './labRouting' with { rstest: 'importActual' };
 
-const getResearchRun = vi.hoisted(() => vi.fn());
-const getResearchReportView = vi.hoisted(() => vi.fn());
-const listResearchRevisions = vi.hoisted(() => vi.fn());
-const createResearchRevision = vi.hoisted(() => vi.fn());
-const restoreResearchRevision = vi.hoisted(() => vi.fn());
-const forkResearchRunFromRevision = vi.hoisted(() => vi.fn());
-const putResearchWorkingReport = vi.hoisted(() => vi.fn());
-const putResearchCanonicalReport = vi.hoisted(() => vi.fn());
-const discardResearchWorkingReport = vi.hoisted(() => vi.fn());
-const convertResearchToNote = vi.hoisted(() => vi.fn());
-const convertResearchToSource = vi.hoisted(() => vi.fn());
-const navigateToResearchLab = vi.hoisted(() => vi.fn());
+const getResearchRun = rs.hoisted(() => rs.fn());
+const getResearchReportView = rs.hoisted(() => rs.fn());
+const listResearchRevisions = rs.hoisted(() => rs.fn());
+const createResearchRevision = rs.hoisted(() => rs.fn());
+const restoreResearchRevision = rs.hoisted(() => rs.fn());
+const forkResearchRunFromRevision = rs.hoisted(() => rs.fn());
+const putResearchWorkingReport = rs.hoisted(() => rs.fn());
+const putResearchCanonicalReport = rs.hoisted(() => rs.fn());
+const discardResearchWorkingReport = rs.hoisted(() => rs.fn());
+const convertResearchToNote = rs.hoisted(() => rs.fn());
+const convertResearchToSource = rs.hoisted(() => rs.fn());
+const navigateToResearchLab = rs.hoisted(() => rs.fn());
 
 // Mock reason: stub ResearchRun report/revisions/convert APIs for Eden LabReportPage unit tests.
-vi.mock('./edenResearchApi', () => ({
+rs.mock('./edenResearchApi', () => ({
   getResearchRun,
   getResearchReportView,
   listResearchRevisions,
@@ -32,20 +33,19 @@ vi.mock('./edenResearchApi', () => ({
   convertResearchToSource,
 }));
 
-vi.mock('./labRouting', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./labRouting')>();
+rs.mock('./labRouting', () => {
   return {
-    ...actual,
+    ...labRoutingActual,
     navigateToResearchLab: (...args: unknown[]) => navigateToResearchLab(...args),
   };
 });
 
-vi.mock('../../shared/toast', () => ({
+rs.mock('../../shared/toast', () => ({
   toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-    warning: vi.fn(),
+    success: rs.fn(),
+    error: rs.fn(),
+    info: rs.fn(),
+    warning: rs.fn(),
   },
 }));
 
@@ -117,14 +117,14 @@ describe('LabReportPage eden revisions/convert (c89)', () => {
     convertResearchToNote.mockReset();
     convertResearchToSource.mockReset();
     navigateToResearchLab.mockReset();
-    vi.mocked(toast.success).mockReset();
-    vi.mocked(toast.error).mockReset();
-    vi.mocked(toast.info).mockReset();
+    rs.mocked(toast.success).mockReset();
+    rs.mocked(toast.error).mockReset();
+    rs.mocked(toast.info).mockReset();
   });
 
   it('loads revisions from GET revisions not sessionStorage', async () => {
     stubReady();
-    const getItem = vi.spyOn(Storage.prototype, 'getItem');
+    const getItem = rs.spyOn(Storage.prototype, 'getItem');
 
     renderWithLayer(<LabReportPage notebookId={62} runId={9} />);
 
@@ -218,7 +218,7 @@ describe('LabReportPage eden revisions/convert (c89)', () => {
       working: undefined,
       viewing: 'canonical',
     });
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    rs.spyOn(window, 'confirm').mockReturnValue(true);
 
     renderWithLayer(<LabReportPage notebookId={62} runId={9} />);
     await waitFor(() => expect(screen.getByText('草稿')).toBeTruthy());

@@ -1,4 +1,4 @@
-import { beforeEach, expect, test, vi } from 'vitest';
+import { beforeEach, expect, test, rs } from '@rstest/core';
 
 import { decodeOutputItem, isFallbackOutputPayload } from './outputPayload';
 import {
@@ -11,7 +11,7 @@ import {
 } from './utils';
 
 beforeEach(() => {
-  vi.useRealTimers();
+  rs.useRealTimers();
 });
 
 test('normalizeMessage maps role, citations, and chunk ids', () => {
@@ -90,9 +90,9 @@ test('collectChunkIds filters invalid and non-positive values', () => {
 
 test('formatRelativeTime returns humanized values', () => {
   // Mock reason: make time-dependent formatting deterministic (no wall-clock flakiness).
-  vi.useFakeTimers();
+  rs.useFakeTimers();
   const now = new Date('2024-06-01T12:00:00.000Z');
-  vi.setSystemTime(now);
+  rs.setSystemTime(now);
 
   expect(formatRelativeTime('2024-06-01T12:00:00.000Z')).toBe('刚刚');
   expect(formatRelativeTime('2024-06-01T11:59:00.000Z')).toBe('1 分钟前');

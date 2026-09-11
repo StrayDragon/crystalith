@@ -1,6 +1,10 @@
 ---
 depends_on: []
 skip_specs_landing: true
+branch: sdd/migrate-web-to-rsbuild
+base_sha: 57addb1f8485f98070f3a5435feaa73bf03f9110
+checkpointed: true
+checkpoint_sha: 57addb1f8485f98070f3a5435feaa73bf03f9110
 ---
 
 # Web 前端构建基础设施迁移：Vite → Rsbuild/Rspack

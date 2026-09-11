@@ -49,7 +49,7 @@ const stageDir = path.join(outDir, 'stage', name);
 
 console.log(`📦 building release ${name} …`);
 
-// 1. Web SPA build (vite → apps/web/dist).
+// 1. Web SPA build (rsbuild → apps/web/dist).
 await sh(['bun', 'run', 'build'], { cwd: path.join(repoRoot, 'apps', 'web') });
 const webDist = path.join(repoRoot, 'apps', 'web', 'dist');
 if (!existsSync(path.join(webDist, 'index.html'))) {
