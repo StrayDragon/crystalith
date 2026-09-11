@@ -7,7 +7,7 @@
 
   @req:r400 @human
   场景: Lab is the only deep-research entry and Eden-only
-    - 深研产品主入口 MUST 为 /research-lab/:nid（工作区烧瓶导航、slash 命令与任务抽屉仅导航此产品路径）；产品路径 MUST 仅使用服务端 Eden ResearchRun 权威控制器（或等价实现），MUST NOT 经 VITE_LAB_FIXTURE 或 mode=fixture 切换为 xlsx-lib 定时回放权威；旧工作区深研模式入口 MUST NOT 再作为深研主入口或主路径；MUST NOT 删除 ResearchRun 后端 API。
+    - 深研产品主入口 MUST 为 /research-lab/:nid（工作区烧瓶导航、slash 命令与任务抽屉仅导航此产品路径）；产品路径 MUST 仅使用服务端 Eden ResearchRun 权威控制器（或等价实现），MUST NOT 切换为 xlsx-lib 定时回放权威（fixture 切换面已废除，MUST NOT 重新引入任何 fixture 切换面，含环境变量或查询参数）；旧工作区深研模式入口 MUST NOT 再作为深研主入口或主路径；MUST NOT 删除 ResearchRun 后端 API。
 
   @req:r401 @human
   场景: H1 create form on desk
@@ -187,7 +187,7 @@
 
   @req:r453 @human
   场景: Eden Lab production e2e gate
-    - 仓库 MUST 提供 @p0（或等价）Playwright 路径，在 VITE_LAB_FIXTURE 未设时演练 Eden Lab：Compose 创建 → 图含 nodes/edges → M1 confirm → 报告页 → convert；该门禁 MUST 作为生产默认深研路径对拍证明；MUST NOT 仅以 fixture 回放 smoke 充当生产 parity 门禁。
+    - 仓库 MUST 提供 @p0（或等价）Playwright 路径，在默认（生产）构建配置下演练 Eden Lab：Compose 创建 → 图含 nodes/edges → M1 confirm → 报告页 → convert；该门禁 MUST 作为生产默认深研路径对拍证明；MUST NOT 仅以 fixture 回放 smoke 充当生产 parity 门禁。
 
   @req:r454 @human
   场景: Lab compose and retry expose model picker

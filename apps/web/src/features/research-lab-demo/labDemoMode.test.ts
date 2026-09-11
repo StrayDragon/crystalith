@@ -19,8 +19,4 @@ describe('isLabDemoMode (r457)', () => {
     expect(isLabDemoMode({ DEV: true })).toBe(true);
     expect(isLabDemoMode({ DEV: true, VITE_LAB_DEMO: '' })).toBe(true);
   });
-
-  it('ignores legacy VITE_LAB_FIXTURE for demo gate', () => {
-    expect(isLabDemoMode({ DEV: false, VITE_LAB_FIXTURE: '1' } as never)).toBe(false);
-  });
 });
