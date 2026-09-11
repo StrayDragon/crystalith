@@ -1,6 +1,6 @@
 # language: zh-CN
 # capability: frontend-eden-migration
-# purpose: 固化前端 wire 约定：Eden + shared camelCase、无平行 Api SSOT、SSE 走 /v2、错误信封与 Vitest 夹具一致。本 spec 为持续约束，与 openapi-and-client-generation（Eden 一等 client canonical）互补。
+# purpose: 固化前端 wire 约定：Eden + shared camelCase、无平行 Api SSOT、SSE 走 /v2、错误信封与 Rstest 夹具一致。本 spec 为持续约束，与 openapi-and-client-generation（Eden 一等 client canonical）互补。
 # scope: apps/web/
 
 功能: frontend-eden-migration
@@ -22,5 +22,5 @@
     - 在 wire 已为 camelCase 后，前端 MUST NOT 再实现针对 API 载荷的 snake_case→camelCase 字段重命名映射。允许与命名无关的 UI 派生。
 
   @req:r287 @human
-  场景: Web Vitest fixtures MUST use camelCase wire
-    - apps/web Vitest/MSW 夹具与断言 MUST 使用 camelCase HTTP/SSE JSON 字段名，MUST NOT 以 snake_case wire 键作为正式期望；just test-web 门禁运行时 MUST 全绿通过。
+  场景: Web Rstest fixtures MUST use camelCase wire
+    - apps/web Rstest/MSW 夹具与断言 MUST 使用 camelCase HTTP/SSE JSON 字段名，MUST NOT 以 snake_case wire 键作为正式期望；just test-web 门禁运行时 MUST 全绿通过。

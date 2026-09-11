@@ -6,34 +6,34 @@
       "id": "health",
       "backend": { "bunTestGlobs": ["apps/server/tests/**/*.test.ts"] },
       "frontend": {
-        "vitestFiles": ["src/features/workspace/layout/hooks/useDependencyHealth.test.tsx"]
+        "rstestFiles": ["src/features/workspace/layout/hooks/useDependencyHealth.test.tsx"]
       }
     },
     {
       "id": "notebooks",
       "backend": { "bunTestGlobs": ["apps/server/tests/**/*.test.ts"] },
       "frontend": {
-        "vitestFiles": ["src/features/workspace/domains/notebooks/useNotebooks.test.tsx"]
+        "rstestFiles": ["src/features/workspace/domains/notebooks/useNotebooks.test.tsx"]
       }
     },
     {
       "id": "sources",
       "backend": { "bunTestGlobs": ["apps/server/tests/**/*.test.ts"] },
-      "frontend": { "vitestFiles": ["src/features/workspace/domains/sources/useSources.test.tsx"] }
+      "frontend": { "rstestFiles": ["src/features/workspace/domains/sources/useSources.test.tsx"] }
     },
     {
       "id": "chat",
       "backend": { "bunTestGlobs": ["apps/server/tests/**/*.test.ts"] },
-      "frontend": { "vitestFiles": ["src/features/workspace/domains/messages/useChat.test.tsx"] }
+      "frontend": { "rstestFiles": ["src/features/workspace/domains/messages/useChat.test.tsx"] }
     },
     {
       "id": "outputs",
       "backend": { "bunTestGlobs": ["apps/server/tests/**/*.test.ts"] },
-      "frontend": { "vitestFiles": ["src/features/workspace/shared/hooks/useOutputQueue.test.tsx"] }
+      "frontend": { "rstestFiles": ["src/features/workspace/shared/hooks/useOutputQueue.test.tsx"] }
     }
   ],
   "frontend": {
-    "extraVitestFiles": [
+    "extraRstestFiles": [
       "src/app/App.test.tsx",
       "src/features/workspace/layout/hooks/useWorkspaceReadiness.test.ts"
     ]

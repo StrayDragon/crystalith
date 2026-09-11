@@ -8,7 +8,7 @@ export default defineConfig({
   extends: withRsbuildConfig(),
   testEnvironment: 'jsdom',
   globals: true,
-  setupFiles: ['./src/setupTests.ts'],
+  setupFiles: ['./src/rstest.setup.ts'],
   exclude: [
     '**/node_modules/**',
     'vendor/**',

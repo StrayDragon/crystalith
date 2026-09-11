@@ -12,7 +12,7 @@ export default defineConfig({
     entry: {
       index: './src/app/main.tsx',
     },
-    // import.meta.env.VITE_* — same semantics as Vite envDir/prefix behavior.
+    // import.meta.env.VITE_* — from .env files and the shell env.
     define: loadEnv({ prefixes: ['VITE_'] }).publicVars,
   },
   html: {
@@ -38,7 +38,7 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   // Rsbuild ≥2.0 top-level option; names/structure map to Rspack's
-  // optimization.splitChunks (design.md §3 — Vite manualChunks rewrite).
+  // optimization.splitChunks (chunk map: llmanspec archive 2026-09-11-migrate-web-to-rsbuild design.md §3).
   splitChunks: {
     preset: 'per-package',
     cacheGroups: {

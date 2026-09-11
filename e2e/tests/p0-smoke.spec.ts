@@ -57,7 +57,7 @@ test.describe('@p0 workspace smoke', () => {
     await expect(page.getByTestId(TestIds.studioPanel)).toBeVisible();
   });
 
-  test('A02: API health via vite proxy', async ({ page }) => {
+  test('A02: API health via dev-server proxy', async ({ page }) => {
     const res = await page.request.get('/v2/health');
     expect(res.ok()).toBeTruthy();
     const body = await res.json();

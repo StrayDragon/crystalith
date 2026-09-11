@@ -1,12 +1,12 @@
-import { viteApiBaseUrl } from '../../../api/viteEnv';
+import { resolveApiBaseUrl } from '../../../api/apiEnv';
 import { toast } from '../../../shared/toast';
 
 function getBaseUrl(): string {
   if (typeof window !== 'undefined') {
-    // Browser: use same origin (Vite proxy handles forwarding in dev)
+    // Browser: use same origin (dev-server proxy handles forwarding)
     return window.location.origin;
   }
-  return viteApiBaseUrl();
+  return resolveApiBaseUrl();
 }
 
 const BASE_URL = getBaseUrl();

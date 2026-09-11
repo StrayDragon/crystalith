@@ -125,7 +125,7 @@ check-bun:
     @command -v bun >/dev/null || (echo "bun not found on PATH" >&2; exit 1)
 
 # Primary PR gate: typecheck, lint, format-check, generated-config drift,
-# server+shared unit/integration, frontend Vitest (`test:ci`), Playwright @p0.
+# server+shared unit/integration, frontend Rstest (`test:ci`), Playwright @p0.
 # Output minimized — only errors and warnings shown.
 #
 # Out of gate (run separately when relevant):
@@ -139,7 +139,7 @@ qa: check check-env-examples check-app-schema check-i18n-keys check-provider-dep
 test:
     @bun test --only-failures apps/server/tests/ packages/shared/test/
 
-# Frontend Vitest CI suite (MSW on-unhandled=error). Part of `just qa`.
+# Frontend Rstest CI suite (MSW on-unhandled=error). Part of `just qa`.
 test-web:
     cd apps/web && bun run test:ci
 

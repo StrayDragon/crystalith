@@ -4,9 +4,9 @@ import { afterAll, afterEach, beforeAll, expect } from '@rstest/core';
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 /* eslint-disable eslint/max-classes-per-file */
-// Prefer explicit expect.extend: `@testing-library/jest-dom/vitest` uses
-// CJS `require('vitest')`, which can extend a different expect instance than
-// the ESM one under Bun (→ Invalid Chai property: toBeInTheDocument).
+// Prefer explicit expect.extend: jest-dom's `@testing-library/jest-dom/vitest`
+// entry uses CJS `require('vitest')`, which can extend a different expect
+// instance than the ESM one under Bun (→ Invalid Chai property: toBeInTheDocument).
 import * as matchers from '@testing-library/jest-dom/matchers';
 
 import { server } from './test-utils/msw/server';

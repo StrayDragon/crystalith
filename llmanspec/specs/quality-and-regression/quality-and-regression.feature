@@ -1,6 +1,6 @@
 # language: zh-CN
 # capability: quality-and-regression
-# purpose: 定义 v2 工程质量门槛：以 just qa 为主 PR 门禁，覆盖 typecheck/lint/format、配置漂移、server/shared 单测、web Vitest 与 Playwright @p0；BDD 与 type-aware lint 为可选。
+# purpose: 定义 v2 工程质量门槛：以 just qa 为主 PR 门禁，覆盖 typecheck/lint/format、配置漂移、server/shared 单测、web Rstest 与 Playwright @p0；BDD 与 type-aware lint 为可选。
 # scope: apps/, packages/, e2e/, scripts/
 
 功能: quality-and-regression
@@ -19,7 +19,7 @@
 
   @req:r99 @human
   场景: Backend and frontend verification are mandatory in primary gate
-    - 主门禁 just qa MUST 执行 server+shared 单元/集成测试（just test）与前端 Vitest CI（just test-web / apps/web test:ci）。本条为 just qa 测试面组成的 canonical 约束。
+    - 主门禁 just qa MUST 执行 server+shared 单元/集成测试（just test）与前端 Rstest CI（just test-web / apps/web test:ci）。本条为 just qa 测试面组成的 canonical 约束。
 
   @req:r10 @human
   场景: Critical browser smoke exists
@@ -31,7 +31,7 @@
 
   @req:r172 @human
   场景: Local default unit entrypoints are scoped
-    - just test MUST 仅覆盖 apps/server/tests/ 与 packages/shared/test/（不自动运行 web Vitest 或 e2e）；完整 PR 验证 MUST 使用 just qa（含 web Vitest 与 e2e）。本条为本地默认测试入口范围的 canonical 约束。
+    - just test MUST 仅覆盖 apps/server/tests/ 与 packages/shared/test/（不自动运行 web Rstest 或 e2e）；完整 PR 验证 MUST 使用 just qa（含 web Rstest 与 e2e）。本条为本地默认测试入口范围的 canonical 约束。
 
   @req:r16 @human
   场景: Frontend test suites are tiered and reproducible
