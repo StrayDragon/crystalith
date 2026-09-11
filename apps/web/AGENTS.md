@@ -20,7 +20,7 @@
 
 ## Research Lab（产品 Eden；演示隔离）
 
-`/research-lab/:nid`（及 `/report`）是深研**产品主表面**，**仅** Eden `ResearchRun` + SSE（`useEdenLabController` / `EdenLabReportPage`）。旧 `VITE_LAB_FIXTURE` **不再**切换产品权威。
+`/research-lab/:nid`（及 `/report`）是深研**产品主表面**，**仅** Eden `ResearchRun` + SSE（`useEdenLabController` / `EdenLabReportPage`）。
 
 | 产品 `/research-lab`                      | 演示 `/demo/research-lab`（DEV \|\| `VITE_LAB_DEMO=1`） |
 | ----------------------------------------- | ------------------------------------------------------- |

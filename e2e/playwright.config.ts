@@ -49,7 +49,6 @@ function e2eServerEnv(): NodeJS.ProcessEnv {
     'OPENAI_API_KEY',
     'ANTHROPIC_API_KEY',
     'GOOGLE_GENERATIVE_AI_API_KEY',
-    'VITE_LAB_FIXTURE',
   ] as const;
 
   for (const key of liveKeys) {
@@ -129,8 +128,6 @@ export default defineConfig({
       env: {
         ...process.env,
         VITE_API_PROXY_TARGET: SERVER_URL,
-        // c100 L5=A: production Eden path — never enable fixture Lab
-        VITE_LAB_FIXTURE: '',
       },
     },
   ],

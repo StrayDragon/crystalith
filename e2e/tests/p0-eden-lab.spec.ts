@@ -11,7 +11,6 @@ import { test, expect, TestIds, gotoWorkspace } from '../fixtures/test';
 /**
  * @p0 Eden Lab production path (c100 / r453; c108 budget commitment).
  *
- * - VITE_LAB_FIXTURE must be unset (playwright webServer env).
  * - Server: CL_RESEARCH_E2E_STUB=1 + mock OpenAI gateway (L1 A+B).
  * - c108: mid-wave budget confirm removed — happy path runs to completed;
  *   expand/reexpand catch a live running window instead of awaiting budget.
