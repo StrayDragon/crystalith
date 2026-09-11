@@ -1,8 +1,8 @@
 ---
-name: 'llman-sdd-graph'
-description: '以 mermaid 图可视化 llman SDD 变更间的依赖关系（depends_on/blocks）。辅助工具，任意阶段可用，不属于主实现 pipeline。'
+name: "llman-sdd-graph"
+description: "以 mermaid 图可视化 llman SDD 变更间的依赖关系（depends_on/blocks）。辅助工具，任意阶段可用，不属于主实现 pipeline。"
 metadata:
-  version: '0.0.72'
+  version: "0.0.77"
 ---
 
 # LLMAN SDD 依赖图
@@ -61,6 +61,7 @@ depends_on:
 blocks:
   - blocked-change-id
 ---
+
 ## Why
 ...
 ```
@@ -70,7 +71,6 @@ blocks:
 > 命令细节用 `llman sdd <cmd> --help` 查看；命令参考以 CLI 为准，skill 不内嵌命令表（r139）。
 
 ## Ethics Governance
-
 - `ethics.risk_level`：low——仅读写本仓库与 `llmanspec/`，无外发动作；正文另有声明时从其声明。
 - `ethics.prohibited_actions`：违反正文「硬约束」的动作；未经用户明确要求的 push / PR / 外部上传。
 - `ethics.required_evidence`：结论须有命令输出或文件路径佐证；门禁状态以 `llman sdd validate` 为准。
