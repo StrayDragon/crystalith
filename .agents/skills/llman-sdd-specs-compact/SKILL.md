@@ -1,8 +1,8 @@
 ---
-name: 'llman-sdd-specs-compact'
-description: '人类主动触发的维护工具。压缩去重 llman SDD specs——在归档积累较多后合并冗余 requirement/scenario，保留所有规范行为不变。不属于日常 pipeline：仅在用户明确要求压缩 specs 时才运行。'
+name: "llman-sdd-specs-compact"
+description: "人类主动触发的维护工具。压缩去重 llman SDD specs——在归档积累较多后合并冗余 requirement/scenario，保留所有规范行为不变。不属于日常 pipeline：仅在用户明确要求压缩 specs 时才运行。"
 metadata:
-  version: '0.0.72'
+  version: "0.0.77"
 ---
 
 # LLMAN SDD Specs Compact
@@ -22,25 +22,21 @@ flowchart LR
 > 📎 维护工具，通常在归档积累较多后执行。日常开发 → `llman-sdd-propose`（含 Branch binding + Specs landing）/ `llman-sdd-apply`（须 `readyToImplement`）。
 
 ## Context
-
 - specs 会随着变更积累而膨胀，并出现重复 requirement/scenario。
 - 压缩必须保持可验证、可回归。
 - 当 archive 历史过大时，会干扰压缩评审与定位。
 
 ## Goal
-
 - 识别并合并冗余 requirement/scenario。
 - 形成更紧凑且可维护的规范结构。
 
 ## Constraints
-
 - 未经明确替代，不得删除规范性行为。
 - 尽量保持 requirement 标题稳定。
 - 每个保留 requirement 至少保留一个有效 scenario。
 - **编辑 live `llmanspec/specs/**` 须走 change**：先 Branch binding（`change start` / `attach`），在绑定分支上做 Specs landing 式提交；**禁止**在默认分支直接压缩改写 live specs。
 
 ## Workflow
-
 1. 盘点当前 specs（`llman sdd list --specs`）。
 2. 如果已归档历史较大，先执行 archive freeze：
    - 预览：`llman sdd archive freeze --dry-run`
@@ -50,14 +46,12 @@ flowchart LR
 5. 执行并验证（`llman sdd validate --specs --strict --no-interactive`）。
 
 ## Decision Policy
-
 - 两条 requirement 语义等价时优先合并。
 - 仅在引用关系清晰时提取共享规范文本。
 - archive 目录噪声较大时，优先建议先 freeze 再压缩。
 - 若压缩会改变外部行为，必须先暂停并询问用户。
 
 ## Output Contract
-
 - 输出按 capability 分组的压缩方案。
 - 包含：keep/merge/remove 决策及理由。
 - 包含验证命令与预期结果。
@@ -69,8 +63,7 @@ flowchart LR
 校验修复（单轨 feature-as-spec）：
 
 1）缺少头注释（`missing # capability: header comment`）：
-每个 `llmanspec/specs/<capability>/<capability>.feature` 必须以以下注释开头：
-
+每个 capability `.feature`（`llmanspec/specs/<capability>.feature` 或 `llmanspec/specs/<capability>/<capability>.feature`）必须以以下注释开头：
 ```
 # language: zh-CN
 # capability: <capability>
@@ -79,7 +72,6 @@ flowchart LR
 ```
 
 2）tag 语法（`@human constraint scenario must carry an @req:<req_id> tag` / `orphan acceptance scenario`）：
-
 - 规则：`@req:<id> @human` —— statement 放场景描述（须含 MUST/SHALL）。
 - 验收：`@executable` 且至少一个 `@req:<id>` 挂到规则。
 - `@manual` 须与 `@human` 同用；禁止 `@human` 与 `@executable` 同场景。
@@ -88,14 +80,12 @@ flowchart LR
 运行 `llman sdd project migrate --kind toon2features --yes`，审阅 diff 后提交。
 
 Git-native 护栏：
-
 - **Branch binding** → **Specs landing**：先 `change start` / `attach`，再在绑定的非默认分支编辑 live `.feature` 并 commit。
-- 锁定规则：修改/删除既有 `@human` 场景会触发门禁，除非 proposal frontmatter 带 `rules_edit_acked: true`。
-- apply 前须 `readyToImplement=true`（或 `skip_specs_landing`）。收尾优先 `change finalize`。
+- 锁定规则：修改/删除既有 `@human` 场景会触发门禁，除非 proposal frontmatter 的 `rules_touched` 列出被改动的 req-id。确认路径：finalize 交互一次 y/n 写回 `rules_touched`；`--yes` 只确认带 `@agent` 的规则（审计写入 `agent_acked`）；`rules_edit_acked` 已移除（r135/q9）。
+- apply 前须 `readyToImplement=true`（或 `needs_specs_change: false`）。收尾优先 `change finalize`。
 - 勿使用 `change delta` / solidify / `*.feature.delta.toon`。
 
 ## Ethics Governance
-
 - `ethics.risk_level`：low——仅读写本仓库与 `llmanspec/`，无外发动作；正文另有声明时从其声明。
 - `ethics.prohibited_actions`：违反正文「硬约束」的动作；未经用户明确要求的 push / PR / 外部上传。
 - `ethics.required_evidence`：结论须有命令输出或文件路径佐证；门禁状态以 `llman sdd validate` 为准。

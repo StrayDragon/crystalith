@@ -1,8 +1,8 @@
 ---
-name: 'llman-sdd-explore'
-description: '进入 llman SDD 探索模式：理清思路、调查需求、分析问题。仅思考，禁止写代码。用于意图不明确或需要分析后再行动的场景。'
+name: "llman-sdd-explore"
+description: "进入 llman SDD 探索模式：理清思路、调查需求、分析问题。仅思考，禁止写代码。用于意图不明确或需要分析后再行动的场景。"
 metadata:
-  version: '0.0.72'
+  version: "0.0.77"
 ---
 
 # LLMAN SDD Explore
@@ -10,7 +10,6 @@ metadata:
 当用户希望在开始实现之前先理清思路、调查问题或澄清需求时，使用此 skill。
 
 **重要：探索模式只用于思考，不用于实现。**
-
 - 你可以阅读文件、搜索代码、调查代码库。
 - 你可以创建/更新规划壳工件（proposal/design/tasks）。
 - live specs：**只读**，除非 change 已 Branch-bound 且你在该分支上；否则 STOP 并建议 `llman-sdd-propose` / `change start`。
@@ -23,10 +22,10 @@ metadata:
 勿混淆：**Skill 导航** ≠ **Git-native 生命周期**。全图见根 `AGENTS.md`「领域概念区分」或 `llman-sdd-propose` 内嵌全图。
 
 硬规则：
-
 1. **先** Branch binding（`change start` / `attach`）→ Full；**再** Specs landing（绑定分支编辑并 commit `llmanspec/specs/**`）。
-2. 无 live 合约变更 → `skip_specs_landing: true`。apply 前须 `readyToImplement=true`。
-3. **禁止**在默认分支 commit live specs；已 attach 勿重复 `start`。
+2. 无 live 合约变更 → `needs_specs_change: false`。apply 前须 `readyToImplement=true`。
+3. 收口用 `change finalize`（自动提交 `archive(sdd): <id>`；`--no-commit` 可跳过）。`change checkpoint` 已移除。
+4. **禁止**在默认分支 commit live specs；已 attach 勿重复 `start`。
 
 ### Skill 导航（非生命周期；仅指示当前 skill）
 
@@ -46,14 +45,12 @@ flowchart LR
 > 🗺️ Skill 导航 ≠ Git-native 生命周期
 
 ## 探索姿态
-
 - 好奇而不教条
 - 以真实代码为依据
 - 需要时用 ASCII 图可视化
 - 同时保留多个选项与权衡
 
 ## 建议动作
-
 1. 使用 `llman sdd context --task "<任务>" --paths "<文件>"` 快速定位相关 specs。
    - 阅读 context 的 `direct` 列出的 spec 全文（这些是必须理解的合约）。
    - 如果 context 不可用，运行 `llman sdd index rebuild`（默认 `pageindex`，无需模型）后重试。
@@ -75,47 +72,38 @@ flowchart LR
 > Git-native：先 `change start`/`attach`（Branch binding）进入 Full，再在绑定分支编辑 live `.feature`（Specs landing）；无 `change delta` / solidify / feature_delta。
 
 ## 退出探索模式
-
 当用户准备开始实现时，根据变更规模选择路径：
-
 - 行为合约变更 → `llman-sdd-propose`（创建提案工件）
 - 小改动 / 不改合约 → `llman-sdd-quick`（快速路径）
 - `readyToImplement=true` → `llman-sdd-apply`（按 tasks 实施）
-  若用户在探索模式中要求你开始实现，STOP 并提醒其先退出探索模式。
+若用户在探索模式中要求你开始实现，STOP 并提醒其先退出探索模式。
 
 > 💡 探索完成 → 下一步 `llman-sdd-propose`（提案）或 `llman-sdd-quick`（快速路径）
 
 > 命令细节用 `llman sdd <cmd> --help` 查看；命令参考以 CLI 为准，skill 不内嵌命令表（r139）。
 
 ## Context
-
 - 先查状态再动手：change/spec 状态以 `llman sdd show/list/validate` 输出为准。
 - 读 spec 全文前先用 `llman sdd context --task --paths` 定位相关 specs。
 
 ## Goal
-
 - 本节命令达成一个可验证结果；结果路径与校验状态随报告输出。
 
 ## Constraints
-
 - 遵守正文「硬约束/硬规则」，本节不复读。先判断变更规模选路径（triage）：行为合约变更走完整 SDD，实现层走 quick；不确定选完整 SDD（保守）。
 - 改动保持最小；已知校验错误禁止强行继续。
 
 ## Workflow
-
 - 每步以 `llman sdd` 命令结果为事实来源；改动工件后必跑 `llman sdd validate`。
 - 命令细节见下方生成式命令参考或 `llman sdd <cmd> --help`。
 
 ## Decision Policy
-
 - 高影响歧义先澄清再继续；事实自己查证，只有决策问用户。
 
 ## Output Contract
-
 - 报告先给人读摘要（结论 / 风险 / 待决策），机器细节随后。
 
 ## Ethics Governance
-
 - `ethics.risk_level`：low——仅读写本仓库与 `llmanspec/`，无外发动作；正文另有声明时从其声明。
 - `ethics.prohibited_actions`：违反正文「硬约束」的动作；未经用户明确要求的 push / PR / 外部上传。
 - `ethics.required_evidence`：结论须有命令输出或文件路径佐证；门禁状态以 `llman sdd validate` 为准。
