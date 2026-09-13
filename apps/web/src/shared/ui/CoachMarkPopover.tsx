@@ -91,8 +91,7 @@ export function CoachMarkPopover({
         showAutoDismissCountdown && autoDismissMs !== undefined && autoDismissMs > 0
           ? autoDismissSeconds
           : null,
-      countdownActionId:
-        showAutoDismissCountdown && countdownActionId ? countdownActionId : null,
+      countdownActionId: showAutoDismissCountdown && countdownActionId ? countdownActionId : null,
     }),
     [autoDismissMs, autoDismissSeconds, countdownActionId, showAutoDismissCountdown],
   );

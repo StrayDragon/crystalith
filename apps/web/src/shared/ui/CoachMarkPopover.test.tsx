@@ -4,6 +4,7 @@ import { act, render, screen } from '@testing-library/react';
 import { LayerProvider } from '../layer';
 import { CoachMarkCountdown, CoachMarkPopover } from './CoachMarkPopover';
 
+// Mock reason: fake timers make autoDismissMs / countdown ticks deterministic without wall-clock drift.
 beforeEach(() => {
   rs.useFakeTimers();
 });
