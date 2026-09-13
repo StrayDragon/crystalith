@@ -43,6 +43,16 @@ test('incomplete fence mid-stream does not throw or leak raw fences', () => {
   expect(screen.queryByText('```ts')).not.toBeInTheDocument();
 });
 
+test('hides leaked tool_call xml in assistant markdown', () => {
+  render(
+    <AssistantMarkdown content="答案开头\n\n<tool_call> <function=retrieveSources> <parameter=query> q </tool_call>\n\n结论。" />,
+  );
+  expect(screen.getByText(/答案开头/)).toBeInTheDocument();
+  expect(screen.getByText(/结论/)).toBeInTheDocument();
+  expect(screen.queryByText(/retrieveSources/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/tool_call/)).not.toBeInTheDocument();
+});
+
 test('plain text input stays paragraph text (no fence artifacts)', () => {
   render(<AssistantMarkdown content="第一段。\n\n第二段：结论如下。" />);
 
