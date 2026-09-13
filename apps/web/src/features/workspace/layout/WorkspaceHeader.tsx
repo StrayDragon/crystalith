@@ -71,7 +71,7 @@ const THEME_OPTIONS: Array<{
 
 const AUTO_NOTEBOOK_HINT_KEY = 'crystalith_auto_notebook_hint_dismissed_for_v1';
 const AUTO_NOTEBOOK_HINT_AUTO_DISMISS_MS = 10_000;
-const AUTO_NOTEBOOK_HINT_COUNTDOWN_ACTION_ID = 'rename';
+const AUTO_NOTEBOOK_HINT_COUNTDOWN_ACTION_ID = 'close';
 
 function readAutoNotebookHintDismissedFor(): number | null {
   try {
@@ -239,13 +239,9 @@ export default function WorkspaceHeader({
                       requestNotebookEdit();
                       dismissAutoNotebookHint();
                     }}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-[11px] text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
+                    className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-[11px] text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
                   >
                     改名
-                    <CoachMarkCountdown
-                      actionId={AUTO_NOTEBOOK_HINT_COUNTDOWN_ACTION_ID}
-                      className="text-[10px] text-gray-400 dark:text-slate-500"
-                    />
                   </button>
 
                   {onDeleteNotebook && autoCreatedNotebookId ? (
@@ -285,8 +281,12 @@ export default function WorkspaceHeader({
                 type="button"
                 onClick={dismissAutoNotebookHint}
                 aria-label="关闭默认笔记本提示"
-                className="flex-shrink-0 w-7 h-7 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors flex items-center justify-center"
+                className="flex-shrink-0 flex items-center gap-0.5 rounded-lg px-1 py-0.5 text-gray-500 dark:text-slate-400 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors"
               >
+                <CoachMarkCountdown
+                  actionId={AUTO_NOTEBOOK_HINT_COUNTDOWN_ACTION_ID}
+                  className="text-[10px] text-gray-400 dark:text-slate-500"
+                />
                 <CloseIcon sx={{ fontSize: 16 }} />
               </button>
             </div>
