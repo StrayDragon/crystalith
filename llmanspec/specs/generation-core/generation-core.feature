@@ -59,11 +59,11 @@
 
   @req:qa-retrieve-before-generate @human
   场景: QA MUST gate retrieval then optionally generate
-    - QA 管线 MUST 在进入 LLM 之前先解析 sourceIds：当 sourceIds 非空时 MUST 先做确定性检索并判定 evidence；当 sourceIds 缺失或为空且笔记本仍有来源时 MUST 跳过检索并以无引用（citations=[]）进入 LLM 生成；当笔记本无任何来源时 MUST 返回 evidence=false 且 reason=no_sources 且不进入 LLM。本条持有“空 selection→ungrounded”断言的 canonical 表述。
+    - QA 管线 MUST 在进入 LLM 之前先解析 sourceIds：当 sourceIds 非空时 MUST 先做确定性检索并判定 evidence；当 sourceIds 缺失或为空时 MUST 跳过检索并以无引用（citations=[]）进入 LLM 生成，无论笔记本是否已有来源。本条持有“空 selection→ungrounded”断言的 canonical 表述。
 
   @req:qa-no-evidence-reasons @human
-  场景: QA MUST produce 5 distinct no-evidence reasons
-    - 当 evidence 为 false 时系统 MUST 从 5 种 reason 中确定一个并返回对应本地化回答：no_sources / embedding_empty / no_vector_hits / no_valid_chunks / low_similarity
+  场景: QA MUST produce distinct no-evidence reasons
+    - 当 evidence 为 false 时系统 MUST 从以下 reason 中确定一个并返回对应本地化回答：embedding_empty / no_vector_hits / no_valid_chunks / low_similarity
 
   @req:qa-confidence-score @human
   场景: QA MUST compute and return confidence score
