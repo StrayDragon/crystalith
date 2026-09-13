@@ -1,5 +1,6 @@
 import {
   Popover as RadixPopover,
+  PopoverAnchor as RadixPopoverAnchor,
   PopoverContent as RadixPopoverContent,
   PopoverTrigger,
 } from '@radix-ui/react-popover';
@@ -53,8 +54,21 @@ export function PopoverHandler({ children }: { children: ReactNode }) {
   );
 }
 
+/** Positioning anchor without toggling open state (controlled onboarding / coach marks). */
+export function PopoverAnchor({ children }: { children?: ReactNode }) {
+  if (!children) {
+    return <RadixPopoverAnchor />;
+  }
+  return <RadixPopoverAnchor asChild>{children}</RadixPopoverAnchor>;
+}
+
 export interface PopoverContentProps extends HTMLAttributes<HTMLDivElement> {
   children?: ReactNode;
+  onOpenAutoFocus?: (event: Event) => void;
+  onPointerDownOutside?: (event: Event) => void;
+  onFocusOutside?: (event: Event) => void;
+  onInteractOutside?: (event: Event) => void;
+  onEscapeKeyDown?: (event: KeyboardEvent) => void;
 }
 
 export const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(

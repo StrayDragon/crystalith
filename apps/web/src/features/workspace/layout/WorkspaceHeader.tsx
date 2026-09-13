@@ -13,7 +13,15 @@ import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import ConfirmPopover from '../../../shared/ConfirmPopover';
 import { TestIds, tid } from '../../../shared/testids';
 import type { AsyncStatus } from '../../../shared/types';
-import { Menu, MenuHandler, MenuItem, MenuList, Tooltip } from '../../../shared/ui';
+import {
+  CoachMarkCountdown,
+  CoachMarkPopover,
+  Menu,
+  MenuHandler,
+  MenuItem,
+  MenuList,
+  Tooltip,
+} from '../../../shared/ui';
 import ResearchTasksDrawer from '../../research-lab/ResearchTasksDrawer';
 import ResearchTasksTrigger from '../../research-lab/ResearchTasksTrigger';
 import { navigateLabWithRun } from '../../research-lab/useEdenLabController';
@@ -62,6 +70,8 @@ const THEME_OPTIONS: Array<{
 ];
 
 const AUTO_NOTEBOOK_HINT_KEY = 'crystalith_auto_notebook_hint_dismissed_for_v1';
+const AUTO_NOTEBOOK_HINT_AUTO_DISMISS_MS = 10_000;
+const AUTO_NOTEBOOK_HINT_COUNTDOWN_ACTION_ID = 'rename';
 
 function readAutoNotebookHintDismissedFor(): number | null {
   try {
@@ -173,31 +183,114 @@ export default function WorkspaceHeader({
             />
           </div>
 
-          <NotebookSwitcher
-            notebooks={notebooks}
-            activeNotebookId={activeNotebookId}
-            isOpen={notebookSwitcherOpen}
-            isLoading={isNotebooksLoading}
-            error={notebooksError}
-            isConnected={isConnected}
-            searchInputRef={notebookSearchRef}
-            createName={createName}
-            createState={createState}
-            createError={createError}
-            request={notebookSwitcherRequest}
-            onToggle={() => {
-              setNotebookSwitcherOpen(true);
-            }}
-            onClose={() => {
-              setNotebookSwitcherOpen(false);
-            }}
-            onSelect={onSelectNotebook}
-            onUpdate={onUpdateNotebook}
-            onDelete={onDeleteNotebook}
-            onCreateNameChange={onCreateNameChange}
-            onCreateNotebook={onCreateNotebook}
-            onCreateNotebookFromTemplate={onCreateNotebookFromTemplate}
-          />
+          <CoachMarkPopover
+            open={showAutoNotebookHint}
+            onDismiss={dismissAutoNotebookHint}
+            autoDismissMs={AUTO_NOTEBOOK_HINT_AUTO_DISMISS_MS}
+            showAutoDismissCountdown
+            countdownActionId={AUTO_NOTEBOOK_HINT_COUNTDOWN_ACTION_ID}
+            dismissOnInteractOutside={false}
+            dismissOnEscape={false}
+            contentClassName="w-[min(100vw-2rem,22rem)] border-blue-200 bg-blue-50/95 p-3 shadow-lg dark:border-slate-700 dark:bg-slate-900/95"
+            anchor={
+              <div className="inline-flex min-w-0">
+                <NotebookSwitcher
+                  notebooks={notebooks}
+                  activeNotebookId={activeNotebookId}
+                  isOpen={notebookSwitcherOpen}
+                  isLoading={isNotebooksLoading}
+                  error={notebooksError}
+                  isConnected={isConnected}
+                  searchInputRef={notebookSearchRef}
+                  createName={createName}
+                  createState={createState}
+                  createError={createError}
+                  request={notebookSwitcherRequest}
+                  onToggle={() => {
+                    setNotebookSwitcherOpen(true);
+                  }}
+                  onClose={() => {
+                    setNotebookSwitcherOpen(false);
+                  }}
+                  onSelect={onSelectNotebook}
+                  onUpdate={onUpdateNotebook}
+                  onDelete={onDeleteNotebook}
+                  onCreateNameChange={onCreateNameChange}
+                  onCreateNotebook={onCreateNotebook}
+                  onCreateNotebookFromTemplate={onCreateNotebookFromTemplate}
+                />
+              </div>
+            }
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-gray-900 dark:text-slate-100">
+                  已为你自动创建默认笔记本
+                </div>
+                <div className="mt-0.5 text-[11px] text-gray-700 dark:text-slate-300">
+                  {autoNotebookTitle
+                    ? `当前笔记本：「${autoNotebookTitle}」。你可以改名、删除或新建开始使用。`
+                    : '你可以改名、删除或新建一个笔记本开始使用。'}
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      requestNotebookEdit();
+                      dismissAutoNotebookHint();
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-[11px] text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
+                  >
+                    改名
+                    <CoachMarkCountdown
+                      actionId={AUTO_NOTEBOOK_HINT_COUNTDOWN_ACTION_ID}
+                      className="text-[10px] text-gray-400 dark:text-slate-500"
+                    />
+                  </button>
+
+                  {onDeleteNotebook && autoCreatedNotebookId ? (
+                    <ConfirmPopover
+                      message={`确定删除「${autoNotebookTitle ?? '默认笔记本'}」？此操作不可撤销。`}
+                      onConfirm={() => {
+                        void (async () => {
+                          await onDeleteNotebook(autoCreatedNotebookId);
+                          dismissAutoNotebookHint();
+                        })();
+                      }}
+                      placement="bottom"
+                    >
+                      <button
+                        type="button"
+                        className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-[11px] text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
+                      >
+                        删除
+                      </button>
+                    </ConfirmPopover>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      requestNotebookCreate();
+                      dismissAutoNotebookHint();
+                    }}
+                    className="px-2.5 py-1 rounded-md bg-gray-900 text-white text-[11px] hover:bg-gray-800"
+                  >
+                    新建
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={dismissAutoNotebookHint}
+                aria-label="关闭默认笔记本提示"
+                className="flex-shrink-0 w-7 h-7 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors flex items-center justify-center"
+              >
+                <CloseIcon sx={{ fontSize: 16 }} />
+              </button>
+            </div>
+          </CoachMarkPopover>
         </div>
 
         {topbarSearch ? (
@@ -353,67 +446,6 @@ export default function WorkspaceHeader({
             </MenuList>
           </Menu>
         </div>
-
-        {showAutoNotebookHint ? (
-          <div className="w-full mt-2 rounded-lg border border-blue-200 dark:border-slate-700 bg-blue-50/70 dark:bg-slate-900/40 px-3 py-2 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-xs font-semibold text-gray-900 dark:text-slate-100">
-                已为你自动创建默认笔记本
-              </div>
-              <div className="mt-0.5 text-[11px] text-gray-700 dark:text-slate-300">
-                {autoNotebookTitle
-                  ? `当前笔记本：「${autoNotebookTitle}」。你可以改名、删除或新建开始使用。`
-                  : '你可以改名、删除或新建一个笔记本开始使用。'}
-              </div>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={requestNotebookEdit}
-                  className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-[11px] text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
-                >
-                  改名
-                </button>
-
-                {onDeleteNotebook && autoCreatedNotebookId ? (
-                  <ConfirmPopover
-                    message={`确定删除「${autoNotebookTitle ?? '默认笔记本'}」？此操作不可撤销。`}
-                    onConfirm={() => {
-                      void (async () => {
-                        await onDeleteNotebook(autoCreatedNotebookId);
-                        dismissAutoNotebookHint();
-                      })();
-                    }}
-                    placement="bottom"
-                  >
-                    <button
-                      type="button"
-                      className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-[11px] text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
-                    >
-                      删除
-                    </button>
-                  </ConfirmPopover>
-                ) : null}
-
-                <button
-                  type="button"
-                  onClick={requestNotebookCreate}
-                  className="px-2.5 py-1 rounded-md bg-gray-900 text-white text-[11px] hover:bg-gray-800"
-                >
-                  新建
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={dismissAutoNotebookHint}
-              aria-label="关闭默认笔记本提示"
-              className="flex-shrink-0 w-7 h-7 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors flex items-center justify-center"
-            >
-              <CloseIcon sx={{ fontSize: 16 }} />
-            </button>
-          </div>
-        ) : null}
       </header>
       <ResearchTasksDrawer
         open={tasksDrawerOpen}
