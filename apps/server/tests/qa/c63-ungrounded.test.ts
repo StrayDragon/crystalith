@@ -1,28 +1,25 @@
-// c63: empty source_ids → ungrounded when notebook has sources; no_sources when empty.
+// c63: empty source_ids → ungrounded chat regardless of notebook source count.
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 
 import { notebooks, sources } from '../../src/db/schema.ts';
-import {
-  NO_SOURCES_ANSWER,
-  noEvidenceAnswerForReason,
-  retrieveAndJudge,
-} from '../../src/features/qa/retrieve-and-judge.ts';
+import { retrieveAndJudge } from '../../src/features/qa/retrieve-and-judge.ts';
 import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from '../helpers/integration.ts';
 
 beforeAll(setupIntegrationEnv);
 afterAll(teardownIntegrationEnv);
 
 describe('c63 retrieveAndJudge empty source scope', () => {
-  it('returns no_sources when notebook has zero sources', async () => {
+  it('returns ungrounded evidence when notebook has zero sources', async () => {
     const nb = getOrm().insert(notebooks).values({ name: 'c63-empty-nb' }).returning().get();
     const result = await retrieveAndJudge({
       notebookId: nb.id,
       question: 'hello without sources',
     });
-    expect(result.evidence).toBe(false);
-    expect(result.reason).toBe('no_sources');
+    expect(result.evidence).toBe(true);
     expect(result.citations).toEqual([]);
-    expect(noEvidenceAnswerForReason('no_sources')).toBe(NO_SOURCES_ANSWER);
+    expect(result.context).toBe('');
+    expect(result.confidence).toBe(0);
+    expect(result.reason).toBeUndefined();
   });
 
   it('returns ungrounded evidence when source_ids omitted but notebook has sources', async () => {

@@ -4,7 +4,6 @@ export type WorkspaceReadiness =
   | { kind: 'loading' }
   | { kind: 'not_connected'; connectionState: ConnectionState; error: string }
   | { kind: 'no_notebook' }
-  | { kind: 'no_sources'; notebookId: number }
   | { kind: 'no_session'; notebookId: number }
   | { kind: 'ready'; notebookId: number };
 
@@ -13,7 +12,6 @@ export interface WorkspaceReadinessInput {
   connectionError?: string;
   notebookId: number | null;
   sourcesLoading: boolean;
-  sourcesCount: number;
   sessionsLoading: boolean;
   sessionId: number | null;
 }
@@ -23,7 +21,6 @@ export function computeWorkspaceReadiness({
   connectionError = '',
   notebookId,
   sourcesLoading,
-  sourcesCount,
   sessionsLoading,
   sessionId,
 }: WorkspaceReadinessInput): WorkspaceReadiness {
@@ -41,10 +38,6 @@ export function computeWorkspaceReadiness({
 
   if (sourcesLoading) {
     return { kind: 'loading' };
-  }
-
-  if (sourcesCount === 0) {
-    return { kind: 'no_sources', notebookId };
   }
 
   if (sessionsLoading) {
