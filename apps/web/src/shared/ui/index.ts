@@ -5,7 +5,19 @@ export { Typography, type TypographyProps, type TypographyVariant } from './Typo
 export { Spinner, type SpinnerProps } from './Spinner';
 export { Chip, type ChipProps } from './Chip';
 export { Menu, MenuHandler, MenuItem, MenuList, type MenuProps } from './Menu';
-export { Popover, PopoverContent, PopoverHandler, type PopoverProps } from './Popover';
+export {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverHandler,
+  type PopoverProps,
+} from './Popover';
+export {
+  CoachMarkCountdown,
+  CoachMarkPopover,
+  useCoachMarkCountdown,
+  type CoachMarkPopoverProps,
+} from './CoachMarkPopover';
 export { Tooltip, TooltipProvider, type TooltipProps } from './Tooltip';
 export { Dialog, DialogBody, DialogFooter, DialogHeader, type DialogProps } from './Dialog';
 export {
