@@ -1,4 +1,3 @@
-import { IconButton, Button, Typography, Chip } from '@material-tailwind/react';
 import {
   AutoAwesome as AutoAwesomeIcon,
   Refresh as RefreshIcon,
@@ -6,6 +5,7 @@ import {
   ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
 
+import { IconButton, Button, Typography, Chip } from '../../../../shared/ui';
 import { hasGeneratedBrief, type SourceBrief } from './sourceDetailTypes';
 
 interface SourceDetailSummaryPanelProps {

@@ -1,5 +1,4 @@
 import crystalithLogo from '@brand/logo.webp';
-import { Menu, MenuHandler, MenuItem, MenuList, Tooltip } from '@material-tailwind/react';
 import {
   DarkMode as DarkModeIcon,
   Close as CloseIcon,
@@ -14,6 +13,7 @@ import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import ConfirmPopover from '../../../shared/ConfirmPopover';
 import { TestIds, tid } from '../../../shared/testids';
 import type { AsyncStatus } from '../../../shared/types';
+import { Menu, MenuHandler, MenuItem, MenuList, Tooltip } from '../../../shared/ui';
 import ResearchTasksDrawer from '../../research-lab/ResearchTasksDrawer';
 import ResearchTasksTrigger from '../../research-lab/ResearchTasksTrigger';
 import { navigateLabWithRun } from '../../research-lab/useEdenLabController';

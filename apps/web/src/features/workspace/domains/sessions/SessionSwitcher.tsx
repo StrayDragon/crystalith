@@ -1,12 +1,4 @@
 import {
-  IconButton,
-  Popover,
-  PopoverHandler,
-  PopoverContent,
-  Typography,
-  Spinner,
-} from '@material-tailwind/react';
-import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
@@ -20,6 +12,14 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
+import {
+  IconButton,
+  Typography,
+  Spinner,
+  Popover,
+  PopoverHandler,
+  PopoverContent,
+} from '../../../../shared/ui';
 import { EmptyHint } from '../../shared/components/EmptyHint';
 import { SkeletonLine, SkeletonList } from '../../shared/components/Skeleton';
 import type { SessionSummary } from '../../shared/types';

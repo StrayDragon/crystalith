@@ -1,12 +1,4 @@
 import {
-  IconButton,
-  Menu,
-  MenuHandler,
-  MenuList,
-  MenuItem,
-  Spinner,
-} from '@material-tailwind/react';
-import {
   DriveFileMove as ConvertIcon,
   Notes as NotesIcon,
   Source as SourceIcon,
@@ -21,6 +13,7 @@ import { copyToClipboard } from '../../../../shared/clipboard';
 import { LAYER_LEVELS, useLayer } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
 import { toast } from '../../../../shared/toast';
+import { IconButton, Spinner, Menu, MenuHandler, MenuList, MenuItem } from '../../../../shared/ui';
 import CitationsControl from '../../shared/components/citations/CitationsControl';
 import { EmptyHint } from '../../shared/components/EmptyHint';
 import { IconCopy, IconSave, IconSend } from '../../shared/components/Icons';

@@ -1,10 +1,10 @@
-import { Button, Input, Spinner, Typography } from '@material-tailwind/react';
 import { Close as CloseIcon, Layers as TemplateIcon } from '@mui/icons-material';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useLayer } from '../../../../shared/layer';
 import { toast } from '../../../../shared/toast';
+import { Button, Spinner, Typography, Input } from '../../../../shared/ui';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { DEFAULT_TYPE_LABELS } from '../studio/studioUtils';
 import type { WorkspaceTemplate } from './types';

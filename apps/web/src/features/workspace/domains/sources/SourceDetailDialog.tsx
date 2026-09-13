@@ -1,13 +1,4 @@
 import {
-  IconButton,
-  Typography,
-  Tabs,
-  TabsHeader,
-  TabsBody,
-  Tab,
-  TabPanel,
-} from '@material-tailwind/react';
-import {
   Close as CloseIcon,
   Description as DescriptionIcon,
   AutoAwesome as AutoAwesomeIcon,
@@ -24,6 +15,15 @@ import { t } from '../../../../shared/i18n';
 import { useLayer } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
 import { toast } from '../../../../shared/toast';
+import {
+  IconButton,
+  Typography,
+  Tabs,
+  TabsHeader,
+  TabsBody,
+  Tab,
+  TabPanel,
+} from '../../../../shared/ui';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import type { SourceItem } from '../../shared/types';
 import { SourceDetailChunksPanel } from './SourceDetailChunksPanel';

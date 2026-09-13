@@ -1,4 +1,3 @@
-import { Button, Typography, Progress } from '@material-tailwind/react';
 import {
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
@@ -12,6 +11,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useLayer } from '../../../../shared/layer';
+import { Button, Typography, Progress } from '../../../../shared/ui';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import type { SearchResultItem } from './SearchResultCard';
 

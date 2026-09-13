@@ -1,14 +1,4 @@
 import {
-  Button,
-  IconButton,
-  Menu,
-  MenuHandler,
-  MenuItem,
-  MenuList,
-  Spinner,
-  Typography,
-} from '@material-tailwind/react';
-import {
   ContentCopy as CopyIcon,
   Delete as DeleteIcon,
   DriveFileMove as ConvertIcon,
@@ -24,6 +14,16 @@ import { copyToClipboard } from '../../../../shared/clipboard';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
+import {
+  Button,
+  IconButton,
+  Spinner,
+  Typography,
+  Menu,
+  MenuHandler,
+  MenuItem,
+  MenuList,
+} from '../../../../shared/ui';
 import { EmptyHint } from '../../shared/components/EmptyHint';
 import { SkeletonCard } from '../../shared/components/Skeleton';
 import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';

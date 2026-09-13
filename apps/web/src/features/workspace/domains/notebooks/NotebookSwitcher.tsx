@@ -1,4 +1,3 @@
-import { Button, IconButton, Input, Typography, Spinner } from '@material-tailwind/react';
 import {
   Search as SearchIcon,
   ExpandMore as ExpandMoreIcon,
@@ -18,6 +17,7 @@ import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { useLayer } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
 import type { AsyncStatus } from '../../../../shared/types';
+import { Button, IconButton, Typography, Spinner, Input } from '../../../../shared/ui';
 import { EmptyHint } from '../../shared/components/EmptyHint';
 import { SkeletonLine, SkeletonList } from '../../shared/components/Skeleton';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';

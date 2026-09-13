@@ -1,21 +1,5 @@
 import type { ExtractorInfo } from '@crystalith/shared';
 import {
-  Button,
-  Checkbox,
-  Typography,
-  Chip,
-  Dialog,
-  DialogHeader,
-  DialogBody,
-  IconButton,
-  Tooltip,
-  Spinner,
-  Menu,
-  MenuHandler,
-  MenuList,
-  MenuItem,
-} from '@material-tailwind/react';
-import {
   Close as CloseIcon,
   Add as AddIcon,
   ExpandMore as ExpandMoreIcon,
@@ -32,6 +16,22 @@ import { Virtuoso } from 'react-virtuoso';
 
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
+import {
+  Button,
+  Typography,
+  Chip,
+  IconButton,
+  Spinner,
+  Tooltip,
+  Menu,
+  MenuHandler,
+  MenuList,
+  MenuItem,
+  Checkbox,
+  Dialog,
+  DialogHeader,
+  DialogBody,
+} from '../../../../shared/ui';
 import SearchResultCard, { type SearchResultItem } from './SearchResultCard';
 import type { SearchQueueItem } from './useSources';
 

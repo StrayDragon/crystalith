@@ -1,7 +1,7 @@
-import { Button, Chip, IconButton, Spinner, Typography } from '@material-tailwind/react';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useEffect, useState } from 'react';
 
+import { Button, Chip, IconButton, Spinner, Typography } from '../../../../../../shared/ui';
 import { waitForSlidevPreviewReady } from '../slidesStudioUtils';
 import type { SlidesPreviewPanelProps } from '../types';
 

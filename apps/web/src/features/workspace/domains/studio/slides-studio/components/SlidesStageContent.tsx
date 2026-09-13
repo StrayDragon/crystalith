@@ -1,5 +1,4 @@
-import { Button, Input, Spinner, Textarea, Typography } from '@material-tailwind/react';
-
+import { Button, Spinner, Typography, Input, Textarea } from '../../../../../../shared/ui';
 import type { SlidesStageContentProps } from '../types';
 import { SlidesInputStage } from './SlidesInputStage';
 import { SlidesPreviewModeContent } from './SlidesPreviewModeContent';

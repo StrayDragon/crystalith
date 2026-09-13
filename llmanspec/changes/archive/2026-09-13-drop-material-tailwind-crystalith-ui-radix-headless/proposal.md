@@ -31,19 +31,19 @@ MT 维护不活跃（v2 停滞），而仓库对它的真实使用面极浅（�
 仍为 **37** 个文件引用 `@material-tailwind/react`；tailwind **3.4.19**；MT **2.1.10**。
 相对 2026-09-08 草案，**Dialog 使用面变深**（见下），其余家族量级不变。
 
-| 家族 | 实际形态 | 备注 |
-| --- | --- | --- |
-| Typography / Button / IconButton / Spinner / Chip | 展示件，prop 浅 | P1 纯自研 |
-| Menu 四件套 | ~10 个调用面（排序/行菜单/用户菜单/导出等） | P2 Radix dropdown |
-| Tooltip | ~7 个调用面 | P2 Radix tooltip |
-| Popover 三件套 | 仅 SessionSwitcher | P2 Radix popover；ConfirmPopover 已自研 portal |
-| **Dialog 四件套** | **4 个文件仍用 MT Dialog**：StudioPanel、StudioToolsGrid、SlidesStudioDialog、SearchResultsQueue（内含两处） | P3 迁到既有 portal + focus-trap；SourceDetailDialog **已是** portal，只剩 Tabs |
-| Input / Textarea / Checkbox | 标准表单 | P4 自研 |
-| Select / Option / Alert | 仅 ModelSelector | P4 Select 走 Radix（键盘/ARIA）；Alert 自研 |
-| Tabs 五件套 | 仅 SourceDetailDialog | P4 自研或 Radix Tabs |
-| Progress | 仅 AddSearchResultDialog | P4 自研 |
-| ThemeProvider | `main` + 测试 providers | P5 删除 |
-| Avatar / List / Card | **源码未使用**（仅类型声明） | 不实现 |
+| 家族                                              | 实际形态                                                                                                     | 备注                                                                           |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| Typography / Button / IconButton / Spinner / Chip | 展示件，prop 浅                                                                                              | P1 纯自研                                                                      |
+| Menu 四件套                                       | ~10 个调用面（排序/行菜单/用户菜单/导出等）                                                                  | P2 Radix dropdown                                                              |
+| Tooltip                                           | ~7 个调用面                                                                                                  | P2 Radix tooltip                                                               |
+| Popover 三件套                                    | 仅 SessionSwitcher                                                                                           | P2 Radix popover；ConfirmPopover 已自研 portal                                 |
+| **Dialog 四件套**                                 | **4 个文件仍用 MT Dialog**：StudioPanel、StudioToolsGrid、SlidesStudioDialog、SearchResultsQueue（内含两处） | P3 迁到既有 portal + focus-trap；SourceDetailDialog **已是** portal，只剩 Tabs |
+| Input / Textarea / Checkbox                       | 标准表单                                                                                                     | P4 自研                                                                        |
+| Select / Option / Alert                           | 仅 ModelSelector                                                                                             | P4 Select 走 Radix（键盘/ARIA）；Alert 自研                                    |
+| Tabs 五件套                                       | 仅 SourceDetailDialog                                                                                        | P4 自研或 Radix Tabs                                                           |
+| Progress                                          | 仅 AddSearchResultDialog                                                                                     | P4 自研                                                                        |
+| ThemeProvider                                     | `main` + 测试 providers                                                                                      | P5 删除                                                                        |
+| Avatar / List / Card                              | **源码未使用**（仅类型声明）                                                                                 | 不实现                                                                         |
 
 **已有自研地基**：`shared/layer`（6 层 z-index）、`useFocusTrap`、多处 portal 对话框、自研 toast / ConfirmPopover、`DESIGN.md` token、`tailwind.config` 的 `ui/*` 语义色、`shared/testids.ts`（e2e 锚点 SSOT）。
 

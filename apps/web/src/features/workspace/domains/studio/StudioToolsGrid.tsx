@@ -2,20 +2,20 @@
 // STRUCTURED have no POST /outputs pipeline (manual notes & session
 // conversion only) and would 400 on click.
 import { ToolOutputTypeSchema } from '@crystalith/shared';
+import { Close as CloseIcon, Edit as EditIcon } from '@mui/icons-material';
+import { useCallback, useMemo, useState } from 'react';
+
 import {
   Button,
+  IconButton,
+  Typography,
+  Tooltip,
   Dialog,
   DialogBody,
   DialogFooter,
   DialogHeader,
-  IconButton,
   Textarea,
-  Tooltip,
-  Typography,
-} from '@material-tailwind/react';
-import { Close as CloseIcon, Edit as EditIcon } from '@mui/icons-material';
-import { useCallback, useMemo, useState } from 'react';
-
+} from '../../../../shared/ui';
 import { EmptyHint } from '../../shared/components/EmptyHint';
 import { useGenerationPreference } from '../../shared/hooks/useGenerationPreference';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';

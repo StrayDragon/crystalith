@@ -1,15 +1,4 @@
 import {
-  Checkbox,
-  Chip,
-  IconButton,
-  Menu,
-  MenuHandler,
-  MenuItem,
-  MenuList,
-  Tooltip,
-  Typography,
-} from '@material-tailwind/react';
-import {
   ContentCopy as ContentCopyIcon,
   Delete as DeleteIcon,
   Description as DescriptionIcon,
@@ -24,6 +13,17 @@ import ConfirmPopover from '../../../../../shared/ConfirmPopover';
 import { TestIds, tid } from '../../../../../shared/testids';
 import { toast } from '../../../../../shared/toast';
 import type { AsyncStatus } from '../../../../../shared/types';
+import {
+  Chip,
+  IconButton,
+  Typography,
+  Menu,
+  MenuHandler,
+  MenuItem,
+  MenuList,
+  Tooltip,
+  Checkbox,
+} from '../../../../../shared/ui';
 import type { SourceItem } from '../../../shared/types';
 
 export interface SourceListRowProps {

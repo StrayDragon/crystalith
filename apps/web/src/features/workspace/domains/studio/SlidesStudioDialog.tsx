@@ -1,19 +1,19 @@
-import {
-  Button,
-  Chip,
-  Dialog,
-  DialogBody,
-  DialogFooter,
-  DialogHeader,
-  IconButton,
-  Typography,
-} from '@material-tailwind/react';
 import CloseIcon from '@mui/icons-material/Close';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
 
 import { TestIds, tid } from '../../../../shared/testids';
+import {
+  Button,
+  Chip,
+  IconButton,
+  Typography,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  DialogHeader,
+} from '../../../../shared/ui';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { SlidesPreviewPanel } from './slides-studio/components/SlidesPreviewPanel';
 import { SlidesStageActions } from './slides-studio/components/SlidesStageActions';

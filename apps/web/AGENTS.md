@@ -16,7 +16,7 @@
 ## Design System
 
 - SSOT 文档：包根 [`DESIGN.md`](./DESIGN.md)（YAML tokens + 中文原则）
-- 实现侧：Tailwind / `src/app/tailwind.css`、MUI 局部组件；新表面优先对齐 DESIGN token，避免另起一套色板
+- 实现侧：Tailwind / `src/app/tailwind.css`、`src/shared/ui` 基础件（展示件自研，Menu/Popover/Tooltip 为 Radix headless + 样式壳）；图标可用 `@mui/icons-material`。新表面优先对齐 DESIGN token，避免另起一套色板。
 
 ## Research Lab（产品 Eden；演示隔离）
 
@@ -106,9 +106,8 @@ Zod schema 描述走 `@crystalith/shared` 的 `desc()`（zh/index.json SSOT）�
 import { useLayer } from '../shared/layer';
 const { style } = useLayer('modal');
 
-// Material Tailwind components — use LAYER_LEVELS
-import { LAYER_LEVELS } from '../shared/layer';
-<MenuList style={{ zIndex: LAYER_LEVELS.dropdown }}>...</MenuList>;
+// shared/ui overlays already call useLayer internally
+import { MenuList } from '../shared/ui';
 ```
 
 - `LayerProvider` is already wrapped in `App.tsx`
