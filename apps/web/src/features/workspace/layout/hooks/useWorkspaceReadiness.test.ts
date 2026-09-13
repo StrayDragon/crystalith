@@ -9,7 +9,6 @@ test('computeWorkspaceReadiness: not connected (connecting)', () => {
       connectionError: '',
       notebookId: null,
       sourcesLoading: false,
-      sourcesCount: 0,
       sessionsLoading: false,
       sessionId: null,
     }),
@@ -23,7 +22,6 @@ test('computeWorkspaceReadiness: not connected (error)', () => {
       connectionError: 'boom',
       notebookId: null,
       sourcesLoading: false,
-      sourcesCount: 0,
       sessionsLoading: false,
       sessionId: null,
     }),
@@ -37,7 +35,6 @@ test('computeWorkspaceReadiness: no notebook', () => {
       connectionError: '',
       notebookId: null,
       sourcesLoading: false,
-      sourcesCount: 0,
       sessionsLoading: false,
       sessionId: null,
     }),
@@ -51,25 +48,23 @@ test('computeWorkspaceReadiness: loading sources', () => {
       connectionError: '',
       notebookId: 1,
       sourcesLoading: true,
-      sourcesCount: 0,
       sessionsLoading: false,
       sessionId: null,
     }),
   ).toEqual({ kind: 'loading' });
 });
 
-test('computeWorkspaceReadiness: no sources', () => {
+test('computeWorkspaceReadiness: no session even when notebook has zero sources', () => {
   expect(
     computeWorkspaceReadiness({
       connectionState: 'live',
       connectionError: '',
       notebookId: 1,
       sourcesLoading: false,
-      sourcesCount: 0,
       sessionsLoading: false,
       sessionId: null,
     }),
-  ).toEqual({ kind: 'no_sources', notebookId: 1 });
+  ).toEqual({ kind: 'no_session', notebookId: 1 });
 });
 
 test('computeWorkspaceReadiness: loading sessions', () => {
@@ -79,7 +74,6 @@ test('computeWorkspaceReadiness: loading sessions', () => {
       connectionError: '',
       notebookId: 1,
       sourcesLoading: false,
-      sourcesCount: 2,
       sessionsLoading: true,
       sessionId: null,
     }),
@@ -93,7 +87,6 @@ test('computeWorkspaceReadiness: no session', () => {
       connectionError: '',
       notebookId: 1,
       sourcesLoading: false,
-      sourcesCount: 2,
       sessionsLoading: false,
       sessionId: null,
     }),
@@ -107,7 +100,6 @@ test('computeWorkspaceReadiness: ready', () => {
       connectionError: '',
       notebookId: 1,
       sourcesLoading: false,
-      sourcesCount: 2,
       sessionsLoading: false,
       sessionId: 99,
     }),

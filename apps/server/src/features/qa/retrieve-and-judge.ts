@@ -116,9 +116,7 @@ export interface RetrieveAndJudgeOptions {
  *
  * Pipeline:
  *  1. Normalize source_ids
- *  2. Empty/missing source_ids:
- *     - notebook has no sources → no_sources (short-circuit)
- *     - notebook has sources → ungrounded (skip retrieval, evidence=true, citations=[])
+ *  2. Empty/missing source_ids → ungrounded (skip retrieval, evidence=true, citations=[])
  *  3. Embed question
  *  4. If embedding empty → embedding_empty
  *  5. Vector search
@@ -151,18 +149,9 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
     compressed: false,
   };
 
-  // Step 1-2: empty/missing source_ids — notebook-empty → no_sources;
-  // otherwise ungrounded chat (skip RAG, allow LLM with citations=[]).
+  // Step 1-2: empty/missing source_ids → ungrounded chat (skip RAG, citations=[]).
   const normalizedSourceIds = opts.sourceIds?.length ? opts.sourceIds : undefined;
   if (!normalizedSourceIds) {
-    const notebookSourceCount = db()
-      .select({ id: sources.id })
-      .from(sources)
-      .where(eq(sources.notebookId, opts.notebookId))
-      .all().length;
-    if (notebookSourceCount === 0) {
-      return noEvidence('no_sources', emptyStats);
-    }
     return {
       evidence: true,
       citations: [],
