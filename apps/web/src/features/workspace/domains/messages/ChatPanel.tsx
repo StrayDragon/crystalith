@@ -23,6 +23,8 @@ import { useCommands } from '../../shared/hooks/useCommands';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { ChatMessage, Citation, OutputTypeId } from '../../shared/types';
 import AssistantMarkdown from './AssistantMarkdown';
+import { stripLeakedToolCallXml } from './stripLeakedToolCallXml';
+
 interface ChatPanelProps {
   messages: ChatMessage[];
   draft: string;
@@ -277,7 +279,7 @@ function ChatPanel({
             <button
               type="button"
               className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
-              onClick={() => onSaveToNote?.(message.content)}
+              onClick={() => onSaveToNote?.(stripLeakedToolCallXml(message.content))}
             >
               <IconSave className="w-3.5 h-3.5" />
               保存到笔记
@@ -286,7 +288,7 @@ function ChatPanel({
               type="button"
               className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
               onClick={() => {
-                void handleCopy(message.id, message.content);
+                void handleCopy(message.id, stripLeakedToolCallXml(message.content));
               }}
             >
               <IconCopy className="w-3.5 h-3.5" />

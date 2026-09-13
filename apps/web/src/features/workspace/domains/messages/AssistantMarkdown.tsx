@@ -2,6 +2,8 @@ import { code } from '@streamdown/code';
 import { memo } from 'react';
 import { defaultTranslations, Streamdown } from 'streamdown';
 
+import { stripLeakedToolCallXml } from './stripLeakedToolCallXml';
+
 /** streamdown 内建控件文案中文化（未列出的沿用 defaultTranslations） */
 const zhTranslations = {
   ...defaultTranslations,
@@ -35,6 +37,7 @@ const AssistantMarkdown = memo(function AssistantMarkdown({
   content,
   streaming = false,
 }: AssistantMarkdownProps) {
+  const visible = stripLeakedToolCallXml(content);
   return (
     <Streamdown
       mode={streaming ? 'streaming' : 'static'}
@@ -50,7 +53,7 @@ const AssistantMarkdown = memo(function AssistantMarkdown({
       }}
       lineNumbers={false}
     >
-      {content}
+      {visible}
     </Streamdown>
   );
 });

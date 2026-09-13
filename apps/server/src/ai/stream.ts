@@ -67,6 +67,16 @@ export function sseEvent(event: string, data: unknown): string {
   return sseFrame(event, data);
 }
 
+/** Drop XML-shaped tool invocations some models leak into the answer text. */
+function stripLeakedToolCallXml(text: string): string {
+  return text
+    .replace(/<tool_call\b[\s\S]*?<\/tool_call>/gi, '')
+    .replace(/<tool_call\b[\s\S]*$/gi, '')
+    .replace(/^[ \t]+/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 /**
  * Run a streaming QA agent loop and return a `Response` whose body is an SSE
  * stream. The stream emits `chunk` (text deltas), `state_snapshot` (message
@@ -145,7 +155,7 @@ export function streamQaResponse(opts: StreamQaOptions): Response {
           toolCalls: [],
         });
 
-        opts.onMessageSettled?.(accumulated, false, citations);
+        opts.onMessageSettled?.(stripLeakedToolCallXml(accumulated), false, citations);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Stream failed';
         emit('error', { message });
