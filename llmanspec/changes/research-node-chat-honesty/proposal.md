@@ -36,13 +36,13 @@ E2E 全链路走 `CL_RESEARCH_E2E_STUB=1`（`e2e/playwright.config.ts:71`、`e2e
 
 ## 证据快照（2026-09-14）
 
-| 证据                                                        | 位置                                                     |
-| ----------------------------------------------------------- | -------------------------------------------------------- |
-| agent 失败 → `usedAgent=false` → stub 流式输出，无降级标记  | `apps/server/src/features/research/node-chat.ts:264-289` |
-| stub 模板正文 + 假提案生成器                                | `apps/server/src/features/research/node-chat.ts:34-117`  |
-| chat 路由未挂 response、emit 裸发 `unknown`                 | `apps/server/src/features/research/router.ts:451`、`node-chat.ts:170` |
-| shared 事件 schema 零引用                                   | `packages/shared/src/schemas/research.ts:688-715`        |
-| e2e 显式 stub 开关（本变更后仍可用）                        | `e2e/playwright.config.ts:71`                            |
+| 证据                                                       | 位置                                                                  |
+| ---------------------------------------------------------- | --------------------------------------------------------------------- |
+| agent 失败 → `usedAgent=false` → stub 流式输出，无降级标记 | `apps/server/src/features/research/node-chat.ts:264-289`              |
+| stub 模板正文 + 假提案生成器                               | `apps/server/src/features/research/node-chat.ts:34-117`               |
+| chat 路由未挂 response、emit 裸发 `unknown`                | `apps/server/src/features/research/router.ts:451`、`node-chat.ts:170` |
+| shared 事件 schema 零引用                                  | `packages/shared/src/schemas/research.ts:688-715`                     |
+| e2e 显式 stub 开关（本变更后仍可用）                       | `e2e/playwright.config.ts:71`                                         |
 
 ### 证据刷新方法（apply 开头再跑一次）
 

@@ -29,7 +29,10 @@ await new Promise<void>((resolve) => {
     if (isTerminal(status)) setTimeout(resolve, 50); // 允许尾帧 flush
   });
   // 兜底：广播丢失（进程内 Map 生命周期错位等）时由慢轮询救场
-  const slowTick = () => { if (closed || queryTerminal()) resolve(); else setTimeout(slowTick, 2000); };
+  const slowTick = () => {
+    if (closed || queryTerminal()) resolve();
+    else setTimeout(slowTick, 2000);
+  };
   slowTick();
   // finally: unsubBroadcast()
 });
@@ -76,12 +79,12 @@ export async function* streamWithReconnect(makeStream: () => Promise<SseStream>,
 
 ## 5. 风险登记
 
-| 风险                                                        | 等级 | 缓解                                                                     |
-| ----------------------------------------------------------- | ---- | ------------------------------------------------------------------------ |
-| 重连风暴（多标签页同时退避）                                | 低   | 有界退避 + 上限 5 次；SQLite 单机写读路径扛得住；不做 jitter（单用户产品） |
-| 广播订阅与 SSE 生命周期错位导致 resolve 丢失                | 中   | 保留慢轮询兜底（§2）；单测覆盖「广播早于订阅到达」与「广播永不到达」     |
-| controller 872 行，改动面与 `useEdenLabController` 既有债务重叠 | 中 | 只动 `startStream` 与状态位，不做结构性拆分（拆分归台账 W6，避免撞车）  |
-| e2e flaky（人为断连难注入）                                 | 中   | 单测用 fake timers 覆盖状态机；e2e 不强制覆盖重连路径，p0 仅回归不劣化   |
+| 风险                                                            | 等级 | 缓解                                                                       |
+| --------------------------------------------------------------- | ---- | -------------------------------------------------------------------------- |
+| 重连风暴（多标签页同时退避）                                    | 低   | 有界退避 + 上限 5 次；SQLite 单机写读路径扛得住；不做 jitter（单用户产品） |
+| 广播订阅与 SSE 生命周期错位导致 resolve 丢失                    | 中   | 保留慢轮询兜底（§2）；单测覆盖「广播早于订阅到达」与「广播永不到达」       |
+| controller 872 行，改动面与 `useEdenLabController` 既有债务重叠 | 中   | 只动 `startStream` 与状态位，不做结构性拆分（拆分归台账 W6，避免撞车）     |
+| e2e flaky（人为断连难注入）                                     | 中   | 单测用 fake timers 覆盖状态机；e2e 不强制覆盖重连路径，p0 仅回归不劣化     |
 
 ## 6. 测试计划
 

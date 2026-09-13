@@ -27,9 +27,9 @@ MUST NOT 静默无反馈」。
 
 - `ac.signal.aborted` → 维持现状（抛出/abort 语义，`:268` 已有）。
 - 其他异常 → `logger.error` + `appendProgressEvent(runId, 'chat_failed', { nodeId, headline, message })`
-  + `emit('error', { errorCode, message })` 后 return。errorCode 用 `ErrorCode.INTERNAL_ERROR`
-  （与既有人工错误帧一致）；message 走用户可读文案（「模型暂时不可用，请稍后重试」），
-  原始异常进 server 日志，不直接透出。
+  - `emit('error', { errorCode, message })` 后 return。errorCode 用 `ErrorCode.INTERNAL_ERROR`
+    （与既有人工错误帧一致）；message 走用户可读文案（「模型暂时不可用，请稍后重试」），
+    原始异常进 server 日志，不直接透出。
 - 删除 `!usedAgent` 分支的生产可达性：`stubNodeChatTurn` 调用整体包进
   `if (getResearchE2eStubEnabled())`（复用 `e2e-stub.ts` 既有 env 读取；若该开关函数未导出
   则导出它，不复制 env 判断）。开关关闭时 stub 分支不可达——用 `apparently-unreachable` 的
@@ -73,11 +73,11 @@ const emit = (event: ChatEvent) => {
 
 ## 5. 风险登记
 
-| 风险                                            | 等级 | 缓解                                                                     |
-| ----------------------------------------------- | ---- | ------------------------------------------------------------------------ |
-| e2e @p0 依赖 stub 回复                          | 中   | playwright.config 已设 `CL_RESEARCH_E2E_STUB: '1'`，先本地 `just e2e` 验证 |
-| shared schema 与实际载荷不符导致接线期大面积改  | 低   | 以实际为准修 schema（零消费窗口期，唯二成本是 diff 审阅）                 |
-| 前端把 error 帧当静默失败                       | 低   | §4 最小 UI 配套纳入验收                                                  |
+| 风险                                           | 等级 | 缓解                                                                       |
+| ---------------------------------------------- | ---- | -------------------------------------------------------------------------- |
+| e2e @p0 依赖 stub 回复                         | 中   | playwright.config 已设 `CL_RESEARCH_E2E_STUB: '1'`，先本地 `just e2e` 验证 |
+| shared schema 与实际载荷不符导致接线期大面积改 | 低   | 以实际为准修 schema（零消费窗口期，唯二成本是 diff 审阅）                  |
+| 前端把 error 帧当静默失败                      | 低   | §4 最小 UI 配套纳入验收                                                    |
 
 ## 6. 测试计划
 

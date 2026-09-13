@@ -32,12 +32,12 @@ wire 的 `response.status`（`SourceSearchStatusSchema` 的 ok/not_implemented/n
 
 ## 证据快照（2026-09-14）
 
-| 证据                                            | 位置                                                     |
-| ----------------------------------------------- | -------------------------------------------------------- |
-| catch 吞错 → 空结果 → 契约上等同 no_results     | `apps/server/src/features/sources/router.ts:738-749`     |
-| status 枚举（新增 service_error 的落点）        | `packages/shared/src/schemas/source.ts:531-537`          |
+| 证据                                             | 位置                                                                    |
+| ------------------------------------------------ | ----------------------------------------------------------------------- |
+| catch 吞错 → 空结果 → 契约上等同 no_results      | `apps/server/src/features/sources/router.ts:738-749`                    |
+| status 枚举（新增 service_error 的落点）         | `packages/shared/src/schemas/source.ts:531-537`                         |
 | web 从不读 `response.status`，notice 只看 length | `apps/web/src/features/workspace/domains/sources/useSources.ts:421-433` |
-| 既有条款（本变更在其上补失败语义）              | `source-ingestion-upload-and-url.feature:66`             |
+| 既有条款（本变更在其上补失败语义）               | `source-ingestion-upload-and-url.feature:66`                            |
 
 ### 证据刷新方法（apply 开头再跑一次）
 

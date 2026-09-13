@@ -17,7 +17,12 @@
 `packages/shared/src/schemas/source.ts:531`：
 
 ```ts
-export const SourceSearchStatusSchema = z.enum(['ok', 'not_implemented', 'no_results', 'service_error']);
+export const SourceSearchStatusSchema = z.enum([
+  'ok',
+  'not_implemented',
+  'no_results',
+  'service_error',
+]);
 ```
 
 - `SourceSearchResponseSchema` 增补 refine 或约定注释：`status='service_error'` 时 `message`
@@ -56,10 +61,10 @@ export const SourceSearchStatusSchema = z.enum(['ok', 'not_implemented', 'no_res
 
 ## 5. 风险登记
 
-| 风险                                             | 等级 | 缓解                                                                     |
-| ------------------------------------------------ | ---- | ------------------------------------------------------------------------ |
-| 枚举扩张破坏既有消费者（外部 OpenAPI 用户）      | 低   | 枚举新增成员是向后兼容演化；仓库内消费者仅 web 一处且本变更同步            |
-| e2e 断言依赖 no_results 文案                     | 低   | 全仓 grep「没有找到匹配结果」相关 testid/断言，改引擎故障路径用例时区分   |
+| 风险                                              | 等级 | 缓解                                                                          |
+| ------------------------------------------------- | ---- | ----------------------------------------------------------------------------- |
+| 枚举扩张破坏既有消费者（外部 OpenAPI 用户）       | 低   | 枚举新增成员是向后兼容演化；仓库内消费者仅 web 一处且本变更同步               |
+| e2e 断言依赖 no_results 文案                      | 低   | 全仓 grep「没有找到匹配结果」相关 testid/断言，改引擎故障路径用例时区分       |
 | service_error 也可能由「引擎返回 0 条且抛错」误判 | 低   | searchWeb 抛错才走 service_error；引擎正常应答零命中仍是 no_results，单测锁死 |
 
 ## 6. 测试计划
