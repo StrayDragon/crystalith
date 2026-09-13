@@ -1,11 +1,12 @@
 import type { Chunk as ChunkRead } from '@crystalith/shared';
-import { Typography } from '@material-tailwind/react';
 import {
   DataObject as DataObjectIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
 import { useState } from 'react';
+
+import { Typography } from '../../../../shared/ui';
 
 function ChunkItem({ chunk }: { chunk: ChunkRead }) {
   const [expanded, setExpanded] = useState(false);

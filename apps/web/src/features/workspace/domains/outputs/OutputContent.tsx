@@ -1,4 +1,3 @@
-import { Menu, MenuHandler, MenuList, MenuItem, Spinner } from '@material-tailwind/react';
 import {
   Delete as DeleteIcon,
   Download as DownloadIcon,
@@ -11,6 +10,7 @@ import type { ReactNode } from 'react';
 import { getBuiltinBundleLoader } from '../../../../plugins/official/registry';
 import { t } from '../../../../shared/i18n';
 import { LAYER_LEVELS } from '../../../../shared/layer';
+import { Spinner, Menu, MenuHandler, MenuList, MenuItem } from '../../../../shared/ui';
 import {
   decodeOutputContent,
   getOutputPayloadWarnings,

@@ -3,11 +3,11 @@
  */
 
 import type { ModelList, ModelRole } from '@crystalith/shared';
-import { Select, Option, Typography, Chip, Alert } from '@material-tailwind/react';
 import { CloudQueue as CloudIcon } from '@mui/icons-material';
 import { useState, useEffect, useCallback } from 'react';
 
 import { api } from '../../../../api/eden';
+import { Typography, Chip, Select, Option, Alert } from '../../../../shared/ui';
 
 export interface ModelSelectorProps {
   /** Currently selected model ID */

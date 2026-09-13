@@ -1,14 +1,5 @@
 import type { SourceTag as SourceTagRead } from '@crystalith/shared';
 import {
-  Checkbox,
-  IconButton,
-  Menu,
-  MenuHandler,
-  MenuItem,
-  MenuList,
-  Typography,
-} from '@material-tailwind/react';
-import {
   Delete as DeleteIcon,
   ExpandMore as ExpandMoreIcon,
   MoreHoriz as MoreHorizIcon,
@@ -18,6 +9,15 @@ import {
 import ConfirmPopover from '../../../../../shared/ConfirmPopover';
 import { TestIds, tid } from '../../../../../shared/testids';
 import type { AsyncStatus } from '../../../../../shared/types';
+import {
+  IconButton,
+  Typography,
+  Menu,
+  MenuHandler,
+  MenuItem,
+  MenuList,
+  Checkbox,
+} from '../../../../../shared/ui';
 import type { SourceSortBy, SourceSortOrder } from '../useSources';
 
 export interface SourcesPanelToolbarProps {
@@ -95,7 +95,7 @@ export default function SourcesPanelToolbar({
 
         <span className="flex-1" />
 
-        <Menu placement="bottom-end">
+        <Menu placement="bottom-end" dismiss={{ itemPress: false }}>
           <MenuHandler>
             <IconButton
               size="sm"

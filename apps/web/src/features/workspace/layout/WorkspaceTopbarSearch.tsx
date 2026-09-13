@@ -3,7 +3,6 @@
  * Deep Research entry is the flask → `/research-lab/:nid` (Lab), not this panel.
  */
 import type { ExtractorInfo, SourceFromUrlMode } from '@crystalith/shared';
-import { IconButton, Spinner } from '@material-tailwind/react';
 import {
   ArrowForward as ArrowForwardIcon,
   Close as CloseIcon,
@@ -17,6 +16,7 @@ import { useLayer } from '../../../shared/layer';
 import { TestIds, tid } from '../../../shared/testids';
 import { toast } from '../../../shared/toast';
 import type { AsyncStatus } from '../../../shared/types';
+import { IconButton, Spinner } from '../../../shared/ui';
 import AddSearchResultDialog from '../domains/sources/AddSearchResultDialog';
 import type { ExtractorType } from '../domains/sources/components/sources-panel-types';
 import { useSourcesPanelAddFromSearch } from '../domains/sources/components/useSourcesPanelAddFromSearch';

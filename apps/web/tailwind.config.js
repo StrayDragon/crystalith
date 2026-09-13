@@ -1,9 +1,8 @@
-const withMT = require('@material-tailwind/react/utils/withMT');
 const colors = require('tailwindcss/colors');
 const scrollbar = require('tailwind-scrollbar');
 
 /** @type {import('tailwindcss').Config} */
-module.exports = withMT({
+module.exports = {
   darkMode: 'class',
   content: [
     './src/**/*.{js,jsx,ts,tsx}',
@@ -117,4 +116,4 @@ module.exports = withMT({
     },
   },
   plugins: [scrollbar({ nocompatible: true })],
-});
+};

@@ -1,13 +1,4 @@
 import {
-  Menu,
-  MenuHandler,
-  MenuList,
-  MenuItem,
-  IconButton,
-  Typography,
-  Tooltip,
-} from '@material-tailwind/react';
-import {
   MoreVert as MoreVertIcon,
   Delete as DeleteIcon,
   FileDownload as DownloadIcon,
@@ -17,6 +8,15 @@ import { useMemo, useState, useCallback, useEffect } from 'react';
 
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { useLayer } from '../../../../shared/layer';
+import {
+  IconButton,
+  Typography,
+  Menu,
+  MenuHandler,
+  MenuList,
+  MenuItem,
+  Tooltip,
+} from '../../../../shared/ui';
 import { navigateToLabReport } from '../../../research-lab/labRouting';
 import CitationsControl from '../../shared/components/citations/CitationsControl';
 import { EmptyHint } from '../../shared/components/EmptyHint';

@@ -1,13 +1,13 @@
-/**
- * Lab idle Compose — create a deep-research task (Eden ResearchRun or fixture playback).
- * Field shape mirrors ResearchCreate (topic + channels + sourceIds).
- */
-import { Spinner } from '@material-tailwind/react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { api } from '../../api/eden';
 import { parseServerError } from '../../api/parseServerError';
 import { TestIds, tid } from '../../shared/testids';
+/**
+ * Lab idle Compose — create a deep-research task (Eden ResearchRun or fixture playback).
+ * Field shape mirrors ResearchCreate (topic + channels + sourceIds).
+ */
+import { Spinner } from '../../shared/ui';
 import { LabChatModelSelect } from './LabChatModelSelect';
 import { LAB_COMPOSE_DEPTH_OPTIONS, labComposeDepthBudgetHint } from './labComposeDepth';
 import {

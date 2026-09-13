@@ -13,6 +13,36 @@ import { server } from './test-utils/msw/server';
 
 expect.extend(matchers);
 
+if (globalThis.PointerEvent === undefined) {
+  class PointerEventPolyfill extends MouseEvent {
+    readonly height: number;
+    readonly isPrimary: boolean;
+    readonly pointerId: number;
+    readonly pointerType: string;
+    readonly pressure: number;
+    readonly tangentialPressure: number;
+    readonly tiltX: number;
+    readonly tiltY: number;
+    readonly twist: number;
+    readonly width: number;
+
+    constructor(type: string, params: PointerEventInit = {}) {
+      super(type, params);
+      this.height = params.height ?? 1;
+      this.isPrimary = params.isPrimary ?? true;
+      this.pointerId = params.pointerId ?? 1;
+      this.pointerType = params.pointerType ?? 'mouse';
+      this.pressure = params.pressure ?? 0.5;
+      this.tangentialPressure = params.tangentialPressure ?? 0;
+      this.tiltX = params.tiltX ?? 0;
+      this.tiltY = params.tiltY ?? 0;
+      this.twist = params.twist ?? 0;
+      this.width = params.width ?? 1;
+    }
+  }
+  globalThis.PointerEvent = PointerEventPolyfill as typeof PointerEvent;
+}
+
 beforeAll(() => {
   const onUnhandledRequest = (process.env.RSTEST_MSW_ON_UNHANDLED || 'error') as
     | 'bypass'

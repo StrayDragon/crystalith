@@ -1,10 +1,10 @@
-import { Button, Input, Spinner, Typography } from '@material-tailwind/react';
 import { BookmarkAdd as BookmarkAddIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useLayer } from '../../../../shared/layer';
 import { toast } from '../../../../shared/toast';
+import { Button, Spinner, Typography, Input } from '../../../../shared/ui';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import type { OutputTypeId } from '../../shared/types';
 import { DEFAULT_TYPE_LABELS } from '../studio/studioUtils';

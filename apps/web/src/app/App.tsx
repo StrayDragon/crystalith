@@ -13,6 +13,7 @@ import WorkspacePage from '../features/workspace/app/WorkspacePage';
 import ErrorBoundary from '../features/workspace/shared/components/ErrorBoundary';
 import { LayerProvider } from '../shared/layer';
 import { ToastContainer } from '../shared/toast';
+import { TooltipProvider } from '../shared/ui';
 
 function useLocationKey(): string {
   const [key, setKey] = useState(() => `${window.location.pathname}${window.location.search}`);
@@ -81,8 +82,10 @@ function AppRoutes() {
 function App() {
   return (
     <LayerProvider>
-      <AppRoutes />
-      <ToastContainer />
+      <TooltipProvider delayDuration={200}>
+        <AppRoutes />
+        <ToastContainer />
+      </TooltipProvider>
     </LayerProvider>
   );
 }

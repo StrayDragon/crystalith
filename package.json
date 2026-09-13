@@ -11,8 +11,8 @@
   "scripts": {
     "dev:server": "cd apps/server && bun run dev",
     "dev:web": "cd apps/web && bun run dev",
-    "dev": "overmind start -N -c slidev -f Procfile",
-    "dev:overmind": "overmind start -N -c slidev -f Procfile",
+    "dev": "bash -c 'source ./scripts/load-cl-env.sh && overmind start -N -c slidev -f Procfile'",
+    "dev:overmind": "bash -c 'source ./scripts/load-cl-env.sh && overmind start -N -c slidev -f Procfile'",
     "dev:slidev": "cd packages/crystalith-slidev && bun run dev",
     "build": "bun --filter '*' build",
     "test": "bun --filter './apps/*' --filter './packages/*' test",

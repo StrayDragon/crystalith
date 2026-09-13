@@ -1,5 +1,4 @@
-import { Button, Textarea, Typography } from '@material-tailwind/react';
-
+import { Button, Typography, Textarea } from '../../../../../../shared/ui';
 import { QUEUE_STATUS_LABELS } from '../constants';
 import type { SlidesPreviewModeContentProps } from '../types';
 

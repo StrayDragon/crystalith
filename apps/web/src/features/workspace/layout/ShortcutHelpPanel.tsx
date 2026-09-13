@@ -1,10 +1,10 @@
-import { IconButton, Typography } from '@material-tailwind/react';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useMemo } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useLayer } from '../../../shared/layer';
 import { TestIds, tid } from '../../../shared/testids';
+import { IconButton, Typography } from '../../../shared/ui';
 import type { ShortcutCategory, WorkspaceShortcutDefinition } from '../shared/shortcuts';
 
 interface ShortcutHelpPanelProps {

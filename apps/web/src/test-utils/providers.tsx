@@ -1,15 +1,15 @@
-import { ThemeProvider } from '@material-tailwind/react';
 import type { ReactNode } from 'react';
 import { SWRConfig } from 'swr';
 
 import { LayerProvider } from '../shared/layer';
+import { TooltipProvider } from '../shared/ui';
 
-/** Match production `main.tsx`: MT ThemeProvider + LayerProvider for UI tests. */
+/** Match production: LayerProvider + TooltipProvider for UI tests. */
 export function TestProviders({ children }: { children: ReactNode }) {
   return (
-    <ThemeProvider>
-      <LayerProvider>{children}</LayerProvider>
-    </ThemeProvider>
+    <LayerProvider>
+      <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
+    </LayerProvider>
   );
 }
 

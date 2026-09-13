@@ -1,5 +1,4 @@
-import { Button, Input, Textarea, Typography } from '@material-tailwind/react';
-
+import { Button, Typography, Input, Textarea } from '../../../../../../shared/ui';
 import { ModelSelector } from '../../ModelSelector';
 import type { SlidesInputStageProps } from '../types';
 

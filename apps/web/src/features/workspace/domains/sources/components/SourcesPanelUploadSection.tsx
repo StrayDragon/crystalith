@@ -1,4 +1,3 @@
-import { Button, Spinner, Tooltip, Typography } from '@material-tailwind/react';
 import {
   CloudUpload as CloudUploadIcon,
   Hub as HubIcon,
@@ -11,6 +10,7 @@ import { t } from '../../../../../shared/i18n';
 import { TestIds, tid } from '../../../../../shared/testids';
 import { toast } from '../../../../../shared/toast';
 import type { AsyncStatus } from '../../../../../shared/types';
+import { Button, Spinner, Typography, Tooltip } from '../../../../../shared/ui';
 import { SOURCE_UPLOAD_ACCEPT } from '../../../shared/uploadTypes';
 import type { SourceUploadItem } from '../useSources';
 import { splitUploadFiles } from './sources-panel-utils';

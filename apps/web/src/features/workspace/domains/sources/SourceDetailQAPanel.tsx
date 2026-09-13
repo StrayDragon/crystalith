@@ -1,13 +1,4 @@
 import {
-  IconButton,
-  Typography,
-  Spinner,
-  Menu,
-  MenuHandler,
-  MenuList,
-  MenuItem,
-} from '@material-tailwind/react';
-import {
   Send as SendIcon,
   QuestionAnswer as QuestionAnswerIcon,
   SaveAlt as SaveAltIcon,
@@ -18,6 +9,15 @@ import {
 import type { RefObject } from 'react';
 
 import { t } from '../../../../shared/i18n';
+import {
+  IconButton,
+  Typography,
+  Spinner,
+  Menu,
+  MenuHandler,
+  MenuList,
+  MenuItem,
+} from '../../../../shared/ui';
 import type { ChatMessage } from './sourceDetailTypes';
 
 interface SourceDetailQAPanelProps {

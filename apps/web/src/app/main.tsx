@@ -1,4 +1,3 @@
-import { ThemeProvider as MTThemeProvider } from '@material-tailwind/react';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import 'streamdown/styles.css';
@@ -14,8 +13,6 @@ if (!rootElement) {
 const root = createRoot(rootElement);
 root.render(
   <StrictMode>
-    <MTThemeProvider>
-      <App />
-    </MTThemeProvider>
+    <App />
   </StrictMode>,
 );

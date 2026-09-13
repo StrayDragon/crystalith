@@ -1,4 +1,3 @@
-import { Button, Typography } from '@material-tailwind/react';
 import {
   cloneElement,
   forwardRef,
@@ -13,6 +12,7 @@ import { createPortal } from 'react-dom';
 
 import { useLayer } from './layer';
 import { TestIds, tid } from './testids';
+import { Button, Typography } from './ui';
 
 type Placement = 'top' | 'bottom' | 'left' | 'right';
 

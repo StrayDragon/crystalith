@@ -57,6 +57,14 @@ export async function ingestFromUrl(
   );
   const dedupAction = dedupParsed.success ? dedupParsed.data : 'prompt';
 
+  if (extractor) {
+    await pluginRegistry.ensureLoaded();
+    const validExtractors = extractorNames();
+    if (!validExtractors.includes(extractor)) {
+      throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Unknown extractor: ${extractor}`);
+    }
+  }
+
   // SSRF guard: validate URL before fetch.
   try {
     await validateUrlForFetch(url, getSecurityPolicy());
@@ -89,14 +97,6 @@ export async function ingestFromUrl(
   // Link mode: create a lightweight source, then embed so it is searchable (v1 still embeds)
   if (mode === 'link') {
     return createLinkSource(nid, url, title, snippet, dedupKey);
-  }
-
-  if (extractor) {
-    await pluginRegistry.ensureLoaded();
-    const validExtractors = extractorNames();
-    if (!validExtractors.includes(extractor)) {
-      throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Unknown extractor: ${extractor}`);
-    }
   }
 
   return fetchAndIngest(nid, url, title, extractor, dedupKey);

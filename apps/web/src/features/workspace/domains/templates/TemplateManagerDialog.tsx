@@ -1,4 +1,3 @@
-import { Button, IconButton, Input, Spinner, Typography } from '@material-tailwind/react';
 import {
   Close as CloseIcon,
   Delete as DeleteIcon,
@@ -11,6 +10,7 @@ import { createPortal } from 'react-dom';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { useLayer } from '../../../../shared/layer';
 import { toast } from '../../../../shared/toast';
+import { Button, IconButton, Spinner, Typography, Input } from '../../../../shared/ui';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import type { WorkspaceTemplate } from './types';
 

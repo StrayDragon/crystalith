@@ -1,14 +1,4 @@
 import {
-  Button,
-  Dialog,
-  DialogBody,
-  DialogFooter,
-  DialogHeader,
-  IconButton,
-  Textarea,
-  Typography,
-} from '@material-tailwind/react';
-import {
   Add as AddIcon,
   Build as ToolsIcon,
   Close as CloseIcon,
@@ -20,6 +10,16 @@ import { createPortal } from 'react-dom';
 
 import { useLayer } from '../../../../shared/layer';
 import { TestIds, tid } from '../../../../shared/testids';
+import {
+  Button,
+  IconButton,
+  Typography,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  DialogHeader,
+  Textarea,
+} from '../../../../shared/ui';
 import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';
 import type { Citation, OutputItem, OutputTypeId, WorkspaceTool } from '../../shared/types';
 import StudioOutputsList from './StudioOutputsList';

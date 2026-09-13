@@ -1,6 +1,6 @@
-import { IconButton, Tooltip } from '@material-tailwind/react';
 import type { ReactNode, RefObject } from 'react';
 
+import { IconButton, Tooltip } from '../../../../shared/ui';
 import ErrorBoundary from '../../shared/components/ErrorBoundary';
 import { IconExitFullscreen, IconFullscreen } from '../../shared/components/Icons';
 

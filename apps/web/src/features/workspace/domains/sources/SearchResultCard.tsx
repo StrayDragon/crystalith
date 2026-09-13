@@ -1,13 +1,4 @@
 import {
-  Checkbox,
-  Typography,
-  IconButton,
-  Menu,
-  MenuHandler,
-  MenuList,
-  MenuItem,
-} from '@material-tailwind/react';
-import {
   MoreHoriz as MoreHorizIcon,
   OpenInNew as OpenInNewIcon,
   CloudDownload as FetchIcon,
@@ -16,6 +7,15 @@ import {
 import { forwardRef } from 'react';
 
 import { LAYER_LEVELS } from '../../../../shared/layer';
+import {
+  Typography,
+  IconButton,
+  Menu,
+  MenuHandler,
+  MenuList,
+  MenuItem,
+  Checkbox,
+} from '../../../../shared/ui';
 
 export interface SearchResultItem {
   title: string;

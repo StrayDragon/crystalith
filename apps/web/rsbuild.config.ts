@@ -23,7 +23,7 @@ export default defineConfig({
       '@brand': path.resolve(__dirname, '../../assets'),
       '@crystalith/shared': path.resolve(__dirname, '../../packages/shared/src'),
       '@crystalith-slidev': path.resolve(__dirname, '../../packages/crystalith-slidev/src'),
-      // Force a single React copy (MT / emotion / RTL must share one dispatcher).
+      // Force a single React copy (Radix / emotion / RTL must share one dispatcher).
       react: path.resolve(__dirname, 'node_modules/react'),
       'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
       'react/jsx-runtime': path.join(
@@ -67,9 +67,9 @@ export default defineConfig({
         name: 'vendor-framer-motion',
         priority: 20,
       },
-      materialTW: {
-        test: /[\\/]node_modules[\\/](@material-tailwind|@floating-ui)[\\/]/,
-        name: 'vendor-material-tailwind',
+      radixUi: {
+        test: /[\\/]node_modules[\\/](@radix-ui|@floating-ui)[\\/]/,
+        name: 'vendor-radix',
         priority: 20,
       },
       xyflow: {

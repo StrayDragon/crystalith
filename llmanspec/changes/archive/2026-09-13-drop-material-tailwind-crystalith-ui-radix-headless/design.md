@@ -20,14 +20,14 @@ apps/web/tailwind.config.js      # P5：去掉 withMT
 
 ## 2. 混合路线（为何 Dialog 不用 Radix）
 
-| 类别 | 选型 | 理由 |
-| --- | --- | --- |
-| 展示件 | 自研 | prop 面极浅；自研 30–80 行可抄现用 className |
-| Menu / Popover / Tooltip | Radix headless + 样式壳 | 焦点循环、方向键、定位、ARIA；仓库无意自研这份 a11y |
-| Dialog / modal | **自研 portal + `useFocusTrap` + Layer** | 多数对话框已是这条路；再引入 Radix Dialog = 两套 overlay SSOT，与 workspace-ui-core 弹层策略冲突 |
-| Select | Radix Select | 唯一需要列表键盘导航的表单件 |
-| Tabs / Checkbox / Input | 自研（Tabs 若 a11y 不够再升 Radix Tabs） | 用法浅 |
-| ConfirmPopover | **保持自研** | 已有 placement/portal；只换内部 Button/Typography |
+| 类别                     | 选型                                     | 理由                                                                                             |
+| ------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| 展示件                   | 自研                                     | prop 面极浅；自研 30–80 行可抄现用 className                                                     |
+| Menu / Popover / Tooltip | Radix headless + 样式壳                  | 焦点循环、方向键、定位、ARIA；仓库无意自研这份 a11y                                              |
+| Dialog / modal           | **自研 portal + `useFocusTrap` + Layer** | 多数对话框已是这条路；再引入 Radix Dialog = 两套 overlay SSOT，与 workspace-ui-core 弹层策略冲突 |
+| Select                   | Radix Select                             | 唯一需要列表键盘导航的表单件                                                                     |
+| Tabs / Checkbox / Input  | 自研（Tabs 若 a11y 不够再升 Radix Tabs） | 用法浅                                                                                           |
+| ConfirmPopover           | **保持自研**                             | 已有 placement/portal；只换内部 Button/Typography                                                |
 
 否决：全自研行为件；等 MT v4；用 `@mui/material` 组件替换 MT。
 
@@ -54,14 +54,14 @@ expand-contract，MT 直到 P5 才卸载：
 
 ## 5. 风险登记
 
-| 风险 | 等级 | 缓解 |
-| --- | --- | --- |
-| Menu/Tooltip 打开后 e2e 点不到（portal/pointer-events） | 高 | 保持现有 `data-testid` 挂在 trigger/list 上；Radix `modal`/`container` 对齐现状；每期 `just e2e` |
-| Dialog 焦点/Esc/遮罩与 Layer 打架 | 高 | 复用已验证的 portal 对话框模式，抽一层壳而不是第三套 |
-| withMT 去掉后 `ui/*` 或 MT 注入的默认 theme 类丢失 | 中 | P5 前对照 computed class；缺的 utility 内联到基础件或 `tailwind.css` |
-| Radix 与 React 18.2 不兼容 | 中 | 锁定兼容 18 的 Radix 发行；禁止顺手升 React 19 |
-| 视觉回归（暗色） | 中 | 不改 token；关键面（顶栏菜单、来源行菜单、Studio 对话框）手动明暗对照 |
-| `@mui/material` 误删导致 icons 坏 | 低 | P5 先 `bun install` 验证再提交 |
+| 风险                                                    | 等级 | 缓解                                                                                             |
+| ------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------ |
+| Menu/Tooltip 打开后 e2e 点不到（portal/pointer-events） | 高   | 保持现有 `data-testid` 挂在 trigger/list 上；Radix `modal`/`container` 对齐现状；每期 `just e2e` |
+| Dialog 焦点/Esc/遮罩与 Layer 打架                       | 高   | 复用已验证的 portal 对话框模式，抽一层壳而不是第三套                                             |
+| withMT 去掉后 `ui/*` 或 MT 注入的默认 theme 类丢失      | 中   | P5 前对照 computed class；缺的 utility 内联到基础件或 `tailwind.css`                             |
+| Radix 与 React 18.2 不兼容                              | 中   | 锁定兼容 18 的 Radix 发行；禁止顺手升 React 19                                                   |
+| 视觉回归（暗色）                                        | 中   | 不改 token；关键面（顶栏菜单、来源行菜单、Studio 对话框）手动明暗对照                            |
+| `@mui/material` 误删导致 icons 坏                       | 低   | P5 先 `bun install` 验证再提交                                                                   |
 
 ## 6. 测试 seam（复用既有 harness，无新 seam）
 
