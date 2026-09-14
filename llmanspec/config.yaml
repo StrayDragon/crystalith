@@ -1,3 +1,8 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/StrayDragon/llman/main/artifacts/schema/configs/en/llmanspec-config.schema.json
 schema: spec-driven
 locale: zh-CN
+
+# v2 change id 规约：c{num}-{verb}-{subject}（active 校验；archive/ 与 frozen 包免检）
+change_id:
+  pattern: '^c(?P<unique>[0-9]+)-[a-z0-9-]+$'
+  template: 'c{{ llman_sdd_unique_id }}-{{ verb }}-{{ subject }}'

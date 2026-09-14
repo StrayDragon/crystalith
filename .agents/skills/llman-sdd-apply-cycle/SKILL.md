@@ -2,7 +2,7 @@
 name: "llman-sdd-apply-cycle"
 description: "单个变更的闭环：门禁检查→实施→测试→校验→verify 建议→归档→提交。仅手动触发。Agent MUST NOT 自动调用。"
 metadata:
-  version: "0.0.77"
+  version: "0.0.78"
 disable-model-invocation: true
 ---
 
@@ -44,7 +44,7 @@ llman sdd validate <change-id> --strict --no-interactive
 ```bash
 llman sdd change finalize <change-id>
 ```
-（工作区可脏；ff-merge + 文档改名 + **自动提交** `archive(sdd): <change-id>` 单进程完成。`--no-commit` 跳过自动提交用于手动/CI 历史——此时自行 `git add -A && git commit -m "archive(sdd): <change-id>"`。）
+（工作区可脏；自动合并（squash 缺省）+ 文档改名 + **自动提交** `archive(sdd): <change-id>` 单进程完成。`--no-commit` 跳过自动提交用于手动/CI 历史——此时自行 `git add -A && git commit -m "archive(sdd): <change-id>"`。）
 
 `change checkpoint` 已移除；普通 `change archive` 命令保留为 fallback（不再要求任何 checkpointed 字段）。
 
@@ -53,7 +53,7 @@ finalize 已自动提交，除非传了 `--no-commit`。
 
 ### 6) 可选清理
 ```bash
-git branch -d <feature-branch>
+git branch -D <feature-branch>   # squash 后分支不再是 main 祖先，-d 会被拒绝
 ```
 push / Hosting PR 仅当用户明确要求。
 
@@ -70,3 +70,6 @@ push / Hosting PR 仅当用户明确要求。
 - `ethics.required_evidence`: `readyToImplement=true`、validate --strict 通过、tasks 全勾、finalize/archive 成功
 - `ethics.refusal_contract`: 门禁或校验自修复 8 轮仍失败 → 报告 blocker，禁止强行归档
 - `ethics.escalation_policy`: 若改动 SDD 工作流 spec/模板，归档前暂停请用户确认
+
+> 命令细节用 `llman sdd <cmd> --help` 查看；命令参考以 CLI 为准，skill 不内嵌命令表。
+> 文中「规约」= 本项目 `llmanspec/specs/` 下的 `.feature` 文件；用 `llman sdd list --specs` / `llman sdd show <capability>` 查全文。
