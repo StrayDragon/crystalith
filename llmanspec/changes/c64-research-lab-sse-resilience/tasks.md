@@ -1,4 +1,4 @@
-# Tasks — research-lab-sse-resilience
+# Tasks — c64-research-lab-sse-resilience
 
 > Seam：
 > ① `bun test apps/server/tests/research/`（run-sse 生命周期）

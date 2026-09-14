@@ -1,4 +1,4 @@
-# Design：research-lab-sse-resilience
+# Design：c64-research-lab-sse-resilience
 
 ## 1. Spec 增量（apply 时在绑定分支编辑 live spec）
 

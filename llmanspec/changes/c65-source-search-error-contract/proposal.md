@@ -51,5 +51,5 @@ grep -n "'service_error'" packages/shared/src/schemas/source.ts
 ## 非目标
 
 - 不改搜索结果队列的 UI 结构（SearchResultsQueue 已有 error 态样式，直接复用）。
-- 不做自动重试/退避（用户手动重搜即可；与 `research-lab-sse-resilience` 的自动重连是不同场景）。
+- 不做自动重试/退避（用户手动重搜即可；与 `c64-research-lab-sse-resilience` 的自动重连是不同场景）。
 - 不动 research 侧对 searchWeb 的复用（`deep-research-runtime.feature:22` 的复用条款不受影响；research 侧对引擎失败的容忍语义已有独立条款 r158 管）。

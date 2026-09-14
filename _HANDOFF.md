@@ -22,11 +22,11 @@
 
 ## 1. SDD changes（designed，待认领）
 
-| change id                      | 一句话                                                                  | 关键 spec 位置                                 |
-| ------------------------------ | ----------------------------------------------------------------------- | ---------------------------------------------- |
-| `research-node-chat-honesty`   | 模型失败禁止静默 stub 降级，改显式 error 帧；接线零消费的 chat 事件契约 | `deep-research-runtime`（新增场景）            |
-| `research-lab-sse-resilience`  | Run SSE 断线有界重连 + 可见中断态；server 终态等待去 100ms 轮询         | `deep-research-ui`（新增场景）                 |
-| `source-search-error-contract` | 引擎不可用返回 `service_error`，与 no_results 可区分；前端消费 status   | `source-ingestion-upload-and-url:66`（补子句） |
+| change id                          | 一句话                                                                  | 关键 spec 位置                                 |
+| ---------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------- |
+| `c63-research-node-chat-honesty`   | 模型失败禁止静默 stub 降级，改显式 error 帧；接线零消费的 chat 事件契约 | `deep-research-runtime`（新增场景）            |
+| `c64-research-lab-sse-resilience`  | Run SSE 断线有界重连 + 可见中断态；server 终态等待去 100ms 轮询         | `deep-research-ui`（新增场景）                 |
+| `c65-source-search-error-contract` | 引擎不可用返回 `service_error`，与 no_results 可区分；前端消费 status   | `source-ingestion-upload-and-url:66`（补子句） |
 
 ## 2. 直接修正波次
 
@@ -38,7 +38,7 @@
 
 ### W2 · 死代码清理（P1）✅ 2026-09-14
 
-> 注意：**不要**删 `packages/shared/src/schemas/research.ts:688-715` 的 `ResearchNodeChat*EventSchema`——由 `research-node-chat-honesty` 接线（不是死代码，是未接线）。
+> 注意：**不要**删 `packages/shared/src/schemas/research.ts:688-715` 的 `ResearchNodeChat*EventSchema`——由 `c63-research-node-chat-honesty` 接线（不是死代码，是未接线）。
 
 - [x] server：删 `ai/generate-output.ts` 整文件；`shared/ids.ts` 删 5 个未用 param schema + 3 个仅测试引用的 parse helpers（保留 PathId/NidParamsSchema，删配套 `tests/shared/ids.test.ts`）；删 `db/vectors.ts getAllVectors`；`qa/handler.ts` estimateTokens 换名 wrapper 删除、两处调用点直用 `countTokens`
 - [x] shared：删 8 个 `*ListSchema` + `QaStreamEventNames/Name`。**修正**：`OutputTypeMetaSchema`（是 OutputMetaSchema 的 extend 基类）与 `SlidesConfigSchemaSchema`（PluginConfigSchema 别名链消费）实为活代码，未删
@@ -48,7 +48,7 @@
 
 ### W3 · research 运行时合规（P1，spec 已有 MUST，纯实现欠账）
 
-> 与 `research-node-chat-honesty` 都动 `node-chat.ts`：**先做该 change，再进本波**（或反之及时 rebase）。
+> 与 `c63-research-node-chat-honesty` 都动 `node-chat.ts`：**先做该 change，再进本波**（或反之及时 rebase）。
 
 - [ ] 互斥强制化（条款：`deep-research-runtime.feature`「Node chat SSE proposals only」r98「chat 与 work-unit MUST 互斥（拒绝或排队）」、:154）：runLoop 启动检查 `llmActivity==='node_chat'` 则拒绝/排队（现状 `run-loop.ts:867` 无条件置位不检查）；chat 进行中 `add-budget` 触发的 `scheduleRun`（`commands.ts:474-499`）同口径
 - [ ] config 默认值收敛：`shared/config.ts:263/819/1016` 三份 ResearchSettings 字面量 → 单一 SSOT 常量喂给 schema `.default()` 与 fallback；`research-core.ts:100-103` 改用既有 `getResearchSettings()`
@@ -71,7 +71,7 @@
 
 ### W6 · 神文件拆分（P2，行为不变，拆分纪律见根 AGENTS.md）
 
-> 顺序约束：`useEdenLabController` 的结构性改动等 `research-lab-sse-resilience` 落地后再动（该 change 只动 `startStream`）。
+> 顺序约束：`useEdenLabController` 的结构性改动等 `c64-research-lab-sse-resilience` 落地后再动（该 change 只动 `startStream`）。
 
 - [ ] `useSources.ts`（940 行）→ 五缝：`useSourceTags` / `useExtractors` / `useSourceUploads` / `useSourceSearchQueue` / 引用高亮 hook
 - [ ] `WorkspaceLayout.tsx`（984 行）→ 命令面板 builder 独立模块；SourcesPanel/ChatPanel/Overlays 直接消费 store+SWR，砍 45/24/56 props 链；顺带清僵尸 props（`:679-681` 空回调、`searchQueue={[]}`）
