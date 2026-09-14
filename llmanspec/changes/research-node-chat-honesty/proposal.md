@@ -32,7 +32,7 @@ E2E 全链路走 `CL_RESEARCH_E2E_STUB=1`（`e2e/playwright.config.ts:71`、`e2e
 
 - **行为（需 spec 修正）**：模型调用失败/异常 MUST 经 chat SSE `error` 事件显式终结对话（含 errorCode/message），MUST NOT 以 stub/模板内容冒充模型回复；`stubNodeChatTurn` MUST 仅在 `CL_RESEARCH_E2E_STUB=1` 下可达；progress ledger MUST 记录 chat 失败事件。
 - **契约（合规任务，无需新条款）**：将 shared 的 `ResearchNodeChat*EventSchema` 真正接线——chat SSE 的 emit 出口以 shared schema 收窄类型，dev/test 下 safeParse 断言；使「chunk、proposal、done、error」事件契约从声明变为受控。
-- **不动**：chat 与 work-unit 互斥（r98 已有 MUST，属实现欠账，另走直接修正批次，见 `docs/2026-09-qa-progress.md` W3）；fixture/（Fake）文案泄漏（web 侧小修，归直接批次 W1）。
+- **不动**：chat 与 work-unit 互斥（r98 已有 MUST，属实现欠账，另走直接修正批次，见根目录 `_HANDOFF.md` W3）；fixture/（Fake）文案泄漏（web 侧小修，已随直接批次 W1 完成）。
 
 ## 证据快照（2026-09-14）
 

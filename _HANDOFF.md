@@ -1,5 +1,9 @@
-# 2026-09 阶段性 QA 台账（编排）
+# 2026-09 阶段性 QA 台账（编排）【临时交接文件】
 
+> **临时性说明**：本文件是工作台账（handoff），不是正式文档。原 `docs/2026-09-qa-progress.md`
+> 已迁入此处；W1–W8 与三个 SDD change 全部完成后可整文件删除。正式沉淀以各 change 的
+> llmanspec 归档与 commit history 为准。
+>
 > 2026-09-14 全仓 QA（代码 slop + 产品/用户视角）的收敛编排。三个需要 spec 修正的发现已立
 > SDD change（designed 态、未 start，可直接认领）；其余归直接修正波次（无需 SDD，按
 > `.agents/skills/crystalith-ssot-qa-batches` 批次纪律：一波一主题、`just qa` 绿再 commit）。
