@@ -143,6 +143,3 @@ export const QaExportJsonResponseSchema = z
     description: desc('qa.export_json', 'QA JSON 导出'),
   });
 export type QaExportJsonResponse = z.infer<typeof QaExportJsonResponseSchema>;
-
-export const QaStreamEventNames = ['chunk', 'state_snapshot', 'done', 'error'] as const;
-export type QaStreamEventName = (typeof QaStreamEventNames)[number];

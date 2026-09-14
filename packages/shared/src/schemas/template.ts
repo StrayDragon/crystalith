@@ -39,10 +39,6 @@ export const TemplateCreateSchema = z
   });
 export type TemplateCreate = z.infer<typeof TemplateCreateSchema>;
 
-export const TemplateListSchema = z.object({
-  templates: z.array(TemplateSchema),
-});
-
 /** Wire shape for GET /v2/templates (bare array, not wrapped). */
 export const TemplateArraySchema = z.array(TemplateSchema);
 export type TemplateArray = z.infer<typeof TemplateArraySchema>;
@@ -87,7 +83,3 @@ export const PromptPresetCreateSchema = z
     example: { trigger: 'eli5', systemPrompt: '…' },
   });
 export type PromptPresetCreate = z.infer<typeof PromptPresetCreateSchema>;
-
-export const PromptPresetListSchema = z.object({
-  presets: z.array(PromptPresetSchema),
-});

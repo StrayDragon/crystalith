@@ -43,10 +43,6 @@ export const MessageCreateSchema = z
   });
 export type MessageCreate = z.infer<typeof MessageCreateSchema>;
 
-export const MessageListSchema = z.object({
-  messages: z.array(MessageSchema),
-});
-
 /** Single chat turn used when building LLM conversation history. */
 export const ChatTurnSchema = z.object({
   role: MessageRoleSchema,

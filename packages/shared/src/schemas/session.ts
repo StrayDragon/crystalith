@@ -41,10 +41,6 @@ export const SessionUpdateSchema = z.object({
 });
 export type SessionUpdate = z.infer<typeof SessionUpdateSchema>;
 
-export const SessionListSchema = z.object({
-  sessions: z.array(SessionSchema),
-});
-
 /** POST …/sessions/:sid/convert-to-source */
 export const SessionConvertToSourceRequestSchema = z
   .object({

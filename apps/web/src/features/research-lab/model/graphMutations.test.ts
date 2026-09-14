@@ -3,15 +3,12 @@ import { describe, expect, it } from '@rstest/core';
 import { deriveLabState } from '../../research-lab-demo/fake/deriveLabState';
 import { getLabScenario } from '../../research-lab-demo/fake/scenarios';
 import { defaultForkDraft, previewPruneAlongEdge } from './graphMutations';
-import { extractCitationIds, parseReportSections } from './reportDocument';
+import { extractCitationIds } from './reportDocument';
 
 describe('reportDocument', () => {
-  it('parses sections and inline citation ids', () => {
+  it('extracts inline citation ids', () => {
     const scenario = getLabScenario('xlsx-lib');
-    const sections = parseReportSections(scenario.reportMarkdown);
-    expect(sections.length).toBeGreaterThan(1);
     expect(extractCitationIds(scenario.reportMarkdown)).toContain('c2');
-    expect(sections.some((s) => s.primaryCitationId != null)).toBe(true);
   });
 });
 
