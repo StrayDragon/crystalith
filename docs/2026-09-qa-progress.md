@@ -32,14 +32,15 @@
 - [x] `nodeQuickActions.ts:112`「（Fake）」summary 漏进真实 run：直接移除后缀（fixture 语境自明，无需 mode 门控）；已补 proposal 载荷不含 fixture 词汇的 Rstest 锁测
 - [x] `outputs/router.ts:541-544` 转来源吞 embedding 失败：补 `errorMessage` 落库 + logger.error（对齐 `sources/router.ts:444-455` 模式）
 
-### W2 · 死代码清理（P1）
+### W2 · 死代码清理（P1）✅ 2026-09-14
 
 > 注意：**不要**删 `packages/shared/src/schemas/research.ts:688-715` 的 `ResearchNodeChat*EventSchema`——由 `research-node-chat-honesty` 接线（不是死代码，是未接线）。
 
-- [ ] server：删 `apps/server/src/ai/generate-output.ts`（113 行零引用，已被 `features/outputs/generator.ts` 取代）；删 `shared/ids.ts` 未用 param schema 与仅测试引用的 parse helpers（半途而废的抽象，默认删除；若想转为采用需 PR 说明）；`db/vectors.ts:188 getAllVectors`、`qa/handler.ts estimateTokens` 换名 wrapper
-- [ ] shared：删 8 个 `*ListSchema`（Message/Notebook/Output/PromptPreset/Session/Source/StudioSlide/Template——被 `PaginatedSchema(X)` 取代的平行信封）、`OutputTypeMetaSchema`、`SlidesConfigSchemaSchema`、`QaStreamEventNames/Name`
-- [ ] web：删整文件死的 `WorkspaceResizeHandle.tsx`、`WorkspacePanelShell.tsx`；`workspace/shared/utils.ts` 9 个死导出；`research-lab/model/reportDocument.ts` 三个无调用方解析器（真实路径在 `markdownToResearchReport.ts`）
-- [ ] 每处删除前 grep 复核零引用；`just qa` 全绿
+- [x] server：删 `ai/generate-output.ts` 整文件；`shared/ids.ts` 删 5 个未用 param schema + 3 个仅测试引用的 parse helpers（保留 PathId/NidParamsSchema，删配套 `tests/shared/ids.test.ts`）；删 `db/vectors.ts getAllVectors`；`qa/handler.ts` estimateTokens 换名 wrapper 删除、两处调用点直用 `countTokens`
+- [x] shared：删 8 个 `*ListSchema` + `QaStreamEventNames/Name`。**修正**：`OutputTypeMetaSchema`（是 OutputMetaSchema 的 extend 基类）与 `SlidesConfigSchemaSchema`（PluginConfigSchema 别名链消费）实为活代码，未删
+- [x] web：删整文件 `WorkspaceResizeHandle.tsx`、`WorkspacePanelShell.tsx`；`reportDocument.ts` 删三个无生产调用方的解析器及配套 interface（`graphMutations.test.ts` 的 reportDocument 块改为只测存活的 `extractCitationIds`）；`utils.ts` 删 5 个死导出（buildRefineOutput/buildSourceSummaryPrompt/resolveTemplateLabel/buildJobTitle/formatOutputForCopy）。**修正**：toTimestampRaw/formatDate/formatSourceType/buildCitationScopeSnapshot 被同文件活函数（normalizeSource/formatRelativeTime/normalizeOutput）内部调用，降级为私有而非删除
+- [x] 每处删除前 grep 复核（含同文件内部调用）；`just qa` 全绿
+- 教训：只查外部引用会漏掉同文件内部消费，utils.ts 4 个「死导出」因此差点误删；后续死代码判定需 grep 全仓不含排除项
 
 ### W3 · research 运行时合规（P1，spec 已有 MUST，纯实现欠账）
 

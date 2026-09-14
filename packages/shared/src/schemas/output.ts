@@ -391,10 +391,6 @@ export const OutputConvertToSourceResponseSchema = z
   });
 export type OutputConvertToSourceResponse = z.infer<typeof OutputConvertToSourceResponseSchema>;
 
-export const OutputListSchema = z.object({
-  outputs: z.array(OutputListItemSchema),
-});
-
 /**
  * Nested GET /v2/notebooks/:nid/outputs/:id/export — format only;
  * path `:nid` is notebook SSOT (c69).

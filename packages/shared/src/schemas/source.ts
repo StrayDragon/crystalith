@@ -87,10 +87,6 @@ export const SourceCreateSchema = z
   });
 export type SourceCreate = z.infer<typeof SourceCreateSchema>;
 
-export const SourceListSchema = z.object({
-  sources: z.array(SourceSchema),
-});
-
 // ---------------------------------------------------------------------------
 // Source tags
 // ---------------------------------------------------------------------------

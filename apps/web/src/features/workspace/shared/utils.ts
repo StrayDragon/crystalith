@@ -21,9 +21,6 @@ import type {
   ChatMessage,
   Notebook,
   OutputItem,
-  RefineMode,
-  RefineOutput,
-  RefineTemplate,
   SessionSummary,
   SourceItem,
 } from './types';
@@ -48,30 +45,6 @@ export function createId(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-export function buildRefineOutput(text: string): RefineOutput {
-  const normalized = text.trim();
-  if (!normalized) {
-    return { paragraph: '', bullets: [], structured: null, evidence: false };
-  }
-
-  const bullets = normalized
-    .split(/[\n。；;]+/gu)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, 6);
-
-  return {
-    paragraph: `已生成提炼结果（演示）：${normalized}`,
-    bullets: bullets.length > 0 ? bullets : [normalized],
-    structured: {
-      title: normalized.slice(0, 48),
-      bullets: bullets.length > 0 ? bullets : [normalized],
-      terms: ['演示数据'],
-    },
-    evidence: true,
-  };
-}
-
 /** Eden may coerce ISO wire timestamps into `Date`; UI formatters must accept both. */
 export type TimestampInput = string | Date | null | undefined;
 
@@ -83,7 +56,7 @@ function parseTimestamp(value?: TimestampInput): Date | null {
 }
 
 /** Stable ISO/string for raw caches / Date.parse — never keep a live `Date` in UI models. */
-export function toTimestampRaw(value?: unknown): string | undefined {
+function toTimestampRaw(value?: unknown): string | undefined {
   if (value == null || value === '') return undefined;
   if (typeof value === 'string') return value;
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
@@ -105,7 +78,7 @@ export function formatTimestamp(value?: TimestampInput): string {
   });
 }
 
-export function formatDate(value?: TimestampInput): string {
+function formatDate(value?: TimestampInput): string {
   const parsed = parseTimestamp(value);
   if (!parsed) return '';
   return parsed.toLocaleDateString('zh-CN', {
@@ -129,47 +102,6 @@ export function formatRelativeTime(value?: TimestampInput): string {
   const days = Math.floor(diff / day);
   if (days < 30) return `${days} 天前`;
   return formatDate(parsed);
-}
-
-export function buildSourceSummaryPrompt(title?: string | null): string {
-  // intentionally || — empty string is missing
-  // oxlint-disable-next-line typescript/prefer-nullish-coalescing
-  const safeTitle = title?.trim() || '文档';
-  return `请总结《${safeTitle}》的核心观点`;
-}
-
-export function resolveTemplateLabel(prompt: string, templates: readonly RefineTemplate[]): string {
-  const normalized = prompt.trim();
-  const match = templates.find((item) => item.prompt.trim() === normalized);
-  return match?.label ?? '自定义';
-}
-
-export function buildJobTitle(label: string, createdAt: string): string {
-  const dateLabel = formatDate(createdAt);
-  return `[${label}] ${dateLabel || '未命名日期'}`;
-}
-
-export function formatOutputForCopy(
-  output: RefineOutput | null | undefined,
-  mode: RefineMode,
-): string {
-  if (!output) return '';
-  if (mode === 'paragraph') return output.paragraph || '';
-  if (mode === 'bullets') {
-    return (output.bullets ?? []).map((item) => `- ${item}`).join('\n');
-  }
-  if (mode === 'structured') {
-    const parts: string[] = [];
-    if (output.structured?.title) parts.push(output.structured.title);
-    if (output.structured?.bullets?.length) {
-      parts.push(output.structured.bullets.map((item) => `- ${item}`).join('\n'));
-    }
-    if (output.structured?.terms?.length) {
-      parts.push(`关键术语：${output.structured.terms.join('、')}`);
-    }
-    return parts.join('\n');
-  }
-  return '';
 }
 
 function formatOutputLine(text: string, depth = 0) {
@@ -405,7 +337,7 @@ export function mergeOutputListWithCache(
   });
 }
 
-export function formatSourceType(row: Pick<WireSource, 'filename' | 'mimeType'>): string {
+function formatSourceType(row: Pick<WireSource, 'filename' | 'mimeType'>): string {
   const filename = row.filename ?? '';
   const extension = filename.split('.').pop()?.toLowerCase();
   if (extension === 'md' || extension === 'markdown') return 'Markdown';
@@ -514,7 +446,7 @@ export function collectOutputCitations(content: unknown): Citation[] {
   return Array.from(seen.values());
 }
 
-export function buildCitationScopeSnapshot(
+function buildCitationScopeSnapshot(
   citations: Citation[],
   mode: CitationScopeMode,
 ): CitationScopeSnapshot {

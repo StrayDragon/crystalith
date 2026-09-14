@@ -99,10 +99,6 @@ export const SlideDraftUpdateSchema = z
   });
 export type SlideDraftUpdate = z.infer<typeof SlideDraftUpdateSchema>;
 
-export const StudioSlideListSchema = z.object({
-  slides: z.array(StudioSlideSchema),
-});
-
 export const StudioOutlinePutSchema = z.object({
   outline: SlidesOutlineSchema,
 });

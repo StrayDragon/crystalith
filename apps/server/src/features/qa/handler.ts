@@ -96,7 +96,7 @@ export async function streamQa(opts: QaHandlerOptions): Promise<Response> {
   const minScore = opts.minScore ?? 0.2;
 
   // Step 1: Deterministic retrieval + judgment
-  const historyTokens = estimateTokens(opts.history.map((m) => m.content).join(' '));
+  const historyTokens = countTokens(opts.history.map((m) => m.content).join(' '));
   const judgment = await retrieveAndJudge({
     notebookId: opts.notebookId,
     question: opts.question,
@@ -253,11 +253,6 @@ function streamStatsAnswer(
   return sseResponse(stream);
 }
 
-/** c48: real token count via gpt-tokenizer (was char estimate). */
-function estimateTokens(text: string): number {
-  return countTokens(text);
-}
-
 /** Inject retrieved context only when non-empty (c63 ungrounded chat skips RAG). */
 function withOptionalSourceMaterial(systemPrompt: string, context: string): string {
   const trimmed = context.trim();
@@ -287,7 +282,7 @@ export async function generateQaDirect(opts: QaHandlerOptions): Promise<QaDirect
   const topK = opts.topK ?? 5;
   const minScore = opts.minScore ?? 0.2;
 
-  const historyTokens = estimateTokens(opts.history.map((m) => m.content).join(' '));
+  const historyTokens = countTokens(opts.history.map((m) => m.content).join(' '));
   const judgment = await retrieveAndJudge({
     notebookId: opts.notebookId,
     question: opts.question,
