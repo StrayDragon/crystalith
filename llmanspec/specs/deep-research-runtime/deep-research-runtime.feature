@@ -97,6 +97,10 @@
   场景: Node chat SSE proposals only
     - 系统 MUST 提供 POST 节点 chat 的短轮 SSE（正文增量与可选 ActionProposal/tool-approval）；chat MUST 与 Run 进度 stream 分离；同一 Run 上 chat 与自研 work-unit MUST 互斥（拒绝或排队）；Structure 类意图 MUST 经用户确认后调用既有命令口，MUST NOT 在 tool execute 中静默改图。
 
+  @req:r12 @human
+  场景: Node chat failure is honest
+    - 模型调用失败（provider 错误、网关不可达、输出非法）时，系统 MUST 以 chat SSE 的 error 事件终结本轮对话（携带 errorCode 与用户可读 message），MUST NOT 以 stub、模板或占位正文冒充模型回复；progress ledger MUST 记录对应 chat 失败事件。stub 回复路径 MUST 仅在显式非生产开关（CL_RESEARCH_E2E_STUB=1）下可达，且该开关开启时 progress 事件 MUST 携带 via='stub' 标记。用户主动中止（abort）语义不变（error 事件 + chat_aborted 账本事件）。
+
   @req:r323 @human
   场景: User-visible run revisions
     - 系统 MUST 为 ResearchRun 提供用户可见的 revisions：至少支持列表、从当前 graph 与权威 report 创建快照、按 id 读取；恢复某 revision MUST 将对应 graph/report 写回为当前权威并通知客户端（graph_patch 或等价）；revisions MUST NOT 与内部 checkpoint 混为同一概念。
