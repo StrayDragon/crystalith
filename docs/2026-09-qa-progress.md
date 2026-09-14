@@ -5,6 +5,7 @@
 > `.agents/skills/crystalith-ssot-qa-batches` 批次纪律：一波一主题、`just qa` 绿再 commit）。
 >
 > **认领方式**：
+>
 > - SDD change：`llman sdd change start <id>`（自动建 `sdd/<id>` 分支），按 tasks.md 执行。
 > - 直接波次：`git switch -c <自述分支名>`，按本台账该波清单执行；行为合约不变，
 >   若实施中发现需要改 MUST/SHALL → 停，切 `/llman-sdd-propose`。
@@ -17,11 +18,11 @@
 
 ## 1. SDD changes（designed，待认领）
 
-| change id                     | 一句话                                                                 | 关键 spec 位置                  |
-| ----------------------------- | ---------------------------------------------------------------------- | ------------------------------- |
-| `research-node-chat-honesty`  | 模型失败禁止静默 stub 降级，改显式 error 帧；接线零消费的 chat 事件契约 | `deep-research-runtime`（新增场景） |
-| `research-lab-sse-resilience` | Run SSE 断线有界重连 + 可见中断态；server 终态等待去 100ms 轮询        | `deep-research-ui`（新增场景）  |
-| `source-search-error-contract`| 引擎不可用返回 `service_error`，与 no_results 可区分；前端消费 status   | `source-ingestion-upload-and-url:66`（补子句） |
+| change id                      | 一句话                                                                  | 关键 spec 位置                                 |
+| ------------------------------ | ----------------------------------------------------------------------- | ---------------------------------------------- |
+| `research-node-chat-honesty`   | 模型失败禁止静默 stub 降级，改显式 error 帧；接线零消费的 chat 事件契约 | `deep-research-runtime`（新增场景）            |
+| `research-lab-sse-resilience`  | Run SSE 断线有界重连 + 可见中断态；server 终态等待去 100ms 轮询         | `deep-research-ui`（新增场景）                 |
+| `source-search-error-contract` | 引擎不可用返回 `service_error`，与 no_results 可区分；前端消费 status   | `source-ingestion-upload-and-url:66`（补子句） |
 
 ## 2. 直接修正波次
 

@@ -39,13 +39,13 @@ spec 该管而没管的部分。
 
 ## 证据快照（2026-09-14）
 
-| 证据                                              | 位置                                                    |
-| ------------------------------------------------- | ------------------------------------------------------- |
-| SSE 死亡后仅一次对账，running 即不再恢复、无提示  | `apps/web/src/features/research-lab/useEdenLabController.ts:316-328` |
-| 流生成器无重试语义                                | `apps/web/src/api/stream.ts:101-160`                    |
-| 每订阅者 100ms 轮询 researchRuns 等终态           | `apps/server/src/features/research/run-sse.ts:68-88`    |
-| 终态广播已存在（可复用为 resolve 信号）           | `run-sse.ts` 的 `emitStatus` → `broadcast(runId,'status')` |
-| progress gap-fill 既有机制（重连补账本用）        | `deep-research-ui.feature:170`（progress ledger 条款）  |
+| 证据                                             | 位置                                                                 |
+| ------------------------------------------------ | -------------------------------------------------------------------- |
+| SSE 死亡后仅一次对账，running 即不再恢复、无提示 | `apps/web/src/features/research-lab/useEdenLabController.ts:316-328` |
+| 流生成器无重试语义                               | `apps/web/src/api/stream.ts:101-160`                                 |
+| 每订阅者 100ms 轮询 researchRuns 等终态          | `apps/server/src/features/research/run-sse.ts:68-88`                 |
+| 终态广播已存在（可复用为 resolve 信号）          | `run-sse.ts` 的 `emitStatus` → `broadcast(runId,'status')`           |
+| progress gap-fill 既有机制（重连补账本用）       | `deep-research-ui.feature:170`（progress ledger 条款）               |
 
 ### 证据刷新方法（apply 开头再跑一次）
 
