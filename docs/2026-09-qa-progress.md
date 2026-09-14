@@ -26,11 +26,11 @@
 
 ## 2. 直接修正波次
 
-### W1 · 用户可见小修（P0，最小批量）
+### W1 · 用户可见小修（P0，最小批量）✅ 2026-09-14
 
-- [ ] `useChat.ts:126-128` 与 `:455`：坏 ternary（两分支相同，非 string 错误变空白）→ 换统一 `parseServerError`（参照 `useSources.ts` 用法）
-- [ ] `nodeQuickActions.ts:112`「（Fake）」summary 漏进真实 run：fixture 词汇按 mode 门控（Eden 分支给中性文案）；补一条断言真实 fork proposal 不含 fixture 词汇的 Rstest
-- [ ] `outputs/router.ts:541-544` 转来源吞 embedding 失败：补 `errorMessage` 落库 + 日志（对齐 `sources/router.ts:444-455` 模式）
+- [x] `useChat.ts:126-128` 与 `:455`：坏 ternary（两分支相同，非 string 错误变空白）→ 换统一 `parseServerError`（实际共 3 处，含 `convert-to-source` 同款）
+- [x] `nodeQuickActions.ts:112`「（Fake）」summary 漏进真实 run：直接移除后缀（fixture 语境自明，无需 mode 门控）；已补 proposal 载荷不含 fixture 词汇的 Rstest 锁测
+- [x] `outputs/router.ts:541-544` 转来源吞 embedding 失败：补 `errorMessage` 落库 + logger.error（对齐 `sources/router.ts:444-455` 模式）
 
 ### W2 · 死代码清理（P1）
 

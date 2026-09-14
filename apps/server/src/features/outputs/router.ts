@@ -38,6 +38,7 @@ import { formatCitationBlock } from '../../shared/citations.ts';
 import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { PathId } from '../../shared/ids.ts';
+import { logger } from '../../shared/logger.ts';
 import { requireOwnedRow, resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import { runOutputPipeline } from './pipeline.ts';
 import { renderOutputToMarkdown, splitTextToChunks } from './render.ts';
@@ -538,8 +539,16 @@ async function handleConvertOutputToSource(id: number, notebookId: number, set: 
     await strategy.indexSource(sourceRow.id, sourceRow.notebookId);
     db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)).run();
     bumpSourcesEpoch(sourceRow.notebookId);
-  } catch {
-    db().update(sources).set({ status: 'failed' }).where(eq(sources.id, sourceRow.id)).run();
+  } catch (error) {
+    logger.error('[outputs] convert-to-source embed failed:', error);
+    db()
+      .update(sources)
+      .set({
+        status: 'failed',
+        errorMessage: error instanceof Error ? error.message : String(error),
+      })
+      .where(eq(sources.id, sourceRow.id))
+      .run();
     bumpSourcesEpoch(sourceRow.notebookId);
   }
 

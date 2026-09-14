@@ -122,10 +122,7 @@ export function useChat({
         .notebooks({ nid: activeNotebookId! })
         .sessions({ sid: activeSessionId! })
         .messages.get({ query: { offset: 0, limit: 200 } });
-      if (fetchErr)
-        throw new Error(
-          typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
-        );
+      if (fetchErr) throw new Error(parseServerError(fetchErr).message);
       return result?.items ?? [];
     },
     { revalidateOnFocus: false },
@@ -451,8 +448,7 @@ export function useChat({
       const { data: qaResult, error: qaErr } = await api.v2
         .notebooks({ nid: notebookId })
         .qa.post(qaBody);
-      if (qaErr)
-        throw new Error(typeof qaErr === 'string' ? qaErr : typeof qaErr === 'string' ? qaErr : '');
+      if (qaErr) throw new Error(parseServerError(qaErr).message);
       if (!qaResult) throw new Error('请求失败，请检查后端服务或稍后重试。');
       const parsedAnswer = QaAnswerSchema.safeParse(qaResult);
       const result = parsedAnswer.success ? parsedAnswer.data : qaResult;
@@ -533,10 +529,7 @@ export function useChat({
         .sessions({ sid: s.activeSessionId })
         // eslint-disable-next-line no-unexpected-multiline
         ['convert-to-source'].post();
-      if (convErr)
-        throw new Error(
-          typeof convErr === 'string' ? convErr : typeof convErr === 'string' ? convErr : '',
-        );
+      if (convErr) throw new Error(parseServerError(convErr).message);
       if (refreshSources) {
         await refreshSources();
       }

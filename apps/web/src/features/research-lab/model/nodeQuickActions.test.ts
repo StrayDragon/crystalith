@@ -43,6 +43,19 @@ describe('buildNodeQuickActionGroups', () => {
       }).length,
     ).toBeGreaterThan(3);
   });
+
+  it('proposal payloads never carry fixture vocabulary (leaks into real eden forks)', () => {
+    const actions = buildNodeQuickActions({
+      node: node({ role: 'research', conclusionStatus: 'partial', query: 'q' }),
+      phase: 'completed',
+    });
+    for (const action of actions) {
+      for (const value of Object.values(action.proposal.params ?? {})) {
+        if (typeof value === 'string') expect(value).not.toMatch(/Fake|mock/);
+      }
+      expect(action.proposal.rationale).not.toMatch(/Fake|mock/);
+    }
+  });
 });
 
 describe('mockNodeEnrichment', () => {
