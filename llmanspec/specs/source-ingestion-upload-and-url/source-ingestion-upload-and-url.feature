@@ -63,7 +63,7 @@
 
   @req:sources-search-web @human
   场景: Sources search MUST perform real web search
-    - POST /sources/search MUST 调用 web search 引擎（SearXNG）返回真实 web 结果，MUST NOT 返回 notebook 内向量匹配作为 placeholder
+    - POST /sources/search MUST 调用 web search 引擎（SearXNG）返回真实 web 结果，MUST NOT 返回 notebook 内向量匹配作为 placeholder；搜索引擎不可用或调用失败时 MUST 返回 status='service_error' 且 message MUST 为用户可读中文文案，MUST NOT 伪装为 'no_results' 或返回空成功响应；'no_results' MUST 仅表示引擎正常应答且零命中。前端 MUST 将 service_error 呈现为可与「无命中」区分的错误态（含重试入口或重试指引），MUST NOT 将其渲染为普通空结果提示。
 
   @req:sources-dedup-config-gated @human
   场景: Dedup MUST be gated by config

@@ -417,6 +417,20 @@ export function useSources() {
           .sources.search.post({ query: trimmed, engine, mode });
         if (srErr) throw new Error(parseServerError(srErr).message);
         const results = response?.results ?? [];
+
+        // c65: engine failure is a distinct error state, never "no hits".
+        if (response?.status === 'service_error') {
+          const serviceErrorNotice = response.message || '搜索服务暂时不可用，请稍后重试。';
+          setSearchQueue((prev) =>
+            prev.map((item) =>
+              item.id === searchId
+                ? { ...item, status: 'error', results: [], notice: serviceErrorNotice }
+                : item,
+            ),
+          );
+          return;
+        }
+
         let notice = '';
         if (response?.message) {
           notice = response.message;
@@ -448,6 +462,15 @@ export function useSources() {
   const removeSearchQueueItem = useCallback((queueItemId: string) => {
     setSearchQueue((prev) => prev.filter((item) => item.id !== queueItemId));
   }, []);
+
+  /** Re-run a failed queue item with its original query (c65 error-state retry). */
+  const retrySearchQueueItem = useCallback(
+    (queueItem: SearchQueueItem) => {
+      setSearchQueue((prev) => prev.filter((item) => item.id !== queueItem.id));
+      void handleSearch({ query: queueItem.query, engine: queueItem.engine, mode: queueItem.mode });
+    },
+    [handleSearch],
+  );
 
   const removeResultsFromQueue = useCallback((urls: string[]) => {
     const urlSet = new Set(urls);
@@ -910,6 +933,7 @@ export function useSources() {
     isConnected,
     searchQueue,
     removeSearchQueueItem,
+    retrySearchQueueItem,
     removeResultsFromQueue,
     extractors,
     availableExtractors,

@@ -744,8 +744,19 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
           });
         }
       } catch (error) {
-        // SearXNG unavailable — return error info, not a crash
+        // Engine unavailable/failing is diagnosable, not "no hits"
+        // (c65 / sources-search-web): early-return so this never masquerades
+        // as no_results downstream.
         logger.error('[sources/search] web search failed:', error);
+        return {
+          status: 'service_error',
+          query,
+          engine: engine ?? 'searxng',
+          mode: mode && mode !== 'Deep Research' ? mode : 'Fast Research',
+          results: [],
+          message: '搜索服务暂时不可用，请稍后重试。',
+          createdAt: new Date().toISOString(),
+        };
       }
 
       // mode is web-search channel metadata (echo); not Deep Research / ResearchRun.

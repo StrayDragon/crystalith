@@ -524,7 +524,14 @@ export const SourceSearchResultSchema = z.object({
 });
 export type SourceSearchResult = z.infer<typeof SourceSearchResultSchema>;
 
-export const SourceSearchStatusSchema = z.enum(['ok', 'not_implemented', 'no_results']);
+export const SourceSearchStatusSchema = z
+  .enum(['ok', 'not_implemented', 'no_results', 'service_error'])
+  .openapi({
+    description: desc(
+      'source.search_status',
+      '搜索结果状态：ok=有命中；no_results=引擎正常应答零命中；service_error=引擎不可用或调用失败',
+    ),
+  });
 export type SourceSearchStatus = z.infer<typeof SourceSearchStatusSchema>;
 
 export const SourceSearchResponseSchema = z
@@ -534,7 +541,16 @@ export const SourceSearchResponseSchema = z
     engine: z.string(),
     mode: z.string(),
     results: z.array(SourceSearchResultSchema),
-    message: z.string().nullable().optional(),
+    message: z
+      .string()
+      .nullable()
+      .optional()
+      .openapi({
+        description: desc(
+          'source.search_message',
+          '补充文案；status=service_error 时 MUST 为用户可读中文错误文案',
+        ),
+      }),
     createdAt: IsoTimestampSchema,
   })
   .openapi({
