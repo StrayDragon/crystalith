@@ -109,7 +109,7 @@ export function buildNodeQuickActionGroups(input: {
           proposal: proposal('fork_sibling', '分叉对照支路', '结构：fork', {
             title: `对照：${node.title}`,
             query: node.query ? `${node.query} · 对照角` : `${node.title} 对照`,
-            summary: `从「${node.title}」分出的对照探索（Fake）。`,
+            summary: `从「${node.title}」分出的对照探索。`,
           }),
         },
         {
