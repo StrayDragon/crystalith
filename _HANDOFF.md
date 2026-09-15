@@ -46,13 +46,13 @@
 - [x] 每处删除前 grep 复核（含同文件内部调用）；`just qa` 全绿
 - 教训：只查外部引用会漏掉同文件内部消费，utils.ts 4 个「死导出」因此差点误删；后续死代码判定需 grep 全仓不含排除项
 
-### W3 · research 运行时合规（P1，spec 已有 MUST，纯实现欠账）
+### W3 · research 运行时合规（P1，spec 已有 MUST，纯实现欠账）✅ 2026-09-16
 
 > 与 `c63-research-node-chat-honesty` 都动 `node-chat.ts`：**先做该 change，再进本波**（或反之及时 rebase）。
 
-- [ ] 互斥强制化（条款：`deep-research-runtime.feature`「Node chat SSE proposals only」r98「chat 与 work-unit MUST 互斥（拒绝或排队）」、:154）：runLoop 启动检查 `llmActivity==='node_chat'` 则拒绝/排队（现状 `run-loop.ts:867` 无条件置位不检查）；chat 进行中 `add-budget` 触发的 `scheduleRun`（`commands.ts:474-499`）同口径
-- [ ] config 默认值收敛：`shared/config.ts:263/819/1016` 三份 ResearchSettings 字面量 → 单一 SSOT 常量喂给 schema `.default()` 与 fallback；`research-core.ts:100-103` 改用既有 `getResearchSettings()`
-- [ ] `node-agent.ts:315` node_chat 步数硬编码 8 → 进 config（与 `getWorkUnitMaxSteps()` 同源）
+- [x] 互斥强制化（条款：`deep-research-runtime.feature`「Node chat SSE proposals only」r98「chat 与 work-unit MUST 互斥（拒绝或排队）」、:154）：runLoop 启动检查 `llmActivity==='node_chat'` 则拒绝/排队（现状 `run-loop.ts:867` 无条件置位不检查）；chat 进行中 `add-budget` 触发的 `scheduleRun`（`commands.ts:474-499`）同口径
+- [x] config 默认值收敛：`shared/config.ts:263/819/1016` 三份 ResearchSettings 字面量 → 单一 SSOT 常量喂给 schema `.default()` 与 fallback；`research-core.ts:100-103` 改用既有 `getResearchSettings()`
+- [x] `node-agent.ts:315` node_chat 步数硬编码 8 → 进 config（`nodeChatMaxSteps`，与 `getWorkUnitMaxSteps()` 同源）
 
 ### W4 · 查询性能（P2）
 
