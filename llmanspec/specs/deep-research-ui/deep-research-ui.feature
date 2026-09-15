@@ -135,7 +135,7 @@
 
   @req:r438 @human
   场景: Eden node chat uses HTTP SSE not fixture propose
-    - Eden 模式下 LabNodeDrawer 发送对话 MUST 调用 POST …/research/:rid/nodes/:nodeId/chat 并消费独立 chat SSE（chunk、proposal、done、error）；MUST NOT 以 fixture 专用节点对话函数作为默认权威；chat 事件 MUST NOT 混入 Run progress stream 处理器。
+    - Eden 模式下 LabNodeDrawer 发送对话 MUST 调用 POST …/research/:rid/nodes/:nodeId/chat 并消费独立 chat SSE（chunk、proposal、done、error）；MUST NOT 以 fixture 专用节点对话函数作为默认权威；chat 事件 MUST NOT 混入 Run progress stream 处理器；chat error 事件 MUST 以可见错误态呈现（对话区错误提示），MUST NOT 静默无反馈。
 
   @req:r439 @human
   场景: Eden chat accept maps proposals to command ports

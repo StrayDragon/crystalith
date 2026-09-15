@@ -685,25 +685,44 @@ export const ResearchNodeChatBodySchema = z
   .openapi({ description: desc('research.node_chat_body', '节点对话请求体') });
 export type ResearchNodeChatBody = z.infer<typeof ResearchNodeChatBodySchema>;
 
-export const ResearchNodeChatChunkEventSchema = z.object({
-  text: z.string(),
-});
+export const ResearchNodeChatChunkEventSchema = z
+  .object({
+    text: z.string().openapi({ description: desc('research.chat_chunk_text', '本轮正文增量') }),
+  })
+  .openapi({ description: desc('research.chat_chunk_event', '节点对话正文增量事件') });
 
 export const ResearchNodeChatProposalEventSchema = ResearchNodeActionProposalSchema;
 
-export const ResearchNodeChatDoneEventSchema = z.object({
-  proposals: z.array(ResearchNodeActionProposalSchema).optional(),
-});
+export const ResearchNodeChatDoneEventSchema = z
+  .object({
+    proposals: z.array(ResearchNodeActionProposalSchema).openapi({
+      description: desc('research.chat_done_proposals', '本轮累计动作提案（可为空数组）'),
+    }),
+  })
+  .openapi({ description: desc('research.chat_done_event', '节点对话正常终结事件') });
 
-export const ResearchNodeChatErrorEventSchema = z.object({
-  errorCode: z.string(),
-  message: z.string(),
-});
+export const ResearchNodeChatErrorEventSchema = z
+  .object({
+    errorCode: z.string().openapi({
+      description: desc('research.chat_error_code', '错误码（服务端 ErrorCode 值）'),
+    }),
+    message: z
+      .string()
+      .openapi({ description: desc('research.chat_error_message', '用户可读错误文案') }),
+  })
+  .openapi({ description: desc('research.chat_error_event', '节点对话失败终结事件') });
 
-export const ResearchNodeChatLogEventSchema = z.object({
-  message: z.string(),
-  nodeId: z.string().optional(),
-});
+export const ResearchNodeChatLogEventSchema = z
+  .object({
+    message: z
+      .string()
+      .openapi({ description: desc('research.chat_log_message', '连接级日志文案') }),
+    nodeId: z
+      .string()
+      .optional()
+      .openapi({ description: desc('research.chat_log_node', '关联节点 ID') }),
+  })
+  .openapi({ description: desc('research.chat_log_event', '节点对话连接日志事件') });
 
 export const ResearchNodeChatStreamEventSchema = z.discriminatedUnion('event', [
   z.object({ event: z.literal('log'), data: ResearchNodeChatLogEventSchema }),
@@ -822,6 +841,7 @@ export const ResearchProgressKindSchema = z.enum([
   'chat_started',
   'chat_finished',
   'chat_aborted',
+  'chat_failed',
 ]);
 export type ResearchProgressKind = z.infer<typeof ResearchProgressKindSchema>;
 

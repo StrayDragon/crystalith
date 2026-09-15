@@ -5,7 +5,9 @@ import type {
   ResearchNode,
   ResearchNodeActionProposal,
   ResearchNodeChatBody,
+  ResearchNodeChatStreamEvent,
 } from '@crystalith/shared';
+import { ResearchNodeChatStreamEventSchema } from '@crystalith/shared';
 import { eq } from 'drizzle-orm';
 
 import { db } from '../../db/index.ts';
@@ -13,6 +15,7 @@ import { researchRuns } from '../../db/schema.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { logger } from '../../shared/logger.ts';
 import { sseFrame, sseResponse } from '../../shared/sse-response.ts';
+import { isResearchE2eStub } from './e2e-stub.ts';
 import { createResearchNodeAgent, proposalFromStructureToolCall } from './node-agent.ts';
 import {
   activeLoops,
@@ -167,10 +170,20 @@ export function createNodeChatSseResponse(
     async start(controller) {
       const encoder = new TextEncoder();
       let closed = false;
-      const emit = (event: string, data: unknown) => {
+      // Chat SSE contract is enforced at the emit exit: typed as the shared
+      // discriminated union, with a runtime assertion outside production
+      // builds (deep-research-runtime r12 wiring).
+      const chatContractCheck = (import.meta as { env?: { DEV?: boolean } }).env?.DEV ?? true;
+      const emit = (event: ResearchNodeChatStreamEvent) => {
+        if (chatContractCheck) {
+          const parsed = ResearchNodeChatStreamEventSchema.safeParse(event);
+          if (!parsed.success) {
+            logger.error('[research] node chat event contract violation:', parsed.error);
+          }
+        }
         if (closed || ac.signal.aborted) return;
         try {
-          controller.enqueue(encoder.encode(sseFrame(event, data)));
+          controller.enqueue(encoder.encode(sseFrame(event.event, event.data)));
         } catch {
           closed = true;
         }
@@ -186,11 +199,14 @@ export function createNodeChatSseResponse(
         }
       }, 8_000);
       try {
-        emit('log', { message: 'connected', nodeId });
+        emit({ event: 'log', data: { message: 'connected', nodeId } });
 
         if (ac.signal.aborted) {
           appendProgressEvent(runId, 'chat_aborted', { nodeId, headline: '对话已中止' });
-          emit('error', { errorCode: ErrorCode.INVALID_REQUEST, message: 'aborted' });
+          emit({
+            event: 'error',
+            data: { errorCode: ErrorCode.INVALID_REQUEST, message: 'aborted' },
+          });
           return;
         }
 
@@ -198,6 +214,7 @@ export function createNodeChatSseResponse(
         const agent = await createResearchNodeAgent(notebookId);
         let proposals: ResearchNodeActionProposal[] = [];
         let usedAgent = false;
+        let failureMessage = '';
 
         if (agent) {
           try {
@@ -220,7 +237,7 @@ export function createNodeChatSseResponse(
               if (ac.signal.aborted) break;
               if (part.type === 'text-delta') {
                 const text = 'text' in part ? (part.text ?? '') : '';
-                if (text) emit('chunk', { text });
+                if (text) emit({ event: 'chunk', data: { text } });
               } else if (part.type === 'tool-approval-request') {
                 const toolCall = (
                   part as {
@@ -234,7 +251,7 @@ export function createNodeChatSseResponse(
                 });
                 if (proposal) {
                   proposals.push(proposal);
-                  emit('proposal', proposal);
+                  emit({ event: 'proposal', data: proposal });
                 }
               } else if (part.type === 'tool-call') {
                 // Fallback if a Structure tool somehow streams without approval
@@ -250,60 +267,95 @@ export function createNodeChatSseResponse(
                 });
                 if (proposal && !proposals.some((p) => p.id === proposal.id)) {
                   proposals.push(proposal);
-                  emit('proposal', proposal);
+                  emit({ event: 'proposal', data: proposal });
                 }
               } else if (part.type === 'error') {
-                const message =
-                  'error' in part && part.error instanceof Error
-                    ? part.error.message
-                    : 'Generation error';
-                emit('error', { errorCode: ErrorCode.INTERNAL_ERROR, message });
+                logger.error('[research] node chat agent stream error:', part.error);
+                appendProgressEvent(runId, 'chat_failed', {
+                  nodeId,
+                  headline: '节点对话模型调用失败',
+                  payload: { message: '模型暂时不可用，请稍后重试' },
+                });
+                emit({
+                  event: 'error',
+                  data: {
+                    errorCode: ErrorCode.INTERNAL_ERROR,
+                    message: '模型暂时不可用，请稍后重试',
+                  },
+                });
                 return;
               }
             }
           } catch (agentError) {
-            // Fall back to deterministic stub when model/mock is unavailable
-            usedAgent = false;
             if (ac.signal.aborted) throw agentError;
-            logger.warn('[research] node chat agent failed; using stub:', agentError);
+            usedAgent = false;
+            failureMessage = '模型暂时不可用，请稍后重试';
+            logger.error('[research] node chat agent failed:', agentError);
           }
+        } else {
+          failureMessage = '对话模型未配置，请先在设置中选择默认对话模型';
         }
 
         if (!usedAgent) {
-          const turn = stubNodeChatTurn(node, body.message);
-          proposals = turn.proposals;
-          const chunkSize = 48;
-          for (let i = 0; i < turn.text.length; i += chunkSize) {
-            if (ac.signal.aborted) {
-              appendProgressEvent(runId, 'chat_aborted', { nodeId, headline: '对话已中止' });
-              emit('error', { errorCode: ErrorCode.INVALID_REQUEST, message: 'aborted' });
-              return;
+          if (isResearchE2eStub()) {
+            // Explicit non-production e2e path: deterministic stub reply
+            // (text + fake proposals + via='stub' ledger marker). Never
+            // reachable in production (deep-research-runtime r12).
+            const turn = stubNodeChatTurn(node, body.message);
+            proposals = turn.proposals;
+            const chunkSize = 48;
+            for (let i = 0; i < turn.text.length; i += chunkSize) {
+              if (ac.signal.aborted) {
+                appendProgressEvent(runId, 'chat_aborted', { nodeId, headline: '对话已中止' });
+                emit({
+                  event: 'error',
+                  data: { errorCode: ErrorCode.INVALID_REQUEST, message: 'aborted' },
+                });
+                return;
+              }
+              emit({ event: 'chunk', data: { text: turn.text.slice(i, i + chunkSize) } });
+              await Bun.sleep(0);
             }
-            emit('chunk', { text: turn.text.slice(i, i + chunkSize) });
-            await Bun.sleep(0);
-          }
-          for (const proposal of proposals) {
-            if (ac.signal.aborted) break;
-            emit('proposal', proposal);
+            for (const proposal of proposals) {
+              if (ac.signal.aborted) break;
+              emit({ event: 'proposal', data: proposal });
+            }
+          } else {
+            appendProgressEvent(runId, 'chat_failed', {
+              nodeId,
+              headline: '节点对话模型调用失败',
+              payload: { message: failureMessage },
+            });
+            emit({
+              event: 'error',
+              data: { errorCode: ErrorCode.INTERNAL_ERROR, message: failureMessage },
+            });
+            return;
           }
         }
 
         if (ac.signal.aborted) {
           appendProgressEvent(runId, 'chat_aborted', { nodeId, headline: '对话已中止' });
-          emit('error', { errorCode: ErrorCode.INVALID_REQUEST, message: 'aborted' });
+          emit({
+            event: 'error',
+            data: { errorCode: ErrorCode.INVALID_REQUEST, message: 'aborted' },
+          });
           return;
         }
 
-        emit('done', { proposals });
+        emit({ event: 'done', data: { proposals } });
         appendProgressEvent(runId, 'chat_finished', {
           nodeId,
           headline: '节点对话结束',
           payload: { proposalCount: proposals.length, via: usedAgent ? 'agent' : 'stub' },
         });
       } catch (error) {
-        emit('error', {
-          errorCode: error instanceof AppHttpError ? error.code : ErrorCode.INTERNAL_ERROR,
-          message: String(error),
+        emit({
+          event: 'error',
+          data: {
+            errorCode: error instanceof AppHttpError ? error.code : ErrorCode.INTERNAL_ERROR,
+            message: String(error),
+          },
         });
       } finally {
         clearInterval(heartbeat);

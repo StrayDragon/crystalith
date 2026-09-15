@@ -1,5 +1,8 @@
 ---
 depends_on: []
+branch: sdd/c63-research-node-chat-honesty
+base_sha: 1e9ba331da8ff481ea1ac2c204a9b6cad1f62747
+base_branch: main
 ---
 
 # 节点 chat 合约诚实化：禁止静默 stub 降级 + 接线 chat 事件契约

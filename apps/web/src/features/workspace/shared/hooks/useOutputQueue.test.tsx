@@ -111,9 +111,11 @@ function useOutputQueueHarness({ isConnected }: { isConnected: boolean }) {
 
 test('enqueueOutputJob processes and updates outputs', async () => {
   let capturedBody: Record<string, unknown> | null = null;
+  let outputCreated = false;
   server.use(
     http.post('*/v2/notebooks/*/outputs', async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
+      outputCreated = true;
       return HttpResponse.json({
         id: 10,
         notebookId: 1,
@@ -125,6 +127,30 @@ test('enqueueOutputJob processes and updates outputs', async () => {
         updatedAt: '2024-01-01T00:00:00Z',
       });
     }),
+    // Mock reason: the server persists the row before the create response, so a
+    // list revalidation after create must include it — otherwise the queue's
+    // post-create mutateOutputs() would legitimately wipe the optimistic entry.
+    http.get('*/v2/notebooks/*/outputs', () =>
+      outputCreated
+        ? HttpResponse.json({
+            items: [
+              {
+                id: 10,
+                notebookId: 1,
+                type: 'FAQ',
+                prompt: 'hello',
+                chunkIds: [1],
+                content: {},
+                createdAt: '2024-01-01T00:00:00Z',
+                updatedAt: '2024-01-01T00:00:00Z',
+              },
+            ],
+            total: 1,
+            offset: 0,
+            limit: 200,
+          })
+        : HttpResponse.json({ items: [], total: 0, offset: 0, limit: 200 }),
+    ),
   );
 
   setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });

@@ -384,9 +384,9 @@ export async function* streamNodeChat(
       if (!proposal.success) continue;
       yield { event: 'proposal', data: proposal.data };
     } else if (ev.event === 'done') {
-      const proposalsRaw = Array.isArray(data.proposals) ? data.proposals : undefined;
+      const proposalsRaw = Array.isArray(data.proposals) ? data.proposals : [];
       const proposals = proposalsRaw
-        ?.map((item) => ResearchNodeActionProposalSchema.safeParse(item))
+        .map((item) => ResearchNodeActionProposalSchema.safeParse(item))
         .filter((r): r is { success: true; data: ResearchNodeActionProposal } => r.success)
         .map((r) => r.data);
       yield { event: 'done', data: { proposals } };
