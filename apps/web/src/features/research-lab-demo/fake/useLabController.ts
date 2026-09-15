@@ -613,6 +613,10 @@ export function useLabController(initialScenarioId = 'xlsx-lib'): LabController 
     setConfirmChoice,
     mutations,
     reshaping,
+    // Fixture playback is local — SSE resilience states never apply (c64).
+    streamState: 'ok' as const,
+    streamAttempt: 0,
+    retryStream: () => undefined,
     composeAndStart,
     pruneAlongEdge,
     forkAlongEdge,

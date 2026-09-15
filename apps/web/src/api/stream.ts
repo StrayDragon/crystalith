@@ -158,3 +158,85 @@ export async function* streamRequest(
     reader.releaseLock();
   }
 }
+
+// ---------------------------------------------------------------------------
+// Bounded-reconnect wrapper (c64 / r13): a Run SSE stream that ends without a
+// terminal state is reconciled via GET and re-subscribed with capped backoff.
+// ---------------------------------------------------------------------------
+
+export type StreamReconnectState = 'ok' | 'reconnecting' | 'exhausted';
+
+export const STREAM_RECONNECT_BACKOFF_MS = [1000, 2000, 4000] as const;
+export const STREAM_RECONNECT_MAX_ATTEMPTS = 5;
+
+export interface StreamWithReconnectOptions {
+  /**
+   * Called after the stream ends (normally or throwing). Must reconcile with
+   * the resource owner (e.g. GET ResearchRun + progress gap-fill) and return
+   * whether the resource is in a terminal state — terminal stops reconnecting.
+   */
+  reconcile: () => Promise<boolean>;
+  onStateChange?: (state: StreamReconnectState, attempt: number) => void;
+  signal?: AbortSignal;
+  /** Backoff ladder; the last value repeats for attempts beyond its length. */
+  backoffMs?: number[];
+  maxAttempts?: number;
+}
+
+/**
+ * Re-subscribe `makeStream` with bounded backoff (1s/2s/4s, ≤5 attempts)
+ * until `reconcile()` reports a terminal state, the signal aborts, or
+ * attempts are exhausted (state `exhausted` — caller shows manual retry).
+ */
+export async function* streamWithReconnect(
+  makeStream: () => AsyncGenerator<SseEvent>,
+  options: StreamWithReconnectOptions,
+): AsyncGenerator<SseEvent> {
+  const backoff = options.backoffMs ?? STREAM_RECONNECT_BACKOFF_MS;
+  const maxAttempts = options.maxAttempts ?? STREAM_RECONNECT_MAX_ATTEMPTS;
+  const { signal } = options;
+  let attempt = 0;
+
+  while (true) {
+    if (signal?.aborted) return;
+    let sawEvent = false;
+    try {
+      for await (const ev of makeStream()) {
+        if (signal?.aborted) return;
+        if (!sawEvent) {
+          sawEvent = true;
+          options.onStateChange?.('ok', attempt);
+        }
+        yield ev;
+      }
+    } catch {
+      // Connection failure mid-stream falls through to the retry path below;
+      // aborts are handled by the signal checks.
+      if (signal?.aborted) return;
+    }
+
+    // Stream ended (server close or error). Normal close ≠ terminal — the
+    // server only closes on terminal state or client cancel, so reconcile.
+    if (signal?.aborted) return;
+    let terminal = false;
+    try {
+      terminal = await options.reconcile();
+    } catch {
+      terminal = false;
+    }
+    if (signal?.aborted) return;
+    if (terminal) {
+      options.onStateChange?.('ok', attempt);
+      return;
+    }
+
+    attempt += 1;
+    if (attempt > maxAttempts) {
+      options.onStateChange?.('exhausted', attempt - 1);
+      return;
+    }
+    options.onStateChange?.('reconnecting', attempt);
+    const delayMs = backoff[Math.min(attempt - 1, backoff.length - 1)];
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+}

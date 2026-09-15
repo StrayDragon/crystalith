@@ -12,7 +12,7 @@ import { ResearchStreamEventSchema } from '@crystalith/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { parseServerError } from '../../api/parseServerError';
-import { streamRequest } from '../../api/stream';
+import { streamRequest, streamWithReconnect, type StreamReconnectState } from '../../api/stream';
 import { applyGraphPatch } from './applyGraphPatch';
 import { confirmHighlightIds } from './confirmHighlight';
 import { deriveEdenLabPhase } from './deriveEdenLabPhase';
@@ -155,6 +155,9 @@ export function useEdenLabController(
   const [edgePathPreset, setEdgePathPreset] = useState<LabEdgePathPreset>('smoothstep');
   const [layoutAlgorithm, setLayoutAlgorithm] = useState<LabLayoutAlgorithm>('layered');
   const [reshaping, setReshaping] = useState(false);
+  // Run SSE liveness (c64 / r13): visible interruption state for the banner.
+  const [streamState, setStreamState] = useState<StreamReconnectState>('ok');
+  const [streamAttempt, setStreamAttempt] = useState(0);
 
   // c99: consume ?topic= once when opening Compose without rid
   useEffect(() => {
@@ -183,6 +186,9 @@ export function useEdenLabController(
   const stopStream = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
+    // No live stream → no reconnect banner (r13 invariant).
+    setStreamState('ok');
+    setStreamAttempt(0);
   }, []);
 
   const pullProgress = useCallback(
@@ -209,9 +215,36 @@ export function useEdenLabController(
       abortRef.current = ac;
       void (async () => {
         try {
-          for await (const ev of streamRequest(
-            `/v2/notebooks/${notebookId}/research/${rid}/stream`,
-            { signal: ac.signal },
+          for await (const ev of streamWithReconnect(
+            () =>
+              streamRequest(`/v2/notebooks/${notebookId}/research/${rid}/stream`, {
+                signal: ac.signal,
+              }),
+            {
+              signal: ac.signal,
+              reconcile: async () => {
+                // Runs on every stream end: refresh UI via GET and gap-fill
+                // the progress window missed while disconnected (r170/r13).
+                try {
+                  const fresh = await getResearchRun(notebookId, rid);
+                  applyRun(fresh);
+                  refreshResearchTasks(notebookId);
+                  void pullProgress(rid, progressSeqRef.current);
+                  return TERMINAL_STATUSES.has(fresh.status);
+                } catch {
+                  return false;
+                }
+              },
+              onStateChange: (state, attempt) => {
+                setStreamState(state);
+                setStreamAttempt(attempt);
+                if (state === 'exhausted') {
+                  const msg = '连接已中断且自动重连未成功，请手动重试';
+                  setLastError(msg);
+                  pushLog(msg);
+                }
+              },
+            },
           )) {
             if (ac.signal.aborted) break;
             const typed = parseResearchStreamEvent(ev);
@@ -313,23 +346,18 @@ export function useEdenLabController(
           const msg = error instanceof Error ? error.message : String(error);
           setLastError(msg);
           pushLog(`SSE：${msg}`);
-        } finally {
-          // Stream may end without a terminal status event — reconcile UI with GET.
-          if (!ac.signal.aborted) {
-            try {
-              const fresh = await getResearchRun(notebookId, rid);
-              applyRun(fresh);
-              refreshResearchTasks(notebookId);
-              void pullProgress(rid, progressSeqRef.current);
-            } catch {
-              /* ignore */
-            }
-          }
         }
       })();
     },
     [applyRun, notebookId, pullProgress, pushLog, stopStream],
   );
+
+  const retryStream = useCallback(() => {
+    const rid = runIdRef.current;
+    if (!rid) return;
+    setLastError('');
+    startStream(rid);
+  }, [startStream]);
 
   const loadRun = useCallback(
     async (rid: number) => {
@@ -774,6 +802,9 @@ export function useEdenLabController(
     mutations: { ...EMPTY_MUTATIONS, activityNotes: activityLog },
     reshaping,
     busy,
+    streamState,
+    streamAttempt,
+    retryStream,
     composeAndStart,
     startFromIdle: () => undefined,
     pause: () => undefined,

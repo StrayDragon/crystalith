@@ -1,5 +1,8 @@
 ---
 depends_on: []
+branch: sdd/c64-research-lab-sse-resilience
+base_sha: faa211189c4670e0866853f0e0edeb031e03635f
+base_branch: main
 ---
 
 # Research Lab SSE 断线韧性：有界重连 + 可见中断态（含 server 终态等待去轮询）
