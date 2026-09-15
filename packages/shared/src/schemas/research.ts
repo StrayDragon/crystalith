@@ -14,6 +14,18 @@ export const ResearchRunStatusSchema = z
   .openapi({ description: desc('research.status', '研究任务状态') });
 export type ResearchRunStatus = z.infer<typeof ResearchRunStatusSchema>;
 
+// Terminal vs active split is semantic, not schema-level — define once here
+// so server run-loop and web consumers derive from the same source (W7).
+export const RESEARCH_TERMINAL_STATUSES = [
+  'completed',
+  'failed',
+  'cancelled',
+] as const satisfies readonly ResearchRunStatus[];
+export const RESEARCH_ACTIVE_STATUSES: ResearchRunStatus[] = ResearchRunStatusSchema.options.filter(
+  (status): status is ResearchRunStatus =>
+    !(RESEARCH_TERMINAL_STATUSES as readonly string[]).includes(status),
+);
+
 export const ResearchDepthSchema = z
   .enum(['shallow', 'medium', 'deep'])
   .openapi({ description: desc('research.depth', '研究深度') });
