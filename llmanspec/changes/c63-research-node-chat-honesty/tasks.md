@@ -1,4 +1,4 @@
-# Tasks — research-node-chat-honesty
+# Tasks — c63-research-node-chat-honesty
 
 > Seam：
 > ① `bun test apps/server/tests/research/`（node-chat 行为 + 契约）

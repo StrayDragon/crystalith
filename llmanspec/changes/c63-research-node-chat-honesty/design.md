@@ -1,4 +1,4 @@
-# Design：research-node-chat-honesty
+# Design：c63-research-node-chat-honesty
 
 ## 1. Spec 增量（apply 时在绑定分支编辑 live spec）
 
@@ -69,7 +69,7 @@ const emit = (event: ChatEvent) => {
 
 `useEdenLabController` / `LabNodeDrawer` 消费链路确认 `error` 事件已有分支
 （`LabNodeDrawer.tsx:291-371` Eden 分支）；若 error 仅写日志无 UI 反馈，补对话区内联错误
-文案（复用既有错误样式），不做重连/重试设计（那是 `research-lab-sse-resilience` 的主题）。
+文案（复用既有错误样式），不做重连/重试设计（那是 `c64-research-lab-sse-resilience` 的主题）。
 
 ## 5. 风险登记
 
