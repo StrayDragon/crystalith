@@ -11,6 +11,7 @@ import { sseFrame, sseResponse } from '../../shared/sse-response.ts';
 import {
   CONFIRM_OPTIONS,
   getGraph,
+  isTerminalStatus,
   requireRun,
   subscribeRun,
   type SseEmit,
@@ -49,6 +50,9 @@ export function createResearchSseResponse(notebookId: number, runId: number): Re
   requireRun(notebookId, runId);
 
   let unsub: (() => void) | undefined;
+  // Set by the terminal waiter; invoked when the client side dies so the
+  // waiter resolves immediately instead of waiting for its next tick.
+  let onClosed: (() => void) | undefined;
   let closed = false;
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -59,32 +63,51 @@ export function createResearchSseResponse(notebookId: number, runId: number): Re
           controller.enqueue(encoder.encode(sseFrame(event, data)));
         } catch {
           closed = true;
+          onClosed?.();
         }
       };
       try {
         unsub = await streamRun(notebookId, runId, emit);
-        // Keep connection open until client cancels or run reaches terminal
-        // and a short grace period. Poll status for terminal close.
+        // Keep the connection open until the client cancels or the run
+        // reaches a terminal state. Terminal is signalled primarily by the
+        // in-process status broadcast (subscribeRun fan-out); the DB poll
+        // below is only a slow fallback for a missed broadcast (c64) — no
+        // more per-subscriber 100ms hot loop.
         await new Promise<void>((resolve) => {
-          const tick = () => {
-            if (closed) {
-              resolve();
-              return;
-            }
-            const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
-            if (
-              row &&
-              (row.status === 'completed' || row.status === 'failed' || row.status === 'cancelled')
-            ) {
-              // Allow final events to flush
-              setTimeout(() => {
-                resolve();
-              }, 50);
-              return;
-            }
-            setTimeout(tick, 100);
+          let done = false;
+          let unsubStatus: () => void = () => undefined;
+
+          const settleTerminal = () => {
+            if (done) return;
+            done = true;
+            unsubStatus();
+            // Allow final events to flush before closing.
+            setTimeout(resolve, 50);
           };
-          tick();
+          const settleClosed = () => {
+            if (done) return;
+            done = true;
+            unsubStatus();
+            resolve();
+          };
+
+          unsubStatus = subscribeRun(runId, (event, data) => {
+            if (event !== 'status') return;
+            const status = (data as { status?: string } | undefined)?.status;
+            if (typeof status === 'string' && isTerminalStatus(status)) settleTerminal();
+          });
+          onClosed = settleClosed;
+
+          const slowTick = () => {
+            if (done) return;
+            const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+            if (row && isTerminalStatus(row.status)) {
+              settleTerminal();
+              return;
+            }
+            setTimeout(slowTick, 2000);
+          };
+          slowTick();
         });
       } catch (error) {
         emit('error', {
@@ -105,6 +128,7 @@ export function createResearchSseResponse(notebookId: number, runId: number): Re
     cancel() {
       closed = true;
       unsub?.();
+      onClosed?.();
     },
   });
 

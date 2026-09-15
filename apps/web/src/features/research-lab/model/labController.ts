@@ -5,6 +5,7 @@
  */
 import type { ResearchConclusionStatus, ResearchDepth } from '@crystalith/shared';
 
+import type { StreamReconnectState } from '../../../api/stream';
 import type { LabProgressLedgerItem } from '../labProgressLedger';
 import type { LabConfirmKind } from './resolveLabPrimaryAction';
 import type {
@@ -69,6 +70,12 @@ export interface LabController {
   setConfirmChoice: (v: string | null) => void;
   mutations: LabGraphMutations;
   reshaping: boolean;
+  /** Run SSE liveness (Eden); fixture/demo is always 'ok' (c64 / r13). */
+  streamState: StreamReconnectState;
+  /** Current reconnect attempt (0 while connected); drives the (N/M) banner. */
+  streamAttempt: number;
+  /** Manual resubscribe after reconnect exhaustion (Eden); fixture no-op. */
+  retryStream: () => void;
   /** Idle compose → apply topic to root and start fixture playback. */
   composeAndStart: (topic: string) => void;
   pruneAlongEdge: (edgeId: string) => void;

@@ -32,6 +32,7 @@ import { LabForkDialog, LabPruneDialog, useDialogEscape } from './LabMutationDia
 import LabNodeDrawer from './LabNodeDrawer';
 import LabProgressBar from './LabProgressBar';
 import { navigateToLabReport, navigateToWorkspace } from './labRouting';
+import { LabStreamBanner } from './LabStreamBanner';
 import {
   defaultForkDraft,
   findForkContext,
@@ -625,6 +626,11 @@ function LabWorkbench({
             {labPausedBannerText(lab.phase, lab.confirmKind)}
           </div>
         ) : null}
+        <LabStreamBanner
+          streamState={lab.streamState}
+          streamAttempt={lab.streamAttempt}
+          retryStream={lab.retryStream}
+        />
         {shouldShowLabPartialCompletionBanner({
           phase: lab.phase,
           nodes: lab.derived.nodes,

@@ -129,6 +129,10 @@
   场景: SSE and terminal GET refresh align node fields
     - Eden Lab 在收到 SSE graph_patch 后 MUST 合并节点与边；在 status 进入 completed、failed 或 cancelled 以及 report_ready 后 MUST getResearchRun 或等效全量刷新以对齐 node.phase、conclusionStatus 与 evidenceIds。
 
+  @req:r13 @human
+  场景: Run SSE reconnects with bounded backoff and visible state
+    - Run SSE 意外断开（网络错误、非用户离开、非终态结束）时，客户端 MUST 立即对账 GET ResearchRun；若 Run 处于非终态 MUST 以有界退避自动重订阅同一 SSE 端点（默认 1s/2s/4s，至多 5 次或直至终态，取先到者）；重连期间 UI MUST 呈现可见的「连接中断，正在重连」状态且 MUST NOT 渲染伪造进度；重连成功后 MUST 以 GET progress gap-fill + 后续 SSE 事件补齐中断窗口；重试耗尽或对账发现终态 MUST 停止重试，前者 SHALL 提供明确错误与手动重试入口；用户主动离开页面或 Run 进入终态后 MUST NOT 继续重连。MUST NOT 为此引入 notebook 级 list SSE（r17）。
+
   @req:r437 @human
   场景: awaiting_confirm progress does not contradict playing
     - 当 Run status 为 awaiting_confirm 时，Lab MUST NOT 同时展示「多源探索」playing 横幅与「已暂停」类矛盾文案；playing 推断 MUST 仅对 queued 或 running 为 true；进度条 phase MUST 为 awaiting_confirm。
