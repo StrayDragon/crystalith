@@ -25,7 +25,7 @@
 | change id                          | 一句话                                                                  | 关键 spec 位置                                 | 状态                           |
 | ---------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------ |
 | `c63-research-node-chat-honesty`   | 模型失败禁止静默 stub 降级，改显式 error 帧；接线零消费的 chat 事件契约 | `deep-research-runtime`（新增场景）            | ✅ 2026-09-15 归档（3817cc11） |
-| `c64-research-lab-sse-resilience`  | Run SSE 断线有界重连 + 可见中断态；server 终态等待去 100ms 轮询         | `deep-research-ui`（新增场景）                 | 进行中                         |
+| `c64-research-lab-sse-resilience`  | Run SSE 断线有界重连 + 可见中断态；server 终态等待去 100ms 轮询         | `deep-research-ui`（新增场景）                 | ✅ 2026-09-15 归档（e5ce62c0） |
 | `c65-source-search-error-contract` | 引擎不可用返回 `service_error`，与 no_results 可区分；前端消费 status   | `source-ingestion-upload-and-url:66`（补子句） | 待认领                         |
 
 ## 2. 直接修正波次
