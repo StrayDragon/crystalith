@@ -113,6 +113,116 @@ test('handleSearch updates queue status and notice on success', async () => {
   });
 });
 
+test('handleSearch maps service_error to queue error state with server message (c65)', async () => {
+  server.use(
+    http.post('*/v2/notebooks/:notebookId/sources/search', () =>
+      HttpResponse.json({
+        status: 'service_error',
+        query: 'hello',
+        engine: 'searxng',
+        mode: 'Fast Research',
+        results: [],
+        message: '搜索服务暂时不可用，请稍后重试。',
+        createdAt: '2024-01-01T00:00:00Z',
+      }),
+    ),
+  );
+
+  const { result } = renderHook(() => useSources(), { wrapper: wrapSWR });
+
+  act(() => {
+    useWorkspaceStore.getState().setConnectionState('live');
+    useWorkspaceStore.getState().setActiveNotebook(1);
+  });
+
+  await act(async () => {
+    await result.current.handleSearch({ query: 'hello', engine: 'Web', mode: 'Fast Research' });
+  });
+
+  await waitFor(() => {
+    expect(result.current.searchQueue[0].status).toBe('error');
+  });
+  expect(result.current.searchQueue[0].notice).toBe('搜索服务暂时不可用，请稍后重试。');
+  expect(result.current.searchQueue[0].results).toEqual([]);
+});
+
+test('handleSearch keeps no_results as success with empty-hit notice (c65)', async () => {
+  server.use(
+    http.post('*/v2/notebooks/:notebookId/sources/search', () =>
+      HttpResponse.json({
+        status: 'no_results',
+        query: 'hello',
+        engine: 'searxng',
+        mode: 'Fast Research',
+        results: [],
+        createdAt: '2024-01-01T00:00:00Z',
+      }),
+    ),
+  );
+
+  const { result } = renderHook(() => useSources(), { wrapper: wrapSWR });
+
+  act(() => {
+    useWorkspaceStore.getState().setConnectionState('live');
+    useWorkspaceStore.getState().setActiveNotebook(1);
+  });
+
+  await act(async () => {
+    await result.current.handleSearch({ query: 'hello', engine: 'Web', mode: 'Fast Research' });
+  });
+
+  await waitFor(() => {
+    expect(result.current.searchQueue[0].status).toBe('success');
+  });
+  expect(result.current.searchQueue[0].notice).toBe('没有找到匹配结果。');
+});
+
+test('retrySearchQueueItem removes the failed item and re-runs the original query (c65)', async () => {
+  let searches = 0;
+  const queries: string[] = [];
+  server.use(
+    http.post('*/v2/notebooks/:notebookId/sources/search', async ({ request }) => {
+      searches += 1;
+      const body = (await request.json()) as { query: string };
+      queries.push(body.query);
+      return HttpResponse.json({
+        status: searches === 1 ? 'service_error' : 'no_results',
+        query: body.query,
+        engine: 'searxng',
+        mode: 'Fast Research',
+        results: [],
+        message: '搜索服务暂时不可用，请稍后重试。',
+        createdAt: '2024-01-01T00:00:00Z',
+      });
+    }),
+  );
+
+  const { result } = renderHook(() => useSources(), { wrapper: wrapSWR });
+
+  act(() => {
+    useWorkspaceStore.getState().setConnectionState('live');
+    useWorkspaceStore.getState().setActiveNotebook(1);
+  });
+
+  await act(async () => {
+    await result.current.handleSearch({ query: 'hello', engine: 'Web', mode: 'Fast Research' });
+  });
+  await waitFor(() => {
+    expect(result.current.searchQueue[0].status).toBe('error');
+  });
+
+  await act(async () => {
+    result.current.retrySearchQueueItem(result.current.searchQueue[0]);
+  });
+
+  await waitFor(() => {
+    expect(result.current.searchQueue).toHaveLength(1);
+    expect(result.current.searchQueue[0].status).toBe('success');
+  });
+  expect(searches).toBe(2);
+  expect(queries).toEqual(['hello', 'hello']);
+});
+
 test('removeSources calls batch delete endpoint and refreshes list', async () => {
   let deleteCalls = 0;
   let sourceListHits = 0;

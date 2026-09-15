@@ -48,6 +48,8 @@ interface SearchResultsQueueProps {
   searchQueue?: SearchQueueItem[];
   /** 移除单个搜索队列项 */
   onRemoveQueueItem?: (queueItemId: string) => void;
+  /** 重试失败的搜索队列项（以原查询重新发起搜索，c65） */
+  onRetryQueueItem?: (queueItem: SearchQueueItem) => void;
   /** 可用的提取器列表 */
   availableExtractors?: ExtractorInfo[];
   /** 默认提取器 */
@@ -59,6 +61,7 @@ export default function SearchResultsQueue({
   isAdding = false,
   searchQueue = [],
   onRemoveQueueItem,
+  onRetryQueueItem,
   availableExtractors = [],
   defaultExtractor = null,
 }: SearchResultsQueueProps) {
@@ -439,7 +442,21 @@ export default function SearchResultsQueue({
         {/* Error notice */}
         {isError && queueItem.notice && (
           <div className="px-3 py-2 text-xs text-red-600 bg-red-50 border-t border-red-200">
-            {queueItem.notice}
+            <div className="flex items-center justify-between gap-2">
+              <span className="min-w-0 break-words">{queueItem.notice}</span>
+              {onRetryQueueItem ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onRetryQueueItem(queueItem);
+                  }}
+                  className="flex-shrink-0 rounded-md border border-red-300 bg-white/80 px-2 py-0.5 text-[11px] font-medium text-red-700 hover:bg-red-100 transition-colors"
+                  {...tid(TestIds.searchQueueRetry)}
+                >
+                  重试
+                </button>
+              ) : null}
+            </div>
           </div>
         )}
       </div>

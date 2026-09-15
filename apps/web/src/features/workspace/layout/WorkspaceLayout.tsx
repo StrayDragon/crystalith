@@ -903,6 +903,7 @@ export default function WorkspaceLayout() {
                 void sources.handleSearch(...args);
               }}
               onRemoveSearchQueueItem={sources.removeSearchQueueItem}
+              onRetrySearchQueueItem={sources.retrySearchQueueItem}
               onRemoveResultsFromQueue={sources.removeResultsFromQueue}
               onAddSourceFromUrl={sources.addSourceFromUrl}
               availableExtractors={sources.availableExtractors}

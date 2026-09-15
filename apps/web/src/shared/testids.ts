@@ -139,6 +139,7 @@ export const TestIds = {
   researchLabPruneDialog: 'research-lab-prune-dialog',
   researchLabPruneCancel: 'research-lab-prune-cancel',
   researchLabPruneConfirm: 'research-lab-prune-confirm',
+  searchQueueRetry: 'search-queue-retry',
   researchLabCompose: 'research-lab-compose',
   researchLabStreamReconnecting: 'research-lab-stream-reconnecting',
   researchLabStreamExhausted: 'research-lab-stream-exhausted',

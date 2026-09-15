@@ -34,6 +34,7 @@ export interface WorkspaceTopbarSearchProps {
   searchQueue: SearchQueueItem[];
   onSearch: (payload: { query: string; engine: string; mode: string }) => void;
   onRemoveSearchQueueItem?: (queueItemId: string) => void;
+  onRetrySearchQueueItem?: (queueItem: SearchQueueItem) => void;
   onRemoveResultsFromQueue?: (urls: string[]) => void;
   onAddSourceFromUrl: (
     url: string,
@@ -56,6 +57,7 @@ function FastSearchBody({
   onAddToSources,
   isAddingFromUrl,
   onRemoveSearchQueueItem,
+  onRetrySearchQueueItem,
   availableExtractors,
   defaultExtractor,
 }: {
@@ -72,6 +74,7 @@ function FastSearchBody({
   ) => void;
   isAddingFromUrl: boolean;
   onRemoveSearchQueueItem?: (queueItemId: string) => void;
+  onRetrySearchQueueItem?: (queueItem: SearchQueueItem) => void;
   availableExtractors: ExtractorInfo[];
   defaultExtractor: ExtractorType | null;
 }) {
@@ -146,6 +149,7 @@ function FastSearchBody({
           isAdding={isAddingFromUrl}
           searchQueue={searchQueue}
           onRemoveQueueItem={onRemoveSearchQueueItem}
+          onRetryQueueItem={onRetrySearchQueueItem}
           availableExtractors={availableExtractors}
           defaultExtractor={defaultExtractor}
         />
@@ -161,6 +165,7 @@ export default function WorkspaceTopbarSearch({
   searchQueue,
   onSearch,
   onRemoveSearchQueueItem,
+  onRetrySearchQueueItem,
   onRemoveResultsFromQueue,
   onAddSourceFromUrl,
   availableExtractors,
@@ -281,6 +286,7 @@ export default function WorkspaceTopbarSearch({
                     onAddToSources={handleAddToSources}
                     isAddingFromUrl={isAddingFromUrl}
                     onRemoveSearchQueueItem={onRemoveSearchQueueItem}
+                    onRetrySearchQueueItem={onRetrySearchQueueItem}
                     availableExtractors={availableExtractors}
                     defaultExtractor={defaultExtractor}
                   />

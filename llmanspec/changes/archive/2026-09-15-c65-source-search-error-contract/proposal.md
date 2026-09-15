@@ -1,5 +1,8 @@
 ---
 depends_on: []
+branch: sdd/c65-source-search-error-contract
+base_sha: 52d67b182ec02ecebbcb13187a50097888b6c8db
+base_branch: main
 ---
 
 # 来源网页搜索错误契约：引擎不可用与无结果可区分
