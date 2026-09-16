@@ -69,14 +69,14 @@
 - [x] z-index 双轨收敛（lab 系 9 处 → Layer；TopbarSearch/WidgetCatalog/CommandPalette 的 z-* 实为 Layer 容器内部排序或已清，核实后保留）：lab 系 21 处 Tailwind `z-10/20/30` → Layer 体系（`ResearchLabPage.tsx:414/606/614-640`、`LabComposePanel.tsx:126`、`DemoResearchLabPage.tsx` 5 处、`WorkspaceTopbarSearch.tsx:251/257`、`CommandPalette.tsx`、`WidgetCatalog.tsx`）
 - [ ] （P3 可选）Lab 图谱节点/边键盘可达性：`LabGraph.tsx:125-240`
 
-### W6 · 神文件拆分（P2，行为不变，拆分纪律见根 AGENTS.md）
+### W6 · 神文件拆分（P2，行为不变，拆分纪律见根 AGENTS.md）✅ 2026-09-16
 
 > 顺序约束：`useEdenLabController` 的结构性改动等 `c64-research-lab-sse-resilience` 落地后再动（该 change 只动 `startStream`）。
 
-- [ ] `useSources.ts`（940 行）→ 五缝：`useSourceTags` / `useExtractors` / `useSourceUploads` / `useSourceSearchQueue` / 引用高亮 hook
-- [ ] `WorkspaceLayout.tsx`（984 行）→ 命令面板 builder 独立模块；SourcesPanel/ChatPanel/Overlays 直接消费 store+SWR，砍 45/24/56 props 链；顺带清僵尸 props（`:679-681` 空回调、`searchQueue={[]}`）
-- [ ] `LabNodeDrawer.tsx`（857 行）→ `useNodeChat` hook + Meta/Chat 子组件；移除模块级 `chatByNodeId` Map（:34）；fixture 假打字机（:52-65）随 demo 走
-- [ ] （P3）server `shared/config.ts`（1033 行，三段拆）与 `run-loop.ts`（968 行，ingest/单元执行/循环三缝）——先消 W3 默认值三写再拆
+- [x] `useSources.ts`（拆前 988 行）→ 五缝（308 行 facade + useSourceTags/useExtractors/useSourceUploads/useSourceSearchQueue/useSourceCitationHighlight，SourceSeamContext 共享上下文）：`useSourceTags` / `useExtractors` / `useSourceUploads` / `useSourceSearchQueue` / 引用高亮 hook
+- [x] `WorkspaceLayout.tsx`（拆前 990 行 → 875）→ 命令面板 builder 独立模块（commandPaletteCommands.ts）+ 僵尸 props 清理（onSearch 空回调、searchQueue 及队列移除回调，c75 后无消费）；「SourcesPanel/ChatPanel 直连 store 砍 props 链」评估为高风险大改，留待下次触达面板时做；SourcesPanel/ChatPanel/Overlays 直接消费 store+SWR，砍 45/24/56 props 链；顺带清僵尸 props（`:679-681` 空回调、`searchQueue={[]}`）
+- [x] `LabNodeDrawer.tsx`（拆前 932 行 → 702）→ `useNodeChat` hook；模块级 `chatByNodeId` Map 移除（改为 drawer 生命周期内缓存）；fixture 假打字机移入 proposeNodeChatTurn（r438 fixture 专属模块）；Meta/Chat 子组件按拆分纪律判定为 props 转发壳（10+ 回调穿参），不拆
+- [ ] （P3，保留）server `shared/config.ts`（现 1086 行，三段拆）与 `run-loop.ts`（984 行）——W3 默认值三写已消，拆分本身仍为 P3 待办
 
 ### W7 · 状态词汇收敛（P3）
 
