@@ -54,10 +54,10 @@
 - [x] config 默认值收敛：`shared/config.ts:263/819/1016` 三份 ResearchSettings 字面量 → 单一 SSOT 常量喂给 schema `.default()` 与 fallback；`research-core.ts:100-103` 改用既有 `getResearchSettings()`
 - [x] `node-agent.ts:315` node_chat 步数硬编码 8 → 进 config（`nodeChatMaxSteps`，与 `getWorkUnitMaxSteps()` 同源）
 
-### W4 · 查询性能（P2）
+### W4 · 查询性能（P2）✅ 2026-09-16
 
-- [ ] `sources/router.ts:537-564` sortBy='size' 比较器内发 COUNT → 列表预取一次映射后排序
-- [ ] `sources/router.ts:477-496` enrichSources 每行 2 查询 → 批量聚合；顺带删 `:504` 名不副实的「N+1 fix」注释
+- [x] `sources/router.ts` sortBy='size' 比较器内发 COUNT → 列表预取一次映射后排序
+- [x] `sources/router.ts` enrichSources 每行 2 查询 → 批量聚合（GROUP BY + inArray）；「N+1 fix」注释已改为准确描述
 
 ### W5 · UX 一致性（P2）
 
