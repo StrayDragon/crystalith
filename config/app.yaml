@@ -337,22 +337,25 @@ source_ingestion:
 research:
   # After a run reaches a terminal status, truncate progress_events to the
   # most recent N rows (by seq). In-flight runs keep the full ledger.
-  progressEventRetain: 200
+  progress_event_retain: 200
   # Max concurrent research-node work-units per Run (c106). 1 = serial drain;
   # default 2; Zod clamps to 1..8. Same-Run LLM calls stay serialized via queue.
-  parallelBranchUnits: 2
+  parallel_branch_units: 2
   # Optional model id for topic auto-decompose (c93). Omit or leave empty to
   # inherit models.defaults.chat.
-  # decomposeModelId: ""
+  # decompose_model_id: ""
   # Page-fetch budget = ceil(maxSearches * pageRatio) (c107). Independent of searches.
-  pageRatio: 1.5
+  page_ratio: 1.5
   # ToolLoopAgent work_unit step cap (c107).
-  workUnitMaxSteps: 12
+  work_unit_max_steps: 12
+  # ToolLoopAgent node_chat step cap (W3). Keys are snake_case per r249;
+  # pre-r249 camelCase keys are accepted with a deprecation warning.
+  node_chat_max_steps: 8
   # Per-node web evidence content token budget (c107).
-  nodeContentTokenBudget: 32768
+  node_content_token_budget: 32768
   # Node short-synthesis evidence context token budget (c107).
-  nodeSummaryTokenBudget: 65536
+  node_summary_token_budget: 65536
   # Search budget add-on: K = clamp(ceil(maxSearches × addOnRatio), minK, maxK) (c108).
-  addOnRatio: 0.25
-  addOnMinK: 5
-  addOnMaxK: 50
+  add_on_ratio: 0.25
+  add_on_min_k: 5
+  add_on_max_k: 50

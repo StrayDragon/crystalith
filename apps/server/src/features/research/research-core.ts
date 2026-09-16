@@ -98,7 +98,7 @@ export function abortAllChatsForRun(runId: number): void {
 }
 
 export function getProgressEventRetain(): number {
-  return getResearchSettings().progressEventRetain;
+  return getResearchSettings().progress_event_retain;
 }
 
 export function resolveNodeRole(node: Pick<ResearchNode, 'id' | 'role'>): ResearchNodeRole {
