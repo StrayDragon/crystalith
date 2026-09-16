@@ -82,10 +82,10 @@
 
 - [ ] `ResearchTaskStatus` 字面量四处（`researchTaskTypes.ts:6-13`、`useResearchTasks.ts:13`、`useEdenLabController.ts:65-69`、`demoResearchTasks.ts:9-14`）→ 从 `@crystalith/shared` research schema 派生单一来源；label 映射留 web
 
-### W8 · spec / config 卫生（P2）
+### W8 · spec / config 卫生（P2）✅ 2026-09-16
 
-- [ ] 删孤儿愿景 spec：`llmanspec/specs/knowledge-curation-and-freshness/`（freshness/duplicate candidates/ignore/re_ingest 全部零实现，grep 已验证；唯一真实存在的 re-embed 归 source-ingestion 系 specs）→ `llman sdd validate --specs --strict` 验收
-- [ ] `app.yaml` research 节 camelCase → snake_case（现状违反 `configuration-governance.feature:34` MUST）：改名 + schema 兼容旧键一个过渡期（`.optional()` alias + deprecation 日志），`check-app-schema` 门禁对齐
+- [x] 删孤儿愿景 spec：`llmanspec/specs/knowledge-curation-and-freshness/`（freshness/duplicate candidates/ignore/re_ingest 全部零实现，grep 已验证；唯一真实存在的 re-embed 归 source-ingestion 系 specs）→ `llman sdd validate --specs --strict` 验收
+- [x] `app.yaml` research 节 camelCase → snake_case（现状违反 `configuration-governance.feature:34` MUST）：改名 + schema 兼容旧键一个过渡期（`.optional()` alias + deprecation 日志），`check-app-schema` 门禁对齐
 - [ ] ~~CoachMarkPopover spec 因果补录~~ → 撤销：对应 r281 分层引导条款在实施前已存在（57addb1 < e4510fd），无 spec 增量需求，非欠账
 
 ## 3. 排查中排除的嫌疑（勿重复立项）
