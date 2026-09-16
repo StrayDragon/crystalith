@@ -78,9 +78,9 @@
 - [x] `LabNodeDrawer.tsx`（拆前 932 行 → 702）→ `useNodeChat` hook；模块级 `chatByNodeId` Map 移除（改为 drawer 生命周期内缓存）；fixture 假打字机移入 proposeNodeChatTurn（r438 fixture 专属模块）；Meta/Chat 子组件按拆分纪律判定为 props 转发壳（10+ 回调穿参），不拆
 - [ ] （P3，保留）server `shared/config.ts`（现 1086 行，三段拆）与 `run-loop.ts`（984 行）——W3 默认值三写已消，拆分本身仍为 P3 待办
 
-### W7 · 状态词汇收敛（P3）
+### W7 · 状态词汇收敛（P3）✅ 2026-09-16
 
-- [ ] `ResearchTaskStatus` 字面量四处（`researchTaskTypes.ts:6-13`、`useResearchTasks.ts:13`、`useEdenLabController.ts:65-69`、`demoResearchTasks.ts:9-14`）→ 从 `@crystalith/shared` research schema 派生单一来源；label 映射留 web
+- [x] `ResearchTaskStatus` 字面量四处（shared 新增 RESEARCH_TERMINAL/ACTIVE_STATUSES 单一来源，四处派生；label 映射留 web；server research-core 终态集合同步派生）（`researchTaskTypes.ts:6-13`、`useResearchTasks.ts:13`、`useEdenLabController.ts:65-69`、`demoResearchTasks.ts:9-14`）→ 从 `@crystalith/shared` research schema 派生单一来源；label 映射留 web
 
 ### W8 · spec / config 卫生（P2）✅ 2026-09-16
 
