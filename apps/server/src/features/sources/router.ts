@@ -33,7 +33,7 @@ import {
 // (c90: flat notebook-scoped /v2/sources/:id* and /upload aliases removed)
 //
 // Mirrors v1 `features/sources/api.py` + `features/sources/api_ingest.py`.
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { Elysia } from 'elysia';
 import { z } from 'zod';
 
@@ -455,7 +455,7 @@ async function handleReEmbedSource(id: number, notebookId: number) {
   }
 }
 
-/** Enrich source rows with chunk counts and tags. */
+/** Enrich source rows with chunk counts and tags (batched: 2 queries per list, not per row). */
 function enrichSources(
   rows: Array<{
     id: number;
@@ -474,26 +474,38 @@ function enrichSources(
     updatedAt: Date;
   }>,
 ) {
-  return rows.map((row) => {
-    // Get chunk count
-    const c = db()
-      .select({ c: sql<number>`COUNT(*)` })
+  if (rows.length === 0) return [];
+  const ids = rows.map((r) => r.id);
+
+  const chunkCountById = new Map(
+    db()
+      .select({ sourceId: chunks.sourceId, c: sql<number>`COUNT(*)` })
       .from(chunks)
-      .where(eq(chunks.sourceId, row.id))
-      .get();
-    const chunkCount = c?.c ?? 0;
+      .where(inArray(chunks.sourceId, ids))
+      .groupBy(chunks.sourceId)
+      .all()
+      .map((r) => [r.sourceId, r.c] as const),
+  );
 
-    // Get tags
-    const tagRows = db()
-      .select({ name: sourceTags.name })
-      .from(sourceTagMap)
-      .innerJoin(sourceTags, eq(sourceTagMap.tagId, sourceTags.id))
-      .where(eq(sourceTagMap.sourceId, row.id))
-      .all();
-    const tags = tagRows.map((t) => t.name);
+  const tagsBySourceId = new Map<number, string[]>();
+  for (const t of db()
+    .select({ sourceId: sourceTagMap.sourceId, name: sourceTags.name })
+    .from(sourceTagMap)
+    .innerJoin(sourceTags, eq(sourceTagMap.tagId, sourceTags.id))
+    .where(inArray(sourceTagMap.sourceId, ids))
+    .all()) {
+    const names = tagsBySourceId.get(t.sourceId) ?? [];
+    names.push(t.name);
+    tagsBySourceId.set(t.sourceId, names);
+  }
 
-    return serializeSource({ ...row, chunkCount, tags });
-  });
+  return rows.map((row) =>
+    serializeSource({
+      ...row,
+      chunkCount: chunkCountById.get(row.id) ?? 0,
+      tags: tagsBySourceId.get(row.id) ?? [],
+    }),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -501,7 +513,7 @@ function enrichSources(
 // ---------------------------------------------------------------------------
 
 export const sourcesRouter = new Elysia({ prefix: '/v2' })
-  // List sources for a notebook (c39: tag filter + sortBy + N+1 fix)
+  // List sources for a notebook (c39: tag filter + sortBy; W4: batched size sort + enrichment)
   .get(
     '/notebooks/:nid/sources',
     ({ params, query }) => {
@@ -533,27 +545,33 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         }
       }
 
-      // Sort
+      // Sort (size: chunk counts prefetched once, not 2 COUNTs per comparison)
+      const chunkCountById =
+        sortBy === 'size'
+          ? new Map(
+              db()
+                .select({ sourceId: chunks.sourceId, c: sql<number>`COUNT(*)` })
+                .from(chunks)
+                .where(
+                  inArray(
+                    chunks.sourceId,
+                    rows.map((r) => r.id),
+                  ),
+                )
+                .groupBy(chunks.sourceId)
+                .all()
+                .map((r) => [r.sourceId, r.c] as const),
+            )
+          : null;
       rows.sort((a, b) => {
         let cmp = 0;
         switch (sortBy) {
           case 'name':
             cmp = a.filename.localeCompare(b.filename);
             break;
-          case 'size': {
-            const ca = db()
-              .select({ c: sql<number>`COUNT(*)` })
-              .from(chunks)
-              .where(eq(chunks.sourceId, a.id))
-              .get();
-            const cb = db()
-              .select({ c: sql<number>`COUNT(*)` })
-              .from(chunks)
-              .where(eq(chunks.sourceId, b.id))
-              .get();
-            cmp = (ca?.c ?? 0) - (cb?.c ?? 0);
+          case 'size':
+            cmp = (chunkCountById?.get(a.id) ?? 0) - (chunkCountById?.get(b.id) ?? 0);
             break;
-          }
           case 'type':
             cmp = (a.parserType ?? '').localeCompare(b.parserType ?? '');
             break;
