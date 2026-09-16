@@ -22,6 +22,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { TestIds, tid } from '../../shared/testids';
 import { toast } from '../../shared/toast';
+import { mapTransportError } from '../../shared/transportError';
 import CitationsControl from '../workspace/shared/components/citations/CitationsControl';
 import { runConvertToNote, runConvertToSource } from './edenConvertActions';
 import {
@@ -145,7 +146,7 @@ export default function EdenLabReportPage({
         if (cancelled) return;
       } catch (error) {
         if (cancelled) return;
-        const message = error instanceof Error ? error.message : String(error);
+        const message = mapTransportError(error);
         setState({ status: 'error', message });
       }
     })();
@@ -185,7 +186,7 @@ export default function EdenLabReportPage({
     try {
       await fn();
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = mapTransportError(error);
       toast.error(message, 5000);
     } finally {
       setBusy(false);
@@ -304,7 +305,7 @@ export default function EdenLabReportPage({
         setEditorEpoch((n) => n + 1);
         toast.success('已恢复版本；返回图谱将重载思考图', 3600);
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = mapTransportError(error);
         setActionError(message);
       } finally {
         setBusy(false);
@@ -324,7 +325,7 @@ export default function EdenLabReportPage({
         toast.success(`已新开研究 #${created.id}`, 2800);
         navigateToResearchLab(notebookId, created.id);
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = mapTransportError(error);
         setActionError(message);
         toast.error(message, 5000);
       } finally {

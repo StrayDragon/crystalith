@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { api } from '../../api/eden';
 import { parseServerError } from '../../api/parseServerError';
+import { useLayer } from '../../shared/layer';
 import { TestIds, tid } from '../../shared/testids';
 /**
  * Lab idle Compose — create a deep-research task (Eden ResearchRun or fixture playback).
@@ -68,6 +69,7 @@ export default function LabComposePanel({
   onSubmit,
   submitting = false,
 }: LabComposePanelProps) {
+  const { style: overlayLayerStyle } = useLayer('popover');
   const [sources, setSources] = useState<LabComposeSourceOption[]>([]);
   const [sourcesLoading, setSourcesLoading] = useState(true);
   const [sourcesError, setSourcesError] = useState('');
@@ -123,7 +125,8 @@ export default function LabComposePanel({
 
   return (
     <div
-      className="absolute inset-0 z-20 flex items-start justify-center overflow-y-auto bg-gray-50/90 px-4 py-8 backdrop-blur-[2px]"
+      className="absolute inset-0 flex items-start justify-center overflow-y-auto bg-gray-50/90 px-4 py-8 backdrop-blur-[2px]"
+      style={overlayLayerStyle}
       {...tid(TestIds.researchLabCompose)}
     >
       <div className="my-auto w-full max-w-xl rounded-xl border border-gray-200 bg-white p-5 shadow-lg">

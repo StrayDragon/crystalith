@@ -8,8 +8,10 @@ import {
 } from '@mui/icons-material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useLayer } from '../../shared/layer';
 import { TestIds, tid } from '../../shared/testids';
 import { toast } from '../../shared/toast';
+import { mapTransportError } from '../../shared/transportError';
 import { acceptNodeChatAction as applyNodeChatAction } from './acceptNodeChatAction';
 import { cancelActiveEdenRun } from './edenCancelFlow';
 import {
@@ -130,6 +132,10 @@ function LabWorkbench({
   onSelectTask,
   onCreateNew,
 }: LabWorkbenchProps) {
+  // W5: Layer-system z-indices replacing Tailwind z-10/20/30 utility classes.
+  const { style: bannerLayerStyle } = useLayer('dropdown');
+  const { style: overlayLayerStyle } = useLayer('popover');
+  const { style: menuLayerStyle } = useLayer('popover', 1);
   const selected = lab.derived.nodes.find((n) => n.id === lab.selectedNodeId) ?? null;
   // Avoid Compose flash while Eden loads `?rid=` (phase is idle until GET returns).
   const urlRid = readActiveRunIdFromUrl();
@@ -203,7 +209,7 @@ function LabWorkbench({
         downloadResearchReportMarkdown(resolved.markdown, resolved.title);
         toast.success('已导出研究报告 Markdown', 2800);
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
+        const msg = mapTransportError(error);
         toast.error(msg);
       }
     })();
@@ -293,7 +299,7 @@ function LabWorkbench({
         try {
           await cancelActiveEdenRun(notebookId, rid);
         } catch (error) {
-          const msg = error instanceof Error ? error.message : String(error);
+          const msg = mapTransportError(error);
           toast.error(msg);
         }
       })();
@@ -412,7 +418,10 @@ function LabWorkbench({
                   <MoreHorizIcon sx={{ fontSize: 16 }} />
                   更多
                 </summary>
-                <div className="absolute right-0 z-30 mt-1 min-w-[160px] rounded-xl border border-gray-200 bg-white p-1 shadow-lg">
+                <div
+                  className="absolute right-0 mt-1 min-w-[160px] rounded-xl border border-gray-200 bg-white p-1 shadow-lg"
+                  style={menuLayerStyle}
+                >
                   <button
                     type="button"
                     className="block w-full rounded-lg px-3 py-2 text-left text-[11px] text-gray-700 hover:bg-gray-50"
@@ -604,7 +613,10 @@ function LabWorkbench({
         ) : null}
 
         {loadingExistingRun ? (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-gray-50/80 backdrop-blur-[1px]">
+          <div
+            className="absolute inset-0 flex items-center justify-center bg-gray-50/80 backdrop-blur-[1px]"
+            style={overlayLayerStyle}
+          >
             <p className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm">
               正在加载 Run #{urlRid}…
             </p>
@@ -612,7 +624,10 @@ function LabWorkbench({
         ) : null}
 
         {!showCompose && lab.reshaping ? (
-          <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-[11px] font-medium text-amber-900 shadow-md backdrop-blur">
+          <div
+            className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-[11px] font-medium text-amber-900 shadow-md backdrop-blur"
+            style={bannerLayerStyle}
+          >
             流程重塑中 · 重算布局
           </div>
         ) : null}
@@ -622,7 +637,10 @@ function LabWorkbench({
           playing: lab.playing,
           phase: lab.phase,
         }) ? (
-          <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-full border border-blue-200 bg-blue-50/95 px-3 py-1.5 text-[11px] font-medium text-blue-900 shadow-md backdrop-blur">
+          <div
+            className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-blue-200 bg-blue-50/95 px-3 py-1.5 text-[11px] font-medium text-blue-900 shadow-md backdrop-blur"
+            style={bannerLayerStyle}
+          >
             {labPausedBannerText(lab.phase, lab.confirmKind)}
           </div>
         ) : null}
@@ -636,14 +654,18 @@ function LabWorkbench({
           nodes: lab.derived.nodes,
         }) ? (
           <div
-            className="absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-[11px] font-medium text-amber-950 shadow-md backdrop-blur"
+            className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-[11px] font-medium text-amber-950 shadow-md backdrop-blur"
+            style={bannerLayerStyle}
             {...tid(TestIds.researchLabPartialCompletionBanner)}
           >
             {LAB_PARTIAL_COMPLETION_BANNER}
           </div>
         ) : null}
         {shouldShowLabPlayingTip({ showCompose, playing: lab.playing }) ? (
-          <div className="pointer-events-none absolute left-3 top-3 z-10 max-w-[240px] rounded-lg border border-gray-200 bg-white/90 px-2.5 py-1.5 text-[10px] text-gray-500 shadow-sm">
+          <div
+            className="pointer-events-none absolute left-3 top-3 max-w-[240px] rounded-lg border border-gray-200 bg-white/90 px-2.5 py-1.5 text-[10px] text-gray-500 shadow-sm"
+            style={bannerLayerStyle}
+          >
             点节点打开会话 · 边上分叉/剪枝 · 左下角画布设置
           </div>
         ) : null}

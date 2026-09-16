@@ -21,6 +21,7 @@ rs.mock('./model/proposeNodeChatTurn', () => {
   };
 });
 
+import { LayerProvider } from '../../shared/layer';
 import LabNodeDrawer from './LabNodeDrawer';
 import type { LabNode } from './model/types';
 
@@ -51,15 +52,17 @@ describe('LabNodeDrawer chat mode (c88)', () => {
     });
 
     render(
-      <LabNodeDrawer
-        node={researchNode}
-        citations={{}}
-        phase="explore"
-        mode="eden"
-        notebookId={62}
-        runId={9}
-        onClose={() => undefined}
-      />,
+      <LayerProvider>
+        <LabNodeDrawer
+          node={researchNode}
+          citations={{}}
+          phase="explore"
+          mode="eden"
+          notebookId={62}
+          runId={9}
+          onClose={() => undefined}
+        />
+      </LayerProvider>,
     );
 
     fireEvent.click(screen.getByText('对话'));
@@ -84,13 +87,15 @@ describe('LabNodeDrawer chat mode (c88)', () => {
 
   it('fixture send may call proposeNodeChatTurn', async () => {
     const { unmount } = render(
-      <LabNodeDrawer
-        node={{ ...researchNode, id: 'fixture-branch' }}
-        citations={{}}
-        phase="explore"
-        mode="fixture"
-        onClose={() => undefined}
-      />,
+      <LayerProvider>
+        <LabNodeDrawer
+          node={{ ...researchNode, id: 'fixture-branch' }}
+          citations={{}}
+          phase="explore"
+          mode="fixture"
+          onClose={() => undefined}
+        />
+      </LayerProvider>,
     );
 
     fireEvent.click(screen.getByText('对话'));
@@ -112,16 +117,18 @@ describe('LabNodeDrawer chat mode (c88)', () => {
 
   it('llmBusy disables send', () => {
     render(
-      <LabNodeDrawer
-        node={{ ...researchNode, id: 'busy-branch' }}
-        citations={{}}
-        phase="explore"
-        mode="eden"
-        notebookId={62}
-        runId={9}
-        llmBusy
-        onClose={() => undefined}
-      />,
+      <LayerProvider>
+        <LabNodeDrawer
+          node={{ ...researchNode, id: 'busy-branch' }}
+          citations={{}}
+          phase="explore"
+          mode="eden"
+          notebookId={62}
+          runId={9}
+          llmBusy
+          onClose={() => undefined}
+        />
+      </LayerProvider>,
     );
 
     fireEvent.click(screen.getByText('对话'));
@@ -140,16 +147,18 @@ describe('LabNodeDrawer chat mode (c88)', () => {
     const onChatError = rs.fn();
 
     render(
-      <LabNodeDrawer
-        node={{ ...researchNode, id: 'err-branch' }}
-        citations={{}}
-        phase="explore"
-        mode="eden"
-        notebookId={62}
-        runId={9}
-        onChatError={onChatError}
-        onClose={() => undefined}
-      />,
+      <LayerProvider>
+        <LabNodeDrawer
+          node={{ ...researchNode, id: 'err-branch' }}
+          citations={{}}
+          phase="explore"
+          mode="eden"
+          notebookId={62}
+          runId={9}
+          onChatError={onChatError}
+          onClose={() => undefined}
+        />
+      </LayerProvider>,
     );
 
     fireEvent.click(screen.getByText('对话'));

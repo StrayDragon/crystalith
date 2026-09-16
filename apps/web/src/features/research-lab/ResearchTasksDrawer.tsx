@@ -3,11 +3,13 @@
  * Demo pages MAY inject `tasks` / `activeTaskId` to reuse this shell without fixture env gates.
  */
 import { Close as CloseIcon, Assignment as AssignmentIcon } from '@mui/icons-material';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
+import ConfirmPopover from '../../shared/ConfirmPopover';
 import { useLayer } from '../../shared/layer';
 import { TestIds, tid } from '../../shared/testids';
+import { useFocusTrap } from '../../shared/ui';
 import {
   isActiveResearchStatus,
   RESEARCH_TASK_STATUS_LABEL,
@@ -60,6 +62,8 @@ export default function ResearchTasksDrawer({
   error: errorOverride,
 }: ResearchTasksDrawerProps) {
   const { style: layerStyle } = useLayer('modal');
+  const drawerRef = useRef<HTMLElement>(null);
+  useFocusTrap({ active: open, containerRef: drawerRef, onEscape: onClose });
   const eden = useResearchTasks(tasksOverride === undefined ? notebookId : null);
   const injected = tasksOverride !== undefined;
   const tasks = injected ? (tasksOverride ?? []) : eden.tasks;
@@ -83,6 +87,7 @@ export default function ResearchTasksDrawer({
         onClick={onClose}
       />
       <aside
+        ref={drawerRef}
         className="absolute right-0 top-0 flex h-full w-[min(380px,100%)] flex-col border-l border-gray-200 bg-white shadow-xl"
         role="dialog"
         aria-modal="true"
@@ -170,16 +175,23 @@ export default function ResearchTasksDrawer({
                     </button>
                     {canCancel ? (
                       <div className="mt-2 flex justify-end">
-                        <button
-                          type="button"
-                          className="rounded-md border border-red-100 bg-white px-2 py-1 text-[10px] font-medium text-red-700 hover:bg-red-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
+                        <ConfirmPopover
+                          message={`确认取消「${task.topic.slice(0, 24)}」？取消后 Run 进入 cancelled 终态。`}
+                          onConfirm={() => {
                             onCancelTask?.(task);
                           }}
+                          placement="left"
                         >
-                          取消研究
-                        </button>
+                          <button
+                            type="button"
+                            className="rounded-md border border-red-100 bg-white px-2 py-1 text-[10px] font-medium text-red-700 hover:bg-red-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                          >
+                            取消研究
+                          </button>
+                        </ConfirmPopover>
                       </div>
                     ) : null}
                   </div>

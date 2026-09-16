@@ -8,6 +8,7 @@ import { useNotebooks } from '../domains/notebooks/useNotebooks';
 import { useRefine } from '../domains/refine/useRefine';
 import SessionSwitcher from '../domains/sessions/SessionSwitcher';
 import { useSessions } from '../domains/sessions/useSessions';
+import SourceDedupConfirmDialog from '../domains/sources/SourceDedupConfirmDialog';
 import type { ChatMessage as SourceDialogMessage } from '../domains/sources/SourceDetailDialog';
 import SourcesPanel from '../domains/sources/SourcesPanel';
 import { useSources } from '../domains/sources/useSources';
@@ -841,6 +842,10 @@ export default function WorkspaceLayout() {
             event.target.value = '';
           }
         }}
+      />
+      <SourceDedupConfirmDialog
+        request={sources.dedupConfirm}
+        onResolve={sources.resolveDedupConfirm}
       />
 
       <AddSourceFromUrlDialog
