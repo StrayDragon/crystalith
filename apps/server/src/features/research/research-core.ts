@@ -24,7 +24,7 @@ import {
   type ResearchCheckpointJson,
   type ResearchGraphJson,
 } from '../../db/schema.ts';
-import { config, ResearchSettingsSchema } from '../../shared/config.ts';
+import { getResearchSettings } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 
 export type SseEmit = (event: string, data: unknown) => void;
@@ -98,8 +98,7 @@ export function abortAllChatsForRun(runId: number): void {
 }
 
 export function getProgressEventRetain(): number {
-  const parsed = ResearchSettingsSchema.safeParse(config().raw.research ?? {});
-  return parsed.success ? parsed.data.progressEventRetain : 200;
+  return getResearchSettings().progressEventRetain;
 }
 
 export function resolveNodeRole(node: Pick<ResearchNode, 'id' | 'role'>): ResearchNodeRole {

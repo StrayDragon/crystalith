@@ -260,22 +260,10 @@ export function getDefaultChatModel(): ModelConfig | undefined {
   return models.available.find((m) => m.roles.includes('chat'));
 }
 
-const RESEARCH_SETTINGS_FALLBACK: ResearchSettings = {
-  progressEventRetain: 200,
-  parallelBranchUnits: 2,
-  pageRatio: 1.5,
-  workUnitMaxSteps: 12,
-  nodeContentTokenBudget: 32768,
-  nodeSummaryTokenBudget: 65536,
-  addOnRatio: 0.25,
-  addOnMinK: 5,
-  addOnMaxK: 50,
-};
-
 /** Parsed `research:` section from app.yaml (defaults applied). */
 export function getResearchSettings(): ResearchSettings {
   const parsed = ResearchSettingsSchema.safeParse(config().raw.research ?? {});
-  return parsed.success ? parsed.data : { ...RESEARCH_SETTINGS_FALLBACK };
+  return parsed.success ? parsed.data : { ...RESEARCH_SETTINGS_DEFAULTS };
 }
 
 /** maxPageFetches = ceil(maxSearches * pageRatio); default ratio 1.5. */
@@ -289,6 +277,13 @@ export function getPageRatio(): number {
 export function getWorkUnitMaxSteps(): number {
   const n = getResearchSettings().workUnitMaxSteps ?? 12;
   if (!Number.isFinite(n)) return 12;
+  return Math.max(1, Math.trunc(n));
+}
+
+/** ToolLoopAgent node_chat step cap (W3; same source as getWorkUnitMaxSteps). */
+export function getNodeChatMaxSteps(): number {
+  const n = getResearchSettings().nodeChatMaxSteps ?? RESEARCH_SETTINGS_DEFAULTS.nodeChatMaxSteps;
+  if (!Number.isFinite(n)) return RESEARCH_SETTINGS_DEFAULTS.nodeChatMaxSteps;
   return Math.max(1, Math.trunc(n));
 }
 
@@ -816,12 +811,30 @@ export type ProxySettings = z.infer<typeof ProxySettingsSchema>;
 // Each section carries an inline .describe() for JSON Schema doc.
 // ===========================================================================
 
+/**
+ * Single source of truth for research defaults (W3): feeds the per-field
+ * schema defaults, the RootConfigSchema `research` default, and the
+ * parse-failure fallback in getResearchSettings().
+ */
+export const RESEARCH_SETTINGS_DEFAULTS = {
+  progressEventRetain: 200,
+  parallelBranchUnits: 2,
+  pageRatio: 1.5,
+  workUnitMaxSteps: 12,
+  nodeChatMaxSteps: 8,
+  nodeContentTokenBudget: 32768,
+  nodeSummaryTokenBudget: 65536,
+  addOnRatio: 0.25,
+  addOnMinK: 5,
+  addOnMaxK: 50,
+} as const;
+
 export const ResearchSettingsSchema = z.object({
   progressEventRetain: z
     .number()
     .int()
     .positive()
-    .default(200)
+    .default(RESEARCH_SETTINGS_DEFAULTS.progressEventRetain)
     .describe(desc('research.progress_event_retain', '终态后进度账本保留最近 N 条')),
   /**
    * Max concurrent research-node work-units per Run (c106).
@@ -832,7 +845,7 @@ export const ResearchSettingsSchema = z.object({
     .int()
     .min(1)
     .max(8)
-    .default(2)
+    .default(RESEARCH_SETTINGS_DEFAULTS.parallelBranchUnits)
     .describe(
       desc(
         'research.parallel_branch_units',
@@ -853,46 +866,53 @@ export const ResearchSettingsSchema = z.object({
   pageRatio: z
     .number()
     .positive()
-    .default(1.5)
+    .default(RESEARCH_SETTINGS_DEFAULTS.pageRatio)
     .describe(desc('research.page_ratio', '读页预算 = ceil(maxSearches × pageRatio)')),
   /** ToolLoopAgent work_unit step cap (c107). */
   workUnitMaxSteps: z
     .number()
     .int()
     .positive()
-    .default(12)
+    .default(RESEARCH_SETTINGS_DEFAULTS.workUnitMaxSteps)
     .describe(desc('research.work_unit_max_steps', '节点 work_unit 工具环最大步数')),
+  /** ToolLoopAgent node_chat step cap (W3; same source as workUnitMaxSteps). */
+  nodeChatMaxSteps: z
+    .number()
+    .int()
+    .positive()
+    .default(RESEARCH_SETTINGS_DEFAULTS.nodeChatMaxSteps)
+    .describe(desc('research.node_chat_max_steps', '节点对话 agent 单轮工具环最大步数')),
   /** Per-node web evidence content token budget (c107). */
   nodeContentTokenBudget: z
     .number()
     .int()
     .positive()
-    .default(32768)
+    .default(RESEARCH_SETTINGS_DEFAULTS.nodeContentTokenBudget)
     .describe(desc('research.node_content_token_budget', '单节点网页正文合计 token 上限')),
   /** Node short-synthesis evidence context token budget (c107). */
   nodeSummaryTokenBudget: z
     .number()
     .int()
     .positive()
-    .default(65536)
+    .default(RESEARCH_SETTINGS_DEFAULTS.nodeSummaryTokenBudget)
     .describe(desc('research.node_summary_token_budget', '节点短综合证据上下文 token 上限')),
   /** Search budget add-on: K = clamp(ceil(maxSearches × ratio), minK, maxK) (c108). */
   addOnRatio: z
     .number()
     .positive()
-    .default(0.25)
+    .default(RESEARCH_SETTINGS_DEFAULTS.addOnRatio)
     .describe(desc('research.add_on_ratio', '检索加购比例：K=ceil(maxSearches×ratio)')),
   addOnMinK: z
     .number()
     .int()
     .positive()
-    .default(5)
+    .default(RESEARCH_SETTINGS_DEFAULTS.addOnMinK)
     .describe(desc('research.add_on_min_k', '检索加购块下限')),
   addOnMaxK: z
     .number()
     .int()
     .positive()
-    .default(50)
+    .default(RESEARCH_SETTINGS_DEFAULTS.addOnMaxK)
     .describe(desc('research.add_on_max_k', '检索加购块上限')),
 });
 export type ResearchSettings = z.infer<typeof ResearchSettingsSchema>;
@@ -1013,17 +1033,7 @@ export const RootConfigSchema = z.object({
   database: DatabaseSettingsSchema.describe(desc('root.database', '数据库设置（v1 兼容）')),
   plugins: PluginsSettingsSchema.describe(desc('root.plugins', '插件发现与加载配置')),
   proxy_settings: ProxySettingsSchema.describe(desc('root.proxy_settings', '出站代理设置')),
-  research: ResearchSettingsSchema.default({
-    progressEventRetain: 200,
-    parallelBranchUnits: 2,
-    pageRatio: 1.5,
-    workUnitMaxSteps: 12,
-    nodeContentTokenBudget: 32768,
-    nodeSummaryTokenBudget: 65536,
-    addOnRatio: 0.25,
-    addOnMinK: 5,
-    addOnMaxK: 50,
-  }).describe(
+  research: ResearchSettingsSchema.default(RESEARCH_SETTINGS_DEFAULTS).describe(
     desc(
       'root.research',
       'Deep Research 运行时：进度账本保留、支路并行度、读页预算比、加购公式、work_unit 步数、token 预算、可选拆解模型等',

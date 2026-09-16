@@ -213,6 +213,7 @@
   "research.model_id": "结案/节点综合所用模型 ID（省略则服务端默认）",
   "research.node": "研究图节点",
   "research.node_chat_body": "节点对话请求体",
+  "research.node_chat_max_steps": "节点对话 agent 单轮工具环最大步数",
   "research.node_id": "研究图节点 ID",
   "research.node_patch_body": "研究节点字段补丁",
   "research.node_phase": "节点执行阶段",

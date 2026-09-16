@@ -21,8 +21,10 @@ const agentModeKey = '__c63ChatAgentMode' as const;
 
 mock.module('../../src/features/research/node-agent.ts', () => ({
   createResearchNodeAgent: async () => {
+    // Default is the benign streaming agent: bun:test shares one process, so
+    // this mock outlives the file — never leave a rejecting default behind.
     const mode = ((globalThis as Record<symbol | string, unknown>)[agentModeKey] ??
-      'reject') as AgentMode;
+      'stream') as AgentMode;
     if (mode === 'no_model') return null;
     if (mode === 'stream') {
       return {

@@ -20,7 +20,12 @@ import { retrieveSourcesTool } from '../../ai/tools/retrieve-sources.ts';
 import { webSearchTool } from '../../ai/tools/web-search.ts';
 import { db } from '../../db/index.ts';
 import { embedSingle } from '../../rag/embedder.ts';
-import { getDefaultChatModel, getSearxngHost, getWorkUnitMaxSteps } from '../../shared/config.ts';
+import {
+  getDefaultChatModel,
+  getNodeChatMaxSteps,
+  getSearxngHost,
+  getWorkUnitMaxSteps,
+} from '../../shared/config.ts';
 import { withRunLlmLockReleased } from './run-locks.ts';
 
 /** Release per-run LLM lock while tool IO runs so parallel work-units can overlap search. */
@@ -312,7 +317,7 @@ export async function createResearchNodeAgent(
         toolApproval: Object.fromEntries(
           STRUCTURE_TOOL_NAMES.map((name) => [name, 'user-approval' as const]),
         ),
-        stopWhen: isStepCount(8),
+        stopWhen: isStepCount(getNodeChatMaxSteps()),
       };
     },
   };

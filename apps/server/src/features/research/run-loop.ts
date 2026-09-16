@@ -855,7 +855,7 @@ async function runQuestionPhaseOrSkip(runId: number, abortSignal: AbortSignal): 
   return false;
 }
 
-export async function runLoop(runId: number): Promise<void> {
+export async function runLoop(runId: number, chatWaitBudgetMs = 60_000): Promise<void> {
   if (activeLoops.has(runId)) return;
   activeLoops.add(runId);
   const abort = ensureRunAbortController(runId);
@@ -863,6 +863,22 @@ export async function runLoop(runId: number): Promise<void> {
     let row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
     if (!row) return;
     if (row.status !== 'queued' && row.status !== 'running') return;
+
+    // r98: chat 与 work-unit MUST 互斥。节点对话持锁时这里排队等待其释放
+    // （chat 是短轮 SSE，流结束/中止时必然释放互斥）；等待超预算则放弃本次
+    // 调度而非抢占，Run 保持 queued/running，可再次手动继续。
+    const chatWaitStart = Date.now();
+    while (row.llmActivity === 'node_chat') {
+      if (bailIfAborted(runId, abort.signal)) return;
+      if (Date.now() - chatWaitStart >= chatWaitBudgetMs) {
+        emitLog(runId, '节点对话长时间占用，研究循环暂缓（可手动继续）');
+        return;
+      }
+      await Bun.sleep(250);
+      row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+      if (!row) return;
+      if (row.status !== 'queued' && row.status !== 'running') return;
+    }
 
     row = updateRun(runId, { status: 'running', llmActivity: 'work_unit', activeNodeId: null });
     emitStatus(runId, 'running');
