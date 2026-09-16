@@ -32,6 +32,8 @@ export type LabRfData = {
   statusOverride?: string;
   /** Soft ring from citation multi-match (in addition to selected). */
   highlighted?: boolean;
+  /** Keyboard: Enter/Space on the focused node opens the inspector (r15). */
+  onSelectNode?: (id: string) => void;
 };
 
 export type LabEdgeData = {

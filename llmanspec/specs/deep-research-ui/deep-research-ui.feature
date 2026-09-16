@@ -33,6 +33,10 @@
   场景: Node inspector prune fork convert
     - 在 running 或 awaiting_confirm 时，用户单击节点 MUST 打开轻量 inspector，并 MUST 提供剪枝与 fork（fork 可带可选 hint）且在执行前 MUST 有轻量二次确认；节点 Convert 入口 MUST 淡化展示；completed/failed/cancelled 时图与 inspector MUST 只读且 MUST NOT 继续 prune/fork。
 
+  @req:r15 @human
+  场景: Graph keyboard access parity
+    - 在 running 或 awaiting_confirm 时，键盘用户 MUST 能将焦点移至研究图节点并以键盘动作（Enter/Space 或等价）打开节点 inspector；边上可用的剪枝与 fork 操作 MUST 键盘可达（MUST NOT 仅 hover 时可见/可触发）；completed/failed/cancelled 的只读禁令对键盘路径与鼠标路径同等适用；本条 MUST NOT 改变既有鼠标交互行为。
+
   @req:r407 @human
   场景: M1 confirm bar on detail
     - 当 Run 进入 awaiting_confirm 时，详情顶栏 MUST 展示 M1 确认条（预算将尽或扩支路），并 MUST 提供确认动作；图上对应节点/区域 MUST 可高亮；MUST NOT 恢复逐步审批计划 UI。

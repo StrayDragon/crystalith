@@ -122,7 +122,7 @@ const ROLE_LABEL = {
 /** Invisible connection anchors — edges still attach, dots stay hidden. */
 const HIDDEN_HANDLE = '!w-2 !h-2 !min-w-0 !min-h-0 !border-0 !bg-transparent !opacity-0';
 
-function LabFlowNode({ data }: NodeProps<LabFlowNode>) {
+function LabFlowNode({ data, id }: NodeProps<LabFlowNode>) {
   const d = data;
   const style = STATUS_STYLE[d.conclusionStatus] ?? STATUS_STYLE.pending;
   const isConclusion = d.role === 'conclusion';
@@ -133,9 +133,18 @@ function LabFlowNode({ data }: NodeProps<LabFlowNode>) {
 
   return (
     <div
-      className={`lab-node-in relative rounded-xl border-2 px-3 py-2.5 text-xs shadow-sm ${
+      className={`lab-node-in relative rounded-xl border-2 px-3 py-2.5 text-xs shadow-sm outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 ${
         isQuestion || isConclusion ? 'min-w-[200px] max-w-[280px]' : 'min-w-[140px] max-w-[210px]'
       } ${isConclusion ? 'ring-1 ring-amber-900/10' : ''} ${d.reshaping ? 'lab-node-reshape' : ''}`}
+      role="button"
+      tabIndex={0}
+      aria-label={`${d.title}（打开节点详情）`}
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        e.stopPropagation();
+        d.onSelectNode?.(id);
+      }}
       style={{
         borderColor: isQuestion ? '#0f766e' : isConclusion ? '#9a3412' : style.border,
         background: isQuestion ? '#ecfdf5' : isConclusion ? '#fff7ed' : style.bg,
@@ -247,7 +256,7 @@ const LabActionEdge = memo(function LabActionEdge({
       />
       <EdgeLabelRenderer>
         <div
-          className="nodrag nopan pointer-events-auto absolute"
+          className="nodrag nopan group pointer-events-auto absolute"
           style={{
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
           }}
@@ -258,59 +267,62 @@ const LabActionEdge = memo(function LabActionEdge({
             setHovered(false);
           }}
         >
-          {hovered ? (
-            <div className="flex flex-col items-center gap-1">
-              <span
-                className={`rounded bg-white/95 px-1.5 py-0.5 text-[9px] border shadow-sm ${
-                  d?.faded ? 'text-slate-400 border-slate-100' : 'text-slate-500 border-slate-200'
-                }`}
-              >
-                {/* intentionally || — empty label note falls back to kind */}
-                {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
-                {d?.labelNote || d?.kind || ''}
-              </span>
-              {d?.canFork || d?.canPrune ? (
-                <div className="flex items-center gap-0.5">
-                  {d.canFork ? (
-                    <button
-                      type="button"
-                      title="沿此边分叉研究支路"
-                      className="rounded-md border border-teal-200 bg-teal-50 px-1.5 py-0.5 text-[10px] font-medium text-teal-800 hover:bg-teal-100 shadow-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        d.onFork(id);
-                      }}
-                    >
-                      分叉
-                    </button>
-                  ) : null}
-                  {d.canPrune ? (
-                    <button
-                      type="button"
-                      title="淡化此研究支路（保留汇入）"
-                      className="rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-800 hover:bg-rose-100 shadow-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        d.onPrune(id);
-                      }}
-                    >
-                      剪枝
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          ) : (
+          <div className="flex flex-col items-center gap-1">
             <span
-              className={`rounded bg-white/80 px-1 py-0.5 text-[9px] border border-transparent ${
-                d?.faded ? 'text-slate-300' : 'text-slate-400'
-              }`}
+              className={
+                hovered
+                  ? `rounded bg-white/95 px-1.5 py-0.5 text-[9px] border shadow-sm ${
+                      d?.faded
+                        ? 'text-slate-400 border-slate-100'
+                        : 'text-slate-500 border-slate-200'
+                    }`
+                  : `rounded bg-white/80 px-1 py-0.5 text-[9px] border border-transparent ${
+                      d?.faded ? 'text-slate-300' : 'text-slate-400'
+                    }`
+              }
             >
               {/* intentionally || — empty label note falls back to kind */}
               {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
               {d?.labelNote || d?.kind || ''}
             </span>
-          )}
+            {d?.canFork || d?.canPrune ? (
+              <div
+                className={`flex items-center gap-0.5 transition-opacity ${
+                  hovered
+                    ? 'opacity-100'
+                    : // Hidden but tab-reachable (r15): absolute keeps static spot, no layout shift.
+                      'absolute pointer-events-none opacity-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100'
+                }`}
+              >
+                {d.canFork ? (
+                  <button
+                    type="button"
+                    title="沿此边分叉研究支路"
+                    className="rounded-md border border-teal-200 bg-teal-50 px-1.5 py-0.5 text-[10px] font-medium text-teal-800 hover:bg-teal-100 shadow-sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      d.onFork(id);
+                    }}
+                  >
+                    分叉
+                  </button>
+                ) : null}
+                {d.canPrune ? (
+                  <button
+                    type="button"
+                    title="淡化此研究支路（保留汇入）"
+                    className="rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-800 hover:bg-rose-100 shadow-sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      d.onPrune(id);
+                    }}
+                  >
+                    剪枝
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
       </EdgeLabelRenderer>
     </>
@@ -364,6 +376,10 @@ function Inner({
   const lastFitTrigger = useRef('');
   const selectedRef = useRef(selectedNodeId);
   selectedRef.current = selectedNodeId;
+  // Node data callbacks are baked at layout time — route through a ref so keyboard
+  // activation always hits the latest prop without re-running ELK.
+  const onSelectNodeRef = useRef(onSelectNode);
+  onSelectNodeRef.current = onSelectNode;
   const graphRef = useRef({ labNodes, labEdges });
   graphRef.current = { labNodes, labEdges };
   const edgePathPresetRef = useRef(edgePathPreset);
@@ -446,6 +462,7 @@ function Inner({
             ...n.data,
             selected: n.id === selectedRef.current,
             reshaping: reshaping && n.data.role === 'conclusion',
+            onSelectNode: (nid: string) => onSelectNodeRef.current(nid),
           },
         })),
       );
@@ -585,6 +602,7 @@ function Inner({
   }, []);
 
   return (
+    // Focus lives on our inner node div (r15 keyboard path); xyflow wrapper must not grab a second tab stop.
     <ReactFlow
       nodes={rfNodes}
       edges={rfEdges}
@@ -599,6 +617,7 @@ function Inner({
       }}
       nodesDraggable
       nodesConnectable={false}
+      nodesFocusable={false}
       elementsSelectable
       panOnDrag={[1, 2]}
       selectionOnDrag={false}

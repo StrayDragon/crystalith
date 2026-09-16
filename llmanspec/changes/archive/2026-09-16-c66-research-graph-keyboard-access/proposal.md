@@ -1,5 +1,8 @@
 ---
 depends_on: []
+branch: sdd/c66-research-graph-keyboard-access
+base_sha: 141acd4a999519cc8603eaf964c0aa1115b607cd
+base_branch: main
 ---
 
 # Lab 研究图键盘可达性：节点 inspector 与边操作可键盘触达
