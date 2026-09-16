@@ -9,12 +9,7 @@ import type {
 
 import type { AsyncStatus } from '../../../../../shared/types';
 import type { SourceItem } from '../../../shared/types';
-import type {
-  SearchQueueItem,
-  SourceSortBy,
-  SourceSortOrder,
-  SourceUploadItem,
-} from '../useSources';
+import type { SourceSortBy, SourceSortOrder, SourceUploadItem } from '../useSources';
 
 export type ExtractorType = ExtractorInfo['type'];
 
@@ -32,7 +27,6 @@ export interface SourcesPanelProps {
   onRetryUpload?: () => void;
   onClearUploadQueue?: () => void;
   searchState: AsyncStatus;
-  onSearch: (payload: { query: string; engine: string; mode: string }) => void;
   onAddSourceFromUrl: (
     url: string,
     mode: SourceFromUrlMode,
@@ -58,12 +52,6 @@ export interface SourcesPanelProps {
   isLoading: boolean;
   removeState: AsyncStatus;
   isFullscreen?: boolean;
-  /** 搜索队列 */
-  searchQueue?: SearchQueueItem[];
-  /** 移除单个搜索队列项 */
-  onRemoveSearchQueueItem?: (queueItemId: string) => void;
-  /** 从搜索队列中移除已添加的结果 */
-  onRemoveResultsFromQueue?: (urls: string[]) => void;
   /** 可用的提取器列表 */
   availableExtractors?: ExtractorInfo[];
   /** 全量提取器列表（含不可用/禁用项） */
