@@ -704,6 +704,7 @@
         "parallelBranchUnits": 2,
         "pageRatio": 1.5,
         "workUnitMaxSteps": 12,
+        "nodeChatMaxSteps": 8,
         "nodeContentTokenBudget": 32768,
         "nodeSummaryTokenBudget": 65536,
         "addOnRatio": 0.25,
@@ -734,6 +735,11 @@
         "workUnitMaxSteps": {
           "description": "节点 work_unit 工具环最大步数",
           "default": 12,
+          "type": "number"
+        },
+        "nodeChatMaxSteps": {
+          "description": "节点对话 agent 单轮工具环最大步数",
+          "default": 8,
           "type": "number"
         },
         "nodeContentTokenBudget": {
