@@ -1,3 +1,5 @@
+import type { ResearchRunStatus } from '@crystalith/shared';
+
 import { isRecord, parseJsonValue } from '../../shared/json';
 
 /**
@@ -6,12 +8,8 @@ import { isRecord, parseJsonValue } from '../../shared/json';
  * research-lab/useResearchTasks.
  */
 
-export type DemoResearchTaskStatus =
-  | 'queued'
-  | 'running'
-  | 'awaiting_confirm'
-  | 'completed'
-  | 'failed';
+/** Demo tasks never cancel — derived from the shared run-status vocab (W7). */
+export type DemoResearchTaskStatus = Exclude<ResearchRunStatus, 'cancelled'>;
 
 export interface DemoResearchTask {
   id: string;

@@ -8,7 +8,7 @@ import type {
   ResearchRunStatus,
   ResearchStreamEvent,
 } from '@crystalith/shared';
-import { ResearchStreamEventSchema } from '@crystalith/shared';
+import { RESEARCH_TERMINAL_STATUSES, ResearchStreamEventSchema } from '@crystalith/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { parseServerError } from '../../api/parseServerError';
@@ -63,11 +63,7 @@ const EMPTY_MUTATIONS = {
   activityNotes: [] as string[],
 };
 
-const TERMINAL_STATUSES: ReadonlySet<ResearchRunStatus> = new Set([
-  'completed',
-  'failed',
-  'cancelled',
-]);
+const TERMINAL_STATUSES: ReadonlySet<ResearchRunStatus> = new Set(RESEARCH_TERMINAL_STATUSES);
 
 function mergeRunGraph(_prev: ResearchRun | null, next: ResearchRun): ResearchRun {
   return next;

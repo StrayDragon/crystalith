@@ -1,16 +1,9 @@
 /**
  * Unified research task list item for drawer (fixture demo id string or Eden run id).
  */
-import type { ResearchRunStatus } from '@crystalith/shared';
+import { RESEARCH_ACTIVE_STATUSES, type ResearchRunStatus } from '@crystalith/shared';
 
-export type ResearchTaskStatus =
-  | ResearchRunStatus
-  | 'queued'
-  | 'running'
-  | 'awaiting_confirm'
-  | 'completed'
-  | 'failed'
-  | 'cancelled';
+export type ResearchTaskStatus = ResearchRunStatus;
 
 export interface ResearchTaskListItem {
   id: string;
@@ -29,5 +22,5 @@ export const RESEARCH_TASK_STATUS_LABEL: Record<string, string> = {
 };
 
 export function isActiveResearchStatus(status: string): boolean {
-  return status === 'queued' || status === 'running' || status === 'awaiting_confirm';
+  return (RESEARCH_ACTIVE_STATUSES as string[]).includes(status);
 }

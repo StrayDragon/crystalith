@@ -2,6 +2,7 @@
  * Deep Research shared state + serialize/broadcast/db helpers.
  * No imports from run-loop / commands / report / node-chat (cycle bridge).
  */
+import { RESEARCH_TERMINAL_STATUSES } from '@crystalith/shared';
 import type {
   ResearchEvidence,
   ResearchGraphPatch,
@@ -43,7 +44,7 @@ export const runAbortControllers = new Map<number, AbortController>();
 /** Per-run node-chat AbortControllers (`${runId}:${nodeId}`). */
 export const chatAbortControllers = new Map<string, AbortController>();
 
-export const TERMINAL_STATUSES = new Set(['completed', 'failed', 'cancelled']);
+export const TERMINAL_STATUSES = new Set<string>(RESEARCH_TERMINAL_STATUSES);
 
 /** Confirm kinds accepted by the run confirm gate (mirrors ResearchRunSchema.confirmKind). */
 export type ConfirmKind = 'budget' | 'reexpand' | 'expand_branch';
