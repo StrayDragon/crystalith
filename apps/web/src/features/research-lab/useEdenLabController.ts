@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { parseServerError } from '../../api/parseServerError';
 import { streamRequest, streamWithReconnect, type StreamReconnectState } from '../../api/stream';
+import { mapTransportError } from '../../shared/transportError';
 import { applyGraphPatch } from './applyGraphPatch';
 import { confirmHighlightIds } from './confirmHighlight';
 import { deriveEdenLabPhase } from './deriveEdenLabPhase';
@@ -343,7 +344,7 @@ export function useEdenLabController(
           }
         } catch (error) {
           if (ac.signal.aborted) return;
-          const msg = error instanceof Error ? error.message : String(error);
+          const msg = mapTransportError(error);
           setLastError(msg);
           pushLog(`SSE：${msg}`);
         }
@@ -384,7 +385,7 @@ export function useEdenLabController(
           stopStream();
         }
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
+        const msg = mapTransportError(error);
         setLastError(msg);
         pushLog(msg);
       } finally {
@@ -498,7 +499,7 @@ export function useEdenLabController(
           );
           window.dispatchEvent(new PopStateEvent('popstate'));
         } catch (error) {
-          const msg = error instanceof Error ? error.message : String(error);
+          const msg = mapTransportError(error);
           setLastError(msg);
           pushLog(msg);
         } finally {
@@ -732,7 +733,7 @@ export function useEdenLabController(
         const next = await cancelActiveEdenRun(notebookId, rid);
         applyRun(next, '已取消研究');
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
+        const msg = mapTransportError(error);
         setLastError(msg);
         pushLog(msg);
       } finally {

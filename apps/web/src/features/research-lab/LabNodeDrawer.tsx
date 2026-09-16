@@ -1,12 +1,14 @@
 import type { ResearchNodeActionProposal } from '@crystalith/shared';
 import { useEffect, useRef, useState } from 'react';
 
+import { useLayer } from '../../shared/layer';
 import { TestIds, tid } from '../../shared/testids';
 import { toast } from '../../shared/toast';
 import { runConvertToNote, runConvertToSource } from './edenConvertActions';
 import { streamNodeChat } from './edenResearchApi';
 import { resolveNodeCitations } from './evidenceAdapter';
 import { LAB_STATUS_LEGEND } from './LabGraph';
+import { LabConfirmDialog, LabPromptDialog } from './LabMutationDialogs';
 import type { LabNodeActionProposal } from './model/nodeChatTypes';
 import {
   buildNodeQuickActionGroups,
@@ -194,19 +196,7 @@ export default function LabNodeDrawer({
     );
   };
 
-  const runAction = (proposal: LabNodeActionProposal, via: 'chat' | 'badge'): boolean => {
-    let next = proposal;
-    if (proposal.kind === 'rewrite_query') {
-      const seed = proposal.params?.query ?? node.query ?? node.conclusion ?? '';
-      const typed = window.prompt(node.role === 'question' ? '研究意图 / 问题' : '检索查询', seed);
-      if (typed === null) return false;
-      const q = typed.trim();
-      if (!q) return false;
-      next = { ...proposal, params: { ...proposal.params, query: q } };
-    }
-    if (proposal.kind === 'prune_node') {
-      if (!window.confirm(`确认剪枝「${node.title}」？`)) return false;
-    }
+  const finishAction = (next: LabNodeActionProposal, via: 'chat' | 'badge'): boolean => {
     const ok = onAcceptAction?.(next, node);
     const failed = ok === false;
     setMessages((prev) => [
@@ -222,6 +212,41 @@ export default function LabNodeDrawer({
       },
     ]);
     return !failed;
+  };
+
+  // W5: rewrite_query / prune confirmations run through in-app dialogs
+  // (LabPromptDialog / LabConfirmDialog) instead of window.prompt/confirm.
+  const [pendingAction, setPendingAction] = useState<{
+    proposal: LabNodeActionProposal;
+    via: 'chat' | 'badge';
+    seed: string;
+    onAccepted?: () => void;
+  } | null>(null);
+  const [pendingPrune, setPendingPrune] = useState<{
+    proposal: LabNodeActionProposal;
+    via: 'chat' | 'badge';
+    onAccepted?: () => void;
+  } | null>(null);
+  const [editQueryOpen, setEditQueryOpen] = useState(false);
+  const { style: drawerLayerStyle } = useLayer('dropdown');
+
+  const runAction = (
+    proposal: LabNodeActionProposal,
+    via: 'chat' | 'badge',
+    onAccepted?: () => void,
+  ): boolean => {
+    if (proposal.kind === 'rewrite_query') {
+      const seed = proposal.params?.query ?? node.query ?? node.conclusion ?? '';
+      setPendingAction({ proposal, via, seed, onAccepted });
+      return false;
+    }
+    if (proposal.kind === 'prune_node') {
+      setPendingPrune({ proposal, via, onAccepted });
+      return false;
+    }
+    const ok = finishAction(proposal, via);
+    if (ok) onAccepted?.();
+    return ok;
   };
 
   const quickGroups = buildNodeQuickActionGroups({
@@ -375,9 +400,10 @@ export default function LabNodeDrawer({
     <aside
       className={
         overlay
-          ? 'absolute top-3 right-3 bottom-3 z-10 flex w-[min(380px,calc(100%-1.5rem))] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white/95 shadow-xl backdrop-blur'
+          ? 'absolute top-3 right-3 bottom-3 flex w-[min(380px,calc(100%-1.5rem))] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white/95 shadow-xl backdrop-blur'
           : 'flex w-[380px] shrink-0 flex-col overflow-hidden border-l border-gray-200 bg-white'
       }
+      style={overlay ? drawerLayerStyle : undefined}
       {...tid(TestIds.researchLabNodeDrawer)}
     >
       <div className="flex items-start justify-between gap-2 border-b border-gray-100 px-3 py-2.5">
@@ -513,9 +539,7 @@ export default function LabNodeDrawer({
                               className="rounded-md bg-blue-600 px-2 py-0.5 text-[10px] font-medium text-white hover:bg-blue-700"
                               {...tid(TestIds.researchLabChatActionAccept)}
                               onClick={() => {
-                                if (runAction(p, 'chat')) {
-                                  patchProposal(m.id, p.id, 'accepted');
-                                }
+                                runAction(p, 'chat', () => patchProposal(m.id, p.id, 'accepted'));
                               }}
                             >
                               确认执行
@@ -797,9 +821,7 @@ export default function LabNodeDrawer({
                 type="button"
                 className="mt-2 text-[11px] font-medium text-blue-700 hover:underline"
                 onClick={() => {
-                  const next = window.prompt('检索查询（空则取消）', node.query ?? '');
-                  if (next === null) return;
-                  onEdit(node.id, { query: next.trim() || undefined });
+                  setEditQueryOpen(true);
                 }}
               >
                 快速改查询…
@@ -852,6 +874,59 @@ export default function LabNodeDrawer({
           </section>
         </div>
       )}
+      <LabPromptDialog
+        open={pendingAction !== null}
+        title={node.role === 'question' ? '研究意图 / 问题' : '检索查询'}
+        description="确认后按对应命令口执行（不会在对话内直接改图）。"
+        initialValue={pendingAction?.seed ?? ''}
+        confirmText="执行"
+        onCancel={() => {
+          setPendingAction(null);
+        }}
+        onConfirm={(value) => {
+          if (!pendingAction || !value) {
+            setPendingAction(null);
+            return;
+          }
+          const next: LabNodeActionProposal = {
+            ...pendingAction.proposal,
+            params: { ...pendingAction.proposal.params, query: value },
+          };
+          if (finishAction(next, pendingAction.via)) pendingAction.onAccepted?.();
+          setPendingAction(null);
+        }}
+      />
+      <LabConfirmDialog
+        open={pendingPrune !== null}
+        title={`确认剪枝「${node.title}」？`}
+        description="剪枝后该支路淡化且不再参与结论，共享下游保留。"
+        confirmText="剪枝"
+        onCancel={() => {
+          setPendingPrune(null);
+        }}
+        onConfirm={() => {
+          if (pendingPrune) {
+            if (finishAction(pendingPrune.proposal, pendingPrune.via)) {
+              pendingPrune.onAccepted?.();
+            }
+          }
+          setPendingPrune(null);
+        }}
+      />
+      <LabPromptDialog
+        open={editQueryOpen}
+        title="快速改查询"
+        description="改检索查询会触发流程重塑（后端 reshape）。"
+        initialValue={node.query ?? ''}
+        confirmText="修改"
+        onCancel={() => {
+          setEditQueryOpen(false);
+        }}
+        onConfirm={(value) => {
+          setEditQueryOpen(false);
+          onEdit?.(node.id, { query: value || undefined });
+        }}
+      />
     </aside>
   );
 }

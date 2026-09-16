@@ -26,6 +26,12 @@ type SourceTagRead = SourceTag;
 type QaMessage = QAMessage;
 type ExtractorsListResponse = ExtractorsList;
 
+/** W5: pending dedup "reuse or create new" decision (rendered as a dialog). */
+export interface DedupConfirmRequest {
+  existingName: string;
+  resolve: (reuse: boolean) => void;
+}
+
 /** 搜索队列项状态 */
 export type SearchQueueItemStatus = 'loading' | 'success' | 'error';
 
@@ -110,6 +116,24 @@ export function useSources() {
   const [sortBy, setSortBy] = useState<SourceSortBy>('date');
   const [sortOrder, setSortOrder] = useState<SourceSortOrder>('desc');
   const [tagFilter, setTagFilter] = useState('');
+  // W5: dedup "reuse existing source?" runs through an in-app dialog rendered
+  // by SourceDedupConfirmDialog instead of window.confirm.
+  const [dedupConfirm, setDedupConfirm] = useState<DedupConfirmRequest | null>(null);
+
+  const askDedupReuse = useCallback(
+    (existingName: string) =>
+      new Promise<boolean>((resolve) => {
+        setDedupConfirm({ existingName, resolve });
+      }),
+    [],
+  );
+
+  const resolveDedupConfirm = useCallback((reuse: boolean) => {
+    setDedupConfirm((prev) => {
+      prev?.resolve(reuse);
+      return null;
+    });
+  }, []);
 
   const searchIdRef = useRef(0);
   const maxSearchQueueItems = 20;
@@ -143,7 +167,9 @@ export function useSources() {
           if (r.error) throw new Error(parseServerError(r.error).message);
           return r.data?.items ?? [];
         }),
-    { revalidateOnFocus: false },
+    // Toast lives in SWR onError (deduped per request) — an effect toast here
+    // re-fired on every background revalidate failure (W5).
+    { revalidateOnFocus: false, onError: () => toast.error('来源加载失败，请检查后端状态。') },
   );
 
   const { data: tagsData, mutate: mutateTags } = useSWR<SourceTagRead[]>(
@@ -173,7 +199,7 @@ export function useSources() {
       return;
     }
     if (error) {
-      toast.error('来源加载失败，请检查后端状态。');
+      store.getState().setError('sources', '来源加载失败，请检查后端状态。');
       return;
     }
     if (data) {
@@ -296,9 +322,7 @@ export function useSources() {
                 details.existing_filename
                   ? details.existing_filename
                   : file.name;
-              const reuse = window.confirm(
-                `检测到重复来源：${existingFilename}\n\n点击“确定”复用已有来源；点击“取消”仍创建新来源。`,
-              );
+              const reuse = await askDedupReuse(existingFilename);
               const dedupAction = reuse ? 'reuse' : 'create_new';
               try {
                 // Keep per-file UI updates and dedup flow serial.
@@ -355,7 +379,7 @@ export function useSources() {
         store.getState().setUploadState('idle');
       }
     },
-    [activeNotebookId, isConnected, mutate, store],
+    [askDedupReuse, activeNotebookId, isConnected, mutate, store],
   );
 
   const retryUpload = useCallback(async () => {
@@ -783,16 +807,14 @@ export function useSources() {
           dedupDetails.existing_filename
             ? dedupDetails.existing_filename
             : url;
-        const reuse = window.confirm(
-          `检测到重复来源：${existingFilename}\n\n点击“确定”复用已有来源；点击“取消”仍创建新来源。`,
-        );
+        const reuse = await askDedupReuse(existingFilename);
         const result = await call(reuse ? 'reuse' : 'create_new');
         await mutate();
         if (reuse) toast.info('已复用已有来源');
         return result;
       }
     },
-    [isConnected, activeNotebookId, mutate],
+    [askDedupReuse, isConnected, activeNotebookId, mutate],
   );
 
   const {
@@ -934,6 +956,8 @@ export function useSources() {
     searchQueue,
     removeSearchQueueItem,
     retrySearchQueueItem,
+    dedupConfirm,
+    resolveDedupConfirm,
     removeResultsFromQueue,
     extractors,
     availableExtractors,

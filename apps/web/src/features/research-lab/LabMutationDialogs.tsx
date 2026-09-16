@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useLayer } from '../../shared/layer';
 import { TestIds, tid } from '../../shared/testids';
+import { useFocusTrap } from '../../shared/ui';
 import type { ForkDraft, PrunePreview } from './model/graphMutations';
 
 export function LabForkDialog({
@@ -21,6 +22,8 @@ export function LabForkDialog({
   onConfirm: () => void;
 }) {
   const { style: modalStyle } = useLayer('modal', 2);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap({ active: open, containerRef: panelRef, onEscape: onCancel });
   if (!open) return null;
   const canSubmit = draft.title.trim().length > 0;
 
@@ -37,6 +40,7 @@ export function LabForkDialog({
         onClick={onCancel}
       />
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal
         aria-labelledby="lab-fork-title"
@@ -125,6 +129,8 @@ export function LabPruneDialog({
   onConfirm: () => void;
 }) {
   const { style: modalStyle } = useLayer('modal', 2);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap({ active: open, containerRef: panelRef, onEscape: onCancel });
   if (!open || !preview) return null;
 
   return createPortal(
@@ -140,6 +146,7 @@ export function LabPruneDialog({
         onClick={onCancel}
       />
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal
         aria-labelledby="lab-prune-title"
@@ -218,4 +225,173 @@ export function useDialogEscape(open: boolean, onCancel: () => void) {
       window.removeEventListener('keydown', onKey);
     };
   }, [open, onCancel]);
+}
+
+/**
+ * Generic in-app text prompt — replaces `window.prompt` on Lab flows (W5):
+ * same native-free styling as the other Lab dialogs, focus-trapped.
+ */
+export function LabPromptDialog({
+  open,
+  title,
+  description,
+  initialValue = '',
+  placeholder,
+  confirmText = '确认',
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  title: string;
+  description?: string;
+  initialValue?: string;
+  placeholder?: string;
+  confirmText?: string;
+  onCancel: () => void;
+  onConfirm: (value: string) => void;
+}) {
+  const { style: modalStyle } = useLayer('modal', 2);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [value, setValue] = useState(initialValue);
+  useFocusTrap({ active: open, containerRef: panelRef, onEscape: onCancel });
+  useEffect(() => {
+    if (open) setValue(initialValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reseed only when (re)opened
+  }, [open]);
+
+  if (!open) return null;
+  const canSubmit = value.trim().length > 0;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 flex items-center justify-center p-4"
+      style={{ ...modalStyle, backgroundColor: 'rgb(15 23 42 / 0.45)' }}
+    >
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        aria-label="关闭"
+        onClick={onCancel}
+      />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal
+        aria-label={title}
+        className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl"
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+      >
+        <div className="border-b border-slate-100 px-4 py-3">
+          <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+          {description ? <p className="mt-0.5 text-[11px] text-slate-500">{description}</p> : null}
+        </div>
+        <div className="px-4 py-3">
+          <input
+            className="h-9 w-full rounded-lg border border-slate-200 px-2.5 text-xs"
+            value={value}
+            placeholder={placeholder}
+            onChange={(e) => {
+              setValue(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && canSubmit) onConfirm(value.trim());
+            }}
+            autoFocus
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            disabled={!canSubmit}
+            onClick={() => {
+              onConfirm(value.trim());
+            }}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-40"
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/**
+ * Generic in-app confirm — replaces `window.confirm` on Lab flows (W5).
+ */
+export function LabConfirmDialog({
+  open,
+  title,
+  description,
+  confirmText = '确认',
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  title: string;
+  description?: string;
+  confirmText?: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const { style: modalStyle } = useLayer('modal', 2);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap({ active: open, containerRef: panelRef, onEscape: onCancel });
+  if (!open) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 flex items-center justify-center p-4"
+      style={{ ...modalStyle, backgroundColor: 'rgb(15 23 42 / 0.45)' }}
+    >
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        aria-label="关闭"
+        onClick={onCancel}
+      />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal
+        aria-label={title}
+        className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl"
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+      >
+        <div className="border-b border-slate-100 px-4 py-3">
+          <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+          {description ? <p className="mt-0.5 text-[11px] text-slate-500">{description}</p> : null}
+        </div>
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-lg bg-red-700 px-4 py-2 text-xs font-semibold text-white hover:bg-red-800"
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
 }

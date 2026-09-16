@@ -16,6 +16,7 @@ import { parseServerError } from '../../../../api/parseServerError';
 import { streamRequest } from '../../../../api/stream';
 import { t } from '../../../../shared/i18n';
 import { toast } from '../../../../shared/toast';
+import { mapTransportError } from '../../../../shared/transportError';
 import { navigateToResearchLab } from '../../../research-lab/labRouting';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { ChatMessage as WorkspaceChatMessage } from '../../shared/types';
@@ -65,23 +66,6 @@ function ensureAssistantMessage(
     content: '',
     citationScope: scope,
   });
-}
-
-function mapTransportError(error: Error | null, status?: number): string {
-  if (status === 503) {
-    return '可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置或稍后重试。';
-  }
-  if (status === 404) {
-    return '会话或笔记本不存在。';
-  }
-  if (status === 500) {
-    return '服务器内部错误，请检查模型/Embedding 配置或稍后重试。';
-  }
-  const message = error?.message ?? '';
-  if (message.length > 0 && message.length < 120) {
-    return message;
-  }
-  return '请求失败，请检查后端服务或稍后重试。';
 }
 
 export function useChat({
@@ -152,17 +136,25 @@ export function useChat({
     const normalized = data
       .filter((item) => item.role !== 'system')
       .map((item) => normalizeMessage(item));
-    const scopeMap = new Map<string, (typeof messagesRef.current)[number]['citationScope']>();
+    // Content-based keys are inherently ambiguous when two assistant messages
+    // share the same content + chunk list; queue scopes per key and hand them
+    // out in order so each message keeps its own citationScope (W5 串扰修复).
+    const scopeQueues = new Map<
+      string,
+      Array<(typeof messagesRef.current)[number]['citationScope']>
+    >();
     for (const message of messagesRef.current) {
       if (message.role !== 'assistant') continue;
       if (!message.citationScope || message.citationScope.mode !== 'selected') continue;
       const key = `${message.role}::${message.content}::${(message.citationChunkIds ?? []).join(',')}`;
-      scopeMap.set(key, message.citationScope);
+      const queue = scopeQueues.get(key) ?? [];
+      queue.push(message.citationScope);
+      scopeQueues.set(key, queue);
     }
     const merged = normalized.map((message) => {
       if (message.role !== 'assistant') return message;
       const key = `${message.role}::${message.content}::${(message.citationChunkIds ?? []).join(',')}`;
-      const preservedScope = scopeMap.get(key);
+      const preservedScope = scopeQueues.get(key)?.shift();
       return preservedScope ? { ...message, citationScope: preservedScope } : message;
     });
     const s = store.getState();

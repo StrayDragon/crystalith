@@ -21,6 +21,7 @@ rs.mock('../../shared/toast', () => ({
   },
 }));
 
+import { LayerProvider } from '../../shared/layer';
 import LabNodeDrawer from './LabNodeDrawer';
 import type { LabCitation, LabNode } from './model/types';
 
@@ -63,15 +64,17 @@ describe('LabNodeDrawer evidence convert (c91 / r445)', () => {
 
   it('eden evidence convert note/source call helpers with kind=evidence', () => {
     render(
-      <LabNodeDrawer
-        node={researchNode}
-        citations={citations}
-        phase="explore"
-        mode="eden"
-        notebookId={62}
-        runId={9}
-        onClose={() => undefined}
-      />,
+      <LayerProvider>
+        <LabNodeDrawer
+          node={researchNode}
+          citations={citations}
+          phase="explore"
+          mode="eden"
+          notebookId={62}
+          runId={9}
+          onClose={() => undefined}
+        />
+      </LayerProvider>,
     );
 
     fireEvent.click(screen.getByTestId('research-lab-evidence-convert-note-ev-1'));
@@ -89,13 +92,15 @@ describe('LabNodeDrawer evidence convert (c91 / r445)', () => {
 
   it('fixture evidence convert stubs toast and does not call helpers', () => {
     render(
-      <LabNodeDrawer
-        node={researchNode}
-        citations={citations}
-        phase="explore"
-        mode="fixture"
-        onClose={() => undefined}
-      />,
+      <LayerProvider>
+        <LabNodeDrawer
+          node={researchNode}
+          citations={citations}
+          phase="explore"
+          mode="fixture"
+          onClose={() => undefined}
+        />
+      </LayerProvider>,
     );
 
     fireEvent.click(screen.getByTestId('research-lab-evidence-convert-note-ev-1'));

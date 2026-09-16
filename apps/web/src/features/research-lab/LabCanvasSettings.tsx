@@ -8,6 +8,7 @@ import {
 } from '@mui/icons-material';
 import { useState } from 'react';
 
+import { useLayer } from '../../shared/layer';
 import { TestIds, tid } from '../../shared/testids';
 import {
   LAB_EDGE_PATH_PRESETS,
@@ -40,11 +41,15 @@ export default function LabCanvasSettings({
   onShowMiniMap: (v: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const { style: panelLayerStyle } = useLayer('dropdown');
 
   return (
     <div className="relative flex flex-col items-start" {...tid(TestIds.researchLabCanvasSettings)}>
       {open ? (
-        <div className="absolute bottom-[calc(100%+6px)] left-0 z-10 w-[min(280px,calc(100vw-6rem))] rounded-xl border border-gray-200 bg-white p-2 shadow-md">
+        <div
+          className="absolute bottom-[calc(100%+6px)] left-0 w-[min(280px,calc(100vw-6rem))] rounded-xl border border-gray-200 bg-white p-2 shadow-md"
+          style={panelLayerStyle}
+        >
           <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
               画布设置
