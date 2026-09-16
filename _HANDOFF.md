@@ -59,14 +59,14 @@
 - [x] `sources/router.ts` sortBy='size' 比较器内发 COUNT → 列表预取一次映射后排序
 - [x] `sources/router.ts` enrichSources 每行 2 查询 → 批量聚合（GROUP BY + inArray）；「N+1 fix」注释已改为准确描述
 
-### W5 · UX 一致性（P2）
+### W5 · UX 一致性（P2）✅ 2026-09-16
 
-- [ ] 取消 run 加确认：`ResearchTasksDrawer.tsx:171-183` 接 ConfirmPopover（对齐删除笔记本/输出标准）
-- [ ] `window.prompt/confirm` 收敛：`LabNodeDrawer.tsx:201/208/800`、`useSources.ts:299/763` → 组件化（自绘 LabMutationDialogs / ConfirmPopover 已有）
-- [ ] 原始 error 直出 UI → 推广 `mapTransportError` 式翻译：`ResearchLabPage.tsx:205/510-517`、`EdenLabReportPage.tsx:148`、`useEdenLabController.ts` 4 处、`useSources.ts:700/878`
-- [ ] SWR effect 内 toast → `onError`（`useSources.ts:166-184`，修后台 revalidate 失败重复弹窗）；顺带修 `useChat.ts:149-174` citationScope 拼 key 串扰
-- [ ] lab 自绘 modal 补 `useFocusTrap`（`LabMutationDialogs.tsx`、`ResearchTasksDrawer.tsx`；workspace 已有现成 hook）
-- [ ] z-index 双轨收敛：lab 系 21 处 Tailwind `z-10/20/30` → Layer 体系（`ResearchLabPage.tsx:414/606/614-640`、`LabComposePanel.tsx:126`、`DemoResearchLabPage.tsx` 5 处、`WorkspaceTopbarSearch.tsx:251/257`、`CommandPalette.tsx`、`WidgetCatalog.tsx`）
+- [x] 取消 run 加确认：`ResearchTasksDrawer.tsx:171-183` 接 ConfirmPopover（对齐删除笔记本/输出标准）
+- [x] `window.prompt/confirm` 收敛：`LabNodeDrawer.tsx:201/208/800`、`useSources.ts:299/763` → 组件化（自绘 LabMutationDialogs / ConfirmPopover 已有）
+- [x] 原始 error 直出 UI → 推广 `mapTransportError` 式翻译（共享模块 `web/shared/transportError`，10 处；useSources 两处行号已失效——现状已是固定文案，无需改）：`ResearchLabPage.tsx:205/510-517`、`EdenLabReportPage.tsx:148`、`useEdenLabController.ts` 4 处、`useSources.ts:700/878`
+- [x] SWR effect 内 toast → `onError`（`useSources.ts:166-184`，修后台 revalidate 失败重复弹窗）；顺带修 `useChat.ts:149-174` citationScope 拼 key 串扰
+- [x] lab 自绘 modal 补 `useFocusTrap`（`LabMutationDialogs.tsx`、`ResearchTasksDrawer.tsx`；workspace 已有现成 hook）
+- [x] z-index 双轨收敛（lab 系 9 处 → Layer；TopbarSearch/WidgetCatalog/CommandPalette 的 z-* 实为 Layer 容器内部排序或已清，核实后保留）：lab 系 21 处 Tailwind `z-10/20/30` → Layer 体系（`ResearchLabPage.tsx:414/606/614-640`、`LabComposePanel.tsx:126`、`DemoResearchLabPage.tsx` 5 处、`WorkspaceTopbarSearch.tsx:251/257`、`CommandPalette.tsx`、`WidgetCatalog.tsx`）
 - [ ] （P3 可选）Lab 图谱节点/边键盘可达性：`LabGraph.tsx:125-240`
 
 ### W6 · 神文件拆分（P2，行为不变，拆分纪律见根 AGENTS.md）
