@@ -183,3 +183,23 @@ export function findInboundEdgeForNode(
   if (!node || node.role === 'question' || node.role === 'conclusion') return null;
   return edges.find((e) => e.target === nodeId) ?? null;
 }
+
+/**
+ * Fixture-only fake typewriter (W6): animates a full reply char-by-char.
+ * Lives beside proposeNodeChatTurn so the product drawer never carries
+ * demo machinery — the Eden path streams real SSE instead (r438).
+ */
+export async function fixtureTypewriter(
+  full: string,
+  onUpdate: (partial: string, done: boolean) => void,
+): Promise<void> {
+  let acc = '';
+  for (const char of full) {
+    acc += char;
+    onUpdate(acc, false);
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, char === '\n' ? 18 : 8);
+    });
+  }
+  onUpdate(acc, true);
+}

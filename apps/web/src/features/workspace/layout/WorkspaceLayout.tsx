@@ -28,6 +28,7 @@ import { getSlideIdFromOutput } from '../shared/outputPayload';
 import { useWorkspaceStore } from '../shared/state/workspaceStore';
 import type { ChatMessage, Citation, PanelId, SourceItem } from '../shared/types';
 import { SOURCE_UPLOAD_ACCEPT } from '../shared/uploadTypes';
+import { buildCommandPaletteCommands } from './commandPaletteCommands';
 import MobilePanelShell from './components/MobilePanelShell';
 import { useDependencyHealth, useWorkspaceOverlays } from './hooks';
 import {
@@ -448,188 +449,78 @@ export default function WorkspaceLayout() {
   const notebookList = notebooks.notebooks;
   const setActiveNotebookId = notebooks.setActiveNotebookId;
 
-  const cmdPaletteCommands = useMemo<CommandItem[]>(() => {
-    const cmds: CommandItem[] = [];
-
-    // Core workspace actions
-    cmds.push({
-      id: 'create-notebook',
-      label: '新建笔记本',
-      icon: '📓',
-      action: () => {
-        void handleCreateNotebookCommand();
-      },
-    });
-
-    notebookList.slice(0, 12).forEach((notebook) => {
-      cmds.push({
-        id: `switch-notebook-${notebook.id}`,
-        label:
-          notebook.id === activeNotebookId
-            ? `切换笔记本: ${notebook.title}（当前）`
-            : `切换笔记本: ${notebook.title}`,
-        icon: notebook.id === activeNotebookId ? '✅' : '📓',
-        action: () => {
-          setActiveNotebookId(notebook.id);
+  const cmdPaletteCommands = useMemo<CommandItem[]>(
+    () =>
+      buildCommandPaletteCommands({
+        notebookList,
+        activeNotebookId,
+        setActiveNotebookId,
+        onCreateNotebook: () => {
+          void handleCreateNotebookCommand();
         },
-      });
-    });
-
-    cmds.push({
-      id: 'import-sources-upload',
-      label: '导入来源: 上传文件',
-      icon: '⬆️',
-      action: handleOpenUpload,
-    });
-
-    cmds.push({
-      id: 'import-sources-url',
-      label: '导入来源: 从 URL',
-      icon: '🔗',
-      action: handleOpenAddSourceFromUrl,
-    });
-
-    cmds.push({
-      id: 'import-sources-search',
-      label: '导入来源: 搜索',
-      icon: '🔍',
-      action: handleFocusSourceSearch,
-    });
-
-    cmds.push({
-      id: 'start-session',
-      label: '开始会话',
-      icon: '💬',
-      action: () => {
-        void handleStartSession();
-      },
-    });
-
-    if (activeNotebookId && activeSessionId && isConnected) {
-      cmds.push({
-        id: 'export-qa-markdown',
-        label: '导出当前会话（Markdown，含引用）',
-        icon: '⬇️',
-        action: () => {
-          exportQaMarkdownDownload({ notebookId: activeNotebookId, sessionId: activeSessionId });
+        onOpenUpload: handleOpenUpload,
+        onOpenUrlImport: handleOpenAddSourceFromUrl,
+        onFocusSourceSearch: handleFocusSourceSearch,
+        onStartSession: () => {
+          void handleStartSession();
         },
-      });
-
-      cmds.push({
-        id: 'export-qa-json',
-        label: '导出当前会话（JSON，含引用）',
-        icon: '⬇️',
-        action: () => {
-          void exportQaJsonDownload({ notebookId: activeNotebookId, sessionId: activeSessionId });
+        activeSessionId,
+        isConnected,
+        exportQaMarkdown: () => {
+          exportQaMarkdownDownload({ notebookId: activeNotebookId!, sessionId: activeSessionId! });
         },
-      });
-    }
-
-    if (activeNotebookId && isConnected) {
-      const outputId = overlays.viewerOutputId ?? refine.outputs[0]?.id ?? null;
-      if (outputId) {
-        cmds.push({
-          id: 'export-output-markdown',
-          label: '导出当前 Output（Markdown，含引用）',
-          icon: '📝',
-          action: () => {
-            exportOutputMarkdownDownload({ notebookId: activeNotebookId, outputId });
-          },
-        });
-
-        cmds.push({
-          id: 'export-output-json',
-          label: '导出当前 Output（JSON，含引用）',
-          icon: '🧾',
-          action: () => {
-            void exportOutputJsonDownload({ notebookId: activeNotebookId, outputId });
-          },
-        });
-      }
-    }
-
-    cmds.push({
-      id: slidesTool ? 'open-slides-studio' : 'recover-slides-workflow',
-      label: slidesTool ? '打开 Slides Studio' : '查看 Slides 诊断 / 安装指引',
-      icon: '🖼️',
-      action: slidesTool
-        ? () => {
-            overlays.openSlidesDialog('config');
-          }
-        : handleOpenSlidesRecovery,
-    });
-
-    cmds.push({
-      id: 'open-diagnostics',
-      label: '健康 / 诊断',
-      icon: '🩺',
-      action: overlays.openDiagnostics,
-    });
-
-    cmds.push({
-      id: 'shortcut-help',
-      label: '快捷键帮助',
-      icon: '⌨️',
-      action: overlays.openShortcutHelp,
-    });
-
-    if (isDesktopLayout) {
-      Object.entries(WIDGET_REGISTRY).forEach(([id, meta]) => {
-        const isActive = activeWidgetIds.includes(id);
-        if (!isActive) {
-          cmds.push({
-            id: `add-${id}`,
-            label: `添加模块: ${meta.label}`,
-            icon: meta.icon,
-            action: () => canvasRef.current?.addWidget(id),
+        exportQaJson: () => {
+          void exportQaJsonDownload({ notebookId: activeNotebookId!, sessionId: activeSessionId! });
+        },
+        outputId: overlays.viewerOutputId ?? refine.outputs[0]?.id ?? null,
+        exportOutputMarkdown: () => {
+          exportOutputMarkdownDownload({
+            notebookId: activeNotebookId!,
+            outputId: overlays.viewerOutputId ?? refine.outputs[0]!.id,
           });
-        } else {
-          cmds.push({
-            id: `remove-${id}`,
-            label: `移除模块: ${meta.label}`,
-            icon: meta.icon,
-            action: () => canvasRef.current?.removeWidget(id),
+        },
+        exportOutputJson: () => {
+          void exportOutputJsonDownload({
+            notebookId: activeNotebookId!,
+            outputId: overlays.viewerOutputId ?? refine.outputs[0]!.id,
           });
-        }
-      });
-
-      cmds.push({
-        id: 'toggle-lock',
-        label: locked ? '解锁布局（进入编辑模式）' : '锁定布局',
-        icon: locked ? '🔓' : '🔒',
-        action: toggleLock,
-      });
-    }
-
-    cmds.push({
-      id: 'session-search',
-      label: '切换会话',
-      icon: '💬',
-      action: openSessionSearch,
-    });
-
-    return cmds;
-  }, [
-    activeWidgetIds,
-    activeNotebookId,
-    activeSessionId,
-    handleCreateNotebookCommand,
-    handleFocusSourceSearch,
-    handleOpenAddSourceFromUrl,
-    handleOpenUpload,
-    handleStartSession,
-    isConnected,
-    isDesktopLayout,
-    locked,
-    handleOpenSlidesRecovery,
-    notebookList,
-    openSessionSearch,
-    overlays,
-    refine.outputs,
-    setActiveNotebookId,
-    slidesTool,
-    toggleLock,
-  ]);
+        },
+        hasSlidesTool: Boolean(slidesTool),
+        onOpenSlidesDialog: () => {
+          overlays.openSlidesDialog('config');
+        },
+        onOpenSlidesRecovery: handleOpenSlidesRecovery,
+        onOpenDiagnostics: overlays.openDiagnostics,
+        onOpenShortcutHelp: overlays.openShortcutHelp,
+        isDesktopLayout,
+        activeWidgetIds,
+        canvas: canvasRef.current,
+        locked,
+        onToggleLock: toggleLock,
+        onOpenSessionSearch: openSessionSearch,
+      }),
+    [
+      activeNotebookId,
+      activeSessionId,
+      activeWidgetIds,
+      canvasRef,
+      handleCreateNotebookCommand,
+      handleFocusSourceSearch,
+      handleOpenAddSourceFromUrl,
+      handleOpenSlidesRecovery,
+      handleOpenUpload,
+      handleStartSession,
+      isConnected,
+      isDesktopLayout,
+      locked,
+      notebookList,
+      openSessionSearch,
+      overlays,
+      refine.outputs,
+      setActiveNotebookId,
+      toggleLock,
+    ],
+  );
 
   const widgetHeaderExtras = useMemo<Record<string, ReactNode>>(
     () => ({
@@ -677,9 +568,6 @@ export default function WorkspaceLayout() {
               }}
               onClearUploadQueue={sources.clearUploadQueue}
               searchState={sources.searchState}
-              onSearch={() => {
-                /* web search moved to top bar (c75) */
-              }}
               onAddSourceFromUrl={sources.addSourceFromUrl}
               onOpenUrlImport={handleOpenAddSourceFromUrl}
               onRemoveSources={sources.removeSources}
@@ -700,9 +588,6 @@ export default function WorkspaceLayout() {
               isLoading={sources.isLoading}
               removeState={sources.removeState}
               isFullscreen={false}
-              searchQueue={[]}
-              onRemoveSearchQueueItem={sources.removeSearchQueueItem}
-              onRemoveResultsFromQueue={sources.removeResultsFromQueue}
               extractors={sources.extractors}
               availableExtractors={sources.availableExtractors}
               defaultExtractor={sources.defaultExtractor}

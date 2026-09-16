@@ -1,11 +1,9 @@
-import type { ResearchNodeActionProposal } from '@crystalith/shared';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useLayer } from '../../shared/layer';
 import { TestIds, tid } from '../../shared/testids';
 import { toast } from '../../shared/toast';
 import { runConvertToNote, runConvertToSource } from './edenConvertActions';
-import { streamNodeChat } from './edenResearchApi';
 import { resolveNodeCitations } from './evidenceAdapter';
 import { LAB_STATUS_LEGEND } from './LabGraph';
 import { LabConfirmDialog, LabPromptDialog } from './LabMutationDialogs';
@@ -15,76 +13,12 @@ import {
   QUICK_ACTION_ACTIVE_CLASS,
   QUICK_ACTION_TONE_CLASS,
 } from './model/nodeQuickActions';
-import { proposeNodeChatTurn } from './model/proposeNodeChatTurn';
 import {
   resolveDefaultNodePanelTab,
   type LabNodePanelTab,
 } from './model/resolveDefaultNodePanelTab';
 import type { LabCitation, LabNode, LabPhase } from './model/types';
-
-type ChatRole = 'user' | 'assistant' | 'system';
-
-interface NodeChatMessage {
-  id: string;
-  role: ChatRole;
-  text: string;
-  streaming?: boolean;
-  proposals?: LabNodeActionProposal[];
-}
-
-/** Per-node chat histories survive switching selection within the session. */
-const chatByNodeId = new Map<string, NodeChatMessage[]>();
-
-function seedMessages(node: LabNode): NodeChatMessage[] {
-  const roleHint =
-    node.role === 'question'
-      ? '提问节点会话。可改意图、在确认点收束；试「改查询 …」「结束」「继续深挖」。'
-      : node.role === 'conclusion'
-        ? '结论节点会话。可追问综述；试「打开报告」「结束并出报告」。'
-        : '研究支路会话。否定/改写/定态会弹出待确认指引——确认后才改图。试「定为明确」。';
-  return [
-    {
-      id: `${node.id}-sys`,
-      role: 'system',
-      text: roleHint,
-    },
-  ];
-}
-
-async function streamInto(
-  full: string,
-  onUpdate: (partial: string, done: boolean) => void,
-): Promise<void> {
-  let acc = '';
-  for (const char of full) {
-    acc += char;
-    onUpdate(acc, false);
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, char === '\n' ? 18 : 8);
-    });
-  }
-  onUpdate(acc, true);
-}
-
-function toLabProposal(p: ResearchNodeActionProposal): LabNodeActionProposal {
-  return {
-    id: p.id,
-    kind: p.kind,
-    label: p.label,
-    rationale: p.rationale,
-    status: p.status ?? 'pending',
-    params: p.params,
-  };
-}
-
-function mergeProposals(
-  existing: LabNodeActionProposal[],
-  incoming: LabNodeActionProposal[],
-): LabNodeActionProposal[] {
-  const byId = new Map(existing.map((p) => [p.id, p]));
-  for (const p of incoming) byId.set(p.id, p);
-  return [...byId.values()];
-}
+import { useNodeChat } from './useNodeChat';
 
 export default function LabNodeDrawer({
   node,
@@ -130,45 +64,35 @@ export default function LabNodeDrawer({
   onChatError?: (message: string) => void;
 }) {
   const [tab, setTab] = useState<LabNodePanelTab>('meta');
-  const [messages, setMessages] = useState<NodeChatMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [streaming, setStreaming] = useState(false);
-  const [chatError, setChatError] = useState<string | null>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-  const nodeIdRef = useRef<string | null>(null);
-  const chatAbortRef = useRef<AbortController | null>(null);
-
+  // Only re-pick default tab on selection change — not when status updates live.
   useEffect(() => {
     if (!node) return;
-    nodeIdRef.current = node.id;
-    chatAbortRef.current?.abort();
-    chatAbortRef.current = null;
-    const existing = chatByNodeId.get(node.id);
-    setMessages(existing ?? seedMessages(node));
-    // Only re-pick default tab on selection change — not when status updates live.
     setTab(resolveDefaultNodePanelTab(node));
-    setInput('');
-    setStreaming(false);
-    setChatError(null);
   }, [node?.id]);
 
-  useEffect(() => {
-    return () => {
-      chatAbortRef.current?.abort();
-      chatAbortRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!node) return;
-    chatByNodeId.set(node.id, messages);
-  }, [node, messages]);
-
-  useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [messages, streaming]);
+  const chat = useNodeChat({
+    node,
+    phase,
+    mode,
+    notebookId,
+    runId,
+    reportAvailable,
+    llmBusy,
+    onChatError,
+  });
+  const {
+    messages,
+    setMessages,
+    input,
+    setInput,
+    streaming,
+    chatError,
+    listRef,
+    sendBusy,
+    sendDisabled,
+    send,
+    patchProposal,
+  } = chat;
 
   if (!node) return null;
 
@@ -179,22 +103,6 @@ export default function LabNodeDrawer({
   const isQuestion = node.role === 'question';
   const showConfirm =
     phase === 'awaiting_confirm' && (isQuestion || isConclusion) && onConfirmFinish;
-
-  const patchProposal = (
-    messageId: string,
-    proposalId: string,
-    status: LabNodeActionProposal['status'],
-  ) => {
-    setMessages((prev) =>
-      prev.map((m) => {
-        if (m.id !== messageId || !m.proposals) return m;
-        return {
-          ...m,
-          proposals: m.proposals.map((p) => (p.id === proposalId ? { ...p, status } : p)),
-        };
-      }),
-    );
-  };
 
   const finishAction = (next: LabNodeActionProposal, via: 'chat' | 'badge'): boolean => {
     const ok = onAcceptAction?.(next, node);
@@ -254,147 +162,6 @@ export default function LabNodeDrawer({
     phase,
     reportAvailable,
   });
-
-  const sendBusy = streaming || llmBusy;
-  const sendDisabled = sendBusy || !input.trim() || (mode === 'eden' && (!notebookId || !runId));
-
-  const send = async () => {
-    const text = input.trim();
-    if (!text || sendBusy) return;
-    if (mode === 'eden' && (!notebookId || !runId)) {
-      const msg = '无法发送：缺少 ResearchRun';
-      setChatError(msg);
-      onChatError?.(msg);
-      return;
-    }
-    setInput('');
-    setChatError(null);
-    const userMsg: NodeChatMessage = {
-      id: `${node.id}-u-${Date.now()}`,
-      role: 'user',
-      text,
-    };
-    const asstId = `${node.id}-a-${Date.now()}`;
-    setMessages((prev) => [
-      ...prev,
-      userMsg,
-      { id: asstId, role: 'assistant', text: '', streaming: true },
-    ]);
-    setStreaming(true);
-
-    if (mode === 'fixture') {
-      const turn = proposeNodeChatTurn({
-        nodeId: node.id,
-        role: node.role ?? 'research',
-        title: node.title,
-        query: node.query,
-        userText: text,
-        phase,
-        reportAvailable,
-        conclusionStatus: node.conclusionStatus,
-      });
-
-      await streamInto(turn.assistantText, (partial, done) => {
-        if (nodeIdRef.current !== node.id) return;
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === asstId
-              ? {
-                  ...m,
-                  text: partial,
-                  streaming: !done,
-                  proposals: done ? turn.proposals : m.proposals,
-                }
-              : m,
-          ),
-        );
-        if (done) setStreaming(false);
-      });
-      return;
-    }
-
-    // Eden: POST …/nodes/:nodeId/chat SSE (MUST NOT proposeNodeChatTurn).
-    chatAbortRef.current?.abort();
-    const ac = new AbortController();
-    chatAbortRef.current = ac;
-    let acc = '';
-    let proposals: LabNodeActionProposal[] = [];
-    try {
-      for await (const ev of streamNodeChat(
-        notebookId!,
-        runId!,
-        node.id,
-        { message: text },
-        {
-          signal: ac.signal,
-        },
-      )) {
-        if (ac.signal.aborted || nodeIdRef.current !== node.id) break;
-        if (ev.event === 'chunk') {
-          acc += ev.data.text;
-          const textSnap = acc;
-          const proposalsSnap = proposals;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === asstId
-                ? { ...m, text: textSnap, streaming: true, proposals: proposalsSnap }
-                : m,
-            ),
-          );
-        } else if (ev.event === 'proposal') {
-          proposals = mergeProposals(proposals, [toLabProposal(ev.data)]);
-          const textSnap = acc;
-          const proposalsSnap = proposals;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === asstId
-                ? { ...m, text: textSnap, streaming: true, proposals: proposalsSnap }
-                : m,
-            ),
-          );
-        } else if (ev.event === 'done') {
-          if (ev.data.proposals?.length) {
-            proposals = mergeProposals(proposals, ev.data.proposals.map(toLabProposal));
-          }
-          const textSnap = acc;
-          const proposalsSnap = proposals;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === asstId
-                ? { ...m, text: textSnap, streaming: false, proposals: proposalsSnap }
-                : m,
-            ),
-          );
-        } else if (ev.event === 'error') {
-          const msg = ev.data.message || ev.data.errorCode || '节点对话失败';
-          setChatError(msg);
-          onChatError?.(msg);
-          const textSnap = acc || msg;
-          const proposalsSnap = proposals;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === asstId
-                ? { ...m, text: textSnap, streaming: false, proposals: proposalsSnap }
-                : m,
-            ),
-          );
-        }
-      }
-    } catch (error) {
-      if (ac.signal.aborted) return;
-      const msg = error instanceof Error ? error.message : String(error);
-      setChatError(msg);
-      onChatError?.(msg);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === asstId ? { ...m, text: acc || msg, streaming: false, proposals } : m,
-        ),
-      );
-    } finally {
-      if (chatAbortRef.current === ac) chatAbortRef.current = null;
-      if (nodeIdRef.current === node.id) setStreaming(false);
-    }
-  };
 
   return (
     <aside
