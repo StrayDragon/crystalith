@@ -125,17 +125,24 @@ describe('research settings SSOT (W3)', () => {
     expect(ResearchSettingsSchema.parse({})).toEqual(RESEARCH_SETTINGS_DEFAULTS);
   });
 
-  it('nodeChatMaxSteps flows from config into getNodeChatMaxSteps', () => {
+  it('node_chat_max_steps flows from config into getNodeChatMaxSteps', () => {
     resetConfig({
       models: { defaults: {}, available: [] },
-      raw: { research: { nodeChatMaxSteps: 3 } },
+      raw: { research: { node_chat_max_steps: 3 } },
     });
     expect(getNodeChatMaxSteps()).toBe(3);
 
     // Missing/invalid section falls back to the same SSOT constant.
     resetConfig({ models: { defaults: {}, available: [] }, raw: {} });
-    expect(getNodeChatMaxSteps()).toBe(RESEARCH_SETTINGS_DEFAULTS.nodeChatMaxSteps);
+    expect(getNodeChatMaxSteps()).toBe(RESEARCH_SETTINGS_DEFAULTS.node_chat_max_steps);
     expect(getNodeChatMaxSteps()).toBe(8);
+
+    // Pre-r249 camelCase key still works through the deprecation alias (W8).
+    resetConfig({
+      models: { defaults: {}, available: [] },
+      raw: { research: { nodeChatMaxSteps: 5 } },
+    });
+    expect(getNodeChatMaxSteps()).toBe(5);
 
     resetConfig(null);
   });

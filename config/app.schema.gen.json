@@ -700,69 +700,69 @@
     "research": {
       "description": "Deep Research 运行时：进度账本保留、支路并行度、读页预算比、加购公式、work_unit 步数、token 预算、可选拆解模型等",
       "default": {
-        "progressEventRetain": 200,
-        "parallelBranchUnits": 2,
-        "pageRatio": 1.5,
-        "workUnitMaxSteps": 12,
-        "nodeChatMaxSteps": 8,
-        "nodeContentTokenBudget": 32768,
-        "nodeSummaryTokenBudget": 65536,
-        "addOnRatio": 0.25,
-        "addOnMinK": 5,
-        "addOnMaxK": 50
+        "progress_event_retain": 200,
+        "parallel_branch_units": 2,
+        "page_ratio": 1.5,
+        "work_unit_max_steps": 12,
+        "node_chat_max_steps": 8,
+        "node_content_token_budget": 32768,
+        "node_summary_token_budget": 65536,
+        "add_on_ratio": 0.25,
+        "add_on_min_k": 5,
+        "add_on_max_k": 50
       },
       "type": "object",
       "properties": {
-        "progressEventRetain": {
+        "progress_event_retain": {
           "description": "终态后进度账本保留最近 N 条",
           "default": 200,
           "type": "number"
         },
-        "parallelBranchUnits": {
+        "parallel_branch_units": {
           "description": "同一 Run 同时推进的支路 work-unit 上限（1=串行，默认 2，最大 8）",
           "default": 2,
           "type": "number"
         },
-        "decomposeModelId": {
+        "decompose_model_id": {
           "description": "主题自动拆解所用模型 id；省略或空字符串时继承 models.defaults.chat",
           "type": "string"
         },
-        "pageRatio": {
+        "page_ratio": {
           "description": "读页预算 = ceil(maxSearches × pageRatio)",
           "default": 1.5,
           "type": "number"
         },
-        "workUnitMaxSteps": {
+        "work_unit_max_steps": {
           "description": "节点 work_unit 工具环最大步数",
           "default": 12,
           "type": "number"
         },
-        "nodeChatMaxSteps": {
+        "node_chat_max_steps": {
           "description": "节点对话 agent 单轮工具环最大步数",
           "default": 8,
           "type": "number"
         },
-        "nodeContentTokenBudget": {
+        "node_content_token_budget": {
           "description": "单节点网页正文合计 token 上限",
           "default": 32768,
           "type": "number"
         },
-        "nodeSummaryTokenBudget": {
+        "node_summary_token_budget": {
           "description": "节点短综合证据上下文 token 上限",
           "default": 65536,
           "type": "number"
         },
-        "addOnRatio": {
+        "add_on_ratio": {
           "description": "检索加购比例：K=ceil(maxSearches×ratio)",
           "default": 0.25,
           "type": "number"
         },
-        "addOnMinK": {
+        "add_on_min_k": {
           "description": "检索加购块下限",
           "default": 5,
           "type": "number"
         },
-        "addOnMaxK": {
+        "add_on_max_k": {
           "description": "检索加购块上限",
           "default": 50,
           "type": "number"
