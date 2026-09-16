@@ -49,12 +49,8 @@ import {
   type RunRow,
 } from './research-core.ts';
 import { orderResearchNodesForWork } from './research-work-queue.ts';
-import {
-  drainResearchWorkUnits,
-  finishWaveOrSynthesize,
-  scheduleRun,
-  writeBackNodeWork,
-} from './run-loop.ts';
+import { drainResearchWorkUnits, finishWaveOrSynthesize, scheduleRun } from './run-loop.ts';
+import { writeBackNodeWork } from './work-unit.ts';
 
 /** Raise maxSearches by formula K; does NOT touch maxNodes / maxPageFetches (c108). */
 export function applySearchBudgetAddOn(runId: number): { k: number; maxSearches: number } {
