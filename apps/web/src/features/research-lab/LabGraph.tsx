@@ -39,7 +39,6 @@ import type {
   LabLayoutDirection,
   LabNode,
 } from './model/types';
-
 import '@xyflow/react/dist/style.css';
 
 function labEdgePath(
@@ -288,10 +287,7 @@ const LabActionEdge = memo(function LabActionEdge({
             {d?.canFork || d?.canPrune ? (
               <div
                 className={`flex items-center gap-0.5 transition-opacity ${
-                  hovered
-                    ? 'opacity-100'
-                    : // Hidden but tab-reachable (r15): absolute keeps static spot, no layout shift.
-                      'absolute pointer-events-none opacity-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100'
+                  hovered ? 'opacity-100' : EDGE_ACTIONS_HIDDEN
                 }`}
               >
                 {d.canFork ? (
@@ -332,6 +328,14 @@ const LabActionEdge = memo(function LabActionEdge({
 const nodeTypes = { lab: LabFlowNode };
 const edgeTypes = { labAction: LabActionEdge };
 
+/**
+ * Hidden but tab-reachable (r15): absolute keeps the buttons at their static
+ * spot (no layout shift), pointer-events-none spares the mouse, and the
+ * wrapper's group-focus-within reveals them for keyboard users.
+ */
+const EDGE_ACTIONS_HIDDEN =
+  'absolute pointer-events-none opacity-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100';
+
 function Inner({
   labNodes,
   labEdges,
@@ -341,6 +345,7 @@ function Inner({
   layoutAlgorithm,
   edgePathPreset,
   reshaping,
+  readOnly = false,
   onSelectNode,
   onForkEdge,
   onPruneEdge,
@@ -356,6 +361,8 @@ function Inner({
   layoutAlgorithm: LabLayoutAlgorithm;
   edgePathPreset: LabEdgePathPreset;
   reshaping: boolean;
+  /** Terminal-run gate (r406/r15): no fork/prune actions on edges. */
+  readOnly?: boolean;
   onSelectNode: (id: string | null) => void;
   onForkEdge: (edgeId: string) => void;
   onPruneEdge: (edgeId: string) => void;
@@ -443,7 +450,7 @@ function Inner({
       edges,
       direction,
       { onFork: onForkEdge, onPrune: onPruneEdge },
-      { reshaping, algorithm: layoutAlgorithm },
+      { reshaping, algorithm: layoutAlgorithm, readOnly },
     ).then((result) => {
       if (cancelled) return;
       const forceElk = reshaping || dragPositions.current.size === 0;
@@ -491,6 +498,7 @@ function Inner({
     direction,
     layoutAlgorithm,
     reshaping,
+    readOnly,
     onForkEdge,
     onPruneEdge,
     pulseLayoutAnim,
@@ -618,6 +626,7 @@ function Inner({
       nodesDraggable
       nodesConnectable={false}
       nodesFocusable={false}
+      edgesFocusable={false}
       elementsSelectable
       panOnDrag={[1, 2]}
       selectionOnDrag={false}
@@ -676,6 +685,7 @@ export default function LabGraph({
   layoutAlgorithm = 'layered',
   edgePathPreset = 'smoothstep',
   reshaping = false,
+  readOnly = false,
   onSelectNode,
   onForkEdge,
   onPruneEdge,
@@ -692,6 +702,8 @@ export default function LabGraph({
   layoutAlgorithm?: LabLayoutAlgorithm;
   edgePathPreset?: LabEdgePathPreset;
   reshaping?: boolean;
+  /** Terminal-run gate (r406/r15): no fork/prune actions on edges. */
+  readOnly?: boolean;
   onSelectNode: (id: string | null) => void;
   onForkEdge: (edgeId: string) => void;
   onPruneEdge: (edgeId: string) => void;
@@ -712,6 +724,7 @@ export default function LabGraph({
           layoutAlgorithm={layoutAlgorithm}
           edgePathPreset={edgePathPreset}
           reshaping={reshaping}
+          readOnly={readOnly}
           onSelectNode={onSelectNode}
           onForkEdge={onForkEdge}
           onPruneEdge={onPruneEdge}

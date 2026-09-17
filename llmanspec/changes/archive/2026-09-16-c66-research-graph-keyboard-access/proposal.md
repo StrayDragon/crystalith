@@ -50,3 +50,15 @@ grep -n "r406" llmanspec/specs/deep-research-ui/deep-research-ui.feature
 - 不做全图 ARIA 审计与屏读播报（graph_patch 增量的无障碍通告超出本波）。
 - 不改鼠标行为、不改 inspector/抽屉内容（c63 已对齐）。
 - 不动 xyflow 库配置语义（`nodesFocusable` 等维持默认；不新增键盘快捷键体系）。
+
+## 追记（2026-09-17，subagent review 后小修）
+
+- **上节第 3 条非目标被 apply 推翻**：实现设了 `nodesFocusable={false}`（LabGraph.tsx），让焦点
+  落在内层节点卡而非 xyflow wrapper，避免双 tab stop；后续又补 `edgesFocusable={false}` 清掉
+  边的空 tab stop。两者均为纯 a11y 增益，无鼠标行为变化。
+- **只读门控补全（r406/r15）**：review 发现 `canFork/canPrune` 此前仅挡节点级 pruned，Run 级
+  终态（completed/failed/cancelled）在图接缝无门控——这是 r406 时代的既有缺口，键盘奇偶性如实
+  继承。现已由 `layoutWithElk opts.readOnly` + ResearchLabPage 传 `RESEARCH_TERMINAL_STATUSES`
+  关闭，终态下边按钮不渲染、节点仍可打开只读抽屉；锁测试补终态用例。
+- 工件措辞勘误：design §2 的「useMemo 里接线」实为 ELK effect + ref 转发；tasks 的「group-hover」
+  实为 hovered 态 + `group-focus-within` CSS（无 group-hover）。机制描述以本追记为准。

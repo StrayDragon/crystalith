@@ -13,6 +13,8 @@ import type { LabEdge, LabNode } from './model/types';
 // measured. Emulate non-zero cards + the initial ResizeObserver tick real browsers fire.
 const cardWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
 const cardHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight');
+const originalRO = window.ResizeObserver;
+const originalDOMMatrix = window.DOMMatrixReadOnly;
 
 beforeAll(() => {
   Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
@@ -95,6 +97,8 @@ beforeAll(() => {
 afterAll(() => {
   if (cardWidth) Object.defineProperty(HTMLElement.prototype, 'offsetWidth', cardWidth);
   if (cardHeight) Object.defineProperty(HTMLElement.prototype, 'offsetHeight', cardHeight);
+  window.ResizeObserver = originalRO;
+  window.DOMMatrixReadOnly = originalDOMMatrix;
 });
 
 const onSelectNode = rs.fn();
@@ -118,7 +122,7 @@ const edges: LabEdge[] = [
   { id: 'e_n2_c', source: 'n2', target: 'node_conclusion', kind: 'merge' },
 ];
 
-function renderGraph() {
+function renderGraph(opts?: { readOnly?: boolean }) {
   return render(
     <LayerProvider>
       <LabGraph
@@ -131,6 +135,7 @@ function renderGraph() {
         onDirection={() => {}}
         onAlgorithm={() => {}}
         onEdgePathPreset={() => {}}
+        readOnly={opts?.readOnly}
       />
     </LayerProvider>,
   );
@@ -170,6 +175,11 @@ describe('LabGraph keyboard access (r15)', () => {
     renderGraph();
     await screen.findByText('支路A');
     const fork = screen.getByRole('button', { name: '分叉' });
+    // Keyboard reachability: focusable and in the a11y tree without any hover.
+    // (Visual reveal is CSS group-focus-within — jsdom cannot compute Tailwind
+    // styles, so visibility-on-focus is asserted in browser e2e, not here.)
+    fork.focus();
+    expect(document.activeElement).toBe(fork);
     fireEvent.click(fork);
     expect(onForkEdge).toHaveBeenCalledWith('e_root_n1');
     fireEvent.click(screen.getByRole('button', { name: '剪枝' }));
@@ -186,5 +196,16 @@ describe('LabGraph keyboard access (r15)', () => {
     card.focus();
     fireEvent.keyDown(card, { key: 'Enter' });
     expect(onSelectNode).toHaveBeenCalledWith('n2');
+  });
+
+  it('readOnly (terminal run, r406/r15) drops edge actions but nodes still open', async () => {
+    renderGraph({ readOnly: true });
+    await screen.findByText('支路A');
+    expect(screen.queryByRole('button', { name: '分叉' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '剪枝' })).toBeNull();
+    const card = nodeCard('n1');
+    card.focus();
+    fireEvent.keyDown(card, { key: 'Enter' });
+    expect(onSelectNode).toHaveBeenCalledWith('n1');
   });
 });

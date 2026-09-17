@@ -1,3 +1,4 @@
+import { RESEARCH_TERMINAL_STATUSES, type ResearchRunStatus } from '@crystalith/shared';
 /**
  * Research Lab — deep-research workbench (Eden ResearchRun + SSE only).
  */
@@ -59,6 +60,11 @@ import {
   useEdenLabController,
   type EdenLabController,
 } from './useEdenLabController';
+
+/** r406/r15: terminal runs render a read-only graph (no edge fork/prune). */
+const GRAPH_READ_ONLY_STATUSES: ReadonlySet<ResearchRunStatus> = new Set(
+  RESEARCH_TERMINAL_STATUSES,
+);
 
 export default function ResearchLabPage({ notebookId }: { notebookId: number }) {
   const [runId, setRunId] = useState(() => readActiveRunIdFromUrl());
@@ -570,6 +576,7 @@ function LabWorkbench({
           layoutAlgorithm={lab.layoutAlgorithm}
           edgePathPreset={lab.edgePathPreset}
           reshaping={lab.reshaping}
+          readOnly={lab.runStatus ? GRAPH_READ_ONLY_STATUSES.has(lab.runStatus) : false}
           onSelectNode={onSelectNode}
           onForkEdge={requestFork}
           onPruneEdge={requestPrune}

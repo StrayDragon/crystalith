@@ -119,7 +119,7 @@ export async function layoutWithElk(
   edges: LabEdge[],
   direction: LabLayoutDirection,
   handlers: { onFork: (id: string) => void; onPrune: (id: string) => void },
-  opts?: { reshaping?: boolean; algorithm?: LabLayoutAlgorithm },
+  opts?: { reshaping?: boolean; algorithm?: LabLayoutAlgorithm; readOnly?: boolean },
 ): Promise<{ nodes: LabFlowNode[]; edges: LabFlowEdge[] }> {
   const algorithm = opts?.algorithm ?? 'layered';
   const sizeById = new Map(nodes.map((n) => [n.id, estimateSize(n)]));
@@ -225,8 +225,10 @@ export async function layoutWithElk(
     const source = nodeById.get(e.source);
     const target = nodeById.get(e.target);
     const faded = source?.conclusionStatus === 'pruned' || target?.conclusionStatus === 'pruned';
-    const canPrune = target?.role === 'research' && target.conclusionStatus !== 'pruned';
-    const canFork = target?.role === 'research' && target.conclusionStatus !== 'pruned';
+    // r406/r15: terminal-run runs expose a read-only graph — no fork/prune on any edge.
+    const actionable = Boolean(target?.role === 'research' && target.conclusionStatus !== 'pruned');
+    const canPrune = actionable && !opts?.readOnly;
+    const canFork = actionable && !opts?.readOnly;
     const inns = inEdges.get(e.target) ?? [e];
     const inIdx = inns.findIndex((x) => x.id === e.id);
     const inCount = inns.length;

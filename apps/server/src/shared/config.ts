@@ -13,6 +13,9 @@ import { desc, ModelsSettingsSchema, ProviderConfigSchema } from '@crystalith/sh
 //   config-settings.ts  — models + per-domain typed settings & accessors
 //   config-research.ts  — research: section (defaults SSOT, r249 aliases)
 //   config.ts (here)    — RootConfigSchema (app.schema.gen.json source)
+// Note: `export *` widens the public surface with the five helpers the modules
+// share (envValue/resetEnvOverlay/renderTemplates/isRecord/parseSection);
+// legacy imports keep working unchanged.
 import { z } from 'zod';
 
 import { RESEARCH_SETTINGS_DEFAULTS, ResearchSettingsSchema } from './config-research.ts';
