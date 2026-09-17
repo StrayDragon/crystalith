@@ -94,6 +94,25 @@ export default function LabNodeDrawer({
     patchProposal,
   } = chat;
 
+  // W5: rewrite_query / prune confirmations run through in-app dialogs
+  // (LabPromptDialog / LabConfirmDialog) instead of window.prompt/confirm.
+  // Hooks must stay above the `!node` early return: the Eden Lab page keeps
+  // this drawer mounted while nothing is selected (node === null), so any
+  // hook below the return changes hook count null→selected and crashes React.
+  const [pendingAction, setPendingAction] = useState<{
+    proposal: LabNodeActionProposal;
+    via: 'chat' | 'badge';
+    seed: string;
+    onAccepted?: () => void;
+  } | null>(null);
+  const [pendingPrune, setPendingPrune] = useState<{
+    proposal: LabNodeActionProposal;
+    via: 'chat' | 'badge';
+    onAccepted?: () => void;
+  } | null>(null);
+  const [editQueryOpen, setEditQueryOpen] = useState(false);
+  const { style: drawerLayerStyle } = useLayer('dropdown');
+
   if (!node) return null;
 
   const style = LAB_STATUS_LEGEND[node.conclusionStatus];
@@ -121,22 +140,6 @@ export default function LabNodeDrawer({
     ]);
     return !failed;
   };
-
-  // W5: rewrite_query / prune confirmations run through in-app dialogs
-  // (LabPromptDialog / LabConfirmDialog) instead of window.prompt/confirm.
-  const [pendingAction, setPendingAction] = useState<{
-    proposal: LabNodeActionProposal;
-    via: 'chat' | 'badge';
-    seed: string;
-    onAccepted?: () => void;
-  } | null>(null);
-  const [pendingPrune, setPendingPrune] = useState<{
-    proposal: LabNodeActionProposal;
-    via: 'chat' | 'badge';
-    onAccepted?: () => void;
-  } | null>(null);
-  const [editQueryOpen, setEditQueryOpen] = useState(false);
-  const { style: drawerLayerStyle } = useLayer('dropdown');
 
   const runAction = (
     proposal: LabNodeActionProposal,
