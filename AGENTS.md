@@ -220,7 +220,7 @@ Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `ope
 `just qa`（typecheck + lint + format-check + env/schema drift + **server/shared** tests + **web Rstest** + **e2e @p0**）必须全员通过才算一次成功的 PR。
 
 **门禁组成（与 `justfile` 一致）**：
-`check` → `check-env-examples` → `check-app-schema` → `check-i18n-keys` → `check-provider-deps` → `test`（`apps/server/tests/` + `packages/shared/test/`）→ `test-web`（`apps/web` `test:ci`）→ `e2e`。
+`check` → `check-env-examples` → `check-app-schema` → `check-i18n-keys` → `check-provider-deps` → `test`（`apps/server/tests/` + `packages/shared/test/`，`--path-ignore-patterns` 排除 `bdd/`）→ `test-web`（`apps/web` `test:ci`）→ `e2e`。
 
 **QA 输出详细程度（三档，见 justfile 头部注释）**：默认 L0 静默 — 只输出错误/警告级
 汇总（各工具自带 `--quiet`/`--only-failures`/dot reporter/`CL_LOG_LEVEL`，无自定义过滤脚本），

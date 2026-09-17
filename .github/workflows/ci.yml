@@ -79,7 +79,11 @@ jobs:
       - run: bun install --frozen-lockfile
 
       # Server + shared unit/integration (same as `just test`)
-      - run: bun test apps/server/tests/ packages/shared/test/
+      # Server + shared unit/integration (same as `just test`; BDD 单独一步见下)
+      - run: bun test --path-ignore-patterns='apps/server/tests/bdd/**' apps/server/tests/ packages/shared/test/
+
+      # BDD CRUD subset (same as `just test-bdd`; not in `just qa` but 保持 CI 绿)
+      - run: bun test apps/server/tests/bdd/run.test.ts
 
       # Frontend Rstest CI suite (same as `just test-web`)
       - run: bun run test:ci
