@@ -26,7 +26,7 @@ beforeAll(() => {
     get: () => 64,
   });
   // xyflow reads `m22` from a DOMMatrixReadOnly of the viewport transform; jsdom has none.
-  if (typeof window.DOMMatrixReadOnly === 'undefined') {
+  if (window.DOMMatrixReadOnly === undefined) {
     class FakeDOMMatrix {
       m11 = 1;
 
@@ -52,7 +52,8 @@ beforeAll(() => {
 
       f = 0;
 
-      constructor(_init?: string | number[]) {}
+      // xyflow constructs with the viewport transform string; keep the signature.
+      constructor(public readonly init?: string | number[]) {}
     }
     window.DOMMatrixReadOnly = FakeDOMMatrix as unknown as typeof DOMMatrixReadOnly;
   }
