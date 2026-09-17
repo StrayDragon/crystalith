@@ -49,9 +49,9 @@ beforeAll(() => {
   notebookId = getOrm().insert(notebooks).values({ name: 'e2e-r02-race' }).returning().get().id;
 });
 
-afterAll(() => {
+afterAll(async () => {
   delete process.env.CL_RESEARCH_E2E_STUB;
-  teardownIntegrationEnv();
+  await teardownIntegrationEnv();
 });
 
 describe('e2e stub reexpand skip race (c108 R02)', () => {

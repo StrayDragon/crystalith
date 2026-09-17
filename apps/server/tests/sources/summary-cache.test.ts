@@ -59,9 +59,7 @@ beforeAll(() => {
     .run();
 });
 
-afterAll(() => {
-  teardownIntegrationEnv();
-});
+afterAll(teardownIntegrationEnv);
 
 describe('c74 source summary cache', () => {
   it('GET without cache returns empty state and does not call LLM', async () => {

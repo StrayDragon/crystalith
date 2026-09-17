@@ -28,9 +28,7 @@ beforeAll(() => {
   tagId = orm.insert(sourceTags).values({ notebookId, name: 't1' }).returning().get().id;
 });
 
-afterAll(() => {
-  teardownIntegrationEnv();
-});
+afterAll(teardownIntegrationEnv);
 
 describe('qa-to-source multi-turn', () => {
   it('accepts messages[] and creates a new source with transcript', async () => {

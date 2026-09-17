@@ -29,9 +29,7 @@ beforeAll(() => {
   setupIntegrationEnv();
 });
 
-afterAll(() => {
-  teardownIntegrationEnv();
-});
+afterAll(teardownIntegrationEnv);
 
 describe('embedding timing (c30: sync embed before ready)', () => {
   it('marks ready only after indexSource completes', async () => {

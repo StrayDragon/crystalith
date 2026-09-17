@@ -9,15 +9,19 @@ import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { createDb, resetDb, type Orm } from '../../src/db/index.ts';
+import {
+  activeLoops,
+  ensureRunAbortController,
+} from '../../src/features/research/research-core.ts';
 import { resetConfig } from '../../src/shared/config.ts';
 
 const TMP_DIR = join(import.meta.dirname, '..', '..', 'data');
 
-// bun:test 在同一进程顺序运行多个测试文件(共用 process.pid)。若所有文件共用
-// `test-integration-<pid>.db`, 后一文件的 setupIntegrationEnv 会删掉前一文件
-// 正在使用的数据库文件(真实 agent / 后台 summary 等写路径可能 busy), 且前一
-// 文件的 ledger/run 状态会串到后一文件 —— fresh-checkout 的文件顺序下会 500。
 // 每个 setup 调用生成唯一文件名(随机后缀), 各自 teardown 清理, 文件间解耦。
+// 避免 `test-integration-<pid>.db` 被后一文件删掉前一文件正在使用的数据库
+// （后台 agent / 后台 loop 等写路径可能 busy），也避免 ledger/run 状态串文件。
+// `--parallel`（implied --isolate）下每文件独立模块表 + 独立 worker，唯一名
+// 保证 worker 之间（不同 pid）也不会碰撞。
 let tmpDbPaths: string[] | null = null;
 
 let orm: Orm;
@@ -31,8 +35,43 @@ export function setupIntegrationEnv(): void {
   resetDb(orm);
 }
 
-/** Drop the temp DB files. */
-export function teardownIntegrationEnv(): void {
+// runLoop is scheduled fire-and-forget (scheduleRun via createRun / confirm
+// endpoints). Under `--parallel`（implied --isolate）each test file owns its
+// module registry and temp DB; if such a detached loop is still settling when
+// teardown closes the connection, its tail DB writes (finalizeCancel / the
+// finally llmActivity reset) hit "database is locked". Cancels every active
+// loop and waits for the set to drain before the connection is closed.
+const RESEARCH_LOOP_DRAIN_TIMEOUT_MS = 3000;
+
+async function drainResearchLoops(): Promise<void> {
+  const deadline = Date.now() + RESEARCH_LOOP_DRAIN_TIMEOUT_MS;
+  // Loop passes: scheduleRun() can enqueue a loop in a microtask between
+  // passes; ensureRunAbortController(runId).abort() also pre-empts loops that
+  // were scheduled but have not started (their first bailIfAborted fires).
+  while (Date.now() < deadline) {
+    for (const runId of activeLoops) {
+      try {
+        ensureRunAbortController(runId).abort();
+      } catch {
+        // loop torn down concurrently — ignore
+      }
+    }
+    if (activeLoops.size === 0) return;
+    await Bun.sleep(25);
+  }
+  if (activeLoops.size > 0) {
+    console.warn(
+      `[test] teardown: ${activeLoops.size} research runLoop(s) did not settle within ` +
+        `${RESEARCH_LOOP_DRAIN_TIMEOUT_MS}ms; closing the temp DB anyway`,
+    );
+  }
+}
+
+/** Drop the temp DB files. Async: first cancels & awaits any detached runLoop. */
+export async function teardownIntegrationEnv(): Promise<void> {
+  // 先让后台研究循环沉降, 再关连接: --parallel 逐文件隔离下, 残留 loop 的
+  // 尾部 updateRun 会打到已关闭的临时 DB → SQLiteError: database is locked.
+  await drainResearchLoops();
   // 显式关闭底层 bun:sqlite 连接: bun:test 同进程会创建几十个临时 DB,
   // 仅 resetDb(null) 指望 GC 释放会让文件描述符/锁耗尽, 后续文件的 createDb
   // 报 'disk I/O error'。必须先 close 再删文件。

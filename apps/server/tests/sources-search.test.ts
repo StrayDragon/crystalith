@@ -45,9 +45,9 @@ beforeAll(() => {
     .get().id;
 });
 
-afterAll(() => {
+afterAll(async () => {
   delete (globalThis as Record<symbol | string, unknown>)[engineModeKey];
-  teardownIntegrationEnv();
+  await teardownIntegrationEnv();
 });
 
 async function postSearch(): Promise<{ status: number; body: Record<string, unknown> }> {

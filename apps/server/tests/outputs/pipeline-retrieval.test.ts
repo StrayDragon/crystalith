@@ -32,9 +32,7 @@ beforeAll(async () => {
   await stubEmbedding();
 });
 
-afterAll(() => {
-  teardownIntegrationEnv();
-});
+afterAll(teardownIntegrationEnv);
 
 describe('resolvePipelineContextChunks', () => {
   it('falls back to direct chunks when scoped RAG returns empty', async () => {

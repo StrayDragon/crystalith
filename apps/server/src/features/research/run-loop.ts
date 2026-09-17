@@ -342,7 +342,10 @@ export async function runLoop(runId: number, chatWaitBudgetMs = 60_000): Promise
         emitLog(runId, '节点对话长时间占用，研究循环暂缓（可手动继续）');
         return;
       }
-      await Bun.sleep(250);
+      // Abortable sleep: cancel must pre-empt the wait promptly instead of
+      // waiting out the poll tick (tests rely on this too to settle detached
+      // loops before the temp DB is closed).
+      await sleepUnlessAborted(250, abort.signal);
       row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
       if (!row) return;
       if (row.status !== 'queued' && row.status !== 'running') return;
