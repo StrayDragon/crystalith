@@ -20,22 +20,22 @@ type AgentMode = 'reject' | 'no_model' | 'stream';
 const agentModeKey = '__c63ChatAgentMode' as const;
 
 // bun:test 在同一进程顺序运行多个测试文件, mock.module 会跨文件泄漏。
-// 之前长期把 node-agent 整体换成 chat stub(默认 'stream' 也只产 text-delta,
-// proposalFromStructureToolCall 置空), 一旦本文件在别人前面跑, 后续依赖
-// 真实 node-agent 的测试(如 runtime.test 的 node chat 提案断言)就被破坏
-// (CI bun 1.4.0 的调度顺序正是这样红的)。修复: 先捕获真实实现, mock 只在
-// 本文件场景(全局 key 命中)替换 createResearchNodeAgent; proposal 映射与
-// 无 key 场景一律透传真实行为 —— 泄漏出去也是无害的。
+// 修复原则与 parallel-branch-units 完全一致: createResearchNodeAgent 统一
+// 返回「调用时活跃的 'ai' mock 的 ToolLoopAgent」(mode=work_unit 产
+// webSearch tool-result、mode=node_chat 产 prune 审批, 由各消费方自己的
+// ai mock/installAiMock 决定), proposalFromStructureToolCall 沿用真实实现。
+// 注意: 绝不能在这里调用真实 createResearchNodeAgent —— 真实 agent 的
+// ToolLoopAgent 是模块首次加载时的绑定快照, 跨文件顺序不同会让后续研究流
+// (已证: fork-run) 陷入空转/死锁。
 const realNodeAgent = await import('../../src/features/research/node-agent.ts');
 
+async function activeAiMockAgent(): Promise<unknown> {
+  const { ToolLoopAgent } = await import('ai');
+  return new (ToolLoopAgent as new () => unknown)() as never;
+}
+
 mock.module('../../src/features/research/node-agent.ts', () => ({
-  createResearchNodeAgent: async (notebookId: number) => {
-    // bun:test 在同一进程顺序运行多个测试文件, mock.module 会跨文件泄漏。
-    // 之前把 node-agent 整体换成 chat stub 且不还原, 一旦本文件先跑, 后续
-    // 依赖真实 node-agent 的测试(runtime.test 的 node chat 提案断言等)就被
-    // 破坏 — CI bun 1.4.0 的调度顺序正是这样红的。修复: 只有当本文件场景
-    // 命中(全局 key 存在)时才替换; 泄漏给其他文件(key 缺失)一律透传真实
-    // node-agent, proposal 映射同样永远保持真实。
+  createResearchNodeAgent: async () => {
     const hasScenario = Object.prototype.hasOwnProperty.call(
       globalThis as Record<symbol | string, unknown>,
       agentModeKey,
@@ -43,7 +43,9 @@ mock.module('../../src/features/research/node-agent.ts', () => ({
     const mode = (globalThis as Record<symbol | string, unknown>)[agentModeKey] as
       | AgentMode
       | undefined;
-    if (!hasScenario) return realNodeAgent.createResearchNodeAgent(notebookId);
+    // 泄漏给其他文件(key 缺失): 与 parallel-branch-units 相同的
+    // active-ai-mock ToolLoopAgent, 对任意执行顺序及任消费方 mock 都适配。
+    if (!hasScenario) return activeAiMockAgent();
     if (mode === 'reject') {
       return {
         stream: async () => {
