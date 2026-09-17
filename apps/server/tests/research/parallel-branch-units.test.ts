@@ -15,18 +15,22 @@ mock.module('../../src/ai/tools/web-search.ts', () => ({
   webSearchTool: () => ({}),
 }));
 
-// Bun 在同一进程顺序运行多个测试文件, mock.module 会跨文件泄漏: 若
-// node-chat-honesty 先跑, 会把 node-agent 换成 chat 专用 stub, 本文件的
-// work_unit drain 就再也拿不到 webSearch tool-results (searches=0、节点
-// 证据为空也能 'completed')。这里钉住自己的 node-agent: createResearchNodeAgent
-// 直接复用上方 mock 的 ToolLoopAgent —— mode=work_unit + allowWeb 时产出
-// webSearch tool-result, 行为与真实 node-agent 在该 mock 下一致。
+// 钉住 node-agent(work_unit drain 稳定走调用时活跃的 'ai' 的 ToolLoopAgent:
+// mode=work_unit + allowWeb -> webSearch tool-result, 证据完整且不依赖
+// 真实 AI SDK 绑定, 避免跨文件执行顺序差异产生的偶发空证据/挂起)。
+// 注意: mock.module 在同一进程跨文件泄漏, 所以本 mock 的
+// proposalFromStructureToolCall 必须委托真实实现 —— 若置空会把 null
+// 泄漏给后续 node-agent.test / runtime.test 的提案断言(CI 曾因此在
+// fresh-checkout 的文件顺序下失败)。createResearchNodeAgent 在调用时
+// `await import('ai')` 取活跃的 ai mock, 对任何消费者的 mock 都适配。
+const realNodeAgent = await import('../../src/features/research/node-agent.ts');
+
 mock.module('../../src/features/research/node-agent.ts', () => ({
   createResearchNodeAgent: async () => {
     const { ToolLoopAgent } = await import('ai');
     return new (ToolLoopAgent as new () => unknown)() as never;
   },
-  proposalFromStructureToolCall: () => null,
+  proposalFromStructureToolCall: realNodeAgent.proposalFromStructureToolCall,
 }));
 
 import {
