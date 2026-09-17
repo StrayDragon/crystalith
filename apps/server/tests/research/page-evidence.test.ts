@@ -32,7 +32,7 @@ import {
   listEvidences,
   upsertWebEvidenceContent,
 } from '../../src/features/research/research-core.ts';
-import { ingestWorkToolResult } from '../../src/features/research/run-loop.ts';
+import { ingestWorkToolResult } from '../../src/features/research/work-unit.ts';
 import { createApp } from '../../src/server.ts';
 
 const BASE = 'http://test.local';
