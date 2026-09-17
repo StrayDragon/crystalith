@@ -14,7 +14,7 @@
 # Crystalith v2 — AI Agent Guidelines
 
 > Bun + TypeScript rewrite (Elysia + React). **v1 Python SSOT (`backend/py/`) has been removed as of c14** — all behavior is now parity-confirmed in TypeScript.
-> **Status**: c00–c65 DONE, c14 DONE；Deep Research runtime + Eden Lab 已落地（约 c80–c110）；c13 v1（web 模式 server 单二进制分发管线）已落地，跨平台矩阵发布待 CI。
+> **Status**: c00–c66 DONE, c14 DONE；Deep Research runtime + Eden Lab 已落地（约 c80–c110）；c13 v1（web 模式 server 单二进制分发管线）已落地，跨平台矩阵发布待 CI。
 
 ## Project Structure
 
@@ -50,7 +50,7 @@ crystalith/
 
 ## Current State
 
-- ✅ All c00–c65 completed (66 changes); v1 parity confirmed through E2E
+- ✅ All c00–c66 completed (67 changes); v1 parity confirmed through E2E
 - ✅ **Deep Research**：server `features/research/`（ResearchRun / SSE / budget / synthesize 等）已实现；wire Zod 在 `packages/shared/src/schemas/research.ts`
 - ✅ Frontend: all output renderers aligned with v1 interactive components
 - 🔬 **Research Lab**：产品 `research-lab/`（Eden）；演示 `research-lab-demo/`（`/demo/research-lab`，DEV / `VITE_LAB_DEMO`）；细则 `apps/web/AGENTS.md`
