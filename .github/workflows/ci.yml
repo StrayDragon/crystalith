@@ -1,7 +1,8 @@
 name: CI
 
-# Test-acceptance gate — the CI equivalent of `just qa` (see justfile):
-# static checks + schema-drift gates + server/shared unit + web Rstest + e2e @p0.
+# Test-acceptance gate — the CI equivalent of `just qa` (see justfile).
+# All checks invoke `just` recipes so commands are SSOT with the local
+# toolchain (bun/node versions pinned by .bun-version / .node-version).
 # e2e is fully mocked (mock-openai-gateway, isolated ports/DB) and needs no
 # network or LLM keys.
 
@@ -28,9 +29,16 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          # .bun-version pins the exact Bun for reproducible CI (bun.lock was
-          # generated with it); engines.bun in package.json stays the npm floor.
+          # 与本地开发环境保持同一版本(单一来源: .bun-version / .node-version)
           bun-version-file: .bun-version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just
 
       - name: Cache bun install
         uses: actions/cache@v6
@@ -41,15 +49,12 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - run: bun typecheck
-      - run: bun lint
-      - run: bun format:check
-
-      # Generated-artifact drift gates (same as `just check-env-examples` / `check-app-schema`)
-      - run: bun scripts/gen-env-examples.ts --check
-      - run: bun scripts/gen-app-schema.ts --check
-      - run: bun scripts/check-i18n-keys.ts
-      - run: bun scripts/check-provider-deps.ts
+      # SSOT: 都调 just 配方(定义在 justfile, 与本地完全一致)
+      - run: just check
+      - run: just check-env-examples
+      - run: just check-app-schema
+      - run: just check-i18n-keys
+      - run: just check-provider-deps
 
   test:
     name: Tests (server / shared / web / e2e @p0)
@@ -62,6 +67,14 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: .bun-version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just
 
       - name: Cache bun install
         uses: actions/cache@v6
@@ -78,22 +91,17 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      # Server + shared unit/integration (same as `just test`)
-      # Server + shared unit/integration (same as `just test`; BDD 单独一步见下)
-      - run: bun test --path-ignore-patterns='apps/server/tests/bdd/**' apps/server/tests/ packages/shared/test/
+      # SSOT: 都调 just 配方(定义在 justfile, 与本地完全一致)
+      - run: just test
+      - run: just test-bdd
+      - run: just test-web
 
-      # BDD CRUD subset (same as `just test-bdd`; not in `just qa` but 保持 CI 绿)
-      - run: bun test apps/server/tests/bdd/run.test.ts
-
-      # Frontend Rstest CI suite (same as `just test-web`)
-      - run: bun run test:ci
-        working-directory: apps/web
-
-      # Playwright @p0 critical path (same as `just e2e` / `bun run e2e`)
+      # Playwright 浏览器引导(just e2e 不负责装浏览器; 与本地 e2e-install
+      # 等价, 但 CI 需 --with-deps 装系统依赖)
       - run: bunx playwright install --with-deps chromium
         working-directory: e2e
       # Use the Playwright chromium above, not the runner's system Chrome
       # (playwright.config channels to `chrome` unless this is '0').
-      - run: bun run e2e
+      - run: just e2e
         env:
           CL_E2E_USE_SYSTEM_CHROME: '0'
