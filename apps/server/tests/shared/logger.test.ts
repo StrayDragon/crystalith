@@ -2,6 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test';
 
 import { getLogLevel, logger, setLogLevel } from '../../src/shared/logger.ts';
 
+// bun:test runs multiple test files in one process, so the global log level is
+// process-wide state. This suite overrides it via setLogLevel(); without a
+// restore, every later test file would inherit whatever level the last test
+// left behind (e.g. 'info'), flooding QA output with app access logs even
+// though NODE_ENV=test would otherwise keep it at 'warn'. Snapshot the level
+// at module scope (our initial level) and restore it after every test.
+const initialLevel = getLogLevel();
+
 describe('structured logger', () => {
   let entries: Array<Record<string, unknown>>;
   let spies: Array<ReturnType<typeof spyOn>>;
@@ -27,6 +35,7 @@ describe('structured logger', () => {
 
   afterEach(() => {
     for (const s of spies) s.mockRestore();
+    setLogLevel(initialLevel);
   });
 
   it('emits single-line JSON with ts/level/msg', () => {

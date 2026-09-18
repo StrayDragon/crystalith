@@ -158,7 +158,7 @@ import { resetConfig, config, getParallelBranchUnits } from '../../src/shared/co
     ...cur,
     raw: {
       ...cur.raw,
-      research: { progressEventRetain: 200, parallelBranchUnits: 2 },
+      research: { progress_event_retain: 200, parallel_branch_units: 2 },
     },
   });
 }

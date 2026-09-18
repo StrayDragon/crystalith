@@ -95,6 +95,27 @@ release-next-pre *args:
 # Code Quality (delegated to root bun scripts)
 # --------------------------------------------------------------------------
 
+# --- QA 输出详细程度 (三档; 机制对标 ../scalim/scripts/qa-step.sh) ---
+#   L0 静默 (默认, 适合 agent): 各步只启用工具自带的安静开关
+#        (--quiet / --only-failures / dot reporter / CL_LOG_LEVEL),
+#        通过时仅输出错误与警告级汇总; 失败时工具照常全量输出.
+#   L1 摘要 (QA_VERBOSE=1): 同 L0 (工具内置最小输出即一行摘要形式).
+#   L2 全量 (QA_VERBOSE=2): 关闭全部安静开关, 实时流式全量输出 (排障).
+# 用法: just qa          # L0 (agent / CI)
+#       just QA_VERBOSE=1 qa
+#       just QA_VERBOSE=2 qa     # 排障时用
+#
+# 原则: 只用工具/应用自带的安静能力, 不做自定义 stdout 过滤脚本.
+QA_VERBOSE := ""
+
+# 各 gate 步 quiet 旗标 (L2 = "" 关闭所有静默)
+_qlint   := if QA_VERBOSE == "2" { "" } else { "--quiet" }
+_qtest   := if QA_VERBOSE == "2" { "" } else { "--only-failures" }
+_qrstest := if QA_VERBOSE == "2" { "" } else { "--reporter=dot --silent passed-only --hideSkippedTestFiles" }
+_qe2e    := if QA_VERBOSE == "2" { "" } else { "--reporter=dot --quiet" }
+_qlog    := if QA_VERBOSE == "2" { "info" } else { "error" }
+_qtmock  := if QA_VERBOSE == "2" { "" } else { "> /dev/null" }
+
 # Format check (oxfmt) — suppress success noise, only check exit code
 format-check:
     @bun format:check > /dev/null
@@ -103,9 +124,9 @@ format-check:
 format:
     @bun format:write
 
-# Lint (oxlint) — warnings to stdout, silent on success
+# Lint (oxlint) — L0: 只列错误 + 警告计数 (--quiet); L2: 全部警告详情
 lint:
-    @bun lint
+    @bun lint {{ _qlint }}
 
 # Typecheck (all workspaces) — suppress workspace orchestration stdout, preserve tsc errors on stderr
 typecheck:
@@ -135,13 +156,15 @@ check-bun:
 qa: check check-env-examples check-app-schema check-i18n-keys check-provider-deps test test-web e2e
     @echo "✅ QA passed"
 
-# Server + shared unit/integration tests — only show failures
+# Server + shared unit/integration tests — L0: 仅错误级应用日志 + 失败
+# (--only-failures; CL_LOG_LEVEL=error); L2: info 全量
 test:
-    @bun test --only-failures apps/server/tests/ packages/shared/test/
+    @CL_LOG_LEVEL={{ _qlog }} bun test {{ _qtest }} apps/server/tests/ packages/shared/test/
 
 # Frontend Rstest CI suite (MSW on-unhandled=error). Part of `just qa`.
+# L0: mock 报告静默 + dot reporter + passed-only 静默 (仅失败显示 console)
 test-web:
-    cd apps/web && bun run test:ci
+    @cd apps/web && node ./scripts/test_mock_report.mjs --check-mock-reasons {{ _qtmock }} && TZ=UTC RSTEST_MSW_ON_UNHANDLED=error bunx rstest run {{ _qrstest }}
 
 # Server BDD (Gherkin) — CRUD subset only; see apps/server/tests/bdd/run.test.ts
 # SKIP_FEATURE_DIRS. Not part of `just qa`.
@@ -153,8 +176,9 @@ test-bdd:
 # Stubs chat/embedding gateways offline (does not use live CL_* from justdev).
 # Default: system Google Chrome. For bundled Chromium: `just e2e-install` then
 # `CL_E2E_USE_SYSTEM_CHROME=0 just e2e`
+# L0: dot reporter + --quiet (静默 test/webserver stdio, 仅保留结果行)
 e2e:
-    cd e2e && bunx playwright test --grep @p0
+    @cd e2e && bunx playwright test {{ _qe2e }} --grep @p0
 
 # Optional @p1 browser flows (not in `just qa`)
 e2e-p1:
