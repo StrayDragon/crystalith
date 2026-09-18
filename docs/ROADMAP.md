@@ -18,8 +18,8 @@
 ## B 线：分发 + 插件架构（c13）
 
 > **进展**：c13 v1 已随 `v2.0.0-pre` 首发——linux-x64/arm64 原生构建 + 冒烟 +
-> GitHub Release 自动化；darwin/win32 暂缓（Bun 上游 SQLite 扩展限制，
-> 见 [known-issues.md](known-issues.md)）。
+> GitHub Release 自动化；darwin 暂缓（Apple SQLite 扩展限制），win32 与 Linux
+> 同链路、待 Windows 冒烟解锁（见 [known-issues.md](known-issues.md)）。
 
 ### 已定方向
 

@@ -111,13 +111,13 @@ CL_CHAT_MODEL=… CL_CHAT_API_BASE=… ./crystalith-server   # :8032，API + Web
 ## 开发
 
 ```bash
-just test        # server + shared 单测（bun test）
-just test-web    # 前端 Vitest
+just test        # server + shared 单测（bun test，--parallel 逐文件隔离）
+just test-web    # 前端 Rstest
 just e2e         # Playwright @p0 关键路径（全程 mock 网关，可离线）
 just qa          # typecheck + lint + format + schema 漂移 + 全部测试 —— PR 门禁
 ```
 
-技术栈：Bun · Elysia（Eden RPC 端到端类型安全）· Drizzle ORM · sqlite-vec · Vercel AI SDK v7 · Zod 合约 SSOT（`packages/shared`）· React + Vite。架构决策与模块约定见 [AGENTS.md](AGENTS.md)。
+技术栈：Bun · Elysia（Eden RPC 端到端类型安全）· Drizzle ORM · sqlite-vec · Vercel AI SDK v7 · Zod 合约 SSOT（`packages/shared`）· React + Rsbuild。架构决策与模块约定见 [AGENTS.md](AGENTS.md)。
 
 ## 文档
 
