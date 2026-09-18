@@ -12,21 +12,38 @@ import { createDb, resetDb, type Orm } from '../../src/db/index.ts';
 import { resetConfig } from '../../src/shared/config.ts';
 
 const TMP_DIR = join(import.meta.dirname, '..', '..', 'data');
-const TMP_DB = join(TMP_DIR, `test-integration-${process.pid}.db`);
+
+// bun:test 在同一进程顺序运行多个测试文件(共用 process.pid)。若所有文件共用
+// `test-integration-<pid>.db`, 后一文件的 setupIntegrationEnv 会删掉前一文件
+// 正在使用的数据库文件(真实 agent / 后台 summary 等写路径可能 busy), 且前一
+// 文件的 ledger/run 状态会串到后一文件 —— fresh-checkout 的文件顺序下会 500。
+// 每个 setup 调用生成唯一文件名(随机后缀), 各自 teardown 清理, 文件间解耦。
+let tmpDbPaths: string[] | null = null;
 
 let orm: Orm;
 
 /** Point the db() singleton at a fresh temp DB (runs migrations + vec setup). */
 export function setupIntegrationEnv(): void {
-  for (const f of [TMP_DB, `${TMP_DB}-wal`, `${TMP_DB}-shm`]) rmSync(f, { force: true });
-  orm = createDb(TMP_DB);
+  const db = join(TMP_DIR, `test-integration-${process.pid}-${crypto.randomUUID().slice(0, 8)}.db`);
+  tmpDbPaths = [db, `${db}-wal`, `${db}-shm`];
+  for (const f of tmpDbPaths) rmSync(f, { force: true });
+  orm = createDb(db);
   resetDb(orm);
 }
 
 /** Drop the temp DB files. */
 export function teardownIntegrationEnv(): void {
+  // 显式关闭底层 bun:sqlite 连接: bun:test 同进程会创建几十个临时 DB,
+  // 仅 resetDb(null) 指望 GC 释放会让文件描述符/锁耗尽, 后续文件的 createDb
+  // 报 'disk I/O error'。必须先 close 再删文件。
+  try {
+    orm?.$client?.close();
+  } catch {
+    // already closed / never opened — ignore
+  }
   resetDb(null);
-  for (const f of [TMP_DB, `${TMP_DB}-wal`, `${TMP_DB}-shm`]) rmSync(f, { force: true });
+  for (const f of tmpDbPaths ?? []) rmSync(f, { force: true });
+  tmpDbPaths = null;
 }
 
 /** The temp ORM instance (for direct inspection / seeding in tests). */
