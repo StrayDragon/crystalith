@@ -94,7 +94,7 @@ async function chapterChat(browser: Browser) {
 
   // Answer streams until the citations action appears; .last() targets THIS
   // question's answer when earlier Q&A already exists in the session.
-  const citationsButton = page.getByRole('button', { name: /查看引用/ }).last();
+  const citationsButton = page.getByRole('button', { name: /查看引用/u }).last();
   await citationsButton.waitFor({ timeout: 120_000 });
   await pause(page, 2_000);
 

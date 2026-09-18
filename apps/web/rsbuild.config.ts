@@ -43,52 +43,52 @@ export default defineConfig({
     preset: 'per-package',
     cacheGroups: {
       libReact: {
-        test: /[\\/]node_modules[\\/](react|react-dom|scheduler|use-sync-external-store)[\\/]/,
+        test: /[\\/]node_modules[\\/](react|react-dom|scheduler|use-sync-external-store)[\\/]/u,
         name: 'vendor-react',
         priority: 20,
       },
       vendorMui: {
-        test: /[\\/]node_modules[\\/](@emotion|@mui|emotion-|hoist-non-react-statics)[\\/]/,
+        test: /[\\/]node_modules[\\/](@emotion|@mui|emotion-|hoist-non-react-statics)[\\/]/u,
         name: 'vendor-mui',
         priority: 20,
       },
       exportJspdf: {
-        test: /[\\/]node_modules[\\/]jspdf[\\/]/,
+        test: /[\\/]node_modules[\\/]jspdf[\\/]/u,
         name: 'vendor-export-jspdf',
         priority: 20,
       },
       exportPptx: {
-        test: /[\\/]node_modules[\\/]pptxgenjs[\\/]/,
+        test: /[\\/]node_modules[\\/]pptxgenjs[\\/]/u,
         name: 'vendor-export-pptxgenjs',
         priority: 20,
       },
       framerMotion: {
-        test: /[\\/]node_modules[\\/](framer-motion|popmotion|framesync|style-value-types|hey-listen|@motionone|motionone)[\\/]/,
+        test: /[\\/]node_modules[\\/](framer-motion|popmotion|framesync|style-value-types|hey-listen|@motionone|motionone)[\\/]/u,
         name: 'vendor-framer-motion',
         priority: 20,
       },
       radixUi: {
-        test: /[\\/]node_modules[\\/](@radix-ui|@floating-ui)[\\/]/,
+        test: /[\\/]node_modules[\\/](@radix-ui|@floating-ui)[\\/]/u,
         name: 'vendor-radix',
         priority: 20,
       },
       xyflow: {
-        test: /[\\/]node_modules[\\/](@xyflow|d3-)[\\/]/,
+        test: /[\\/]node_modules[\\/](@xyflow|d3-)[\\/]/u,
         name: 'vendor-xyflow',
         priority: 20,
       },
       gridstack: {
-        test: /[\\/]node_modules[\\/]gridstack[\\/]/,
+        test: /[\\/]node_modules[\\/]gridstack[\\/]/u,
         name: 'vendor-gridstack',
         priority: 20,
       },
       virtuoso: {
-        test: /[\\/]node_modules[\\/]react-virtuoso[\\/]/,
+        test: /[\\/]node_modules[\\/]react-virtuoso[\\/]/u,
         name: 'vendor-virtuoso',
         priority: 20,
       },
       stateLibs: {
-        test: /[\\/]node_modules[\\/](swr|zustand)[\\/]/,
+        test: /[\\/]node_modules[\\/](swr|zustand)[\\/]/u,
         name: 'vendor-state',
         priority: 20,
       },
@@ -137,7 +137,7 @@ export default defineConfig({
       // No upstream fix as of 4.0.1 (latest, 2025-06); drop this when fixed.
       config.plugins!.push(
         new rspack.NormalModuleReplacementPlugin(
-          /^node:(fs|https)$/,
+          /^node:(fs|https)$/u,
           path.resolve(__dirname, 'scripts/empty-module.js'),
         ),
       );

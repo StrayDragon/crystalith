@@ -237,6 +237,8 @@ export async function* streamWithReconnect(
     }
     options.onStateChange?.('reconnecting', attempt);
     const delayMs = backoff[Math.min(attempt - 1, backoff.length - 1)];
-    await new Promise((r) => setTimeout(r, delayMs));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, delayMs);
+    });
   }
 }

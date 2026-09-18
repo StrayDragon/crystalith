@@ -70,10 +70,10 @@ export function sseEvent(event: string, data: unknown): string {
 /** Drop XML-shaped tool invocations some models leak into the answer text. */
 function stripLeakedToolCallXml(text: string): string {
   return text
-    .replace(/<tool_call\b[\s\S]*?<\/tool_call>/gi, '')
-    .replace(/<tool_call\b[\s\S]*$/gi, '')
-    .replace(/^[ \t]+/gm, '')
-    .replace(/\n{3,}/g, '\n\n')
+    .replaceAll(/<tool_call\b[\s\S]*?<\/tool_call>/giu, '')
+    .replaceAll(/<tool_call\b[\s\S]*$/giu, '')
+    .replaceAll(/^[ \t]+/gmu, '')
+    .replaceAll(/\n{3,}/gu, '\n\n')
     .trim();
 }
 

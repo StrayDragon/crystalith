@@ -15,7 +15,7 @@
 // The script creates the tag locally only — pushing it triggers the Release
 // workflow, so that stays an explicit `git push origin <tag>`.
 
-const PRE_TAG_RE = /^v(\d+)\.(\d+)\.(\d+)-pre(?:\.(\d+))?$/;
+const PRE_TAG_RE = /^v(\d+)\.(\d+)\.(\d+)-pre(?:\.(\d+))?$/u;
 
 function sh(cmd: string[], options?: { allowFailure?: boolean }): string {
   const proc = Bun.spawnSync(cmd, { stdout: 'pipe', stderr: 'pipe' });
@@ -32,8 +32,8 @@ function sh(cmd: string[], options?: { allowFailure?: boolean }): string {
 
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
-const baseArg = args.find((a) => a !== '--dry-run')?.replace(/^v/, '');
-if (baseArg !== undefined && !/^\d+\.\d+\.\d+$/.test(baseArg)) {
+const baseArg = args.find((a) => a !== '--dry-run')?.replace(/^v/u, '');
+if (baseArg !== undefined && !/^\d+\.\d+\.\d+$/u.test(baseArg)) {
   console.error(`[next-pre-tag] invalid base version "${baseArg}" — expected X.Y.Z`);
   process.exit(1);
 }
@@ -55,7 +55,8 @@ interface PreTag {
   maj: number;
   min: number;
   pat: number;
-  n: number; // pre-release counter; plain `-pre` counts as 0
+  // pre-release counter; plain `-pre` counts as 0
+  n: number;
 }
 
 const preTags: PreTag[] = [];
