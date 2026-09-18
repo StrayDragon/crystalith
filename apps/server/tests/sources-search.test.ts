@@ -3,7 +3,7 @@
  * `no_results`), with a user-readable message. The zero-hit path must stay
  * `no_results` — the key contrast case.
  */
-import { afterAll, beforeAll, describe, expect, it, mock } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it, mock, spyOn } from 'bun:test';
 
 // Per-test engine behaviour via globalThis (hoisted module factory safe).
 type EngineMode = 'reject' | 'empty' | 'hits';
@@ -64,14 +64,20 @@ async function postSearch(): Promise<{ status: number; body: Record<string, unkn
 describe('sources search error contract (c65)', () => {
   it('engine failure → service_error with readable message, empty results', async () => {
     (globalThis as Record<symbol | string, unknown>)[engineModeKey] = 'reject';
-    const { status, body } = await postSearch();
-    expect(status).toBe(200);
-    expect(body.status).toBe('service_error');
-    expect(body.results).toEqual([]);
-    expect(typeof body.message).toBe('string');
-    expect(body.message).not.toBe('');
-    expect(String(body.message)).toContain('搜索服务');
-    expect(body.status).not.toBe('no_results');
+    // 刻意失败场景: 吞掉应用层 error 日志, 避免门禁输出把预期内的错误当误报
+    const errorSpy = spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const { status, body } = await postSearch();
+      expect(status).toBe(200);
+      expect(body.status).toBe('service_error');
+      expect(body.results).toEqual([]);
+      expect(typeof body.message).toBe('string');
+      expect(body.message).not.toBe('');
+      expect(String(body.message)).toContain('搜索服务');
+      expect(body.status).not.toBe('no_results');
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it('engine answers with zero hits → still no_results (contrast case)', async () => {

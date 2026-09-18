@@ -7,7 +7,7 @@
  * - Emit contract: every frame conforms to the shared
  *   ResearchNodeChatStreamEventSchema discriminated union.
  */
-import { afterAll, beforeAll, describe, expect, it, mock } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it, mock, spyOn } from 'bun:test';
 
 mock.module('../../src/ai/tools/web-search.ts', () => ({
   searchWeb: async () => [],
@@ -129,17 +129,21 @@ async function runChat(): Promise<SseFrame[]> {
 describe('node chat failure honesty (c63 / r12)', () => {
   it('agent rejection → error frame + chat_failed ledger, no stub chunks', async () => {
     (globalThis as Record<symbol | string, unknown>)[agentModeKey] = 'reject';
-    const frames = await runChat();
-
-    expect(frames.some((f) => f.event === 'chunk')).toBe(false);
-    expect(frames.some((f) => f.event === 'proposal')).toBe(false);
-    const errorFrame = frames.find((f) => f.event === 'error');
-    expect(errorFrame).toBeDefined();
-    expect(errorFrame?.data.message).toBe('模型暂时不可用，请稍后重试');
-    expect(typeof errorFrame?.data.errorCode).toBe('string');
-
-    expect(progressKinds()).toContain('chat_failed');
-    expect(progressKinds()).not.toContain('chat_finished');
+    // 刻意失败场景: 吞掉应用层 error 日志, 避免门禁输出把预期内的错误当误报
+    const errorSpy = spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const frames = await runChat();
+      expect(frames.some((f) => f.event === 'chunk')).toBe(false);
+      expect(frames.some((f) => f.event === 'proposal')).toBe(false);
+      const errorFrame = frames.find((f) => f.event === 'error');
+      expect(errorFrame).toBeDefined();
+      expect(errorFrame?.data.message).toBe('模型暂时不可用，请稍后重试');
+      expect(typeof errorFrame?.data.errorCode).toBe('string');
+      expect(progressKinds()).toContain('chat_failed');
+      expect(progressKinds()).not.toContain('chat_finished');
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it('no chat model configured → honest error frame, not a fake reply', async () => {
@@ -155,6 +159,8 @@ describe('node chat failure honesty (c63 / r12)', () => {
   it('CL_RESEARCH_E2E_STUB=1 keeps the stub path (text + proposals + via=stub)', async () => {
     (globalThis as Record<symbol | string, unknown>)[agentModeKey] = 'reject';
     process.env.CL_RESEARCH_E2E_STUB = '1';
+    // 即便 stub 路径, reject-mode 的 agent 工厂侧也可能触发 error 日志——一并吞掉
+    const errorSpy = spyOn(console, 'error').mockImplementation(() => {});
     // Ledger accumulates across tests on the same run — scope to this turn.
     const before = ledgerRows().length;
     try {
@@ -169,6 +175,7 @@ describe('node chat failure honesty (c63 / r12)', () => {
       expect(finished?.headline).toBe('节点对话结束');
       expect((finished?.payload as { via?: string })?.via).toBe('stub');
     } finally {
+      errorSpy.mockRestore();
       delete process.env.CL_RESEARCH_E2E_STUB;
     }
   });
