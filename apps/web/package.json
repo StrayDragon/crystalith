@@ -2,6 +2,7 @@
   "name": "crystalith-web",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "start": "rsbuild dev",
     "predev": "bash ../../scripts/ensure_frontend_web_ready.sh",
