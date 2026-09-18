@@ -41,9 +41,10 @@ import {
 let notebookId: number;
 let runSeq = 0;
 
-// Explicit high ids: bun:test shares one process (and the module-level
-// activeLoops / db() singletons) across files — a small autoincrement id can
-// collide with a lingering loop from another test file's run.
+// Explicit high ids: belt-and-suspenders — dev runs without `--parallel` share
+// one process (and the module-level activeLoops / db() singletons) across files,
+// where a small autoincrement id could collide with a lingering loop from
+// another file's run (`--parallel`/`--isolate` already prevents this).
 const RUN_ID_BASE = 9_000_000;
 
 function seedRun(llmActivity: 'node_chat' | null): number {

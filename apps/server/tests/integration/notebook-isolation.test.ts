@@ -41,9 +41,7 @@ beforeAll(() => {
     .get().id;
 });
 
-afterAll(() => {
-  teardownIntegrationEnv();
-});
+afterAll(teardownIntegrationEnv);
 
 async function get(path: string) {
   const res = await app.handle(new Request(`${BASE}${path}`));

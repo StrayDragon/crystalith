@@ -14,9 +14,7 @@ beforeAll(() => {
   setupIntegrationEnv();
 });
 
-afterAll(() => {
-  teardownIntegrationEnv();
-});
+afterAll(teardownIntegrationEnv);
 
 describe('notebook delete cleans vectors', () => {
   it('DELETE /v2/notebooks/:nid removes vec_chunks rows of its sources', async () => {

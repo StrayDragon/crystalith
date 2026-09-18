@@ -199,9 +199,9 @@ beforeAll(() => {
   notebookId = getOrm().insert(notebooks).values({ name: 'research-c106-nb' }).returning().get().id;
 });
 
-afterAll(() => {
+afterAll(async () => {
   clearRunLocks();
-  teardownIntegrationEnv();
+  await teardownIntegrationEnv();
 });
 
 async function waitForStatus(runId: number, wanted: string[], timeoutMs = 10000): Promise<string> {

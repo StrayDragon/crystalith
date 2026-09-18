@@ -86,9 +86,7 @@ beforeAll(async () => {
     .run();
 });
 
-afterAll(() => {
-  teardownIntegrationEnv();
-});
+afterAll(teardownIntegrationEnv);
 
 function slidesBase(): string {
   return `/v2/notebooks/${notebookId}/studio/slides`;

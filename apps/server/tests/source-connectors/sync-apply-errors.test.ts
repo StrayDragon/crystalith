@@ -26,9 +26,7 @@ beforeAll(() => {
     .get().id;
 });
 
-afterAll(() => {
-  teardownIntegrationEnv();
-});
+afterAll(teardownIntegrationEnv);
 
 describe('sync-check apply error envelope', () => {
   it('returns 409 CONFLICT with SYNC_CHECK_REQUIRED when no sync_check ran', async () => {

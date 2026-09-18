@@ -158,10 +158,13 @@ qa: check check-env-examples check-app-schema check-i18n-keys check-provider-dep
 
 # Server + shared unit/integration tests — L0: 仅错误级应用日志 + 失败
 # (--only-failures; CL_LOG_LEVEL=error); L2: info 全量。
+# --parallel（implied --isolate）：每测试文件独立模块表/全局对象/worker 进程，
+# 杜绝跨文件泄漏（mock.module、module 单例、DB、timer）造成的顺序依赖 —— 测试
+# 文件必须自给自足（自己在 import 被测模块前装好 'ai' mock 等）。
 # BDD (apps/server/tests/bdd) 经 --path-ignore-patterns 排除在门禁外：
 # 它是补充性的 CRUD 子集，单独跑 `just test-bdd`（见下与根 AGENTS.md）。
 test:
-    @CL_LOG_LEVEL={{ _qlog }} bun test {{ _qtest }} --path-ignore-patterns='apps/server/tests/bdd/**' apps/server/tests/ packages/shared/test/
+    @CL_LOG_LEVEL={{ _qlog }} bun test --parallel {{ _qtest }} --path-ignore-patterns='apps/server/tests/bdd/**' apps/server/tests/ packages/shared/test/
 
 # Frontend Rstest CI suite (MSW on-unhandled=error). Part of `just qa`.
 # L0: mock 报告静默 + dot reporter + passed-only 静默 (仅失败显示 console)

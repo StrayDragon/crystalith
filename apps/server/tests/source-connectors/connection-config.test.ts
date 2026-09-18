@@ -15,9 +15,7 @@ beforeAll(() => {
   notebookId = getOrm().insert(notebooks).values({ name: 'connector-cfg' }).returning().get().id;
 });
 
-afterAll(() => {
-  teardownIntegrationEnv();
-});
+afterAll(teardownIntegrationEnv);
 
 describe('source-connector connectionConfig validation', () => {
   it('rejects missing required vaultPath with 400', async () => {

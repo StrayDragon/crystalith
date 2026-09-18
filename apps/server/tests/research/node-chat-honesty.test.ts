@@ -104,10 +104,10 @@ beforeAll(() => {
     .get().id;
 });
 
-afterAll(() => {
+afterAll(async () => {
   delete (globalThis as Record<symbol | string, unknown>)[agentModeKey];
   delete process.env.CL_RESEARCH_E2E_STUB;
-  teardownIntegrationEnv();
+  await teardownIntegrationEnv();
 });
 
 interface SseFrame {

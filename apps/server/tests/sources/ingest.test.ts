@@ -44,9 +44,7 @@ beforeAll(async () => {
   app = createApp();
 });
 
-afterAll(() => {
-  teardownIntegrationEnv();
-});
+afterAll(teardownIntegrationEnv);
 
 // ---------------------------------------------------------------------------
 // Helpers
