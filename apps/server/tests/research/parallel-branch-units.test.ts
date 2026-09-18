@@ -15,6 +15,20 @@ mock.module('../../src/ai/tools/web-search.ts', () => ({
   webSearchTool: () => ({}),
 }));
 
+// Bun 在同一进程顺序运行多个测试文件, mock.module 会跨文件泄漏: 若
+// node-chat-honesty 先跑, 会把 node-agent 换成 chat 专用 stub, 本文件的
+// work_unit drain 就再也拿不到 webSearch tool-results (searches=0、节点
+// 证据为空也能 'completed')。这里钉住自己的 node-agent: createResearchNodeAgent
+// 直接复用上方 mock 的 ToolLoopAgent —— mode=work_unit + allowWeb 时产出
+// webSearch tool-result, 行为与真实 node-agent 在该 mock 下一致。
+mock.module('../../src/features/research/node-agent.ts', () => ({
+  createResearchNodeAgent: async () => {
+    const { ToolLoopAgent } = await import('ai');
+    return new (ToolLoopAgent as new () => unknown)() as never;
+  },
+  proposalFromStructureToolCall: () => null,
+}));
+
 import {
   getOrm,
   seedChatModel,
