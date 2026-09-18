@@ -14,7 +14,7 @@
 # Crystalith v2 — AI Agent Guidelines
 
 > Bun + TypeScript rewrite (Elysia + React). **v1 Python SSOT (`backend/py/`) has been removed as of c14** — all behavior is now parity-confirmed in TypeScript.
-> **Status**: c00–c66 DONE, c14 DONE；Deep Research runtime + Eden Lab 已落地（约 c80–c110）；c13 v1（web 模式 server 单二进制分发管线）已落地，跨平台矩阵发布待 CI。
+> **Status**: c00–c66 DONE, c14 DONE；Deep Research runtime + Eden Lab 已落地（约 c80–c110）；c13 v1（web 模式 server 单二进制分发管线）已随 `v2.0.0-pre` 首发（linux-x64/arm64），darwin/win32 暂缓（见 `docs/known-issues.md`）。
 
 ## Project Structure
 
@@ -55,7 +55,7 @@ crystalith/
 - ✅ Frontend: all output renderers aligned with v1 interactive components
 - 🔬 **Research Lab**：产品 `research-lab/`（Eden）；演示 `research-lab-demo/`（`/demo/research-lab`，DEV / `VITE_LAB_DEMO`）；细则 `apps/web/AGENTS.md`
 - ✅ c14: `backend/py/` + `api/generated/` deleted；wire 类型走 Eden + `@crystalith/shared`（`shared-types.ts` 已移除）
-- 🚧 **c13** distribution — v1（web 模式 server 单二进制）已落地：`just build-binary` / `just release`、静态 web 托管（`CL_WEB_DIST` 或二进制旁 `web/dist`）、tag 版本注入；Tauri 桌面端 delay，跨平台矩阵待 CI（见 `llmanspec/changes/ship-server-binary`）
+- 🚧 **c13** distribution — v1（web 模式 server 单二进制）已随 `v2.0.0-pre` 首发（linux-x64/arm64）：`just build-binary` / `just release`、静态 web 托管（`CL_WEB_DIST` 或二进制旁 `web/dist`）、tag 版本注入；Tauri 桌面端 delay，darwin/win32 暂缓（见 `docs/known-issues.md`；变更档案 `llmanspec/changes/archive/2026-09-09-ship-server-binary`）
 - 📦 作业法见 `.agents/skills/crystalith-ssot-qa-batches/`
 
 ## v2 Stack
@@ -220,7 +220,15 @@ Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `ope
 `just qa`（typecheck + lint + format-check + env/schema drift + **server/shared** tests + **web Rstest** + **e2e @p0**）必须全员通过才算一次成功的 PR。
 
 **门禁组成（与 `justfile` 一致）**：
-`check` → `check-env-examples` → `check-app-schema` → `check-i18n-keys` → `check-provider-deps` → `test`（`apps/server/tests/` + `packages/shared/test/`，`--path-ignore-patterns` 排除 `bdd/`）→ `test-web`（`apps/web` `test:ci`）→ `e2e`。
+`check` → `check-env-examples` → `check-app-schema` → `check-i18n-keys` → `check-provider-deps` → `test`（`apps/server/tests/` + `packages/shared/test/`，`--parallel` 逐文件隔离，`--path-ignore-patterns` 排除 `bdd/`）→ `test-web`（`apps/web` `test:ci`）→ `e2e`。
+
+**测试逐文件隔离纪律（`--parallel` implied `--isolate`）**：
+server 测试每个文件跑在自己的 fresh module registry / global / worker 进程里 —
+**禁止依赖任何跨文件泄漏**（`mock.module`、module 单例、DB、timer、globalThis）。
+文件必须自给自足：在 import 被测模块**之前**自装 `installAiMock(...)` /
+`mock.module('ai', ...)`；集成测试一律走 `setupIntegrationEnv` /
+`teardownIntegrationEnv`（唯一临时 DB + 自动 drain 后台研究循环）。依赖“前一个
+文件恰好泄漏了什么”的写法在 `--parallel` 下是硬失败。
 
 **QA 输出详细程度（三档，见 justfile 头部注释）**：默认 L0 静默 — 只输出错误/警告级
 汇总（各工具自带 `--quiet`/`--only-failures`/dot reporter/`CL_LOG_LEVEL`，无自定义过滤脚本），
@@ -263,5 +271,6 @@ agent 日常跑 `just qa` 即可，token 开销极低。
 ## Agent-Specific Instructions
 
 - SDD workflow: `/llman-sdd-*` skills; conventions in `llmanspec/config.yaml`
-- Design decisions: `llmanspec/changes/`
+- Design decisions: `llmanspec/changes/`（已完成的在 `archive/`，行为合约以 `llmanspec/specs/` 为准）
 - Package-level rules: `apps/server/AGENTS.md`, `apps/web/AGENTS.md`, `config/AGENTS.md`
+- **文档一致性纪律**：文档里的状态声明与路径引用必须随代码变更同步——归档的 llman change 引用改指 `archive/` 或对应 `specs/`；迁移走完的旧工具名（如 vitest→rstest、Vite→Rsbuild）不留残句；台账条目（`docs/known-issues.md`）须带可验证的恢复/删除条件，解决后及时删除条目
