@@ -53,7 +53,7 @@ function normalizeResearchSection(raw: unknown): Record<string, unknown> {
  * Single source of truth for research defaults (W3): feeds the per-field
  * schema defaults, the RootConfigSchema `research` default, and the
  * parse-failure fallback in getResearchSettings(). Keys are snake_case per
- * configuration-governance r249.
+ * configuration-governance r36.
  */
 export const RESEARCH_SETTINGS_DEFAULTS = {
   progress_event_retain: 200,

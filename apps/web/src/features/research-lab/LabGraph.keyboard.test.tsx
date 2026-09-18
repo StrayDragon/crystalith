@@ -6,7 +6,7 @@ import { LayerProvider } from '../../shared/layer';
 import LabGraph from './LabGraph';
 import type { LabEdge, LabNode } from './model/types';
 
-// Lock test for deep-research-ui r15: keyboard users can open the node inspector
+// Lock test for deep-research-ui r106: keyboard users can open the node inspector
 // from a focused node, and edge fork/prune actions are tab-reachable (not hover-only).
 
 // jsdom reports zero element dimensions; xyflow renders edges only once nodes are

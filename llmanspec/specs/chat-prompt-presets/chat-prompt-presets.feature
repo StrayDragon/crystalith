@@ -5,38 +5,38 @@
 
 功能: chat-prompt-presets
 
-  @req:r25 @human
+  @req:r22 @human
   场景: Prompt directives are parsed from QA question when enabled
     - 当 `app.features.chat_prompt_presets_enabled=true` 时，系统 MUST 支持在 `question` 内解析 prompt 指令： `/prompt:<preset> <query>` 其中： - `<preset>` MUST 匹配正则：`[a-z0-9_-]{1,32}`（大小写不敏感，解析后统一为小写） - `<query>` MAY 为空（空时视为输入错误）。指令解析 MUST NOT 仅接受 body 的 preset 字段。
 
-  @req:r25 @human
+  @req:r22 @human
   场景: empty-query-returns-deterministic-error
     - 当 presets 功能启用且 `question` 为 `/prompt:<preset>`（无 query）时，系统 SHALL 返回 400 并提示用法与可用 preset 列表。
 
-  @req:r25 @human
+  @req:r22 @human
   场景: presets-disabled-returns-deterministic-error
     - 当 `question` 以 `/prompt:` 开头但 `app.features.chat_prompt_presets_enabled=false` 时，系统 SHALL 返回 400，MUST NOT 静默当作普通 QA 处理。
 
-  @req:r83 @human
+  @req:r23 @human
   场景: Unknown preset names are rejected with a stable list
     - 系统 MUST 将 preset 集合视为白名单（built-in + custom）。未知 preset MUST 被拒绝并返回可用 preset 列表（含 built-in 与 custom）。
 
-  @req:r121 @human
+  @req:r24 @human
   场景: Custom prompt presets can override the QA system prompt
     - 系统 MUST 支持用户定义的 custom preset。对于 `/prompt:<preset> <query>`： - 若 `<preset>` 命中 custom preset 且 `enabled=true`，系统 MUST 使用该 preset 的 `systemPrompt` 覆盖 QA pipeline 的 system message。 - 系统 MUST 将 `<query>` 作为实际 QA question 执行（不包含 `/prompt:` 前缀）。
 
-  @req:r157 @human
+  @req:r25 @human
   场景: Disabled presets are rejected deterministically
     - 当 preset 存在但 `enabled=false` 时，系统 MUST 拒绝该请求并返回确定性错误。
 
-  @req:r248 @human
+  @req:r26 @human
   场景: Stats persists plain answer text and shared UI state
-    - 当 `stats` preset 生成合法的结构化结果时，系统 MUST 将 `fallback_markdown` 持久化为 assistant `content`，且不依赖 `chat_ui_envelope_enabled`、不在 `content` 中嵌入 envelope（见 chat-ui-envelope r26/r84）；session `sharedState.ui` 的 chart/table mounts 为可选后续能力，未实现时 MUST NOT 伪造。
+    - 当 `stats` preset 生成合法的结构化结果时，系统 MUST 将 `fallback_markdown` 持久化为 assistant `content`，且不依赖 `chat_ui_envelope_enabled`、不在 `content` 中嵌入 envelope（见 chat-ui-envelope r28/r29）；session `sharedState.ui` 的 chart/table mounts 为可选后续能力，未实现时 MUST NOT 伪造。
 
-  @req:r468 @human
+  @req:r27 @human
   场景: QA MUST support stats preset with chart and table JSON
     - QA MUST 支持 stats preset（对齐既有语义）：专用系统提示 + chart/table 结构校验与专用 JSON 解析路径。模型最终输出 MUST 为单个 JSON object（不含 code fence、解释文本或多段输出），且 MUST 满足（snake_case 键，模型输出合约，非 HTTP wire）： - `fallback_markdown: string`（MUST 非空，SHOULD 含 inline citations 如 `[1]`） - `chart: { title, unit?, items:[{ label, value }] }` - `table?: { columns, rows }`；解析/校验失败 MUST 回退默认 QA 文本生成并保持对话可用。MUST NOT 缺失该 preset。
 
-  @req:r468 @human
+  @req:r27 @human
   场景: invalid-json-falls-back-to-text-qa
     - 当模型输出无法被解析/校验为 stats JSON 时，系统 SHALL 回退默认 QA 文本生成并保持对话可用，正常返回 citations/evidence/confidence。
