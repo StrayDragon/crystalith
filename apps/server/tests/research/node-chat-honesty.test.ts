@@ -19,29 +19,49 @@ mock.module('../../src/ai/tools/web-search.ts', () => ({
 type AgentMode = 'reject' | 'no_model' | 'stream';
 const agentModeKey = '__c63ChatAgentMode' as const;
 
+// bun:test 在同一进程顺序运行多个测试文件, mock.module 会跨文件泄漏。
+// 之前长期把 node-agent 整体换成 chat stub(默认 'stream' 也只产 text-delta,
+// proposalFromStructureToolCall 置空), 一旦本文件在别人前面跑, 后续依赖
+// 真实 node-agent 的测试(如 runtime.test 的 node chat 提案断言)就被破坏
+// (CI bun 1.4.0 的调度顺序正是这样红的)。修复: 先捕获真实实现, mock 只在
+// 本文件场景(全局 key 命中)替换 createResearchNodeAgent; proposal 映射与
+// 无 key 场景一律透传真实行为 —— 泄漏出去也是无害的。
+const realNodeAgent = await import('../../src/features/research/node-agent.ts');
+
 mock.module('../../src/features/research/node-agent.ts', () => ({
-  createResearchNodeAgent: async () => {
-    // Default is the benign streaming agent: bun:test shares one process, so
-    // this mock outlives the file — never leave a rejecting default behind.
-    const mode = ((globalThis as Record<symbol | string, unknown>)[agentModeKey] ??
-      'stream') as AgentMode;
-    if (mode === 'no_model') return null;
-    if (mode === 'stream') {
+  createResearchNodeAgent: async (notebookId: number) => {
+    // bun:test 在同一进程顺序运行多个测试文件, mock.module 会跨文件泄漏。
+    // 之前把 node-agent 整体换成 chat stub 且不还原, 一旦本文件先跑, 后续
+    // 依赖真实 node-agent 的测试(runtime.test 的 node chat 提案断言等)就被
+    // 破坏 — CI bun 1.4.0 的调度顺序正是这样红的。修复: 只有当本文件场景
+    // 命中(全局 key 存在)时才替换; 泄漏给其他文件(key 缺失)一律透传真实
+    // node-agent, proposal 映射同样永远保持真实。
+    const hasScenario = Object.prototype.hasOwnProperty.call(
+      globalThis as Record<symbol | string, unknown>,
+      agentModeKey,
+    );
+    const mode = (globalThis as Record<symbol | string, unknown>)[agentModeKey] as
+      | AgentMode
+      | undefined;
+    if (!hasScenario) return realNodeAgent.createResearchNodeAgent(notebookId);
+    if (mode === 'reject') {
       return {
-        stream: async () => ({
-          stream: (async function* () {
-            yield { type: 'text-delta', text: '真实模型回复' };
-          })(),
-        }),
+        stream: async () => {
+          throw new Error('gateway down (c63 mock)');
+        },
       };
     }
+    if (mode === 'no_model') return null;
+    // mode === 'stream'(本文件明确设置): 良性纯文本 agent
     return {
-      stream: async () => {
-        throw new Error('gateway down (c63 mock)');
-      },
+      stream: async () => ({
+        stream: (async function* () {
+          yield { type: 'text-delta', text: '真实模型回复' };
+        })(),
+      }),
     };
   },
-  proposalFromStructureToolCall: () => null,
+  proposalFromStructureToolCall: realNodeAgent.proposalFromStructureToolCall,
 }));
 
 import { ResearchNodeChatStreamEventSchema } from '@crystalith/shared';
