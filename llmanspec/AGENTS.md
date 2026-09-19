@@ -1,4 +1,5 @@
 <!-- LLMANSPEC:START -->
+
 # llmanspec AGENTS.md
 
 此文件由根目录的 `AGENTS.md` 托管块引用。可在此添加项目特定的规则、
@@ -6,6 +7,7 @@
 
 <!-- 在此行下方添加你的规则 -->
 <!-- LLMANSPEC:END -->
+
 # Crystalith Project Rules
 
 This file is referenced by the root `AGENTS.md`. Use it to add project-specific
