@@ -25,30 +25,30 @@
   场景: Conversion follows source lifecycle and epoch rules
     - 任何创建新来源的转换路径 MUST 遵循 source 状态机与 epoch 失效规则。
 
-  @req:summary-qa-error-and-ownership @human
+  @req:r509 @human
   场景: Summary and per-source QA MUST return 400 for not-ready and verify notebook ownership
     - summary 和 per-source QA 端点在 source 未 ready 时 MUST 返回 400（非 404），且 MUST 校验 source 属于 URL 中的 notebook
 
-  @req:qa-to-source-multi-turn @human
+  @req:r510 @human
   场景: qa-to-source MUST accept multi-turn messages list
     - qa-to-source 转换 MUST 接受 messages: list[QAMessage] 多轮历史并格式化为完整 transcript 后创建 source（对齐既有语义）；MAY 另接受单轮 {question, answer}。
 
-  @req:tag-binding-must-return-per-item-diagnostics @human
+  @req:r511 @human
   场景: Tag assign/remove MUST return per-item results with errorCode
     - tag 批量 assign/remove MUST 返回可逐项判定成功/失败的结果；逐项结果形状与缺失/跨 notebook source 的诊断语义 MUST 遵循 source-ingestion-management-and-tags tag-binding-response-and-ownership 与 r268（canonical）。
 
-  @req:convert-embedding-no-ready-on-fail @human
+  @req:r512 @human
   场景: Source conversion MUST NOT mark ready when embedding fails
     - QA-to-source 和 session convert-to-source 的 embedding 失败处理遵循 source-ingestion-core r2_sync（canonical）：MUST 标记 source 为 failed 而非 ready。
 
-  @req:per-source-qa-vector-search @human
+  @req:r513 @human
   场景: Per-source QA MUST use vector retrieval
     - per-source QA MUST 通过 embed question + scoped vector search 检索相关 chunk；结果 MUST 按相关度排序返回，MUST NOT 以固定截断数量替代检索排序。
 
-  @req:summary-post-persists-auto-summary @human
+  @req:r514 @human
   场景: POST summary MUST persist autoSummary
     - POST /v2/notebooks/:nid/sources/:sid/summary MUST 对 ready 来源生成摘要结构，MUST 将结果 merge 写入 sources.metadata.autoSummary，并 MUST 返回与有缓存时 GET 相同形状的 SourceSummary。
 
-  @req:summary-async-after-ready @human
+  @req:r515 @human
   场景: Ingest MUST async-pregenerate summary after ready
     - 来源 ingest 成功标记 ready 后，系统 SHOULD 异步预生成并写入 metadata.autoSummary；预生成失败 MUST NOT 将 source 标为 failed，也 MUST NOT 阻塞 ingest 成功响应。

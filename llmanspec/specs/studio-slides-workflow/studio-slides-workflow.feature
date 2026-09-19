@@ -37,30 +37,30 @@
   场景: Slides UI availability follows tools contract
     - Studio slides 相关 UI（工具卡片、dialog、入口动作）MUST 以 `/v2/workspace/tools` 返回的 `SLIDES` tool 作为可用性唯一来源，不得依赖硬编码假设 slides 默认存在。
 
-  @req:studio-latest-draft @human
+  @req:r522 @human
   场景: Studio MUST provide drafts/latest endpoint
     - studio MUST 提供 GET 端点返回 notebook 下按 updatedAt desc 的最新 draft，MUST NOT 缺失该端点
 
-  @req:studio-serialize-must-include-output-id-and-config @human
+  @req:r523 @human
   场景: Studio slide serialization MUST include outputId and generationConfig
     - studio slide 序列化结果 MUST 返回 outputId（可为 null）与 generationConfig 字段（camelCase wire）；前端读 outputId 做 slide→output 跳转、读 generationConfig 复用配置
 
-  @req:studio-sse-done-payload-must-carry-trace-id @human
+  @req:r524 @human
   场景: Studio SSE done event MUST carry traceId and slideId (not full slide)
     - studio SSE 的 done 事件 payload MUST 为 {traceId, slideId}（camelCase），MUST NOT 直接序列化整个 slide；且所有 SSE 事件 SHALL 携带 traceId 以支持关联/可观测性；outline/markdown 各生成阶段前 SHALL 发 toolcall 事件（对齐既有语义）
 
-  @req:studio-generation-config-must-expand-to-ranges @human
+  @req:r525 @human
   场景: Studio generation MUST interpret generationConfig with concrete ranges not raw tokens
     - studio outline 与 markdown 生成 MUST 解读 slide.generationConfig 的 quantity/density/audience/tone/structure/language/themePreset 字段并展开为具体区间与本地化提示；quantity/density 的区间映射 MUST 可配置（默认对齐既有语义）；preference（quality/speed）对检索参数（topK/minScore）的调节见 generation-core r126/r162（canonical）。MUST NOT 把原始字段 id（如 'standard'）直接拼进 prompt 而不做展开。
 
-  @req:studio-frontmatter-six-key-shape @human
+  @req:r526 @human
   场景: Studio frontmatter MUST use the six-key template shape with override support
     - studio 生成的 markdown frontmatter MUST 为 6-key 结构（theme 恒为 default、colorSchema、fonts{sans,serif,mono}、transition、background、class），对齐既有模板语义；当 generationConfig.frontmatter 非空时，MUST 以该字符串作为 frontmatter body 绕过预设，仅在缺 title: 且存在标题时补一行。预设路径（generationConfig.frontmatter 为空）MUST NOT 省略 colorSchema/class/serif/mono 字段；override 模式以用户提供的字符串为准，不适用该补全约束。
 
-  @req:slides-preview-availability-determined @human
+  @req:r527 @human
   场景: SLIDES availability is determined by config and probe, not hardcoded
     - server MUST 依据「active slides workflow 插件已加载 ∧ 预览进程探测可达」判定 SLIDES 可用性；探测目标与超时 MUST 经 config schema（slides_preview.base_url / probe_timeout_ms，env 覆盖 CL_SLIDEV_BASE_URL）声明，探测结果 MUST 短 TTL 缓存且失败 MUST 降级为结构化诊断而非异常。`/v2/workspace/tools` MUST 将结果填入 `diagnostics.slides`（available/message/hint/activePluginId/engine/errorCode），SLIDES tool 的 `enabled` MUST 反映该可用性；MUST NOT 硬编码 enabled=true。不可用时 errorCode MUST 取稳定值（SLIDES_PREVIEW_UNREACHABLE / SLIDES_PLUGIN_MISSING / SLIDES_PREVIEW_DISABLED）且 hint MUST 可执行。
 
-  @req:slides-ui-removes-unavailable-entry @human
+  @req:r528 @human
   场景: Studio generate entry removes SLIDES when unavailable
     - 当 `/v2/workspace/tools` 的 `diagnostics.slides.available === false` 时，Studio 生成入口（工具弹层）MUST 移除 SLIDES 卡片；不可用原因与恢复提示 MUST 仍可经诊断面板（diagnostics.slides）呈现。MUST NOT 影响其余输出类型工具的渲染。

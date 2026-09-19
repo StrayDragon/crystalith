@@ -45,6 +45,6 @@
   场景: Remote CI status checks are optional
     - 仓库 MAY 提供 GitHub Actions 等远程 CI；在未提供 workflows 时，贡献者 MUST 以本地 just qa 作为 PR 自检门禁（PR 模板 SHALL 要求勾选本地 just qa），MUST NOT 假定 push/PR 上已有强制 CI 状态检查。
 
-  @req:r_bdd_optional @human
+  @req:r497 @human
   场景: BDD and type-aware lint are out of primary gate
     - just test-bdd 与 just type-aware-lint MUST NOT 作为 just qa 的硬性组成部分；BDD 为 CRUD 子集可选回归，type-aware lint 为 advisory。本条为该门禁组成的 canonical 约束（bdd-test-harness r120/r_integration_tests 引用此处）。

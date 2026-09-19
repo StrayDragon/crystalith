@@ -33,10 +33,10 @@
   场景: Extractor plugins provide structured errors
     - 提取器插件在失败时 MUST 抛出结构化错误（至少包含 errorCode/message，且可选包含 extractor/url），以便 core 能区分“可重试失败/不可用/配置缺失”并做出一致的降级与提示。
 
-  @req:extractors-full-response @human
+  @req:r531 @human
   场景: GET extractors MUST return full ExtractorsListResponse
     - GET /extractors MUST 返回完整 ExtractorsListResponse（每提取器 available/displayName/priority/requiresApiKey/recoveryHint + defaultExtractor + fallbackEnabled），MUST NOT 只返回存储的策略行
 
-  @req:extractor-url-patterns @human
+  @req:r532 @human
   场景: Extractor plugins MAY declare urlPatterns for UI hints
     - 提取器插件 MAY 声明可选 `urlPatterns`（regex source 字符串数组）；系统 SHALL 在 extractors 元数据响应中透出该字段；`urlPatterns` 仅作 UI 预选提示，MUST NOT 改变提取执行链的 fall-through 语义（见 r55）。

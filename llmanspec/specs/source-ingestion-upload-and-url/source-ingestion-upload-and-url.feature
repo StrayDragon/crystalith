@@ -37,7 +37,7 @@
   场景: Deterministic input errors do not create source rows
     - 空文件或无可索引内容等确定性输入错误 MUST 返回 400 且不创建来源。
 
-  @req:r_upload_size_limit @human
+  @req:r516 @human
   场景: Oversized uploads are rejected deterministically with 413
     - 当 HTTP guardrails 启用时，上传接口 MUST 对单次上传施加配置项 `upload_max_bytes` 限制；超过上限 MUST 返回 413，且 MUST 不创建来源记录。未配置时的默认值 MUST 来自 config schema。
 
@@ -45,7 +45,7 @@
   场景: URL from-source supports link and fetch modes
     - `from-url` MUST 支持 `link|fetch`，`link` 不抓网页正文，`fetch` 抓取并分块。
 
-  @req:r_ssrf @human
+  @req:r517 @human
   场景: Fetch applies SSRF validation before network calls
     - `fetch` MUST 在请求前做 SSRF 校验（含逐跳重定向重验）并拒绝高风险目标；SSRF 策略 MUST 从配置解析 hostAllowlist/domainAllowlist/cidrAllowlist/allowlist_only，配置 allowlist_only 时非白名单主机 MUST 被拒绝；无配置时 MUST 回退默认姿态（拒绝私网与元数据 IP）。
 
@@ -61,10 +61,10 @@
   场景: Extractor selection errors are diagnosable
     - fetch 模式显式指定 extractor 的尝试顺序与不可用时的 fallback/错误语义见 web-extractor-plugins r113/r217（canonical）；无论回退还是失败，系统 MUST 输出可诊断信息说明发生了什么与如何恢复。
 
-  @req:sources-search-web @human
+  @req:r518 @human
   场景: Sources search MUST perform real web search
     - POST /sources/search MUST 调用 web search 引擎（SearXNG）返回真实 web 结果，MUST NOT 返回 notebook 内向量匹配作为 placeholder；搜索引擎不可用或调用失败时 MUST 返回 status='service_error' 且 message MUST 为用户可读中文文案，MUST NOT 伪装为 'no_results' 或返回空成功响应；'no_results' MUST 仅表示引擎正常应答且零命中。前端 MUST 将 service_error 呈现为可与「无命中」区分的错误态（含重试入口或重试指引），MUST NOT 将其渲染为普通空结果提示。
 
-  @req:sources-dedup-config-gated @human
+  @req:r519 @human
   场景: Dedup MUST be gated by config
     - sources 去重 MUST 受 config source_ingestion.dedup.enabled 门控，为 false 时 MUST 跳过 dedup 直接创建新 source

@@ -81,7 +81,7 @@ shared 启用 zod-extend；高频 schema 补注解；其余可增量。
 
 无代码 SSOT 的 capability：默认 **删除**（或用户明确要求归档）。  
 混有已落地条款的：精简为已实现 req，删愿景状态机条款。  
-`llman sdd validate --specs --strict` 验收。
+`llman-sdd validate --specs --strict` 验收。
 
 ### F — 神文件拆分（行为不变）
 

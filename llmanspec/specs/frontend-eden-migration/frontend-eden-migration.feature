@@ -5,15 +5,15 @@
 
 功能: frontend-eden-migration
 
-  @req:fm2 @human
+  @req:r473 @human
   场景: Streaming Endpoints
     - Streaming endpoints MUST 使用 fetch（或等价）手动解析 SSE，且 URL MUST 使用 /v2/*；MUST NOT 引用已废弃的 /v1/* API 前缀。
 
-  @req:frontend-sources-must-pass-notebook-id-query @human
+  @req:r474 @human
   场景: Frontend sources single-item calls MUST pass notebookId query for ownership check
     - 前端调用 sources 单 source 路由（GET/DELETE/re-embed/chunks）MUST 使用嵌套 canonical 路径 `/v2/notebooks/:nid/sources/...` 携带归属上下文（`:nid` 取自前端会话中当前激活 notebook），MUST NOT 附加 notebookId query 平行参数；归属校验语义见 workspace-api-contract nested-path-nid-is-ownership-ssot（canonical）。
 
-  @req:frontend-error-envelope-must-use-shared-parser @human
+  @req:r475 @human
   场景: Frontend eden error handling MUST use the shared error parser
     - 前端 eden 调用点的错误处理 MUST 经共享的错误解析入口解析 ErrorEnvelope，MUST NOT 在各调用点 inline cast 导致漂移。
 

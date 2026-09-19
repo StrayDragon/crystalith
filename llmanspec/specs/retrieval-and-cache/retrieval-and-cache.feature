@@ -41,18 +41,18 @@
   场景: Epoch cache wired to strategies and source mutations
     - epoch 缓存组件 MUST 接线到各检索策略的 retrieve 入口。源增删改 MUST bump sources_epoch，向量重嵌 MUST bump vector_epoch。缓存 key MUST 包含 epoch 版本。MUST NOT 零调用（死代码）。
 
-  @req:studio-rag-through-registry @human
+  @req:r498 @human
   场景: Studio retrieval MUST go through the unified RAG registry
     - studio 生成检索 MUST 经统一 RAG registry 入口走 embed/fusion/diversity 路径，MUST NOT 用原始文本 slice 截断（对齐 qa/outputs 的检索路径一致性）
 
-  @req:qa-retrieval-must-be-deterministic @human
+  @req:r499 @human
   场景: QA retrieval MUST be deterministic single-embed (no multi-query expansion)
     - QA 检索 MUST 使用确定性单次 embed 检索路径（对齐既有语义），MUST NOT 在 QA 检索路径硬编码 multiQuery:true。
 
-  @req:qa-retrieval-must-be-deterministic @human
+  @req:r499 @human
   场景: deterministic-retrieval
     - 当同一 question、同一组 sourceIds 与同一 embedding 下重复执行 QA 检索时，系统 SHALL 产出完全一致的结果（无 seed 扩张、无 RRF 归一化）。
 
-  @req:retrieval-source-scoping @human
+  @req:r500 @human
   场景: QA and vector search MUST support sourceIds filtering
     - QA 检索与向量 KNN MUST 支持通过 sourceIds 参数将检索范围限定到指定 source 子集；当 sourceIds 缺失或为空时 QA MUST 跳过向量检索（不得回退为全库检索）；minScore 阈值作为证据门控 MUST 可配置。
