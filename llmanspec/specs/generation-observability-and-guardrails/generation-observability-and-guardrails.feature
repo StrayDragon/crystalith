@@ -33,10 +33,10 @@
   场景: Background workers shutdown gracefully
     - 后台任务队列 worker MUST 支持优雅停机，并等待任务到达可接受的终态。
 
-  @req:retry-honors-retry-after @human
+  @req:r485 @human
   场景: Retry MUST honor Retry-After header and include full retryable codes
     - AI 调用重试 MUST 解析并遵守响应的 Retry-After 头（命中时按其指示等待而非使用指数退避），且可重试状态码集合 MUST 包含 408/409/425/429/500/502/503/504
 
-  @req:retry-timeout-budget @human
+  @req:r486 @human
   场景: Retry MUST enforce timeout budget and max delay
     - AI 调用重试 MUST 实施 total timeout 预算和 max delay 上限（退避延迟不超过 max_delay、总时间不超过 total timeout），避免无限退避。本条与 retry-honors-retry-after 共为 AI 调用重试策略的 canonical 约束（职责承载见 architecture-plugin-and-agent r247）。

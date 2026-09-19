@@ -1,5 +1,4 @@
 <!-- LLMANSPEC:START -->
-
 # LLMAN 规范驱动开发
 
 本项目使用 llman SDD。阅读 `llmanspec/config.yaml` 了解 SDD 命令行为配置，以及 `llmanspec/AGENTS.md` 获取项目附加规则。
@@ -8,7 +7,7 @@
 
 使用 `/llman-sdd-explore` 开始，然后按照 pipeline：`/llman-sdd-propose` → `/llman-sdd-apply` → `/llman-sdd-verify` → `/llman-sdd-archive`。
 
-保留此托管块，便于 `llman sdd init --update` 刷新。
+保留此托管块，便于 `llman-sdd init --update` 刷新。
 <!-- LLMANSPEC:END -->
 
 # Crystalith v2 — AI Agent Guidelines
@@ -205,7 +204,7 @@ Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `ope
 
 ## v2 Workflow
 
-1. Run `llman sdd list` for active change status
+1. Run `llman-sdd list` for active change status
 2. Implement in `apps/server/` / `apps/web` / `packages/shared/`
 3. See package docs: `apps/server/AGENTS.md`, `apps/web/AGENTS.md`, `config/AGENTS.md`
 

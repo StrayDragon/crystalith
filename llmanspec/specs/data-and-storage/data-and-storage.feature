@@ -25,10 +25,10 @@
   场景: Schema types exported for frontend
     - Drizzle schema 导出的 TS 类型 ($inferSelect/$inferInsert) MUST 通过 packages/shared 暴露给前端 eden RPC 消费，且与 server 侧类型一致。
 
-  @req:r_storage_layer @human
+  @req:r471 @human
   场景: Content storage abstraction
     - 系统 MUST 提供内容存储抽象（本地文件系统实现）的写入与读取操作以持久化原始上传字节 使 document_parse 任务可重新解析 单二进制架构下 MUST 使用本地文件系统路径
 
-  @req:r_document_parse @human
+  @req:r472 @human
   场景: document_parse task wired
     - 任务队列 worker MUST 实现 document_parse 任务类型 从存储读取原始字节 经 parse 与 chunk 与 embed 完整流程并写入向量库 不再抛 stub 错误

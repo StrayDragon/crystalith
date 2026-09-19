@@ -25,10 +25,10 @@
   场景: 转换请求与结果元数据必须显式表达目标类型与映射摘要
     - 系统 MUST 在转换请求与结果元数据中显式表达目标类型；用户执行转换前查看影响时 SHALL 能获得该 route 的保留/重建映射摘要用于 UI 展示。
 
-  @req:session-get-single @human
+  @req:r469 @human
   场景: API MUST provide GET single session
     - 系统 MUST 提供 GET 单个 session 端点返回完整 session 信息
 
-  @req:session-convert-citation-chunks @human
+  @req:r470 @human
   场景: Session convert-to-output MUST collect chunkIds from citations
     - session convert-to-output MUST 从消息 citations 中收集 chunkIds 并附加到创建的 output

@@ -33,11 +33,11 @@
   场景: Optional source dedup does not silently drop data
     - 系统 MAY 支持来源去重，但命中去重时 MUST 不得静默丢弃用户导入请求，MUST 提供「复用既有来源」或「仍创建新来源」的明确选择（或等价机制）。
 
-  @req:sources-reembed-requires-failed @human
+  @req:r505 @human
   场景: Re-embed MUST require FAILED status
     - POST /sources/:id/re-embed MUST 校验 source 状态为 failed，非 failed MUST 返回 400
 
-  @req:sources-reembed-requires-failed @executable
+  @req:r505 @executable
   场景: reembed-ready-source
     假如 一个空白笔记本
     而且 笔记本中有一篇来源"notes.md"
@@ -47,26 +47,26 @@
       """
     那么 响应状态码为400
 
-  @req:tag-binding-response-and-ownership @human
+  @req:r506 @human
   场景: Tag binding MUST return stable batch result shape and verify ownership
     - tag binding MUST 返回 {count, results:[SourceBatchItemResult]} 结构，且 DELETE binding MUST 校验 source 属于该 notebook，跨 notebook 时 MUST 返回 404（归属 SSOT 见 workspace-api-contract nested-path-nid-is-ownership-ssot）。本条为 tag 绑定响应与归属校验的 canonical 约束。
 
-  @req:tags-uniqueness-and-ownership @human
+  @req:r507 @human
   场景: Tag operations MUST enforce uniqueness and notebook ownership
     - source tag 的创建和更新 MUST 强制名称唯一性（同一 notebook 下大小写不敏感，冲突返回 409），所有 tag 操作 MUST 校验 tag 属于指定 notebook
 
-  @req:tags-uniqueness-and-ownership @executable
+  @req:r507 @executable
   场景: duplicate-name
     假如 一个空白笔记本
     而且 已存在来源标签"Research"
     当 创建一个名为"research"的来源标签
     那么 响应状态码为409
 
-  @req:tags-assign-idempotent @human
+  @req:r508 @human
   场景: Tag assign and remove MUST be idempotent
     - tag 的 assign 和 remove 操作 MUST 验证 source 存在且具备幂等性
 
-  @req:tags-assign-idempotent @executable
+  @req:r508 @executable
   场景: reassign
     假如 一个空白笔记本
     而且 笔记本中有一篇来源"notes.md"

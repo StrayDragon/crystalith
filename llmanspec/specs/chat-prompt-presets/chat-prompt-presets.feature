@@ -33,10 +33,10 @@
   场景: Stats persists plain answer text and shared UI state
     - 当 `stats` preset 生成合法的结构化结果时，系统 MUST 将 `fallback_markdown` 持久化为 assistant `content`，且不依赖 `chat_ui_envelope_enabled`、不在 `content` 中嵌入 envelope（见 chat-ui-envelope r26/r84）；session `sharedState.ui` 的 chart/table mounts 为可选后续能力，未实现时 MUST NOT 伪造。
 
-  @req:preset-stats @human
+  @req:r468 @human
   场景: QA MUST support stats preset with chart and table JSON
     - QA MUST 支持 stats preset（对齐既有语义）：专用系统提示 + chart/table 结构校验与专用 JSON 解析路径。模型最终输出 MUST 为单个 JSON object（不含 code fence、解释文本或多段输出），且 MUST 满足（snake_case 键，模型输出合约，非 HTTP wire）： - `fallback_markdown: string`（MUST 非空，SHOULD 含 inline citations 如 `[1]`） - `chart: { title, unit?, items:[{ label, value }] }` - `table?: { columns, rows }`；解析/校验失败 MUST 回退默认 QA 文本生成并保持对话可用。MUST NOT 缺失该 preset。
 
-  @req:preset-stats @human
+  @req:r468 @human
   场景: invalid-json-falls-back-to-text-qa
     - 当模型输出无法被解析/校验为 stats JSON 时，系统 SHALL 回退默认 QA 文本生成并保持对话可用，正常返回 citations/evidence/confidence。

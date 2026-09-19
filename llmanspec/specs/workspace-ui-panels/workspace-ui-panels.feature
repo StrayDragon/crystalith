@@ -57,34 +57,34 @@
   场景: Citation UI distinguishes source count from chunk count
     - Chat 引用入口与引用详情弹层 MUST 同时展示唯一来源数与片段（citation/chunk）数，并支持按来源分组或过滤。
 
-  @req:sources-bar-tab-model @human
+  @req:r557 @human
   场景: Sources bar MUST use tabs (all/selected/history) with cross-tab enforcement
     - Sources 栏 MUST 使用 all/selected/history 三个 tab（默认 all），tab 间状态联动 MUST 遵守：拖动/添加/移除来源只允许在 all tab 发生；selected 计数 MUST 基于 `selectedSourceIds` 动态计算；history 仅记录最近 upload/import/query 动作且 MUST NOT 作为选择来源的渠道，将历史条目添加回来源栏 SHOULD 支持（该动作仅更新来源栏视图，不触发后端搜索）；sources 列表滚动 MUST 由独立 scroll 状态管理。
 
-  @req:frontend-inline-error-boundary @human
+  @req:r558 @human
   场景: Frontend MUST provide inline error boundary
     - 前端 MUST 提供内联错误边界（inline error boundary）渲染组件内错误并允许重试，MUST NOT 白屏。
 
-  @req:frontend-message-status-from-fetcher @human
+  @req:r559 @human
   场景: Frontend MUST derive message status from fetcher/session snapshot
     - 前端消息气泡状态（pending/streaming/done/error）MUST 派生自 fetcher/session snapshot 而非本地临时布尔标记，以保证多 tab 一致性与重连语义。
 
-  @req:frontend-assistant-markdown-streaming @human
+  @req:r560 @human
   场景: Chat panel renders assistant content as streaming-safe markdown
     - Chat 面板 SHALL 以流式安全的 markdown 渲染 assistant `message.content`（至少覆盖 GFM 的标题、列表、代码块、表格与引用块），流式中间态（未闭合语法）MUST NOT 破版或以原始围栏字符闪现；user 消息 MUST 保持纯文本渲染。渲染器替换 MUST NOT 改变消息 wire 协议与 sharedState mounts 契约。
 
-  @req:workspace-sources-bar-gating @human
+  @req:r561 @human
   场景: Sources workflows are gated by ready/error states with actionable recovery
     - Sources 栏内每个来源条目 MUST 按状态展示：`ready` 正常（含 source 显示信息）、`failed` 错误信息与可执行恢复提示、`loading`（`processing` 状态的展示别名，等待 embedding/解析完成）旋转指示器且不阻塞其它来源的操作；来源列表条目 MUST 提供“移除”与“重新生成摘要”等操作，且仅当操作真实可用时呈现。
 
-  @req:workspace-sources-panel-error-snapshot @human
+  @req:r562 @human
   场景: Sources panel MUST expose error snapshot at panel level
     - Sources 面板 MUST 在面板层提供错误快照：某来源错误时面板头部或摘要区 SHALL 显示该来源失败总数/错误消息摘要，而不是仅依赖列表项上的小图标。
 
-  @req:workspace-sources-drag-drop-add @human
+  @req:r563 @human
   场景: Sources drag-and-drop MUST add to source list without upload
     - 将文件拖入 Sources 栏/面板非上传区时，系统 MUST 仅把该文件加入来源列表（等待后续上传或转换为可检索来源），MUST NOT 自动触发上传或解析。
 
-  @req:url-import-extractor-hints @human
+  @req:r564 @human
   场景: URL import dialog hints extractors from pasted URL in fetch mode
     - URL 导入对话框在 fetch（获取内容）模式 SHALL 对用户粘贴的 URL 本地匹配 extractors 元数据中的 `urlPatterns`；命中时 SHALL 呈现推荐提取器并默认预选，用户 MUST 能取消或恢复勾选；未命中或未选择时 MUST 以 `extractor: null` 走既有默认提取链；link 模式 MUST NOT 展示任何提取器选择 UI。

@@ -61,6 +61,6 @@
   场景: Command palette is discoverable and includes core actions
     - Workspace MUST 提供可发现的命令面板（例如 Ctrl+K）并包含覆盖核心流程的最小动作集；其中与可选能力相关的动作 MUST 随运行时 capability 动态变化。
 
-  @req:workspace-topbar-e1-search-panel @human
+  @req:r556 @human
   场景: Top bar MUST open E1 anchored search panel
     - 用户点击或聚焦顶栏搜索/调研输入时，Workspace MUST 打开锚定于顶栏的宽幅面板（E1）：面板层级与关闭策略 MUST 走统一 Layer（Esc 与遮罩可关闭）；MUST NOT 使用硬编码 z-index。

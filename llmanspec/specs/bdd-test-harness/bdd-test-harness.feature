@@ -17,6 +17,6 @@
   场景: BDD 为可选回归入口
     - MUST 提供 just test-bdd（或等价 BDD 运行命令），作为已对齐 CRUD 子集的可选回归入口；在 skip 集合显著缩小前，BDD 不进入 just qa / pre-commit 硬性门禁——门禁组成的 canonical 归属见 quality-and-regression r_bdd_optional。
 
-  @req:r_integration_tests @human
+  @req:r467 @human
   场景: Cross-module integration tests exist
     - 系统 MUST 在 server 集成测试目录提供关键路径集成覆盖；该目录进入 just test 与 just qa 门禁的归属见 quality-and-regression r99/r172（canonical）。

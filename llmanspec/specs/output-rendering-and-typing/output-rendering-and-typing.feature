@@ -29,26 +29,26 @@
   场景: unsupported-or-broken-bundle-falls-back-safely
     - 当 `frontendBundle` 的 `apiVersion` 不受支持或 bundle 加载/导出解析失败时，系统 MUST 回退到 `renderDescriptor` 驱动的通用渲染器（若存在），并以 Raw JSON 作为最终安全回退。
 
-  @req:outputs-response-contract @human
+  @req:r491 @human
   场景: POST outputs MUST return OutputRead contract
     - POST /v2/notebooks/:nid/outputs MUST 返回 camelCase OutputRead 实体（id/notebookId/type/prompt/chunkIds/content/createdAt/updatedAt），与 packages/shared Zod wire 契约一致；MUST NOT 返回 snake_case 或裸 PipelineResult；扁平 /v2/outputs 的登记禁令见 openapi-and-client-generation openapi-documents-nested-canonical-paths（canonical）
 
-  @req:outputs-export-fields @human
+  @req:r492 @human
   场景: Export JSON citations and sources MUST match camelCase wire
     - GET /outputs/:id/export?format=json 的 citations MUST 包含 chunkIndex/pageNumber/paragraphIndex/score；sources meta 字段集见 workspace-api-contract qa-export-endpoint（canonical）
 
-  @req:outputs-error-mapping @human
+  @req:r493 @human
   场景: Output generation errors MUST map to granular HTTP codes
     - 输出生成错误 MUST 映射到细分 HTTP 状态码：model 不可用→503、schema 校验失败→422、值错误→400，MUST NOT 统一返回 500
 
-  @req:outputs-slides-must-be-rejected-at-outputs-endpoint @human
+  @req:r494 @human
   场景: Outputs endpoint MUST reject SLIDES type with 400 (use studio endpoints)
     - outputs 生成端点 MUST 对 type=SLIDES 返回 400 并提示使用 studio slides 端点（对齐既有语义），MUST NOT 把 SLIDES 路由进通用 outputs pipeline。
 
-  @req:outputs-export-format @human
+  @req:r495 @human
   场景: Export MUST support markdown and json formats
     - outputs 导出端点 MUST 支持 format=markdown 和 format=json 两种格式，markdown 路径 MUST 按输出类型渲染为可读 markdown
 
-  @req:outputs-convert-type-aware @human
+  @req:r496 @human
   场景: Convert-to-source MUST use type-aware rendering
     - outputs convert-to-source MUST 使用逐类型 markdown 渲染而非原始 JSON 序列化，并按段落分块嵌入

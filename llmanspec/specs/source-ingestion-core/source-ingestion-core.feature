@@ -29,11 +29,11 @@
   场景: Core-only ingestion profile is minimal and explicit
     - 在 core-only 安装形态下，系统 MUST 至少支持 txt/md/markdown/csv 的 ingestion；其他格式 MUST 被视为不可用增强能力并以稳定的「不支持」语义拒绝（需通过插件安装/启用提供）。
 
-  @req:r2_sync @human
+  @req:r503 @human
   场景: Ready MUST follow synchronous embedding
     - 系统 MUST 在标记来源 ready 之前同步完成向量写入，不得使用 fire-and-forget embedding（本条约束 ready 之前的同步时序语义）；embedding 失败时 MUST 将来源标记为 failed 而非 ready。
 
-  @req:csv-parser-markdown-table @human
+  @req:r504 @human
   场景: CSV parser MUST produce markdown-table chunks with row metadata
     - CSV 解析 MUST 使用专用 CSV 解析器产出 markdown-table 格式分块（每块行数与单元格截断上限由 config schema 给出），并在 chunk metadata 中记录 csv_row_start/csv_row_end，MUST NOT 把 CSV 当纯文本 pass-through；markdown-table 单元格中的 `|` 与换行 MUST 转义，截断 MUST 以 … 省略号表示。本条为 CSV 解析契约（含单元格转义）的 canonical 约束。
 
