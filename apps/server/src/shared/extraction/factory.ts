@@ -3,7 +3,7 @@
 //
 // Since plugin-interface-ssot (r7), the extractor implementations register as
 // built-in `CrystalithPlugin`s (kind: 'extractor'); this module keeps only the
-// kind-level orchestration required by web-extractor-plugins r55: ordered
+// kind-level orchestration required by web-extractor-plugins r331: ordered
 // fallback, availability gating and the metadata/availability report.
 // Wire extractor names ('readability' | 'jina' | 'firecrawl') are derived from
 // plugin ids by stripping the `extractor-` prefix.

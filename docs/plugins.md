@@ -1,6 +1,6 @@
 # Crystalith 插件作者指引（v1，npm 分发）
 
-> 宿主契约见 `llmanspec/specs/architecture-plugin-and-agent`（r7/r11）；
+> 宿主契约见 `llmanspec/specs/architecture-plugin-and-agent`（r16/r17）；
 > 行为级契约按 kind 细化：extractor 见 `web-extractor-plugins`，
 > slides workflow 见 `slides-workflow-plugins`。
 

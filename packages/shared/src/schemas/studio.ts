@@ -111,7 +111,7 @@ export type StudioMarkdownPut = z.infer<typeof StudioMarkdownPutSchema>;
 
 // ---------------------------------------------------------------------------
 // c56: Slide generation config + config_schema (v1 PluginConfigSchema parity).
-// Drives the workspace /tools config_schema contract (workspace-api-contract r20)
+// Drives the workspace /tools config_schema contract (workspace-api-contract r361)
 // and studio generation prompt/retrieval interpretation.
 // ---------------------------------------------------------------------------
 
@@ -162,7 +162,7 @@ export type PreviewDescriptor = z.infer<typeof PreviewDescriptorSchema>;
 /**
  * v1 render_types.py PluginConfigSchema — the shape returned by
  * /workspace/tools[].config_schema and /workspace/tools/:id/config for SLIDES.
- * Drives the frontend config UI directly (workspace-api-contract r20).
+ * Drives the frontend config UI directly (workspace-api-contract r361).
  */
 export const SlidesConfigSchemaSchema = z
   .object({

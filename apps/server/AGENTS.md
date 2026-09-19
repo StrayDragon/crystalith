@@ -51,7 +51,7 @@ From repo root:
 - AI: AI SDK v7 first（`generateText`/`streamText`/`ToolLoopAgent`/`Output`）；其它编排框架须在 SDD design 论证后引入，且不得另立 ResearchRun 平行过程态
 - Config: `config/app.yaml`；API keys 走 `CL_*` env 或 gitignored `.env`（see `config/AGENTS.md`；legacy `config/secret.env` 机制已移除，加载即抛错）
 - **Outbound HTTP (non-LLM)**: use `shared/net/outbound-fetch.ts` (`outboundFetch`) — or helpers that wrap it (`fetchWithRedirectGuard`). Do **not** bare-`fetch` search / URL fetch / web extractors. AI SDK providers stay direct unless a future per-provider proxy lands. Global switch: `proxy_settings` in `config/app.yaml`.
-- Research prune closure（`collectResearchPruneClosure` / product B）须与 Web Lab `research-lab/model/pruneClosure.collectPruneClosure` 同步；规格见 `llmanspec/specs/deep-research-runtime`（r316 剪枝语义）
+- Research prune closure（`collectResearchPruneClosure` / product B）须与 Web Lab `research-lab/model/pruneClosure.collectPruneClosure` 同步；规格见 `llmanspec/specs/deep-research-runtime`（r69 剪枝语义）
 
 ## Progress
 

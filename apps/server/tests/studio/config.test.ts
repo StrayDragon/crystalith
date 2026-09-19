@@ -141,7 +141,7 @@ describe('c56: preference → retrieval tuning (v1 SLIDES tuning table)', () => 
   });
 });
 
-describe('c56: buildSlidesConfigSchema completeness (workspace-api-contract r20)', () => {
+describe('c56: buildSlidesConfigSchema completeness (workspace-api-contract r361)', () => {
   const schema = buildSlidesConfigSchema();
 
   it('returns all 7 options arrays non-empty', () => {

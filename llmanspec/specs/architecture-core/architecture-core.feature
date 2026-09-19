@@ -29,18 +29,18 @@
   场景: Workspace state uses sliced Zustand stores
     - 复杂工作区状态 MUST 按 slice 组织并通过 selector 访问，避免全局重渲染与循环依赖。
 
-  @req:r465 @human
+  @req:r7 @human
   场景: Non-LLM outbound HTTP uses unified proxy-aware client
     - 非 LLM 出站 HTTP（搜索、URL 抓取、网页抽取、同类中间件）MUST 经统一代理感知的出站客户端（outboundFetch 或等价 helper）发出，并读取全局 `proxy_settings`：enabled=false 时 MUST 直连；enabled=true 时 MUST 对未命中 no_proxy 的目标注入 HTTP(S) 代理。socks5_url MAY 保留于配置但本阶段 MUST 忽略。MUST NOT 在这些路径直接调用全局 `fetch` 绕过代理合约。AI SDK / LLM / embedding provider 路径本阶段不受此约束。
 
-  @req:r465 @human
+  @req:r7 @human
   场景: no_proxy_skips
     - 当 proxy_settings.enabled=true 且目标命中 no_proxy（如 localhost）时，出站客户端 SHALL 对该目标直连，不注入代理。
 
-  @req:r465 @human
+  @req:r7 @human
   场景: https_uses_https_url
     - 当 proxy_settings.enabled=true 且 https_url 非空时，对 HTTPS 目标（如 https://api.firecrawl.dev/v2/scrape）的请求 SHALL 使用该 https_url 作为代理。
 
-  @req:r466 @human
+  @req:r8 @human
   场景: Unified TaskQueue HTTP runtime MUST stay retired
     - 系统 MUST NOT 再暴露 /v2/tasks*（含 notebook tasks 列表与 cancel）或恢复已删除的跨域 TaskQueue 作为生成/导入默认底座，除非新产品需求经 SDD 重新提案；对已删除的 /v2/tasks 或 /v2/notebooks/:nid/tasks 的请求 SHALL 返回 404（或等价未挂载）。研究/幻灯片等长任务 MUST 继续使用其域内进度与取消语义（如 SSE），不得假定存在统一 tasks 表轮询 API。

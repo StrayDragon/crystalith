@@ -1,7 +1,7 @@
 import type { SlidesConfigSchema } from '@crystalith/shared';
 // Built-in slides workflow plugin (kind: 'slides-workflow') — the official
 // reference implementation backed by the Slidev integration. Id follows the
-// stable naming required by slides-workflow-plugins r139.
+// stable naming required by slides-workflow-plugins r238.
 // The config tables/resolvers in features/studio/config.ts are this plugin's
 // implementation; /workspace/tools reads the config schema through the
 // registry instead of importing the table module directly (r7).

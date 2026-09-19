@@ -5,46 +5,46 @@
 
 功能: typed-generation-framework
 
-  @req:r54 @human
+  @req:r322 @human
   场景: 系统必须提供生成类型的注册与发现
     - 系统 MUST 以统一方式注册（内置生成类型在系统启动时装载）并向调用方发现可用的生成类型集合。
 
-  @req:r54 @human
+  @req:r322 @human
   场景: 前端查询可用生成类型列表
     - 当前端需要渲染右侧生成入口时，系统 SHALL 提供可用生成类型列表（至少包含 id、displayName、输入要求概览、可选输出类型概览、完成语义概览）。
 
-  @req:r112 @human
+  @req:r323 @human
   场景: 生成请求必须显式绑定生成类型
     - 系统 MUST 将生成类型作为显式的一等对象，而不是隐含在 prompt 或入口按钮中。
 
-  @req:r149 @human
+  @req:r324 @human
   场景: 系统必须按生成类型契约装配请求并做最小校验
     - 系统 MUST 使用生成类型契约装配默认值并做最小输入要求校验（缺失生成类型标识的请求 MUST 被拒绝），避免类型语义被隐式分叉。
 
-  @req:r149 @human
+  @req:r324 @human
   场景: 请求未指定输出类型
     - 当生成请求已指定生成类型但未显式指定输出类型时，系统 SHALL 使用该类型契约的默认输出类型装配请求。
 
-  @req:r184 @human
+  @req:r325 @human
   场景: 生成类型必须声明最小类型契约
     - 系统 MUST 为每种生成类型声明最小契约（至少输入要求、输出结构、控制面与完成语义），以支撑后续控制项、结果结构和完成语义。
 
-  @req:r216 @human
+  @req:r326 @human
   场景: 生成结果必须回传生成类型、输出类型与完成语义元数据
     - 系统 MUST 在结果对象中同时回传生成类型与输出类型，并回传完成语义相关元数据以支撑治理与后续工作流。
 
-  @req:r243 @human
+  @req:r327 @human
   场景: 生成类型与输出类型必须保持边界分离
     - 系统 MUST 保持生成类型与输出类型的边界清晰，避免一个概念吞掉另一个概念。
 
-  @req:r261 @human
+  @req:r328 @human
   场景: 下游扩展只能使用扩展位，禁止反向改写公共词汇
     - 系统 MUST 为下游能力提供明确扩展位（如 controlSurface knobs/presets），同时禁止下游能力反向改写公共词汇定义。
 
-  @req:r529 @human
+  @req:r329 @human
   场景: Outputs pipeline MUST sanitize citation indices (range/dup/int) with warnings
-    - outputs pipeline MUST 递归剥离越界、重复、非整数 citation 索引，并设置 _warnings / citations_sanitized / _postprocessed 标记。本条为 generation-core r250（canonical）行为的实现级细化：剥离准则与内容标记命名归此承载，管线阶段顺序以 canonical 为准。
+    - outputs pipeline MUST 递归剥离越界、重复、非整数 citation 索引，并设置 _warnings / citations_sanitized / _postprocessed 标记。本条为 generation-core r165（canonical）行为的实现级细化：剥离准则与内容标记命名归此承载，管线阶段顺序以 canonical 为准。
 
-  @req:r530 @human
+  @req:r330 @human
   场景: Outputs pipeline with preference=quality MUST run LLM repair loop for salvageable output
-    - outputs pipeline 在 preference=quality 且 needsRepair 为真时 MUST 再跑一次生成修补以挽救可挽救输出；失败则保留原对象并走后续 postprocess/fallback；修补所处的管线阶段顺序见 generation-core r31/r250。
+    - outputs pipeline 在 preference=quality 且 needsRepair 为真时 MUST 再跑一次生成修补以挽救可挽救输出；失败则保留原对象并走后续 postprocess/fallback；修补所处的管线阶段顺序见 generation-core r160/r165。

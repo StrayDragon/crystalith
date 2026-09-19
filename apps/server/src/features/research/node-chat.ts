@@ -172,7 +172,7 @@ export function createNodeChatSseResponse(
       let closed = false;
       // Chat SSE contract is enforced at the emit exit: typed as the shared
       // discriminated union, with a runtime assertion outside production
-      // builds (deep-research-runtime r12 wiring).
+      // builds (deep-research-runtime r76 wiring).
       const chatContractCheck = (import.meta as { env?: { DEV?: boolean } }).env?.DEV ?? true;
       const emit = (event: ResearchNodeChatStreamEvent) => {
         if (chatContractCheck) {
@@ -300,7 +300,7 @@ export function createNodeChatSseResponse(
           if (isResearchE2eStub()) {
             // Explicit non-production e2e path: deterministic stub reply
             // (text + fake proposals + via='stub' ledger marker). Never
-            // reachable in production (deep-research-runtime r12).
+            // reachable in production (deep-research-runtime r76).
             const turn = stubNodeChatTurn(node, body.message);
             proposals = turn.proposals;
             const chunkSize = 48;
