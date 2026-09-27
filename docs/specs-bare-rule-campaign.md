@@ -1,6 +1,6 @@
 # Specs 裸规则压降作战地图（llman-sdd 0.5 pending 计量）
 
-> 状态：**批次推进中**（全量 448 条已分类；c111 试点、c112 P0 碰撞修复均已收口；下一批 Batch 1 待启动）。
+> 状态：**A 类全量落地（2026-09-27）**。pending **448 → 209**：c111 试点（13）→ c112 碰撞修复 → c113 非深研 A 类（118）→ c114 深研双雄 A 类（121）。剩余 209 条 = B 区约 162（需新增测试资产，独立批次启动）+ C 47（豁免台账见下）；其中 3 条盘点期标 A 的经落笔复核改判 B（如 generation-core r174，无既有测试覆盖）。
 > 删除条件：全部批次完成后（review `pending` 信号只剩有记录豁免的 C 类裸规则）本档转为纯记录，或随 specs-compact 收敛后删除。
 
 ## 背景
@@ -89,3 +89,39 @@ llman-sdd 0.5 原生分层格式下，规则（`规则:` 块 + `@req` 句柄）�
 ## 附录：req_id 碰撞清单（45 个 tag）
 
 > 碰撞清单已于 c112 全量修复（54 处重号，首现保留、后续 r420-r473），本文原附录按文档纪律删除。复核命令：`just check-req-ids`（应报 OK）；上游 validate 漏报修复后可迁移为其全局门。
+
+## C 类豁免台账（47 条，保留裸规则的记录）
+
+> 判据：架构决策 / 治理约束 / 选型声明 / 愿景叙述，无法（完全）程序判定，强写 GWT 会失真。后续若有条款获得可程序判定口径（如新增静态检查），随时升格补场景。
+
+### 选型与架构决策（26 条）
+
+- architecture-core r1-r6：feature 切片 / 依赖方向 / 路由聚合 / 前端 domain 切片 / app-shared 薄边界 / Zustand 分片（结构约束）
+- architecture-plugin-and-agent r9/r10/r12：AI SDK v7 / 官方 @ai-sdk/* providers / generateObject+Zod（技术选型）
+- architecture-plugin-and-agent r11：agent loop DEFERRED（延期声明）；r15：middleware 职责叙述
+- data-and-storage r46/r47/r48：单 SQLite 文件 / Drizzle ORM / Drizzle Kit（选型与流程约束）
+- deep-research-runtime r53：ResearchRun process SSOT；r56：共享 webSearch tool only（架构决策）
+- openapi-and-client-generation r190/r191/r192：Eden 一等 client / first-party 仅 Eden / shared Zod camelCase SSOT（治理与结构约定）
+- generation-core r160/r164：确定性节点管线顺序 / stream-non-stream 共享（架构链路与复用约束）
+- typed-generation-framework r323/r325/r327/r328：显式绑定类型 / 最小类型契约 / 生成-输出边界 / 扩展位治理
+- generation-observability r180：重试边界不堆叠（架构边界）
+- deep-research-runtime r78/r79：合约对齐 Lab design / Lab-only extras 文档化（治理元条款）
+
+### 治理与流程约束（19 条）
+
+- source-aware-generation-modes r241（不得反向重写上游对象模型）、r187（预设不得反向定义生成类型）
+- chat-prompt-presets ——（无）
+- quality-and-regression r222：remote CI optional（流程治理）
+- configuration-governance r31/r33/r35/r36：CL_* 命名 / typed accessor 禁解构 / 超时上限走 config / YAML snake_case（治理与命名约定）
+- web-ui-foundation r159：Rstest fixtures camelCase（夹具治理）
+- public-repo-hygiene r209：security disclosure policy（DEFERRED 治理项）；r211：项目元数据一致性（表述性）
+- deep-research-ui r119：Lab 经 Eden + shared schemas（wire SSOT 治理）；r150：cl-prd-demo skill 文档治理
+- source-ingestion-upload-and-url r294：extractor fallback canonical（纯委托 web-extractor-plugins 的治理条款）
+- output-rendering-and-typing r200：RenderDescriptor 合约稳定（治理性承诺）
+- workspace-ui-core r390/r393：弹层统一策略 / 面板合约归属（治理条款）
+- chat-prompt-presets ——（本 capability 无 C 类）
+
+### 表述与视觉类（2 条）
+
+- web-ui-foundation r343：tokens 对齐既有设计系统（视觉一致性属人工评审）
+- source-aware-generation-modes r244：来源模式标签不暴露内部术语（UI 文案表述）
