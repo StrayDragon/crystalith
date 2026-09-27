@@ -1,5 +1,8 @@
 ---
-depends_on: ["c111-convert-pilot-bare-rules"]
+depends_on: ['c111-convert-pilot-bare-rules']
+branch: sdd/c112-dedupe-colliding-req-ids
+base_branch: main
+base_sha: 0e00bf0abe2999863de5c8ff4146776a44f01894
 ---
 
 # 修复 spec 文件内 @req 编号碰撞（45 tag / 54 处）

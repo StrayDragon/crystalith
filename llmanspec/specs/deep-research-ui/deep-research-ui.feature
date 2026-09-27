@@ -173,63 +173,83 @@
   @req:r154
   规则: Lab partial completion after budget finish
     当 Run 因预算触顶后 finish_report 完成且图中仍有 missing/未覆盖 research 节点时，Lab MUST 展示「预算用尽·部分完成」（或等价）可见提示；报告面 MUST 不掩盖该缺口。
-  @req:r99
+  @req:r442
+
   规则: sources-has-no-deep-mode-toggle
     工作区来源面板的搜索/模式 UI MUST NOT 出现 Fast/Deep 深研模式切换或深研队列主入口等旧深研模式残留。
-  @req:r100
+  @req:r443
+
   规则: empty-sources-disables-start
     当 useNotebookSources 开启且台内未选任何来源时，用户尝试开始深研 MUST 保持开始控件禁用，且 MUST NOT 发出创建请求。
-  @req:r112
+  @req:r444
+
   规则: topbar-fast-only-and-lab-reachable
     工作区顶栏 MUST NOT 呈现旧深研 Desk 入口，且仓库回归（e2e 或 Rstest）MUST 能断言 Lab 入口仍可发现。
-  @req:r115
+  @req:r445
+
   规则: role-or-prefix-protects-sink
     图中 conclusion 节点带 role=conclusion（或既有 id 前缀识别）时 MUST NOT 作为可剪枝研究支路入口展示，与服务端剪枝保护一致。
-  @req:r117
+  @req:r446
+
   规则: canvas-pref-does-not-call-graph-api
     用户切换画布布局方向或小地图偏好生效时，MUST NOT 因此发出修改 research graph 的命令口请求。
-  @req:r120
+  @req:r447
+
   规则: compose-create-increments-badge
     当 Lab 已接线 Eden 且当前 activeCount 为 0 时，用户 Compose 创建 Run 成功后任务列表 MUST 包含新 Run 且 badge activeCount MUST 相应增加。
-  @req:r120
+  @req:r448
+
   规则: run-terminal-clears-badge
     当列表中一项 awaiting_confirm 的 Run 经用户 confirm 或 SSE 变为 completed 后，任务列表 status MUST 更新且 badge activeCount MUST 归零。
-  @req:r121
+  @req:r449
+
   规则: cancel-from-header-running
     当 Eden Lab 打开且 Run status 为 running 时，用户从顶栏触发取消并确认后 MUST 调用 POST …/research/:rid/cancel，成功后 Run status MUST 变为 cancelled。
-  @req:r121
+  @req:r450
+
   规则: cancel-from-drawer-awaiting-confirm
     当任务抽屉存在 awaiting_confirm 任务时，用户从抽屉行触发取消 MUST 成功，且列表中该任务 status MUST 显示为 cancelled。
-  @req:r125
+  @req:r451
+
   规则: eden-report-not-sessionstorage
     当 sessionStorage 无 labRevisions 时，Eden 报告页 MUST 仍以 Run.report 渲染正文。
-  @req:r127
+  @req:r452
+
   规则: eden-export-no-report-error
     当 Eden Run 无 report 时用户触发导出，MUST 展示可见错误提示，且 MUST NOT 写入 fixture revision。
-  @req:r128
+  @req:r453
+
   规则: drawer-shows-evidence-when-ids-present
     当 Eden Run completed 且某节点 evidenceIds 非空时，打开该节点抽屉 MUST 展示至少一条证据摘要（标题或 snippet 至少其一）。
-  @req:r132
+  @req:r454
+
   规则: running-shows-playing
     当 Run status 为 running 时，playing 推断 MUST 为 true，且 MUST NOT 出现「已暂停」类矛盾文案。
-  @req:r137
+  @req:r455
+
   规则: convert-node-via-artifact-ref
     Eden 节点抽屉内将节点转为来源时，请求体 MUST 含 ResearchArtifactRef kind=node 与对应 nodeId。
-  @req:r138
+  @req:r456
+
   规则: evidence-convert-note-calls-api
     Eden 节点抽屉内将已列出证据转为笔记时，请求体 MUST 含 ResearchArtifactRef kind=evidence 与对应 evidenceId，且 MUST 出现成功或失败 toast。
-  @req:r139
+  @req:r457
+
   规则: toast-action-clickable
     共享 toast 以 success 与 action 展示时，用户点击 action 标签 MUST 执行其 onClick（如打开工作区）。
-  @req:r143
+  @req:r458
+
   规则: eden-no-progress-stays-explore
     当 Eden Run 为 running 且尚无 progress 事件时，顶栏相位 MUST 展示基础相位（如 explore），MUST NOT 以节点 phase 众数猜测富化相位。
-  @req:r145
+  @req:r459
+
   规则: slash-compose-prefills-topic
     当用户在工作区 chat 输入带 topic 的深研 slash 并确认发送时，Lab Compose MUST 打开且 topic MUST 预填，MUST NOT 立即创建 ResearchRun。
-  @req:r146
+  @req:r460
+
   规则: eden-graph-has-nodes-edges
     P0：Eden Lab 用例 MUST 经稳定锚点（如 research-lab-graph testid）断言画布可见且至少渲染一个研究节点与一条边。
-  @req:r149
+  @req:r461
+
   规则: demo-not-registered-in-prod-default
     生产构建未设 VITE_LAB_DEMO 时 /demo/research-lab/* 路由 MUST NOT 注册，请求回落非 Lab 页面或不可达。

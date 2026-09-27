@@ -10,4 +10,4 @@ change_id:
 # BDD-on（feature-as-spec 前置）：specs 含可执行场景时 validate/finalize 门要求声明
 # 项目 BDD 执行入口；runner（apps/server/tests/bdd/）自 c111 起支持 规则: 块嵌套场景。
 bdd:
-  run_command: "bun test apps/server/tests/bdd/run.test.ts"
+  run_command: 'bun test apps/server/tests/bdd/run.test.ts'

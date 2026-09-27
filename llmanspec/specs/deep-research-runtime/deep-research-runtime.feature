@@ -143,54 +143,71 @@
   @req:r98
   规则: Partial completion honesty on budget finish
     当用户在搜索预算触顶后选择 finish_report（或等价出报告）且仍存在未完成/missing 的 research 节点时，权威报告 MUST 明示预算用尽与未覆盖主题（或部分完成），MUST NOT 将残缺研究包装为已完整覆盖；已有证据仍 MUST 正常综合。
-  @req:r59
+  @req:r425
+
   规则: no-mid-wave-budget-confirm
     若波次结束且 searchesUsed 大于 0 但小于 maxSearches，则不得因剩余搜索额度而进入 confirmKind=budget
-  @req:r67
+  @req:r426
+
   规则: invalid-state-code
     若 Run 已 completed，则对其调用 prune 必须返回 RESEARCH_INVALID_STATE 且图保持只读
-  @req:r69
+  @req:r427
+
   规则: shared-child-stays-live
     若 libs 与 perf 均指向共享子节点 stream 且 libs 另有 merge 到 conclusion，则对 libs 执行 prune 后：libs 必须标为 pruned；stream 因仍有活父 perf 必须保持未剪枝；conclusion 不得被剪枝；libs→conclusion 的 merge 边必须仍在
-  @req:r69
+  @req:r428
+
   规则: exclusive-child-cascades
     若 data 仅有独占子 minimize 且 minimize merge 到 conclusion，则对 data 执行 prune 后 data 与 minimize 必须均标为 pruned；minimize→conclusion 的 merge 边必须保留；conclusion 不得被剪枝
-  @req:r69
+  @req:r429
+
   规则: reject-protected-root
     若 Run 处于 running 且存在 node_root_* 节点，则对该 root 的 prune 请求必须被拒绝且图保持不变
-  @req:r71
+  @req:r430
+
   规则: cancel-aborts-active
     若某节点的检索或综合正在进行时用户调用 cancel，则活动单元必须中止、状态进入 cancelled（或协作收尾至 cancelled）且 checkpoint 已落盘
-  @req:r73
+  @req:r431
+
   规则: reject-client-authored-closure
     客户端以非命令口方式提交任意节点集合作为权威剪枝结果时，请求必须被拒绝（或该接口不存在），图必须仅能经 prune 等命令口变更
-  @req:r75
+  @req:r432
+
   规则: chat-separate-from-run-stream
     已订阅 Run stream 的客户端发起节点 chat 时，chat 正文事件必须不出现在 Run stream 的事件名集合中
-  @req:r80
+  @req:r433
+
   规则: max-nodes-respected
     若 planner 提议的支路会使节点数超过 Run.maxNodes 预算，则服务端必须裁剪或拒绝扩展，节点数不得超过预算
-  @req:r81
+  @req:r434
+
   规则: skip-question-when-branches
     若 Run 已拆解出活 research 节点，则运行循环调度必须跳过 question work-unit，且各 research 节点完成写回
-  @req:r82
+  @req:r435
+
   规则: synthesize-fail-no-heuristic
     若结案模型调用抛错，则 Run status 必须为 failed 且不得存在启发式权威报告
-  @req:r83
+  @req:r436
+
   规则: retry-does-not-rerun-drain
     对已因结案失败而 failed 且已有支路 evidence 的 Run 执行 retry-synthesize 时，必须复用原 evidence 且不得新增 research work-unit 检索进度
-  @req:r83
+  @req:r437
+
   规则: retry-rejects-completed
     若 Run 已 completed，则调用 retry-synthesize 必须返回 RESEARCH_INVALID_STATE 或等价错误
-  @req:r89
+  @req:r438
+
   规则: fork-leaves-source-unchanged
     fork 完成后再次读取源 Run 及其 revisions 列表，其内容必须与 fork 前一致
-  @req:r92
+  @req:r439
+
   规则: page-soft-cap-per-node
     若剩余 6 次读页且有 3 个活 research 节点，则该节点 work-unit 开始时的读页软上限必须为 2
-  @req:r95
+  @req:r440
+
   规则: addon-does-not-raise-max-nodes
     当 budget 加购发生时，maxNodes 必须保持不变，不得随加购抬高
-  @req:r96
+  @req:r441
+
   规则: search-soft-cap-even-split
     若剩余 9 次搜索且有 3 个活 research 节点，则该节点 work-unit 开始时的搜索软上限必须为 3，且仍受 Run.maxSearches 硬顶约束

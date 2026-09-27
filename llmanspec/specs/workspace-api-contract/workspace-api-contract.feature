@@ -116,7 +116,8 @@
   @req:r373
   规则: Nested path :nid is ownership SSOT
     嵌套 canonical 路由上，path :nid MUST 为归属唯一真源；请求 body MUST NOT 再要求必填 notebookId。若 body 携带 notebookId：等于 :nid 时 MUST 忽略；不等于时 MUST 返回 400。响应实体 SHOULD 继续包含 notebookId 字段（兼容读取）。笔记本作用域资源 MUST NOT 再提供扁平 query/body notebookId 平行面。notebook 作用域资源（至少包括 outputs CRUD、qa（含 stream/export）、studio/slides、sources 单资源与 upload）的 canonical HTTP path MUST 为 /v2/notebooks/:nid/<domain>/...，跨 notebook 访问 MUST 返回 404。非嵌套的归属校验端点 MUST 要求显式归属参数（query 或 path）；资源存在但不属于该 notebook 时 MUST 返回 404 且 MUST NOT 按全局 id 返回数据。
-  @req:r373
+  @req:r470
+
   规则: cross-notebook-source-get-404
     存在属于 notebook A 的 source 时，若客户端用 notebook B 的 notebookId 请求该 source，系统 SHALL 返回 404 NOT_FOUND 且响应为统一 ErrorEnvelope。
   @req:r374

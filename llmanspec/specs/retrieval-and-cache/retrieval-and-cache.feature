@@ -38,7 +38,8 @@
   @req:r234
   规则: QA retrieval MUST be deterministic single-embed (no multi-query expansion)
     QA 检索 MUST 使用确定性单次 embed 检索路径（对齐既有语义），MUST NOT 在 QA 检索路径硬编码 multiQuery:true。
-  @req:r234
+  @req:r463
+
   规则: deterministic-retrieval
     当同一 question、同一组 sourceIds 与同一 embedding 下重复执行 QA 检索时，系统 SHALL 产出完全一致的结果（无 seed 扩张、无 RRF 归一化）。
   @req:r235

@@ -14,10 +14,12 @@
   @req:r287
   规则: 上传端点必须保留受支持写作工具的 Markdown 语义
     对于标准 Markdown 上传，系统 MUST 在进入 `chunk / embed / store` 之前执行语义预处理，以兼容常见写作工具的 Markdown 扩展语法，并将可提取的文档元数据写入 source metadata。
-  @req:r287
+  @req:r464
+
   规则: 上传-obsidian-风格-wikilink-与嵌入引用时标准化为标准 Markdown
     上传的 Markdown 含 `[[page]]` 或 `[[page|alias]]` wikilink 时，系统 MUST 在 chunking 前将其转换为标准 Markdown 链接文本；含 `![[file]]` 或 `![[file|alias]]` 嵌入引用时 MUST 将其转换为可检索的文本引用。
-  @req:r287
+  @req:r465
+
   规则: 上传-markdown-时提取-frontmatter-到来源元数据
     上传的 Markdown 文件包含可解析的 YAML frontmatter 时，系统 MUST 将支持字段（`title`、`tags`、`aliases`、`date`）写入 `source.metadata.frontmatter`。
   @req:r288

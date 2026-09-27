@@ -34,57 +34,57 @@ llman-sdd 0.5 原生分层格式下，规则（`规则:` 块 + `@req` 句柄）�
 
 > 全量已分类：**A 242 / B 159 / C 47**（pilot 13 条压降 + 1 条有据豁免已计入对应 capability 行）。逐条 tag/标题/锚点明细由盘点分片报告产出，各批次 change 设计时按行复验后落入该批 design.md。
 
-| # | capability | pending(裸规则) | A | B | C | 备注 |
-|---|---|---|---|---|---|---|
-| 1 | studio-output-types | 8 | 2 | 6 | 0 | r299-r303 前端 viewer 全无测试（B 集中区） |
-| 2 | source-ingestion-management-and-tags | 8 | 5 | 3 | 0 | |
-| 3 | source-connectors | 8 | 6 | 2 | 0 | bdd features 已有步骤基础 |
-| 4 | source-aware-generation-modes | 7 | 0 | 5 | 2 | r243 重号已修（c111）；r39-r43 类似区块 spec 领先实现 |
-| 5 | openapi-and-client-generation | 7 | 4 | 0 | 3 | parity/asyncapi 测试可直接锚定 |
-| 6 | data-and-storage | 7 | 2 | 2 | 3 | r46-r48 选型决策合法裸规则 |
-| 7 | cross-type-result-transformations | 7 | 0 | 7 | 0 | 整块 spec 领先实现（无 transform/lineage 代码） |
-| 8 | generation-presets-and-constraints | 5 | 1 | 3 | 1 | |
-| 9 | deep-research-ui | 76 | 65 | 9 | 2 | 研究锚点：research-lab/*.test + p0-eden-lab.spec；**18 个碰撞 tag 待 c112** |
-| 10 | deep-research-runtime | 63 | 56 | 3 | 4 | 锚点：apps/server/tests/research/*（runtime/budget/prune/synthesize-retry 等）；**14 个碰撞 tag 待 c112**（含 r69×4、r83×3） |
-| 11 | generation-core | 16 | 9 | 5 | 2 | 锚点：apps/server/tests/{outputs,qa}/* |
-| 12 | workspace-ui-core | 15 | 8 | 5 | 2 | 锚点：e2e p0 + useWorkspaceReadiness 等；**3 个碰撞 tag 待 c112**（r388/r389/r394） |
-| 13 | studio-slides-workflow | 15 | 11 | 4 | 0 | 锚点：apps/server/tests/studio/* + BDD 工作室场景 |
-| 14 | slides-workflow-plugins | 0 | — | — | — | c111 已压降 |
-| 15 | chat-ui-envelope | 0 | — | — | — | c111 已压降 |
-| 16 | web-ui-foundation | 1 | — | 0 | 1 | c111 后仅剩 r343（有据豁免） |
-| 17 | workspace-command-registry | 0 | — | — | — | c111 已压降 |
-| 18 | bdd-test-harness | 0 | — | — | — | c111 已压降 |
-| 19 | frontend-eden-migration | 5 | 3 | 1 | 1 | r158 负向禁令缺锁测（仿 r29 静态扫描） |
-| 20 | public-repo-hygiene | 5 | 0 | 3 | 2 | r209/r211 治理项豁免候选 |
-| 21 | workspace-api-contract | 35 | 17 | 18 | 0 | 锚点：errors/schemas/notebook-isolation/BDD 知识问答；**r373×2 碰撞待 c112**；B 集中（convert/export/models 断言缺） |
-| 22 | workspace-ui-panels | 21 | 4 | 17 | 0 | 前端组件级测试基建缺失，B 最大区 |
-| 23 | source-ingestion-upload-and-url | 16 | 5 | 10 | 1 | 锚点：ingest/url-safety/sources-search；**r287×3 碰撞待 c112**（markdown 预处理三条款） |
-| 24 | retrieval-and-cache | 13 | 7 | 6 | 0 | 锚点：rag/{cache,chunker,multi-query,context-window}；**r234×2 碰撞待 c112** |
-| 25 | source-ingestion-summary-and-conversion | 12 | 5 | 7 | 0 | 锚点：summary-cache/qa-to-source-and-tags |
-| 26 | output-rendering-and-typing | 12 | 8 | 3 | 1 | 锚点：GenericOutputRenderer/collect-cited-citations/BDD 结构化输出；r201×2 碰撞待 c112 |
-| 27 | typed-generation-framework | 11 | 1 | 5 | 5 | 整块偏框架决策；r322/r324 碰撞待 c112 |
-| 28 | quality-and-regression | 11 | 1 | 9 | 1 | r213-r223 多数可由 justfile 断言程序化（B） |
-| 29 | architecture-core | 10 | 3 | 1 | 6 | r1-r6 结构约束合法裸规则；r7×3 碰撞待 c112（proxy 三条为 A） |
-| 30 | web-extractor-plugins | 9 | 4 | 5 | 0 | 锚点：plugins/registry + c62 shape；r332×3 碰撞待 c112 |
-| 31 | source-ingestion-core | 9 | 5 | 4 | 0 | 锚点：ingest/rag cache/embed-timing/csv-parser |
-| 32 | generation-observability-and-guardrails | 9 | 1 | 7 | 1 | 可观测字段类多缺测试（B） |
-| 33 | configuration-governance | 9 | 2 | 3 | 4 | r31/r33/r35/r36 命名与治理豁免候选 |
-| 34 | chat-prompt-presets | 9 | 4 | 5 | 0 | 锚点：qa/presets + BDD 知识问答；r22×3/r27×2 碰撞待 c112 |
-| 35 | architecture-plugin-and-agent | 9 | 3 | 1 | 5 | 技术选型/延期声明（C）；r13/r14/r17 可锚定 |
+| #   | capability                              | pending(裸规则) | A   | B   | C   | 备注                                                                                                                         |
+| --- | --------------------------------------- | --------------- | --- | --- | --- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 1   | studio-output-types                     | 8               | 2   | 6   | 0   | r299-r303 前端 viewer 全无测试（B 集中区）                                                                                   |
+| 2   | source-ingestion-management-and-tags    | 8               | 5   | 3   | 0   |                                                                                                                              |
+| 3   | source-connectors                       | 8               | 6   | 2   | 0   | bdd features 已有步骤基础                                                                                                    |
+| 4   | source-aware-generation-modes           | 7               | 0   | 5   | 2   | r243 重号已修（c111）；r39-r43 类似区块 spec 领先实现                                                                        |
+| 5   | openapi-and-client-generation           | 7               | 4   | 0   | 3   | parity/asyncapi 测试可直接锚定                                                                                               |
+| 6   | data-and-storage                        | 7               | 2   | 2   | 3   | r46-r48 选型决策合法裸规则                                                                                                   |
+| 7   | cross-type-result-transformations       | 7               | 0   | 7   | 0   | 整块 spec 领先实现（无 transform/lineage 代码）                                                                              |
+| 8   | generation-presets-and-constraints      | 5               | 1   | 3   | 1   |                                                                                                                              |
+| 9   | deep-research-ui                        | 76              | 65  | 9   | 2   | 研究锚点：research-lab/*.test + p0-eden-lab.spec；**18 个碰撞 tag 待 c112**                                                  |
+| 10  | deep-research-runtime                   | 63              | 56  | 3   | 4   | 锚点：apps/server/tests/research/*（runtime/budget/prune/synthesize-retry 等）；**14 个碰撞 tag 待 c112**（含 r69×4、r83×3） |
+| 11  | generation-core                         | 16              | 9   | 5   | 2   | 锚点：apps/server/tests/{outputs,qa}/*                                                                                       |
+| 12  | workspace-ui-core                       | 15              | 8   | 5   | 2   | 锚点：e2e p0 + useWorkspaceReadiness 等；**3 个碰撞 tag 待 c112**（r388/r389/r394）                                          |
+| 13  | studio-slides-workflow                  | 15              | 11  | 4   | 0   | 锚点：apps/server/tests/studio/* + BDD 工作室场景                                                                            |
+| 14  | slides-workflow-plugins                 | 0               | —   | —   | —   | c111 已压降                                                                                                                  |
+| 15  | chat-ui-envelope                        | 0               | —   | —   | —   | c111 已压降                                                                                                                  |
+| 16  | web-ui-foundation                       | 1               | —   | 0   | 1   | c111 后仅剩 r343（有据豁免）                                                                                                 |
+| 17  | workspace-command-registry              | 0               | —   | —   | —   | c111 已压降                                                                                                                  |
+| 18  | bdd-test-harness                        | 0               | —   | —   | —   | c111 已压降                                                                                                                  |
+| 19  | frontend-eden-migration                 | 5               | 3   | 1   | 1   | r158 负向禁令缺锁测（仿 r29 静态扫描）                                                                                       |
+| 20  | public-repo-hygiene                     | 5               | 0   | 3   | 2   | r209/r211 治理项豁免候选                                                                                                     |
+| 21  | workspace-api-contract                  | 35              | 17  | 18  | 0   | 锚点：errors/schemas/notebook-isolation/BDD 知识问答；**r373×2 碰撞待 c112**；B 集中（convert/export/models 断言缺）         |
+| 22  | workspace-ui-panels                     | 21              | 4   | 17  | 0   | 前端组件级测试基建缺失，B 最大区                                                                                             |
+| 23  | source-ingestion-upload-and-url         | 16              | 5   | 10  | 1   | 锚点：ingest/url-safety/sources-search；**r287×3 碰撞待 c112**（markdown 预处理三条款）                                      |
+| 24  | retrieval-and-cache                     | 13              | 7   | 6   | 0   | 锚点：rag/{cache,chunker,multi-query,context-window}；**r234×2 碰撞待 c112**                                                 |
+| 25  | source-ingestion-summary-and-conversion | 12              | 5   | 7   | 0   | 锚点：summary-cache/qa-to-source-and-tags                                                                                    |
+| 26  | output-rendering-and-typing             | 12              | 8   | 3   | 1   | 锚点：GenericOutputRenderer/collect-cited-citations/BDD 结构化输出；r201×2 碰撞待 c112                                       |
+| 27  | typed-generation-framework              | 11              | 1   | 5   | 5   | 整块偏框架决策；r322/r324 碰撞待 c112                                                                                        |
+| 28  | quality-and-regression                  | 11              | 1   | 9   | 1   | r213-r223 多数可由 justfile 断言程序化（B）                                                                                  |
+| 29  | architecture-core                       | 10              | 3   | 1   | 6   | r1-r6 结构约束合法裸规则；r7×3 碰撞待 c112（proxy 三条为 A）                                                                 |
+| 30  | web-extractor-plugins                   | 9               | 4   | 5   | 0   | 锚点：plugins/registry + c62 shape；r332×3 碰撞待 c112                                                                       |
+| 31  | source-ingestion-core                   | 9               | 5   | 4   | 0   | 锚点：ingest/rag cache/embed-timing/csv-parser                                                                               |
+| 32  | generation-observability-and-guardrails | 9               | 1   | 7   | 1   | 可观测字段类多缺测试（B）                                                                                                    |
+| 33  | configuration-governance                | 9               | 2   | 3   | 4   | r31/r33/r35/r36 命名与治理豁免候选                                                                                           |
+| 34  | chat-prompt-presets                     | 9               | 4   | 5   | 0   | 锚点：qa/presets + BDD 知识问答；r22×3/r27×2 碰撞待 c112                                                                     |
+| 35  | architecture-plugin-and-agent           | 9               | 3   | 1   | 5   | 技术选型/延期声明（C）；r13/r14/r17 可锚定                                                                                   |
 
 > **全量盘点完成**：35 capability / 448 条 pending 全部分类 —— **A 242（54%）/ B 159（36%）/ C 47（10%）**，与 review 计数精确吻合。分片报告的逐条规则表（tag/标题/类别/锚点）在各批次 change 的 design 中按需复验落档。
 
 ## 批次规划
 
-| 批次 | 范围 | 内容 | 前置 |
-|---|---|---|---|
-| **c112（P0）** | 11 个文件 54 处重号 | 碰撞 req_id 重新取号；顺带向上游 llman-sdd 报 validate「全局重复 req_id」门对同文件碰撞漏报的缺陷 | 无（立即） |
-| Batch 1（A 类快批，~30 条） | source-connectors(6A)、source-ingestion-core(5A)、openapi(4A)、web-extractor(4A)、frontend-eden-migration(3A)、data-and-storage(2A)、retrieval-and-cache(7A 中锚点最实者)、configuration-governance(2A) | 只补场景、锚定既有测试，不解锁新测试面 | c112 |
-| Batch 2（B 集中区，~40 条） | workspace-api-contract(18B)、studio-output-types(6B)、source-ingestion-summary(7B)、generation-core(5B) | 补场景 + 补 server/BDD 测试 | c112 |
-| Batch 3（前端 B 区，~30 条） | workspace-ui-panels(17B)、workspace-ui-core(5B)、source-aware-generation-modes(5B) | 需要组件级测试基建决策，先行 design | Batch 2 |
-| Batch 4（深研双雄，~120 条） | deep-research-ui(65A/9B/2C)、deep-research-runtime(56A/3B/4C) | A 密度最高，分 3-4 个子批 | c112 |
-| Batch 5（收尾） | 其余 A/B（generation-observability 7B、quality-and-regression 9B、typed-generation 5B、chat-prompt-presets 5B 等） | 按锚点成熟度分批 | Batch 2 |
-| 持续 | C 类 47 条豁免台账 | 每批 change design 记录理由；归档后评估 specs-compact 合并冗余 | — |
+| 批次                         | 范围                                                                                                                                                                                                    | 内容                                                                                              | 前置       |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------- |
+| **c112（P0）**               | 11 个文件 54 处重号                                                                                                                                                                                     | 碰撞 req_id 重新取号；顺带向上游 llman-sdd 报 validate「全局重复 req_id」门对同文件碰撞漏报的缺陷 | 无（立即） |
+| Batch 1（A 类快批，~30 条）  | source-connectors(6A)、source-ingestion-core(5A)、openapi(4A)、web-extractor(4A)、frontend-eden-migration(3A)、data-and-storage(2A)、retrieval-and-cache(7A 中锚点最实者)、configuration-governance(2A) | 只补场景、锚定既有测试，不解锁新测试面                                                            | c112       |
+| Batch 2（B 集中区，~40 条）  | workspace-api-contract(18B)、studio-output-types(6B)、source-ingestion-summary(7B)、generation-core(5B)                                                                                                 | 补场景 + 补 server/BDD 测试                                                                       | c112       |
+| Batch 3（前端 B 区，~30 条） | workspace-ui-panels(17B)、workspace-ui-core(5B)、source-aware-generation-modes(5B)                                                                                                                      | 需要组件级测试基建决策，先行 design                                                               | Batch 2    |
+| Batch 4（深研双雄，~120 条） | deep-research-ui(65A/9B/2C)、deep-research-runtime(56A/3B/4C)                                                                                                                                           | A 密度最高，分 3-4 个子批                                                                         | c112       |
+| Batch 5（收尾）              | 其余 A/B（generation-observability 7B、quality-and-regression 9B、typed-generation 5B、chat-prompt-presets 5B 等）                                                                                      | 按锚点成熟度分批                                                                                  | Batch 2    |
+| 持续                         | C 类 47 条豁免台账                                                                                                                                                                                      | 每批 change design 记录理由；归档后评估 specs-compact 合并冗余                                    | —          |
 
 ## 附录：req_id 碰撞清单（45 个 tag）
 

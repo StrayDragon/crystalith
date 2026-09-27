@@ -20,7 +20,8 @@
   @req:r201
   规则: Rendering priority is deterministic
     渲染优先级 MUST 为 `frontendBundle renderer > GenericOutputRenderer > Raw JSON`： - `frontendBundle renderer`：由后端在 `/v2/workspace/tools` 返回的 `frontendBundle` 声明驱动加载与渲染 - `GenericOutputRenderer`：由后端返回的 `renderDescriptor` 驱动的声明式渲染 - `Raw JSON`：最终安全回退
-  @req:r201
+  @req:r462
+
   规则: unsupported-or-broken-bundle-falls-back-safely
     当 `frontendBundle` 的 `apiVersion` 不受支持或 bundle 加载/导出解析失败时，系统 MUST 回退到 `renderDescriptor` 驱动的通用渲染器（若存在），并以 Raw JSON 作为最终安全回退。
   @req:r202

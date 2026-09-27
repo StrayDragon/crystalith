@@ -26,10 +26,12 @@
   @req:r7
   规则: Non-LLM outbound HTTP uses unified proxy-aware client
     非 LLM 出站 HTTP（搜索、URL 抓取、网页抽取、同类中间件）MUST 经统一代理感知的出站客户端（outboundFetch 或等价 helper）发出，并读取全局 `proxy_settings`：enabled=false 时 MUST 直连；enabled=true 时 MUST 对未命中 no_proxy 的目标注入 HTTP(S) 代理。socks5_url MAY 保留于配置但本阶段 MUST 忽略。MUST NOT 在这些路径直接调用全局 `fetch` 绕过代理合约。AI SDK / LLM / embedding provider 路径本阶段不受此约束。
-  @req:r7
+  @req:r420
+
   规则: no_proxy_skips
     当 proxy_settings.enabled=true 且目标命中 no_proxy（如 localhost）时，出站客户端 SHALL 对该目标直连，不注入代理。
-  @req:r7
+  @req:r421
+
   规则: https_uses_https_url
     当 proxy_settings.enabled=true 且 https_url 非空时，对 HTTPS 目标（如 https://api.firecrawl.dev/v2/scrape）的请求 SHALL 使用该 https_url 作为代理。
   @req:r8

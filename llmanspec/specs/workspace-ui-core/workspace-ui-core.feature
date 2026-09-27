@@ -14,13 +14,15 @@
   @req:r388
   规则: Mobile viewport uses single-panel navigation
     当视口宽度处于移动端窄屏范围时（以 `md` 断点为界），Workspace MUST 以单面板模式呈现 Sources / Chat / Studio，并通过底部 TabBar 提供面板切换入口，以避免多列挤压造成不可用。
-  @req:r388
+  @req:r471
+
   规则: switching-tabs-preserves-critical-in-progress-state
     当用户在 TabBar 之间切换面板时，Workspace SHALL 保留用户在关键路径上的进行中状态（例如 Chat 输入草稿、已选择的来源、当前输出列表）。
   @req:r389
   规则: Mobile tab bar respects safe-area and accessibility
     移动端 TabBar MUST 兼容 iOS safe-area（home indicator）并满足最小可访问性基线（可聚焦、可读、可识别当前选中项）。
-  @req:r389
+  @req:r472
+
   规则: tab-bar-is-not-obscured-by-home-indicator
     当运行环境存在非零 `safe-area-inset-bottom`（例如 iOS Safari）时，TabBar MUST 为交互区域预留底部 padding，使点击目标不被系统 UI 遮挡。
   @req:r390
@@ -38,7 +40,8 @@
   @req:r394
   规则: Workspace provides guided empty states
     Workspace MUST 在首次进入与关键空态下提供分层引导，明确下一步动作与成功路径。
-  @req:r394
+  @req:r473
+
   规则: Empty states enumerate backend loss, empty sources, and missing session
     Workspace MUST 对关键空态提供分层引导并明确下一步动作：后端不可连接或连接状态为 error 时 SHALL 显示可见的错误提示；当前 notebook 来源列表为空时 SHALL 引导用户上传文件、从 URL 导入或使用搜索导入；已有来源但尚无可用会话时 SHALL 提供“一键开始会话”的明确入口。
   @req:r395

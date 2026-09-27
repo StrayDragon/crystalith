@@ -11,10 +11,12 @@
   @req:r332
   规则: Extractor selection supports preference and controlled fallback
     系统 MUST 支持对单次 fetch 指定 `preferredExtractor`，并 MUST 支持按配置定义的 fallback order；fallback MUST 仅在显式开启时发生，且每次尝试都必须可观测（日志/诊断信息）。
-  @req:r332
+  @req:r468
+
   规则: preferred-extractor-is-attempted-first
     用户指定 `preferredExtractor=X` 且 X 可用时，系统 SHALL 首先尝试 X。
-  @req:r332
+  @req:r469
+
   规则: no-extractors-available-produces-a-stable-failure
     当前配置与插件集合下没有任何可用提取器时，fetch 模式 SHALL 失败并返回稳定的错误码与恢复提示（例如「安装/启用官方 extractor 插件」）。
   @req:r333
