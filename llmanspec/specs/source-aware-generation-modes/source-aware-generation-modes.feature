@@ -20,7 +20,7 @@
   @req:r243
   规则: 来源模式必须影响检索与上下文构造行为
     系统 MUST 让来源模式影响检索、上下文构造与证据约束行为，而不是只改变展示文案。
-  @req:r243
+  @req:r419
   规则: 不同来源模式下的生成行为差异
     以 strict_evidence 模式执行生成时，系统 SHALL 以可引用的来源片段构造上下文并强制 citation 预期；以 brainstorming 模式执行时，系统 SHALL 允许在不强制 citation 的前提下生成。
   @req:r244

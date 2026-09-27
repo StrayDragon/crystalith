@@ -17,6 +17,12 @@
   @req:r383
   规则: Command schema supports future extensibility
     `/v2/commands` 返回的命令对象 MUST 支持未来扩展更多命令族而不破坏旧客户端： - `kind` MUST 为字符串枚举；客户端 MAY 忽略未知 `kind` 并保持其它命令可用 - `meta` 字段 MAY 存在且 MUST 为 JSON object
+
+    场景: command-schema-tolerates-extension
+      假如 /v2/commands 返回命令对象列表
+      当 校验单个命令对象 schema
+      那么 kind 为字符串枚举
+      而且 meta（若存在）为 JSON object 且未知 kind 不破坏其余命令可用性
   @req:r384
   规则: custom-prompt-preset-appears-and-reflects-enabled-state
     prompt preset 命令 MUST 以 `trigger="/prompt:<preset>"` 表达可插入的触发串，且命令对象 MUST 提供 `kind="prompt_preset"` 与启用状态。用户创建自定义 preset `demo` 且 `enabled=false` 后，`GET /v2/commands` SHALL 包含 `trigger="/prompt:demo"`、`source="custom"` 且 `enabled=false` 的条目。

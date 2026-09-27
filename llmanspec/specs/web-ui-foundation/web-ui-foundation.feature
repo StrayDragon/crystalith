@@ -9,14 +9,32 @@
   规则: Display primitives live in the shared UI layer
     Web 应用 MUST 将可复用展示件（按钮、图标按钮、文字、加载指示、标签及同等浅层控件）放在共享 UI 层，供各业务面复用。
     业务面 MUST NOT 为同一展示语义再引入第三套组件库实现。
+
+    场景: display-primitives-centralized-in-shared-ui
+      假如 前端工程可被静态检查
+      当 扫描各业务面的浅层控件来源
+      那么 可复用展示件定义或复用自共享 UI 层
+      而且 无第三套组件库实现同一展示语义
   @req:r339
   规则: Interactive overlays use headless primitives plus Layer
     菜单、popover 与 tooltip 的焦点管理、键盘导航、定位与 ARIA MUST 由 headless 原语（Radix 或同等）提供，样式壳 MUST 接入统一 Layer。
     这些行为件 MUST NOT 硬编码 z-index（见 workspace-ui-core 弹层策略）。
+
+    场景: overlays-use-headless-primitives-plus-layer
+      假如 菜单、popover 与 tooltip 实现就绪
+      当 审查其焦点管理、键盘导航、定位与 ARIA 来源
+      那么 行为来自 headless 原语且样式壳接入统一 Layer
+      而且 z-index 全部经由 Layer token 而非硬编码
   @req:r340
   规则: Dialogs share one overlay policy
     模态对话框 MUST 使用与既有工作区对话框相同的 overlay 策略：portal、焦点陷阱、Esc/遮罩关闭，以及 modal Layer。
     系统 MUST NOT 再并列一套与 Layer 无关的对话框运行时作为默认实现。
+
+    场景: dialogs-share-one-overlay-policy
+      假如 模态对话框实现就绪
+      当 对照既有工作区对话框的 overlay 策略
+      那么 portal、焦点陷阱、Esc/遮罩关闭与 modal Layer 行为一致
+      而且 不存在与 Layer 无关的并列对话框运行时
   @req:r341
   规则: Replacement preserves stable test anchors
     替换基础组件库时，浏览器 @p0 所依赖的稳定 testid 锚点与可访问名 MUST 保持不变。

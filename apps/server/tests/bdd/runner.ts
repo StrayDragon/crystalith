@@ -231,37 +231,50 @@ export function runFeature(
   const feature = doc.feature;
   if (!feature) return;
 
-  describe(feature.name, () => {
-    for (const child of feature.children) {
-      const scenario = child.scenario;
-      if (!scenario) continue; // skip Background / Rule containers
+  // Scenarios live at two levels: top-level children and nested inside
+  // 规则: (Rule) blocks (child.rule.children, the llman-sdd 0.5 native layered
+  // format). Flatten both so rule-block scenarios execute instead of being
+  // silently skipped.
+  const scenarios = feature.children.flatMap((child) => {
+    if (child.scenario) return [{ scenario: child.scenario, rule: undefined }];
+    return (child.rule?.children ?? [])
+      .filter((rc) => rc.scenario)
+      .map((rc) => ({ scenario: rc.scenario!, rule: child.rule }));
+  });
 
+  describe(feature.name, () => {
+    for (const { scenario, rule } of scenarios) {
       const shouldSkip =
         options.skipScenarios?.test(scenario.name) ||
-        (scenario.tags ?? []).some((t) => t.name === '@skip' || t.name === '@experimental');
+        [...(rule?.tags ?? []), ...(scenario.tags ?? [])].some(
+          (t) => t.name === '@skip' || t.name === '@experimental',
+        );
 
       const runScenario = async () => {
         const ctx = makeContext();
         let prevKind: StepKind = 'given';
-
-        // Background steps (if any) run before each scenario.
-        for (const bg of feature.children) {
-          if (bg.background) {
-            for (const step of bg.background.steps) {
-              prevKind = keywordToKind(step.keyword, prevKind);
-              const def = matchStep(prevKind, step.text);
-              if (!def) throw new Error(`No step definition for: ${step.keyword}${step.text}`);
-              await runStep(def, step.text, step.docString?.content ?? null, ctx);
-            }
+        const runSteps = async (
+          steps: { keyword: string; text: string; docString?: { content: string } }[],
+        ) => {
+          for (const step of steps) {
+            prevKind = keywordToKind(step.keyword, prevKind);
+            const def = matchStep(prevKind, step.text);
+            if (!def) throw new Error(`No step definition for: ${step.keyword}${step.text}`);
+            await runStep(def, step.text, step.docString?.content ?? null, ctx);
           }
+        };
+
+        // Feature-level Background steps (if any) run before each scenario.
+        for (const bg of feature.children) {
+          if (bg.background) await runSteps(bg.background.steps);
+        }
+        // Rule-level Background (Gherkin allows one per Rule) runs after the
+        // feature-level one for scenarios inside that Rule.
+        for (const rc of rule?.children ?? []) {
+          if (rc.background) await runSteps(rc.background.steps);
         }
 
-        for (const step of scenario.steps) {
-          prevKind = keywordToKind(step.keyword, prevKind);
-          const def = matchStep(prevKind, step.text);
-          if (!def) throw new Error(`No step definition for: ${step.keyword}${step.text}`);
-          await runStep(def, step.text, step.docString?.content ?? null, ctx);
-        }
+        await runSteps(scenario.steps);
       };
 
       if (shouldSkip) {

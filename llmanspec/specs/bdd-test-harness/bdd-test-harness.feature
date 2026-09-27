@@ -8,12 +8,35 @@
   @req:r18
   规则: 中文 BDD 测试解析器
     MUST 提供基于 @cucumber/gherkin 的 BDD runner，MUST 支持 language zh-CN 的 .feature 解析，MUST 与 bun test 集成（BDD 测试目录）。
+
+    场景: runner-executes-rule-block-nested-scenarios
+      假如 BDD runner 加载含 规则: 块与嵌套场景的中文 feature
+      当 运行 BDD 套件
+      那么 规则块内嵌套场景被注册执行
+      而且 无规则块的 feature 行为不变
   @req:r19
   规则: Feature 文件维护在 v2 树
     MUST 在 BDD features 目录维护中文 .feature；API 路径 MUST 使用 /v2 前缀。活跃域与跳过白名单 MUST 在 BDD 运行器中明示。
+
+    场景: features-tree-uses-v2-paths-and-explicit-skip-set
+      假如 BDD features 目录与运行器入口可被静态检查
+      当 扫描 feature 步骤中的 API 路径与跳过白名单定义
+      那么 API 路径均使用 /v2 前缀
+      而且 活跃域与跳过白名单在运行器中明示
   @req:r20
   规则: BDD 为可选回归入口
     MUST 提供 just test-bdd（或等价 BDD 运行命令），作为已对齐 CRUD 子集的可选回归入口；在 skip 集合显著缩小前，BDD 不进入 just qa / pre-commit 硬性门禁——门禁组成的 canonical 归属见 quality-and-regression r_bdd_optional。
+
+    场景: just-test-bdd-runs-aligned-crud-surface
+      假如 仓库 justfile 定义 test-bdd
+      当 运行 just test-bdd
+      那么 BDD 套件执行且退出码为 0
+      而且 BDD 不在 just qa 硬性门禁内
   @req:r21
   规则: Cross-module integration tests exist
     系统 MUST 在 server 集成测试目录提供关键路径集成覆盖；该目录进入 just test 与 just qa 门禁的归属见 quality-and-regression r216/r219（canonical）。
+
+    场景: integration-coverage-in-just-test-gate
+      假如 server 测试目录含集成用例（setupIntegrationEnv）
+      当 运行 just test
+      那么 集成测试通过且计入门禁
