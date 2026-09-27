@@ -20,9 +20,21 @@
   @req:r162
   规则: Preference tuning is table-driven
     `preference` MUST 通过集中 tuning 表映射到检索与重试默认值。
+
+    场景: preference-maps-through-tuning-table
+      假如 已用记录型假 embed 策略覆盖 registry 的 embed 注册
+      当 运行 apps/server/tests/outputs/preference-tuning.test.ts 的 preference 用例
+      那么 quality/speed 分别映射到 tuning 表对应 topK
+      而且 缺省 preference 时落到 quality 行
   @req:r163
   规则: Explicit request knobs override defaults
     请求显式给定 `topK/minScore` 等参数时 MUST 覆盖 preference 默认值。
+
+    场景: request-knobs-override-tuning-defaults
+      假如 请求显式携带 topK=7 与 minScore=0.55（preference=speed）
+      当 运行 apps/server/tests/outputs/preference-tuning.test.ts 的 explicit knobs 用例
+      那么 检索按 topK=7 与 minScore=0.55 执行，覆盖 tuning 表值
+      而且 缺省 minScore 时落到检索默认值
   @req:r164
   规则: QA stream and non-stream completion logic is shared
     流式与非流式 QA MUST 复用同一完成阶段逻辑，保证 citations/evidence/confidence 一致。
@@ -48,6 +60,12 @@
   @req:r168
   规则: Outputs RAG retrieval with failure propagation
     outputs 生成 MUST 通过 RAG 检索获取相关上下文（topK 由生成偏好调节），MUST NOT dump 全部 chunk 以避免上下文窗口溢出；检索失败 MUST 传播错误使请求失败，MUST NOT 回退为选取 notebook 全部 chunk（违背检索子集意图）。
+
+    场景: retrieval-failure-propagates-or-scoped-fallback
+      假如 embed 策略检索抛错
+      当 运行 apps/server/tests/outputs/preference-tuning.test.ts 的 retrieval failure 用例
+      那么 未选来源时请求以统一错误信封失败（Output retrieval failed）
+      而且 已选来源时直接回退仅取所选来源的 chunk，不混入未选来源或全库 chunk
   @req:r169
   规则: Outputs postprocess MUST backfill per-type fields and fall back
     outputs 后处理 MUST 对每个输出类型逐字段补默认值（如 GUIDE 的 examples/exercises、MINDMAP 的 children），而非仅做顶层空检查后整体替换；生成失败时 MUST 产出类型化 fallback 内容而非空结果。
@@ -67,6 +85,12 @@
   @req:r171
   规则: QA MUST ensure inline citations when missing
     有证据路径（citations 非空）下，QA answer 无 [N] 形式内联引用时 MUST 追加 [1] 兜底标记（对齐既有语义）；无证据路径 MUST 保持 citations 为空且不注入兜底标记。
+
+    场景: inline-citation-backfill
+      假如 QA 处于有证据路径且 answer 不含 [N] 形式内联引用
+      当 运行 apps/server/tests/qa/inline-citations.test.ts 的 backfill 用例
+      那么 answer 追加 [1] 兜底标记，已含内联引用的 answer 原样保留
+      而且 无证据路径（citations 为空）不注入兜底标记
   @req:r172
   规则: Low similarity no-evidence MUST return empty citations
     当 noEvidenceReason 为 low_similarity 时 MUST 返回 citations=[] 空数组，MUST NOT 返回检索到的 citations
@@ -86,6 +110,12 @@
   @req:r174
   规则: QA MUST produce distinct no-evidence reasons
     当 evidence 为 false 时系统 MUST 从以下 reason 中确定一个并返回对应本地化回答：embedding_empty / no_vector_hits / no_valid_chunks / low_similarity
+
+    场景: no-evidence-reasons-distinct-and-localized
+      假如 分别以检索抛错、空命中与幽灵 chunk 假策略驱动 retrieveAndJudge
+      当 运行 apps/server/tests/qa/no-evidence-reasons.test.ts 的各 reason 用例
+      那么 embedding_empty/no_vector_hits/no_valid_chunks 各返回对应 reason 与本地化回答
+      而且 四个规范 reason 的本地化回答两两不同且非空（low_similarity 含于映射表）
   @req:r175
   规则: QA MUST compute and return confidence score
     当 evidence 为 true 时系统 MUST 计算并返回 confidence 置信度分数（0–1 区间）

@@ -1,5 +1,8 @@
 ---
-depends_on: ["c115-api-contract-b-class-tests"]
+depends_on: ['c115-api-contract-b-class-tests']
+branch: sdd/c116-b-zone-gates-and-server
+base_branch: main
+base_sha: b28ad2bfb757f6206b3469e28e3fd2a9332b8ccb
 ---
 
 # B 区第二批：门禁元规则 + 服务侧（约 30 条）

@@ -55,3 +55,9 @@
   @req:r8
   规则: Unified TaskQueue HTTP runtime MUST stay retired
     系统 MUST NOT 再暴露 /v2/tasks*（含 notebook tasks 列表与 cancel）或恢复已删除的跨域 TaskQueue 作为生成/导入默认底座，除非新产品需求经 SDD 重新提案；对已删除的 /v2/tasks 或 /v2/notebooks/:nid/tasks 的请求 SHALL 返回 404（或等价未挂载）。研究/幻灯片等长任务 MUST 继续使用其域内进度与取消语义（如 SSE），不得假定存在统一 tasks 表轮询 API。
+
+    场景: retired-tasks-routes-return-404
+      假如 应用已按统一入口聚合挂载全部路由
+      当 运行 apps/server/tests/integration/retired-tasks-routes.test.ts 对 GET /v2/tasks、GET /v2/notebooks/:nid/tasks 与 POST cancel 的请求
+      那么 三个请求均返回 404
+      而且 响应体为统一错误信封（errorCode=NOT_FOUND）
