@@ -8,6 +8,12 @@
   @req:r285
   规则: Upload endpoint returns created source on success
     上传成功 MUST 返回 201 与来源对象；失败语义区分 400/413/415/500（至少；413 对应超限拒绝，见 size-limit 条）。
+
+    场景: upload-returns-201-with-source
+      假如 一个空白笔记本
+      当 发送 POST 请求"/v2/notebooks/{当前笔记本[id]}/sources"上传一个受支持的文本文件
+      那么 响应状态码为201 且返回含 id 与 status 的来源对象
+      而且 轮询该来源直至状态为 ready（见 sources/ingest.test.ts upload 用例）
   @req:r286
   规则: Supported formats are parser-driven
     支持类型 MUST 由 parser 能力决定；无匹配 parser 的文件 MUST 返回 415 且不创建来源。
@@ -37,9 +43,22 @@
   @req:r292
   规则: URL from-source supports link and fetch modes
     `from-url` MUST 支持 `link|fetch`，`link` 不抓网页正文，`fetch` 抓取并分块。
+
+    场景: from-url-link-and-fetch-modes
+      假如 一个空白笔记本
+      当 分别以 mode=link 与 mode=fetch 发送 POST 请求"/v2/notebooks/{当前笔记本[id]}/sources/from-url"
+      那么 link 模式不抓取网页正文仅登记链接来源
+      而且 fetch 模式抓取页面正文并产出可检索分块
   @req:r293
   规则: Fetch applies SSRF validation before network calls
     `fetch` MUST 在请求前做 SSRF 校验（含逐跳重定向重验）并拒绝高风险目标；SSRF 策略 MUST 从配置解析 hostAllowlist/domainAllowlist/cidrAllowlist/allowlist_only，配置 allowlist_only 时非白名单主机 MUST 被拒绝；无配置时 MUST 回退默认姿态（拒绝私网与元数据 IP）。
+
+    场景: fetch-ssrf-validation
+      假如 fetch 目标为私网 IP 或元数据地址
+      当 发送 POST 请求"/v2/notebooks/{当前笔记本[id]}/sources/from-url"且 mode=fetch
+      那么 请求在发起网络调用前被拒绝（见 net/url-safety.test.ts 与 net/fetch-with-redirect-guard.test.ts）
+      而且 逐跳重定向落到私网目标同样被拦截
+      而且 配置 allowlist_only 后非白名单主机被拒绝
   @req:r294
   规则: Extractor preference, fallback, and retry
     上传/URL 抓取路径的提取器 fallback 与可诊断失败语义 MUST 遵循 web-extractor-plugins r332/r335（canonical）；出站 HTTP 代理合约见 architecture-core r_outbound_http。
@@ -49,9 +68,21 @@
   @req:r296
   规则: Extractor selection errors are diagnosable
     fetch 模式显式指定 extractor 的尝试顺序与不可用时的 fallback/错误语义见 web-extractor-plugins r332/r335（canonical）；无论回退还是失败，系统 MUST 输出可诊断信息说明发生了什么与如何恢复。
+
+    场景: extractor-errors-diagnosable
+      假如 一个空白笔记本
+      当 以 mode=fetch 且 extractor="not-a-real-extractor" 发送 from-url 请求（见 sources/ingest.test.ts 业务层拒绝用例）
+      那么 请求被拒绝且返回可机器读取的诊断信息
+      而且 诊断信息说明发生了什么与如何恢复
   @req:r297
   规则: Sources search MUST perform real web search
     POST /sources/search MUST 调用 web search 引擎（SearXNG）返回真实 web 结果，MUST NOT 返回 notebook 内向量匹配作为 placeholder；搜索引擎不可用或调用失败时 MUST 返回 status='service_error' 且 message MUST 为用户可读中文文案，MUST NOT 伪装为 'no_results' 或返回空成功响应；'no_results' MUST 仅表示引擎正常应答且零命中。前端 MUST 将 service_error 呈现为可与「无命中」区分的错误态（含重试入口或重试指引），MUST NOT 将其渲染为普通空结果提示。
+
+    场景: sources-search-real-web-contract
+      假如 web search 引擎不可用
+      当 发送 POST 请求"/v2/notebooks/{当前笔记本[id]}/sources/search"（见 sources-search.test.ts c65 用例）
+      那么 响应 status 为 service_error 且 message 为用户可读中文文案
+      而且 仅当引擎正常应答且零命中时才返回 no_results
   @req:r298
   规则: Dedup MUST be gated by config
     sources 去重 MUST 受 config source_ingestion.dedup.enabled 门控，为 false 时 MUST 跳过 dedup 直接创建新 source

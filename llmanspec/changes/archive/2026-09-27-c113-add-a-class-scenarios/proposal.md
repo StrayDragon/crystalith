@@ -1,5 +1,8 @@
 ---
-depends_on: ["c112-dedupe-colliding-req-ids"]
+depends_on: ['c112-dedupe-colliding-req-ids']
+branch: sdd/c113-add-a-class-scenarios
+base_branch: main
+base_sha: 58e4cb77dee44ec5c4e7042bee505245a705fcb0
 ---
 
 # A 类裸规则全量补场景（非深研 33 capability）

@@ -20,9 +20,21 @@
   @req:r13
   规则: Streaming uses streamText ReadableStream + SSE relay
     流式生成 MUST 通过 AI SDK streamText 的 fullStream（或等价）→ Elysia SSE Response 中继到前端。SSE MUST 使用 text/event-stream。
+
+    场景: stream-relay-through-sse
+      假如 笔记本中有一篇来源且发起流式提问
+      当 运行 apps/server/tests/bdd/features/qa/知识问答.feature 的流式提问场景
+      那么 streamText fullStream 经 Elysia SSE 中继返回 200
+      而且 SSE Content-Type 为 text/event-stream
   @req:r14
   规则: Token counting uses gpt-tokenizer
     Token 计数 MUST 使用 gpt-tokenizer（纯 JS），MUST NOT 依赖 tiktoken/wasm 作为主路径。
+
+    场景: token-counting-uses-gpt-tokenizer
+      假如 AI 调用需要 token 计数与截断
+      当 运行 apps/server/tests/tokenizer.test.ts 的计数用例
+      那么 countTokens/countMessageTokens/truncateToTokens 按 gpt-tokenizer 纯 JS 实现产出
+      而且 主路径不依赖 tiktoken/wasm
   @req:r15
   规则: Middleware handles retry and logging
     AI SDK middleware MUST 承载 LLM 调用的自动重试与结构化日志；OpenTelemetry tracer MAY 后续接入。重试策略细节（次数、指数退避）见 generation-observability-and-guardrails retry-honors-retry-after / retry-timeout-budget（canonical）。
@@ -32,3 +44,10 @@
   @req:r17
   规则: External plugins load from npm dependencies with restart semantics
     外部插件 MUST 以 npm 依赖形式分发（官方插件约定 scope `@crystalith-plugin/*`，MUST 为纯 JS 且不依赖 native addon），宿主在启动时按 `plugins.enabled`（allowlist）/ `plugins.disabled`（denylist）/ `plugins.load_order`（后加载者优先消解冲突）从 node_modules 动态 import 加载。系统 MUST NOT 提供运行时热插拔：安装、升级与禁用 MUST 以重启 server 生效。单个插件加载失败 MUST 记入 `/v2/workspace/tools` 的 `diagnostics.plugins.skipped`（含 errorCode/message/hint）并 MUST NOT 阻断启动。
+
+    场景: plugin-load-failure-skips-without-blocking
+      假如 多个插件按 plugins.enabled/load_order 从 node_modules 动态 import
+      当 运行 apps/server/tests/plugins/registry.test.ts 的 load semantics 用例
+      那么 allowlist 外、disabled 与 factory/import 失败的插件记入 diagnostics.plugins.skipped（PLUGIN_* errorCode）
+      而且 其余插件继续加载生效且启动不被阻断
+      而且 未提供运行时热插拔入口，安装/升级/禁用经重启 server 生效

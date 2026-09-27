@@ -17,12 +17,24 @@
   @req:r49
   规则: Vector store is sqlite-vec in-process
     向量检索 MUST 使用 sqlite-vec 扩展（同库零依赖）。MUST 以 `partition by notebook_id` 做多 notebook 隔离。MUST NOT 引入 ChromaDB/lancedb/Qdrant。向量检索延迟与召回规模目标 MUST 由配置承载并以基准测试验证，spec 不锚定具体数值。
+
+    场景: sqlite-vec-knn-with-notebook-isolation
+      假如 同一 SQLite 库内已写入多个 notebook 的 vec_chunks 向量
+      当 运行 apps/server/tests/db.test.ts 的 sqlite-vec 虚表用例
+      那么 同进程内 KNN 检索按 distance 返回最近邻且不依赖外部向量服务
+      而且 按 notebook_id 分区使不同 notebook 的向量互相隔离
   @req:r50
   规则: Schema types exported for frontend
     Drizzle schema 导出的 TS 类型 ($inferSelect/$inferInsert) MUST 通过 packages/shared 暴露给前端 eden RPC 消费，且与 server 侧类型一致。
   @req:r51
   规则: Content storage abstraction
     系统 MUST 提供内容存储抽象（本地文件系统实现）的写入与读取操作以持久化原始上传字节 使 document_parse 任务可重新解析 单二进制架构下 MUST 使用本地文件系统路径
+
+    场景: local-storage-round-trip
+      假如 内容存储抽象就绪且单二进制下实现为本地文件系统路径
+      当 运行 apps/server/tests/shared/storage.test.ts 的 LocalStorage 用例
+      那么 save 后 fetch 可按 key 往返读出原始上传字节供 document_parse 重新解析
+      而且 exists 与 delete 的返回语义一致
   @req:r52
   规则: document_parse task wired
     任务队列 worker MUST 实现 document_parse 任务类型 从存储读取原始字节 经 parse 与 chunk 与 embed 完整流程并写入向量库 不再抛 stub 错误

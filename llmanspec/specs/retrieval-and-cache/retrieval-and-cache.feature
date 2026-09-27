@@ -11,24 +11,60 @@
   @req:r225
   规则: Retrieval context obeys token budget and actually truncates
     检索上下文组装 MUST 受 token budget 约束；超预算时 MUST 实际截断或压缩上下文以适配预算（保留最高优先级块，边界块部分修剪）且 compressed 标记 SHALL 置 true；预算内上下文 SHALL 原样通过且 compressed 为 false；MUST NOT 仅设置 compressed 标记而将完整超长上下文传给 LLM。截断优先级 MUST 为 history→retrieval→recent→system→query。token 计数 MUST 使用项目 tokenizer（见 architecture-plugin-and-agent r14），MUST NOT 用字符数截断替代。
+
+    场景: token-budget-truncates-by-priority
+      假如 检索上下文装配就绪
+      当 上下文超出 token 预算
+      那么 按优先级保留高分块并部分修剪低分块且 compressed 标记置 true
+      而且 修剪后不产生孤立 citation 引用（见 rag/context-window.test.ts）
   @req:r226
   规则: Multi-query retrieval is bounded
     启用 multi-query 时 MUST 受 seed 上限、融合策略与去重规则约束。
+
+    场景: multi-query-seeds-capped
+      假如 multi-query 扩展已启用
+      当 运行 rag/multi-query.test.ts 的 SEED_CAP 用例
+      那么 生成的 query seeds 数量不超过 seed 上限
+      而且 融合与去重规则约束下不出现无界扩展
   @req:r227
   规则: Epoch-based cache invalidation is canonical
     sources/vector 相关缓存 MUST 基于 `sources_epoch` 与 `vector_epoch` 失效；epoch 递增在并发下 MUST 原子且单调递增。
+
+    场景: epoch-bump-invalidates-cache
+      假如 检索缓存中已有同 epoch 命中的条目
+      当 运行 rag/cache.test.ts 的 bumpSourcesEpoch/bumpVectorEpoch 用例
+      那么 对应 epoch 递增后旧缓存条目不再命中
+      而且 epoch 递增在并发下原子且单调
   @req:r228
   规则: Optional retrieval assembly cache is versioned
     若启用检索组装缓存，key MUST 包含 epoch 版本信息以避免脏命中。
+
+    场景: assembly-cache-key-carries-epoch
+      假如 检索组装缓存已启用
+      当 sources/vector epoch 递增后以相同输入读取缓存
+      那么 缓存 key 因包含 epoch 版本信息而不命中旧值
+      而且 缓存按 notebook 隔离互不污染（见 rag/cache.test.ts per-notebook 用例）
   @req:r229
   规则: Embed strategy converts distance to similarity
     Embed 检索策略 MUST 将 sqlite-vec 返回的 distance 转换为 similarity score (score = 1 - distance)。过滤 MUST 使用 score >= minScore 比较并按 score 降序排序（MUST NOT 直接用 distance 做 >= 比较，方向相反）。minScore 与 topK 的默认值 MUST 来自配置。
   @req:r230
   规则: Chunking uses sliding window with configurable params
     文本分块 MUST 使用带重叠的滑动窗口（块大小 + 重叠量），分块参数 MUST 可配置（默认值对齐既有语义）；MUST NOT 使用无重叠的段落切分。
+
+    场景: sliding-window-chunk-with-overlap
+      假如 文本分块器以默认配置就绪
+      当 运行 rag/chunker.test.ts 的 DEFAULT_CHUNKER_CONFIG 用例
+      那么 块大小 512、重叠 102 且每块文本长度不超过 maxLen
+      而且 分块参数可由配置覆盖且不退化为无重叠的段落切分
   @req:r231
   规则: Multi-query expansion with RRF fusion
     检索 MUST 支持 multi-query 扩展：按 outputType 生成 query seeds，多查询结果 RRF 融合（融合参数来自 config schema）。MUST 受 seedCap 限制避免无界扩展。
+
+    场景: rrf-fuses-multi-query-seeds
+      假如 已按 outputType 生成多个 query seeds
+      当 运行 rag/multi-query.test.ts 的 rrfFuseSeeds 用例
+      那么 多查询结果按 RRF（参数来自 config schema）融合为单一排序列表
+      而且 融合结果受 seedCap 限制避免无界扩展
   @req:r232
   规则: Epoch cache wired to strategies and source mutations
     epoch 缓存组件 MUST 接线到各检索策略的 retrieve 入口。源增删改 MUST bump sources_epoch，向量重嵌 MUST bump vector_epoch。缓存 key MUST 包含 epoch 版本。MUST NOT 零调用（死代码）。
@@ -45,3 +81,9 @@
   @req:r235
   规则: QA and vector search MUST support sourceIds filtering
     QA 检索与向量 KNN MUST 支持通过 sourceIds 参数将检索范围限定到指定 source 子集；当 sourceIds 缺失或为空时 QA MUST 跳过向量检索（不得回退为全库检索）；minScore 阈值作为证据门控 MUST 可配置。
+
+    场景: sourceids-filters-qa-and-knn
+      假如 QA 检索与向量 KNN 支持 sourceIds 参数
+      当 sourceIds 缺失或为空时执行 QA 检索（见 qa/c63-ungrounded.test.ts）
+      那么 跳过向量检索且不回退为全库检索
+      而且 指定 sourceIds 时检索范围限定到该子集并受可配置 minScore 门控（见 qa/low-similarity-passthrough.test.ts）

@@ -11,6 +11,12 @@
   @req:r399
   规则: Streaming UX supports send/chunk/done/error and cancel
     涉及流式输出的面板（如 Chat/Research）MUST 显式呈现 send/chunk/done/error 状态，并 MUST 支持用户取消以停止继续追加内容。
+
+    场景: stream-cancel-stops-appending
+      假如 Chat 面板已建立流式对话连接
+      当 依次观察 send/chunk/done/error 状态的呈现
+      那么 触发取消（AbortController）后流立即停止且不再追加内容
+      而且 中途取消不产生尾部的状态回写（reconcile）
   @req:r400
   规则: Chat input supports /prompt directives as user-facing commands
     Workspace 的 Chat 面板 MUST 允许用户在输入框中使用 `/prompt:<preset> <query>` 指令来请求受控的预设生成模式。
@@ -38,12 +44,24 @@
   @req:r408
   规则: Sources upload file type support is consistent and includes PDF
     Workspace 的 Sources 上传入口 MUST 支持后端核心发行版的常见内置解析格式，且前端 `accept`、预过滤与提示文案 MUST 保持一致。 该支持集 SHALL 至少包含：`.txt/.md/.markdown` 与 `.pdf`（`application/pdf`），以及 `.csv`（`text/csv`）。
+
+    场景: upload-accepts-pdf-and-csv
+      假如 上传控件就绪
+      当 检查可接受文件类型与分派逻辑
+      那么 PDF 与 CSV 进入对应解析路径
+      而且 不支持类型被前端预检拒绝
   @req:r409
   规则: Studio queue, rendering fallback, and export gating are explicit
     Studio MUST 明确展示生成队列状态并支持取消；渲染 MUST 定义确定的回退顺序；导出选项 MUST 仅显示当前输出类型支持项。
   @req:r410
   规则: Citation UI distinguishes source count from chunk count
     Chat 引用入口与引用详情弹层 MUST 同时展示唯一来源数与片段（citation/chunk）数，并支持按来源分组或过滤。
+
+    场景: citation-counts-sources-vs-chunks
+      假如 引用详情弹层收到一组 citation 片段
+      当 citationLabels 按 sourceId（缺失时回退 sourceName）去重统计
+      那么 唯一来源数与片段数同时展示
+      而且 同一来源的多个 chunk 只计一次来源
   @req:r411
   规则: Sources bar MUST use tabs (all/selected/history) with cross-tab enforcement
     Sources 栏 MUST 使用 all/selected/history 三个 tab（默认 all），tab 间状态联动 MUST 遵守：拖动/添加/移除来源只允许在 all tab 发生；selected 计数 MUST 基于 `selectedSourceIds` 动态计算；history 仅记录最近 upload/import/query 动作且 MUST NOT 作为选择来源的渠道，将历史条目添加回来源栏 SHOULD 支持（该动作仅更新来源栏视图，不触发后端搜索）；sources 列表滚动 MUST 由独立 scroll 状态管理。
@@ -68,3 +86,9 @@
   @req:r418
   规则: URL import dialog hints extractors from pasted URL in fetch mode
     URL 导入对话框在 fetch（获取内容）模式 SHALL 对用户粘贴的 URL 本地匹配 extractors 元数据中的 `urlPatterns`；命中时 SHALL 呈现推荐提取器并默认预选，用户 MUST 能取消或恢复勾选；未命中或未选择时 MUST 以 `extractor: null` 走既有默认提取链；link 模式 MUST NOT 展示任何提取器选择 UI。
+
+    场景: url-dialog-hints-extractor
+      假如 用户在 URL 导入对话框 fetch 模式粘贴 URL
+      当 matchExtractorsForUrl 以各提取器的 urlPatterns 本地匹配
+      那么 命中时呈现推荐提取器并默认预选且可取消勾选
+      而且 未命中时以 extractor 为 null 走默认提取链

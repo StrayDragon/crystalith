@@ -8,6 +8,12 @@
   @req:r22
   规则: Prompt directives are parsed from QA question when enabled
     当 `app.features.chat_prompt_presets_enabled=true` 时，系统 MUST 支持在 `question` 内解析 prompt 指令： `/prompt:<preset> <query>` 其中： - `<preset>` MUST 匹配正则：`[a-z0-9_-]{1,32}`（大小写不敏感，解析后统一为小写） - `<query>` MAY 为空（空时视为输入错误）。指令解析 MUST NOT 仅接受 body 的 preset 字段。
+
+    场景: prompt-directive-parsed-from-question
+      假如 chat_prompt_presets_enabled=true 且 question 为 "/prompt:STATS 销售数据"
+      当 运行 apps/server/tests/qa/presets.test.ts 的 parsePromptDirective 用例
+      那么 解析出 preset=stats（统一小写）且 question 为去前缀后的查询文本
+      而且 无指令时才回退 body 的 preset 字段
   @req:r422
 
   规则: empty-query-returns-deterministic-error
@@ -19,18 +25,36 @@
   @req:r23
   规则: Unknown preset names are rejected with a stable list
     系统 MUST 将 preset 集合视为白名单（built-in + custom）。未知 preset MUST 被拒绝并返回可用 preset 列表（含 built-in 与 custom）。
+
+    场景: unknown-preset-rejected-with-stable-list
+      假如 preset 白名单含 built-in 与 custom
+      当 以 "/prompt:不存在的预设 某个问题" 调用 QA（apps/server/tests/bdd/features/qa/知识问答.feature 的未知预设场景）
+      那么 响应状态码为 400
+      而且 错误信息返回可用 preset 列表
   @req:r24
   规则: Custom prompt presets can override the QA system prompt
     系统 MUST 支持用户定义的 custom preset。对于 `/prompt:<preset> <query>`： - 若 `<preset>` 命中 custom preset 且 `enabled=true`，系统 MUST 使用该 preset 的 `systemPrompt` 覆盖 QA pipeline 的 system message。 - 系统 MUST 将 `<query>` 作为实际 QA question 执行（不包含 `/prompt:` 前缀）。
   @req:r25
   规则: Disabled presets are rejected deterministically
     当 preset 存在但 `enabled=false` 时，系统 MUST 拒绝该请求并返回确定性错误。
+
+    场景: disabled-preset-rejected-deterministically
+      假如 存在 enabled=false 的 preset（如 disabled-test）
+      当 以 "/prompt:disabled-test 某个问题" 调用 QA（同 feature 的已禁用预设场景）
+      那么 响应状态码为 400
+      而且 重复调用返回相同的确定性错误
   @req:r26
   规则: Stats persists plain answer text and shared UI state
     当 `stats` preset 生成合法的结构化结果时，系统 MUST 将 `fallback_markdown` 持久化为 assistant `content`，且不依赖 `chat_ui_envelope_enabled`、不在 `content` 中嵌入 envelope（见 chat-ui-envelope r28/r29）；session `sharedState.ui` 的 chart/table mounts 为可选后续能力，未实现时 MUST NOT 伪造。
   @req:r27
   规则: QA MUST support stats preset with chart and table JSON
     QA MUST 支持 stats preset（对齐既有语义）：专用系统提示 + chart/table 结构校验与专用 JSON 解析路径。模型最终输出 MUST 为单个 JSON object（不含 code fence、解释文本或多段输出），且 MUST 满足（snake_case 键，模型输出合约，非 HTTP wire）： - `fallback_markdown: string`（MUST 非空，SHOULD 含 inline citations 如 `[1]`） - `chart: { title, unit?, items:[{ label, value }] }` - `table?: { columns, rows }`；解析/校验失败 MUST 回退默认 QA 文本生成并保持对话可用。MUST NOT 缺失该 preset。
+
+    场景: stats-preset-parses-chart-table-json
+      假如 stats preset 使用专用系统提示且模型输出含 fallback_markdown/chart/table 的 JSON
+      当 运行 apps/server/tests/qa/presets.test.ts 的 parseStatsPresetOutput 用例与 bdd stats 提问场景
+      那么 合法 JSON（snake_case 键）经专用解析路径产出 chart/table 结构
+      而且 环绕散文或 code fence 中的 JSON 仍可被提取校验
   @req:r424
 
   规则: invalid-json-falls-back-to-text-qa

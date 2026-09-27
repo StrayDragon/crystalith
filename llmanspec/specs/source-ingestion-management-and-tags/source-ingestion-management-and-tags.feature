@@ -11,6 +11,12 @@
   @req:r263
   规则: Source list can be epoch-cached
     列表结果 MUST 基于 `sources_epoch` 缓存；失效模型遵循 retrieval-and-cache r227（canonical），来源集合或 tag 相关变更成功后 MUST 使列表缓存失效并在下次查询重建。
+
+    场景: list-cache-follows-epoch
+      假如 已按 sources_epoch 缓存的来源列表结果
+      当 来源集合或 tag 相关变更成功（见 rag/cache.test.ts bump 失效用例）
+      那么 sources_epoch 递增使列表缓存失效
+      而且 下次列表查询基于新数据重建
   @req:r264
   规则: Chunks endpoint returns deterministic order
     来源 chunks 接口 MUST 按 `chunk_index` 升序返回。
@@ -20,12 +26,30 @@
   @req:r266
   规则: Source failures include diagnostic fields
     来源在失败或不可恢复状态下 MUST 提供结构化诊断信息，以支持 UI 给出可操作的修复建议。
+
+    场景: failure-includes-diagnostics
+      假如 一个会在解析或嵌入阶段失败的来源
+      当 摄取该来源直至失败（见 sources/c57-safety-diagnostics.test.ts）
+      那么 失败来源携带结构化诊断信息
+      而且 四阶段错误码（含 PARSE_ERROR、EMBEDDING_FAILED）均有恢复提示
   @req:r267
   规则: Batch operations return per-item results and keep epoch consistent
     批量删除、批量 re-embed 与 tag 绑定/解绑 MUST 返回逐项结果数组（含 errorCode/message），部分来源不可删除或不存在时仍逐项报告成功/失败，并保持 `sources_epoch` 失效语义可预测。本条为批操作逐项结果形状的 canonical 约束。
+
+    场景: batch-per-item-results
+      假如 笔记本内有两篇来源且批量请求中混入一个不存在的来源 id
+      当 发送批量删除或批量 re-embed 请求
+      那么 响应返回逐项结果数组且每项含 errorCode 与 message
+      而且 不存在的 id 逐项报告失败且不影响其余项成功
   @req:r268
   规则: Optional source dedup does not silently drop data
     系统 MAY 支持来源去重，但命中去重时 MUST 不得静默丢弃用户导入请求，MUST 提供「复用既有来源」或「仍创建新来源」的明确选择（或等价机制）。
+
+    场景: dedup-explicit-choice
+      假如 笔记本内已有一篇相同内容的来源
+      当 不带 dedupAction 重复上传同一内容（见 sources/ingest.test.ts 三分支用例）
+      那么 返回 409 SOURCE_DEDUP_HIT 而不静默丢弃导入请求
+      而且 dedupAction=reuse 复用既有来源、dedupAction=create_new 创建新来源
   @req:r269
   规则: Re-embed MUST require FAILED status
     POST /sources/:id/re-embed MUST 校验 source 状态为 failed，非 failed MUST 返回 400
@@ -38,6 +62,12 @@
   @req:r270
   规则: Tag binding MUST return stable batch result shape and verify ownership
     tag binding MUST 返回 {count, results:[SourceBatchItemResult]} 结构，且 DELETE binding MUST 校验 source 属于该 notebook，跨 notebook 时 MUST 返回 404（归属 SSOT 见 workspace-api-contract nested-path-nid-is-ownership-ssot）。本条为 tag 绑定响应与归属校验的 canonical 约束。
+
+    场景: tag-binding-batch-shape-and-ownership
+      假如 一个空白笔记本
+      当 发送 POST 请求"/v2/notebooks/{当前笔记本[id]}/sources/tags/{当前标签[id]}/sources"批量绑定且混入缺失的 source id（见 sources/qa-to-source-and-tags.test.ts）
+      那么 响应返回 {count, results:[SourceBatchItemResult]} 结构且逐项含 errorCode
+      而且 对跨 notebook 的 source 执行 DELETE binding 时返回 404
   @req:r271
   规则: Tag operations MUST enforce uniqueness and notebook ownership
     source tag 的创建和更新 MUST 强制名称唯一性（同一 notebook 下大小写不敏感，冲突返回 409），所有 tag 操作 MUST 校验 tag 属于指定 notebook

@@ -20,6 +20,12 @@
   @req:r217
   规则: Critical browser smoke exists
     仓库 MUST 维护 Playwright @p0 冒烟（just e2e），并纳入 just qa。
+
+    场景: p0-smoke-gated-by-just-qa
+      假如 检查 justfile 的 qa 与 e2e 目标
+      当 just e2e 运行 e2e/tests/p0-smoke.spec.ts
+      那么 @p0 workspace 冒烟用例（shell 挂载/API 健康等）被执行
+      而且 just qa 的目标列表包含 e2e
   @req:r218
   规则: Config schema and env example drift checks are mandatory
     just qa MUST 运行 check-env-examples 与 check-app-schema（Zod SSOT → .env.example / secret.env.example / app.schema.gen.json）；任一检查发现与 Zod SSOT 不一致时，just qa SHALL 失败并以非 0 退出。

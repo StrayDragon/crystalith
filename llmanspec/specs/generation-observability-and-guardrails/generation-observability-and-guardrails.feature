@@ -23,6 +23,12 @@
   @req:r181
   规则: Concurrency and cancellation guardrails are enforced
     生成与后台任务 MUST 有阶段级并发上限与取消语义：超过上限的请求 MUST 被限流或排队，取消 SHALL 按取消语义停止相关任务。
+
+    场景: concurrency-queue-and-cancel
+      假如 节点 chat 持有 LLM mutex 且 runLoop 到达调度点
+      当 检查 mutex 未释放期间 runLoop 的行为
+      那么 runLoop 排队等待且不抢占 mutex
+      而且 mutex 释放后认领 work_unit，任务被取消时按取消语义停止
   @req:r182
   规则: Background workers shutdown gracefully
     后台任务队列 worker MUST 支持优雅停机，并等待任务到达可接受的终态。

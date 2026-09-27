@@ -8,9 +8,19 @@
   @req:r386
   规则: Workspace uses modular canvas layout
     工作区 MUST 基于模块化画布布局，默认包含 Sources/Chat/Studio 核心模块。
+
+    场景: workspace-shell-mounts-core-modules
+      假如 打开 Workspace 页面
+      那么 workspace 根容器与顶栏可见
+      而且 Sources、Chat、Studio 三个核心模块面板同时挂载可见
   @req:r387
   规则: Header remains compact and hosts search entry
     顶部栏 MUST 提供 notebook 切换、布局锁定、全局入口，并 MUST 在中间区域提供统一的搜索/调研输入入口；窄屏下关键入口仍可访问。
+
+    场景: topbar-hosts-core-entries
+      假如 Workspace 顶栏挂载完成
+      那么 notebook 切换器与布局锁定开关等关键入口可见
+      而且 顶栏中间的搜索/调研输入入口可见，点击后打开搜索面板
   @req:r388
   规则: Mobile viewport uses single-panel navigation
     当视口宽度处于移动端窄屏范围时（以 `md` 断点为界），Workspace MUST 以单面板模式呈现 Sources / Chat / Studio，并通过底部 TabBar 提供面板切换入口，以避免多列挤压造成不可用。
@@ -31,6 +41,12 @@
   @req:r391
   规则: Keyboard and accessibility baselines exist
     快捷键帮助、基础可访问性与 modal 交互规范 MUST 提供。
+
+    场景: keyboard-shortcuts-and-help-baseline
+      假如 Workspace shell 已挂载
+      当 用户在非输入焦点按下注册的全局快捷键
+      那么 对应动作被触发，输入框聚焦时全局快捷键被忽略（Ctrl+K 等 allowInInput 例外仍可用）
+      而且 用户菜单中的快捷键帮助入口可打开快捷键帮助面板
   @req:r392
   规则: Workspace localization is centralized and locale-ready (zh-CN only)
     Workspace MUST 将关键路径的用户可见文案集中管理（稳定 message key + `t()` 等价接口），并默认使用 `zh-CN` 文案。核心发行版不要求提供语言切换入口与多语言内置翻译，但结构 SHOULD 保持可扩展以支持社区后续新增 locale。
@@ -40,16 +56,41 @@
   @req:r394
   规则: Workspace provides guided empty states
     Workspace MUST 在首次进入与关键空态下提供分层引导，明确下一步动作与成功路径。
+
+    场景: guided-empty-states
+      当 computeWorkspaceReadiness 依据连接、notebook、来源与会话状态求值
+      那么 每个关键空态（未连接、无 notebook、来源加载中、无会话）都映射到对应的引导状态而非空白
+      而且 引导状态明确下一步动作与成功路径
   @req:r473
 
   规则: Empty states enumerate backend loss, empty sources, and missing session
     Workspace MUST 对关键空态提供分层引导并明确下一步动作：后端不可连接或连接状态为 error 时 SHALL 显示可见的错误提示；当前 notebook 来源列表为空时 SHALL 引导用户上传文件、从 URL 导入或使用搜索导入；已有来源但尚无可用会话时 SHALL 提供“一键开始会话”的明确入口。
+
+    场景: empty-states-enumerate-error-empty-sources-no-session
+      当 computeWorkspaceReadiness 求值出连接错误、来源为空与已有来源无会话状态
+      那么 连接错误映射到可见的错误提示状态
+      而且 来源为空时给出上传/URL 导入/搜索导入引导，已有来源无会话时给出一键开始会话入口
   @req:r395
   规则: Workspace health status is visible and actionable
     Workspace MUST 提供可见的健康入口，能展示核心依赖与可选服务（如 chroma/redis/ollama/searxng）的 degraded/unknown 状态与恢复提示（recoveryHint），并包含可执行的恢复建议。
+
+    场景: health-status-visible-and-actionable
+      当 用户菜单打开诊断面板
+      那么 核心依赖与 chroma/redis/ollama/searxng 等可选服务状态可见
+      而且 degraded/unknown 服务附带 recoveryHint 恢复建议，诊断数据可经 force 端点强制刷新
   @req:r396
   规则: Command palette is discoverable and includes core actions
     Workspace MUST 提供可发现的命令面板（例如 Ctrl+K）并包含覆盖核心流程的最小动作集；其中与可选能力相关的动作 MUST 随运行时 capability 动态变化。
+
+    场景: command-palette-discoverable
+      假如 工作区 shell 挂载完成
+      当 用户按下 Ctrl+K
+      那么 命令面板打开且可检索命令
   @req:r397
   规则: Top bar MUST open E1 anchored search panel
     用户点击或聚焦顶栏搜索/调研输入时，Workspace MUST 打开锚定于顶栏的宽幅面板（E1）：面板层级与关闭策略 MUST 走统一 Layer（Esc 与遮罩可关闭）；MUST NOT 使用硬编码 z-index。
+
+    场景: topbar-search-opens-anchored-panel
+      当 用户点击或聚焦顶栏搜索/调研输入入口
+      那么 锚定顶栏的宽幅搜索面板（E1）打开且包含来源搜索输入与提交动作
+      而且 面板层级与关闭走统一 Layer，Esc 与遮罩可关闭且不硬编码 z-index

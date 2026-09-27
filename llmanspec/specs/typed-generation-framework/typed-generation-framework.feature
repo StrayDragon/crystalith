@@ -37,6 +37,12 @@
   @req:r329
   规则: Outputs pipeline MUST sanitize citation indices (range/dup/int) with warnings
     outputs pipeline MUST 递归剥离越界、重复、非整数 citation 索引，并设置 _warnings / citations_sanitized / _postprocessed 标记。本条为 generation-core r165（canonical）行为的实现级细化：剥离准则与内容标记命名归此承载，管线阶段顺序以 canonical 为准。
+
+    场景: citation-indices-sanitized
+      假如 outputs pipeline 收到带 citation 索引的生成结果
+      当 sanitizeCitationsIndices 以引用池上界执行剥离
+      那么 越界、重复、非整数索引被递归剥离
+      而且 发生剥离时设置 _warnings 与 citations_sanitized / _postprocessed 标记
   @req:r330
   规则: Outputs pipeline with preference=quality MUST run LLM repair loop for salvageable output
     outputs pipeline 在 preference=quality 且 needsRepair 为真时 MUST 再跑一次生成修补以挽救可挽救输出；失败则保留原对象并走后续 postprocess/fallback；修补所处的管线阶段顺序见 generation-core r160/r165。
