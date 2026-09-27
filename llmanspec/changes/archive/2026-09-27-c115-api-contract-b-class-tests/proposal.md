@@ -1,5 +1,8 @@
 ---
-depends_on: ["c114-deep-research-a-class-scenarios"]
+depends_on: ['c114-deep-research-a-class-scenarios']
+branch: sdd/c115-api-contract-b-class-tests
+base_branch: main
+base_sha: 5eb78fc0e2adf384e2f622460b8f3e9c368cd2f6
 ---
 
 # workspace-api-contract B 类 18 条：新增 server 集成测试 + 补场景
