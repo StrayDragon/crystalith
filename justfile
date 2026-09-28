@@ -229,11 +229,6 @@ check-i18n-keys:
 check-provider-deps:
     bun scripts/check-provider-deps.ts
 
-# Local guard: no @req id reused across rule headers within one .feature file
-# (upstream validate/dedupe miss within-file collisions; c112, not in `just qa`)
-check-req-ids:
-    bun scripts/check-req-id-collisions.ts
-
 # Regenerate all generated artifacts from SSOT: env examples + JSON schema
 gen-all:
     just gen-env-examples gen-app-schema

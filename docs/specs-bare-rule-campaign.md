@@ -16,7 +16,7 @@ llman-sdd 0.5 原生分层格式下，规则（`规则:` 块 + `@req` 句柄）�
 - **上游工具缺口**（llman-sdd 0.5.0，两处均未报出）：
   1. `validate` 的「全局重复 req_id」ERROR 门未检测同文件内碰撞（如 deep-research-ui L8/L176 同挂 r99，validate 判 valid）；
   2. `project dedupe-req-ids --dry-run` 报 "No colliding req_id values"（疑似只查跨文件）。
-- 处置：c112 已按 `spec next-req-id` 重取号（首现保留原号，后续 → r420-r473），本地 `just check-req-ids` 复扫为 0；上游两处漏报仍待报 llman-sdd 修复。
+- 处置：c112 已按 `spec next-req-id` 重取号（首现保留原号，后续 → r420-r473）。上游两处漏报已报 [llman-sdd#4](https://github.com/StrayDragon/llman-sdd/issues/4) 并于 **0.5.1 修复**（detect-same-file-req-dupes；同文件碰撞注入实测 validate ERROR + dedupe remap 计划均拦截），本地 `just check-req-ids` 兜底脚本已退役。
 
 ## 分类口径（c111 design 校准产物）
 
@@ -81,7 +81,7 @@ llman-sdd 0.5 原生分层格式下，规则（`规则:` 块 + `@req` 句柄）�
 | 批次                             | 状态               | 结果                                                                                                                                                                                             |
 | -------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | ~~c111 试点~~ ✅                 | merge 96345d55     | 5 capability 13 场景 + runner 规则块下钻 + bdd.run_command                                                                                                                                       |
-| ~~c112（P0 碰撞）~~ ✅           | merge 17d4cf08     | 54 处重号 r420-r473 + `just check-req-ids` 自检；上游漏报已报 [llman-sdd#4](https://github.com/StrayDragon/llman-sdd/issues/4)                                                                   |
+| ~~c112（P0 碰撞）~~ ✅           | merge 17d4cf08     | 54 处重号 r420-r473 + `just check-req-ids` 自检；上游漏报已报 [llman-sdd#4](https://github.com/StrayDragon/llman-sdd/issues/4) 并于 0.5.1 修复（detect-same-file-req-dupes，双门实测拦截）→ 本地 `check-req-ids` 脚本已退役                                                                   |
 | ~~c113 非深研 A 类~~ ✅          | merge f99e81ab     | 118 场景                                                                                                                                                                                         |
 | ~~c114 深研双雄 A 类~~ ✅        | merge 6cd6c2fa     | 121 场景                                                                                                                                                                                         |
 | ~~c115 API 合约 B 区~~ ✅        | merge bd01ed1e     | 16 覆盖 + 28 集成测试；缺口 r345（鉴权未实现）/r351（UI state 端点不存在，牵动 chat-ui-envelope r29 合约）                                                                                       |
@@ -94,7 +94,7 @@ llman-sdd 0.5 原生分层格式下，规则（`规则:` 块 + `@req` 句柄）�
 
 ## 附录：req_id 碰撞清单（45 个 tag）
 
-> 碰撞清单已于 c112 全量修复（54 处重号，首现保留、后续 r420-r473），本文原附录按文档纪律删除。复核命令：`just check-req-ids`（应报 OK）；上游 validate 漏报修复后可迁移为其全局门。
+> 碰撞清单已于 c112 全量修复（54 处重号，首现保留、后续 r420-r473），附录按文档纪律删除。防回归现由上游 0.5.1 全局门承担（validate ERROR + dedupe-req-ids）。
 
 ## C 类豁免台账（47 条，保留裸规则的记录）
 
