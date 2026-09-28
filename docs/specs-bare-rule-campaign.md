@@ -1,6 +1,6 @@
 # Specs 裸规则压降作战地图（llman-sdd 0.5 pending 计量）
 
-> 状态：**A 类全量落地；B 区第一区完成（2026-09-27）**。pending **448 → 193**：c111 试点（13）→ c112 碰撞修复 → c113 非深研 A 类（118）→ c114 深研双雄 A 类（121）→ c115 B 区第一区 workspace-api-contract（16 覆盖 / 2 产品缺口保持裸规则）。剩余 193 条 = B 区约 146（其余区域，需新增测试资产）+ C 47（豁免台账见下）；其中 3 条盘点期标 A 的经落笔复核改判 B（如 generation-core r174，无既有测试覆盖）。
+> 状态：**B 区主体完成（2026-09-28）**。pending **448 → 126**：c111 试点（13）→ c112 碰撞修复 → c113 非深研 A 类（118）→ c114 深研双雄 A 类（121）→ c115 API 合约（16）→ c116 门禁/服务侧（26）→ c117 摄取/抽取/深研运行时（23）→ c118 前端组件区（18）。剩余 126 条 = **产品缺口 ~32**（spec 有 MUST 而实现不存在：r345/r351、r422/r423/r24/r166、r287/r464/r465/r290/r295、r405/r411/r413/r416/r417、r322/r324 等——处置为实现落地或修合约）+ **spec 领先实现 12**（cross-type 7、source-aware 5，待实现后按 A 类流程补场景）+ **顺延 ~35**（deep-research-ui 9、studio-output-types 6、generation-observability 7、retrieval 余量等可测未测项）+ **C 47**（豁免台账见下）。
 > 删除条件：全部批次完成后（review `pending` 信号只剩有记录豁免的 C 类裸规则）本档转为纯记录，或随 specs-compact 收敛后删除。
 
 ## 背景
@@ -76,15 +76,21 @@ llman-sdd 0.5 原生分层格式下，规则（`规则:` 块 + `@req` 句柄）�
 
 ## 批次规划
 
-| 批次                                      | 范围                                                                                                                                                                                                    | 内容                                                                                              | 前置       |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------- |
-| **c112（P0）**                            | 11 个文件 54 处重号                                                                                                                                                                                     | 碰撞 req_id 重新取号；顺带向上游 llman-sdd 报 validate「全局重复 req_id」门对同文件碰撞漏报的缺陷 | 无（立即） |
-| **Batch 1（下一批）**（A 类快批，~30 条） | source-connectors(6A)、source-ingestion-core(5A)、openapi(4A)、web-extractor(4A)、frontend-eden-migration(3A)、data-and-storage(2A)、retrieval-and-cache(7A 中锚点最实者)、configuration-governance(2A) | 只补场景、锚定既有测试，不解锁新测试面                                                            | c112       |
-| Batch 2（B 集中区，~40 条）               | workspace-api-contract(18B)、studio-output-types(6B)、source-ingestion-summary(7B)、generation-core(5B)                                                                                                 | 补场景 + 补 server/BDD 测试                                                                       | c112       |
-| Batch 3（前端 B 区，~30 条）              | workspace-ui-panels(17B)、workspace-ui-core(5B)、source-aware-generation-modes(5B)                                                                                                                      | 需要组件级测试基建决策，先行 design                                                               | Batch 2    |
-| Batch 4（深研双雄，~120 条）              | deep-research-ui(65A/9B/2C)、deep-research-runtime(56A/3B/4C)                                                                                                                                           | A 密度最高，分 3-4 个子批                                                                         | c112       |
-| Batch 5（收尾）                           | 其余 A/B（generation-observability 7B、quality-and-regression 9B、typed-generation 5B、chat-prompt-presets 5B 等）                                                                                      | 按锚点成熟度分批                                                                                  | Batch 2    |
-| 持续                                      | C 类 47 条豁免台账                                                                                                                                                                                      | 每批 change design 记录理由；归档后评估 specs-compact 合并冗余                                    | —          |
+## 批次推进
+
+| 批次                             | 状态               | 结果                                                                                                                                                                                             |
+| -------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ~~c111 试点~~ ✅                 | merge 96345d55     | 5 capability 13 场景 + runner 规则块下钻 + bdd.run_command                                                                                                                                       |
+| ~~c112（P0 碰撞）~~ ✅           | merge 17d4cf08     | 54 处重号 r420-r473 + `just check-req-ids` 自检；上游漏报已报 [llman-sdd#4](https://github.com/StrayDragon/llman-sdd/issues/4)                                                                   |
+| ~~c113 非深研 A 类~~ ✅          | merge f99e81ab     | 118 场景                                                                                                                                                                                         |
+| ~~c114 深研双雄 A 类~~ ✅        | merge 6cd6c2fa     | 121 场景                                                                                                                                                                                         |
+| ~~c115 API 合约 B 区~~ ✅        | merge bd01ed1e     | 16 覆盖 + 28 集成测试；缺口 r345（鉴权未实现）/r351（UI state 端点不存在，牵动 chat-ui-envelope r29 合约）                                                                                       |
+| ~~c116 门禁/服务侧~~ ✅          | merge 1669e7ac     | 26 覆盖（门禁组成锁测 9 全中）；缺口 r422/r423/r24/r166                                                                                                                                          |
+| ~~c117 摄取/抽取/深研运行时~~ ✅ | merge 692a3bc3     | 23 覆盖；缺口 r287/r464/r465（markdown 预处理未实现）/r290（空文件上传 200/ready/0-chunk 缺陷）/r295/r469 半边（415 路径不存在）/r334 合取未算                                                   |
+| ~~c118 前端组件区~~ ✅           | merge 51cbfd87     | 18 覆盖（panels 12 + ui-core 5 + r158 负向扫描）；web 测试 339→371；缺口 r405/r411/r413/r416/r417（前端无对应实现）                                                                              |
+| **顺延（未开批）**               | 待下一会话         | deep-research-ui 交互 9（r101/r102/r111/r117/r148 等）、studio-output-types 6（r299-r303/r306，r306 为 server FK 可先做）、generation-observability 7（r176-r179/r182-r184）、retrieval/其余散量 |
+| **spec 领先实现**                | 转入待实现         | cross-type 7、source-aware 5——实现落地后按 A 类流程补场景                                                                                                                                        |
+| 持续                             | C 类 47 条豁免台账 | 见下节；specs-compact 时机再评估合并                                                                                                                                                             |
 
 ## 附录：req_id 碰撞清单（45 个 tag）
 
