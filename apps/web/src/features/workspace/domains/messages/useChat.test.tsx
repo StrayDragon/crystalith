@@ -376,6 +376,116 @@ test('streaming path applies snapshot and delta with backend message id', async 
   );
 });
 
+// covers: r400
+test('sendMessage forwards /prompt directive text verbatim as question', async () => {
+  let capturedBody: Record<string, unknown> | null = null;
+  server.use(
+    http.post('*/v2/notebooks/*/qa', async ({ request }) => {
+      capturedBody = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json({
+        answer: 'Answer',
+        citations: [],
+        messageId: 9501,
+        shared_state: { ui: { v: 1, components: {}, datasets: {} } },
+        shared_state_revision: 0,
+      });
+    }),
+  );
+
+  const ensureSession = rs.fn().mockResolvedValue(321);
+  const { result } = renderHook(() => useChat({ ensureSession, enableStreaming: false }), {
+    wrapper: wrapSWR,
+  });
+
+  act(() => {
+    const s = useWorkspaceStore.getState();
+    s.setConnectionState('live');
+    s.setActiveNotebook(1);
+    s.setActiveSession(321);
+    s.setDraft('/prompt:analysis 总结这篇论文');
+  });
+
+  await act(async () => {
+    await result.current.sendMessage();
+  });
+
+  expect((capturedBody as Record<string, unknown> | null)?.question).toBe(
+    '/prompt:analysis 总结这篇论文',
+  );
+});
+
+// covers: r404
+test('streaming UI is driven by server state_snapshot stable messageId', async () => {
+  server.use(
+    http.get('*/v2/notebooks/:notebookId/sessions/:sessionId/messages', () =>
+      HttpResponse.json({
+        items: [
+          { id: 1, role: 'user', content: 'snapshot drives ui', citations: null },
+          {
+            id: 9601,
+            role: 'assistant',
+            content: '快照驱动回答',
+            citations: [{ chunkId: 7, chunkIndex: 1, sourceName: 'Doc', snippet: 'S' }],
+          },
+        ],
+        total: 2,
+        offset: 0,
+        limit: 200,
+      }),
+    ),
+  );
+
+  streamRequestMock.mockImplementation(async function* () {
+    yield {
+      event: 'state_snapshot',
+      data: {
+        messageId: 9601,
+        shared_state: { ui: { v: 1, components: {}, datasets: {} } },
+        shared_state_revision: 0,
+      },
+    };
+    yield { event: 'chunk', data: { text: '快照驱动' } };
+    yield { event: 'chunk', data: { text: '回答' } };
+    yield {
+      event: 'done',
+      data: {
+        messageId: 9601,
+        citations: [{ chunkId: 7, chunkIndex: 1, sourceName: 'Doc', snippet: 'S' }],
+      },
+    };
+  });
+
+  const ensureSession = rs.fn().mockResolvedValue(123);
+  const { result } = renderHook(() => useChat({ ensureSession, enableStreaming: true }), {
+    wrapper: wrapSWR,
+  });
+
+  act(() => {
+    const s = useWorkspaceStore.getState();
+    s.setConnectionState('live');
+    s.setActiveNotebook(1);
+    s.setActiveSession(123);
+    s.setDraft('snapshot drives ui');
+  });
+
+  await act(async () => {
+    await result.current.sendMessage();
+  });
+
+  await waitFor(() => {
+    expect(result.current.messages).toHaveLength(2);
+  });
+
+  // 助手消息以服务端稳定 messageId 建立关联
+  expect(result.current.messages[1].id).toBe('9601');
+  expect(result.current.messages[1].content).toBe('快照驱动回答');
+  // done 事件的 citations 挂到同一 messageId
+  expect(result.current.messages[1].citations).toHaveLength(1);
+  // 流结束后流式标记清除，UI 状态由快照权威
+  expect(result.current.isStreaming).toBe(false);
+  expect(result.current.streamingMessageId).toBeNull();
+});
+
 test('stopStreaming rolls back provisional assistant message before done', async () => {
   server.use(
     http.get('*/v2/notebooks/:notebookId/sessions/:sessionId/messages', () =>

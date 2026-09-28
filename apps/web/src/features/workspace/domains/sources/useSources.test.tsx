@@ -356,3 +356,93 @@ test('assignTagToSources sends selected source ids', async () => {
   expect(success).toBe(true);
   expect(capturedBody).toEqual({ sourceIds: [1, 2] });
 });
+
+// covers: r407
+test('upload queue items settle into success terminal state', async () => {
+  server.use(
+    http.post('*/v2/notebooks/:notebookId/sources/upload', () =>
+      HttpResponse.json({
+        id: 31,
+        notebookId: 1,
+        title: 'notes',
+        type: 'TXT',
+        status: 'PROCESSING',
+        statusTone: 'PROCESSING',
+        chunks: 0,
+        tags: [],
+        createdAt: '2026-02-07T10:00:00Z',
+        updatedAt: '2026-02-07T10:00:00Z',
+      }),
+    ),
+  );
+
+  const { result } = renderHook(() => useSources(), { wrapper: wrapSWR });
+
+  act(() => {
+    useWorkspaceStore.getState().setConnectionState('live');
+    useWorkspaceStore.getState().setActiveNotebook(1);
+  });
+
+  const file = new File(['hello'], 'notes.txt', { type: 'text/plain' });
+
+  await act(async () => {
+    await result.current.handleUpload([file]);
+  });
+
+  await waitFor(() => {
+    expect(result.current.uploadQueue[0]?.status).toBe('success');
+  });
+  expect(result.current.uploadQueue[0].name).toBe('notes.txt');
+  expect(result.current.uploadError).toBe('');
+});
+
+// covers: r407
+test('failed uploads settle into error terminal state with retry entry', async () => {
+  let attempts = 0;
+  server.use(
+    http.post('*/v2/notebooks/:notebookId/sources/upload', () => {
+      attempts += 1;
+      return attempts === 1
+        ? HttpResponse.json({ error: 'boom' }, { status: 500 })
+        : HttpResponse.json({
+            id: 32,
+            notebookId: 1,
+            title: 'retry',
+            type: 'TXT',
+            status: 'PROCESSING',
+            statusTone: 'PROCESSING',
+            chunks: 0,
+            tags: [],
+            createdAt: '2026-02-07T10:01:00Z',
+            updatedAt: '2026-02-07T10:01:00Z',
+          });
+    }),
+  );
+
+  const { result } = renderHook(() => useSources(), { wrapper: wrapSWR });
+
+  act(() => {
+    useWorkspaceStore.getState().setConnectionState('live');
+    useWorkspaceStore.getState().setActiveNotebook(1);
+  });
+
+  const file = new File(['hello'], 'retry.txt', { type: 'text/plain' });
+
+  await act(async () => {
+    await result.current.handleUpload([file]);
+  });
+
+  await waitFor(() => {
+    expect(result.current.uploadQueue[0]?.status).toBe('error');
+  });
+  expect(result.current.uploadError).toContain('上传失败');
+
+  // 重试入口复用失败文件，队列项落到确定终态
+  await act(async () => {
+    await result.current.retryUpload();
+  });
+
+  await waitFor(() => {
+    expect(result.current.uploadQueue.some((item) => item.status === 'success')).toBe(true);
+  });
+});

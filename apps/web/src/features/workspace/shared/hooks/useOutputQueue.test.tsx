@@ -474,3 +474,52 @@ test('enqueueSlidesJob settles when outline+markdown generation completes', asyn
   });
   expect(markJobCompleted).toHaveBeenCalled();
 });
+
+// covers: r409
+test('failed output job can be retried back through the queue', async () => {
+  let attempts = 0;
+  server.use(
+    http.post('*/v2/notebooks/*/outputs', () => {
+      attempts += 1;
+      if (attempts === 1) {
+        return HttpResponse.json({ error: 'generation failed' }, { status: 500 });
+      }
+      return HttpResponse.json({
+        id: 13,
+        notebookId: 1,
+        type: 'FAQ',
+        prompt: 'hello',
+        chunkIds: [1],
+        content: {},
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      });
+    }),
+  );
+
+  setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });
+  const { result } = renderHook(() => useOutputQueueHarness({ isConnected: true }), {
+    wrapper: wrapSWR,
+  });
+
+  act(() => {
+    result.current.enqueueOutputJob({
+      type: 'FAQ',
+      prompt: 'hello',
+      sourceIds: [1],
+    });
+  });
+
+  await waitFor(() => {
+    expect(result.current.outputQueueJobs[0]?.status).toBe('error');
+  });
+
+  act(() => {
+    result.current.retryOutputJob(result.current.outputQueueJobs[0].id);
+  });
+
+  await waitFor(() => {
+    expect(result.current.outputQueueJobs[0]?.status).toBe('done');
+  });
+  expect(attempts).toBe(2);
+});

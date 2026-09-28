@@ -66,6 +66,7 @@ test('shows export menu and triggers selected format export', async () => {
   expect(exportOutput).toHaveBeenCalledWith(output, 'json');
 });
 
+// covers: r409
 test('only shows markdown for timeline export', async () => {
   const output = createOutput('TIMELINE', {
     events: [{ date: '2024', event: '上线', description: '产品发布' }],
@@ -98,6 +99,7 @@ test('renders timeline when Eden coerces event dates to Date', () => {
   expect(screen.getByText('Paper published')).toBeInTheDocument();
 });
 
+// covers: r409
 test('falls back to raw JSON renderer when payload shape is invalid', () => {
   const output = createOutput('QUIZ', {
     wrong: true,

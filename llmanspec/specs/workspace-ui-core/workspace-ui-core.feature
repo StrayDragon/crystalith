@@ -24,17 +24,37 @@
   @req:r388
   规则: Mobile viewport uses single-panel navigation
     当视口宽度处于移动端窄屏范围时（以 `md` 断点为界），Workspace MUST 以单面板模式呈现 Sources / Chat / Studio，并通过底部 TabBar 提供面板切换入口，以避免多列挤压造成不可用。
+
+    场景: mobile-viewport-renders-single-panel-tabbar
+      假如 视口宽度处于移动端窄屏（md 断点以下）
+      当 Workspace 渲染 Sources/Chat/Studio
+      那么 以单面板模式呈现并通过底部 TabBar 提供切换入口
   @req:r471
 
   规则: switching-tabs-preserves-critical-in-progress-state
     当用户在 TabBar 之间切换面板时，Workspace SHALL 保留用户在关键路径上的进行中状态（例如 Chat 输入草稿、已选择的来源、当前输出列表）。
+
+    场景: switching-tabs-preserves-in-progress-state
+      假如 某面板存在进行中状态（流式回复/输入草稿/已选来源）
+      当 用户切换到其它面板再返回
+      那么 关键进行中状态保留不丢失
   @req:r389
   规则: Mobile tab bar respects safe-area and accessibility
     移动端 TabBar MUST 兼容 iOS safe-area（home indicator）并满足最小可访问性基线（可聚焦、可读、可识别当前选中项）。
+
+    场景: tabbar-safe-area-and-accessibility
+      假如 移动端 TabBar 渲染于 iOS safe-area 环境
+      当 检查底部 padding 与可访问性基线
+      那么 避让 home indicator 且可聚焦、可读、可识别当前选中项
   @req:r472
 
   规则: tab-bar-is-not-obscured-by-home-indicator
     当运行环境存在非零 `safe-area-inset-bottom`（例如 iOS Safari）时，TabBar MUST 为交互区域预留底部 padding，使点击目标不被系统 UI 遮挡。
+
+    场景: tabbar-not-obscured-by-home-indicator
+      假如 TabBar 渲染于带非零 safe-area-inset-bottom 的视口
+      当 测量交互区域底部布局
+      那么 点击目标不被系统 UI 遮挡
   @req:r390
   规则: Overlay/layer policy is centralized
     弹层、对话框、popover 的层级、遮罩与关闭交互（如 Esc/点击遮罩关闭）MUST 由统一策略管理。
@@ -50,6 +70,11 @@
   @req:r392
   规则: Workspace localization is centralized and locale-ready (zh-CN only)
     Workspace MUST 将关键路径的用户可见文案集中管理（稳定 message key + `t()` 等价接口），并默认使用 `zh-CN` 文案。核心发行版不要求提供语言切换入口与多语言内置翻译，但结构 SHOULD 保持可扩展以支持社区后续新增 locale。
+
+    场景: user-facing-copy-centralized-via-message-keys
+      假如 Workspace 关键路径文案就绪
+      当 检查用户可见文案来源
+      那么 文案经稳定 message key 集中管理且默认 zh-CN
   @req:r393
   规则: Core panel contracts are delegated
     Sources/Chat/Studio/Research 等面板交互细节 MUST 在 `workspace-ui-panels` 规范维护，避免总览规范膨胀。

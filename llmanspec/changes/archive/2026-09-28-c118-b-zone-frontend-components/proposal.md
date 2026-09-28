@@ -1,5 +1,8 @@
 ---
-depends_on: ["c117-b-zone-ingestion-and-research"]
+depends_on: ['c117-b-zone-ingestion-and-research']
+branch: sdd/c118-b-zone-frontend-components
+base_branch: main
+base_sha: b36de59d6d1408a2c2646275c3f35257d9fb9414
 ---
 
 # B 区第四批：前端组件与静态扫描（37 条）
@@ -20,4 +23,4 @@ workspace-ui-panels、workspace-ui-core、studio-output-types、deep-research-ui
 
 ## Impact
 
-review `pending` 144 → 约 110；`just test-web` 门禁内新增前端测试。
+review `pending` 144 → 126（18 条覆盖 / 5 条产品缺口保持裸规则：r405 tool_use 白名单、r411 三 tab、r413 消息状态派生、r416 面板级错误快照、r417 非上传区拖拽均无前端实现）。深研 ui 9 与 studio-output-types B 类顺延后续 change。

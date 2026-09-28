@@ -35,6 +35,12 @@
   @req:r158
   规则: Frontend MUST NOT snake-to-camel normalize API payloads
     在 wire 已为 camelCase 后，前端 MUST NOT 再实现针对 API 载荷的 snake_case→camelCase 字段重命名映射。允许与命名无关的 UI 派生。
+
+    场景: wire-consumption-has-no-snake-to-camel-normalizer
+      假如 wire 契约已为 camelCase
+      当 静态扫描前端 API 载荷消费路径
+      那么 不存在 snake_case 到 camelCase 的字段重命名映射
+      而且 命名无关的 UI 派生不受影响
   @req:r159
   规则: Web Rstest fixtures MUST use camelCase wire
     apps/web Rstest/MSW 夹具与断言 MUST 使用 camelCase HTTP/SSE JSON 字段名，MUST NOT 以 snake_case wire 键作为正式期望；just test-web 门禁运行时 MUST 全绿通过。

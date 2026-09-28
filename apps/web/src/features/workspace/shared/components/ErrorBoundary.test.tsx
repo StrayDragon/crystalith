@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, test, rs } from '@rstest/core';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 
 import ErrorBoundary from './ErrorBoundary';
 
@@ -30,6 +31,44 @@ test('error boundary shows fallback and supports retry action', () => {
   const retryButton = screen.getByRole('button', { name: '重试' });
   fireEvent.click(retryButton);
   expect(onRetry).toHaveBeenCalledTimes(1);
+});
+
+// covers: r412
+test('inline error boundary recovers the panel after retry instead of white-screening', () => {
+  let shouldCrash = true;
+
+  function SometimesCrashing() {
+    if (shouldCrash) {
+      throw new Error('first render fails');
+    }
+    return <div>面板已恢复</div>;
+  }
+
+  function Host() {
+    const [, force] = useState(0);
+    return (
+      <ErrorBoundary
+        title="面板异常"
+        description="面板渲染失败，请重试。"
+        onRetry={() => {
+          shouldCrash = false;
+          force((n) => n + 1);
+        }}
+      >
+        <SometimesCrashing />
+      </ErrorBoundary>
+    );
+  }
+
+  render(<Host />);
+
+  expect(screen.getByText('面板异常')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: '重试' }));
+
+  // 重试后同一边界重新挂载子组件并恢复正常渲染
+  expect(screen.getByText('面板已恢复')).toBeInTheDocument();
+  expect(screen.queryByText('面板异常')).not.toBeInTheDocument();
 });
 
 test('error boundary keeps other panels visible when one panel crashes', () => {
