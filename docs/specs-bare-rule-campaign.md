@@ -1,6 +1,6 @@
 # Specs 裸规则压降作战地图（llman-sdd 0.5 pending 计量）
 
-> 状态：**B 区主体完成（2026-09-28）**。pending **448 → 126**：c111 试点（13）→ c112 碰撞修复 → c113 非深研 A 类（118）→ c114 深研双雄 A 类（121）→ c115 API 合约（16）→ c116 门禁/服务侧（26）→ c117 摄取/抽取/深研运行时（23）→ c118 前端组件区（18）。剩余 126 条 = **产品缺口 ~32**（spec 有 MUST 而实现不存在：r345/r351、r422/r423/r24/r166、r287/r464/r465/r290/r295、r405/r411/r413/r416/r417、r322/r324 等——处置为实现落地或修合约）+ **spec 领先实现 12**（cross-type 7、source-aware 5，待实现后按 A 类流程补场景）+ **顺延 ~35**（deep-research-ui 9、studio-output-types 6、generation-observability 7、retrieval 余量等可测未测项）+ **C 47**（豁免台账见下）。
+> 状态：**顺延低难度批完成（2026-09-28）**。pending **448 → 111**：c111 试点（13）→ c112 碰撞修复 → c113 非深研 A 类（118）→ c114 深研双雄 A 类（121）→ c115 API 合约（16）→ c116 门禁/服务侧（26）→ c117 摄取/抽取/深研运行时（23）→ c118 前端组件区（18）→ c119 顺延低难度（15）。剩余 111 条 = **产品缺口 ~33**（spec 有 MUST 而实现不存在或违约，见「产品缺口」与 c119 新增 r111）+ **spec 领先实现 12**（cross-type 7、source-aware 5）+ **顺延重交互/缺口批 ~19**（c120/c121/c122 候选）+ **C 47**（豁免台账）。
 > 删除条件：全部批次完成后（review `pending` 信号只剩有记录豁免的 C 类裸规则）本档转为纯记录，或随 specs-compact 收敛后删除。
 
 ## 背景
@@ -88,6 +88,7 @@ llman-sdd 0.5 原生分层格式下，规则（`规则:` 块 + `@req` 句柄）�
 | ~~c116 门禁/服务侧~~ ✅          | merge 1669e7ac     | 26 覆盖（门禁组成锁测 9 全中）；缺口 r422/r423/r24/r166                                                                                                                                                                     |
 | ~~c117 摄取/抽取/深研运行时~~ ✅ | merge 692a3bc3     | 23 覆盖；缺口 r287/r464/r465（markdown 预处理未实现）/r290（空文件上传 200/ready/0-chunk 缺陷）/r295/r469 半边（415 路径不存在）/r334 合取未算                                                                              |
 | ~~c118 前端组件区~~ ✅           | merge 51cbfd87     | 18 覆盖（panels 12 + ui-core 5 + r158 负向扫描）；web 测试 339→371；缺口 r405/r411/r413/r416/r417（前端无对应实现）                                                                                                         |
+| ~~c119 顺延低难度批~~ ✅         | merge 7534d6f2     | 15 覆盖（web 17 例 + server 28 例）；**r111 坐实违约保持裸规则**：ResearchLabPage 被动读 URL ?rid= 恢复 Run（useEdenLabController 无条件 loadRun），不经显式动作/无会话门控；r462 apiVersion 复核为已实现非缺口             |
 | **顺延（未开批）**               | 待下一会话         | deep-research-ui 交互 9（r101/r102/r111/r117/r148 等）、studio-output-types 6（r299-r303/r306，r306 为 server FK 可先做）、generation-observability 7（r176-r179/r182-r184）、retrieval/其余散量                            |
 | **spec 领先实现**                | 转入待实现         | cross-type 7、source-aware 5——实现落地后按 A 类流程补场景                                                                                                                                                                   |
 | 持续                             | C 类 47 条豁免台账 | 见下节；specs-compact 时机再评估合并                                                                                                                                                                                        |
