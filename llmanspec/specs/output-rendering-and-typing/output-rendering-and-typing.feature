@@ -8,6 +8,12 @@
   @req:r197
   规则: Output payload is modeled as discriminated union
     前端 MUST 以 `output.type` 作为判别字段建模 payload，保证类型 narrowing 可用；当输出类型来自插件且客户端未知时，类型系统 MUST 提供一个 "unknown/other" 分支以避免编译期与运行期崩溃。
+
+    场景: unknown-plugin-type-decodes-to-safe-branch
+      假如 输出类型来自插件且客户端类型系统不存在该类型
+      当 运行 outputPayload.test.ts 的 unknown/other 分支用例
+      那么 decodeOutputItem 返回 null 且 normalizeOutputPayload 回退 UnknownOutputPayload（_fallback 标记 + 保留原始字段 + 警告合并）
+      而且 编译期与运行期均不崩溃
   @req:r198
   规则: Runtime decode provides safe fallback
     运行时 decoder/guard MUST 在 shape 不匹配时回退到 raw/unknown 渲染，不得崩溃。
@@ -42,9 +48,21 @@
 
   规则: unsupported-or-broken-bundle-falls-back-safely
     当 `frontendBundle` 的 `apiVersion` 不受支持或 bundle 加载/导出解析失败时，系统 MUST 回退到 `renderDescriptor` 驱动的通用渲染器（若存在），并以 Raw JSON 作为最终安全回退。
+
+    场景: unsupported-or-broken-bundle-safe-fallback
+      假如 OutputContent 挂载了 frontendBundle 声明
+      当 运行 OutputContentFrontendBundle.test.tsx 的回退用例（apiVersion 非 v1 / 加载被拒 / 无 renderDescriptor）
+      那么 apiVersion 不受支持时跳过 bundle 回退到 renderDescriptor 通用渲染
+      而且 加载/导出解析失败被 .catch 吸收并以 Raw JSON 作为最终安全回退
   @req:r202
   规则: POST outputs MUST return OutputRead contract
     POST /v2/notebooks/:nid/outputs MUST 返回 camelCase OutputRead 实体（id/notebookId/type/prompt/chunkIds/content/createdAt/updatedAt），与 packages/shared Zod wire 契约一致；MUST NOT 返回 snake_case 或裸 PipelineResult；扁平 /v2/outputs 的登记禁令见 openapi-and-client-generation openapi-documents-nested-canonical-paths（canonical）
+
+    场景: post-outputs-returns-outputread-contract
+      假如 笔记本内通过 POST /v2/notebooks/:nid/outputs 登记输出
+      当 运行 output-read-contract.test.ts 的 OutputRead 合同用例
+      那么 响应按 packages/shared OutputSchema 解析通过且全字段 camelCase（id/notebookId/type/prompt/chunkIds/content/createdAt/updatedAt）
+      而且 响应不含 snake_case 字段与裸 PipelineResult 形状（outputId/chunkCount/citations/warnings）
   @req:r203
   规则: Export JSON citations and sources MUST match camelCase wire
     GET /outputs/:id/export?format=json 的 citations MUST 包含 chunkIndex/pageNumber/paragraphIndex/score；sources meta 字段集见 workspace-api-contract qa-export-endpoint（canonical）

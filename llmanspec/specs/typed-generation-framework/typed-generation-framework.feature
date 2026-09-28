@@ -8,6 +8,12 @@
   @req:r322
   规则: 系统必须提供生成类型的注册与发现
     系统 MUST 以统一方式注册（内置生成类型在系统启动时装载）并向调用方发现可用的生成类型集合。
+
+    场景: generation-types-registry-discovered-via-tools
+      假如 内置生成类型在启动时装入 OUTPUT_META 注册表（workspace-tools-discovery.test.ts）
+      当 调用方请求 GET /v2/workspace/tools
+      那么 发现的生成类型集合与注册表一一对应（id/kind/label/outputType/prompt/renderDescriptor/frontendBundle 映射一致）
+      而且 响应通过 shared WorkspaceToolsListResponseSchema 且 SLIDES 的 enabled 随预览探针可用性降级
   @req:r466
 
   规则: 前端查询可用生成类型列表
@@ -46,3 +52,9 @@
   @req:r330
   规则: Outputs pipeline with preference=quality MUST run LLM repair loop for salvageable output
     outputs pipeline 在 preference=quality 且 needsRepair 为真时 MUST 再跑一次生成修补以挽救可挽救输出；失败则保留原对象并走后续 postprocess/fallback；修补所处的管线阶段顺序见 generation-core r160/r165。
+
+    场景: quality-preference-runs-repair-loop
+      假如 mock 生成器首次产出 needsRepair 为真的不完整对象（repair-loop.test.ts）
+      当 以 preference=quality 运行 outputs pipeline
+      那么 第二次生成产出完整对象时被接受且不再有 _fallback
+      而且 修补抛错或仍不完整时保留原对象走 fallback、preference=speed 则只跑一次生成

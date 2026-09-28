@@ -62,3 +62,9 @@
   @req:r261
   规则: Web search mode is not Deep Research
     POST …/sources/search 的 mode 字段 MUST 仅表示网搜通道元数据（默认 Fast Research 或等价）；MUST NOT 用 mode=Deep Research（或同义）触发或冒充 ResearchRun 深研编排；本约束 MUST NOT 删除或削弱 /v2/notebooks/:nid/research* ResearchRun API。
+
+    场景: search-mode-normalized-fast-research
+      假如 mock 网搜引擎可用并向 POST …/sources/search 分别提交 mode=Deep Research、自定义通道与缺省（mode-normalization.test.ts）
+      当 路由回显 search 响应的 mode 字段
+      那么 Deep Research 被归一化为 Fast Research、其余 mode 按元数据 echo、缺省为 Fast Research
+      而且 全程 ResearchRun 表零写入且 /v2/notebooks/:nid/research* 保持不受影响

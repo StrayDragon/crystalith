@@ -98,3 +98,35 @@ describe('outputPayload decoder', () => {
     expect(formatOutputFieldText(new Date(2017, 5, 12))).toBe('2017-06-12');
   });
 });
+
+describe('unknown/other branch for plugin output types (r197)', () => {
+  // 插件提供的输出类型在客户端类型系统里不存在 — 模拟一个运行期才出现的类型。
+  const PLUGIN_TYPE = 'GRAPHRAG' as unknown as Parameters<typeof normalizeOutputPayload>[0];
+
+  it('decodeOutputItem returns null (not a crash) for unknown plugin types', () => {
+    const output = createOutput({
+      type: PLUGIN_TYPE,
+      content: { customField: 'x' },
+    });
+    expect(decodeOutputItem(output)).toBeNull();
+  });
+
+  it('normalizeOutputPayload falls back to the unknown/other payload branch', () => {
+    const payload = normalizeOutputPayload(PLUGIN_TYPE, {
+      customField: 'x',
+      _warnings: ['existing'],
+    });
+
+    // 未知分支：_fallback 标记 + 保留原始字段 + 警告合并去重
+    expect(isFallbackOutputPayload(payload)).toBe(true);
+    const record = payload as unknown as Record<string, unknown>;
+    expect(record.customField).toBe('x');
+    expect(getOutputPayloadWarnings(payload)).toEqual(['existing', 'Invalid payload for GRAPHRAG']);
+  });
+
+  it('unknown branch also covers non-record content (raw passthrough)', () => {
+    const payload = normalizeOutputPayload(PLUGIN_TYPE, 'plain-text');
+    expect(isFallbackOutputPayload(payload)).toBe(true);
+    expect((payload as unknown as Record<string, unknown>).raw).toBe('plain-text');
+  });
+});

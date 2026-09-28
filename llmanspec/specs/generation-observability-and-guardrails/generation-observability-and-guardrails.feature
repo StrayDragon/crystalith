@@ -35,6 +35,18 @@
   @req:r183
   规则: Retry MUST honor Retry-After header and include full retryable codes
     AI 调用重试 MUST 解析并遵守响应的 Retry-After 头（命中时按其指示等待而非使用指数退避），且可重试状态码集合 MUST 包含 408/409/425/429/500/502/503/504
+
+    场景: retry-honors-retry-after-and-retryable-codes
+      假如 fake LanguageModel 依次注入带 Retry-After 头的可重试错误与成功响应（middleware-retry.test.ts）
+      当 逐状态码驱动 withRetry 的重试循环
+      那么 数值与 HTTP-date 形式的 Retry-After 按其指示等待而非指数退避（捕获的退避延迟等于指示值）
+      而且 408/409/425/429/500/502/503/504 各触发一次重试后成功、400 不重试并原样抛出
   @req:r184
   规则: Retry MUST enforce timeout budget and max delay
     AI 调用重试 MUST 实施 total timeout 预算和 max delay 上限（退避延迟不超过 max_delay、总时间不超过 total timeout），避免无限退避。本条与 retry-honors-retry-after 共为 AI 调用重试策略的 canonical 约束（职责承载见 architecture-plugin-and-agent r15）。
+
+    场景: retry-enforces-budget-and-max-delay
+      假如 fake LanguageModel 持续返回可重试错误（middleware-retry.test.ts）
+      当 以 maxDelayMs 与 totalTimeoutMs 约束驱动重试循环
+      那么 退避延迟被截断在 maxDelayMs（100, 200→150）
+      而且 totalTimeoutMs 预算触顶后抛 Retry budget exceeded 并阻止无限退避（仅 2 次尝试）

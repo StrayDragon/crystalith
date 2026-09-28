@@ -152,6 +152,12 @@
   @req:r117
   规则: Desk canvas prefs from Lab mechanisms
     Desk 研究图 MUST 提供与 Lab 对齐的画布机制入口（至少布局方向或算法偏好、以及小地图可开关之一档）；这些偏好 MAY 仅存于客户端；MUST NOT 因此新增服务端编排 API 或改变图 SSOT。
+
+    场景: canvas-prefs-client-only-zero-requests
+      假如 Desk 研究图提供画布设置入口（方向 / 布局算法 / 连线 / 小地图）
+      当 运行 LabCanvasSettings.test.tsx 并逐一切换画布偏好
+      那么 仅触发客户端回调且 fetch 记录为零请求（无 research graph 命令口或服务端编排 API 调用）
+      而且 图 SSOT 不因偏好切换改变
   @req:r118
   规则: Revisions UI over server snapshots
     Desk（或报告面）MUST 能列出并查看服务端 revisions，并 MUST 支持创建当前快照与恢复到某 revision（经 API）；恢复成功后画布与报告 MUST 反映服务端快照内容（经 GET run 或 graph_patch 对齐）；客户端本地暂存（sessionStorage/localStorage 等）MUST NOT 作为生产权威版本源——本条为此禁令的 canonical 约束。
@@ -471,6 +477,12 @@
 
   规则: sources-has-no-deep-mode-toggle
     工作区来源面板的搜索/模式 UI MUST NOT 出现 Fast/Deep 深研模式切换或深研队列主入口等旧深研模式残留。
+
+    场景: sources-panel-no-deep-mode-residue
+      假如 扫描 apps/web/src/features/workspace/domains/sources/ 的源码
+      当 运行 sourcesNoDeepModeToggle.test.ts 的负向静态扫描
+      那么 来源面板源码无 Fast/Deep 深研模式切换或深研队列主入口等残留文案
+      而且 'Fast Research' 网搜通道元数据不被误报（positive control 通过）
   @req:r443
 
   规则: empty-sources-disables-start
@@ -503,6 +515,12 @@
 
   规则: compose-create-increments-badge
     当 Lab 已接线 Eden 且当前 activeCount 为 0 时，用户 Compose 创建 Run 成功后任务列表 MUST 包含新 Run 且 badge activeCount MUST 相应增加。
+
+    场景: compose-create-increments-active-badge
+      假如 Lab 已接线 Eden 且 MSW mock listRuns 返回空列表（activeCount 为 0）
+      当 用户 Compose 创建 Run 成功（researchTasksBadge.compose.test.tsx 经 createResearchRun 并 mutate 任务列表）
+      那么 任务列表包含新 Run 且 badge activeCount 从 0 相应增至 1
+      而且 badge 以 testid research-tasks-badge 显示 1
   @req:r448
 
   规则: run-terminal-clears-badge

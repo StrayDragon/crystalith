@@ -1,5 +1,8 @@
 ---
-depends_on: ["c118-b-zone-frontend-components"]
+depends_on: ['c118-b-zone-frontend-components']
+branch: sdd/c119-low-effort-deferred-tests
+base_branch: main
+base_sha: 85f0fe1de0350e2d22e37a5e21b72cfad08e6375
 ---
 
 # 顺延低难度可测项同批（~15 条，调研后批）
