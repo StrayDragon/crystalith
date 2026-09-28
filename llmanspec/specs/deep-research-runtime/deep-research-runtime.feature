@@ -353,6 +353,12 @@
   @req:r94
   规则: Agent-chosen page reads thin sufficiency
     work_unit 工具环 MUST 由 agent 自选值得阅读的 URL 调用 fetchPage，MUST NOT 在运行时对每次 webSearch 结果自动读取 Top-N；工具环步数 MUST 取配置 workUnitMaxSteps；指令 MUST 向 agent 暴露剩余读页预算与本节点软上限，并要求在已读正文基础上薄判断是否足够再决定是否继续检索。
+
+    场景: work-unit-loop-bounded-by-workunitmaxsteps
+      假如 config 设置 research.work_unit_max_steps 且 work-unit 工具环就绪
+      当 运行 apps/server/tests/research/c117-dr-runtime.test.ts 的 stopWhen 与预算用例
+      那么 work_unit 的 stopWhen 为 isStepCount(workUnitMaxSteps) 且指令与 prompt 暴露剩余读页预算与本节点软上限
+      而且 webSearch 后内核不做自动 Top-N 读页（pagesUsed 不变且证据无 content）
   @req:r95
   规则: Search budget add-on formula
     当 confirmKind=budget 且用户选择 continue、或经加购命令口主动加购时，系统 MUST 将 maxSearches 增加 K，其中 K=clamp(ceil(当前 maxSearches×addOnRatio),minK,maxK)（addOnRatio/minK/maxK 来自 config schema，实现 MUST NOT 写死数值）；MUST NOT 在业务代码写死绝对加购块；加购 MUST NOT 抬高 maxNodes；budget continue 之后 MUST resume 研究内核而非立即强制结案。
@@ -453,10 +459,22 @@
 
   规则: reject-client-authored-closure
     客户端以非命令口方式提交任意节点集合作为权威剪枝结果时，请求必须被拒绝（或该接口不存在），图必须仅能经 prune 等命令口变更
+
+    场景: reject-client-authored-closure-submission
+      假如 客户端以 PUT/POST/PATCH 携带伪造节点集合（含 pruned 状态与空边表）
+      当 请求打到 /research/:rid/graph、/research/:rid/nodes 等非命令口路径（见 apps/server/tests/research/c117-dr-runtime.test.ts）
+      那么 接口不存在（404/405）且图中节点与边保持不变
+      而且 同一 Run 上节点 PATCH 命令口仍可用
   @req:r432
 
   规则: chat-separate-from-run-stream
     已订阅 Run stream 的客户端发起节点 chat 时，chat 正文事件必须不出现在 Run stream 的事件名集合中
+
+    场景: chat-body-events-outside-run-stream
+      假如 客户端已订阅 Run stream 且对某活节点发起 chat
+      当 对照共享 SSE 事件联合类型并运行 apps/server/tests/research/c117-dr-runtime.test.ts 的行为用例
+      那么 chat 正文事件 chunk/proposal/done 不在 Run stream 事件名集合中
+      而且 同一 Run 上进行 chat 时 Run stream 仅出现 status/graph_patch 等声明事件
   @req:r433
 
   规则: max-nodes-respected

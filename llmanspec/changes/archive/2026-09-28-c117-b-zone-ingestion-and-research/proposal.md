@@ -1,5 +1,8 @@
 ---
-depends_on: ["c116-b-zone-gates-and-server"]
+depends_on: ['c116-b-zone-gates-and-server']
+branch: sdd/c117-b-zone-ingestion-and-research
+base_branch: main
+base_sha: 49e8b0768b737b51a177ee9c15c74da21b3c36db
 ---
 
 # B 区第三批：摄取/抽取族 + 深研运行时（28 条）

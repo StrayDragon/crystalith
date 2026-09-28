@@ -17,6 +17,12 @@
   @req:r286
   规则: Supported formats are parser-driven
     支持类型 MUST 由 parser 能力决定；无匹配 parser 的文件 MUST 返回 415 且不创建来源。
+
+    场景: supported-formats-parser-driven
+      假如 已注册 parser 各自声明可处理的 MIME 与扩展名
+      当 查询 /v2/sources/parsers 并上传 .md 与 .csv 文件（见 sources/c117-upload-contract.test.ts）
+      那么 清单按 parser 能力给出 mimeTypes 与 extensions
+      而且 上传按能力路由到匹配 parser 并在来源上记录 parserType
   @req:r287
   规则: 上传端点必须保留受支持写作工具的 Markdown 语义
     对于标准 Markdown 上传，系统 MUST 在进入 `chunk / embed / store` 之前执行语义预处理，以兼容常见写作工具的 Markdown 扩展语法，并将可提取的文档元数据写入 source metadata。
@@ -31,15 +37,33 @@
   @req:r288
   规则: Core upload supports CSV sources
     系统的核心发行版 MUST 支持通过上传方式创建 CSV 来源：`.csv` 扩展名与 `text/csv` MIME MUST 被识别并由匹配 parser 处理。
+
+    场景: csv-upload-parser-contract
+      假如 一个空白笔记本
+      当 分别以 text/csv MIME 与缺失 MIME 的 .csv 扩展名上传 CSV（见 sources/c117-upload-contract.test.ts）
+      那么 上传被 CSV parser 处理（parserType=csv）并落库
+      而且 无 MIME 时按 .csv 扩展名识别并同样标记 ready
   @req:r289
   规则: CSV sources are chunked by rows to avoid oversized single chunks
     大 CSV 按行块切分为多个可索引 chunk 的行为 MUST 遵循 source-ingestion-core csv-parser-markdown-table（canonical：markdown-table 分块、csv_row_start/csv_row_end metadata、单元格转义），以避免单个超大 chunk 导致检索与引用不稳定。
+
+    场景: csv-row-chunking
+      假如 一个 120 行的 CSV 上传
+      当 查看其分块与 chunk metadata（见 sources/c117-upload-contract.test.ts）
+      那么 切分为 3 个 50 行 markdown-table 分块且各自自带表头
+      而且 csv_row_start/csv_row_end 元数据 1 起始且连续
   @req:r290
   规则: Deterministic input errors do not create source rows
     空文件或无可索引内容等确定性输入错误 MUST 返回 400 且不创建来源。
   @req:r291
   规则: Oversized uploads are rejected deterministically with 413
     当 HTTP guardrails 启用时，上传接口 MUST 对单次上传施加配置项 `upload_max_bytes` 限制；超过上限 MUST 返回 413，且 MUST 不创建来源记录。未配置时的默认值 MUST 来自 config schema。
+
+    场景: upload-max-bytes-413
+      假如 config 将 upload_max_bytes 配置为小于上传体大小
+      当 上传超限文件（见 sources/c117-upload-contract.test.ts）
+      那么 返回 413 PAYLOAD_TOO_LARGE 且 details 含 maxBytes 与 uploadedBytes
+      而且 不创建来源记录
   @req:r292
   规则: URL from-source supports link and fetch modes
     `from-url` MUST 支持 `link|fetch`，`link` 不抓网页正文，`fetch` 抓取并分块。
@@ -86,3 +110,9 @@
   @req:r298
   规则: Dedup MUST be gated by config
     sources 去重 MUST 受 config source_ingestion.dedup.enabled 门控，为 false 时 MUST 跳过 dedup 直接创建新 source
+
+    场景: dedup-gated-by-config
+      假如 config 将 source_ingestion.dedup.enabled 设为 false
+      当 重复上传同一内容且不带 create_new（见 sources/c117-upload-contract.test.ts）
+      那么 跳过去重直接创建新来源且不返回 409
+      而且 默认门控开启时重复上传仍返回 409 CONFLICT

@@ -8,6 +8,12 @@
   @req:r262
   规则: Source list query semantics are stable
     来源列表 MUST 支持 tag 精确过滤与稳定排序（date/name/size/type + asc/desc）。
+
+    场景: list-tag-filter-and-stable-sort
+      假如 笔记本内有文件名/类型/chunk 数/更新时间各异的来源且部分绑定标签
+      当 以 tag 过滤并以 sortBy=date/name/size/type 加 asc/desc 查询列表（见 sources/c117-mgmt-tags.test.ts）
+      那么 tag 过滤为精确匹配且仅返回绑定该标签的来源
+      而且 各排序键按请求方向返回稳定顺序且重复查询结果一致
   @req:r263
   规则: Source list can be epoch-cached
     列表结果 MUST 基于 `sources_epoch` 缓存；失效模型遵循 retrieval-and-cache r227（canonical），来源集合或 tag 相关变更成功后 MUST 使列表缓存失效并在下次查询重建。
@@ -20,9 +26,21 @@
   @req:r264
   规则: Chunks endpoint returns deterministic order
     来源 chunks 接口 MUST 按 `chunk_index` 升序返回。
+
+    场景: chunks-ascending-deterministic
+      假如 一篇来源的 chunks 以乱序 chunk_index 插入
+      当 请求 GET /v2/notebooks/:nid/sources/:sid/chunks（见 sources/c117-mgmt-tags.test.ts）
+      那么 返回的 chunkIndex 为升序（0,1,2）
+      而且 重复请求返回相同顺序
   @req:r265
   规则: Delete and re-embed keep storage and epochs consistent
     来源删除必须同步移除 DB 记录与向量存储记录（见 source-ingestion-core r256，canonical）；re-embed MUST 使用既有 chunks 重算向量并维护 epoch 一致性。
+
+    场景: delete-and-reembed-consistency
+      假如 一篇已索引来源与一篇 failed 且已有 chunks 无向量的来源
+      当 删除前者并对后者执行 POST re-embed（见 sources/c117-mgmt-tags.test.ts）
+      那么 删除同步清除 DB 行与 vec_chunks 向量行且 sources_epoch 递增使检索缓存失效
+      而且 re-embed 复用既有 chunks 重算向量（不新增 chunk 行）、来源置 ready 并失效缓存
   @req:r266
   规则: Source failures include diagnostic fields
     来源在失败或不可恢复状态下 MUST 提供结构化诊断信息，以支持 UI 给出可操作的修复建议。

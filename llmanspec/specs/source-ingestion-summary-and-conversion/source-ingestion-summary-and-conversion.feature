@@ -17,6 +17,12 @@
   @req:r274
   规则: Source-scoped QA is hard-bounded by sourceId
     来源 QA MUST 仅在该 `sourceId` 范围内检索与回答。
+
+    场景: qa-scoped-to-source-id
+      假如 笔记本内有两篇已索引来源且问题在另一篇来源中得分更高
+      当 对来源 A 发起 per-source QA（见 sources/c117-per-source-qa.test.ts）
+      那么 检索上下文仅含来源 A 的分块而不泄漏其它来源分块
+      而且 scoped 检索无命中时回退也只读取来源 A 自身分块
   @req:r275
   规则: Source QA conversion creates reusable source
     来源问答转换 MUST 创建新来源并可立即用于后续检索。
@@ -29,12 +35,30 @@
   @req:r276
   规则: Conversation/output conversion keeps traceable metadata
     对话或输出转换为来源/笔记时 MUST 记录来源元数据与追踪信息；lineage 语义见 cross-type-result-transformations r40。
+
+    场景: conversion-records-lineage-metadata
+      假如 笔记本内有一篇 ready 来源及其 QA 结果与一段会话消息
+      当 分别执行 qa-to-source 与 session convert-to-source（见 sources/c117-conversion-lineage.test.ts）
+      那么 新来源 metadata 记录 qa_from_source 与 original_filename
+      而且 会话转换新来源 metadata 记录 convertedFromSession、messageCount 与 conversionTimestamp
   @req:r277
   规则: Conversion follows source lifecycle and epoch rules
     任何创建新来源的转换路径 MUST 遵循 source 状态机与 epoch 失效规则。
+
+    场景: conversion-follows-lifecycle-and-epochs
+      假如 已按当前 epoch 写入检索缓存哨兵
+      当 执行 qa-to-source 与 session convert-to-source（见 sources/c117-conversion-lineage.test.ts）
+      那么 两类转换的新来源在向量写入成功后置 ready
+      而且 notebook 的 vector/sources epoch 递增使原缓存失效
   @req:r278
   规则: Summary and per-source QA MUST return 400 for not-ready and verify notebook ownership
     summary 和 per-source QA 端点在 source 未 ready 时 MUST 返回 400（非 404），且 MUST 校验 source 属于 URL 中的 notebook
+
+    场景: summary-qa-not-ready-and-ownership
+      假如 笔记本内有一篇 processing 来源与一篇属于其它笔记本的 ready 来源
+      当 对二者分别请求 summary 与 per-source QA（见 sources/c117-per-source-qa.test.ts）
+      那么 未 ready 的来源返回 400 INVALID_REQUEST 而非 404
+      而且 跨 notebook 的来源返回 404 且其自身状态不受影响
   @req:r279
   规则: qa-to-source MUST accept multi-turn messages list
     qa-to-source 转换 MUST 接受 messages: list[QAMessage] 多轮历史并格式化为完整 transcript 后创建 source（对齐既有语义）；MAY 另接受单轮 {question, answer}。
@@ -56,9 +80,21 @@
   @req:r281
   规则: Source conversion MUST NOT mark ready when embedding fails
     QA-to-source 和 session convert-to-source 的 embedding 失败处理遵循 source-ingestion-core r2_sync（canonical）：MUST 标记 source 为 failed 而非 ready。
+
+    场景: conversion-embedding-failure-marks-failed
+      假如 embedding provider 抛出异常
+      当 执行 qa-to-source 与 session convert-to-source（见 sources/c117-conversion-lineage.test.ts）
+      那么 两类转换的新来源均被标记为 failed 而非 ready
+      而且 错误信息携带失败原因（HTTP 500 INTERNAL_ERROR）
   @req:r282
   规则: Per-source QA MUST use vector retrieval
     per-source QA MUST 通过 embed question + scoped vector search 检索相关 chunk；结果 MUST 按相关度排序返回，MUST NOT 以固定截断数量替代检索排序。
+
+    场景: qa-vector-relevance-ordering
+      假如 来源内强相关分块的 chunkIndex 大于弱相关分块
+      当 对该来源发起问答（见 sources/c117-per-source-qa.test.ts 的 r282 用例）
+      那么 QA 上下文经 embed question + scoped vector search 检索
+      而且 上下文按相关度排序（弱相关分块不因插入顺序靠前而排在强相关之前）
   @req:r283
   规则: POST summary MUST persist autoSummary
     POST /v2/notebooks/:nid/sources/:sid/summary MUST 对 ready 来源生成摘要结构，MUST 将结果 merge 写入 sources.metadata.autoSummary，并 MUST 返回与有缓存时 GET 相同形状的 SourceSummary。
@@ -71,3 +107,9 @@
   @req:r284
   规则: Ingest MUST async-pregenerate summary after ready
     来源 ingest 成功标记 ready 后，系统 SHOULD 异步预生成并写入 metadata.autoSummary；预生成失败 MUST NOT 将 source 标为 failed，也 MUST NOT 阻塞 ingest 成功响应。
+
+    场景: async-pregenerate-after-ready
+      假如 一个来源刚经摄取完成并标记 ready
+      当 观察摄取响应与后台预生成（见 sources/c117-summary-pregenerate.test.ts）
+      那么 摄取响应不被摘要预生成阻塞且 metadata.autoSummary 最终写入
+      而且 预生成失败不将来源标为 failed 也不影响成功响应
