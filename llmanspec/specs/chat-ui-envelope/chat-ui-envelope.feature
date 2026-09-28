@@ -15,7 +15,7 @@
       那么 零处生成 `[[crystalith-ui:v1]]` delimiter 或 envelope JSON
   @req:r29
   规则: Frontend does not parse legacy envelope markers
-    Chat 前端 MUST NOT 解析 assistant `content` 中的 legacy envelope marker；UI mounts MUST 仅依据 session `sharedState.ui`（服务端权威）由前端渲染层恢复——包括页面刷新重新加载会话时经 `/ui/state` 拉取恢复。本条为前端不解析 envelope 禁令的 canonical 条目。
+    Chat 前端 MUST NOT 解析 assistant `content` 中的 legacy envelope marker；UI mounts MUST 仅依据 session `sharedState.ui`（服务端权威）由前端渲染层恢复——包括页面刷新重新加载会话时经 session 资源拉取恢复。本条为前端不解析 envelope 禁令的 canonical 条目。
 
     场景: frontend-parses-no-legacy-envelope
       假如 前端源码树可被静态扫描

@@ -102,8 +102,14 @@
       那么 界面以用户可见内联错误与 toast 呈现
       而且 专用错误码不被静默吞掉
   @req:r111
-  规则: No run URL deep link in v1
-    深研 UI MUST NOT 被动依赖 URL query/path 深链恢复特定 Run 状态（报告页 ?rid= 及用户显式动作 / slash 命令发起的 ?rid=/topic 导航除外，见 r145/r152）；被动刷新/直达时打开详情 MUST 由会话内 UI 状态驱动。
+  规则: rid query param is intra-app navigation, not an external deep-link guarantee
+    v1 不提供可分享/可收藏的外部 Run deep link 保证：系统 MUST NOT 提供分享入口或对外稳定的 Run URL 语义。应用内导航 MAY 携带 `?rid=`，Lab 到达时（含刷新与直达）MUST 依据该参数恢复对应 Run——这是 r152 fork-run 导航与 r145 slash 导航的必要承接；报告页 `?rid=` 语义见 r145/r152。
+
+    场景: intra-app-rid-navigation-restores-run
+      假如 应用内显式动作（如 fork-run）导航至 /research-lab/:nid?rid=X
+      当 Lab 页面到达并读取 rid
+      那么 对应 Run 被恢复为当前研究上下文
+      而且 系统不提供任何对外分享/收藏 deep link 入口
   @req:r112
   规则: i18n and reachable Lab entry
     深研相关用户可见文案 MUST 走前端 i18n（t()）；仓库 MUST 至少保留一条可达 Lab 入口的回归（testid 或等价）。

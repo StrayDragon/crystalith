@@ -1,5 +1,8 @@
 ---
-depends_on: ["c119-low-effort-deferred-tests"]
+depends_on: ['c119-low-effort-deferred-tests']
+branch: sdd/c120-gap-remediation-first
+base_branch: main
+base_sha: 9d67c8c435dcb46de3a46d896c15f38cf38c807f
 ---
 
 # 缺口处置第一批：r290 产品修复 + r111/r351 合约对齐

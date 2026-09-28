@@ -61,8 +61,14 @@
       当 发起非流式问答后读取该会话的消息列表
       那么 非流式响应的 answer 与所有 assistant 消息的 content 均为纯字符串
   @req:r351
-  规则: Session UI state endpoints are stable and server-authoritative
-    系统 MUST 提供 session-scoped UI 状态端点： - `GET /v2/notebooks/{notebookId}/sessions/{sessionId}/ui/state` - `POST /v2/notebooks/{notebookId}/sessions/{sessionId}/ui/event` `GET` MUST 返回 `sessionId`、`sharedState`、`sharedStateRevision`；`POST` MUST 接收 `CUSTOM(name="ui.v1.event")`，并返回 `delta` 与最新 `sharedStateRevision`。携带 `clientRequestId` 与 `baseRevision` 的事件 MUST 做幂等处理与 revision 冲突检查。
+  规则: Session UI state is server-authoritative on the session resource
+    session-scoped UI 状态由 session 资源服务端权威承载：`GET /v2/notebooks/{notebookId}/sessions/{sessionId}` MUST 返回 `sessionId`、`sharedState` 与 `sharedStateRevision`；更新携带 `sharedState` 时 MUST 校验 `sharedStateRevision`，不匹配返回 409，匹配则写入并递增 revision。前端 UI 恢复 MUST 经 session 资源拉取（chat-ui-envelope r29 同源），不设独立 /ui/* 端点。
+
+    场景: session-resource-carries-ui-state
+      假如 某会话存在服务端权威 sharedState
+      当 GET 该 session 资源
+      那么 响应携带 sessionId、sharedState 与 sharedStateRevision
+      而且 PATCH 携写过期 sharedStateRevision 时返回 409 且不写入
   @req:r352
   规则: Prompt presets CRUD endpoints are stable
     系统 MUST 提供 prompt presets 的 CRUD 端点集合： - `GET /v2/prompt-presets`：返回 built-in + custom 的 preset 列表 - `POST /v2/prompt-presets`：创建 custom preset 并返回 201 - `PATCH /v2/prompt-presets/{presetId}`：更新 custom preset 并返回更新后的对象 - `DELETE /v2/prompt-presets/{presetId}`：删除 custom preset 并返回 204。创建 trigger 与 built-in 或已存在 custom 冲突的 preset MUST 返回 409；更新或删除不存在的 `presetId` MUST 返回 404。

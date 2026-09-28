@@ -11,6 +11,7 @@ import { db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { chunkText } from '../../rag/chunker.ts';
+import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { logger } from '../../shared/logger.ts';
 import { contentStorage } from '../../shared/storage.ts';
 import { guessMimeType, registerParser, selectParser } from './parser-registry.ts';
@@ -86,6 +87,12 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
     ? selectParser(input.parserType)
     : selectParser(mimeType, input.filename);
 
+  // r290: deterministic input errors MUST 400 without creating a source row —
+  // reject empty uploads before any insert.
+  if (input.buffer.length === 0) {
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Empty file');
+  }
+
   // 1. Create source record in 'processing' state
   const sourceRow = db()
     .insert(sources)
@@ -126,6 +133,17 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
             metadata: p.metadata,
           }))
         : chunkText(result.text).map((c) => ({ index: c.index, text: c.text }));
+
+    // r290: no indexable content is a deterministic input error — roll back the
+    // processing row (and best-effort the saved bytes) and 400, leaving no source.
+    const hasPages = (result.pages?.length ?? 0) > 0;
+    if (chunked.length === 0 || (!hasPages && !result.text.trim())) {
+      db().delete(sources).where(eq(sources.id, sourceRow.id)).run();
+      await contentStorage.delete(sourceRow.id).catch((error) => {
+        logger.warn(`[pipeline] contentStorage cleanup failed for source ${sourceRow.id}:`, error);
+      });
+      throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'No indexable content');
+    }
 
     // 4. Insert chunk rows
     let offset = 0;
@@ -176,6 +194,9 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
       status: 'ready',
     };
   } catch (error) {
+    // r290: deterministic input errors are client-facing 400s — rethrow instead
+    // of classifying them as a pipeline stage failure.
+    if (error instanceof AppHttpError) throw error;
     const message = error instanceof Error ? error.message : 'Unknown error';
     // c57: 4-stage error classification (v1 api_ingest.py:893-924)
     const errorCode =

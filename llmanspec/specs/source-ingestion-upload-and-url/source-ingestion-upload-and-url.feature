@@ -55,6 +55,12 @@
   @req:r290
   规则: Deterministic input errors do not create source rows
     空文件或无可索引内容等确定性输入错误 MUST 返回 400 且不创建来源。
+
+    场景: empty-or-blank-upload-rejected-without-source-row
+      假如 集成环境就绪且上传入口可用
+      当 上传空 .txt 或纯空白 .txt 文件
+      那么 响应状态码为 400 且 errorCode 为 INVALID_REQUEST
+      而且 sources 表不残留任何来源行
   @req:r291
   规则: Oversized uploads are rejected deterministically with 413
     当 HTTP guardrails 启用时，上传接口 MUST 对单次上传施加配置项 `upload_max_bytes` 限制；超过上限 MUST 返回 413，且 MUST 不创建来源记录。未配置时的默认值 MUST 来自 config schema。
