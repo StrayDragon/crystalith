@@ -125,9 +125,9 @@ llman-sdd 0.5 原生分层格式下，规则（`规则:` 块 + `@req` 句柄）�
 
 > 建议批次序：**c121 = F（真 bug）或 A（顺延可测）→ c122 = 另一者 → c123 = C → c124 = G(+H)**；B/D/E 需产品决策，其中 E 合约化一次压降 12 条。
 
-## req id 退役护栏（c121 副产物）
+## req id 退役护栏（已退役，2026-09-29）
 
-`spec next-req-id` 为**最小空闲号**语义：c121 删除 cross-type（r39-r45）后，下一次取号会复用 r39，与 archive 中历史 change 的 r39-r45 引用产生歧义。**护栏：后续新增 req 一律显式指名 r474+（树内现最大 r473），不复用已删除 capability 的号段。**若上游未来提供 max+1 取号选项或删除即烧号语义，可撤销本护栏。
+上游 llman-sdd **0.7.0 已将 `spec next-req-id` 改为 max+1 语义**（修复 issue #5，有意不提供旧行为开关；见迁移指引 migrations/v0.6-v0.7）。本项目护栏脚本 `check-retired-req-ids` 与 `just check` 挂钩按其自述条款随之退役（r39-r45/r50/r239-244/r419 不会再被取号发出）。
 
 ## 附录：req_id 碰撞清单（45 个 tag）
 

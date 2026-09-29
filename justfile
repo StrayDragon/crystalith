@@ -133,12 +133,7 @@ typecheck:
     @bun typecheck > /dev/null
 
 # Run all quality checks (output minimized — only errors/warnings)
-# Guard: retired req ids (deleted capabilities) must never re-enter live specs
-# (`spec next-req-id` allocates smallest-free; see llman-sdd#5 + campaign map).
-check-retired-req-ids:
-    bun scripts/check-retired-req-ids.ts
-
-check: typecheck lint format-check check-retired-req-ids
+check: typecheck lint format-check
 
 # Type-aware linting (oxlint with tsconfig) — advisory; NOT part of `just qa`
 # (pre-existing errors, especially in test files). Run manually before large PRs.
