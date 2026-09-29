@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@rstest/core';
 
-import { parseServerError } from './parseServerError';
+import { parseServerError, summarizeErrorEnvelope } from './parseServerError';
 
 describe('parseServerError', () => {
   it('parses the Eden treaty nested shape { status, value: ErrorEnvelope }', () => {
@@ -55,5 +55,44 @@ describe('parseServerError', () => {
     expect(parseServerError(42).message).toBe('42');
     expect(parseServerError({}).message).toBe('Unknown error');
     expect(parseServerError(undefined).message).toBe('Unknown error');
+  });
+});
+
+describe('summarizeErrorEnvelope', () => {
+  it('returns the envelope message for free-form errors', () => {
+    expect(
+      summarizeErrorEnvelope({
+        errorCode: 'INVALID_REQUEST',
+        message: 'Missing query after /prompt directive',
+      }),
+    ).toBe('Missing query after /prompt directive');
+  });
+
+  it('collapses schema-validation dumps to the offending property', () => {
+    expect(
+      summarizeErrorEnvelope({
+        errorCode: 'SCHEMA_VALIDATION_FAILED',
+        message: '{\n  "type": "validation",\n  "on": "body"}',
+        details: { property: 'generationTypeId' },
+      }),
+    ).toBe('参数校验失败（generationTypeId）');
+  });
+
+  it('falls back to a generic label when details lack a property', () => {
+    expect(summarizeErrorEnvelope({ errorCode: 'SCHEMA_VALIDATION_FAILED', message: 'dump' })).toBe(
+      '参数校验失败',
+    );
+  });
+
+  it('collapses whitespace and caps long messages', () => {
+    const long = `word ${'x'.repeat(200)}`;
+    const summarized = summarizeErrorEnvelope({ message: `multi\nline\twhitespace ${long}` });
+    expect(summarized).not.toMatch(/\s{2,}/u);
+    expect(summarized.length).toBeLessThanOrEqual(72);
+  });
+
+  it('returns empty for unknown shapes', () => {
+    expect(summarizeErrorEnvelope({})).toBe('');
+    expect(summarizeErrorEnvelope(undefined)).toBe('');
   });
 });

@@ -58,3 +58,23 @@ export function parseServerError(error: unknown): ParsedServerError {
         : undefined;
   return { errorCode, message, details, status };
 }
+
+/** Max characters of server error copy inlined into a transport message. */
+const SERVER_ERROR_DETAIL_CAP = 72;
+
+/**
+ * Envelope → short single-line display copy for transport error messages
+ * (stream.ts non-2xx path). Schema-validation dumps are collapsed to the
+ * first offending property; free-form messages are whitespace-collapsed and
+ * capped so `mapTransportError`'s short-message passthrough still shows them.
+ * Returns '' when there is nothing worth surfacing.
+ */
+export function summarizeErrorEnvelope(envelope: unknown): string {
+  const { errorCode, message, details } = parseServerError(envelope);
+  if (errorCode === 'SCHEMA_VALIDATION_FAILED') {
+    const property = typeof details?.property === 'string' ? details.property : undefined;
+    return property ? `参数校验失败（${property}）` : '参数校验失败';
+  }
+  if (!message || message === 'Unknown error') return '';
+  return message.replaceAll(/\s+/gu, ' ').trim().slice(0, SERVER_ERROR_DETAIL_CAP);
+}

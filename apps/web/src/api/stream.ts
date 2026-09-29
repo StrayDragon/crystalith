@@ -15,6 +15,7 @@
  */
 
 import { resolveApiBaseUrl } from './apiEnv';
+import { summarizeErrorEnvelope } from './parseServerError';
 
 export interface SseEvent {
   event: string;
@@ -120,8 +121,17 @@ export async function* streamRequest(
   });
 
   if (!response.ok) {
+    // Surface the server's ErrorEnvelope reason (c63 SSOT parser) instead of
+    // dropping the body — transport status text alone hides actionable copy
+    // like preset usage hints (INVALID_REQUEST) or the offending property.
+    let detail = '';
+    try {
+      detail = summarizeErrorEnvelope(await response.json());
+    } catch {
+      // Non-JSON error body — status text alone is the honest fallback.
+    }
     const error: Error & { status?: number } = new Error(
-      `SSE request failed: ${response.status} ${response.statusText}`,
+      `SSE request failed: ${response.status} ${response.statusText}${detail ? ` — ${detail}` : ''}`,
     );
     error.status = response.status;
     throw error;
