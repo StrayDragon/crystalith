@@ -296,6 +296,16 @@ async function finishPipeline(
       type: input.type,
       prompt: input.prompt ?? null,
       chunkIds: chunkRows.map((c) => c.id),
+      generationMeta: {
+        generationTypeId: 'output',
+        outputType: input.type,
+        completion: 'output-row',
+        effectiveControls: {
+          preference: input.preference ?? 'quality',
+          ...(input.topK !== undefined ? { topK: input.topK } : {}),
+          ...(input.minScore !== undefined ? { minScore: input.minScore } : {}),
+        },
+      },
       content,
     })
     .returning()

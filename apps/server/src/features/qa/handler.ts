@@ -1,5 +1,5 @@
 import type { LanguageModelV4 } from '@ai-sdk/provider';
-import type { ChatTurn, Citation, ContextStats } from '@crystalith/shared';
+import type { ChatTurn, Citation, ContextStats, GenerationMeta } from '@crystalith/shared';
 import { generateText } from 'ai';
 
 import { streamQaResponse } from '../../ai/stream.ts';
@@ -69,6 +69,8 @@ export interface QaHandlerOptions {
   sourceIds?: number[];
   /** c48: resolved preset id — 'stats' routes through JSON-parse path. */
   preset?: string;
+  /** r326: generation metadata echoed on stream done events. */
+  generation?: GenerationMeta;
   /** Lifecycle hook for the provisional assistant message (includes citations). */
   onMessageSettled?: (
     accumulatedText: string,
@@ -191,6 +193,7 @@ function streamNoEvidence(answer: string, judgment: JudgeResult, opts: QaHandler
           context: judgment.contextStats,
           createdAt: new Date().toISOString(),
           toolCalls: [],
+          generation: opts.generation,
         });
 
         opts.onMessageSettled?.(answer, false);
@@ -240,6 +243,7 @@ function streamStatsAnswer(
           context: judgment.contextStats,
           createdAt: new Date().toISOString(),
           toolCalls: [],
+          generation: opts.generation,
         });
         opts.onMessageSettled?.(answer, false, judgment.citations);
       } catch {

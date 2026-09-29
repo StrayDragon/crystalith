@@ -34,6 +34,7 @@ async function postOutput(): Promise<{ status: number; body: Record<string, unkn
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
+        generationTypeId: 'output',
         type: 'PARAGRAPH',
         prompt: 'r202 合同检查',
         content: { text: '# r202\n\n正文内容' },

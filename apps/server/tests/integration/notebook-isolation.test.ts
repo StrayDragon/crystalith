@@ -141,6 +141,7 @@ describe('c69 nested notebook paths', () => {
   it('POST nested outputs with mismatched body notebookId → 400', async () => {
     const { status, body } = await post(`/v2/notebooks/${notebookA}/outputs`, {
       notebookId: notebookB,
+      generationTypeId: 'output',
       type: 'BRIEFING',
       sourceIds: [sourceId],
     });

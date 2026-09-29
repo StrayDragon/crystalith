@@ -100,15 +100,25 @@ describe('domain schemas', () => {
 
   it('qa nested request requires question/content; notebookId optional', () => {
     const r = S.QaNestedRequestSchema.parse({
+      generationTypeId: 'qa',
       question: 'hi',
       sessionId: 2,
     });
     expect(r.question).toBe('hi');
+    // c122 r324: generationTypeId is mandatory on the typed-generation wire.
+    expect(S.QaNestedRequestSchema.safeParse({ question: 'hi' }).success).toBe(false);
     expect(S.QaNestedRequestSchema.safeParse({}).success).toBe(false);
-    expect(S.QaNestedRequestSchema.safeParse({ content: 'via content alias' }).success).toBe(true);
-    expect(S.QaNestedRequestSchema.safeParse({ notebookId: 1, question: 'with nb' }).success).toBe(
-      true,
-    );
+    expect(
+      S.QaNestedRequestSchema.safeParse({ generationTypeId: 'qa', content: 'via content alias' })
+        .success,
+    ).toBe(true);
+    expect(
+      S.QaNestedRequestSchema.safeParse({
+        notebookId: 1,
+        generationTypeId: 'qa',
+        question: 'with nb',
+      }).success,
+    ).toBe(true);
   });
 
   it('source connector write requests validate shapes', () => {

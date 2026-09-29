@@ -357,6 +357,7 @@ export function useRefine() {
       s.setLoading('outputs', true);
       try {
         const { data, error } = await api.v2.notebooks({ nid: s.activeNotebookId }).outputs.post({
+          generationTypeId: 'output',
           type: 'PARAGRAPH',
           prompt: title,
           content: { title, text: trimmed },

@@ -3,6 +3,7 @@
 import { z } from 'zod';
 
 import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from './common.js';
+import { GenerationTypeIdSchema } from './generation-type.js';
 import { desc } from './i18n.js';
 
 export const TemplateSchema = z
@@ -54,6 +55,8 @@ export const PromptPresetSchema = z
     description: z.string().nullable().optional(),
     systemPrompt: z.string().min(1),
     enabled: z.boolean().default(true),
+    /** Owning generation type (r188) — presets bind to a type contract. */
+    generationTypeId: GenerationTypeIdSchema.default('qa'),
     createdAt: IsoTimestampSchema,
     updatedAt: IsoTimestampSchema,
   })
@@ -65,6 +68,7 @@ export const PromptPresetSchema = z
       description: 'Explain like I am 5',
       systemPrompt: '…',
       enabled: true,
+      generationTypeId: 'qa',
       createdAt: '2026-07-08T12:00:00.000Z',
       updatedAt: '2026-07-08T12:00:00.000Z',
     },
@@ -77,6 +81,8 @@ export const PromptPresetCreateSchema = z
     description: z.string().nullable().optional(),
     systemPrompt: z.string().min(1),
     enabled: z.boolean().default(true),
+    /** Owning generation type (r188) — only types with preset support accept creation. */
+    generationTypeId: GenerationTypeIdSchema.optional(),
   })
   .openapi({
     description: desc('template.prompt_preset_create', '创建 Prompt Preset'),

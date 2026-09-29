@@ -347,6 +347,7 @@ describe('r350 assistant message content stays plain text', () => {
     const qa = await post(`/v2/notebooks/${notebookId}/qa`, {
       question: 'plain text question',
       sessionId: qaSessionId,
+      generationTypeId: 'qa',
     });
     expect(qa.status).toBe(200);
     expect(typeof (qa.body as { answer: unknown }).answer).toBe('string');
@@ -367,6 +368,7 @@ describe('r369 QA confidence/evidence and stream done payload', () => {
     // covers: r369
     const qa = await post(`/v2/notebooks/${notebookId}/qa`, {
       question: 'confidence question',
+      generationTypeId: 'qa',
     });
     expect(qa.status).toBe(200);
     const body = qa.body as { confidence: unknown; evidence: unknown };
@@ -380,7 +382,11 @@ describe('r369 QA confidence/evidence and stream done payload', () => {
       new Request(`${BASE}/v2/notebooks/${notebookId}/qa/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: 'stream question', sessionId: qaSessionId }),
+        body: JSON.stringify({
+          question: 'stream question',
+          sessionId: qaSessionId,
+          generationTypeId: 'qa',
+        }),
       }),
     );
     expect(res.status).toBe(200);

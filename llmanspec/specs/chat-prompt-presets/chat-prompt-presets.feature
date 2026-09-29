@@ -7,7 +7,7 @@
 
   @req:r22
   规则: Prompt directives are parsed from QA question when enabled
-    当 `app.features.chat_prompt_presets_enabled=true` 时，系统 MUST 支持在 `question` 内解析 prompt 指令： `/prompt:<preset> <query>` 其中： - `<preset>` MUST 匹配正则：`[a-z0-9_-]{1,32}`（大小写不敏感，解析后统一为小写） - `<query>` MAY 为空（空时视为输入错误）。指令解析 MUST NOT 仅接受 body 的 preset 字段。
+    系统 MUST 支持在 `question` 内解析 prompt 指令： `/prompt:<preset> <query>` 其中： - `<preset>` MUST 匹配正则：`[a-z0-9_-]{1,32}`（大小写不敏感，解析后统一为小写） - `<query>` MAY 为空（空时视为输入错误）。指令解析 MUST NOT 仅接受 body 的 preset 字段。
 
     场景: prompt-directive-parsed-from-question
       假如 chat_prompt_presets_enabled=true 且 question 为 "/prompt:STATS 销售数据"
@@ -18,29 +18,45 @@
 
   规则: empty-query-returns-deterministic-error
     当 presets 功能启用且 `question` 为 `/prompt:<preset>`（无 query）时，系统 SHALL 返回 400 并提示用法与可用 preset 列表。
-  @req:r423
+  
+    场景: bare-directive-returns-usage-and-list
+      假如 qa-preset 集成环境就绪（tests/qa/preset-resolution.test.ts）
+      当 以 "/prompt:stats"（无 query）调用 QA
+      那么 400 且 details 携带用法说明、触发的 presetId 与可用预设列表
+@req:r423
 
-  规则: presets-disabled-returns-deterministic-error
-    当 `question` 以 `/prompt:` 开头但 `app.features.chat_prompt_presets_enabled=false` 时，系统 SHALL 返回 400，MUST NOT 静默当作普通 QA 处理。
+  规则: prompt-directive-behavior-is-config-independent-and-deterministic
+    `/prompt:` 指令语言不依赖可选特性开关：其解析与错误语义 MUST 在任何部署配置下保持一致（无 enabled/disabled 分支），MUST NOT 把指令静默当作普通 QA 文本处理（裸指令与未知预设见 r422/r23 的确定性 400）。
+
+    场景: directive-deterministic-without-feature-flag
+      假如 默认配置（不存在 presets 特性开关字段，tests/qa/preset-resolution.test.ts）
+      当 以 "/prompt:stats 问题" 调用 QA
+      那么 指令生效且回传 generation.presetId=stats
   @req:r23
   规则: Unknown preset names are rejected with a stable list
     系统 MUST 将 preset 集合视为白名单（built-in + custom）。未知 preset MUST 被拒绝并返回可用 preset 列表（含 built-in 与 custom）。
 
     场景: unknown-preset-rejected-with-stable-list
-      假如 preset 白名单含 built-in 与 custom
-      当 以 "/prompt:不存在的预设 某个问题" 调用 QA（apps/server/tests/bdd/features/qa/知识问答.feature 的未知预设场景）
+      假如 preset 白名单含 built-in 与 custom（tests/qa/preset-resolution.test.ts）
+      当 以 "/prompt:不存在的预设 某个问题" 调用 QA
       那么 响应状态码为 400
       而且 错误信息返回可用 preset 列表
   @req:r24
   规则: Custom prompt presets can override the QA system prompt
     系统 MUST 支持用户定义的 custom preset。对于 `/prompt:<preset> <query>`： - 若 `<preset>` 命中 custom preset 且 `enabled=true`，系统 MUST 使用该 preset 的 `systemPrompt` 覆盖 QA pipeline 的 system message。 - 系统 MUST 将 `<query>` 作为实际 QA question 执行（不包含 `/prompt:` 前缀）。
-  @req:r25
+  
+    场景: custom-preset-overrides-qa-system-prompt
+      假如 qa-preset 集成环境就绪且存在 enabled=true 的 custom preset（tests/qa/preset-resolution.test.ts）
+      当 以 "/prompt:<trigger> <query>" 调用 QA
+      那么 该 preset 的 systemPrompt 覆盖 QA 系统消息（{{directive}} 占位与内置同法渲染）
+      而且 <query> 作为实际 question 执行且 generation.presetId 回传 trigger
+@req:r25
   规则: Disabled presets are rejected deterministically
     当 preset 存在但 `enabled=false` 时，系统 MUST 拒绝该请求并返回确定性错误。
 
     场景: disabled-preset-rejected-deterministically
-      假如 存在 enabled=false 的 preset（如 disabled-test）
-      当 以 "/prompt:disabled-test 某个问题" 调用 QA（同 feature 的已禁用预设场景）
+      假如 存在 enabled=false 的 preset（如 disabled-test，tests/qa/preset-resolution.test.ts）
+      当 以 "/prompt:disabled-test 某个问题" 调用 QA
       那么 响应状态码为 400
       而且 重复调用返回相同的确定性错误
   @req:r26

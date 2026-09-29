@@ -24,6 +24,7 @@ export const OPENAPI_TAG_DESCRIPTIONS: Record<string, string> = {
   sessions: '会话',
   messages: '会话消息',
   qa: '笔记本问答（RAG）',
+  'generation-types': '生成类型合约（typed-generation-framework 一等对象）',
   sources: '来源文档、摄取与单源能力',
   'source-connectors': '外部来源连接器',
   outputs: '产出 / 笔记生成物',

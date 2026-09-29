@@ -13,6 +13,7 @@ import { promptPresets } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { PathId } from '../../shared/ids.ts';
+import { PRESET_CAPABLE_GENERATION_TYPES } from '../generation-types/registry.ts';
 import { listPresets } from '../qa/presets.ts';
 
 /** c61: builtin preset trigger set for conflict detection. */
@@ -82,9 +83,24 @@ function serializePreset(row: typeof promptPresets.$inferSelect) {
     description: row.description,
     systemPrompt: row.systemPrompt,
     enabled: row.enabled,
+    generationTypeId: row.generationTypeId,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+/** r188: presets bind to a generation type; only preset-capable types accept creation. */
+function assertPresetCapableType(generationTypeId: string | undefined): void {
+  if (
+    generationTypeId !== undefined &&
+    !PRESET_CAPABLE_GENERATION_TYPES.includes(generationTypeId as 'qa')
+  ) {
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      `Generation type '${generationTypeId}' does not support prompt presets`,
+      { supported: [...PRESET_CAPABLE_GENERATION_TYPES] },
+    );
+  }
 }
 
 export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
@@ -104,6 +120,7 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
       if (conflict) {
         throw new AppHttpError(ErrorCode.CONFLICT, conflict);
       }
+      assertPresetCapableType(body.generationTypeId);
       const row = db()
         .insert(promptPresets)
         .values({
@@ -111,6 +128,7 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
           description: body.description ?? null,
           systemPrompt: body.systemPrompt,
           enabled: body.enabled ?? true,
+          generationTypeId: body.generationTypeId ?? 'qa',
         })
         .returning()
         .get();
@@ -134,8 +152,10 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
         }
       }
 
+      assertPresetCapableType(body.generationTypeId);
       const updateData: Record<string, unknown> = {};
       if (body.trigger !== undefined) updateData.trigger = body.trigger;
+      if (body.generationTypeId !== undefined) updateData.generationTypeId = body.generationTypeId;
       if (body.description !== undefined) updateData.description = body.description;
       if (body.systemPrompt !== undefined) updateData.systemPrompt = body.systemPrompt;
       if (body.enabled !== undefined) updateData.enabled = body.enabled;

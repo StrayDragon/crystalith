@@ -274,6 +274,7 @@ export function useChat({
 
       try {
         const body: QaNestedRequest = {
+          generationTypeId: 'qa',
           question: text,
           sessionId: sessionId,
           ...(explicitSourceIds.length ? { sourceIds: explicitSourceIds } : {}),
@@ -433,6 +434,7 @@ export function useChat({
     // Non-streaming path
     try {
       const qaBody: QaNestedRequest = {
+        generationTypeId: 'qa',
         question: text,
         sessionId: sessionId,
         ...(explicitSourceIds.length ? { sourceIds: explicitSourceIds } : {}),

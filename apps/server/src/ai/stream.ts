@@ -1,5 +1,5 @@
 import type { LanguageModelV4 } from '@ai-sdk/provider';
-import type { ChatTurn, Citation, ContextStats } from '@crystalith/shared';
+import type { ChatTurn, Citation, ContextStats, GenerationMeta } from '@crystalith/shared';
 // Streaming — relay Vercel AI SDK `streamText` stream parts into SSE
 // events compatible with the v1 frontend chat consumer (`useChat.ts`).
 //
@@ -33,6 +33,8 @@ export interface StreamQaOptions {
   settleNotice?: string;
   /** Confidence score in [0,1] computed from evidence (attached to done). */
   confidenceResolver?: () => number | Promise<number> | undefined;
+  /** r326: generation metadata echoed on the done event. */
+  generation?: GenerationMeta;
   /**
    * Async callback that receives resolved citations and returns a no-evidence
    * reason string (or undefined). Called after citationsResolver for dynamic
@@ -153,6 +155,7 @@ export function streamQaResponse(opts: StreamQaOptions): Response {
           context: opts.contextStats,
           createdAt: new Date().toISOString(),
           toolCalls: [],
+          generation: opts.generation,
         });
 
         opts.onMessageSettled?.(stripLeakedToolCallXml(accumulated), false, citations);

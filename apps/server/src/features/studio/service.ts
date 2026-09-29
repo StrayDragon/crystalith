@@ -197,6 +197,11 @@ export function syncSlideOutput(slide: typeof studioSlides.$inferSelect, markdow
         notebookId: slide.notebookId,
         type: 'SLIDES',
         prompt: `studio:${slide.id}`,
+        generationMeta: {
+          generationTypeId: 'slides',
+          outputType: 'SLIDES',
+          completion: 'sse-done',
+        },
         content,
       })
       .returning()

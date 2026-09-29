@@ -449,6 +449,7 @@ export function useOutputQueue({
         } else if (job.notebookId) {
           const preference = job.preference;
           const body = {
+            generationTypeId: 'output' as const,
             type: job.type,
             // intentionally || — empty prompt/modelId/title become undefined
             // oxlint-disable-next-line typescript/prefer-nullish-coalescing

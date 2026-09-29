@@ -128,7 +128,7 @@ async function postQa(question: string): Promise<{
     new Request(`${BASE}/v2/notebooks/${notebookId}/qa`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, sessionId }),
+      body: JSON.stringify({ question, sessionId, generationTypeId: 'qa' }),
     }),
   );
   const text = await res.text();

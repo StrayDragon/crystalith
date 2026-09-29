@@ -26,6 +26,7 @@ describe('manual PARAGRAPH note create', () => {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          generationTypeId: 'output',
           type: 'PARAGRAPH',
           prompt: '我的笔记',
           content: { title: '我的笔记', text: '# Hello\n\nmarkdown body' },
@@ -52,6 +53,7 @@ describe('manual PARAGRAPH note create', () => {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          generationTypeId: 'output',
           type: 'PARAGRAPH',
           content: { title: 'x', text: '   ' },
         }),
@@ -65,7 +67,7 @@ describe('manual PARAGRAPH note create', () => {
       new Request(`${BASE}/v2/notebooks/${notebookId}/outputs`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ type: 'FAQ', prompt: 'summarize' }),
+        body: JSON.stringify({ generationTypeId: 'output', type: 'FAQ', prompt: 'summarize' }),
       }),
     );
     expect(res.status).toBe(400);

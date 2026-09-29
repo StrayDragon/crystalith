@@ -47,8 +47,13 @@
       那么 越界、重复与非整数索引被剔除并记录 warnings，合法唯一索引保持不变
       而且清洗结果携带 _postprocessed 标记与 warnings，不阻塞生成主链路
   @req:r166
-  规则: Tool output types require a corresponding OutputTypePlugin
-    对于 FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING 等“工具输出类型”，系统 MUST 要求存在可用的 `OutputTypePlugin` 才能生成结构化输出；当插件缺失/禁用/加载失败时，生成请求 MUST 失败并返回可执行的恢复提示，使用统一错误信封（见 workspace-api-contract r346），`details` MUST 包含 `outputType` 与推荐的 `requiredPluginId`（例如 `output-faq`），`message` MUST 可直接面向用户显示。
+  规则: Tool output types are a static server registry
+    工具输出类型（FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING 等）由服务端静态注册表声明，不依赖外部插件加载。未知或不支持的输出类型 MUST 以统一错误信封（见 workspace-api-contract r346）400 拒绝：`details` MUST 携带 `outputType` 与 `supported` 列表，`message` MUST 可直接面向用户显示。
+
+    场景: unsupported-output-type-rejected-with-registry-details
+      假如 generation-types 集成环境就绪（tests/generation/generation-types.test.ts）
+      当 以未知输出类型发起 outputs 生成
+      那么 400 信封的 details 携带该 outputType 与 supported 列表且列表不含 SLIDES
   @req:r167
   规则: Outputs MUST map LLM citation indices to full citation objects
     outputs 生成管线 MUST 将 LLM 输出的数字 citation 索引映射回完整 Citation 对象（仅附加被引用的 chunk）：递归遍历 content 树，把 citations 数字索引数组替换为完整 camelCase Citation dict，并持久化映射后的 content，同时返回扁平 citations 数组。

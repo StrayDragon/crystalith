@@ -147,6 +147,10 @@ export const promptPresets = sqliteTable(
     description: text('description'),
     systemPrompt: text('system_prompt').notNull(),
     enabled: bool('enabled', true),
+    /** Owning generation type (c122 r188); only preset-capable types accept creation. */
+    generationTypeId: text('generation_type_id', { enum: ['qa', 'output', 'slides'] })
+      .notNull()
+      .default('qa'),
     createdAt: ts('created_at'),
     updatedAt: tsUpd('updated_at'),
   },
@@ -366,6 +370,13 @@ export const outputs = sqliteTable(
     }).notNull(),
     prompt: text('prompt'),
     chunkIds: text('chunk_ids', { mode: 'json' }).$type<number[] | null>(),
+    /** Effective-generation metadata (c122 r326): {generationTypeId, outputType, completion, effectiveControls}. */
+    generationMeta: text('generation_meta', { mode: 'json' }).$type<{
+      generationTypeId: 'qa' | 'output' | 'slides';
+      outputType: string;
+      completion: string;
+      effectiveControls?: Record<string, unknown> | null;
+    } | null>(),
     content: jsonReq('content'),
     createdAt: ts('created_at'),
     updatedAt: tsUpd('updated_at'),

@@ -7,6 +7,11 @@
 import { z } from 'zod';
 
 import { CitationSchema, IdSchema, IsoTimestampSchema, JsonMetadataSchema } from '../common.js';
+import {
+  GenerationMetaSchema,
+  GenerationTypeIdSchema,
+  QaControlsSchema,
+} from '../generation-type.js';
 import { desc } from '../i18n.js';
 import { ChatTurnSchema } from '../message.js';
 import { ExportSourceMetaSchema } from '../output.js';
@@ -54,6 +59,8 @@ export const QaStreamDoneEventSchema = z
         'low_similarity',
       ])
       .optional(),
+    /** r326: generation metadata echo on streamed results. */
+    generation: GenerationMetaSchema.optional(),
   })
   .openapi({
     description: desc('qa.stream_done', 'QA SSE done 事件'),
@@ -73,6 +80,10 @@ export const QaDirectiveSchema = z.enum(['Sources_only', 'Knowledge_only', 'Mixe
 export type QaDirective = z.infer<typeof QaDirectiveSchema>;
 
 const QaRequestFieldsSchema = z.object({
+  /** Owning generation type (typed-generation-framework r324) — must be `qa` for this surface. */
+  generationTypeId: GenerationTypeIdSchema,
+  /** Structured constraint overrides (r186). */
+  controls: QaControlsSchema.optional(),
   question: z.string().min(1).optional(),
   /** Alias used by some clients for `question`. */
   content: z.string().min(1).optional(),
@@ -109,6 +120,8 @@ export const QaAnswerSchema = z
     confidence: z.number().min(0).max(1).optional(),
     evidence: z.unknown().optional(),
     noEvidenceReason: z.string().optional(),
+    /** Effective-generation metadata echo (r326/r189). */
+    generation: GenerationMetaSchema,
   })
   .openapi({
     description: desc('qa.answer', 'QA 非流式响应'),

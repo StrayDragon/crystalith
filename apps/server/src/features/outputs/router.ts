@@ -40,6 +40,7 @@ import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { PathId } from '../../shared/ids.ts';
 import { logger } from '../../shared/logger.ts';
 import { requireOwnedRow, resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
+import { OUTPUT_GENERATION_OUTPUT_TYPES, defaultOutputType } from '../generation-types/registry.ts';
 import { runOutputPipeline } from './pipeline.ts';
 import { renderOutputToMarkdown, splitTextToChunks } from './render.ts';
 
@@ -121,6 +122,7 @@ function serializeOutput(row: typeof outputs.$inferSelect) {
     type: row.type,
     prompt: row.prompt,
     chunkIds: row.chunkIds,
+    generationMeta: row.generationMeta ?? null,
     ...(sourceIds ? { sourceIds } : {}),
     content: row.content,
     createdAt: row.createdAt.toISOString(),
@@ -251,6 +253,7 @@ async function handleGenerateOutput(
   request: Request,
 ) {
   const {
+    generationTypeId,
     type,
     chunkIds,
     sourceIds,
@@ -263,8 +266,18 @@ async function handleGenerateOutput(
     modelId,
   } = body;
 
-  // Normalize output type to uppercase (API accepts both 'faq' and 'FAQ')
-  const normalizedType = type.toUpperCase();
+  // r324: this surface only serves its owning generation type.
+  if (generationTypeId !== 'output') {
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      `Generation type '${generationTypeId}' is not served by the outputs endpoint`,
+      { expected: 'output', got: generationTypeId },
+    );
+  }
+
+  // Normalize output type to uppercase (API accepts both 'faq' and 'FAQ');
+  // r467: an unspecified type falls back to the generation type contract default.
+  const normalizedType = (type ?? defaultOutputType('output')).toUpperCase();
 
   // Verify notebook
   const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
@@ -299,6 +312,11 @@ async function handleGenerateOutput(
         type: 'PARAGRAPH',
         prompt: promptRaw?.trim() || title,
         chunkIds: chunkIds?.length ? chunkIds : [],
+        generationMeta: {
+          generationTypeId: 'output',
+          outputType: 'PARAGRAPH',
+          completion: 'manual-note',
+        },
         content,
       })
       .returning()
@@ -310,7 +328,12 @@ async function handleGenerateOutput(
 
   const parsedType = ToolOutputTypeSchema.safeParse(normalizedType);
   if (!parsedType.success) {
-    throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Unsupported output type: ${type}`);
+    // r166 (rewritten): the output-type surface is a static server registry;
+    // unsupported types fail deterministically with an actionable payload.
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Unsupported output type: ${type}`, {
+      outputType: type,
+      supported: [...OUTPUT_GENERATION_OUTPUT_TYPES],
+    });
   }
 
   // c50: reject SLIDES — v1 api.py:205-206 returns 400 "Use slides endpoints

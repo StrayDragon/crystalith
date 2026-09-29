@@ -202,6 +202,8 @@ test('sendMessage non-streaming path stores assistant message and shared_state m
   expect(assistant.content).toBe('Answer');
   expect(result.current.citations).toHaveLength(1);
   expect(capturedBody).toEqual({
+    // c122: typed-generation wire field
+    generationTypeId: 'qa',
     question: 'Hello',
     sessionId: 123,
   });
@@ -241,6 +243,8 @@ test('sendMessage passes selected source ids', async () => {
   });
 
   expect(capturedBody).toEqual({
+    // c122: typed-generation wire field
+    generationTypeId: 'qa',
     question: 'Hello',
     sessionId: 456,
     sourceIds: [101, 102],
@@ -281,6 +285,8 @@ test('sendMessage omits sourceIds when nothing is selected (ungrounded)', async 
   });
 
   expect(capturedBody).toEqual({
+    // c122: typed-generation wire field
+    generationTypeId: 'qa',
     question: 'Chat freely',
     sessionId: 789,
   });

@@ -27,7 +27,14 @@ import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { PathId } from '../../shared/ids.ts';
 import { resolveNestedNotebookId, requireNotebook } from '../../shared/notebook-scope.ts';
 import { streamQa, generateQaDirect } from './handler.ts';
-import { resolvePreset, parsePromptDirective } from './presets.ts';
+import {
+  applyQaControls,
+  detectBarePromptDirective,
+  listAllPresetNames,
+  parsePromptDirective,
+  renderSystemPrompt,
+  resolveQaPreset,
+} from './presets.ts';
 
 /** JSON export is Zod-validated; markdown download is a raw Response. */
 const QaExportResponseSchema = z.union([
@@ -131,7 +138,8 @@ type QaBody = QaNestedRequest & { notebookId: number };
 
 /**
  * Shared QA prelude for /qa and /qa/stream:
- * directive parse → ownership check → history → user message + auto-title →
+ * generation-type check → bare-directive check → directive parse → preset
+ * whitelist resolution → ownership check → history → user message + auto-title →
  * model resolve → provisional assistant placeholder.
  * Call sites only differ in the generator invocation and onMessageSettled policy.
  */
@@ -144,12 +152,43 @@ async function prepareQa(body: QaBody) {
     preset: bodyPreset,
     directive,
     sourceIds,
+    generationTypeId,
+    controls,
   } = body;
+
+  // r324: this surface only serves its owning generation type.
+  if (generationTypeId !== 'qa') {
+    throw new AppHttpError(
+      ErrorCode.INVALID_REQUEST,
+      `Generation type '${generationTypeId}' is not served by the QA endpoint`,
+      { expected: 'qa', got: generationTypeId },
+    );
+  }
 
   // c45: parse /prompt:<preset> directive from question text (v1 presets.py:9-30)
   // Accept both 'question' (API canonical) and 'content' (some clients' convention)
   const resolvedQuestion = (rawQuestion ?? rawContent)!;
+
+  // r422: bare `/prompt:<name>` (no query text) is a deterministic input error.
+  const bareDirective = detectBarePromptDirective(resolvedQuestion);
+  if (bareDirective) {
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Missing query after /prompt directive', {
+      usage: '/prompt:<preset> <query>',
+      presetId: bareDirective,
+      availablePresets: listAllPresetNames(),
+    });
+  }
+
   const { preset, question } = parsePromptDirective(resolvedQuestion, bodyPreset);
+
+  // r23/r24/r25: whitelist resolution across built-in + custom, enabled-checked.
+  const resolution = await resolveQaPreset(preset);
+  const directed = renderSystemPrompt(resolution.systemPromptTemplate, directive ?? 'Mixed');
+  // r186/r189: structured constraint overrides → prompt instructions + echo.
+  const { systemPrompt: directedWithControls, effectiveControls } = applyQaControls(
+    directed,
+    controls,
+  );
 
   assertQaOwnership({ notebookId, sessionId, sourceIds });
 
@@ -164,7 +203,7 @@ async function prepareQa(body: QaBody) {
   const modelConfig = getDefaultChatModel();
   if (!modelConfig) throw new AppHttpError(ErrorCode.MODEL_UNAVAILABLE, 'No chat model configured');
   const model = withRetry(await resolveModel(modelConfig));
-  const systemPrompt = resolvePreset(preset, directive ?? 'Mixed');
+  const systemPrompt = directedWithControls;
 
   // Create provisional assistant message
   let messageId: number | undefined;
@@ -177,7 +216,23 @@ async function prepareQa(body: QaBody) {
     messageId = msg.id;
   }
 
-  return { model, question, notebookId, sessionId, history, systemPrompt, messageId, preset };
+  return {
+    model,
+    question,
+    notebookId,
+    sessionId,
+    history,
+    systemPrompt,
+    messageId,
+    preset: resolution.presetId,
+    effectiveControls,
+    generationBase: {
+      generationTypeId: 'qa',
+      outputType: 'MESSAGE',
+      presetId: resolution.presetId,
+      effectiveControls,
+    } as const,
+  };
 }
 
 async function handleQaPost(body: QaBody) {
@@ -209,6 +264,8 @@ async function handleQaPost(body: QaBody) {
     confidence: result.confidence,
     evidence: result.evidence,
     noEvidenceReason: result.noEvidenceReason,
+    // r326: generation metadata echo on the result object.
+    generation: { ...prepared.generationBase, completion: 'answer' },
   };
 }
 
@@ -221,6 +278,8 @@ async function handleQaStream(body: QaBody) {
     topK: body.topK,
     minScore: body.minScore,
     sourceIds: body.sourceIds,
+    // r326: streamed results echo generation metadata on the done event.
+    generation: { ...prepared.generationBase, completion: 'streamed-answer' },
     onMessageSettled: (text, failed, citations) => {
       const { messageId } = prepared;
       if (!messageId) return;

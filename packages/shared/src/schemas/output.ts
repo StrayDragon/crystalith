@@ -10,6 +10,7 @@ import {
   JsonMetadataSchema,
   PaginatedSchema,
 } from './common.js';
+import { GenerationMetaSchema, GenerationTypeIdSchema } from './generation-type.js';
 import { desc } from './i18n.js';
 
 // ---------------------------------------------------------------------------
@@ -279,6 +280,8 @@ export const OutputSchema = z
       .optional()
       .describe(desc('output.source_ids', '生成时选中的来源 ID 列表')),
     content: OutputContentSchema.describe(desc('output.content')),
+    /** Effective-generation metadata persisted with the row (r326). */
+    generationMeta: GenerationMetaSchema.nullable().optional(),
     createdAt: IsoTimestampSchema.describe(desc('output.created_at')),
     updatedAt: IsoTimestampSchema,
   })
@@ -348,8 +351,11 @@ export type OutputsPage = z.infer<typeof OutputsPageSchema>;
 /** Body fields for generate (without notebook scope). */
 export const OutputGenerateBodySchema = z
   .object({
-    /** Output type id; accepts lower/upper case (normalized server-side). */
-    type: z.string().min(1),
+    /** Owning generation type (typed-generation-framework r324) — must be `output` for this surface. */
+    generationTypeId: GenerationTypeIdSchema,
+    /** Output type id; accepts lower/upper case (normalized server-side). Optional —
+     * omitted value falls back to the generation type contract default (r467). */
+    type: z.string().min(1).optional(),
     prompt: z.string().nullable().optional(),
     /** Display title persisted into content.title (e.g. the caller's tool label). */
     title: z.string().min(1).max(120).nullable().optional().describe(desc('output.generate_title')),

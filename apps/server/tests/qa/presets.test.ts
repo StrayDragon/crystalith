@@ -1,12 +1,14 @@
 // QA presets — stats registry + parseStatsPresetOutput + /prompt: directive (c48 / Wave D.5).
+// c122: renderSystemPrompt/detectBarePromptDirective replace resolvePreset.
 import { describe, expect, it } from 'bun:test';
 
 import {
   STATS_SYSTEM_PROMPT,
+  detectBarePromptDirective,
   listPresets,
   parsePromptDirective,
   parseStatsPresetOutput,
-  resolvePreset,
+  renderSystemPrompt,
 } from '../../src/features/qa/presets.ts';
 
 const validStatsJson = JSON.stringify({
@@ -28,15 +30,15 @@ const validStatsJson = JSON.stringify({
   },
 });
 
-describe('listPresets / resolvePreset (stats)', () => {
+describe('listPresets / renderSystemPrompt (stats)', () => {
   it('includes builtin stats among presets', () => {
     const names = listPresets().map((p) => p.name);
     expect(names).toContain('stats');
     expect(names).toContain('default');
   });
 
-  it('resolvePreset(stats) returns STATS_SYSTEM_PROMPT without directive injection', () => {
-    const prompt = resolvePreset('stats', 'Sources_only');
+  it('renderSystemPrompt(stats) returns STATS_SYSTEM_PROMPT without directive injection', () => {
+    const prompt = renderSystemPrompt(STATS_SYSTEM_PROMPT, 'Sources_only');
     expect(prompt).toBe(STATS_SYSTEM_PROMPT);
     expect(prompt).toContain('fallback_markdown');
     expect(prompt).not.toContain('CRITICAL: Only use information');
@@ -67,6 +69,15 @@ describe('parsePromptDirective', () => {
       preset: 'default',
       question: '/prompt:stats',
     });
+  });
+
+  it('detectBarePromptDirective flags name-only directives (r422)', () => {
+    expect(detectBarePromptDirective('/prompt:stats')).toBe('stats');
+    expect(detectBarePromptDirective('/prompt:STATS')).toBe('stats');
+    expect(detectBarePromptDirective('/prompt:stats ')).toBe('stats');
+    expect(detectBarePromptDirective('/prompt:stats 销售数据')).toBeNull();
+    expect(detectBarePromptDirective('plain question')).toBeNull();
+    expect(detectBarePromptDirective('/prompt:toolongname_but_invalid_chars!')).toBeNull();
   });
 });
 

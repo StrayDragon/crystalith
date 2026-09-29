@@ -23,9 +23,6 @@
       当 运行 apps/server/tests/db.test.ts 的 sqlite-vec 虚表用例
       那么 同进程内 KNN 检索按 distance 返回最近邻且不依赖外部向量服务
       而且 按 notebook_id 分区使不同 notebook 的向量互相隔离
-  @req:r50
-  规则: Schema types exported for frontend
-    Drizzle schema 导出的 TS 类型 ($inferSelect/$inferInsert) MUST 通过 packages/shared 暴露给前端 eden RPC 消费，且与 server 侧类型一致。
   @req:r51
   规则: Content storage abstraction
     系统 MUST 提供内容存储抽象（本地文件系统实现）的写入与读取操作以持久化原始上传字节 使 document_parse 任务可重新解析 单二进制架构下 MUST 使用本地文件系统路径

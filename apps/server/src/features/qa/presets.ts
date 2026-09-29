@@ -1,9 +1,19 @@
+import type { QaControls } from '@crystalith/shared';
+
 // QA presets — system prompt templates for different conversation modes.
 //
 // Replaces v1 `features/qa/presets.py` with a typed TS record.
 // Each preset has a name (used in UI) and a system prompt template.
 // Special directives like `@(Sources_only)` are parsed at runtime before
 // injection.
+//
+// c122 typed-generation-framework: preset resolution is whitelist-based
+// across built-in + custom presets (r23), enabled-checked (r25), and the
+// bare `/prompt:<name>` form is a deterministic input error (r422).
+import { db } from '../../db/index.ts';
+import { promptPresets } from '../../db/schema.ts';
+import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
+
 export interface QAPreset {
   name: string;
   /** Short label for the UI dropdown. */
@@ -95,18 +105,6 @@ export const DIRECTIVES = {
   Mixed: 'Use both retrieved sources and your own knowledge. Prioritize high-quality sources.',
 } as const satisfies Record<Directive, string>;
 
-/**
- * Render a preset's system prompt with the selected directive.
- * Stats preset ignores directives (its prompt is a fixed instruction).
- */
-export function resolvePreset(presetName: string, directive: Directive = 'Mixed'): string {
-  const preset = PRESETS[presetName] ?? PRESETS.default;
-  // no directive placeholder
-  if (presetName === 'stats') return preset.systemPrompt;
-  const directiveText = DIRECTIVES[directive];
-  return preset.systemPrompt.replace('{{directive}}', directiveText ? `\n${directiveText}` : '');
-}
-
 /** List available preset names for UI. */
 export function listPresets(): { name: string; label: string }[] {
   return Object.values(PRESETS).map(({ name, label }) => ({ name, label }));
@@ -125,6 +123,119 @@ export function parsePromptDirective(
     return { preset: match[1].toLowerCase(), question: question.slice(match[0].length) };
   }
   return { preset: (bodyPreset ?? 'default').toLowerCase(), question };
+}
+
+/**
+ * r422: detect the bare `/prompt:<name>` form (directive name, no query text).
+ * Returns the lowercased name, or null when the question is not a bare directive.
+ */
+export function detectBarePromptDirective(question: string): string | null {
+  const match = question.match(/^\/prompt:([a-z0-9_-]{1,32})\s*$/iu);
+  return match ? match[1].toLowerCase() : null;
+}
+
+/** Stable whitelist for errors/usage hints: built-in registry order + custom triggers (r23). */
+export function listAllPresetNames(): string[] {
+  const customTriggers = db()
+    .select({ trigger: promptPresets.trigger })
+    .from(promptPresets)
+    .all()
+    .map((row) => row.trigger.trim().toLowerCase())
+    .toSorted((a, b) => a.localeCompare(b));
+  return [...Object.keys(PRESETS), ...customTriggers];
+}
+
+export interface QaPresetResolution {
+  presetId: string;
+  systemPromptTemplate: string;
+  source: 'builtin' | 'custom';
+}
+
+/**
+ * Whitelist preset resolution across built-in + custom presets (r23/r24/r25).
+ * Unknown names and disabled customs are deterministic 400s; resolution order
+ * is builtin registry first, then custom trigger (case-insensitive).
+ */
+export async function resolveQaPreset(name: string): Promise<QaPresetResolution> {
+  const normalized = name.trim().toLowerCase();
+  const builtin = PRESETS[normalized];
+  if (builtin) {
+    return {
+      presetId: builtin.name,
+      systemPromptTemplate: builtin.systemPrompt,
+      source: 'builtin',
+    };
+  }
+  const custom = db()
+    .select()
+    .from(promptPresets)
+    .all()
+    .find((row) => row.trigger.trim().toLowerCase() === normalized);
+  if (!custom) {
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Unknown preset: ${name}`, {
+      availablePresets: listAllPresetNames(),
+    });
+  }
+  if (!custom.enabled) {
+    throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Preset '${custom.trigger}' is disabled`, {
+      presetId: custom.trigger,
+    });
+  }
+  return {
+    presetId: custom.trigger,
+    systemPromptTemplate: custom.systemPrompt,
+    source: 'custom',
+  };
+}
+
+/**
+ * Render a preset system prompt template with the selected directive.
+ * Templates without a `{{directive}}` placeholder (e.g. stats, custom) are
+ * returned unchanged.
+ */
+export function renderSystemPrompt(template: string, directive: Directive = 'Mixed'): string {
+  if (!template.includes('{{directive}}')) return template;
+  const directiveText = DIRECTIVES[directive];
+  return template.replace('{{directive}}', directiveText ? `\n${directiveText}` : '');
+}
+
+const LENGTH_HINT_INSTRUCTIONS: Record<string, string | null> = {
+  concise: 'Keep the answer concise and to the point.',
+  balanced: null,
+  comprehensive: 'Provide a comprehensive, in-depth answer covering multiple angles.',
+};
+
+/**
+ * r186: apply structured constraint overrides as prompt instructions.
+ * Returns the final system prompt plus the effective-controls echo (r189) —
+ * only explicitly-set controls appear; null when none were set.
+ */
+export function applyQaControls(
+  template: string,
+  controls?: QaControls,
+): { systemPrompt: string; effectiveControls: Record<string, unknown> | null } {
+  const lines: string[] = [];
+  const effective: Record<string, unknown> = {};
+  if (controls?.lengthHint !== undefined) {
+    effective.lengthHint = controls.lengthHint;
+    const instruction = LENGTH_HINT_INSTRUCTIONS[controls.lengthHint];
+    if (instruction) lines.push(instruction);
+  }
+  if (controls?.requireCitations !== undefined) {
+    effective.requireCitations = controls.requireCitations;
+    if (controls.requireCitations) {
+      lines.push(
+        'You MUST ground every claim in the retrieved sources and cite them using [N] notation.',
+      );
+    }
+  }
+  const suffix = lines.length
+    ? `\n\nGeneration constraints:\n${lines.map((line) => `- ${line}`).join('\n')}`
+    : '';
+  return {
+    systemPrompt: template + suffix,
+    effectiveControls: Object.keys(effective).length > 0 ? effective : null,
+  };
 }
 
 // ---------------------------------------------------------------------------

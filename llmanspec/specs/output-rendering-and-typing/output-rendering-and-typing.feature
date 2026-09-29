@@ -56,7 +56,7 @@
       而且 加载/导出解析失败被 .catch 吸收并以 Raw JSON 作为最终安全回退
   @req:r202
   规则: POST outputs MUST return OutputRead contract
-    POST /v2/notebooks/:nid/outputs MUST 返回 camelCase OutputRead 实体（id/notebookId/type/prompt/chunkIds/content/createdAt/updatedAt），与 packages/shared Zod wire 契约一致；MUST NOT 返回 snake_case 或裸 PipelineResult；扁平 /v2/outputs 的登记禁令见 openapi-and-client-generation openapi-documents-nested-canonical-paths（canonical）
+    POST /v2/notebooks/:nid/outputs MUST 返回 camelCase OutputRead 实体（id/notebookId/type/prompt/chunkIds/generationMeta/content/createdAt/updatedAt；generationMeta 为可空回传字段，c122 起随生成落库），与 packages/shared Zod wire 契约一致；MUST NOT 返回 snake_case 或裸 PipelineResult；扁平 /v2/outputs 的登记禁令见 openapi-and-client-generation openapi-documents-nested-canonical-paths（canonical）
 
     场景: post-outputs-returns-outputread-contract
       假如 笔记本内通过 POST /v2/notebooks/:nid/outputs 登记输出

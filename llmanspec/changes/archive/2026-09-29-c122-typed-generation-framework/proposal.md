@@ -1,5 +1,8 @@
 ---
 depends_on: []
+branch: sdd/c122-typed-generation-framework
+base_branch: main
+base_sha: 83297030e007d4ba87448c4518453dfceb127a70
 ---
 
 # 落地 typed-generation-framework 层：生成类型一等公民 + presets 家族闭环

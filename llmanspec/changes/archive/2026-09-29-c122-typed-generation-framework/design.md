@@ -13,11 +13,11 @@ packages/shared/src/schemas/generation-type.ts   ← 词汇与合约形状 SSOT�
 
 ## 生成类型注册表（server 真相源）
 
-| id | displayName | inputRequirement | allowedOutputTypes | defaultOutputType | completionSemantics | allowedControls |
-| --- | --- | --- | --- | --- | --- | --- |
-| `qa` | 知识问答 | `question` 必填；可选 `sessionId`/`sourceIds`/检索参数 | `['MESSAGE']` | `MESSAGE` | `streamed-answer`（一次性为 `answer`） | `lengthHint` / `requireCitations` / `preset` / `directive` |
-| `output` | 结构化输出 | `prompt` 或手动 `content`（Studio 手记）；可选 `sourceIds`/`chunkIds` | FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING/PARAGRAPH/BULLETS/STRUCTURED（SLIDES 由 studio 专属端点承接） | `PARAGRAPH` | `output-row`（同步落库；手动 content 为 `manual-note`） | `preference` / `topK` / `minScore` |
-| `slides` | 幻灯片 | `prompt` + 来源/大纲；studio 专属端点（无 `generationTypeId` 线上字段，归属由注册表声明） | `['SLIDES']` | `SLIDES` | `sse-done`（`{traceId, slideId}`） | — |
+| id       | displayName | inputRequirement                                                                          | allowedOutputTypes                                                                                     | defaultOutputType | completionSemantics                                     | allowedControls                                            |
+| -------- | ----------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------- | ------------------------------------------------------- | ---------------------------------------------------------- |
+| `qa`     | 知识问答    | `question` 必填；可选 `sessionId`/`sourceIds`/检索参数                                    | `['MESSAGE']`                                                                                          | `MESSAGE`         | `streamed-answer`（一次性为 `answer`）                  | `lengthHint` / `requireCitations` / `preset` / `directive` |
+| `output` | 结构化输出  | `prompt` 或手动 `content`（Studio 手记）；可选 `sourceIds`/`chunkIds`                     | FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING/PARAGRAPH/BULLETS/STRUCTURED（SLIDES 由 studio 专属端点承接） | `PARAGRAPH`       | `output-row`（同步落库；手动 content 为 `manual-note`） | `preference` / `topK` / `minScore`                         |
+| `slides` | 幻灯片      | `prompt` + 来源/大纲；studio 专属端点（无 `generationTypeId` 线上字段，归属由注册表声明） | `['SLIDES']`                                                                                           | `SLIDES`          | `sse-done`（`{traceId, slideId}`）                      | —                                                          |
 
 ## wire 形状（shared）
 
@@ -53,12 +53,12 @@ ALTER TABLE `prompt_presets` ADD `generation_type_id` text DEFAULT 'qa' NOT NULL
 
 ## 规格收口映射
 
-| 规则 | 处置 | 场景绑定 |
-| --- | --- | --- |
-| r323/r325/r327/r328（C） | 可程序判定者升格场景，其余保持 C 并注明 | generation-types 列表断言 |
-| r324/r326/r466/r467 | 场景化 | generation-types.test |
-| r186/r188/r189 | 场景化 | preset-resolution / generation-types.test |
-| r166 | 改写为静态注册表 + details 载荷 | outputs 400 断言 |
-| r422/r423/r24 | r422 实现；r423 改写退役开关；r24 补消费链 | preset-resolution.test |
-| r22 | 去「when enabled」从句（锁定规则 WARNING） | 既有 r22 场景保持 |
-| r50 | 移除（c14 架构取代） | — |
+| 规则                     | 处置                                       | 场景绑定                                  |
+| ------------------------ | ------------------------------------------ | ----------------------------------------- |
+| r323/r325/r327/r328（C） | 可程序判定者升格场景，其余保持 C 并注明    | generation-types 列表断言                 |
+| r324/r326/r466/r467      | 场景化                                     | generation-types.test                     |
+| r186/r188/r189           | 场景化                                     | preset-resolution / generation-types.test |
+| r166                     | 改写为静态注册表 + details 载荷            | outputs 400 断言                          |
+| r422/r423/r24            | r422 实现；r423 改写退役开关；r24 补消费链 | preset-resolution.test                    |
+| r22                      | 去「when enabled」从句（锁定规则 WARNING） | 既有 r22 场景保持                         |
+| r50                      | 移除（c14 架构取代）                       | —                                         |

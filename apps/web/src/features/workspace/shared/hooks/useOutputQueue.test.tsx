@@ -175,6 +175,7 @@ test('enqueueOutputJob processes and updates outputs', async () => {
   });
 
   expect(capturedBody).toEqual({
+    generationTypeId: 'output',
     type: 'FAQ',
     prompt: 'hello',
     sourceIds: [1],
@@ -219,6 +220,7 @@ test('enqueueOutputJob propagates generation preference', async () => {
   });
 
   expect(capturedBody).toEqual({
+    generationTypeId: 'output',
     type: 'FAQ',
     prompt: 'hello',
     sourceIds: [1],
