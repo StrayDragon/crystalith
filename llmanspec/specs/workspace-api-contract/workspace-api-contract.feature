@@ -196,6 +196,14 @@
       当 分别发起 convert-to-source 与 convert-to-output 并读取转换文本
       那么 convert-to-source 的文本为"**用户**: …"与"**助手**: …"标签并以空行分隔
       而且 convert-to-output 的文本不含角色前缀
+  @req:r45
+  规则: Session convert-to-output MUST collect chunkIds from citations
+    session convert-to-output MUST 从消息 citations 中收集 chunkIds 并附加到创建的 output。
+
+    场景: convert-to-output-attaches-citation-chunk-ids
+      假如 qa-session-contract 集成环境就绪且会话内助手消息携带含 chunkId 的 citations
+      当 发起 convert-to-output
+      那么 创建的 output 附带去重后的 chunkIds 集合
   @req:r367
   规则: Models response MUST put defaults on envelope (not inline per-model) for list endpoint
     models 列表端点 MUST 在 envelope 顶层提供 `defaults`；列表项 MAY 额外携带 isDefaultChat/isDefaultEmbedding。GET single MUST NOT 要求默认标记字段。

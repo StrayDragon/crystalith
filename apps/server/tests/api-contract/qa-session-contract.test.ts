@@ -51,7 +51,7 @@ mock.module('ai', () => {
 
 import { eq } from 'drizzle-orm';
 
-import { chunks, messages, notebooks, sessions, sources } from '../../src/db/schema.ts';
+import { chunks, messages, notebooks, outputs, sessions, sources } from '../../src/db/schema.ts';
 import { createApp } from '../../src/server.ts';
 import { resetConfig } from '../../src/shared/config.ts';
 import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from '../helpers/integration.ts';
@@ -555,5 +555,71 @@ describe('r366 session convert v1 text format', () => {
     expect(text).toContain('回答');
     expect(text).not.toContain('**用户**');
     expect(text).not.toContain('**助手**');
+  });
+});
+
+describe('r45 convert-to-output collects citation chunkIds', () => {
+  it('attaches deduplicated chunkIds from message citations to the created output', async () => {
+    // covers: r45
+    const orm = getOrm();
+    const sessionId = orm
+      .insert(sessions)
+      .values({ notebookId, title: 'chunkids' })
+      .returning()
+      .get().id;
+    const citation = (chunkId: number, sourceId: number, snippet: string) => ({
+      sourceId,
+      sourceName: snippet,
+      chunkId,
+      chunkIndex: 1,
+      pageNumber: null,
+      paragraphIndex: null,
+      snippet,
+      score: 0.9,
+    });
+    orm
+      .insert(messages)
+      .values({
+        sessionId,
+        role: 'assistant',
+        content: '带引用的回答',
+        citations: [citation(7, sourceInNotebook, 's1'), citation(8, sourceInNotebook, 's2')],
+      })
+      .run();
+    orm.insert(messages).values({ sessionId, role: 'user', content: '无引用提问' }).run();
+    orm
+      .insert(messages)
+      .values({
+        sessionId,
+        role: 'assistant',
+        content: '跨消息重复 chunkId 的回答',
+        citations: [citation(7, sourceOtherNotebook, 'dup'), citation(3, GHOST_SOURCE_ID, 'ghost')],
+      })
+      .run();
+
+    const res = await post(`/v2/notebooks/${notebookId}/sessions/${sessionId}/convert-to-output`, {
+      outputType: 'PARAGRAPH',
+    });
+    expect(res.status).toBe(201);
+    const { outputId } = res.body as { outputId: number };
+
+    const row = orm.select().from(outputs).where(eq(outputs.id, outputId)).get();
+    expect(row).toBeDefined();
+    // Deduped across messages: 7 appears in two citations → collected once.
+    expect([...(row!.chunkIds ?? [])].sort((a, b) => a - b)).toEqual([3, 7, 8]);
+  });
+
+  it('conversion without any citations produces an empty chunkIds list', async () => {
+    // covers: r45
+    const res = await post(
+      `/v2/notebooks/${notebookId}/sessions/${formatSessionId}/convert-to-output`,
+      { outputType: 'PARAGRAPH' },
+    );
+    expect(res.status).toBe(201);
+    const { outputId } = res.body as { outputId: number };
+
+    const orm = getOrm();
+    const row = orm.select().from(outputs).where(eq(outputs.id, outputId)).get();
+    expect(row?.chunkIds ?? []).toEqual([]);
   });
 });

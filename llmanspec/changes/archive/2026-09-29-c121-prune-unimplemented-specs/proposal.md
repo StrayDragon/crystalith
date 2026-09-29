@@ -1,5 +1,8 @@
 ---
 depends_on: []
+branch: sdd/c121-prune-unimplemented-specs
+base_branch: main
+base_sha: d51f02d2450ec3397ef21994c992483f46299f25
 ---
 
 # 移除无代码对应的 spec 块（cross-type 与 source-aware 两 capability）
