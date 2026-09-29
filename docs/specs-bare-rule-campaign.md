@@ -1,6 +1,6 @@
 # Specs 裸规则压降作战地图（llman-sdd 0.5 pending 计量）
 
-> 状态：**缺口处置第一批完成（2026-09-28）；剩余 108 条已八组深挖定性（2026-09-29，见「分组深挖」节）**。pending **448 → 108**：c111 试点（13）→ c112 碰撞修复 → c113 非深研 A 类（118）→ c114 深研双雄 A 类（121）→ c115 API 合约（16）→ c116 门禁/服务侧（26）→ c117 摄取/抽取/深研运行时（23）→ c118 前端组件区（18）→ c119 顺延低难度（15）→ c120 缺口处置一（3：r290 修复 + r111/r351 合约对齐）。剩余 108 = **62 可行动**（A 顺延可测 13 / B 前端功能缺口 6 / C 可观测性 5 / D 类型化生成+预设 12 / E spec 领先两整块 12 / F 摄取真缺陷 7 / G 配置治理 6 / H 鉴权 1）+ **46 C 豁免**（台账实覆盖 46 条，旧文「47」为计数笔误已订正）。
+> 状态：**缺口处置第一批完成（2026-09-28）；剩余 108 条已八组深挖定性（2026-09-29，见「分组深挖」节）**。pending **448 → 108**：c111 试点（13）→ c112 碰撞修复 → c113 非深研 A 类（118）→ c114 深研双雄 A 类（121）→ c115 API 合约（16）→ c116 门禁/服务侧（26）→ c117 摄取/抽取/深研运行时（23）→ c118 前端组件区（18）→ c119 顺延低难度（15）→ c120 缺口处置一（3：r290 修复 + r111/r351 合约对齐）。c121 无对应代码块清理（2026-09-29）后剩余 **94 = 48 可行动**（A 顺延可测 13 / B 前端功能缺口 6 / C 可观测性 5 / D 类型化生成+预设 12 / F 摄取真缺陷 7 / G 配置治理 6 / H 鉴权 1，E 组 12 条已随 c121 处置）+ **44 C 豁免**。原则确立：spec MUST 应有代码对应，无实现且无排期者移除（见「分组深挖」E 组）。
 > 删除条件：全部批次完成后（review `pending` 信号只剩有记录豁免的 C 类裸规则）本档转为纯记录，或随 specs-compact 收敛后删除。
 
 ## 背景
@@ -39,10 +39,10 @@ llman-sdd 0.5 原生分层格式下，规则（`规则:` 块 + `@req` 句柄）�
 | 1   | studio-output-types                     | 8               | 2   | 6   | 0   | r299-r303 前端 viewer 全无测试（B 集中区）                                                                                        |
 | 2   | source-ingestion-management-and-tags    | 8               | 5   | 3   | 0   |                                                                                                                                   |
 | 3   | source-connectors                       | 8               | 6   | 2   | 0   | bdd features 已有步骤基础                                                                                                         |
-| 4   | source-aware-generation-modes           | 7               | 0   | 5   | 2   | r243 重号已修（c111）；r39-r43 类似区块 spec 领先实现                                                                             |
+| 4   | source-aware-generation-modes           | 0（c121 移除）  | —   | —   | —   | c121 整块移除（零实现愿景，7 条含 C 豁免 2）                                                                                      |
 | 5   | openapi-and-client-generation           | 7               | 4   | 0   | 3   | parity/asyncapi 测试可直接锚定                                                                                                    |
 | 6   | data-and-storage                        | 7               | 2   | 2   | 3   | r46-r48 选型决策合法裸规则                                                                                                        |
-| 7   | cross-type-result-transformations       | 7               | 0   | 7   | 0   | 整块 spec 领先实现（无 transform/lineage 代码）                                                                                   |
+| 7   | cross-type-result-transformations       | 0（c121 移除）  | —   | —   | —   | c121 整块移除（零实现）；r44 冗余并入 r349、r45 迁 workspace-api-contract                                                         |
 | 8   | generation-presets-and-constraints      | 5               | 1   | 3   | 1   |                                                                                                                                   |
 | 9   | deep-research-ui                        | 76              | 65  | 9   | 2   | 研究锚点：research-lab/*.test + p0-eden-lab.spec；**18 个碰撞 tag 已修（c112）**                                                  |
 | 10  | deep-research-runtime                   | 63              | 56  | 3   | 4   | 锚点：apps/server/tests/research/*（runtime/budget/prune/synthesize-retry 等）；**14 个碰撞 tag 已修（c112）**（含 r69×4、r83×3） |
@@ -90,6 +90,7 @@ llman-sdd 0.5 原生分层格式下，规则（`规则:` 块 + `@req` 句柄）�
 | ~~c118 前端组件区~~ ✅           | merge 51cbfd87     | 18 覆盖（panels 12 + ui-core 5 + r158 负向扫描）；web 测试 339→371；缺口 r405/r411/r413/r416/r417（前端无对应实现）                                                                                                                                                   |
 | ~~c119 顺延低难度批~~ ✅         | merge 7534d6f2     | 15 覆盖（web 17 例 + server 28 例）；**r111 坐实违约保持裸规则**：ResearchLabPage 被动读 URL ?rid= 恢复 Run（useEdenLabController 无条件 loadRun），不经显式动作/无会话门控；r462 apiVersion 复核为已实现非缺口                                                       |
 | ~~c120 缺口处置一~~ ✅           | merge a8f67173     | **r290 产品修复**（空文件前置 400；零分块回滚行+storage 并 400；catch 对 AppHttpError 重抛）；r111 合约改写（rid=应用内导航载体，非外部 deep link 保证）；r351 合约改写（UI 状态由 session 资源承载，无 /ui/* 端点）+ r29 勘误；顺带记录 parser 误选 html 线索归 r257 |
+| ~~c121 无对应代码块清理~~ ✅     | merge 956ce84b     | 移除零实现两 capability（cross-type 7 + source-aware 7）；r44 冗余移除（r349 已覆盖）、r45 迁 workspace-api-contract 补场景+chunk_ids 断言；pending 108 → 94；确立「spec 无代码对应 → 实现 or 移除」原则                                                              |
 | **顺延（未开批）**               | 待下一会话         | deep-research-ui 交互 9（r101/r102/r111/r117/r148 等）、studio-output-types 6（r299-r303/r306，r306 为 server FK 可先做）、generation-observability 7（r176-r179/r182-r184）、retrieval/其余散量                                                                      |
 | **spec 领先实现**                | 转入待实现         | cross-type 7、source-aware 5——实现落地后按 A 类流程补场景                                                                                                                                                                                                             |
 | 持续                             | C 类 47 条豁免台账 | 见下节；specs-compact 时机再评估合并                                                                                                                                                                                                                                  |
@@ -112,7 +113,7 @@ llman-sdd 0.5 原生分层格式下，规则（`规则:` 块 + `@req` 句柄）�
 | **B 前端功能缺口**          | 6    | r405 r411 r413 r416 r417 r101                                    | workspace-ui-panels 五条（tool 卡确认白名单 / sources 三 tab / 状态派生 / 面板错误快照 / 拖拽入列）前端均无实现；r101 轮询子句未实现                                                                                                                                                   | 先实现（走 propose）后按 A 类补场景；需产品优先级决策                                                           |
 | **C 可观测性落地**          | 5    | r176 r177 r178 r179 r182                                         | 生成管线（generation-core）无 traceId/耗时/errorKind/cache 可观测字段；仅 studio 有 traceId（c51 范式可复用）                                                                                                                                                                          | server 实现+锁测（走 propose）；c123 候选                                                                       |
 | **D 类型化生成+预设合约面** | 12   | r466 r467 r324 r326 r166 r186 r188 r189 r422 r423 r24 r50        | `generationTypeId`/`defaultOutputType`/`effectiveControls` 全仓零命中；presets 功能开关（`chat_prompt_presets_enabled`）与 custom preset 未实现（r422/r423/r24 的 `/prompt:` 族）；r50 inferSelect 导出缺                                                                              | 整块 propose（typed-gen v2 落地）或合约 DEFER 化；需产品决策，体量最大                                          |
-| **E spec 领先两整块**       | 12   | r39-r45；r239 r240 r242 r243 r419                                | cross-type transform/lineage 代码 grep 零命中；server 无 sourceMode 概念（仅 web sources 面板同名 UI 概念）                                                                                                                                                                            | 建议一次性合约化收口（MUST→延期声明，入 C 台账，pending 立降 12）或排实现                                       |
+| ~~E spec 领先两整块~~ ✅    | 0    | （原 r39-r45；r239 r240 r242 r243 r419）                         | cross-type transform/lineage 与 server sourceMode 均 grep 零命中；r44 为 r349 冗余、r45 已实现（convert.ts citationChunkIds）但无断言                                                                                                                                                  | **c121 已收口**：12 条移除 + r45 迁移补场景补测；原则：无代码对应 → 实现 or 移除，不挂账                        |
 | **F 摄取解析真缺陷**        | 7    | r257 r258 r295 r287 r464 r465 r52                                | **r257 根因坐实**：`parser-registry.ts` 前缀匹配按注册序命中首个 `text/*` parser（html 先注册）→ .txt 误配 html；r258 不支持格式静默回退 text（违约）；r295 无 415 路径；r287/r464/r465 markdown 预处理（wikilink/frontmatter）无实现；r52 document_parse 仅持久化原始字节、任务循环无 | 真 bug 修复 + 小实现，**价值最高，c121 候选**（延续 c120 路线）                                                 |
 | **G 配置治理可程序化**      | 6    | r30 r32 r34 r37 r38 r16                                          | 配置加载行为（优先级链/YAML 管线/storage root/确定性/编译分发解析）可程序断言；r16 插件合约 SSOT 可静态断言                                                                                                                                                                            | A/B 类补场景，低风险；c124 候选                                                                                 |
 | **H 鉴权**                  | 1    | r345                                                             | 全仓无 auth 中间件（现有 apiKey 命中均为外部 extractor 凭据）                                                                                                                                                                                                                          | 单独立项：Elysia middleware + config 开关 + 锁测；安全相关，自托管价值明确                                      |
@@ -123,7 +124,7 @@ llman-sdd 0.5 原生分层格式下，规则（`规则:` 块 + `@req` 句柄）�
 
 > 碰撞清单已于 c112 全量修复（54 处重号，首现保留、后续 r420-r473），附录按文档纪律删除。防回归现由上游 0.5.1 全局门承担（validate ERROR + dedupe-req-ids）。
 
-## C 类豁免台账（46 条，保留裸规则的记录）
+## C 类豁免台账（44 条，保留裸规则的记录）
 
 > 判据：架构决策 / 治理约束 / 选型声明 / 愿景叙述，无法（完全）程序判定，强写 GWT 会失真。后续若有条款获得可程序判定口径（如新增静态检查），随时升格补场景。
 
@@ -140,9 +141,9 @@ llman-sdd 0.5 原生分层格式下，规则（`规则:` 块 + `@req` 句柄）�
 - generation-observability r180：重试边界不堆叠（架构边界）
 - deep-research-runtime r78/r79：合约对齐 Lab design / Lab-only extras 文档化（治理元条款）
 
-### 治理与流程约束（16 条）
+### 治理与流程约束（14 条）
 
-- source-aware-generation-modes r241（不得反向重写上游对象模型）、r187（预设不得反向定义生成类型）
+- source-aware-generation-modes r241 随 capability 移除（c121）；generation-presets-and-constraints r187（预设不得反向定义生成类型）
 - chat-prompt-presets ——（无）
 - quality-and-regression r222：remote CI optional（流程治理）
 - configuration-governance r31/r33/r35/r36：CL_* 命名 / typed accessor 禁解构 / 超时上限走 config / YAML snake_case（治理与命名约定）
@@ -157,4 +158,3 @@ llman-sdd 0.5 原生分层格式下，规则（`规则:` 块 + `@req` 句柄）�
 ### 表述与视觉类（2 条）
 
 - web-ui-foundation r343：tokens 对齐既有设计系统（视觉一致性属人工评审）
-- source-aware-generation-modes r244：来源模式标签不暴露内部术语（UI 文案表述）
