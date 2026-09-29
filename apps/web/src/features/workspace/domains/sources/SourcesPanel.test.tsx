@@ -263,3 +263,54 @@ test('accepts PDF upload via drag-and-drop', () => {
   expect(toastWarningSpy).not.toHaveBeenCalled();
   expect(uploadSpy).toHaveBeenCalledWith([pdf]);
 });
+
+// covers: r416 — 面板级错误快照：失败来源/上传在面板头部聚合展示，
+// 无失败时完全不渲染摘要条。
+test('shows panel-level error snapshot with counts and first message', () => {
+  const props = createProps({
+    sources: [
+      ...baseSources,
+      {
+        id: 9,
+        title: 'Broken doc',
+        type: 'PDF',
+        status: '解析失败',
+        statusTone: 'ERROR',
+        chunks: 0,
+        tags: [],
+        createdAt: '2026-02-07 10:05',
+        createdAtRaw: '2026-02-07T10:05:00Z',
+        errorCode: 'PARSE_ERROR',
+        errorMessage: 'unsupported encryption',
+      } as unknown as SourceItem,
+    ],
+    uploadQueue: [
+      { id: 'u1', name: 'a.pdf', status: 'error', message: 'network reset' },
+      { id: 'u2', name: 'b.pdf', status: 'success' },
+    ],
+  });
+
+  render(
+    <TestProviders>
+      <SourcesPanel {...props} />
+    </TestProviders>,
+  );
+
+  const snapshot = screen.getByTestId('sources-panel-error-snapshot');
+  // 1 failed source + 1 failed upload = 2
+  expect(snapshot.textContent).toContain('2 个来源失败');
+  // first failure message surfaces (upload queue message wins in fixture order)
+  expect(snapshot.textContent).toContain('network reset');
+});
+
+test('hides the error snapshot entirely when nothing failed', () => {
+  const props = createProps();
+
+  render(
+    <TestProviders>
+      <SourcesPanel {...props} />
+    </TestProviders>,
+  );
+
+  expect(screen.queryByTestId('sources-panel-error-snapshot')).toBeNull();
+});

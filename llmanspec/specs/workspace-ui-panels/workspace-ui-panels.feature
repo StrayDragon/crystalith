@@ -66,9 +66,6 @@
       当 服务端发送 state_snapshot 与 state_delta
       那么 面板按服务端权威状态驱动 UI
       而且 消息与 mounts 以服务端稳定 messageId 关联
-  @req:r405
-  规则: Tool/action cards enforce confirmation and auto-exec whitelist
-    当消息包含 `tool_use` parts 时，Chat 面板 MUST 仅对宿主白名单内且标记为 `autoExecute=true` 的动作自动执行，对需要确认或非白名单动作 MUST 提供显式确认入口，并对每次执行展示对应 `toolResult` 的结果与错误恢复路径（如允许重试）。
   @req:r406
   规则: Sources workflows are gated and explicit
     Sources 相关操作 MUST 对来源未就绪/失败等情况显式 gating 并提供可恢复提示；依赖来源的 Studio/结构化生成入口在未选择 ready 来源时可禁用；Chat 发送 MUST NOT 仅因未勾选来源而禁用（未勾选时走 ungrounded QA）。
@@ -114,9 +111,6 @@
       当 citationLabels 按 sourceId（缺失时回退 sourceName）去重统计
       那么 唯一来源数与片段数同时展示
       而且 同一来源的多个 chunk 只计一次来源
-  @req:r411
-  规则: Sources bar MUST use tabs (all/selected/history) with cross-tab enforcement
-    Sources 栏 MUST 使用 all/selected/history 三个 tab（默认 all），tab 间状态联动 MUST 遵守：拖动/添加/移除来源只允许在 all tab 发生；selected 计数 MUST 基于 `selectedSourceIds` 动态计算；history 仅记录最近 upload/import/query 动作且 MUST NOT 作为选择来源的渠道，将历史条目添加回来源栏 SHOULD 支持（该动作仅更新来源栏视图，不触发后端搜索）；sources 列表滚动 MUST 由独立 scroll 状态管理。
   @req:r412
   规则: Frontend MUST provide inline error boundary
     前端 MUST 提供内联错误边界（inline error boundary）渲染组件内错误并允许重试，MUST NOT 白屏。
@@ -126,9 +120,6 @@
       当 错误边界捕获
       那么 内联渲染错误并允许重试
       而且 页面不出现白屏
-  @req:r413
-  规则: Frontend MUST derive message status from fetcher/session snapshot
-    前端消息气泡状态（pending/streaming/done/error）MUST 派生自 fetcher/session snapshot 而非本地临时布尔标记，以保证多 tab 一致性与重连语义。
   @req:r414
   规则: Chat panel renders assistant content as streaming-safe markdown
     Chat 面板 SHALL 以流式安全的 markdown 渲染 assistant `message.content`（至少覆盖 GFM 的标题、列表、代码块、表格与引用块），流式中间态（未闭合语法）MUST NOT 破版或以原始围栏字符闪现；user 消息 MUST 保持纯文本渲染。渲染器替换 MUST NOT 改变消息 wire 协议与 sharedState mounts 契约。
@@ -150,9 +141,13 @@
   @req:r416
   规则: Sources panel MUST expose error snapshot at panel level
     Sources 面板 MUST 在面板层提供错误快照：某来源错误时面板头部或摘要区 SHALL 显示该来源失败总数/错误消息摘要，而不是仅依赖列表项上的小图标。
-  @req:r417
-  规则: Sources drag-and-drop MUST add to source list without upload
-    将文件拖入 Sources 栏/面板非上传区时，系统 MUST 仅把该文件加入来源列表（等待后续上传或转换为可检索来源），MUST NOT 自动触发上传或解析。
+  
+    场景: panel-level-error-snapshot
+      假如 Sources 面板打开且存在失败来源或失败上传（SourcesPanel.test 的 r416 用例）
+      当 渲染面板
+      那么 面板头部出现错误快照条并显示失败总数与首条错误消息摘要
+      而且 无任何失败时摘要条完全不渲染
+
   @req:r418
   规则: URL import dialog hints extractors from pasted URL in fetch mode
     URL 导入对话框在 fetch（获取内容）模式 SHALL 对用户粘贴的 URL 本地匹配 extractors 元数据中的 `urlPatterns`；命中时 SHALL 呈现推荐提取器并默认预选，用户 MUST 能取消或恢复勾选；未命中或未选择时 MUST 以 `extractor: null` 走既有默认提取链；link 模式 MUST NOT 展示任何提取器选择 UI。

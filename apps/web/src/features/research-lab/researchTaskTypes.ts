@@ -24,3 +24,13 @@ export const RESEARCH_TASK_STATUS_LABEL: Record<string, string> = {
 export function isActiveResearchStatus(status: string): boolean {
   return (RESEARCH_ACTIVE_STATUSES as string[]).includes(status);
 }
+
+/**
+ * r101: Desk 队列在存在非终态 Run 时以短间隔轮询刷新；全终态（或队列为空）
+ * 时返回 0 关闭轮询。纯函数以便锁测与 SWR refreshInterval 直接接入。
+ */
+export const RESEARCH_QUEUE_POLL_MS = 5_000;
+
+export function researchQueuePollInterval(activeCount: number): number {
+  return activeCount > 0 ? RESEARCH_QUEUE_POLL_MS : 0;
+}

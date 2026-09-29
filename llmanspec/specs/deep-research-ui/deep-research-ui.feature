@@ -26,7 +26,16 @@
   @req:r101
   规则: Queue freshness without list SSE
     Desk 队列 MUST 在打开时拉取 notebook 作用域 listRuns；当存在非终态 Run 时 MUST 以短间隔轮询刷新，全终态或关闭 Desk 时 MUST 停止轮询；创建成功、关闭详情返回、以及详情内导致状态变化的操作之后 MUST 立即再拉 list；MUST NOT 引入 notebook 级 list SSE。
-  @req:r102
+  
+    场景: queue-polls-only-while-active
+      假如 Desk 打开并已拉取 notebook 作用域 listRuns（researchQueuePoll.test）
+      当 队列存在非终态 Run 时
+      那么 轮询节流为 5s 短间隔（researchQueuePollInterval>0）
+      而且 全终态或队列关闭时
+      那么 轮询关闭（interval=0）且不引入任何 notebook 级 list SSE
+      而且 创建成功/关闭详情返回/详情内状态变更操作后立即再拉 list（controller 各事件 refreshResearchTasks）
+
+@req:r102
   规则: Run detail layer keeps the desk mounted
     打开 Run 详情时 MUST 使用不替换工作区的叠加层（LabNodeDrawer overlay 模式，经 Layer 系统 z-index 高于图区），Desk（图/队列）MUST 保持挂载；关闭详情（关闭按钮）MUST 仅收起详情层并恢复 Desk 原样；同时 MUST 最多展示一个 Run 详情（单值 selectedNodeId 派生，切换卡片替换当前详情）。
   

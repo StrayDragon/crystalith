@@ -1,5 +1,8 @@
 ---
 depends_on: []
+branch: sdd/c126-panels-batch-resolution
+base_branch: main
+base_sha: 3d5d55d5df063181e4f72a2f4280f60fa21a0f0b
 ---
 
 # B 组收口：r101/r416 小实现照做 + 四条与架构不符条款移除

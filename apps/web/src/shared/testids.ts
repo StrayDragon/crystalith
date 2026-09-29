@@ -35,6 +35,7 @@ export const TestIds = {
 
   // Sources
   sourcesPanel: 'sources-panel',
+  sourcesPanelErrorSnapshot: 'sources-panel-error-snapshot',
   sourcesAdd: 'sources-add',
   sourcesUploadInput: 'sources-upload-input',
   sourcesConnectors: 'sources-connectors',

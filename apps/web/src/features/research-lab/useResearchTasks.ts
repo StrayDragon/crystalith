@@ -9,7 +9,11 @@ import {
   refreshResearchTasks,
   researchTasksSwrKey,
 } from './researchTasksCache';
-import { isActiveResearchStatus, type ResearchTaskListItem } from './researchTaskTypes';
+import {
+  isActiveResearchStatus,
+  researchQueuePollInterval,
+  type ResearchTaskListItem,
+} from './researchTaskTypes';
 
 const ACTIVE_STATUSES: ResearchRunStatus[] = RESEARCH_ACTIVE_STATUSES;
 
@@ -32,7 +36,14 @@ export function useResearchTasks(notebookId: number | null): {
       const page = await listResearchRuns(nid, { offset: 0, limit: 50 });
       return page.items.map(summaryToTaskItem);
     },
-    { revalidateOnFocus: true },
+    {
+      revalidateOnFocus: true,
+      // r101: 有非终态 Run 时短间隔轮询，全终态自动停止（0 = off）。
+      refreshInterval: (latest: ResearchTaskListItem[] | undefined) =>
+        researchQueuePollInterval(
+          (latest ?? []).filter((t) => isActiveResearchStatus(t.status)).length,
+        ),
+    },
   );
 
   useEffect(() => {
