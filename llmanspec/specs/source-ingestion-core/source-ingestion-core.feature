@@ -17,7 +17,13 @@
   @req:r254
   规则: Ready source guarantees retrievability
     `ready` 来源 MUST 已持久化 chunks 且对应向量可被检索命中（本条约束 ready⇒可检索的结果语义；ready 之前的同步完成时序由 r2_sync 单独约束）。
-  @req:r255
+  
+    场景: ready-source-is-retrievable
+      假如 ingest 集成环境就绪（tests/studio/deferred-lock.test.ts）
+      当 一个来源完成 ingest 并标记 ready
+      那么 该来源已持久化 chunks 且其向量可被 notebook 范围内的最近邻检索命中
+
+@req:r255
   规则: Source and vector mutations bump epochs
     影响来源集合或向量集合的操作 MUST bump `sources_epoch` 与/或 `vector_epoch` 以触发缓存失效（失效模型见 retrieval-and-cache r227）。
 

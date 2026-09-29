@@ -87,7 +87,7 @@
 
     场景: outputs-endpoint-rejects-slides-type
       假如 笔记本中有一篇来源
-      当 对 outputs 生成端点提交 type=SLIDES（apps/server/tests/bdd/features/outputs/结构化输出.feature 的 SLIDES 拒绝场景）
+      当 对 outputs 生成端点提交 type=SLIDES（tests/generation/generation-types.test.ts：合法类型 SLIDES 走专属 400 提示；未知类型走 supported 列表 400）
       那么 响应状态码为 400
       而且 SLIDES 未被路由进通用 outputs pipeline
   @req:r206

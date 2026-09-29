@@ -35,10 +35,24 @@
   @req:r302
   规则: Mindmap supports read-only exploration
     mindmap 输出 MUST 支持只读浏览与节点折叠/展开控制。
-  @req:r303
+  
+    场景: mindmap-collapsible-read-only
+      假如 渲染含多级子节点的 mindmap 输出（MindmapViewer.test）
+      当 点击分支节点折叠再展开
+      那么 折叠后子节点隐藏并显示子节点计数、展开后还原
+      而且 视图不提供任何编辑入口（只读）
+
+@req:r303
   规则: Quiz supports answering and immediate feedback
     quiz 输出 MUST 支持作答、即时反馈与结果汇总查看。
-  @req:r304
+  
+    场景: quiz-answering-feedback-and-summary
+      假如 渲染含两道单选题的 quiz 输出（QuizRunner.test）
+      当 依次作答并提交
+      那么 每题提交后立即显示对/错反馈（错题附正确答案与解析）
+      而且 全部完成后显示正确率与答对计数的汇总并支持重做
+
+@req:r304
   规则: Timeline supports visual events and detail expansion
     timeline 输出 MUST 支持时间轴事件可视化与事件详情展开，且展开详情后时间轴 SHALL 可继续浏览。
 

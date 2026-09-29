@@ -1,5 +1,8 @@
 ---
 depends_on: []
+branch: sdd/c124-deferred-testable-batch
+base_branch: main
+base_sha: b119ce19c788970bd792bb5679a86edee618e17c
 ---
 
 # 顺延可测批：A 组 13 条裸规则场景化 + 幻影锚点重锚

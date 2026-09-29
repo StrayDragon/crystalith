@@ -54,7 +54,14 @@
   @req:r250
   规则: sync_check 使用轻量快照差异规则
     系统 MUST 使用确定性的轻量规则识别快照差异（如相同 `relativePath` 且 `sizeBytes` 或 `modifiedAt` 变化的条目标记为更新），以支持中大型 vault 的同步检查。
-  @req:r251
+  
+    场景: snapshot-diff-is-lightweight-and-deterministic
+      假如 有一份 base 快照与一份 current 快照（tests/studio/deferred-lock.test.ts）
+      当 执行 buildSyncCandidates
+      那么 相同 relativePath 且 sizeBytes/modifiedAt 变化的条目标记为 updated（含原因文案）、新增/消失分别进入 added/missing
+      而且 候选按 relativePath 排序输出（确定性）
+
+@req:r251
   规则: Connector binding creation MUST validate connectionConfig against JSON schema
     创建 connector binding 时 MUST 对 connectionConfig 做 JSON schema 校验，校验失败 MUST 返回 400（CONNECTOR_CONFIG_INVALID）
 
@@ -66,3 +73,9 @@
   @req:r252
   规则: Unavailable connector MUST return 409 with install hint
     connector 不可用时 MUST 返回 409（CONNECTOR_UNAVAILABLE）含 hint 和 pluginDiagnostic，MUST NOT 返回 404
+
+    场景: unavailable-connector-409-with-hint
+      假如 集成环境就绪（tests/studio/deferred-lock.test.ts）
+      当 对不存在的 connectorId 创建绑定
+      那么 409 CONNECTOR_UNAVAILABLE 且 details 携带 hint 与 pluginDiagnostic{connectorId, loaded:false}
+

@@ -219,6 +219,20 @@ describe('r326/r189 generation metadata echo', () => {
   });
 });
 
+describe('r205 outputs endpoint rejects SLIDES with studio hint', () => {
+  it('a known-but-studio-owned type gets its dedicated 400 message', async () => {
+    // covers: r205
+    const { status, body } = await post(`/v2/notebooks/${notebookId}/outputs`, {
+      generationTypeId: 'output',
+      type: 'SLIDES',
+      sourceIds: [1],
+    });
+    expect(status).toBe(400);
+    const message = (body as { message: string }).message;
+    expect(message).toContain('slides');
+  });
+});
+
 describe('r166 static output-type registry rejection', () => {
   it('unsupported output types fail with the type and supported list in details', async () => {
     // covers: r166

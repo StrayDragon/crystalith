@@ -28,8 +28,15 @@
     Desk 队列 MUST 在打开时拉取 notebook 作用域 listRuns；当存在非终态 Run 时 MUST 以短间隔轮询刷新，全终态或关闭 Desk 时 MUST 停止轮询；创建成功、关闭详情返回、以及详情内导致状态变化的操作之后 MUST 立即再拉 list；MUST NOT 引入 notebook 级 list SSE。
   @req:r102
   规则: Run detail layer keeps the desk mounted
-    打开 Run 详情时 MUST 使用高于工作区顶栏 E1 的 modal Layer，且 Desk MUST 保持挂载；关闭详情后 MUST 恢复 Desk 的 tab/查询/队列原样；Escape 或点击详情遮罩 MUST 仅关闭详情；同时 MUST 最多展示一个 Run 详情（切换卡片替换当前详情）。
-  @req:r103
+    打开 Run 详情时 MUST 使用不替换工作区的叠加层（LabNodeDrawer overlay 模式，经 Layer 系统 z-index 高于图区），Desk（图/队列）MUST 保持挂载；关闭详情（关闭按钮）MUST 仅收起详情层并恢复 Desk 原样；同时 MUST 最多展示一个 Run 详情（单值 selectedNodeId 派生，切换卡片替换当前详情）。
+  
+    场景: detail-overlay-keeps-desk-mounted
+      假如 Lab 打开且选中一个研究节点（LabNodeDrawer.test）
+      当 详情叠加层渲染
+      那么 Desk 仍在 DOM 中且详情层以 overlay+Layer 系统样式呈现
+      而且 点击关闭仅触发 onClose（收起详情）且 Desk 未被卸载
+
+@req:r103
   规则: Status-driven primary surface
     Run 详情 MUST 按状态切换主表面：queued/running/awaiting_confirm 以研究图为主且报告草稿默认折叠；completed 以结构化报告为主且图降为只读次级入口；failed/cancelled 以状态说明为主并在可用时展示末次图或草稿；MUST NOT 提供并列的独立「研究思路」页面，也 MUST NOT 使用永久左右分栏作为唯一布局。
 
@@ -431,7 +438,14 @@
   @req:r148
   规则: Failed synthesize has no heuristic report UI
     当结案失败导致 Run failed 时 Lab MUST NOT 将启发式证据清单展示为权威报告正文；用户 MUST 能通过重试结案（可换模）恢复；0 证据但 completed 的诚实成稿 MUST 仍按普通报告渲染。
-  @req:r149
+  
+    场景: failed-run-report-gating
+      假如 Lab 派生状态来自 run（labGraphGates.test）
+      当 run status=failed 时
+      那么 reportVisible=false（报告入口隐藏，不渲染启发式清单为正文）且合成失败横幅提供换模+重试结案入口
+      而且 status=completed 且携带 report（含 0 证据诚实成稿）时 reportVisible=true 按普通报告渲染
+
+@req:r149
   规则: Demo lab isolated under demo prefix
     xlsx-lib / fake 演示（含 fixture 节点对话、本地修订演示与 sessionStorage 修订演示）MUST 落在独立目录并经 /demo/research-lab/:nid（及 report）暴露；该路由 MUST 仅在 import.meta.env.DEV 为真或 VITE_LAB_DEMO=1 时注册；演示 MUST 可演练既定设计面（图交互、节点抽屉、报告与 cite、revisions、画布设置），但 MUST NOT 作为产品权威、MUST NOT 被误认为已接线生产态；产品入口 MUST NOT 链接到 demo；Demo 类型与控制器 MUST NOT 回流为产品页的 fixture/eden 双模联合分支。
 
@@ -513,11 +527,24 @@
 
   规则: role-or-prefix-protects-sink
     图中 conclusion 节点带 role=conclusion（或既有 id 前缀识别）时 MUST NOT 作为可剪枝研究支路入口展示，与服务端剪枝保护一致。
-  @req:r446
+  
+    场景: conclusion-node-not-prunable
+      假如 图中存在 role=conclusion 的汇节点（labGraphGates.test）
+      当 经 labLayout 派生边动作
+      那么 该节点的入边 canPrune/canFork 均为 false（node_conclusion_ 前缀识别同效）
+      而且 role=research 的入边 canPrune=true（readOnly 时除外，对照）
+
+@req:r446
 
   规则: canvas-pref-does-not-call-graph-api
     用户切换画布布局方向或小地图偏好生效时，MUST NOT 因此发出修改 research graph 的命令口请求。
-  @req:r447
+  
+    场景: canvas-preferences-are-client-only
+      假如 Lab 画布设置面板打开（LabCanvasSettings.test 的 MSW 全量请求记录器）
+      当 用户切换布局方向/算法/连线/小地图偏好
+      那么 记录器捕获不到任何修改 research graph 的服务端请求
+
+@req:r447
 
   规则: compose-create-increments-badge
     当 Lab 已接线 Eden 且当前 activeCount 为 0 时，用户 Compose 创建 Run 成功后任务列表 MUST 包含新 Run 且 badge activeCount MUST 相应增加。

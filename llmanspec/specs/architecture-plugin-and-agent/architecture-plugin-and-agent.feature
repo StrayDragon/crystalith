@@ -23,7 +23,7 @@
 
     场景: stream-relay-through-sse
       假如 笔记本中有一篇来源且发起流式提问
-      当 运行 apps/server/tests/bdd/features/qa/知识问答.feature 的流式提问场景
+      当 以流式模式发起笔记本问答（tests/api-contract/qa-session-contract.test.ts 的 r369 stream done 断言）
       那么 streamText fullStream 经 Elysia SSE 中继返回 200
       而且 SSE Content-Type 为 text/event-stream
   @req:r14

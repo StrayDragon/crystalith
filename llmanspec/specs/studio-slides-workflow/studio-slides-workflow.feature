@@ -32,7 +32,15 @@
   @req:r310
   规则: Busy and stale-running handling is explicit
     draft `running` 时 MUST 防并发重复（返回 busy 事件而非覆盖）；stale running（超过阈值；默认值来自 config schema）MUST 先清理再继续；清理 MUST 将 status 置为 IDLE、清空 errorMessage（置 null）并返回 bool，MUST NOT 写入非空诊断文案。
-  @req:r311
+  
+    场景: busy-guard-and-stale-cleanup
+      假如 studio 集成环境就绪且某 slide 处于非 stale 的 running 状态（tests/studio/deferred-lock.test.ts）
+      当 再次发起该 slide 的生成流
+      那么 返回 busy SSE 事件（携带 traceId/slideId）而非开启第二个流
+      而且 对超过阈值的 stale running 执行清理时
+      那么 status 置为 idle、errorMessage 清空（null）、清理返回 true
+
+@req:r311
   规则: Markdown generation requires existing outline
     未有 outline 时 markdown stream MUST 返回可读错误并结束连接。
 
@@ -50,7 +58,14 @@
   @req:r313
   规则: Preview always uses latest saved markdown
     预览前端流程 MUST 先保存 markdown，再刷新当前 active slides workflow plugin 声明的预览目标；宿主与客户端 MUST NOT 硬编码 Slidev 作为唯一预览实现。
-  @req:r314
+  
+    场景: preview-saves-then-refreshes-via-plugin-target
+      假如 SlidesStudio 打开且预览能力就绪（useSlidesPreviewSync.test）
+      当 点击预览
+      那么 先执行 markdown 保存再刷新预览目标
+      而且 预览目标由当前 slides 插件声明的 preview descriptor 解析、未声明时明确报错且不触发保存
+
+@req:r314
   规则: Slides UI availability follows tools contract
     Studio slides 相关 UI（工具卡片、dialog、入口动作）MUST 以 `/v2/workspace/tools` 返回的 `SLIDES` tool 作为可用性唯一来源，不得依赖硬编码假设 slides 默认存在。
 
@@ -68,10 +83,22 @@
   @req:r316
   规则: Studio slide serialization MUST include outputId and generationConfig
     studio slide 序列化结果 MUST 返回 outputId（可为 null）与 generationConfig 字段（camelCase wire）；前端读 outputId 做 slide→output 跳转、读 generationConfig 复用配置
-  @req:r317
+  
+    场景: slide-serialization-carries-output-and-config
+      假如 studio 集成环境就绪（tests/studio/deferred-lock.test.ts）
+      当 读取 slide 详情
+      那么 序列化结果包含 camelCase 的 outputId（可为 null）与 generationConfig 字段
+
+@req:r317
   规则: Studio SSE done event MUST carry traceId and slideId (not full slide)
     studio SSE 的 done 事件 payload MUST 为 {traceId, slideId}（camelCase），MUST NOT 直接序列化整个 slide；且所有 SSE 事件 SHALL 携带 traceId 以支持关联/可观测性；outline/markdown 各生成阶段前 SHALL 发 toolcall 事件（对齐既有语义）
-  @req:r318
+  
+    场景: done-payload-is-traceid-and-slideid
+      假如 studio 集成环境就绪（tests/studio/deferred-lock.test.ts）
+      当 生成流发出 done 事件
+      那么 payload 键集恰为 {traceId, slideId} 且不含 markdown/generationConfig 等全量 slide 字段
+
+@req:r318
   规则: Studio generation MUST interpret generationConfig with concrete ranges not raw tokens
     studio outline 与 markdown 生成 MUST 解读 slide.generationConfig 的 quantity/density/audience/tone/structure/language/themePreset 字段并展开为具体区间与本地化提示；quantity/density 的区间映射 MUST 可配置（默认对齐既有语义）；preference（quality/speed）对检索参数（topK/minScore）的调节见 generation-core r162/r163（canonical）。MUST NOT 把原始字段 id（如 'standard'）直接拼进 prompt 而不做展开。
 
