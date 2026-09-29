@@ -1,0 +1,4 @@
+---
+title: "Research Lab SSE 断线韧性：有界重连 + 可见中断态（含 server 终态等待去轮询）"
+depends_on: []
+---
