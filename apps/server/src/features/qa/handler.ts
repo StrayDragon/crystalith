@@ -155,6 +155,9 @@ export async function streamQa(opts: QaHandlerOptions): Promise<Response> {
     // tip after the answer (stream chunk + persisted text).
     settleNotice: judgment.groundingNotice,
     contextStats: judgment.contextStats,
+    // r326: main evidence path must echo generation metadata like the
+    // no-evidence/stats short-circuit paths already do.
+    generation: opts.generation,
     onMessageSettled: (text, failed, citations) => {
       // c45: apply inline citation fallback before persisting
       const finalText = failed ? text : ensureInlineCitations(text, citations ?? []);

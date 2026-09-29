@@ -38,7 +38,9 @@ mock.module('ai', () => {
   };
 });
 
-import { notebooks } from '../../src/db/schema.ts';
+import { chunks, notebooks, sources } from '../../src/db/schema.ts';
+import { ragRegistry } from '../../src/rag/registry.ts';
+import type { ChunkResult } from '../../src/rag/types.ts';
 import { createApp } from '../../src/server.ts';
 import { resetConfig } from '../../src/shared/config.ts';
 import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from '../helpers/integration.ts';
@@ -47,6 +49,8 @@ const BASE = 'http://test.local';
 
 let app: InstanceType<typeof createApp>;
 let notebookId: number;
+let evidenceSourceId: number;
+let evidenceHits: ChunkResult[] = [];
 
 beforeAll(() => {
   setupIntegrationEnv();
@@ -77,7 +81,39 @@ beforeAll(() => {
     raw: {},
   });
   app = createApp();
-  notebookId = getOrm().insert(notebooks).values({ name: 'gentype' }).returning().get().id;
+  const orm = getOrm();
+  notebookId = orm.insert(notebooks).values({ name: 'gentype' }).returning().get().id;
+
+  // Evidence fixture: a fake RAG strategy with one fixed hit, so the streamed
+  // QA path can traverse the main evidence branch (streamQaResponse).
+  evidenceSourceId = orm
+    .insert(sources)
+    .values({ notebookId, filename: 'gentype.md', status: 'ready' })
+    .returning()
+    .get().id;
+  const evidenceChunkId = orm
+    .insert(chunks)
+    .values({ sourceId: evidenceSourceId, chunkIndex: 0, text: 'gentype evidence chunk' })
+    .returning()
+    .get().id;
+  evidenceHits = [
+    {
+      chunkId: evidenceChunkId,
+      text: 'gentype evidence chunk',
+      score: 0.9,
+      sourceId: evidenceSourceId,
+      chunkIndex: 0,
+    },
+  ];
+  ragRegistry.register({
+    id: 'fake-gentype-embed',
+    name: 'gentype evidence fixture',
+    version: '0.0.0',
+    indexSource: async () => {},
+    retrieve: async () => evidenceHits.map((hit) => ({ ...hit })),
+    isIndexed: async () => true,
+    deleteSource: async () => {},
+  });
 });
 
 afterAll(() => {
@@ -195,6 +231,41 @@ describe('r326/r189 generation metadata echo', () => {
     // r186: controls are injected as prompt instructions, not just echoed.
     expect(lastInstructions).toContain('concise');
     expect(lastInstructions).toContain('[N] notation');
+  });
+
+  it('streamed qa done events echo generation metadata on the main evidence path', async () => {
+    // covers: r326 — regression lock: the main streamQaResponse branch used to
+    // omit `generation` (only the no-evidence/stats short-circuits carried it).
+    const res = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/qa/stream`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          question: 'stream echo question',
+          generationTypeId: 'qa',
+          sourceIds: [evidenceSourceId],
+          strategyId: 'fake-gentype-embed',
+          controls: {},
+        }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const raw = await res.text();
+    const lines = raw.split('\n');
+    // A chunk streamed through the main evidence path, then the done event.
+    expect(lines.some((l) => l === 'event: chunk')).toBe(true);
+    const doneIdx = lines.findIndex((l) => l === 'event: done');
+    expect(doneIdx).toBeGreaterThanOrEqual(0);
+    const done = JSON.parse(lines[doneIdx + 1]!.replace(/^data: /u, '')) as {
+      generation?: Record<string, unknown>;
+    };
+    expect(done.generation).toEqual({
+      generationTypeId: 'qa',
+      outputType: 'MESSAGE',
+      completion: 'streamed-answer',
+      presetId: 'default',
+      effectiveControls: null,
+    });
   });
 
   it('output generation persists generationMeta on the row and echoes it in reads', async () => {
