@@ -33,5 +33,10 @@
       那么 save 后 fetch 可按 key 往返读出原始上传字节供 document_parse 重新解析
       而且 exists 与 delete 的返回语义一致
   @req:r52
-  规则: document_parse task wired
-    任务队列 worker MUST 实现 document_parse 任务类型 从存储读取原始字节 经 parse 与 chunk 与 embed 完整流程并写入向量库 不再抛 stub 错误
+  规则: Source raw bytes are persisted and readable back for re-parse
+    ingest MUST 通过 contentStorage 持久化来源原始字节，且来源 MUST 可按 sourceId 读回原始内容，以支撑后续再解析（document_parse 类能力）。v2 无任务队列（pipeline 有意同步），队列化 re-parse 需要时另立 capability。
+
+    场景: raw-bytes-roundtrip-via-content-storage
+      假如 ingestion 集成环境就绪（tests/sources/parser-selection.test.ts）
+      当 完成一次 upload ingest 并以 contentStorage.fetch(sourceId) 读回
+      那么 读回字节与上传内容逐字节一致

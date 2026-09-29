@@ -1,5 +1,8 @@
 ---
 depends_on: []
+branch: sdd/c123-ingestion-parser-defects
+base_branch: main
+base_sha: 077ce4e07b3794b42de6c41526fea48f98080a87
 ---
 
 # 摄取解析真缺陷修复：parser 选择确定性 + 不支持格式 415 + Markdown 预处理

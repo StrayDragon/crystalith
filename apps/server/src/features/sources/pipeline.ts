@@ -14,11 +14,18 @@ import { chunkText } from '../../rag/chunker.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { logger } from '../../shared/logger.ts';
 import { contentStorage } from '../../shared/storage.ts';
-import { guessMimeType, registerParser, selectParser } from './parser-registry.ts';
+import { preprocessMarkdown } from './markdown-preprocess.ts';
+import { guessMimeType, getParser, registerParser, selectParser } from './parser-registry.ts';
 import { csvParser } from './parsers/csv.ts';
 import { htmlParser } from './parsers/html.ts';
 import { pdfParser } from './parsers/pdf.ts';
 import { textParser } from './parsers/text.ts';
+
+/** r287 scope guard: markdown preprocessing applies to text/markdown inputs. */
+function isMarkdownDocument(mimeType: string, filename: string): boolean {
+  if (mimeType === 'text/markdown' || mimeType === 'text/x-markdown') return true;
+  return /\.md(?:own)?$/iu.test(filename);
+}
 
 // ---------------------------------------------------------------------------
 // Bootstrap: register built-in parsers once at module import.
@@ -83,9 +90,26 @@ export interface IngestResult {
  */
 export async function ingestSource(input: IngestInput): Promise<IngestResult> {
   const mimeType = input.mimeType ?? guessMimeType(input.filename);
+  // r257: explicit parserType overrides resolve by registry id; otherwise
+  // deterministic exact-MIME → extension selection. Unmatched inputs are
+  // rejected (r258/r295) instead of silently mis-parsed.
   const parser = input.parserType
-    ? selectParser(input.parserType)
+    ? getParser(input.parserType)
     : selectParser(mimeType, input.filename);
+  if (!parser) {
+    const ext = input.filename.toLowerCase().includes('.')
+      ? input.filename.toLowerCase().slice(input.filename.lastIndexOf('.') + 1)
+      : '';
+    throw new AppHttpError(
+      ErrorCode.UNSUPPORTED_MEDIA_TYPE,
+      `Unsupported file type: ${mimeType}${ext ? ` (.${ext})` : ''}`,
+      {
+        mimeType,
+        filename: input.filename,
+        ...(ext ? { pluginHint: `parser-${ext}` } : {}),
+      },
+    );
+  }
 
   // r290: deterministic input errors MUST 400 without creating a source row —
   // reject empty uploads before any insert.
@@ -100,7 +124,7 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
       notebookId: input.notebookId,
       filename: input.filename,
       mimeType,
-      parserType: parser?.id ?? 'text',
+      parserType: parser.id,
       status: 'processing',
       dedupKey: input.dedupKey ?? null,
     })
@@ -123,6 +147,17 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
     // 2. Parse
     const result = await parser!.parse(input.buffer, input.filename);
 
+    // r287/r464/r465: markdown semantic preprocessing (wikilink normalization
+    // + frontmatter extraction) runs before chunk/embed/store; extracted
+    // fields land in source.metadata.frontmatter and never enter chunks.
+    let markdownFrontmatter: import('./markdown-preprocess.ts').MarkdownFrontmatter | null = null;
+    let textForChunks = result.text;
+    if (isMarkdownDocument(mimeType, input.filename) && result.text) {
+      const pre = preprocessMarkdown(result.text);
+      textForChunks = pre.text;
+      markdownFrontmatter = pre.frontmatter;
+    }
+
     // 3. Chunk: use parser-provided pages (per-chunk metadata like csv_row_start)
     //    when available; otherwise fall back to the generic chunker.
     const chunked: Array<{ index: number; text: string; metadata?: Record<string, unknown> }> =
@@ -132,12 +167,12 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
             text: p.text,
             metadata: p.metadata,
           }))
-        : chunkText(result.text).map((c) => ({ index: c.index, text: c.text }));
+        : chunkText(textForChunks).map((c) => ({ index: c.index, text: c.text }));
 
     // r290: no indexable content is a deterministic input error — roll back the
     // processing row (and best-effort the saved bytes) and 400, leaving no source.
     const hasPages = (result.pages?.length ?? 0) > 0;
-    if (chunked.length === 0 || (!hasPages && !result.text.trim())) {
+    if (chunked.length === 0 || (!hasPages && !textForChunks.trim())) {
       db().delete(sources).where(eq(sources.id, sourceRow.id)).run();
       await contentStorage.delete(sourceRow.id).catch((error) => {
         logger.warn(`[pipeline] contentStorage cleanup failed for source ${sourceRow.id}:`, error);
@@ -173,11 +208,15 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
     await triggerEmbedding(sourceRow.id, sourceRow.notebookId);
 
     // 6. Mark ready (only after vectors are written)
+    const readyMetadata: Record<string, unknown> = {
+      ...(result.metadata as Record<string, unknown>),
+    };
+    if (markdownFrontmatter) readyMetadata.frontmatter = markdownFrontmatter;
     db()
       .update(sources)
       .set({
         status: 'ready',
-        metadata: result.metadata ?? null,
+        metadata: readyMetadata,
       })
       .where(eq(sources.id, sourceRow.id))
       .run();
@@ -190,7 +229,7 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
       sourceId: sourceRow.id,
       chunkCount: chunked.length,
       text: result.text,
-      parserType: parser?.id ?? 'text',
+      parserType: parser.id,
       status: 'ready',
     };
   } catch (error) {
@@ -230,7 +269,7 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
       sourceId: sourceRow.id,
       chunkCount: 0,
       text: '',
-      parserType: parser?.id ?? 'text',
+      parserType: parser.id,
       status: 'failed',
       errorCode,
       errorMessage: message,

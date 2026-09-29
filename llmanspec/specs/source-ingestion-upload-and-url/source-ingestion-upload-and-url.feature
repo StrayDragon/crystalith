@@ -26,15 +26,33 @@
   @req:r287
   规则: 上传端点必须保留受支持写作工具的 Markdown 语义
     对于标准 Markdown 上传，系统 MUST 在进入 `chunk / embed / store` 之前执行语义预处理，以兼容常见写作工具的 Markdown 扩展语法，并将可提取的文档元数据写入 source metadata。
-  @req:r464
+  
+    场景: markdown-semantic-preprocessing-before-chunking
+      假如 ingestion 集成环境就绪
+      当 上传含 wikilink 与 frontmatter 的 markdown
+      那么 预处理在 chunk 之前执行且普通 markdown 文本逐字节零扰动
+
+@req:r464
 
   规则: 上传-obsidian-风格-wikilink-与嵌入引用时标准化为标准 Markdown
     上传的 Markdown 含 `[[page]]` 或 `[[page|alias]]` wikilink 时，系统 MUST 在 chunking 前将其转换为标准 Markdown 链接文本；含 `![[file]]` 或 `![[file|alias]]` 嵌入引用时 MUST 将其转换为可检索的文本引用。
-  @req:r465
+  
+    场景: wikilinks-and-embeds-normalized
+      假如 ingestion 集成环境就绪
+      当 上传含 [[page|alias]]、[[page]]、![[img.png]]、![[note]] 的 markdown
+      那么 分块文本中分别为 [alias](page)、[page](page)、![img.png](img.png)（图片嵌入）与 [note](note)（文本引用）
+
+@req:r465
 
   规则: 上传-markdown-时提取-frontmatter-到来源元数据
     上传的 Markdown 文件包含可解析的 YAML frontmatter 时，系统 MUST 将支持字段（`title`、`tags`、`aliases`、`date`）写入 `source.metadata.frontmatter`。
-  @req:r288
+  
+    场景: frontmatter-extracted-to-metadata
+      假如 ingestion 集成环境就绪
+      当 上传带 YAML frontmatter（title/tags/aliases/date）的 markdown
+      那么 支持字段写入 source.metadata.frontmatter 且 frontmatter 块不进入任何分块文本
+
+@req:r288
   规则: Core upload supports CSV sources
     系统的核心发行版 MUST 支持通过上传方式创建 CSV 来源：`.csv` 扩展名与 `text/csv` MIME MUST 被识别并由匹配 parser 处理。
 
@@ -95,7 +113,13 @@
   @req:r295
   规则: Unsupported formats are rejected with actionable diagnostics
     当上传/URL 抓取的内容无匹配 parser（例如缺失对应插件）时，系统 MUST 返回 415 且 MUST 提供可机器读取的诊断信息（errorCode/message/details），其中 details MUST 包含恢复提示（例如需要安装/启用的 `parser-*` 插件 id）。
-  @req:r296
+  
+    场景: unsupported-format-415-diagnostics
+      假如 ingestion 集成环境就绪（tests/sources/parser-selection.test.ts）
+      当 上传无匹配 parser 的文件（未知扩展名或未知显式 parserType）
+      那么 415 信封 errorCode=UNSUPPORTED_MEDIA_TYPE 且 details 携带 mimeType/filename 与 parser-<ext> 形式的 pluginHint
+
+@req:r296
   规则: Extractor selection errors are diagnosable
     fetch 模式显式指定 extractor 的尝试顺序与不可用时的 fallback/错误语义见 web-extractor-plugins r332/r335（canonical）；无论回退还是失败，系统 MUST 输出可诊断信息说明发生了什么与如何恢复。
 

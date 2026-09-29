@@ -4,13 +4,13 @@
 
 注册序 pdf → html → csv → text。`selectParser` 三段逻辑的实际行为：
 
-| 输入 | 现行为 | 根因 |
-| --- | --- | --- |
-| `.txt` → text/plain | text ✓ | 精确匹配命中 text（注册序内 text 最后，但精确匹配无竞争） |
-| `.md` → text/markdown | text ✓ | 同上 |
-| **`.xml` → application/xml** | **pdf ✗** | 精确无匹配；前缀段 `application/xml`.startsWith(`application/`) → **pdf 最先注册即赢** |
-| **octet-stream / 无扩展名** | **pdf ✗** | 同上 |
-| **显式 parserType='pdf'** | **text ✗** | `selectParser(input.parserType)` 把 id 'pdf' 当 MIME 查 → 全段落空 → 默认回退 text |
+| 输入                         | 现行为     | 根因                                                                                   |
+| ---------------------------- | ---------- | -------------------------------------------------------------------------------------- |
+| `.txt` → text/plain          | text ✓     | 精确匹配命中 text（注册序内 text 最后，但精确匹配无竞争）                              |
+| `.md` → text/markdown        | text ✓     | 同上                                                                                   |
+| **`.xml` → application/xml** | **pdf ✗**  | 精确无匹配；前缀段 `application/xml`.startsWith(`application/`) → **pdf 最先注册即赢** |
+| **octet-stream / 无扩展名**  | **pdf ✗**  | 同上                                                                                   |
+| **显式 parserType='pdf'**    | **text ✗** | `selectParser(input.parserType)` 把 id 'pdf' 当 MIME 查 → 全段落空 → 默认回退 text     |
 
 结论：前缀匹配（`mimeType.startsWith(m.split('/')[0] + '/')`）与 text 默认回退是两个必须移除的错误设计；显式覆盖需独立按 id 解析。
 

@@ -38,20 +38,20 @@ export function getParser(id: string): Parser | undefined {
   return registry.get(id);
 }
 
-/** Select a parser by MIME type, falling back to extension match. */
+/** Select a parser by exact MIME type, falling back to extension match.
+ *
+ * Deterministic (r257): exact MIME match wins in registry order, then file
+ * extension. No prefix matching and no default fallback — an unmatched input
+ * returns `undefined` so the pipeline can reject it with a stable 415
+ * (r258/r295) instead of silently feeding it to the wrong parser.
+ */
 export function selectParser(mimeType?: string, filename?: string): Parser | undefined {
-  // Try exact MIME match
   if (mimeType) {
     for (const parser of registry.values()) {
       if (parser.mimeTypes.includes(mimeType)) return parser;
     }
-    // Try prefix match (e.g. "text/" matches text/plain, text/html, etc.)
-    for (const parser of registry.values()) {
-      if (parser.mimeTypes.some((m) => mimeType.startsWith(m.split('/')[0] + '/'))) return parser;
-    }
   }
 
-  // Try file extension
   if (filename) {
     const ext = filename.toLowerCase().includes('.')
       ? filename.toLowerCase().slice(filename.lastIndexOf('.'))
@@ -61,8 +61,7 @@ export function selectParser(mimeType?: string, filename?: string): Parser | und
     }
   }
 
-  // Default: text parser
-  return registry.get('text');
+  return undefined;
 }
 
 /** Guess MIME type from file extension. */
