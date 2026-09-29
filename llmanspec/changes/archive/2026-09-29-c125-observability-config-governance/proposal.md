@@ -1,5 +1,8 @@
 ---
 depends_on: []
+branch: sdd/c125-observability-config-governance
+base_branch: main
+base_sha: 47e3fd6fa040c51b6a57261061c5f1e16445e6e1
 ---
 
 # C/H 无实现 spec 移除 + G 配置治理场景化锁测

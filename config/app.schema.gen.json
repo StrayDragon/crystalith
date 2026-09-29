@@ -19,16 +19,6 @@
             }
           }
         },
-        "auth": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "description": "app.auth.enabled",
-              "default": false,
-              "type": "boolean"
-            }
-          }
-        },
         "cors": {
           "type": "object",
           "properties": {

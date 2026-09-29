@@ -8,19 +8,38 @@
   @req:r30
   规则: Configuration source priority chain
     系统 MUST 支持三级配置源优先级链：1) 环境变量（CL_* 前缀）最高优先级；2) YAML 配置文件（config/app.yaml）中间优先级；3) 硬编码默认值最低优先级。高优先级源 MUST 覆盖低优先级源的对应键（如 storage.data_root 配置为 ./data_local 且环境变量 CL_DATA_ROOT=/prod 并存时，数据根 accessor SHALL 返回 /prod）。MUST NOT 出现配置源绕过优先级链直接生效的行为。
-  @req:r31
+  
+    场景: cl-env-overrides-yaml-overrides-default
+      假如 config-governance 集成环境就绪（tests/config-governance.test.ts）
+      当 YAML 设 storage.data_root=./data_local 且 CL_DATA_ROOT=/tmp/c125-prod-root 并存
+      那么 数据根 accessor 返回 /tmp/c125-prod-root
+      而且 无 env 时 YAML 生效、两者皆无时硬编码默认 ./data 生效
+
+@req:r31
   规则: CL_* environment variable naming convention
     环境变量 MUST 使用 CL_ 前缀命名空间。MUST 采用 SCREAMING_SNAKE_CASE。MUST 在 config/app.yaml 的 {{ env.CL_* }} 模板中声明对应的 YAML 缺省值。非 CL_ 前缀的环境变量（如 SEARXNG_HOST）仅作为向后兼容 fallback，新配置 MUST 使用 CL_ 前缀。
   @req:r32
   规则: YAML config loading pipeline
     config/app.yaml MUST 经过三段加载流水线：1) 模板渲染 {{ env.* }}/{{ secret.* }}；2) YAML parse（支持 anchors）；3) Zod schema 校验。三个阶段任一失败 MUST 抛出可读错误并在启动时阻止服务启动（非静默降级）。
-  @req:r33
+  
+    场景: pipeline-fails-loudly-on-any-stage
+      假如 config-governance 集成环境就绪
+      当 分别以非法 YAML 语法、models 段非法形状、已移除的 secret.* 模板引用加载
+      那么 三个阶段任一失败均抛出可读错误且不产出配置
+
+@req:r33
   规则: Typed config accessor requirement
     所有配置读取 MUST 通过 typed accessor 函数（数据根目录、默认模型等均各有 accessor）。Accessor MUST 从配置节 + schema 默认值解析并返回类型化对象。MUST NOT 在业务代码中直接解构 raw config 对象。
   @req:r34
   规则: Unified storage data root
     所有运行时文件存储路径（SQLite DB、slides、uploads、content storage）MUST 从 storage.data_root 派生。MUST NOT 独立硬编码路径或使用独立的默认路径（如 ~/.crystalith/storage）。CL_DATA_ROOT 环境变量 MUST 覆盖 YAML 配置。
-  @req:r35
+  
+    场景: data-root-derives-all-storage-paths
+      假如 config-governance 集成环境就绪
+      当 设置 CL_DATA_ROOT 覆盖 YAML 后读取数据根
+      那么 所有运行时存储子路径由同一根派生且覆盖立即生效
+
+@req:r35
   规则: Timeout and limit config governance
     业务超时与限值（timeout、max_retries、max_results、batch_size 等）MUST 通过 config schema 定义默认值并通过 accessor 读取。MUST NOT 在业务代码中直接硬编码数字常量作为运行时逻辑分支依据。UI/前端常量不受此约束。
   @req:r36
@@ -29,6 +48,18 @@
   @req:r37
   规则: Configuration must be deterministic
     同一组环境变量 + 同一份 config/app.yaml MUST 产生完全相同的 AppConfig 对象。配置加载 MUST 是纯函数（无随机、无网络 I/O、无时间依赖）。secret.env 的缺失 MUST 不改变行为（仅日志警告），应用继续以环境变量提供的值运行。
-  @req:r38
+  
+    场景: same-inputs-same-config
+      假如 固定一组环境变量与一份 app.yaml
+      当 连续两次 loadConfig
+      那么 两次结果深度相等且 secret.env 缺失不改变结果（仅日志警告）
+
+@req:r38
   规则: Compiled distribution config resolution semantics
     二进制分发形态下，配置解析 MUST 与源码运行保持同一 CL_* 优先级语义：配置文件默认按 CWD 相对定位（CL_CONFIG_PATH 可覆盖）；Drizzle 迁移目录 MUST 按「源码树 → 可执行文件旁 → CWD」顺序解析；sqlite-vec 原生扩展 MUST 支持以可执行文件旁 native/ 目录（或 CL_SQLITE_VEC_PATH）加载作为包解析回退；静态 web 资源根 MUST 由 CL_WEB_DIST 或可执行文件旁 web/dist 定位，两者均缺席时 server MUST 以纯 API 模式运行（headless），MUST NOT 因资源缺席拒绝启动。MUST NOT 假设源码仓库布局存在。
+
+    场景: distribution-resolution-without-repo-assumptions
+      假如 config-governance 集成环境就绪（tests/config-governance.test.ts）
+      当 调用 resolveMigrationsFolder/resolveSqliteVecNativePath/resolveWebDistRoot
+      那么 迁移目录按三级候选解析、sqlite-vec native 缺席优雅降级不抛错、web-dist 缺席允许 headless（返回 null 或可用根）
+

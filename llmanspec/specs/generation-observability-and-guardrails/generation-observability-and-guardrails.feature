@@ -5,18 +5,6 @@
 
 功能: generation-observability-and-guardrails
 
-  @req:r176
-  规则: Each generation request has a traceId
-    每次生成请求 MUST 有可关联 `traceId`，并贯穿关键日志。
-  @req:r177
-  规则: Stage timing fields are standardized
-    关键阶段日志 MUST 记录标准化耗时字段（如 embed/search/db/format）。
-  @req:r178
-  规则: Error classification is normalized
-    失败日志 MUST 记录标准错误分类字段（如 `errorKind`）与重试/fallback 信息。
-  @req:r179
-  规则: Cache hit/miss is observable
-    使用检索缓存时 MUST 记录 hit/miss，并尽可能携带 traceId。
   @req:r180
   规则: Retry boundaries are not stacked
     同一失败链路 MUST 只在明确边界执行重试，避免多层叠加重试导致放大延迟。AI 重试由 middleware 统一承载，职责见 architecture-plugin-and-agent r15。
@@ -29,9 +17,6 @@
       当 检查 mutex 未释放期间 runLoop 的行为
       那么 runLoop 排队等待且不抢占 mutex
       而且 mutex 释放后认领 work_unit，任务被取消时按取消语义停止
-  @req:r182
-  规则: Background workers shutdown gracefully
-    后台任务队列 worker MUST 支持优雅停机，并等待任务到达可接受的终态。
   @req:r183
   规则: Retry MUST honor Retry-After header and include full retryable codes
     AI 调用重试 MUST 解析并遵守响应的 Retry-After 头（命中时按其指示等待而非使用指数退避），且可重试状态码集合 MUST 包含 408/409/425/429/500/502/503/504

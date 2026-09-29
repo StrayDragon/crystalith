@@ -1,6 +1,6 @@
 // plugin-interface-ssot tests — registry policy/load semantics (r7/r11) and
 // extractor metadata derivation over the registry-backed factory.
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, it, test } from 'bun:test';
 import { afterAll, beforeAll } from 'bun:test';
 
 import { z } from 'zod';
@@ -148,5 +148,39 @@ describe('extractor metadata over the registry', () => {
     expect(meta[1]?.requiresApiKey).toBeTrue();
     expect(meta[2]?.recoveryHint).toContain('CL_FIRECRAWL_API_KEY');
     expect(meta[3]?.enabled).toBeTrue();
+  });
+});
+
+// covers: r16 — extractor 与 slides-workflow 内置插件经同一 CrystalithPlugin
+// registry 路径生效（builtinPlugins 单点聚合 → pluginRegistry 单例消费），
+// 不存在绕过 registry 的平行内置注册形状。
+describe('r16 built-ins register through the single CrystalithPlugin path', () => {
+  it('builtinPlugins aggregates extractor and slides-workflow kinds in one list', async () => {
+    const { builtinPlugins } = await import('../../src/plugins/builtin/index.ts');
+    const kinds = new Set(builtinPlugins.map((p) => p.kind));
+    expect(kinds.has('extractor')).toBe(true);
+    expect(kinds.has('slides-workflow')).toBe(true);
+    // every built-in carries the full CrystalithPlugin contract shape
+    for (const p of builtinPlugins) {
+      expect(typeof p.id).toBe('string');
+      expect(typeof p.displayName).toBe('string');
+      expect(p.configSchema).toBeDefined();
+      expect(Array.isArray(p.capabilities)).toBe(true);
+      expect(typeof p.factory).toBe('function');
+    }
+  });
+
+  it('extractor metadata derives via the shared registry (loadedByKind), not a parallel path', async () => {
+    const { pluginRegistry } = await import('../../src/plugins/registry.ts');
+    const { builtinPlugins } = await import('../../src/plugins/builtin/index.ts');
+    const extractorIds = builtinPlugins.filter((p) => p.kind === 'extractor').map((p) => p.id);
+    const meta = listExtractorMetadata();
+    // listExtractorMetadata reads pluginRegistry.loadedByKind('extractor');
+    // with no settings enabled the impls may be empty, but the ids it CAN
+    // report must all come from the registry's builtin set.
+    for (const m of meta) {
+      expect(extractorIds).toContain(m.id);
+    }
+    expect(typeof pluginRegistry.loadedByKind).toBe('function');
   });
 });

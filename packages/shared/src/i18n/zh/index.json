@@ -57,7 +57,6 @@
   "env.CL_SERVER_HOST": "Elysia 服务器监听地址。默认 127.0.0.1（仅本地）。生产部署设为 0.0.0.0。",
   "env.CL_SERVER_PORT": "Elysia 服务器监听端口。默认 8032。",
   "env.CL_SLIDEV_BASE_URL": "Slidev 预览进程基地址。覆盖 config/app.yaml 中 slides_preview.base_url。留空使用默认值。",
-  "env.CRYSTALITH_API_KEY": "Crystalith 自托管 API 密钥（可选）。启用 app.auth 时用于 Bearer 认证。",
   "env.FIRECRAWL_API_KEY": "[DEPRECATED] 使用 CL_FIRECRAWL_API_KEY。Firecrawl API 密钥。",
   "env.GOOGLE_GENERATIVE_AI_API_KEY": "Google Generative AI API 密钥。用于直接 Google 调用。",
   "env.JINA_API_KEY": "[DEPRECATED] 使用 CL_JINA_API_KEY。Jina Reader API 密钥。",

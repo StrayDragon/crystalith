@@ -13,9 +13,6 @@
       假如 e2e 冒烟套件 p0-smoke.spec.ts 就绪
       当 逐条发起其中的业务 API 请求
       那么 全部请求路径均以"/v2"开头
-  @req:r345
-  规则: Optional API key authentication is supported for self-host
-    当 `app.auth.enabled` 且配置鉴权密钥时，`/v2/**` 端点 MUST 要求 Bearer token，未携带有效 token 的请求 SHALL 返回 401；未启用时 MAY 匿名访问。本条同时是「health 匿名可达」的 canonical 断言：启用鉴权后 `/health` 与 `/health/dependencies` SHALL 保持匿名可访问以支持探活与运维诊断。
   @req:r346
   规则: Non-SSE errors use unified envelope
     非 SSE 错误响应 MUST 使用统一错误信封：`errorCode`, `message`, `details?`, `retryAfter?`。所有非 SSE 错误 MUST 经共享错误 helper（或等价入口）返回，HTTP status→errorCode 映射 MUST 来自集中映射表；MUST NOT 返回 {error: string} 等 ad-hoc 形状。

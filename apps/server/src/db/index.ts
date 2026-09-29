@@ -32,7 +32,7 @@ export function getDbPath(): string {
 // In a compiled binary `import.meta.url` points into Bun's virtual FS, so the
 // source-relative candidate misses and the release layout wins. Each candidate
 // must contain `meta/_journal.json` to count.
-function resolveMigrationsFolder(): string | null {
+export function resolveMigrationsFolder(): string | null {
   const candidates = [
     import.meta.dirname ? join(import.meta.dirname, '..', '..', 'drizzle') : null,
     join(dirname(process.execPath), 'drizzle'),

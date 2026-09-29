@@ -71,11 +71,6 @@ export const AppSettingsSchema = z.object({
         .describe(desc('app.features.workspace_frontend_bundles_enabled')),
     })
     .optional(),
-  auth: z
-    .object({
-      enabled: z.boolean().default(false).describe(desc('app.auth.enabled')),
-    })
-    .optional(),
   cors: z
     .object({
       allow_origins: z

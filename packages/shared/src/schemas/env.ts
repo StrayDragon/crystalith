@@ -65,8 +65,6 @@ export const BuildRunEnvSchema = z
 
     CL_FIRECRAWL_API_KEY: z.string().default('').describe(desc('env.CL_FIRECRAWL_API_KEY')),
 
-    CRYSTALITH_API_KEY: z.string().default('').describe(desc('env.CRYSTALITH_API_KEY')),
-
     OPENAI_API_KEY: z.string().default('').describe(desc('env.OPENAI_API_KEY')),
 
     ANTHROPIC_API_KEY: z.string().default('').describe(desc('env.ANTHROPIC_API_KEY')),
