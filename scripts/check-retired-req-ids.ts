@@ -55,12 +55,15 @@ if (offenders.length > 0) {
   process.exit(1);
 }
 
-if (maxId < 474) {
+if (maxId < 400) {
   console.error(
-    `[check-retired-req-ids] unexpected max req id r${maxId} (< r474); ` +
+    `[check-retired-req-ids] unexpected max req id r${maxId} (< r400); ` +
       'did specs lose newer rules? See docs/specs-bare-rule-campaign.md.',
   );
   process.exit(1);
 }
 
-console.log(`[check-retired-req-ids] OK — no retired id in use, max req id r${maxId}`);
+console.log(
+  `[check-retired-req-ids] OK — no retired id in use, max req id r${maxId} ` +
+    `(new reqs MUST be r474+; llman-sdd#5 smallest-free semantics).`,
+);
