@@ -296,6 +296,15 @@ describe('r52 (rewritten) raw bytes persist for re-parse', () => {
       mimeType: 'text/plain',
     });
     expect(result.status).toBe('ready');
+    // pipeline persists bytes fire-and-forget（best-effort、不阻塞 ready），
+    // 有界轮询等落盘，避免与 save 竞态导致偶发 ENOENT。
+    const deadline = Date.now() + 5_000;
+    while (!(await contentStorage.exists(result.sourceId))) {
+      if (Date.now() > deadline) {
+        throw new Error(`contentStorage.save did not land for source ${result.sourceId} within 5s`);
+      }
+      await Bun.sleep(10);
+    }
     const stored = await contentStorage.fetch(result.sourceId);
     expect(new TextDecoder().decode(stored)).toBe(payload);
   });
