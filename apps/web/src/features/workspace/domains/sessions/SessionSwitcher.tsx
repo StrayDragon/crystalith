@@ -336,6 +336,8 @@ export default function SessionSwitcher({
         variant="text"
         size="sm"
         className="rounded-none h-full w-8 hover:bg-gray-100"
+        aria-label="新建会话"
+        {...tid(TestIds.sessionCreateButton)}
         onClick={() => {
           void (async () => {
             await onCreate();

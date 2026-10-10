@@ -95,6 +95,9 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
+        // Playwright 1.64 forwards `screen` from device descriptors; keep
+        // window.screen aligned with the old CSS-pixel viewport for this suite.
+        screen: undefined,
         ...(process.env.CL_E2E_USE_SYSTEM_CHROME === '0' ? {} : { channel: 'chrome' as const }),
       },
     },

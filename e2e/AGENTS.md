@@ -23,3 +23,18 @@ just qa            # primary PR gate (includes e2e @p0 + web Rstest)
 | Lab mode        | Eden default                               | **Eden only** (fixture mode decommissioned)       |
 
 On failure: Playwright keeps screenshot/trace/video; Eden Lab tests also attach run JSON + full-page shot via `attachResearchDiagnostics`.
+
+## README demo capture
+
+Against **live** `just dev` (not this e2e stack): `bunx playwright install ffmpeg`
+once, then `bun e2e/capture-demo.ts` and `e2e/build-demo-media.sh`. Uses Playwright
+1.64 `page.screencast` (chapter cards, synthetic cursor, captions), ffmpeg
+`xfade`, then **1.1x** (`DEMO_SPEED`). Three clips, core surfaces only:
+
+| file | chapters |
+| --- | --- |
+| `docs/demo-chat.mp4` | workspace + cited chat |
+| `docs/demo-notebook.mp4` | source detail + Studio briefing |
+| `docs/demo-research.mp4` | Research Lab graph |
+
+Upload each to GitHub user-attachments and put the URLs in the README HTML `<video>` table.

@@ -89,6 +89,7 @@ export const TestIds = {
   chatMessageItem: 'chat-message-item',
   sessionSwitcherTrigger: 'session-switcher-trigger',
   sessionSwitcherOverlay: 'session-switcher-overlay',
+  sessionCreateButton: 'session-create-button',
 
   // Studio / notes
   studioPanel: 'studio-panel',

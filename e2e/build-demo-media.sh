@@ -1,58 +1,102 @@
 #!/usr/bin/env bash
-# Assemble capture-demo.ts chapter webms into the README demo assets:
-#   assets/demo.gif   — inline loop (10fps, 1024w, palette-optimized)
-#   docs/demo.mp4     — full walkthrough (h264)
+# Assemble capture-demo.ts chapter webms into three README clips:
+#   docs/demo-chat.mp4      — 工作台 + 带引用问答
+#   docs/demo-notebook.mp4  — 来源 + Studio 输出
+#   docs/demo-research.mp4  — Deep Research Lab
 #
-# Per-chapter speed multipliers keep the pacing tight: the generate chapter
-# hides a ~15s synchronous LLM POST behind a 4x speedup.
+# Per-chapter speed, then xfade (fade math stays in sped time):
+#   DEMO_SPEED=1.1           default for chat / research / sources
+#   DEMO_GENERATE_SPEED=2.5  squash Studio LLM waiting in demo-notebook
 #
-# Usage: e2e/build-demo-media.sh [VIDEO_DIR]   (default e2e/.tmp/demo-videos)
+# Usage: e2e/build-demo-media.sh [VIDEO_DIR]
 set -euo pipefail
 
 DIR="${1:-$(dirname "$0")/.tmp/demo-videos}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WORK="$DIR/assemble"
-mkdir -p "$WORK"
+FADE="${DEMO_XFADE:-0.45}"
+SPEED="${DEMO_SPEED:-1.1}"
+GENERATE_SPEED="${DEMO_GENERATE_SPEED:-2.5}"
+mkdir -p "$WORK" "$ROOT/docs"
 
-speedup() { # speedup FILE MULTIPLIER OUT
-  ffmpeg -y -loglevel error -i "$1" -vf "setpts=PTS/$3" -an "$2"
-}
-
-trim_head() { # trim_head FILE SECONDS OUT
-  ffmpeg -y -loglevel error -ss "$2" -i "$1" -an "$3"
-}
-
-# Normalize every chapter to 25fps yuv420p for lossless concat.
 norm() { # norm IN OUT
-  ffmpeg -y -loglevel error -i "$1" -r 25 -pix_fmt yuv420p -an "$2"
+  ffmpeg -y -loglevel error -i "$1" -r 30 -pix_fmt yuv420p -an "$2"
 }
 
-: > "$WORK/list.txt"
+xfade_filter() {
+  python3 - "$FADE" "$@" <<'PY'
+import subprocess, sys
+fade = float(sys.argv[1])
+files = sys.argv[2:]
+durs = []
+for f in files:
+    out = subprocess.check_output(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+         "-of", "default=nw=1:nk=1", f],
+        text=True,
+    ).strip()
+    durs.append(float(out))
+parts = []
+last = "[0:v]"
+acc = 0.0
+n = len(files)
+for i in range(1, n):
+    acc += durs[i - 1]
+    offset = max(0.0, acc - fade * i)
+    label = "vout" if i == n - 1 else f"v{i}"
+    parts.append(
+        f"{last}[{i}:v]xfade=transition=fade:duration={fade}:offset={offset:.3f}[{label}]"
+    )
+    last = f"[{label}]"
+print(";".join(parts))
+PY
+}
 
-add() { # add FILE [SPEED]
-  local src="$DIR/$1" out="$WORK/$1"
-  if [ -n "${2:-}" ]; then
-    speedup "$src" "$out" "$2"
-  else
-    trim_head "$src" 0.4 "$out"
+prep() { # prep WEBNAME SPEED → prints mp4 path
+  local src="$DIR/$1" sped="$WORK/${1%.webm}.s${2}.mp4" raw="$WORK/${1%.webm}.raw.mp4"
+  if [ ! -f "$src" ]; then
+    echo "missing $1" >&2
+    return 1
   fi
-  norm "$out" "$out.norm.mp4"
-  echo "file '$out.norm.mp4'" >> "$WORK/list.txt"
+  norm "$src" "$raw"
+  ffmpeg -y -loglevel error -i "$raw" -vf "setpts=PTS/$2" -an "$sped"
+  echo "$sped"
 }
 
-[ -f "$DIR/1-overview.webm" ] && add 1-overview.webm
-[ -f "$DIR/2-chat.webm" ] && add 2-chat.webm
-[ -f "$DIR/3-generate.webm" ] && add 3-generate.webm 4
-[ -f "$DIR/4-research.webm" ] && add 4-research.webm
-[ -f "$DIR/5-new-notebook.webm" ] && add 5-new-notebook.webm
+join_clips() { # join_clips OUT clip.mp4...
+  local out="$1"
+  shift
+  if [ "$#" -eq 1 ]; then
+    ffmpeg -y -loglevel error -i "$1" \
+      -c:v libx264 -pix_fmt yuv420p -crf 20 -preset medium -movflags +faststart "$out"
+    return
+  fi
+  local filter inputs=()
+  filter="$(xfade_filter "$@")"
+  local c
+  for c in "$@"; do
+    inputs+=(-i "$c")
+  done
+  ffmpeg -y -loglevel error "${inputs[@]}" -filter_complex "$filter" -map "[vout]" \
+    -c:v libx264 -pix_fmt yuv420p -crf 20 -preset medium -movflags +faststart "$out"
+}
 
-mkdir -p "$ROOT/docs" "$ROOT/assets"
-ffmpeg -y -loglevel error -f concat -safe 0 -i "$WORK/list.txt" \
-  -c:v libx264 -crf 23 -preset medium -movflags +faststart "$ROOT/docs/demo.mp4"
+emit() {
+  local out="$1"
+  local dur
+  dur="$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$out")"
+  echo "→ $out  $(du -h "$out" | cut -f1)  ${dur}s"
+}
 
-ffmpeg -y -loglevel error -i "$ROOT/docs/demo.mp4" -vf \
-  "fps=10,scale=1024:-1:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer" \
-  "$ROOT/assets/demo.gif"
-
-echo "→ $ROOT/docs/demo.mp4   $(du -h "$ROOT/docs/demo.mp4" | cut -f1)"
-echo "→ $ROOT/assets/demo.gif $(du -h "$ROOT/assets/demo.gif" | cut -f1)"
+if c1="$(prep 1-overview.webm "$SPEED")" && c2="$(prep 2-chat.webm "$SPEED")"; then
+  join_clips "$ROOT/docs/demo-chat.mp4" "$c1" "$c2"
+  emit "$ROOT/docs/demo-chat.mp4"
+fi
+if s1="$(prep 3-sources.webm "$SPEED")" && s2="$(prep 4-generate.webm "$GENERATE_SPEED")"; then
+  join_clips "$ROOT/docs/demo-notebook.mp4" "$s1" "$s2"
+  emit "$ROOT/docs/demo-notebook.mp4"
+fi
+if r1="$(prep 5-research.webm "$SPEED")"; then
+  join_clips "$ROOT/docs/demo-research.mp4" "$r1"
+  emit "$ROOT/docs/demo-research.mp4"
+fi

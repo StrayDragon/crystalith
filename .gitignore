@@ -250,6 +250,10 @@ test-results/
 e2e/.tmp/
 e2e/playwright-report/
 e2e/test-results/
+# README demo assemble output — upload to GitHub user-attachments, do not commit
+docs/demo.mp4
+docs/demo-*.mp4
+assets/demo.gif
 # Build output
 
 dist/
