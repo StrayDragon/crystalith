@@ -7,7 +7,6 @@
 [![](https://img.shields.io/badge/bun-%3E%3D1.4-f472b6?style=flat-square&logo=bun)](https://bun.sh)
 [![](https://img.shields.io/github/actions/workflow/status/StrayDragon/crystalith/ci.yml?style=flat-square&logo=github&label=CI)](https://github.com/StrayDragon/crystalith/actions/workflows/ci.yml)
 [![](https://img.shields.io/github/actions/workflow/status/StrayDragon/crystalith/release.yml?style=flat-square&logo=github&label=Release)](https://github.com/StrayDragon/crystalith/actions/workflows/release.yml)
-[![](https://img.shields.io/github/stars/StrayDragon/crystalith?style=flat-square&logo=github)](https://github.com/StrayDragon/crystalith/stargazers)
 [![](https://img.shields.io/github/last-commit/StrayDragon/crystalith/main?style=flat-square&logo=github&label=last%20commit)](https://github.com/StrayDragon/crystalith/commits/main)
 
 **自托管的 AI 知识笔记本 — 资料喂进去，理解留得下。**
@@ -20,10 +19,26 @@
 
 Crystalith 是一个本地优先的笔记本研究和提炼应用：每个笔记本聚集一组资料源（PDF、网页、arXiv、Obsidian Vault、本地目录），基于本地向量检索做**带引用的问答**，一键产出六类学习输出（简报、指南、闪卡、思维导图、测验、时间线）；**Deep Research** 模式还能在预算内多轮取证、综合成一份研究报告。
 
-https://github.com/user-attachments/assets/69d8238b-b015-47c4-9852-31ce71de496d
+<table>
+  <tr>
+    <th width="33%">带引用问答</th>
+    <th width="33%">笔记 · Studio</th>
+    <th width="33%">Deep Research</th>
+  </tr>
+  <tr>
+    <td>
+      <video src="https://github.com/user-attachments/assets/c976e22c-98f0-4c00-ac30-2c8e539ada94" width="100%" controls muted playsinline></video>
+    </td>
+    <td>
+      <video src="https://github.com/user-attachments/assets/928beea2-ba42-4b45-a71a-b8af8f242d66" width="100%" controls muted playsinline></video>
+    </td>
+    <td>
+      <video src="https://github.com/user-attachments/assets/e89c42ea-448c-4558-b276-0359ddd4f111" width="100%" controls muted playsinline></video>
+    </td>
+  </tr>
+</table>
 
-<!-- 演示媒体不入库：上方为 user-attachments 托管的 mp4（裸链接 GitHub 会渲染成内联播放器）。
-     重录：just dev 后运行 bun e2e/capture-demo.ts 录制章节，再执行 e2e/build-demo-media.sh 合成。 -->
+<!-- 演示 mp4 不入库（docs/demo-*.mp4）。重录：just dev 后 bun e2e/capture-demo.ts，再 e2e/build-demo-media.sh；上传 user-attachments 后替换上表 src。 -->
 
 数据落在单个本地 SQLite 文件里，模型走你自己的 OpenAI 兼容网关（llama.cpp / Ollama / vLLM / 云 API 均可）——资料和 key 都不经过第三方。
 
