@@ -207,8 +207,9 @@ function ChatPanel({
     [commandSelectedIndex, commandSuggestions],
   );
 
+  const showMessageSkeleton = isLoadingMessages && messages.length === 0;
   const shouldRenderMessageList =
-    isConnected && !isBlocked && !isLoadingMessages && !messagesError && messages.length > 0;
+    isConnected && !isBlocked && !messagesError && messages.length > 0;
 
   const handleCopy = useCallback(async (messageId: string, content: string) => {
     const success = await copyToClipboard(content);
@@ -449,7 +450,7 @@ function ChatPanel({
             <EmptyHint title="未连接到后端服务，请检查服务状态后重试。" />
           ) : isBlocked ? (
             <EmptyHint title="请先创建笔记本，再开始对话。" />
-          ) : isLoadingMessages ? (
+          ) : showMessageSkeleton ? (
             <SkeletonList items={3} className="py-1" />
           ) : messagesError ? (
             <div className="text-xs text-red-600 dark:text-red-300">

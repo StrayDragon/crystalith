@@ -232,21 +232,30 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
     set({ sessions });
   },
   setActiveSession: (id) => {
-    set((state) => ({
-      activeSessionId: id,
-      // Reset messages & citations when switching sessions (mirrors old reducer)
-      messages: [],
-      citations: [],
-      hoveredCitationChunkId: null,
-      hoveredMessageChunkIds: [],
-      jumpToCitationChunkId: null,
-      jumpToSourceTarget: null,
-      errors: {
-        ...state.errors,
-        messages: '',
-        send: '',
-      },
-    }));
+    set((state) => {
+      // Switching between two real sessions (or clearing) drops transcript.
+      // null → id is first-session attach during send: keep the optimistic
+      // user bubble that sendMessage already wrote.
+      const switching = state.activeSessionId != null && state.activeSessionId !== id;
+      const clearing = id == null;
+      if (!switching && !clearing) {
+        return { activeSessionId: id };
+      }
+      return {
+        activeSessionId: id,
+        messages: [],
+        citations: [],
+        hoveredCitationChunkId: null,
+        hoveredMessageChunkIds: [],
+        jumpToCitationChunkId: null,
+        jumpToSourceTarget: null,
+        errors: {
+          ...state.errors,
+          messages: '',
+          send: '',
+        },
+      };
+    });
   },
 
   // --- Sources ---

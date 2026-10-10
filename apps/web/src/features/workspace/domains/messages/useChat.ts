@@ -50,6 +50,25 @@ function errorStatus(error: unknown): number | undefined {
   return typeof error.status === 'number' ? error.status : undefined;
 }
 
+/** Keep optimistic/in-flight rows when a SWR fetch races the first send. */
+export function reconcileMessages(
+  fetched: WorkspaceChatMessage[],
+  local: WorkspaceChatMessage[],
+  preservePending: boolean,
+): WorkspaceChatMessage[] {
+  if (!preservePending) return fetched;
+  const fetchedIds = new Set(fetched.map((message) => message.id));
+  const fetchedUserContents = new Set(
+    fetched.filter((message) => message.role === 'user').map((message) => message.content),
+  );
+  const pending = local.filter((message) => {
+    if (fetchedIds.has(message.id)) return false;
+    if (message.role === 'user' && fetchedUserContents.has(message.content)) return false;
+    return true;
+  });
+  return pending.length === 0 ? fetched : [...fetched, ...pending];
+}
+
 function ensureAssistantMessage(
   messageId: string,
   scope: WorkspaceChatMessage['citationScope'] | undefined,
@@ -158,9 +177,11 @@ export function useChat({
       return preservedScope ? { ...message, citationScope: preservedScope } : message;
     });
     const s = store.getState();
-    s.setMessages(merged);
+    // First send creates the session → SWR key appears and often returns [].
+    // Replacing here would drop the optimistic user bubble until stream/mutate.
+    s.setMessages(reconcileMessages(merged, s.messages, s.loading.send || isStreaming));
     s.setError('messages', '');
-  }, [data, error, store]);
+  }, [data, error, store, isStreaming]);
 
   const setDraft = useCallback(
     (value: string) => {
@@ -596,7 +617,7 @@ export function useChat({
     citations: citationsCurrent,
     retryMessages,
     retrySend,
-    isLoadingMessages: isLoading,
+    isLoadingMessages: isLoading && messages.length === 0,
     messagesError: errMessages,
     isConverting,
     convertSessionToSource: handleConvertSessionToSource,

@@ -132,6 +132,19 @@ test('setActiveSession clears session-scoped state', () => {
   expect(next.errors.send).toBe('');
 });
 
+test('setActiveSession keeps messages when attaching the first session', () => {
+  useWorkspaceStore.setState({
+    activeSessionId: null,
+    messages: [{ id: 'local-1', role: 'user', content: '刚发出去' } as any],
+  });
+
+  useWorkspaceStore.getState().setActiveSession(88);
+
+  const next = useWorkspaceStore.getState();
+  expect(next.activeSessionId).toBe(88);
+  expect(next.messages).toEqual([{ id: 'local-1', role: 'user', content: '刚发出去' }]);
+});
+
 test('appendMessageContent updates only the target message', () => {
   useWorkspaceStore.setState({
     messages: [

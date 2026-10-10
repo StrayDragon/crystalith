@@ -7,7 +7,7 @@ import { SWRConfig } from 'swr';
 import { server } from '../../../../test-utils/msw/server';
 import { renderHook } from '../../../../test-utils/renderHook';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
-import { useChat } from './useChat';
+import { reconcileMessages, useChat } from './useChat';
 
 const streamRequestMock = rs.fn();
 
@@ -558,4 +558,66 @@ test('stopStreaming rolls back provisional assistant message before done', async
   expect(
     useWorkspaceStore.getState().messages.filter((message) => message.role === 'user'),
   ).toHaveLength(1);
+});
+
+test('reconcileMessages keeps optimistic user rows when the fetch is still empty', () => {
+  const local = [{ id: 'local-1', role: 'user' as const, content: '第一问' }];
+  expect(reconcileMessages([], local, true)).toEqual(local);
+  expect(reconcileMessages([], local, false)).toEqual([]);
+});
+
+test('reconcileMessages drops optimistic user once the server echo arrives', () => {
+  const local = [{ id: 'local-1', role: 'user' as const, content: '第一问' }];
+  const fetched = [{ id: '9', role: 'user' as const, content: '第一问' }];
+  expect(reconcileMessages(fetched, local, true)).toEqual(fetched);
+});
+
+test('sendMessage keeps the optimistic user bubble if session create fetches []', async () => {
+  streamRequestMock.mockImplementation(async function* () {
+    yield {
+      event: 'state_snapshot',
+      data: { messageId: 7701, shared_state: buildSharedState('7701') },
+    };
+    yield { event: 'chunk', data: { text: '答' } };
+    await new Promise<void>(() => {
+      /* hold the stream so SWR's empty GET can race */
+    });
+  });
+
+  const ensureSession = rs.fn().mockImplementation(async () => {
+    useWorkspaceStore.getState().setActiveSession(88);
+    return 88;
+  });
+  const { result } = renderHook(() => useChat({ ensureSession, enableStreaming: true }), {
+    wrapper: wrapSWR,
+  });
+
+  act(() => {
+    const s = useWorkspaceStore.getState();
+    s.setConnectionState('live');
+    s.setActiveNotebook(1);
+    s.setDraft('第一问会出现在对话区');
+  });
+
+  act(() => {
+    void result.current.sendMessage();
+  });
+
+  await waitFor(() => {
+    expect(result.current.isStreaming).toBe(true);
+  });
+  await act(async () => {
+    await new Promise((resolve) => {
+      setTimeout(resolve, 40);
+    });
+  });
+
+  const userRows = useWorkspaceStore
+    .getState()
+    .messages.filter((message) => message.role === 'user');
+  expect(userRows.some((message) => message.content === '第一问会出现在对话区')).toBe(true);
+
+  act(() => {
+    result.current.stopStreaming();
+  });
 });

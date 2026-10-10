@@ -249,3 +249,12 @@ test('assistant mid-stream unclosed fence does not leak raw fence characters', a
   // 流式中间态：未闭合围栏不闪现原始字符
   expect(screen.queryByText('```ts')).not.toBeInTheDocument();
 });
+
+test('chat panel still shows local messages while history is loading', async () => {
+  renderChatPanel({
+    isLoadingMessages: true,
+    messages: [{ id: 'user-1', role: 'user', content: '刚发出去的问题' }],
+  });
+
+  expect(await screen.findByText('刚发出去的问题')).toBeTruthy();
+});
