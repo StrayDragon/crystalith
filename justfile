@@ -142,6 +142,11 @@ check: typecheck lint format-check
 audit-fallow:
     @fallow audit {{ _qfallow }}
 
+# 架构图 gate：循环依赖（全量二值检查，无存量债问题，恒可 gate）+ 边界（已配置时）。
+# 0.2s 级；新增环立即红。boundary rules 未配置前该段自动空转。
+audit-fallow-arch:
+    @fallow architecture --cycles {{ _qfallow }}
+
 # Type-aware linting (oxlint with tsconfig) — advisory; NOT part of `just qa`
 # (pre-existing errors, especially in test files). Run manually before large PRs.
 type-aware-lint:
@@ -161,7 +166,7 @@ check-bun:
 #   - `just test-bdd` — server BDD CRUD subset
 #   - `just type-aware-lint` — advisory type-aware oxlint
 # Requires Chromium once: `just e2e-install` (or system Chrome; see e2e recipe)
-qa: check check-env-examples check-app-schema check-i18n-keys check-provider-deps audit-fallow test test-web e2e
+qa: check check-env-examples check-app-schema check-i18n-keys check-provider-deps audit-fallow audit-fallow-arch test test-web e2e
     @echo "✅ QA passed"
 
 # Server + shared unit/integration tests — L0: 仅错误级应用日志 + 失败
