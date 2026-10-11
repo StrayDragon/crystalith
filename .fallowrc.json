@@ -1,7 +1,12 @@
 {
   // This file is JSONC: fallow reads these comments; generic JSON tools may not.
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
-  "entry": ["src/index.{js,jsx,mjs}", "src/main.{js,jsx,mjs}"],
+  "entry": [
+    // 各 workspace 由插件自动识别；此处补齐 CLI/构建/CI 辅助脚本入口
+    "scripts/*.{ts,js}",
+    "e2e/*.{ts,js}",
+    "apps/web/scripts/*.{js,ts}"
+  ],
   "workspaces": {
     "patterns": ["apps/server", "apps/web", "packages/*", "e2e"]
   },
