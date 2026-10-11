@@ -136,10 +136,10 @@ typecheck:
 # Run all quality checks (output minimized — only errors/warnings)
 check: typecheck lint format-check
 
-# Fallow PR audit — 只对变更文件 gate（新增问题才 fail，继承问题豁免）。
+# Fallow PR 审计 — 只对变更文件 gate（新增问题才 fail，继承问题豁免）。
 # L0: 仅 verdict + 摘要; L2: 全量报告。本地未提交时 scope=工作树 vs merge-base。
 # CI (GitHub Actions) 用 `fallow audit --base origin/$GITHUB_BASE_REF`，见 ci.yml。
-fallow-audit:
+audit-fallow:
     @fallow audit {{ _qfallow }}
 
 # Type-aware linting (oxlint with tsconfig) — advisory; NOT part of `just qa`
@@ -161,7 +161,7 @@ check-bun:
 #   - `just test-bdd` — server BDD CRUD subset
 #   - `just type-aware-lint` — advisory type-aware oxlint
 # Requires Chromium once: `just e2e-install` (or system Chrome; see e2e recipe)
-qa: check check-env-examples check-app-schema check-i18n-keys check-provider-deps fallow-audit test test-web e2e
+qa: check check-env-examples check-app-schema check-i18n-keys check-provider-deps audit-fallow test test-web e2e
     @echo "✅ QA passed"
 
 # Server + shared unit/integration tests — L0: 仅错误级应用日志 + 失败

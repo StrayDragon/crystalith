@@ -59,7 +59,7 @@ jobs:
       # 显式 --base: push 事件无 PR 语义时也稳定; fork PR 注解无需写权限
       - name: Fallow audit (changed files gate)
         if: github.event_name == 'pull_request'
-        run: just fallow-audit
+        run: just audit-fallow
         env:
           FALLOW_AUDIT_BASE: origin/${{ github.base_ref || 'main' }}
       - name: Fallow annotations
