@@ -128,46 +128,23 @@ export function useNotebooks() {
     [store],
   );
 
-  const handleCreateNotebook = useCallback(async () => {
-    const name = createNameCurrent.trim();
-    if (!name || connectionState !== 'live') return false;
-    const s = store.getState();
-    s.setCreateState('loading');
-    s.setError('create', '');
-    try {
-      const { data: created, error } = await api.v2.notebooks.post({ name });
-      if (error)
-        throw new Error(typeof error === 'string' ? error : typeof error === 'string' ? error : '');
-      const newNotebook = created;
-      await mutate(async (current) => (current ? [...current, newNotebook] : [newNotebook]), {
-        revalidate: false,
-      });
-      const normalized = normalizeNotebook(newNotebook);
-      const s2 = store.getState();
-      s2.setCreateName('');
-      s2.setActiveNotebook(normalized.id);
-      return true;
-    } catch {
-      store.getState().setError('create', '创建失败，请检查后端状态。');
-      return false;
-    } finally {
-      store.getState().setCreateState('idle');
-    }
-  }, [mutate, connectionState, createNameCurrent, store]);
-
-  const handleCreateNotebookQuick = useCallback(
-    async (name?: string) => {
-      // intentionally || — empty trim gets default notebook name
-      // oxlint-disable-next-line typescript/prefer-nullish-coalescing
-      const finalName = name?.trim() || DEFAULT_NOTEBOOK_NAME;
-      if (!finalName || connectionState !== 'live') return false;
+  /**
+   * Shared create flow: guard → loading → POST → SWR prepend → activate → error/idle.
+   * `clearForm` also resets the create-name input (dialog path only).
+   */
+  const createNotebookRequest = useCallback(
+    async (name: string, query?: { templateId: number }, clearForm = false): Promise<boolean> => {
+      if (!name || connectionState !== 'live') return false;
 
       const s = store.getState();
       s.setCreateState('loading');
       s.setError('create', '');
 
       try {
-        const { data: created, error } = await api.v2.notebooks.post({ name: finalName });
+        const { data: created, error } = await api.v2.notebooks.post(
+          { name },
+          query ? { query } : undefined,
+        );
         if (error)
           throw new Error(
             typeof error === 'string' ? error : typeof error === 'string' ? error : '',
@@ -177,6 +154,7 @@ export function useNotebooks() {
           revalidate: false,
         });
         const normalized = normalizeNotebook(newNotebook);
+        if (clearForm) store.getState().setCreateName('');
         store.getState().setActiveNotebook(normalized.id);
         return true;
       } catch {
@@ -189,39 +167,27 @@ export function useNotebooks() {
     [mutate, connectionState, store],
   );
 
-  const handleCreateNotebookFromTemplate = useCallback(
-    async (templateId: number, name: string) => {
-      const finalName = name.trim() || DEFAULT_NOTEBOOK_NAME;
-      if (!finalName || connectionState !== 'live') return false;
+  const handleCreateNotebook = useCallback(async () => {
+    const name = createNameCurrent.trim();
+    return createNotebookRequest(name, undefined, true);
+  }, [createNotebookRequest, createNameCurrent]);
 
-      const s = store.getState();
-      s.setCreateState('loading');
-      s.setError('create', '');
-
-      try {
-        const { data: created, error } = await api.v2.notebooks.post(
-          { name: finalName },
-          { query: { templateId } },
-        );
-        if (error)
-          throw new Error(
-            typeof error === 'string' ? error : typeof error === 'string' ? error : '',
-          );
-        const newNotebook = created;
-        await mutate(async (current) => (current ? [...current, newNotebook] : [newNotebook]), {
-          revalidate: false,
-        });
-        const normalized = normalizeNotebook(newNotebook);
-        store.getState().setActiveNotebook(normalized.id);
-        return true;
-      } catch {
-        store.getState().setError('create', '创建失败，请检查后端状态。');
-        return false;
-      } finally {
-        store.getState().setCreateState('idle');
-      }
+  const handleCreateNotebookQuick = useCallback(
+    (name?: string) => {
+      // intentionally || — empty trim gets default notebook name
+      // oxlint-disable-next-line typescript/prefer-nullish-coalescing
+      const finalName = name?.trim() || DEFAULT_NOTEBOOK_NAME;
+      return createNotebookRequest(finalName);
     },
-    [mutate, connectionState, store],
+    [createNotebookRequest],
+  );
+
+  const handleCreateNotebookFromTemplate = useCallback(
+    (templateId: number, name: string) => {
+      const finalName = name.trim() || DEFAULT_NOTEBOOK_NAME;
+      return createNotebookRequest(finalName, { templateId });
+    },
+    [createNotebookRequest],
   );
 
   const retryNotebooks = useCallback(async () => {
