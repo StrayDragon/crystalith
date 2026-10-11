@@ -34,7 +34,7 @@ import {
 // ---------------------------------------------------------------------------
 
 /** Pragmatic stub: text + ActionProposal — never mutates graph. */
-export function stubNodeChatTurn(
+function stubNodeChatTurn(
   node: ResearchNode,
   message: string,
 ): { text: string; proposals: ResearchNodeActionProposal[] } {

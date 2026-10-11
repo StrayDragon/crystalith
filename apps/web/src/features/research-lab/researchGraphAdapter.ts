@@ -67,7 +67,7 @@ export function researchNodeToLabNode(
   };
 }
 
-export function researchEdgeToLabEdge(edge: ResearchEdge): LabEdge {
+function researchEdgeToLabEdge(edge: ResearchEdge): LabEdge {
   return {
     id: edge.id,
     source: edge.source,

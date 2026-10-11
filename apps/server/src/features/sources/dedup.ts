@@ -59,25 +59,3 @@ export function checkDedup(notebookId: number, dedupKey: string): DedupResult {
   }
   return { hit: false };
 }
-
-/** Resolve dedup_action: returns the existing source id for reuse, undefined otherwise. */
-export function resolveDedupAction(
-  notebookId: number,
-  dedupKey: string,
-  action: DedupAction,
-): { existingSourceId: number } | undefined {
-  const dedupResult = checkDedup(notebookId, dedupKey);
-
-  if (dedupResult.hit) {
-    if (action === 'reuse') {
-      return { existingSourceId: dedupResult.existingSourceId };
-    }
-    // 'prompt' → caller throws 409; 'create_new' → ignore
-    if (action === 'prompt') {
-      // caller must check
-      return { existingSourceId: dedupResult.existingSourceId };
-    }
-  }
-
-  return undefined;
-}

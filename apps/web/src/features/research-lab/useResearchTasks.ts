@@ -1,5 +1,3 @@
-import type { ResearchRunStatus } from '@crystalith/shared';
-import { RESEARCH_ACTIVE_STATUSES } from '@crystalith/shared';
 import { useEffect, useMemo, useRef } from 'react';
 import useSWR from 'swr';
 
@@ -14,8 +12,6 @@ import {
   researchQueuePollInterval,
   type ResearchTaskListItem,
 } from './researchTaskTypes';
-
-const ACTIVE_STATUSES: ResearchRunStatus[] = RESEARCH_ACTIVE_STATUSES;
 
 /** Product task list — Eden ResearchRun only (demo injects tasks into the drawer). */
 export function useResearchTasks(notebookId: number | null): {
@@ -78,5 +74,3 @@ export function useResearchTasks(notebookId: number | null): {
     refresh,
   };
 }
-
-export { ACTIVE_STATUSES, refreshResearchTasks, clearResearchTasksCache, researchTasksSwrKey };

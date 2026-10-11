@@ -37,11 +37,11 @@ import { buildFrontmatter } from './theme-presets.ts';
 // Frontmatter helpers (v1 generator.py:150-170)
 // ---------------------------------------------------------------------------
 
-export function stripFrontmatter(md: string): string {
+function stripFrontmatter(md: string): string {
   return md.replace(/^---\n[\s\S]*?\n---\n?/u, '');
 }
 
-export function applyFrontmatter(md: string, frontmatter: string): string {
+function applyFrontmatter(md: string, frontmatter: string): string {
   const stripped = stripFrontmatter(md.trim());
   return `${frontmatter}\n${stripped}`;
 }

@@ -2,7 +2,7 @@
  * Deep Research runtime — thin barrel re-exporting the public API.
  */
 export type { SseEmit } from './research-core.ts';
-export { isPruneProtectedNode, subscribeRun } from './research-core.ts';
+export { isPruneProtectedNode } from './research-core.ts';
 export { scheduleRun } from './run-loop.ts';
 export {
   retrySynthesize,

@@ -270,7 +270,7 @@ async function ingestConnectorEntry(
   };
 }
 
-export async function importSnapshotEntries(
+async function importSnapshotEntries(
   notebookId: number,
   binding: typeof sourceConnectorBindings.$inferSelect,
   entries: SnapshotEntry[],

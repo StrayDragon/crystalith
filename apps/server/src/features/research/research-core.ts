@@ -39,12 +39,12 @@ export const runEmitters = new Map<number, Set<SseEmit>>();
 export const activeLoops = new Set<number>();
 
 /** Per-run AbortController for cancel → abort active work-unit. */
-export const runAbortControllers = new Map<number, AbortController>();
+const runAbortControllers = new Map<number, AbortController>();
 
 /** Per-run node-chat AbortControllers (`${runId}:${nodeId}`). */
 export const chatAbortControllers = new Map<string, AbortController>();
 
-export const TERMINAL_STATUSES = new Set<string>(RESEARCH_TERMINAL_STATUSES);
+const TERMINAL_STATUSES = new Set<string>(RESEARCH_TERMINAL_STATUSES);
 
 /** Confirm kinds accepted by the run confirm gate (mirrors ResearchRunSchema.confirmKind). */
 export type ConfirmKind = 'budget' | 'reexpand' | 'expand_branch';
@@ -98,7 +98,7 @@ export function abortAllChatsForRun(runId: number): void {
   }
 }
 
-export function getProgressEventRetain(): number {
+function getProgressEventRetain(): number {
   return getResearchSettings().progress_event_retain;
 }
 
@@ -462,7 +462,7 @@ export function appendProgressEvent(
   return event;
 }
 
-export function truncateProgressEvents(runId: number): void {
+function truncateProgressEvents(runId: number): void {
   const retain = getProgressEventRetain();
   const rows = db()
     .select({ id: researchProgressEvents.id, seq: researchProgressEvents.seq })
@@ -478,7 +478,7 @@ export function truncateProgressEvents(runId: number): void {
   }
 }
 
-export function statusToProgressKind(status: ResearchRunStatus): ResearchProgressKind | null {
+function statusToProgressKind(status: ResearchRunStatus): ResearchProgressKind | null {
   switch (status) {
     case 'queued':
       return 'run_queued';

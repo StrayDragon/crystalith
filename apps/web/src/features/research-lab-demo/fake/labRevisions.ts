@@ -37,18 +37,8 @@ export interface LabRevisionStore {
 
 const STORE_PREFIX = 'crystalith.research-lab.revisions';
 
-export function revisionsStorageKey(notebookId: number, scenarioId: string): string {
+function revisionsStorageKey(notebookId: number, scenarioId: string): string {
   return `${STORE_PREFIX}.${notebookId}.${scenarioId}`;
-}
-
-export function emptyGraphSlice(topicDraft = ''): LabRevisionGraphSlice {
-  return {
-    phase: 'completed',
-    mutations: EMPTY_MUTATIONS,
-    topicDraft,
-    forkSeq: 0,
-    forceStatus: null,
-  };
 }
 
 function isLabRevisionGraphSlice(value: unknown): value is LabRevisionGraphSlice {
@@ -82,7 +72,7 @@ function parseLabRevisions(value: unknown): LabRevision[] {
   return value.filter(isLabRevision);
 }
 
-export function readRevisionStore(notebookId: number, scenarioId: string): LabRevisionStore {
+function readRevisionStore(notebookId: number, scenarioId: string): LabRevisionStore {
   try {
     const raw = sessionStorage.getItem(revisionsStorageKey(notebookId, scenarioId));
     if (!raw) {
@@ -107,7 +97,7 @@ export function readRevisionStore(notebookId: number, scenarioId: string): LabRe
   }
 }
 
-export function persistRevisionStore(store: LabRevisionStore): void {
+function persistRevisionStore(store: LabRevisionStore): void {
   try {
     sessionStorage.setItem(
       revisionsStorageKey(store.notebookId, store.scenarioId),

@@ -10,7 +10,7 @@ import { sql } from 'drizzle-orm';
 import type { Orm } from './index';
 
 /** Default embedding dimension (bge-m3 = 1024). Overridable per index. */
-export const DEFAULT_EMBEDDING_DIM = 1024;
+const DEFAULT_EMBEDDING_DIM = 1024;
 
 export interface VectorHit {
   rowid: number;

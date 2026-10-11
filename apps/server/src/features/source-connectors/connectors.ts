@@ -1,16 +1,9 @@
 // Built-in filesystem source connector descriptors — mirrors v1 official plugins.
 import type { SourceConnectorDescriptor } from './types.ts';
 
-export const OBSIDIAN_EXTENSIONS = ['.md', '.markdown'] as const;
+const OBSIDIAN_EXTENSIONS = ['.md', '.markdown'] as const;
 
-export const LOCAL_DIRECTORY_EXTENSIONS = [
-  '.md',
-  '.markdown',
-  '.txt',
-  '.html',
-  '.htm',
-  '.pdf',
-] as const;
+const LOCAL_DIRECTORY_EXTENSIONS = ['.md', '.markdown', '.txt', '.html', '.htm', '.pdf'] as const;
 
 export const BUILTIN_CONNECTORS: SourceConnectorDescriptor[] = [
   {

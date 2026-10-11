@@ -57,10 +57,6 @@ export function listGenerationTypes(): GenerationTypeInfo[] {
   return Object.values(REGISTRY);
 }
 
-export function getGenerationType(id: GenerationTypeId): GenerationTypeInfo {
-  return REGISTRY[id];
-}
-
 /** Defaults applied by request assembly (r467). */
 export function defaultOutputType(id: GenerationTypeId): string {
   return REGISTRY[id].defaultOutputType;

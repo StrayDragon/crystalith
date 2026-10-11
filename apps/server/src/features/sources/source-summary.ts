@@ -13,7 +13,7 @@ import { getDefaultChatModel } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { logger } from '../../shared/logger.ts';
 
-export const AUTO_SUMMARY_KEY = 'autoSummary';
+const AUTO_SUMMARY_KEY = 'autoSummary';
 
 export interface AutoSummaryCache {
   summary: string;
@@ -45,7 +45,7 @@ function isAutoSummaryCache(value: unknown): value is AutoSummaryCache {
 }
 
 /** Parse LLM text — mirrors v1 api_summary.py:36 */
-export function parseSummaryResponse(response: string): {
+function parseSummaryResponse(response: string): {
   summary: string;
   keyPoints: string[];
   topics: string[];

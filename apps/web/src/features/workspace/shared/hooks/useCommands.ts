@@ -3,7 +3,7 @@ import useSWR from 'swr';
 
 import { api } from '../../../../api/eden';
 
-export const COMMANDS_CACHE_KEY = 'workspace/commands';
+const COMMANDS_CACHE_KEY = 'workspace/commands';
 
 interface CommandItem {
   id: string;

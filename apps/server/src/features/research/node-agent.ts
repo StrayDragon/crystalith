@@ -39,7 +39,7 @@ function wrapToolIoOutsideLlmLock<T extends { execute?: (...args: never[]) => un
 }
 export type ResearchAgentMode = 'work_unit' | 'node_chat';
 
-export const ResearchNodeAgentCallOptionsSchema = z.object({
+const ResearchNodeAgentCallOptionsSchema = z.object({
   mode: z.enum(['work_unit', 'node_chat']),
   role: z.enum(['question', 'research', 'conclusion']),
   nodeId: z.string().min(1),

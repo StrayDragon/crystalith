@@ -267,11 +267,6 @@ export async function generateOutputByType(
   return output;
 }
 
-/** List available output type metadata. */
-export function listOutputTypes(): OutputMeta[] {
-  return Object.values(OUTPUT_META);
-}
-
 /**
  * Build a retrieval query from output type + optional prompt (c27).
  *

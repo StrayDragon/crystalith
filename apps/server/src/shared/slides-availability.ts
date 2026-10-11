@@ -16,7 +16,7 @@ import { logger } from './logger.ts';
 // result is cached briefly because tools is polled by SWR.
 
 /** Stable errorCodes surfaced through diagnostics.slides.errorCode. */
-export const SlidesErrorCode = {
+const SlidesErrorCode = {
   PLUGIN_MISSING: 'SLIDES_PLUGIN_MISSING',
   PREVIEW_UNREACHABLE: 'SLIDES_PREVIEW_UNREACHABLE',
   PREVIEW_DISABLED: 'SLIDES_PREVIEW_DISABLED',

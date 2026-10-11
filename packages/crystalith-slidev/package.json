@@ -9,8 +9,5 @@
     "dev": "bun scripts/dev.mjs",
     "ensure-preview": "bun scripts/ensure-preview.mjs"
   },
-  "devDependencies": {
-    "@slidev/cli": "^52.18.0",
-    "@slidev/theme-default": "^0.25.0"
-  }
+  "devDependencies": {}
 }

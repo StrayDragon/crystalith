@@ -24,7 +24,7 @@ export function normalizeGenerationConfig(raw: unknown): SlideGenerationConfig |
   };
 }
 
-export function normalizeFrontmatterOverride(value: string | null | undefined): string {
+function normalizeFrontmatterOverride(value: string | null | undefined): string {
   const trimmed = value?.trim() ?? '';
   if (!trimmed) return '';
   if (!trimmed.startsWith('---')) return trimmed;

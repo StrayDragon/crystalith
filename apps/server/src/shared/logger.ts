@@ -40,7 +40,7 @@ export function getLogLevel(): LogLevel {
 /** Request-scoped storage so any log site inherits the active requestId. */
 export const requestContext = new AsyncLocalStorage<{ requestId?: string }>();
 
-export function getRequestId(): string | undefined {
+function getRequestId(): string | undefined {
   return requestContext.getStore()?.requestId;
 }
 

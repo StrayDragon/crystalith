@@ -8,7 +8,6 @@ import { Database } from 'bun:sqlite';
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { sql } from 'drizzle-orm';
 import { drizzle, type BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import * as sqliteVec from 'sqlite-vec';
@@ -21,7 +20,7 @@ import { initVecChunks } from './vectors';
 // Default (<data_root>/crystalith.db) assumes CWD = repo root (justfile
 // ensures this).  Override via CL_DB_PATH env for tests / custom deployments,
 // or set storage.data_root / CL_DATA_ROOT for a project-wide data root.
-export function getDbPath(): string {
+function getDbPath(): string {
   return process.env.CL_DB_PATH ?? join(getDataRoot(), 'crystalith.db');
 }
 
@@ -145,5 +144,4 @@ export function resetDb(orm: Orm | null = null): void {
 }
 
 // Re-export schema + SQL helper for convenience.
-export { schema, sql };
 export * from './schema';

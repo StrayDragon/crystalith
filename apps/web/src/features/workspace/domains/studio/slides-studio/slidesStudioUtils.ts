@@ -70,7 +70,7 @@ export function resolveErrorStatus(error: unknown): number | undefined {
   return undefined;
 }
 
-export function appendRefreshToken(url: string, refreshKey: number): string {
+function appendRefreshToken(url: string, refreshKey: number): string {
   try {
     const resolved = new URL(
       url,

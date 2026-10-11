@@ -64,7 +64,7 @@ export function resetEnvOverlay(): void {
   _envOverlay = null;
 }
 
-export function getConfigPath(): string {
+function getConfigPath(): string {
   return envValue('CL_CONFIG_PATH') ?? 'config/app.yaml';
 }
 

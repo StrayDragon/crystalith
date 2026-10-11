@@ -28,7 +28,7 @@ function getMutex(map: Map<number, MutexState>, runId: number): MutexState {
   return state;
 }
 
-export async function acquireRunLlmLock(runId: number): Promise<void> {
+async function acquireRunLlmLock(runId: number): Promise<void> {
   const state = getMutex(llmMutex, runId);
   if (!state.locked) {
     state.locked = true;
@@ -39,7 +39,7 @@ export async function acquireRunLlmLock(runId: number): Promise<void> {
   });
 }
 
-export function releaseRunLlmLock(runId: number): void {
+function releaseRunLlmLock(runId: number): void {
   const state = llmMutex.get(runId);
   if (!state) return;
   const next = state.waiters.shift();

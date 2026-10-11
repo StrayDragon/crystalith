@@ -69,35 +69,3 @@ export function clearCache(): void {
   sourcesEpochs.clear();
   vectorEpochs.clear();
 }
-
-// ---------------------------------------------------------------------------
-// Legacy EpochCache class — kept for backwards compat but now delegates to the
-// module-level functions above. Prefer getCached/setCached directly.
-// ---------------------------------------------------------------------------
-
-export class EpochCache<T> {
-  private store = new Map<string, { data: T; epoch: number }>();
-
-  get(key: string, currentEpoch: number): T | undefined {
-    const entry = this.store.get(key);
-    return entry?.epoch === currentEpoch ? entry.data : undefined;
-  }
-
-  set(key: string, data: T, epoch: number): void {
-    this.store.set(key, { data, epoch });
-  }
-
-  clear(): void {
-    this.store.clear();
-  }
-
-  clearEpoch(epoch: number): void {
-    for (const [key, entry] of this.store) {
-      if (entry.epoch === epoch) this.store.delete(key);
-    }
-  }
-
-  get size(): number {
-    return this.store.size;
-  }
-}

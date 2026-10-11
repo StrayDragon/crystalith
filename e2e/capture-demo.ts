@@ -42,8 +42,7 @@ const ACTION_STYLE = {
   style: {
     point:
       'width: 16px; height: 16px; border-radius: 50%; background: #3b82f6; box-shadow: 0 0 0 8px rgba(59,130,246,0.28);',
-    highlight:
-      'outline: 2px solid #3b82f6; background: rgba(59,130,246,0.12); border-radius: 8px;',
+    highlight: 'outline: 2px solid #3b82f6; background: rgba(59,130,246,0.12); border-radius: 8px;',
     title: 'display: none;',
   },
 };
@@ -156,65 +155,83 @@ async function chapterChat(browser: Browser) {
 }
 
 async function chapterSources(browser: Browser) {
-  await withChapter(browser, '3-sources', '资料来源', '喂进去的内容，检索只在这里面', async (page) => {
-    await caption(page, 'PDF、网页、Markdown 都落在同一个笔记本');
-    await page.getByTestId('source-row').first().click();
-    await page.getByTestId('source-detail-dialog').waitFor();
-    await pause(page, 1800);
-    const summaryTab = page.getByTestId('source-detail-tab-summary');
-    if (await summaryTab.isVisible()) {
-      await summaryTab.click();
-      await pause(page, 1400);
-    }
-    await page.getByTestId('source-detail-close').click();
-    await pause(page, 700);
-  });
+  await withChapter(
+    browser,
+    '3-sources',
+    '资料来源',
+    '喂进去的内容，检索只在这里面',
+    async (page) => {
+      await caption(page, 'PDF、网页、Markdown 都落在同一个笔记本');
+      await page.getByTestId('source-row').first().click();
+      await page.getByTestId('source-detail-dialog').waitFor();
+      await pause(page, 1800);
+      const summaryTab = page.getByTestId('source-detail-tab-summary');
+      if (await summaryTab.isVisible()) {
+        await summaryTab.click();
+        await pause(page, 1400);
+      }
+      await page.getByTestId('source-detail-close').click();
+      await pause(page, 700);
+    },
+  );
 }
 
 async function chapterGenerate(browser: Browser) {
-  await withChapter(browser, '4-generate', 'Studio 输出', '一键生成可交互的学习材料', async (page) => {
-    await caption(page, '简报、闪卡、导图、测验……同一批资料');
-    await page.getByTestId('studio-generate').click();
-    await page.getByTestId('studio-tools-popover').waitFor();
-    await pause(page, 900);
-    await caption(page, '正在生成简报…', 4000);
-    await page.getByRole('button', { name: '简报', exact: true }).click();
-    await page.getByTestId('studio-output-item').first().waitFor({ timeout: 180_000 });
-    await pause(page, 800);
-    await page.getByTestId('studio-output-item').first().click();
-    await caption(page, '打开即可阅读，也能导出 PDF / PPTX');
-    await pause(page, 2400);
-    await page.mouse.wheel(0, 380);
-    await pause(page, 1600);
-    await page.keyboard.press('Escape');
-    await pause(page, 700);
-  });
+  await withChapter(
+    browser,
+    '4-generate',
+    'Studio 输出',
+    '一键生成可交互的学习材料',
+    async (page) => {
+      await caption(page, '简报、闪卡、导图、测验……同一批资料');
+      await page.getByTestId('studio-generate').click();
+      await page.getByTestId('studio-tools-popover').waitFor();
+      await pause(page, 900);
+      await caption(page, '正在生成简报…', 4000);
+      await page.getByRole('button', { name: '简报', exact: true }).click();
+      await page.getByTestId('studio-output-item').first().waitFor({ timeout: 180_000 });
+      await pause(page, 800);
+      await page.getByTestId('studio-output-item').first().click();
+      await caption(page, '打开即可阅读，也能导出 PDF / PPTX');
+      await pause(page, 2400);
+      await page.mouse.wheel(0, 380);
+      await pause(page, 1600);
+      await page.keyboard.press('Escape');
+      await pause(page, 700);
+    },
+  );
 }
 
 async function chapterResearch(browser: Browser) {
-  await withChapter(browser, '5-research', 'Deep Research', '预算内多轮取证，再综合成报告', async (page) => {
-    await caption(page, '从任务抽屉进入 Research Lab');
-    await page.getByTestId('research-tasks-trigger').click();
-    await page.getByTestId('research-tasks-drawer').waitFor();
-    await pause(page, 1400);
-    const item = page.getByTestId('research-tasks-item').first();
-    await item.waitFor({ timeout: 15_000 });
-    await item.click();
-    await page.getByTestId('research-lab-graph').waitFor({ timeout: 30_000 });
-    await caption(page, '任务图画在图上：每条支路都看得到');
-    await pause(page, 2200);
+  await withChapter(
+    browser,
+    '5-research',
+    'Deep Research',
+    '预算内多轮取证，再综合成报告',
+    async (page) => {
+      await caption(page, '从任务抽屉进入 Research Lab');
+      await page.getByTestId('research-tasks-trigger').click();
+      await page.getByTestId('research-tasks-drawer').waitFor();
+      await pause(page, 1400);
+      const item = page.getByTestId('research-tasks-item').first();
+      await item.waitFor({ timeout: 15_000 });
+      await item.click();
+      await page.getByTestId('research-lab-graph').waitFor({ timeout: 30_000 });
+      await caption(page, '任务图画在图上：每条支路都看得到');
+      await pause(page, 2200);
 
-    await page.mouse.move(640, 400);
-    await page.mouse.down();
-    await page.mouse.move(430, 340, { steps: 16 });
-    await pause(page, 350);
-    await page.mouse.move(700, 420, { steps: 18 });
-    await page.mouse.up();
-    await pause(page, 1400);
+      await page.mouse.move(640, 400);
+      await page.mouse.down();
+      await page.mouse.move(430, 340, { steps: 16 });
+      await pause(page, 350);
+      await page.mouse.move(700, 420, { steps: 18 });
+      await page.mouse.up();
+      await pause(page, 1400);
 
-    await page.getByTestId('research-lab-back').click();
-    await pause(page, 800);
-  });
+      await page.getByTestId('research-lab-back').click();
+      await pause(page, 800);
+    },
+  );
 }
 
 const CHAPTERS: Record<string, (browser: Browser) => Promise<void>> = {

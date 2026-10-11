@@ -6,7 +6,7 @@ import { join } from 'node:path';
 
 import type { CrystalithPlugin } from './types.ts';
 
-export const EXTERNAL_PLUGIN_SCOPE = '@crystalith-plugin';
+const EXTERNAL_PLUGIN_SCOPE = '@crystalith-plugin';
 
 /**
  * Plugin ids discovered from installed packages: `<dir>/@crystalith-plugin/<id>`.

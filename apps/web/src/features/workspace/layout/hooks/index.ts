@@ -1,5 +1,5 @@
 export { useWorkspaceOverlays } from './useWorkspaceOverlays';
-export { computeWorkspaceReadiness, type WorkspaceReadiness } from './useWorkspaceReadiness';
+export { type WorkspaceReadiness } from './useWorkspaceReadiness';
 export {
   useDependencyHealth,
   toOptionalServiceDiagnostics,

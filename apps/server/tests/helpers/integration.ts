@@ -272,7 +272,7 @@ export function installAiMock(opts: AiMockOptions): void {
  * Backwards-compatible thin wrapper over `installAiMock` (the original shape
  * used by outputs-core-types.test.ts). Prefer `installAiMock` for new tests.
  */
-export function mockAi(opts: { object?: (prompt: string) => unknown; text?: string }): void {
+function mockAi(opts: { object?: (prompt: string) => unknown; text?: string }): void {
   installAiMock(opts);
 }
 
@@ -322,4 +322,3 @@ export async function stubEmbedding(): Promise<void> {
 }
 
 // Re-export beforeAll/afterAll so test files can import everything from here.
-export { beforeAll, afterAll };

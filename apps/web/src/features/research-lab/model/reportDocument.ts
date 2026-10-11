@@ -26,7 +26,7 @@ export function extractNodeIds(text: string): string[] {
   return ids;
 }
 
-export function citationKindLabel(c: LabCitation | undefined): string {
+function citationKindLabel(c: LabCitation | undefined): string {
   if (!c) return 'SRC';
   if (c.kind === 'docs') return 'DOC';
   if (c.kind === 'pdf') return 'PDF';

@@ -18,7 +18,7 @@ const _allTags = new Set<string>();
  * Scalar sidebar tag labels (feature slug → 中文说明).
  * Keep slug stable as `tags: ['…']` in routers; only humanize here.
  */
-export const OPENAPI_TAG_DESCRIPTIONS: Record<string, string> = {
+const OPENAPI_TAG_DESCRIPTIONS: Record<string, string> = {
   system: '系统健康与元信息',
   notebooks: '笔记本（知识空间顶层容器）',
   sessions: '会话',
@@ -79,7 +79,7 @@ export interface OpenApiRoute {
 }
 
 /** Convert a Zod schema to an OpenAPI-friendly JSON Schema object. */
-export function zodSchemaToOpenApi(schema: z.ZodType): Record<string, unknown> {
+function zodSchemaToOpenApi(schema: z.ZodType): Record<string, unknown> {
   try {
     const json = z.toJSONSchema(schema, {
       target: 'openapi-3.0',

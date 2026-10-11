@@ -8,7 +8,7 @@ import type { Orm } from '../../db/index.ts';
 import { sources } from '../../db/schema.ts';
 import { searchVectors, type VectorHit } from '../../db/vectors.ts';
 
-export const RetrieveSourcesArgs = z.object({
+const RetrieveSourcesArgs = z.object({
   query: z.string().min(1).describe('The search query to retrieve relevant source chunks for.'),
   topK: z.number().int().positive().max(50).default(5).describe('Number of chunks to retrieve.'),
 });
@@ -62,14 +62,4 @@ export function retrieveSourcesTool(
       }));
     },
   });
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/** Type guard helper for consuming tool results. */
-export function isRetrievedChunk(value: unknown): value is RetrievedChunk {
-  if (!isRecord(value)) return false;
-  return typeof value.chunkId === 'number' && typeof value.text === 'string';
 }

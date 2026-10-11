@@ -19,7 +19,7 @@ export const EXPORT_FORMAT_LABELS = {
   pptx: 'PPTX',
 } as const satisfies Record<ExportFormat, string>;
 
-export const OUTPUT_EXPORT_FORMATS = {
+const OUTPUT_EXPORT_FORMATS = {
   FAQ: ['markdown', 'json'],
   GUIDE: ['markdown'],
   TIMELINE: ['markdown'],

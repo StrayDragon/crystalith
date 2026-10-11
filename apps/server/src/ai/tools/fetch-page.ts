@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { config } from '../../shared/config.ts';
 import { extractUrl, ExtractionError } from '../../shared/extraction/factory.ts';
 
-export const FetchPageArgs = z.object({
+const FetchPageArgs = z.object({
   url: z.url().describe('Absolute URL of the page to fetch and extract.'),
 });
 
@@ -20,7 +20,7 @@ export type FetchPageResult =
  * Extract page body via ExtractorFactory. Never throws to the agent loop —
  * failures return `{ ok: false }` so the work-unit can continue with SERP snippets.
  */
-export async function fetchPageContent(url: string): Promise<FetchPageResult> {
+async function fetchPageContent(url: string): Promise<FetchPageResult> {
   try {
     // Pass full raw config (extraction keys + source_ingestion) like other call sites.
     const extracted = await extractUrl(url, config().raw);

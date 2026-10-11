@@ -176,7 +176,7 @@ export async function* streamRequest(
 
 export type StreamReconnectState = 'ok' | 'reconnecting' | 'exhausted';
 
-export const STREAM_RECONNECT_BACKOFF_MS = [1000, 2000, 4000] as const;
+const STREAM_RECONNECT_BACKOFF_MS = [1000, 2000, 4000] as const;
 export const STREAM_RECONNECT_MAX_ATTEMPTS = 5;
 
 export interface StreamWithReconnectOptions {

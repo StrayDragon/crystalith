@@ -102,7 +102,7 @@ export function hydrateCitations(
  *   > snippet
  * Defensive on optional fields so both QA and output exports share one impl.
  */
-export function formatCitationMarkdownLines(
+function formatCitationMarkdownLines(
   citations: Array<{
     sourceName?: string;
     chunkIndex?: number;

@@ -157,7 +157,7 @@ export function CoachMarkPopover({
   );
 }
 
-export function useCoachMarkCountdown(): number | null {
+function useCoachMarkCountdown(): number | null {
   return useContext(CoachMarkContext).autoDismissSeconds;
 }
 

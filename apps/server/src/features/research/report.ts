@@ -114,7 +114,7 @@ function buildPartialCompletionPromptHint(row: RunRow): string | null {
 }
 
 /** LLM structured ResearchReport (or e2e stub). Throws on model/schema failure. */
-export async function generateLlmResearchReport(
+async function generateLlmResearchReport(
   row: RunRow,
   evidences: ResearchEvidence[],
   abortSignal?: AbortSignal,
@@ -327,7 +327,7 @@ export async function retrySynthesize(
   return serializeRun(requireRun(notebookId, runId));
 }
 
-export function reportToMarkdown(report: ResearchReport): string {
+function reportToMarkdown(report: ResearchReport): string {
   const citeOrder: string[] = [];
   const noteCite = (ids: string[]) => {
     const marks: string[] = [];
@@ -424,7 +424,7 @@ export function listProgress(
   return { items, nextAfterSeq };
 }
 
-export function assertReportEditable(status: string, hasReport: boolean): void {
+function assertReportEditable(status: string, hasReport: boolean): void {
   if (status === 'completed') return;
   if ((status === 'failed' || status === 'cancelled') && hasReport) return;
   throw new AppHttpError(

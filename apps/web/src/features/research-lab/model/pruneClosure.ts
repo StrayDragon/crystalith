@@ -1,24 +1,5 @@
 import type { LabEdge, LabNode } from './types';
 
-/** Collect node + all descendants via outgoing edges. */
-export function collectDescendants(rootId: string, edges: LabEdge[]): Set<string> {
-  const children = new Map<string, string[]>();
-  for (const e of edges) {
-    const list = children.get(e.source) ?? [];
-    list.push(e.target);
-    children.set(e.source, list);
-  }
-  const out = new Set<string>();
-  const stack = [rootId];
-  while (stack.length) {
-    const id = stack.pop()!;
-    if (out.has(id)) continue;
-    out.add(id);
-    for (const c of children.get(id) ?? []) stack.push(c);
-  }
-  return out;
-}
-
 function isPruneProtected(node: LabNode | undefined, id: string): boolean {
   if (!node) return id === 'root' || id === 'conclusion';
   return (

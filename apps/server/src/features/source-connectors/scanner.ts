@@ -95,7 +95,7 @@ function extractFrontmatterSummary(filePath: string, raw: Uint8Array): Frontmatt
   return summary;
 }
 
-export function resolveConnectorRoot(
+function resolveConnectorRoot(
   connectorId: string,
   connectionConfig: Record<string, unknown>,
 ): { root: string | null; diagnostics: Diagnostic[] | null } {

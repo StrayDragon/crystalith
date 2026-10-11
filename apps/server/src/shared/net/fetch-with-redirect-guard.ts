@@ -11,7 +11,7 @@
 // not apply. Only extractors that fetch the user URL directly on this process
 // (readability, raw router fallback) should use this.
 import { outboundFetch } from './outbound-fetch.ts';
-import { validateUrlForFetch, type SsrfPolicy, SsrfBlockedError } from './url-safety.ts';
+import { validateUrlForFetch, type SsrfPolicy } from './url-safety.ts';
 
 const DEFAULT_MAX_REDIRECTS = 5;
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
@@ -58,5 +58,3 @@ export async function fetchWithRedirectGuard(
   }
   throw new Error(`Too many redirects (>${maxRedirects})`);
 }
-
-export { SsrfBlockedError };

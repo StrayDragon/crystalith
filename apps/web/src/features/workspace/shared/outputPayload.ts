@@ -155,36 +155,6 @@ export function decodeOutputContent(
   }
 }
 
-export function isOutputContentForType<K extends OutputTypeId>(
-  type: K,
-  content: unknown,
-): content is OutputContentByType[K] {
-  switch (type) {
-    case 'FAQ':
-      return isFaqContent(content);
-    case 'GUIDE':
-      return isGuideContent(content);
-    case 'TIMELINE':
-      return isTimelineContent(content);
-    case 'MINDMAP':
-      return isMindmapContent(content);
-    case 'QUIZ':
-      return isQuizContent(content);
-    case 'BRIEFING':
-      return isBriefingContent(content);
-    case 'SLIDES':
-      return isSlidesContent(content);
-    case 'PARAGRAPH':
-      return isParagraphContent(content);
-    case 'BULLETS':
-      return isBulletsContent(content);
-    case 'STRUCTURED':
-      return isStructuredContent(content);
-    default:
-      return false;
-  }
-}
-
 export function decodeOutputItem(output: OutputItem): TypedOutputItem | null {
   if (!output.content) return null;
   switch (output.type) {

@@ -36,7 +36,7 @@ import {
 import { resolveNodeRoleForWork } from './research-work-queue.ts';
 import { withRunLlmLock, withRunWriteLock } from './run-locks.ts';
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 

@@ -36,7 +36,7 @@ import {
   updateRun,
 } from './research-core.ts';
 
-export function serializeRevision(row: typeof researchRevisions.$inferSelect): ResearchRevision {
+function serializeRevision(row: typeof researchRevisions.$inferSelect): ResearchRevision {
   return {
     id: row.id,
     runId: row.runId,

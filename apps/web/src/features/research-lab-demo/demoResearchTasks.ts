@@ -150,10 +150,6 @@ export function setActiveDemoResearchTaskId(taskId: string | null): void {
   emit();
 }
 
-export function getDemoResearchTask(taskId: string): DemoResearchTask | null {
-  return getDemoResearchTasksSnapshot().find((t) => t.id === taskId) ?? null;
-}
-
 let taskSeq = 0;
 
 export function createDemoResearchTask(input: {
@@ -192,7 +188,7 @@ export function updateDemoResearchTask(
   return next;
 }
 
-export function taskSessionStorageKey(taskId: string): string {
+function taskSessionStorageKey(taskId: string): string {
   return `${SESSION_BY_TASK_PREFIX}${taskId}`;
 }
 
@@ -211,14 +207,6 @@ export function readTaskLabSessionRaw(taskId: string): string | null {
     return null;
   }
 }
-
-export const DEMO_RESEARCH_STATUS_LABEL: Record<DemoResearchTaskStatus, string> = {
-  queued: '排队中',
-  running: '进行中',
-  awaiting_confirm: '待确认',
-  completed: '已完成',
-  failed: '失败',
-};
 
 /** Map Lab phase → demo task status. */
 export function demoStatusFromLabPhase(phase: string): DemoResearchTaskStatus | null {

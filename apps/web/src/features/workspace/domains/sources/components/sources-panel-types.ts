@@ -13,7 +13,7 @@ import type { SourceSortBy, SourceSortOrder, SourceUploadItem } from '../useSour
 
 export type ExtractorType = ExtractorInfo['type'];
 
-export const SEARCH_ENGINE_WEB = 'Web' as const;
+const SEARCH_ENGINE_WEB = 'Web' as const;
 export type SearchEngine = typeof SEARCH_ENGINE_WEB;
 
 export interface SourcesPanelProps {

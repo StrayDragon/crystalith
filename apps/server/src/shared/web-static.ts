@@ -13,7 +13,7 @@ import { Elysia, NotFoundError } from 'elysia';
 // for API prefixes so unmatched API paths keep the JSON ErrorEnvelope.
 
 /** Path prefixes that must never fall back to the SPA index.html. */
-export const API_PATH_PREFIXES = ['/v1', '/v2', '/health', '/openapi', '/asyncapi'] as const;
+const API_PATH_PREFIXES = ['/v1', '/v2', '/health', '/openapi', '/asyncapi'] as const;
 
 /**
  * Locate the web asset root: `CL_WEB_DIST` (explicit override, relative paths

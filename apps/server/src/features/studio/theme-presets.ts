@@ -9,27 +9,6 @@
 // the preset entirely) and title injection.
 import { THEME_PRESET_TEMPLATES, resolveThemePreset, type ThemePresetTemplate } from './config.ts';
 
-export interface ThemePreset {
-  id: string;
-  label: string;
-  template: ThemePresetTemplate;
-}
-
-/** v1-aligned preset catalog (labels from config.py:164-195). */
-export const THEME_PRESETS: Record<string, ThemePreset> = Object.fromEntries(
-  Object.entries(THEME_PRESET_TEMPLATES).map(([id, template], _idx) => {
-    const labels: Record<string, string> = {
-      'minimal-clean': '清爽极简',
-      'business-brief': '商务汇报',
-      'product-launch': '产品发布',
-      'research-paper': '学术研究',
-      'data-insight': '数据洞察',
-      'creative-visual': '创意视觉',
-    };
-    return [id, { id, label: labels[id] ?? id, template }];
-  }),
-);
-
 /**
  * YAML-encode a single frontmatter value (v1 _yaml_value, generator.py:118-125).
  * Objects/arrays → JSON; strings → as-is; null → "null".
@@ -99,9 +78,4 @@ export function buildFrontmatter(
   const template =
     THEME_PRESET_TEMPLATES[resolvedPreset] ?? THEME_PRESET_TEMPLATES['minimal-clean'];
   return `---\n${buildPresetBody(template, title)}\n---\n`;
-}
-
-/** List available preset names and labels for UI. */
-export function listThemePresets(): { name: string; label: string }[] {
-  return Object.entries(THEME_PRESETS).map(([name, p]) => ({ name, label: p.label }));
 }

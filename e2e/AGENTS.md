@@ -31,10 +31,10 @@ once, then `bun e2e/capture-demo.ts` and `e2e/build-demo-media.sh`. Uses Playwri
 1.64 `page.screencast` (chapter cards, synthetic cursor, captions), ffmpeg
 `xfade`, then **1.1x** (`DEMO_SPEED`). Three clips, core surfaces only:
 
-| file | chapters |
-| --- | --- |
-| `docs/demo-chat.mp4` | workspace + cited chat |
+| file                     | chapters                        |
+| ------------------------ | ------------------------------- |
+| `docs/demo-chat.mp4`     | workspace + cited chat          |
 | `docs/demo-notebook.mp4` | source detail + Studio briefing |
-| `docs/demo-research.mp4` | Research Lab graph |
+| `docs/demo-research.mp4` | Research Lab graph              |
 
 Upload each to GitHub user-attachments and put the URLs in the README HTML `<video>` table.

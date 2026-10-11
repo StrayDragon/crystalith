@@ -14,7 +14,7 @@ let _embedModel: EmbeddingModelV4 | null = null;
  * Get or lazily initialize the embedding model singleton.
  * Returns null if no embedding model is configured.
  */
-export async function getEmbedModel(): Promise<EmbeddingModelV4 | null> {
+async function getEmbedModel(): Promise<EmbeddingModelV4 | null> {
   if (_embedModel) return _embedModel;
 
   const config = getDefaultEmbeddingModel();

@@ -20,14 +20,12 @@ import { parseStatsPresetOutput } from './presets.ts';
 import {
   retrieveAndJudge,
   noEvidenceAnswerForReason,
-  resolveCitations,
   type NoEvidenceReason,
   type JudgeResult,
 } from './retrieve-and-judge.ts';
 
 // Re-export for consumers (router, presets). ContextStats now comes from
 // @crystalith/shared (c54: moved out of server-local to honor Zod-SSOT).
-export { retrieveAndJudge, noEvidenceAnswerForReason, resolveCitations };
 export type { NoEvidenceReason, JudgeResult, ContextStats };
 
 // ---------------------------------------------------------------------------

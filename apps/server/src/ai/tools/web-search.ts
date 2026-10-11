@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { getSearxngHost, getSearchSettings } from '../../shared/config.ts';
 import { outboundFetch } from '../../shared/net/outbound-fetch.ts';
 
-export const WebSearchArgs = z.object({
+const WebSearchArgs = z.object({
   query: z.string().min(1).describe('The web search query.'),
   maxResults: z.number().int().positive().max(50).default(10),
 });

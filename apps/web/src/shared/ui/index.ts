@@ -1,4 +1,3 @@
-export { cx } from './cx';
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button';
 export { IconButton, type IconButtonProps } from './IconButton';
 export { Typography, type TypographyProps, type TypographyVariant } from './Typography';
@@ -15,7 +14,6 @@ export {
 export {
   CoachMarkCountdown,
   CoachMarkPopover,
-  useCoachMarkCountdown,
   type CoachMarkPopoverProps,
 } from './CoachMarkPopover';
 export { Tooltip, TooltipProvider, type TooltipProps } from './Tooltip';

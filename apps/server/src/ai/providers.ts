@@ -17,7 +17,7 @@ interface ProviderEntry {
   factory: string;
 }
 
-export const KNOWN_PROVIDERS = {
+const KNOWN_PROVIDERS = {
   openai: { sdk: '@ai-sdk/openai', factory: 'createOpenAI' },
   anthropic: { sdk: '@ai-sdk/anthropic', factory: 'createAnthropic' },
   google: { sdk: '@ai-sdk/google', factory: 'createGoogleGenerativeAI' },

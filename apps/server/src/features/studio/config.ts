@@ -9,13 +9,13 @@ import type { ConfigOption, SlidesConfigSchema, ThemePresetOption } from '@cryst
 // Range tables (v1 config.py:35-45)
 // ---------------------------------------------------------------------------
 
-export const QUANTITY_RANGES = {
+const QUANTITY_RANGES = {
   short: [6, 8],
   standard: [8, 12],
   detailed: [12, 18],
 } as const satisfies Record<string, readonly [number, number]>;
 
-export const DENSITY_BULLETS = {
+const DENSITY_BULLETS = {
   sparse: [2, 3],
   standard: [3, 5],
   dense: [5, 7],
@@ -25,7 +25,7 @@ export const DENSITY_BULLETS = {
 // Hint tables (v1 config.py:47-72) — Chinese localized phrases
 // ---------------------------------------------------------------------------
 
-export const STRUCTURE_TEMPLATES = {
+const STRUCTURE_TEMPLATES = {
   standard: '封面 / 议程 / 背景 / 关键发现 / 结论 / 下一步',
   'problem-solution': '背景 / 问题 / 影响 / 方案 / 实施计划 / 收益 / 下一步',
   story: '起点 / 冲突 / 转折 / 洞察 / 行动 / 结尾',
@@ -33,21 +33,21 @@ export const STRUCTURE_TEMPLATES = {
   training: '目标 / 核心概念 / 示例 / 练习 / 总结',
 } as const satisfies Record<string, string>;
 
-export const AUDIENCE_HINTS = {
+const AUDIENCE_HINTS = {
   general: '通俗易懂，避免过多术语',
   executive: '强调结论与决策要点，简洁直达',
   technical: '保留必要技术细节与定义',
   external: '强调价值与故事性，避免内部术语',
 } as const satisfies Record<string, string>;
 
-export const TONE_HINTS = {
+const TONE_HINTS = {
   professional: '正式、专业',
   friendly: '亲和、易读',
   inspiring: '鼓舞、强调愿景',
   serious: '严谨、客观',
 } as const satisfies Record<string, string>;
 
-export const LANGUAGE_HINTS = {
+const LANGUAGE_HINTS = {
   zh: '中文',
   en: '英文',
 } as const satisfies Record<string, string>;
@@ -120,7 +120,7 @@ export const THEME_PRESET_TEMPLATES: Record<string, ThemePresetTemplate> = {
 // DEFAULT_CONFIG (v1 config.py:24-33)
 // ---------------------------------------------------------------------------
 
-export const DEFAULT_CONFIG = {
+const DEFAULT_CONFIG = {
   quantity: 'standard',
   audience: 'general',
   structure: 'standard',
@@ -135,20 +135,20 @@ export const DEFAULT_CONFIG = {
 // OPTIONS lists (v1 config.py:125-195) — for the frontend config UI
 // ---------------------------------------------------------------------------
 
-export const QUANTITY_OPTIONS: ConfigOption[] = [
+const QUANTITY_OPTIONS: ConfigOption[] = [
   { id: 'short', label: '精简（6-8）', isDefault: false },
   { id: 'standard', label: '标准（8-12）', isDefault: true },
   { id: 'detailed', label: '详尽（12-18）', isDefault: false },
 ];
 
-export const AUDIENCE_OPTIONS: ConfigOption[] = [
+const AUDIENCE_OPTIONS: ConfigOption[] = [
   { id: 'general', label: '通用受众', isDefault: true },
   { id: 'executive', label: '管理层', isDefault: false },
   { id: 'technical', label: '技术受众', isDefault: false },
   { id: 'external', label: '外部受众', isDefault: false },
 ];
 
-export const STRUCTURE_OPTIONS: ConfigOption[] = [
+const STRUCTURE_OPTIONS: ConfigOption[] = [
   { id: 'standard', label: '通用结构', isDefault: true },
   { id: 'problem-solution', label: '问题/方案', isDefault: false },
   { id: 'story', label: '故事叙事', isDefault: false },
@@ -156,19 +156,19 @@ export const STRUCTURE_OPTIONS: ConfigOption[] = [
   { id: 'training', label: '培训课程', isDefault: false },
 ];
 
-export const TONE_OPTIONS: ConfigOption[] = [
+const TONE_OPTIONS: ConfigOption[] = [
   { id: 'professional', label: '正式专业', isDefault: true },
   { id: 'friendly', label: '亲和易读', isDefault: false },
   { id: 'inspiring', label: '鼓舞愿景', isDefault: false },
   { id: 'serious', label: '严谨客观', isDefault: false },
 ];
 
-export const LANGUAGE_OPTIONS: ConfigOption[] = [
+const LANGUAGE_OPTIONS: ConfigOption[] = [
   { id: 'zh', label: '中文', isDefault: true },
   { id: 'en', label: '英文', isDefault: false },
 ];
 
-export const DENSITY_OPTIONS: ConfigOption[] = [
+const DENSITY_OPTIONS: ConfigOption[] = [
   { id: 'sparse', label: '稀疏（2-3 要点）', isDefault: false },
   { id: 'standard', label: '标准（3-5 要点）', isDefault: true },
   { id: 'dense', label: '密集（5-7 要点）', isDefault: false },
@@ -178,7 +178,7 @@ function themeTemplateJson(id: keyof typeof THEME_PRESET_TEMPLATES): Record<stri
   return { ...THEME_PRESET_TEMPLATES[id] };
 }
 
-export const THEME_PRESET_OPTIONS: ThemePresetOption[] = (
+const THEME_PRESET_OPTIONS: ThemePresetOption[] = (
   [
     ['minimal-clean', '清爽极简'],
     ['business-brief', '商务汇报'],

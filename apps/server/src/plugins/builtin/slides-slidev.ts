@@ -14,7 +14,7 @@ export interface SlidesWorkflowImpl {
   buildSlidesConfigSchema: () => SlidesConfigSchema;
 }
 
-export const SLIDES_PLUGIN_ID = 'slides-slidev';
+const SLIDES_PLUGIN_ID = 'slides-slidev';
 
 export const slidesSlidevPlugin: CrystalithPlugin = {
   id: SLIDES_PLUGIN_ID,

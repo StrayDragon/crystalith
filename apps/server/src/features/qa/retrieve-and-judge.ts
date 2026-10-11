@@ -22,7 +22,7 @@ import { getContextWindowSettings } from '../../shared/config.ts';
 import { logger } from '../../shared/logger.ts';
 import { computeConfidence } from './confidence.ts';
 
-export const EVIDENCE_THRESHOLD_DEFAULT = 0.2;
+const EVIDENCE_THRESHOLD_DEFAULT = 0.2;
 
 // Low-similarity pass-through (allow-low-similarity-qa): retrieved chunks
 // below the evidence threshold no longer short-circuit the QA — the answer is
@@ -31,8 +31,8 @@ export const WEAK_GROUNDING_TIP =
   '\n\n---\n*提示：未在勾选来源中找到与问题高度相关的内容，以上回答主要基于模型通用知识，未引用来源。*';
 
 // Localized no-evidence answers (v1 service.py:27-32, 62-69)
-export const NO_EVIDENCE_ANSWER = '来源中未找到相关证据';
-export const NO_SOURCES_ANSWER = '当前笔记本还没有来源，请先导入后再提问';
+const NO_EVIDENCE_ANSWER = '来源中未找到相关证据';
+const NO_SOURCES_ANSWER = '当前笔记本还没有来源，请先导入后再提问';
 export const NO_VECTOR_INDEX_ANSWER =
   '未在向量库中检索到相关内容。若刚切换运行环境，请对已导入来源重新索引。';
 export const SOURCES_NOT_READY_ANSWER = '所选来源尚未完成索引或内容为空，请等待来源状态变为就绪';

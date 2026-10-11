@@ -1,6 +1,6 @@
 /** Synthesize-class failureReason prefixes (aligned with server report.ts). */
-export const SYNTHESIZE_FAILED_PREFIX = 'synthesize_failed:';
-export const SYNTHESIZE_MODEL_ERROR_PREFIX = 'synthesize_model_error:';
+const SYNTHESIZE_FAILED_PREFIX = 'synthesize_failed:';
+const SYNTHESIZE_MODEL_ERROR_PREFIX = 'synthesize_model_error:';
 
 export function isSynthesizeFailureReason(reason: string | null | undefined): boolean {
   if (!reason) return false;

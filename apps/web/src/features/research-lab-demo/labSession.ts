@@ -177,11 +177,3 @@ export function readLabSessionSnapshot(): LabSessionSnapshot | null {
     return null;
   }
 }
-
-export function clearLabSessionSnapshot(): void {
-  try {
-    sessionStorage.removeItem(LAB_SESSION_STORAGE_KEY);
-  } catch {
-    /* ignore */
-  }
-}

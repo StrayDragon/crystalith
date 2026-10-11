@@ -4,7 +4,7 @@ export type BuiltinBundleModule = {
   render: BundleRenderFn;
 };
 
-export const builtinBundleLoaders: Record<string, () => Promise<BuiltinBundleModule>> = {
+const builtinBundleLoaders: Record<string, () => Promise<BuiltinBundleModule>> = {
   'output-faq': () => import('./output-faq'),
   'output-guide': () => import('./output-guide'),
   'output-timeline': () => import('./output-timeline'),

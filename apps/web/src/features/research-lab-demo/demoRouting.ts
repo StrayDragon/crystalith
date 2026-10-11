@@ -49,12 +49,7 @@ export function navigateToDemoLabReport(notebookId: number): void {
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
-export function isDemoResearchLabPath(pathname: string): boolean {
-  return parseDemoResearchLabPath(pathname) !== null;
-}
-
 export {
-  clearLabSessionSnapshot,
   persistLabScenarioId,
   persistLabSessionSnapshot,
   readLabSessionSnapshot,

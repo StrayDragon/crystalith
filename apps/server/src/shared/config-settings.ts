@@ -104,7 +104,7 @@ export type AppSettings = z.infer<typeof AppSettingsSchema>;
 /**
  * Source ingestion settings schema — maps from `source_ingestion.*`.
  */
-export const SourceIngestionSettingsSchema = z.object({
+const SourceIngestionSettingsSchema = z.object({
   dedup: z
     .object({
       enabled: z.boolean().default(true).optional(),
@@ -186,7 +186,7 @@ export const ContextWindowSettingsSchema = z.object({
 });
 export type ContextWindowSettings = z.infer<typeof ContextWindowSettingsSchema>;
 
-export const SearXNGSettingsSchema = z.object({
+const SearXNGSettingsSchema = z.object({
   host: z.string().default('').describe(desc('search.searxng.host')),
   api_key: z.string().nullable().default(null).describe(desc('search.searxng.api_key')),
   max_results: z

@@ -65,7 +65,7 @@ export interface StreamQaOptions {
 }
 
 /** SSE-encode a single event. Delegates to the shared SSE helper. */
-export function sseEvent(event: string, data: unknown): string {
+function sseEvent(event: string, data: unknown): string {
   return sseFrame(event, data);
 }
 

@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 
-import { LAYER_LEVELS, MAX_SLOTS_PER_LAYER } from './constants';
 import { useLayerContext } from './LayerProvider';
 import type { LayerName, UseLayerResult } from './types';
 
@@ -37,18 +36,4 @@ export function useLayer(layerName: LayerName, slot: number = 0): UseLayerResult
       className: `z-[${zIndex}]`,
     };
   }, [getZIndex, layerName, slot]);
-}
-
-/**
- * 直接获取层级 z-index 值的工具函数
- * 用于不在 React 组件内部的场景（如 CSS-in-JS 或配置）
- *
- * @param layerName 层级名称
- * @param slot 可选的 slot 索引
- * @returns z-index 数值
- */
-export function getLayerZIndex(layerName: LayerName, slot: number = 0): number {
-  const baseZIndex = LAYER_LEVELS[layerName];
-  const safeSlot = Math.max(0, Math.min(slot, MAX_SLOTS_PER_LAYER - 1));
-  return baseZIndex + safeSlot;
 }

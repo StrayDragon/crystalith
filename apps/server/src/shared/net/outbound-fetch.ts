@@ -27,7 +27,7 @@ export function hostMatchesNoProxy(hostname: string, entry: string): boolean {
   return host === normalized || host.endsWith(`.${normalized}`);
 }
 
-export function isNoProxyHost(hostname: string, noProxy: readonly string[]): boolean {
+function isNoProxyHost(hostname: string, noProxy: readonly string[]): boolean {
   return noProxy.some((entry) => hostMatchesNoProxy(hostname, entry));
 }
 

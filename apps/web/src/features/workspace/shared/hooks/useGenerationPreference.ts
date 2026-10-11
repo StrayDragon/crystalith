@@ -21,7 +21,7 @@ export function toApiGenerationPreference(
   return undefined;
 }
 
-export function readInitialGenerationPreference(): GenerationPreferenceSetting {
+function readInitialGenerationPreference(): GenerationPreferenceSetting {
   if (typeof window === 'undefined') {
     return 'default';
   }

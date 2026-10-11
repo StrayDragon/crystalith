@@ -3,7 +3,7 @@ import type { GridStackWidget } from 'gridstack';
 import type { WidgetDef, WidgetMeta } from './types';
 import { GRID_ROWS } from './widgetRegistry';
 
-export const LAYOUT_STORAGE_KEY = 'crystalith_workspace_grid_layout_v1';
+const LAYOUT_STORAGE_KEY = 'crystalith_workspace_grid_layout_v1';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

@@ -19,15 +19,3 @@ import zh from './zh/index.json' with { type: 'json' };
  * No runtime locale initialization needed.
  */
 export const L: Translation = zh;
-
-/** Available locales (currently only zh). */
-export type Locale = 'zh';
-export const locales: Locale[] = ['zh'];
-
-/** Current locale (always zh for now). */
-export const locale: Locale = 'zh';
-
-/** Load a locale (no-op for now; future: dynamic import). */
-export function loadLocale(_locale: Locale): void {
-  // Future: enable locale switching
-}

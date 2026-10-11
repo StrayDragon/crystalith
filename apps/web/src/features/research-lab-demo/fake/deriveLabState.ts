@@ -29,7 +29,7 @@ export const EMPTY_MUTATIONS: LabGraphMutations = {
 const FORK_PLACEHOLDER = '待探索的替代发现。';
 
 /** Appended to conclusion body when pruned research still merges into the sink. */
-export const FAILED_MERGE_NOTE_MARKER = '〔部分汇入失败〕';
+const FAILED_MERGE_NOTE_MARKER = '〔部分汇入失败〕';
 
 function isMergeIntoConclusion(
   edge: LabEdge,
@@ -75,7 +75,7 @@ export function stripFailedMergeNote(text: string | undefined): string {
 }
 
 /** Keep single-sink topology readable: note which merges are failed contributions. */
-export function annotateConclusionFailedMerges(
+function annotateConclusionFailedMerges(
   nodes: LabNode[],
   edges: LabEdge[],
   conclusionId: string | null,
@@ -96,11 +96,7 @@ export function annotateConclusionFailedMerges(
  * Fake playback for user-forked nodes (not in scenario phaseSnapshots).
  * Mirrors backend: fork stays in graph, then progresses with run phase / reshape.
  */
-export function synthesizeForkNodeProgress(
-  node: LabNode,
-  phase: LabPhase,
-  citePool: string[],
-): LabNode {
+function synthesizeForkNodeProgress(node: LabNode, phase: LabPhase, citePool: string[]): LabNode {
   if (node.role === 'question' || node.role === 'conclusion') return node;
   if (node.conclusionStatus === 'pruned') return node;
 
@@ -250,7 +246,7 @@ export function deriveLabState(
   };
 }
 
-export const PLAYBACK_ORDER: LabPhase[] = [
+const PLAYBACK_ORDER: LabPhase[] = [
   'idle',
   'decompose',
   'explore',
