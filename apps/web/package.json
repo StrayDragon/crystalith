@@ -68,7 +68,6 @@
     "@rstest/adapter-rsbuild": "^0.11.12",
     "@rstest/core": "^0.11.12",
     "@types/node": "^22.18.6",
-    "@types/nunjucks": "^3.2.6",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "autoprefixer": "^10.4.23",
