@@ -63,15 +63,20 @@ export function listRevisions(notebookId: number, runId: number): { items: Resea
   return { items: rows.map(serializeRevision) };
 }
 
-export function getRevision(notebookId: number, runId: number, revId: string): ResearchRevision {
-  requireRun(notebookId, runId);
+/** Fetch a revision row scoped to the run, or 404. Caller resolves the run first. */
+function requireRevision(runId: number, revId: string): typeof researchRevisions.$inferSelect {
   const row = db()
     .select()
     .from(researchRevisions)
     .where(and(eq(researchRevisions.runId, runId), eq(researchRevisions.id, revId)))
     .get();
   if (!row) throw new NotFoundError(`Revision ${revId} not found`);
-  return serializeRevision(row);
+  return row;
+}
+
+export function getRevision(notebookId: number, runId: number, revId: string): ResearchRevision {
+  requireRun(notebookId, runId);
+  return serializeRevision(requireRevision(runId, revId));
 }
 
 export function createRevision(
@@ -128,12 +133,7 @@ export function restoreRevision(notebookId: number, runId: number, revId: string
       'Restore only allowed on terminal runs',
     );
   }
-  const rev = db()
-    .select()
-    .from(researchRevisions)
-    .where(and(eq(researchRevisions.runId, runId), eq(researchRevisions.id, revId)))
-    .get();
-  if (!rev) throw new NotFoundError(`Revision ${revId} not found`);
+  const rev = requireRevision(runId, revId);
 
   const now = new Date();
   updateRun(runId, {
@@ -225,12 +225,7 @@ function remapReportEvidenceIds(
  */
 export function forkRunFromRevision(notebookId: number, runId: number, revId: string): ResearchRun {
   const source = requireRun(notebookId, runId);
-  const rev = db()
-    .select()
-    .from(researchRevisions)
-    .where(and(eq(researchRevisions.runId, runId), eq(researchRevisions.id, revId)))
-    .get();
-  if (!rev) throw new NotFoundError(`Revision ${revId} not found`);
+  const rev = requireRevision(runId, revId);
 
   const snapshotGraph = structuredClone(rev.graph);
   const snapshotReport = rev.report ? structuredClone(rev.report) : null;
