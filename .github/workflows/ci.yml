@@ -55,6 +55,18 @@ jobs:
       - run: just check-app-schema
       - run: just check-i18n-keys
       - run: just check-provider-deps
+      # fallow changed-file gate(与本地 just qa 同一配方; PR 上自动 diff origin 分支)
+      # 显式 --base: push 事件无 PR 语义时也稳定; fork PR 注解无需写权限
+      - name: Fallow audit (changed files gate)
+        if: github.event_name == 'pull_request'
+        run: just fallow-audit
+        env:
+          FALLOW_AUDIT_BASE: origin/${{ github.base_ref || 'main' }}
+      - name: Fallow annotations
+        if: github.event_name == 'pull_request' && failure()
+        run: |
+          fallow audit --format json --quiet > /tmp/fallow-audit.json || true
+          fallow report --from /tmp/fallow-audit.json --format github-annotations || true
 
   test:
     name: Tests (server / shared / web / e2e @p0)
