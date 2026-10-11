@@ -16,9 +16,35 @@ const ROOT = resolve(import.meta.dir, '..');
 const SERVER_DIR = resolve(ROOT, 'apps/server');
 
 // Import the real SSOT instead of text-parsing the registry.
-const { KNOWN_PROVIDERS } = (await import(resolve(SERVER_DIR, 'src/ai/providers.ts'))) as {
-  KNOWN_PROVIDERS: Record<string, { sdk: string }>;
+// KNOWN_PROVIDERS is module-private; the registry re-derives it via
+// resolveModel side effects, so we assert on the exported helpers' shape
+// by importing the module and reading its provider-sdk contract from the
+// same source file's registry table (text slice kept in sync by the gate
+// itself — drift in the table shape fails the Object.entries below).
+const providersMod = (await import(resolve(SERVER_DIR, 'src/ai/providers.ts'))) as {
+  knownProviders: () => string[];
 };
+
+// Fallback-free path: parse the registry table from source. The table is a
+// plain object literal `const KNOWN_PROVIDERS = { ... }` with `sdk:` keys.
+const src = readFileSync(resolve(SERVER_DIR, 'src/ai/providers.ts'), 'utf8');
+const tableMatch = /const KNOWN_PROVIDERS = \{([\s\S]*?)\} as const satisfies/.exec(src);
+if (!tableMatch) {
+  console.error('[check-provider-deps] FAIL — KNOWN_PROVIDERS table not found in providers.ts');
+  process.exit(1);
+}
+const sdkRe = /['"]?([\w-]+)['"]?:\s*\{\s*sdk:\s*'([^']+)'/g;
+const providerSdks: Array<{ provider: string; sdk: string }> = [];
+let m: RegExpExecArray | null;
+while ((m = sdkRe.exec(tableMatch[1])) !== null) {
+  providerSdks.push({ provider: m[1]!, sdk: m[2]! });
+}
+if (providerSdks.length === 0) {
+  console.error('[check-provider-deps] FAIL — no provider entries parsed');
+  process.exit(1);
+}
+// Cross-check keys against the runtime helper so a renamed table entry fails here.
+const runtimeKeys = new Set(providersMod.knownProviders());
 
 const pkg = JSON.parse(readFileSync(resolve(SERVER_DIR, 'package.json'), 'utf8')) as {
   dependencies?: Record<string, string>;
@@ -30,8 +56,14 @@ const declared = new Set([
 ]);
 
 const missing: Array<{ provider: string; sdk: string }> = [];
-for (const [provider, entry] of Object.entries(KNOWN_PROVIDERS)) {
-  if (!declared.has(entry.sdk)) missing.push({ provider, sdk: entry.sdk });
+for (const { provider, sdk } of providerSdks) {
+  if (!runtimeKeys.has(provider)) {
+    console.error(
+      `[check-provider-deps] FAIL — parsed provider '${provider}' missing from knownProviders()`,
+    );
+    process.exit(1);
+  }
+  if (!declared.has(sdk)) missing.push({ provider, sdk });
 }
 
 if (missing.length > 0) {
@@ -44,5 +76,5 @@ if (missing.length > 0) {
 }
 
 console.log(
-  `[check-provider-deps] OK — ${Object.keys(KNOWN_PROVIDERS).length} providers, all sdk packages declared`,
+  `[check-provider-deps] OK — ${providerSdks.length} providers, all sdk packages declared`,
 );
