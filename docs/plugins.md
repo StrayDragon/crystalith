@@ -95,7 +95,7 @@ plugins:
 2. 环境变量覆盖：`CL_PROXY_ENABLED` / `CL_PROXY_HTTP_URL` /
    `CL_PROXY_HTTPS_URL`（留空跟随 yaml）；
 3. 临时一次性调试：命令前缀 `HTTPS_PROXY=http://<proxy> bun
-packages/plugin-extractor-arxiv/scripts/try.ts …`（对遵循标准代理变量
+   packages/plugin-extractor-arxiv/scripts/try.ts …`（对遵循标准代理变量
    的工具同样适用）。
 
 `localhost` / `127.0.0.1` 默认在 `no_proxy` 内，不受影响。

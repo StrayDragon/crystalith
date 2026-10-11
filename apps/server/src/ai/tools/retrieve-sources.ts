@@ -8,14 +8,12 @@ import type { Orm } from '../../db/index.ts';
 import { sources } from '../../db/schema.ts';
 import { searchVectors, type VectorHit } from '../../db/vectors.ts';
 
-const RetrieveSourcesArgs = z.object({
+const RetrieveSourcesArgsSchema = z.object({
   query: z.string().min(1).describe('The search query to retrieve relevant source chunks for.'),
   topK: z.number().int().positive().max(50).default(5).describe('Number of chunks to retrieve.'),
 });
 
-export type RetrieveSourcesArgs = z.infer<typeof RetrieveSourcesArgs>;
-
-export interface RetrievedChunk {
+interface RetrievedChunk {
   chunkId: number;
   chunkIndex: number;
   sourceId: number;
@@ -33,7 +31,7 @@ export function retrieveSourcesTool(
   return tool({
     description:
       "Retrieve relevant source chunks from the notebook's knowledge base using semantic search. Use this to find evidence before answering questions.",
-    inputSchema: RetrieveSourcesArgs,
+    inputSchema: RetrieveSourcesArgsSchema,
     execute: async ({ query, topK }): Promise<RetrievedChunk[]> => {
       const queryVec = await embedder(query);
       const hits: VectorHit[] = searchVectors(orm, queryVec, notebookId, topK);

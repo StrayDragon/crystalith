@@ -27,7 +27,7 @@ import { desc } from './i18n.js';
 export const EnvTarget = {
   BuildRun: 'build-run',
 } as const;
-export type EnvTarget = (typeof EnvTarget)[keyof typeof EnvTarget];
+export type EnvTargetKey = (typeof EnvTarget)[keyof typeof EnvTarget];
 
 // ---------------------------------------------------------------------------
 // Build-run env vars (→ .env)
@@ -166,7 +166,7 @@ export type AllEnv = z.infer<typeof AllEnvSchema>;
 export interface EnvEntryDescriptor {
   key: string;
   description: string;
-  target: EnvTarget;
+  target: EnvTargetKey;
   default: string;
   deprecated?: boolean;
 }
@@ -176,7 +176,7 @@ export interface EnvEntryDescriptor {
  */
 function extractDescriptors(
   schema: z.ZodObject<z.ZodRawShape>,
-  target: EnvTarget,
+  target: EnvTargetKey,
   deprecated?: boolean,
 ): EnvEntryDescriptor[] {
   const shape = schema.shape;

@@ -1,7 +1,7 @@
 // extractor-arxiv exemplar plugin — host gating, Atom parsing, registry discovery.
 import { beforeAll, describe, expect, test } from 'bun:test';
 
-import extractorArxiv, { parseArxivId } from '@crystalith-plugin/extractor-arxiv';
+import { extractorArxiv, parseArxivId } from '@crystalith-plugin/extractor-arxiv';
 
 import { pluginRegistry } from '../../src/plugins/registry.ts';
 

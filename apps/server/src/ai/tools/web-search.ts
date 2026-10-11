@@ -10,12 +10,10 @@ import { z } from 'zod';
 import { getSearxngHost, getSearchSettings } from '../../shared/config.ts';
 import { outboundFetch } from '../../shared/net/outbound-fetch.ts';
 
-const WebSearchArgs = z.object({
+const WebSearchArgsSchema = z.object({
   query: z.string().min(1).describe('The web search query.'),
   maxResults: z.number().int().positive().max(50).default(10),
 });
-
-export type WebSearchArgs = z.infer<typeof WebSearchArgs>;
 
 export interface WebSearchResultItem {
   title: string;
@@ -114,7 +112,7 @@ export function webSearchTool(config: Partial<WebSearchConfig> = {}) {
   return tool({
     description:
       "Search the web for information on a topic. Returns titles, URLs, and snippets. Use when the notebook's sources don't cover the query.",
-    inputSchema: WebSearchArgs,
+    inputSchema: WebSearchArgsSchema,
     execute: async ({ query, maxResults }): Promise<WebSearchResultItem[]> => {
       // Delegate to searchWeb — single fetch implementation (no duplication)
       return searchWeb(query, {

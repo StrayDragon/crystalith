@@ -36,9 +36,9 @@
   "devDependencies": {
     "@crystalith-plugin/extractor-arxiv": "workspace:*",
     "fallow": "3.33.1",
-    "oxfmt": "^0.58.0",
-    "oxlint": "^1.73.0",
-    "oxlint-tsgolint": "^0.24.0",
+    "oxfmt": "^0.72.0",
+    "oxlint": "^1.87.0",
+    "oxlint-tsgolint": "^7.0.2004",
     "typescript": "^7.0.2"
   },
   "resolutions": {

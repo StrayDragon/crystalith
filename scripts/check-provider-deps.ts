@@ -28,12 +28,12 @@ const providersMod = (await import(resolve(SERVER_DIR, 'src/ai/providers.ts'))) 
 // Fallback-free path: parse the registry table from source. The table is a
 // plain object literal `const KNOWN_PROVIDERS = { ... }` with `sdk:` keys.
 const src = readFileSync(resolve(SERVER_DIR, 'src/ai/providers.ts'), 'utf8');
-const tableMatch = /const KNOWN_PROVIDERS = \{([\s\S]*?)\} as const satisfies/.exec(src);
+const tableMatch = /const KNOWN_PROVIDERS = \{([\s\S]*?)\} as const satisfies/u.exec(src);
 if (!tableMatch) {
   console.error('[check-provider-deps] FAIL — KNOWN_PROVIDERS table not found in providers.ts');
   process.exit(1);
 }
-const sdkRe = /['"]?([\w-]+)['"]?:\s*\{\s*sdk:\s*'([^']+)'/g;
+const sdkRe = /['"]?([\w-]+)['"]?:\s*\{\s*sdk:\s*'([^']+)'/gu;
 const providerSdks: Array<{ provider: string; sdk: string }> = [];
 let m: RegExpExecArray | null;
 while ((m = sdkRe.exec(tableMatch[1])) !== null) {

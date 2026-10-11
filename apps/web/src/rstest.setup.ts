@@ -1,3 +1,5 @@
+/* eslint-disable eslint/max-classes-per-file -- DOM polyfill stubs inherently need several classes */
+// fallow-ignore-file unused-file -- rstest setupFiles 运行时入口，静态图不可达
 import { afterAll, afterEach, beforeAll, expect } from '@rstest/core';
 // jest-dom adds custom jest matchers for asserting on DOM nodes.
 // allows you to do things like:
@@ -44,11 +46,11 @@ if (globalThis.PointerEvent === undefined) {
 }
 
 beforeAll(() => {
-  const onUnhandledRequest = (process.env.RSTEST_MSW_ON_UNHANDLED || 'error') as
+  const onUnhandledFrame = (process.env.RSTEST_MSW_ON_UNHANDLED || 'error') as
     | 'bypass'
     | 'warn'
     | 'error';
-  server.listen({ onUnhandledRequest });
+  server.listen({ onUnhandledFrame });
 });
 
 afterEach(() => {

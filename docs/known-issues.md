@@ -86,3 +86,11 @@
 **新增依赖守则**：凡是「读取 .ts 源码做生成/转换」的工具，引入前先确认其不依赖 TS 经典编译器
 JS API；TS 大版本升级后优先冒烟所有 codegen 类 script（`just gen-all`、db:generate）。
 2026-09-18 冒烟：根 TS 7.0.2，`just gen-all` 零漂移；`db:generate` 见上表 drizzle-kit 行。
+
+## 依赖升级遗留（c127 裁剪项）
+
+| 项                               | 状态                                                                                                                                                                                                                                                        | 恢复/删除条件                                                                   |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| tailwindcss 3→4                  | **裁延**：v4 需 css-first theme 重写（`@tailwind`→`@import "tailwindcss"`+`@theme`）、`@source` 替代 content、`tailwind-scrollbar@4`（peer 强制 tw4）连动、Layer 系统 `z-[N]` arbitrary 与 43 处 `!important` 交互回归——预估 >1 天，按 c127 design 阈值裁出 | 单独 change 承接；完成后删除本条并升 `tailwind-scrollbar` 4                     |
+| oxlint-tsgolint 7 advisory 3 err | 前存 Tier1 债（`just type-aware-lint` 本就允许失败），升级后数量不变                                                                                                                                                                                        | 按 AGENTS「type-aware 债清」专项消化；清零后删条目                              |
+| `@ai-sdk/*` 精确 pin→range 收尾  | 六件套已升 4.0.78 系并改 range 锁步；`provider` 单一 hoist 已验证                                                                                                                                                                                           | 无需动作；仅当再遇 dual-provider hoist 时参考 c127 design「cast wall 收敛」预案 |

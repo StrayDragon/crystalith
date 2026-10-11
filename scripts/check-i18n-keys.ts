@@ -19,7 +19,7 @@ const DICT_PATH = join(ROOT, 'packages/shared/src/i18n/zh/index.json');
 
 const DESC_CALL_RE = /\bdesc\(\s*(['"])([^'"]+)\1/gu;
 
-/** Strip // line comments and /* … *​/ block comments so doc examples don't count. */
+/** Strip // line comments and /* ... *\/ block comments so doc examples don't count. */
 function stripComments(src: string): string {
   return src
     .replaceAll(/\/\*[\s\S]*?\*\//gu, (m) => m.replaceAll(/[^\n]/gu, ' '))

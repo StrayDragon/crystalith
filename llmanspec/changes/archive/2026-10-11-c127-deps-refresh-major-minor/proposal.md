@@ -1,6 +1,9 @@
 ---
 depends_on: []
 needs_specs_change: false
+branch: sdd/c127-deps-refresh-major-minor
+base_branch: main
+base_sha: 3510af5e50b8cfad7ba08c7a52a5512c28eb0f53
 ---
 
 ## Why
@@ -18,6 +21,7 @@ needs_specs_change: false
 同一 change 内**三批次 commit**，每批独立过 `just qa`：
 
 ### Batch G — 绿批：patch/minor 锁步（无 breaking）
+
 - `ai` 7.0.17 → 7.0.x latest
 - `zod` 4.4.3 → 4.6.x（server + web + shared dev/peer 锁步）
 - `elysia` → 1.4.30、`@elysiajs/openapi` → 1.4.16（eden 随动）
@@ -28,6 +32,7 @@ needs_specs_change: false
 - `@types/*` 例行
 
 ### Batch Y — 黄批：`@ai-sdk/*` 六件套锁步升级（核心适配）
+
 - `@ai-sdk/{anthropic,deepseek,google,openai,openai-compatible,provider}` latest 锁步
 - **回归焦点（cast wall）**：
   - `apps/server/src/ai/providers.ts` `resolveChatModel` — `LanguageModelV4` 三分支 cast（callable / `.chat()` / `.languageModel()`）
@@ -38,7 +43,9 @@ needs_specs_change: false
 - 验证：`just type-aware-lint` + provider mock 测试 + `just qa`
 
 ### Batch R — 红批：大版本（逐项评估，可裁剪）
+
 每项独立 commit + 独立过 qa；**遇阻降级为 follow-up change，不阻塞收口**：
+
 - `tailwindcss` 3.4→4：web 全样式迁移——最大单项，超 1 天工时则砍出本 change
 - `@mui/icons-material` 7→9、`msw` 2→3（test-utils）、`jsdom` 26→30
 - `gridstack` 12→14、`gpt-tokenizer` 3→4（`countTokens` 口径回归）
@@ -46,6 +53,7 @@ needs_specs_change: false
 - `oxlint-tsgolint` 0.24→7.x（advisory 底座）、`tailwind-scrollbar` 3→4
 
 ### 收尾
+
 - `bun.lock` 全量收敛，无「pin 与 lock 解析分叉」半升级态
 - `docs/known-issues.md` 升级遗留条目按台账纪律处理
 - fallow 双门禁 + qa 全绿后 finalize

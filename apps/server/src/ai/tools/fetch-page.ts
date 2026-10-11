@@ -6,13 +6,11 @@ import { z } from 'zod';
 import { config } from '../../shared/config.ts';
 import { extractUrl, ExtractionError } from '../../shared/extraction/factory.ts';
 
-const FetchPageArgs = z.object({
+const FetchPageArgsSchema = z.object({
   url: z.url().describe('Absolute URL of the page to fetch and extract.'),
 });
 
-export type FetchPageArgs = z.infer<typeof FetchPageArgs>;
-
-export type FetchPageResult =
+type FetchPageResult =
   | { ok: true; url: string; title: string; content: string }
   | { ok: false; url: string; error: string };
 
@@ -46,7 +44,7 @@ export function fetchPageTool() {
   return tool({
     description:
       'Fetch and extract the main text of a web page by URL (readability → jina → firecrawl). Prefer after webSearch when a hit looks worth reading. On failure, keep using the SERP snippet.',
-    inputSchema: FetchPageArgs,
+    inputSchema: FetchPageArgsSchema,
     execute: async ({ url }): Promise<FetchPageResult> => fetchPageContent(url),
   });
 }

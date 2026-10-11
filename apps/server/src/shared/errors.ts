@@ -33,7 +33,7 @@ export const ErrorCode = {
   RESEARCH_BUDGET: 'RESEARCH_BUDGET',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
-export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
+export type ErrorCodeKey = (typeof ErrorCode)[keyof typeof ErrorCode];
 
 /** Canonical HTTP status for each error code. */
 const STATUS_BY_CODE = {
@@ -52,7 +52,7 @@ const STATUS_BY_CODE = {
   [ErrorCode.RESEARCH_INVALID_STATE]: 409,
   [ErrorCode.RESEARCH_BUDGET]: 409,
   [ErrorCode.INTERNAL_ERROR]: 500,
-} as const satisfies Record<ErrorCode, number>;
+} as const satisfies Record<ErrorCodeKey, number>;
 
 /** Elysia `set` object (only the status field is touched). */
 interface SetStatus {
@@ -65,7 +65,7 @@ interface SetStatus {
  */
 export class AppHttpError extends Error {
   constructor(
-    public code: ErrorCode,
+    public code: ErrorCodeKey,
     message: string,
     public details?: Record<string, unknown>,
     public retryAfter?: number,
@@ -82,7 +82,7 @@ export class AppHttpError extends Error {
  */
 export function sendError(
   set: SetStatus,
-  code: ErrorCode,
+  code: ErrorCodeKey,
   message: string,
   details?: Record<string, unknown>,
   retryAfter?: number,

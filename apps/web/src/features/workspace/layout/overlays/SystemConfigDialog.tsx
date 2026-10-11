@@ -72,14 +72,14 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
     () =>
       presets
         .filter((item) => item.source === 'builtin')
-        .sort((a, b) => a.trigger.localeCompare(b.trigger)),
+        .toSorted((a, b) => a.trigger.localeCompare(b.trigger)),
     [presets],
   );
   const customPresets = useMemo(
     () =>
       presets
         .filter((item) => item.source === 'custom')
-        .sort((a, b) => a.trigger.localeCompare(b.trigger)),
+        .toSorted((a, b) => a.trigger.localeCompare(b.trigger)),
     [presets],
   );
 

@@ -118,23 +118,110 @@ const ROLE_LABEL = {
   conclusion: '结论',
 } as const;
 
+const ROLE_COLORS = {
+  question: { border: '#0f766e', bg: '#ecfdf5' },
+  conclusion: { border: '#9a3412', bg: '#fff7ed' },
+} as const;
+
+function roleColors(
+  role: string | undefined,
+  fallback: { border: string; bg: string },
+): {
+  border: string;
+  bg: string;
+} {
+  if (role === 'question') return ROLE_COLORS.question;
+  if (role === 'conclusion') return ROLE_COLORS.conclusion;
+  return fallback;
+}
+
+function highlightRing(
+  selected: boolean | undefined,
+  highlighted: boolean | undefined,
+  border: string,
+): string | undefined {
+  if (selected) return `0 0 0 2px ${border}`;
+  if (highlighted) return '0 0 0 2px rgba(37, 99, 235, 0.45)';
+  return undefined;
+}
+
+function containerSizeClass(role: string | undefined): string {
+  return role === 'question' || role === 'conclusion'
+    ? 'min-w-[200px] max-w-[280px]'
+    : 'min-w-[140px] max-w-[210px]';
+}
+
+function titleColorClass(role: string | undefined): string {
+  return role === 'conclusion' ? 'text-amber-950' : 'text-slate-800';
+}
+
+interface LabNodeStatusFooterData {
+  showProgress?: boolean;
+  progressPct?: number;
+  statusHint?: string;
+  role?: string;
+  statusOverride?: string;
+  askOnInterrupt?: boolean;
+}
+
+/** Progress bar XOR semantic label XOR interaction hint — the node's third row. */
+// fallow-ignore-next-line complexity -- CRAP 估算无 coverage 数据；cyc/cog 已达标，覆盖率集成后移除
+function LabNodeStatusFooter({
+  d,
+  fallbackColor,
+  fallbackLabel,
+}: {
+  d: LabNodeStatusFooterData;
+  fallbackColor: string;
+  fallbackLabel: string;
+}) {
+  const isConclusion = d.role === 'conclusion';
+  const isQuestion = d.role === 'question';
+  if (d.showProgress) {
+    return (
+      <div className="mt-1.5">
+        <div className="h-1 rounded-full bg-slate-200/80 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-teal-500/80 transition-all duration-700"
+            style={{ width: `${d.progressPct}%` }}
+          />
+        </div>
+        {d.statusHint ? (
+          <div className="mt-0.5 text-[9px] text-slate-500 lab-status-float">{d.statusHint}</div>
+        ) : null}
+      </div>
+    );
+  }
+  if (!isQuestion) {
+    return (
+      <div className="text-[10px] mt-1" style={{ color: isConclusion ? '#9a3412' : fallbackColor }}>
+        {isConclusion ? `打开节点详情 · ${d.statusOverride ?? fallbackLabel}` : fallbackLabel}
+      </div>
+    );
+  }
+  return (
+    <div className="text-[10px] mt-1 text-teal-700">
+      {d.askOnInterrupt === false ? '不问确认 · 可拖动' : '中断时询问 · 可拖动'}
+    </div>
+  );
+}
+
 /** Invisible connection anchors — edges still attach, dots stay hidden. */
 const HIDDEN_HANDLE = '!w-2 !h-2 !min-w-0 !min-h-0 !border-0 !bg-transparent !opacity-0';
 
-function LabFlowNode({ data, id }: NodeProps<LabFlowNode>) {
+// fallow-ignore-next-line complexity -- CRAP 估算无 coverage 数据；cyc/cog 已达标，覆盖率集成后移除
+function LabFlowNodeView({ data, id }: NodeProps<LabFlowNode>) {
   const d = data;
   const style = STATUS_STYLE[d.conclusionStatus] ?? STATUS_STYLE.pending;
   const isConclusion = d.role === 'conclusion';
-  const isQuestion = d.role === 'question';
   const tb = d.direction === 'TB';
   const targetPos = tb ? Position.Top : Position.Left;
   const sourcePos = tb ? Position.Bottom : Position.Right;
+  const colors = roleColors(d.role, style);
 
   return (
     <div
-      className={`lab-node-in relative rounded-xl border-2 px-3 py-2.5 text-xs shadow-sm outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 ${
-        isQuestion || isConclusion ? 'min-w-[200px] max-w-[280px]' : 'min-w-[140px] max-w-[210px]'
-      } ${isConclusion ? 'ring-1 ring-amber-900/10' : ''} ${d.reshaping ? 'lab-node-reshape' : ''}`}
+      className={`lab-node-in relative rounded-xl border-2 px-3 py-2.5 text-xs shadow-sm outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 ${containerSizeClass(d.role)} ${isConclusion ? 'ring-1 ring-amber-900/10' : ''} ${d.reshaping ? 'lab-node-reshape' : ''}`}
       role="button"
       tabIndex={0}
       aria-label={`${d.title}（打开节点详情）`}
@@ -145,15 +232,11 @@ function LabFlowNode({ data, id }: NodeProps<LabFlowNode>) {
         d.onSelectNode?.(id);
       }}
       style={{
-        borderColor: isQuestion ? '#0f766e' : isConclusion ? '#9a3412' : style.border,
-        background: isQuestion ? '#ecfdf5' : isConclusion ? '#fff7ed' : style.bg,
+        borderColor: colors.border,
+        background: colors.bg,
         opacity: style.opacity ?? 1,
         animationDelay: `${d.animDelayMs}ms`,
-        boxShadow: d.selected
-          ? `0 0 0 2px ${isConclusion ? '#9a3412' : isQuestion ? '#0f766e' : style.border}`
-          : d.highlighted
-            ? '0 0 0 2px rgba(37, 99, 235, 0.45)'
-            : undefined,
+        boxShadow: highlightRing(d.selected, d.highlighted, colors.border),
       }}
     >
       <Handle type="target" position={targetPos} className={HIDDEN_HANDLE} />
@@ -163,41 +246,14 @@ function LabFlowNode({ data, id }: NodeProps<LabFlowNode>) {
           {ROLE_LABEL[d.role]}
         </div>
       ) : null}
-      <div
-        className={`font-semibold truncate ${isConclusion ? 'text-amber-950' : 'text-slate-800'}`}
-      >
-        {d.title}
-      </div>
+      <div className={`font-semibold truncate ${titleColorClass(d.role)}`}>{d.title}</div>
       {d.preview ? (
         <div className="mt-1 text-[10px] leading-snug text-slate-600 line-clamp-3 whitespace-pre-wrap">
           {d.preview}
         </div>
       ) : null}
 
-      {d.showProgress ? (
-        <div className="mt-1.5">
-          <div className="h-1 rounded-full bg-slate-200/80 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-teal-500/80 transition-all duration-700"
-              style={{ width: `${d.progressPct}%` }}
-            />
-          </div>
-          {d.statusHint ? (
-            <div className="mt-0.5 text-[9px] text-slate-500 lab-status-float">{d.statusHint}</div>
-          ) : null}
-        </div>
-      ) : !isQuestion ? (
-        <div
-          className="text-[10px] mt-1"
-          style={{ color: isConclusion ? '#9a3412' : style.border }}
-        >
-          {isConclusion ? `打开节点详情 · ${d.statusOverride ?? style.label}` : style.label}
-        </div>
-      ) : (
-        <div className="text-[10px] mt-1 text-teal-700">
-          {d.askOnInterrupt === false ? '不问确认 · 可拖动' : '中断时询问 · 可拖动'}
-        </div>
-      )}
+      <LabNodeStatusFooter d={d} fallbackColor={style.border} fallbackLabel={style.label} />
 
       {d.showProgress && d.statusHint ? (
         <div className="pointer-events-none absolute -right-1 -top-2 translate-x-full pl-1">
@@ -325,7 +381,7 @@ const LabActionEdge = memo(function LabActionEdge({
   );
 });
 
-const nodeTypes = { lab: LabFlowNode };
+const nodeTypes = { lab: LabFlowNodeView };
 const edgeTypes = { labAction: LabActionEdge };
 
 /**

@@ -88,7 +88,7 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(functi
       const id = el.gridstackNode?.id;
       if (!id) continue;
 
-      const contentEl = el.querySelector('.grid-stack-item-content');
+      const contentEl = el?.querySelector('.grid-stack-item-content');
       if (!contentEl) continue;
 
       targets[id] = attachPortalMount(contentEl);
@@ -159,7 +159,7 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(functi
         minRow: GRID_ROWS,
         cellHeight: MIN_CELL_HEIGHT,
         margin: GRID_MARGIN,
-        float: false,
+        mode: 'top',
         animate: true,
         staticGrid: lockedRef.current,
         draggable: { handle: '.mc-draghandle' },
@@ -167,6 +167,8 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(functi
       },
       container,
     );
+
+    if (!gs) return;
 
     gridRef.current = gs;
 
@@ -241,7 +243,7 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(functi
         minH: meta?.minH ?? 2,
       });
 
-      const contentEl = el.querySelector('.grid-stack-item-content');
+      const contentEl = el?.querySelector('.grid-stack-item-content');
       if (contentEl) {
         const mountEl = attachPortalMount(contentEl);
         setPortalTargets((prev) => ({ ...prev, [wid]: mountEl }));
