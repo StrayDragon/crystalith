@@ -64,6 +64,13 @@
       "when": 1791871151532,
       "tag": "0008_chunks_embedding_meta",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1791893158406,
+      "tag": "0009_index_jobs",
+      "breakpoints": true
     }
   ]
 }

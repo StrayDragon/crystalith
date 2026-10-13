@@ -32,8 +32,10 @@ mock.module('ai', () => ({
 }));
 
 import { db } from '../../src/db/index.ts';
-import { chunks, notebooks, sources } from '../../src/db/schema.ts';
+import { chunks, messages, notebooks, sessions, sources } from '../../src/db/schema.ts';
 import { countVectors, deleteSourceVectors } from '../../src/db/vectors.ts';
+import { convertSessionToSource } from '../../src/features/sessions/convert.ts';
+import { sourceExtrasRouter } from '../../src/features/sources/source-extras.router.ts';
 import { EmbedStrategy } from '../../src/rag/embed-strategy.ts';
 import { resetConfig } from '../../src/shared/config.ts';
 import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from '../helpers/integration.ts';
@@ -134,5 +136,61 @@ describe('r479 indexSource writes model and dims metadata', () => {
     expect(await countVectors(db(), nbId)).toBe(2);
     // The second indexSource went through the same titled document path.
     expect(sentBatches).toHaveLength(2);
+  });
+});
+
+describe('r483 direct-write vector paths persist chunk metadata', () => {
+  it('sessions convert stamps embedding_model and dims (c131)', async () => {
+    const orm = getOrm();
+    const sid = orm
+      .insert(sessions)
+      .values({ notebookId: nbId, title: 'conv' })
+      .returning()
+      .get().id;
+    orm
+      .insert(messages)
+      .values([
+        { sessionId: sid, role: 'user', content: '会话转来源的第一条消息，内容足够成块。' },
+        { sessionId: sid, role: 'assistant', content: '会话转来源的第二条消息，内容足够成块。' },
+      ])
+      .run();
+
+    const result = await convertSessionToSource(nbId, sid, {});
+    expect(result.chunkCount).toBeGreaterThan(0);
+
+    const rows = orm
+      .select({ model: chunks.embeddingModel, dims: chunks.embeddingDims })
+      .from(chunks)
+      .where(eq(chunks.sourceId, result.sourceId))
+      .all();
+    expect(rows.length).toBe(result.chunkCount);
+    for (const row of rows) {
+      expect(row.model).toBe('test-embed');
+      expect(row.dims).toBe(DIMS);
+    }
+  });
+
+  it('qa-to-source stamps embedding_model and dims (c131)', async () => {
+    const res = await sourceExtrasRouter.handle(
+      new Request(`http://local/v2/notebooks/${nbId}/sources/${sourceId}/qa-to-source`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ question: '检索元数据如何落库', answer: '直写路径也要落库。' }),
+      }),
+    );
+    expect(res.ok).toBe(true);
+    const body = (await res.json()) as { sourceId: number };
+    expect(body.sourceId).toBeGreaterThan(0);
+
+    const rows = getOrm()
+      .select({ model: chunks.embeddingModel, dims: chunks.embeddingDims })
+      .from(chunks)
+      .where(eq(chunks.sourceId, body.sourceId))
+      .all();
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.model).toBe('test-embed');
+      expect(row.dims).toBe(DIMS);
+    }
   });
 });

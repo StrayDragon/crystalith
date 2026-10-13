@@ -68,21 +68,31 @@ EmbeddingGemma 家族的模型卡要求为 query / document 两种输入分别�
 Crystalith 只消费 OpenAI-compatible 的 `POST /v1/embeddings`；前缀由 Crystalith 侧
 拼好后再送出，**网关拿到的是最终文本，对前缀无感知**。四种常见形态：
 
-| 网关      | 形态                                   | 接入要点                                                                                                 |
-| --------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| OMLX      | macOS（Apple Silicon）MLX server       | 本仓默认网关形态（`app.yaml` 里 `embed_gateway` anchor 指向 `http://127.0.0.1:50256/v1`）；bf16 加载友好 |
-| Ollama    | 跨平台，自带 OpenAI 兼容层             | baseUrl 指向 `http://127.0.0.1:11434/v1`；`model` 填 Ollama 模型名                                       |
-| llama.cpp | `llama-server --embeddings -m <gguf>`  | OpenAI 兼容端点同进程暴露；GGUF 变体选择注意下节精度要求                                                 |
-| TEI       | Hugging Face text-embeddings-inference | 自带 `/v1/embeddings` OpenAI 兼容路由；服务端部署（GPU/CPU）                                             |
+| 网关      | 形态                                       | 接入要点                                                                                                                                     |
+| --------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| OMLX      | macOS（Apple Silicon）MLX server           | 本仓默认网关形态（`app.yaml` 里 `embed_gateway` anchor 指向 `http://127.0.0.1:50256/v1`）；bf16 加载友好                                     |
+| Ollama    | 跨平台，自带 OpenAI 兼容层                 | baseUrl 指向 `http://127.0.0.1:11434/v1`；`model` 填 Ollama 模型名                                                                           |
+| llama.cpp | `llama-server --embeddings -m <gguf>`      | OpenAI 兼容端点同进程暴露；GGUF 变体选择注意下节精度要求                                                                                     |
+| TEI       | Hugging Face text-embeddings-inference     | 自带 `/v1/embeddings` OpenAI 兼容路由；服务端部署（GPU/CPU）                                                                                 |
+| maas-eg2  | 自托管 EmbeddingGemma 2 服务（本项目实测） | 默认条目 `embeddinggemma2-gateway` 走专用 anchor（`CL_EMBEDDING2_API_BASE`，缺省 `http://tufa:50233/v1`）；768 维恒归一、真实 tokenizer 计数 |
 
 provider 一律走 `openai-compatible`（本地网关）或 `openai`（云 API）， baseUrl/
-apiKey 由 `embed_gateway` anchor + `CL_EMBEDDING_API_BASE` / `CL_EMBEDDING_API_KEY`
-环境变量驱动（见 `config/app.yaml` 的 `gateway-embedding` 条目）。
+apiKey 由 anchor + 环境变量驱动：`embed_gateway`（`CL_EMBEDDING_API_BASE`，
+bge-m3 回退条目 `gateway-embedding`）与 `eg2_gateway`（`CL_EMBEDDING2_API_BASE`，
+**默认条目 `embeddinggemma2-gateway`**，c131 T8 起生效）。
 
-**EmbeddingGemma 2 特别注意**：它是多模态模型（2026-10 发布），第三方运行时
-（Ollama / llama.cpp GGUF / TEI / MLX）的支持尚在跟进，接入前**先实测**——发一条
-`/v1/embeddings` 请求确认能 embed 文本、且返回维度与条目 `dims` 声明一致。一代
-embeddinggemma（300M 纯文本版）已有 Ollama / GGUF 支持（如 `ollama pull embeddinggemma`）。
+**EmbeddingGemma 2 特别注意**：多模态模型（2026-10 发布），第三方运行时
+（Ollama / llama.cpp GGUF / TEI / MLX）支持尚在跟进，接入前**先实测**；一代
+embeddinggemma（300M 纯文本版）已有 Ollama / GGUF 支持。**本仓默认条目已实测**
+（2026-10-13，maas-embeddinggemma2 @ tufa:50233）：`ai@7.0.138` 零适配、768 维恒归一、
+前缀模板与服务端 `:SearchQuery`/`:Document` 后缀逐位一致（cos≥0.999999）。
+排错提示：AI SDK 的 `APICallError.message` 只有 "Bad Request"，详情看
+`error.responseBody`；服务端单飞锁串行处理，客户端并发只会在服务端排队。
+
+历史注记（2026-10-13，已修复）：maas 服务长跑进程曾出现 ROCm fp32+sdpa 注意力
+NaN → 向量全 NaN → starlette `allow_nan=False` 裸 500（个别中文序列触发）。服务端已
+加 `_encode_finite()` 兜底（GPU 非有限值 → CPU 重算）与可读 500（含 trace_id）；本仓
+`scripts/embedding-quality.ts` 的触发串已恢复自然措辞并作为回归样例保留。
 
 实测命令（网关地址按实际替换）：
 
@@ -138,8 +148,9 @@ CL_DEFAULT_EMBEDDING_MODEL=gateway-embedding    # 指向 app.yaml 条目 id
 - 另一层保险：provider 实际返回维度 ≠ 条目声明 `dims` 时引擎直接报错
   （`embedding-engine.ts`）——网关侧换了模型但没改配置会立刻暴露，而不是静默写脏向量。
 
-处理步骤（现阶段手动；notebook 级一键重建入口在后续 change c131 提供，届时可
-替代下面的 2–4 步）：
+处理步骤（c131 起**优先用一键重建**：来源面板工具栏的重建按钮，或
+`POST /v2/notebooks/:nid/search-index/rebuild`；维度不一致时自动升级为整库重建，
+确认弹窗会明示。手动 DROP 仅作兜底）：
 
 1. 改 `config/app.yaml`：新模型条目如实声明 `embedding.dims`（需要前缀的模型同时
    声明 `prefixPreset`），`models.defaults.embedding` 指向它。
@@ -150,6 +161,8 @@ CL_DEFAULT_EMBEDDING_MODEL=gateway-embedding    # 指向 app.yaml 条目 id
    sqlite3 data/crystalith.db 'DROP TABLE vec_chunks;'
    # DB 路径默认 <storage.data_root>/crystalith.db，CL_DB_PATH 可覆盖
    ```
+
+   （兜底路径；正常情况直接用重建按钮/端点，无需手动 DROP。）
 
 3. 重启 server：`initVecChunks`（`apps/server/src/db/index.ts`）按新声明维度重建空表。
 4. 对受影响笔记本全量重嵌（sourceIds 取自 `GET /v2/notebooks/:nid/sources`）：
@@ -166,3 +179,15 @@ CL_DEFAULT_EMBEDDING_MODEL=gateway-embedding    # 指向 app.yaml 条目 id
 
 注意：报错只拦「维度变了」的情况。**同维度换模型**（两个模型都是 1024 维）不会
 触发任何报错，但新旧向量空间不可比、混用会静默劣化检索——同样按上面 2–4 步重建。
+
+## 质量基线（c131 T7，2026-10-13 实测）
+
+`scripts/embedding-quality.ts`（手动跑，不进 CI）对 tufa:50233 的结果：
+
+- 前缀一致性：query cos=1.00000002 · document cos=0.99999996（门槛 ≥0.999999）。
+- 自检索 top-1：中文 0.887 · 中英混合 0.770 · 代码 0.867（三语料全中）。
+- 延迟：单条 p50 27ms · batch×32 均值 95ms（约 338 条/s）。
+
+重建期间的降级行为：QA 对话/单源问答返回提示文案（`noEvidenceReason` /
+`degraded` = `index_rebuilding`）；outputs 与 studio 生成返回 409
+`INDEX_REBUILDING`；research 检索工具返回空结果。

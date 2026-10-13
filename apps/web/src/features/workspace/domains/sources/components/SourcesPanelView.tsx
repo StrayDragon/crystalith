@@ -5,6 +5,7 @@ import { t } from '../../../../../shared/i18n';
 import { TestIds, tid } from '../../../../../shared/testids';
 import { SkeletonCard } from '../../../shared/components/Skeleton';
 import { useWorkspaceStore } from '../../../shared/state/workspaceStore';
+import { useSearchIndexRebuild } from '../useSearchIndexRebuild';
 import ExtractorPolicyDialog from './ExtractorPolicyDialog';
 import SourceConnectorsDialog from './SourceConnectorsDialog';
 import type { SourcesPanelViewProps } from './sources-panel-types';
@@ -149,8 +150,12 @@ function SourcesPanelView({
     };
   }, [jumpToSource, sourceIdToIndex]);
 
-  const mutationBusy =
-    removeState === 'loading' || tagMutationState === 'loading' || uploadState === 'loading';
+  const mutationBusy = [removeState, tagMutationState, uploadState].some(
+    (state) => state === 'loading',
+  );
+
+  // c131 T6: notebook-level embedding-index rebuild (toolbar button + progress).
+  const indexRebuild = useSearchIndexRebuild(notebookId);
   const removeDisabled = !isConnected || mutationBusy || selectedIds.length === 0;
   const batchReembedDisabled =
     !isConnected || !onBatchReembedSources || selectedIds.length === 0 || mutationBusy;
@@ -219,6 +224,7 @@ function SourcesPanelView({
         onAssignTagToSources={onAssignTagToSources}
         onRemoveTagFromSources={onRemoveTagFromSources}
         tagMutationState={tagMutationState}
+        indexControl={indexRebuild.control}
       />
 
       {/* r416: panel-level error snapshot — aggregate failures here so users

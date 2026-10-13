@@ -17,6 +17,7 @@ import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
 import { client, db } from '../../db/index.ts';
 import { chunks, outputs, sources, studioSlides } from '../../db/schema.ts';
+import { assertIndexNotRebuilding } from '../../rag/index-rebuild.ts';
 import { getDataRoot, getDefaultChatModel } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { logger } from '../../shared/logger.ts';
@@ -99,6 +100,9 @@ export async function getContext(slide: typeof studioSlides.$inferSelect): Promi
   // intentionally || — empty prompt/title falls back to default query
   // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   const query = slide.prompt || slide.title || 'presentation slides';
+  // c131 r482: retrieval is a hard prerequisite — fail fast while the index is
+  // rebuilding (the try/catch below would otherwise silently degrade).
+  await assertIndexNotRebuilding(slide.notebookId);
   try {
     const { ragRegistry } = await import('../../rag/registry.ts');
     const results = await ragRegistry.retrieveWith('embed', slide.notebookId, query, {

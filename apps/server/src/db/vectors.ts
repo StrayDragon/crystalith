@@ -11,8 +11,27 @@ import { AppHttpError, ErrorCode } from '../shared/errors.ts';
 import { createDbClient } from './client.ts';
 import type { Orm } from './index';
 
-/** Default embedding dimension (bge-m3 = 1024). Overridable per index. */
-const DEFAULT_EMBEDDING_DIM = 1024;
+/** Default embedding dimension fallback (bge-m3 = 1024). Overridable per index. */
+export const DEFAULT_EMBEDDING_DIM = 1024;
+
+/** vec0 CREATE DDL for a dimension (cosine metric — see initVecChunks). */
+function vecChunksDdl(dim: number): string {
+  return `CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(
+        embedding float[${dim}] distance_metric=cosine,
+        notebook_id integer partition by,
+        source_id integer partition by
+      );`;
+}
+
+/**
+ * Recreate vec_chunks wholesale at `dim` (c131 r480 global rebuild mode).
+ * Destructive: every stored vector is dropped — callers re-embed all ready
+ * sources afterwards. No in-place migration by policy (greenfield rebuild).
+ */
+export function recreateVecChunks(orm: Orm, dim: number): void {
+  orm.run(sql`DROP TABLE IF EXISTS vec_chunks`);
+  orm.run(sql.raw(vecChunksDdl(dim)));
+}
 
 /**
  * Parse the declared embedding dimension (`embedding float[N]`) out of a
@@ -30,7 +49,7 @@ function parseVecDim(ddl: string): number | null {
  * because the callers — searchVectors / insertChunkVector — are runtime
  * paths; boot-time initVecChunks reads sqlite_master synchronously instead.
  */
-async function readVecTableDim(orm: Orm): Promise<number | null> {
+export async function readVecTableDim(orm: Orm): Promise<number | null> {
   const rows = await createDbClient(orm).raw<{ sql: string | null }>(
     sql`SELECT sql FROM sqlite_master WHERE type='table' AND name='vec_chunks'`,
   );
@@ -79,11 +98,7 @@ export interface VectorHit {
  * their own rows (vectors are preserved — no re-embed needed).
  */
 export function initVecChunks(orm: Orm, dim = DEFAULT_EMBEDDING_DIM): void {
-  const createDdl = `CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(
-        embedding float[${dim}] distance_metric=cosine,
-        notebook_id integer partition by,
-        source_id integer partition by
-      );`;
+  const createDdl = vecChunksDdl(dim);
 
   const existing = orm.all<{ sql: string | null }>(
     sql`SELECT sql FROM sqlite_master WHERE type='table' AND name='vec_chunks'`,

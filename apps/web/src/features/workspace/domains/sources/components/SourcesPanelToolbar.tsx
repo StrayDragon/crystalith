@@ -19,6 +19,7 @@ import {
   Checkbox,
 } from '../../../../../shared/ui';
 import type { SourceSortBy, SourceSortOrder } from '../useSources';
+import IndexRebuildControl, { type IndexControlProps } from './IndexRebuildControl';
 
 export interface SourcesPanelToolbarProps {
   allSelected: boolean;
@@ -45,6 +46,8 @@ export interface SourcesPanelToolbarProps {
   onAssignTagToSources?: (tagId: number, sourceIds: number[]) => Promise<boolean>;
   onRemoveTagFromSources?: (tagId: number, sourceIds: number[]) => Promise<boolean>;
   tagMutationState: AsyncStatus;
+  /** c131 T6: notebook-level index rebuild control props (null hides it). */
+  indexControl?: IndexControlProps | null;
 }
 
 export default function SourcesPanelToolbar({
@@ -72,7 +75,11 @@ export default function SourcesPanelToolbar({
   onAssignTagToSources,
   onRemoveTagFromSources,
   tagMutationState,
+  indexControl,
 }: SourcesPanelToolbarProps) {
+  // Prefix for the ✓-marked active row in sort/filter menus.
+  const mark = (active: boolean) => (active ? '✓ ' : '   ');
+
   return (
     <div className="flex-shrink-0 px-3 sm:px-4 py-1.5 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700">
       <div className="flex items-center gap-1">
@@ -94,6 +101,8 @@ export default function SourcesPanelToolbar({
         </Typography>
 
         <span className="flex-1" />
+
+        {indexControl && <IndexRebuildControl {...indexControl} />}
 
         <Menu placement="bottom-end" dismiss={{ itemPress: false }}>
           <MenuHandler>
@@ -127,7 +136,7 @@ export default function SourcesPanelToolbar({
                 onClick={() => onSortByChange?.(val)}
                 className={`py-1.5 px-3 text-xs ${sortBy === val ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
               >
-                {sortBy === val ? '✓ ' : '   '}
+                {mark(sortBy === val)}
                 {label}
               </MenuItem>
             ))}
@@ -146,7 +155,7 @@ export default function SourcesPanelToolbar({
                 onClick={() => onSortOrderChange?.(val)}
                 className={`py-1.5 px-3 text-xs ${sortOrder === val ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
               >
-                {sortOrder === val ? '✓ ' : '   '}
+                {mark(sortOrder === val)}
                 {label}
               </MenuItem>
             ))}
@@ -167,7 +176,7 @@ export default function SourcesPanelToolbar({
                     onClick={() => onTagFilterChange?.('')}
                     className={`py-1.5 px-3 text-xs ${!tagFilter ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
                   >
-                    {!tagFilter ? '✓ ' : '   '}全部
+                    {mark(!tagFilter)}全部
                   </MenuItem>,
                   ...sourceTags.map((tag) => (
                     <MenuItem
@@ -175,7 +184,7 @@ export default function SourcesPanelToolbar({
                       onClick={() => onTagFilterChange?.(tag.name)}
                       className={`py-1.5 px-3 text-xs ${tagFilter === tag.name ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
                     >
-                      {tagFilter === tag.name ? '✓ ' : '   '}
+                      {mark(tagFilter === tag.name)}
                       {tag.name}
                     </MenuItem>
                   )),

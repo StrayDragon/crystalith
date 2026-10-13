@@ -64,6 +64,8 @@ export const TestIds = {
   sourceDetailTabRaw: 'source-detail-tab-raw',
   sourcesSelectedMenu: 'sources-selected-menu',
   sourcesBatchDelete: 'sources-batch-delete',
+  sourcesIndexRebuildButton: 'sources-index-rebuild-button',
+  sourcesIndexRebuildProgress: 'sources-index-rebuild-progress',
   sourceRowMenu: 'source-row-menu',
   sourceRowDelete: 'source-row-delete',
 

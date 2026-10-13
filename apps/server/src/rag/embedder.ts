@@ -34,6 +34,16 @@ function noModelError(): Error {
 }
 
 /**
+ * Drop the cached engine so the next embed re-resolves config. Production
+ * never needs this (config is read once per process); tests that `resetConfig`
+ * mid-file (e.g. dimension-change rebuild scenarios) use it to simulate a
+ * fresh process.
+ */
+export function resetEmbedderForTests(): void {
+  _engine = null;
+}
+
+/**
  * Embed a single text string (query role). Returns Float32Array of the embedding.
  */
 export async function embedSingle(text: string): Promise<Float32Array> {

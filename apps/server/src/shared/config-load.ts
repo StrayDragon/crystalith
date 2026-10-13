@@ -47,7 +47,18 @@ export function config(): AppConfig {
 /** Force a reload (tests / config hot-reload). */
 export function resetConfig(cfg: AppConfig | null = null): void {
   _config = cfg;
+  _explicitlySet = true;
   resetEnvOverlay();
+}
+
+/**
+ * True once a test has resetConfig'd its own fixture. Integration setup uses
+ * this to keep unseeded test files hermetic: without it they would inherit
+ * the REAL app.yaml (e.g. its embedding dims) depending on runner CWD.
+ */
+let _explicitlySet = false;
+export function configExplicitlySet(): boolean {
+  return _explicitlySet;
 }
 
 /** Parse a config section safely — returns defaults on absence/invalid. */

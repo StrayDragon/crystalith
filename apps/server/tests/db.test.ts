@@ -20,6 +20,7 @@ import {
   searchVectors,
 } from '../src/db/vectors.ts';
 import { KeywordStrategy } from '../src/rag/keyword-strategy.ts';
+import { seedChatModel } from './helpers/integration.ts';
 
 const TMP_DB = 'data/test-vector.db';
 
@@ -31,6 +32,10 @@ const LEGACY_MIGRATIONS = 'data/test-legacy-drizzle';
 let orm: Orm;
 
 beforeAll(async () => {
+  // Hermetic config (chat seeded; embedding dims fall back to 1024) — this
+  // file drives createDb directly, bypassing setupIntegrationEnv's auto-seed,
+  // and must not inherit the real app.yaml's dims when run from repo root.
+  seedChatModel();
   for (const f of [TMP_DB, `${TMP_DB}-wal`, `${TMP_DB}-shm`]) rmSync(f, { force: true });
   orm = createDb(TMP_DB);
   // KeywordStrategy goes through the client() singleton — point it at this

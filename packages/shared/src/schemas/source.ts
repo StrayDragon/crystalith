@@ -595,6 +595,13 @@ export const SourceQAResponseSchema = z.object({
   sourceName: z.string(),
   question: z.string(),
   answer: z.string(),
+  /** c131 r482: set when the answer is a degrade notice (e.g. index rebuilding). */
+  degraded: z
+    .string()
+    .optional()
+    .describe(
+      desc('source.qa.degraded', '降级原因（如 index_rebuilding 表示索引重建中，回答为提示文案）'),
+    ),
 });
 export type SourceQAResponse = z.infer<typeof SourceQAResponseSchema>;
 
@@ -641,3 +648,89 @@ export const SourceTagBindingResponseSchema = z.object({
   results: z.array(SourceBatchItemResultSchema),
 });
 export type SourceTagBindingResponse = z.infer<typeof SourceTagBindingResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// Search index rebuild + status (c131 r480/r481)
+// ---------------------------------------------------------------------------
+
+export const SearchIndexRebuildResponseSchema = z
+  .object({
+    jobId: z
+      .number()
+      .int()
+      .describe(desc('searchIndex.rebuild.jobId', '重建任务 id，用于查询进度')),
+    mode: z
+      .enum(['notebook', 'global'])
+      .describe(
+        desc(
+          'searchIndex.rebuild.mode',
+          '重建模式：notebook 仅该笔记本；global 为维度变更引发的整库重建',
+        ),
+      ),
+  })
+  .openapi({ description: desc('searchIndex.rebuild.response', '重建任务启动结果（异步）') });
+
+export const SearchIndexProgressSchema = z
+  .object({
+    total: z.number().int().describe(desc('searchIndex.progress.total', '待重嵌来源总数')),
+    done: z.number().int().describe(desc('searchIndex.progress.done', '已成功来源数')),
+    failed: z.number().int().describe(desc('searchIndex.progress.failed', '失败来源数')),
+  })
+  .openapi({ description: desc('searchIndex.progress', '重建进度计数') });
+
+export const SearchIndexLastJobSchema = z
+  .object({
+    id: z.number().int().describe(desc('searchIndex.lastJob.id', '最近一次重建任务 id')),
+    mode: z
+      .enum(['notebook', 'global'])
+      .describe(desc('searchIndex.lastJob.mode', '最近一次重建模式')),
+    state: z.string().describe(desc('searchIndex.lastJob.state', '最近一次任务状态')),
+    total: z.number().int().describe(desc('searchIndex.lastJob.total', '该任务来源总数')),
+    done: z.number().int().describe(desc('searchIndex.lastJob.done', '该任务成功数')),
+    failed: z.number().int().describe(desc('searchIndex.lastJob.failed', '该任务失败数')),
+  })
+  .openapi({ description: desc('searchIndex.lastJob', '最近一次重建任务摘要') });
+
+export const SearchIndexStatusSchema = z
+  .object({
+    state: z
+      .enum(['ready', 'rebuilding', 'dim_mismatch', 'interrupted'])
+      .describe(
+        desc(
+          'searchIndex.status.state',
+          '索引状态：ready 就绪；rebuilding 重建中；dim_mismatch 维度不匹配；interrupted 上次重建被中断',
+        ),
+      ),
+    declaredDims: z
+      .number()
+      .int()
+      .nullable()
+      .optional()
+      .describe(
+        desc('searchIndex.status.declaredDims', '默认嵌入模型声明维度（dim_mismatch 时给出）'),
+      ),
+    tableDims: z
+      .number()
+      .int()
+      .nullable()
+      .optional()
+      .describe(desc('searchIndex.status.tableDims', 'vec_chunks 现表维度（dim_mismatch 时给出）')),
+    jobId: z
+      .number()
+      .int()
+      .nullable()
+      .optional()
+      .describe(desc('searchIndex.status.jobId', '相关任务 id（rebuilding/interrupted 时给出）')),
+    progress: SearchIndexProgressSchema.optional().describe(
+      desc('searchIndex.status.progress', '重建进度（rebuilding 时给出）'),
+    ),
+    lastJob: SearchIndexLastJobSchema.optional().describe(
+      desc('searchIndex.status.lastJob', '最近一次任务摘要（有历史时给出）'),
+    ),
+  })
+  .openapi({ description: desc('searchIndex.status', '笔记本嵌入索引状态') });
+
+export type SearchIndexRebuildResponse = z.infer<typeof SearchIndexRebuildResponseSchema>;
+export type SearchIndexProgress = z.infer<typeof SearchIndexProgressSchema>;
+export type SearchIndexLastJob = z.infer<typeof SearchIndexLastJobSchema>;
+export type SearchIndexStatus = z.infer<typeof SearchIndexStatusSchema>;

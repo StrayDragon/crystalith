@@ -67,6 +67,18 @@ const apiDocs: OpenApiRoute[] = [
 // Router
 // ---------------------------------------------------------------------------
 
+/** c131 r482: notice payload when the notebook index is rebuilding/interrupted. */
+async function qaIndexDegraded(
+  notebookId: number,
+): Promise<{ degraded: string; answer: string } | null> {
+  const { isIndexRebuilding } = await import('../../rag/index-rebuild.ts');
+  if (!(await isIndexRebuilding(notebookId))) return null;
+  return {
+    degraded: 'index_rebuilding',
+    answer: '索引重建中，暂时无法基于该来源检索；请等重建完成后再提问。',
+  };
+}
+
 export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
   // Source summary — GET is cache-only (c74); POST generates & persists
   .get(
@@ -106,6 +118,13 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
       const modelConfig = getDefaultChatModel();
       if (!modelConfig)
         throw new AppHttpError(ErrorCode.MODEL_UNAVAILABLE, 'No chat model configured');
+
+      // c131 r482: index rebuilding/interrupted → conversational degrade with
+      // an explicit notice; skip retrieval (and the first-chunks fallback).
+      const degraded = await qaIndexDegraded(source.notebookId);
+      if (degraded) {
+        return { sourceId: sid, sourceName: source.filename, question, ...degraded };
+      }
 
       // c39: Use vector retrieval scoped to this source (v1 cached_vector_search)
       let contextChunks: Array<{ text: string; score: number }> = [];
@@ -175,7 +194,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
       const filename = `QA_${source.filename}_${timestamp}.md`;
 
       let text: string;
-      if (messages && messages.length > 0) {
+      if (messages?.length) {
         const turns = messages
           .map((m) => {
             const label = m.role === 'assistant' ? '助手' : '用户';
@@ -232,6 +251,9 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
           for (const [i, vec] of vectors.entries()) {
             await insertChunkVector(db(), chunkRows[i].id, source.notebookId, newSource.id, vec);
           }
+          // r483: direct-write path stamps chunk metadata like indexSource does.
+          const { markChunksEmbeddedFromVectors } = await import('../../rag/embed-metadata.ts');
+          await markChunksEmbeddedFromVectors(newSource.id, vectors);
           const { bumpVectorEpoch, bumpSourcesEpoch } = await import('../../rag/cache.ts');
           bumpVectorEpoch(source.notebookId);
           bumpSourcesEpoch(source.notebookId);

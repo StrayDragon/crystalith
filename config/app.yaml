@@ -78,6 +78,12 @@ providers:
     apiKey: "{{ env.CL_EMBEDDING_API_KEY | default('sk-local') }}"
     baseUrl: "{{ env.CL_EMBEDDING_API_BASE | default('http://127.0.0.1:50256/v1') }}"
 
+  # EmbeddingGemma 2 dedicated gateway (c131; keep separate so the bge-m3
+  # embed_gateway stays as fallback). Served by maas-embeddinggemma2.
+  eg2_gateway: &eg2_gateway
+    apiKey: "{{ env.CL_EMBEDDING2_API_KEY | default('local') }}"
+    baseUrl: "{{ env.CL_EMBEDDING2_API_BASE | default('http://tufa:50233/v1') }}"
+
   # OpenAI-compatible primary chat gateway (routed via CL_CHAT_API_BASE by default)
   # Default false: some think/grammar gateways reject json_schema ("failed to parse grammar").
   # gateway-chat-primary overrides to true when the gateway supports response_format json_schema
@@ -94,8 +100,9 @@ models:
   defaults:
     # Default chat model ID (override: CL_DEFAULT_CHAT_MODEL=gateway-chat-light)
     chat: "{{ env.CL_DEFAULT_CHAT_MODEL | default('gateway-chat-primary') }}"
-    # Default embedding model ID
-    embedding: "{{ env.CL_DEFAULT_EMBEDDING_MODEL | default('gateway-embedding') }}"
+    # Default embedding model ID (c131 T8: EmbeddingGemma 2 — quality gate passed
+    # 2026-10-13, see scripts/embedding-quality.ts baseline in docs/embedding.md)
+    embedding: "{{ env.CL_DEFAULT_EMBEDDING_MODEL | default('embeddinggemma2-gateway') }}"
 
   available:
     # -------------------- OpenAI (chat) --------------------
@@ -174,6 +181,21 @@ models:
         dims: 1024
       providerConfig:
         <<: *embed_gateway
+
+    # -------------------- EmbeddingGemma 2 gateway (c131) --------------------
+    - id: "embeddinggemma2-gateway"
+      provider: "openai-compatible"
+      model: "embeddinggemma-2"
+      displayName: "EmbeddingGemma 2 (gateway)"
+      description: "Google EmbeddingGemma 2 文本嵌入（多模态模型，本条目仅文本侧）via OpenAI-compatible gateway"
+      roles: [embed]
+      embedding:
+        dims: 768
+        mrlDims: [768, 512, 256, 128]
+        modalities: [text]
+        prefixPreset: embeddinggemma2
+      providerConfig:
+        <<: *eg2_gateway
 
     - id: "gateway-chat-light"
       provider: "openai-compatible"

@@ -28,6 +28,7 @@ export const ErrorCode = {
   MODEL_UNAVAILABLE: 'MODEL_UNAVAILABLE',
   MODEL_ERROR: 'MODEL_ERROR',
   EMBEDDING_DIM_MISMATCH: 'EMBEDDING_DIM_MISMATCH',
+  INDEX_REBUILDING: 'INDEX_REBUILDING',
   NOT_IMPLEMENTED: 'NOT_IMPLEMENTED',
   CONNECTOR_UNAVAILABLE: 'CONNECTOR_UNAVAILABLE',
   RESEARCH_INVALID_STATE: 'RESEARCH_INVALID_STATE',
@@ -51,6 +52,10 @@ const STATUS_BY_CODE = {
   // 409: stored vec_chunks dimension conflicts with the configured embedding
   // model — retrieval/insert refuse until the index is re-embedded/rebuilt.
   [ErrorCode.EMBEDDING_DIM_MISMATCH]: 409,
+  // 409: embedding index is rebuilding (or left interrupted) — conversational
+  // callers degrade with a notice, hard-prerequisite callers fail fast (c131
+  // r482).
+  [ErrorCode.INDEX_REBUILDING]: 409,
   [ErrorCode.NOT_IMPLEMENTED]: 501,
   [ErrorCode.CONNECTOR_UNAVAILABLE]: 409,
   [ErrorCode.RESEARCH_INVALID_STATE]: 409,

@@ -134,6 +134,9 @@ export async function convertSessionToSource(
       for (const [i, vec] of vectors.entries()) {
         await insertChunkVector(db(), chunkRows[i].id, nid, source.id, vec);
       }
+      // r483: direct-write path stamps chunk metadata like indexSource does.
+      const { markChunksEmbeddedFromVectors } = await import('../../rag/embed-metadata.ts');
+      await markChunksEmbeddedFromVectors(source.id, vectors);
 
       const { bumpVectorEpoch, bumpSourcesEpoch } = await import('../../rag/cache.ts');
       bumpVectorEpoch(nid);

@@ -8,6 +8,7 @@ import { createDbClient } from '../../db/client.ts';
 import type { Orm } from '../../db/index.ts';
 import { sources } from '../../db/schema.ts';
 import { searchVectors, type VectorHit } from '../../db/vectors.ts';
+import { isIndexRebuilding } from '../../rag/index-rebuild.ts';
 
 const RetrieveSourcesArgsSchema = z.object({
   query: z.string().min(1).describe('The search query to retrieve relevant source chunks for.'),
@@ -34,6 +35,11 @@ export function retrieveSourcesTool(
       "Retrieve relevant source chunks from the notebook's knowledge base using semantic search. Use this to find evidence before answering questions.",
     inputSchema: RetrieveSourcesArgsSchema,
     execute: async ({ query, topK }): Promise<RetrievedChunk[]> => {
+      // c131 r482: while the index is rebuilding/interrupted the tool MUST NOT
+      // hand out silently-partial evidence — an empty set lets the research
+      // agent see the degrade instead of citing half an index.
+      if (await isIndexRebuilding(notebookId)) return [];
+
       const queryVec = await embedder(query);
       const hits: VectorHit[] = await searchVectors(orm, queryVec, notebookId, topK);
 

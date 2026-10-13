@@ -1,5 +1,8 @@
 ---
 depends_on: [c130-extend-embedding-capability]
+branch: sdd/c131-adopt-embeddinggemma2
+base_branch: main
+base_sha: de88025ba5648e68b5119e8a771a090541d9b29b
 ---
 
 # Adopt EmbeddingGemma 2：目录接入 + 索引重建路径 + 质量清单 + 默认切换
@@ -59,6 +62,21 @@ depends_on: [c130-extend-embedding-capability]
 - `apps/server`：features/sources（search-index router）、rag（重建引擎 + 元数据 helper）、db（`index_jobs` 表 + 迁移 0009）、shared/errors（`INDEX_REBUILDING`）。
 - `apps/web`：sources 面板工具栏按钮 + 确认弹窗 + 进度轮询 + QA 降级提示。
 - `docs/embedding.md`（tufa 实测行、重建指引、质量基线）、`scripts/embedding-quality.ts`（新）。
+
+## 范围备注（verify W2 记录——门禁驱动的测试/配置基建改动）
+
+以下改动超出 tasks 字面范围，均为通过 `just qa` 门禁所必需，且不改变任何运行时生产行为：
+
+1. `.fallowrc.json` entry 登记 `apps/web/src/**/*.test.{ts,tsx}`：fallow 未自动识别 rstest 测试入口，109 个既有 web 测试文件此前被计入 dead-file 基线；新测试文件会被误判 introduced。登记后测试文件正式成为入口（与既有 test-utils 条目同类别）。
+2. `setupIntegrationEnv` 封闭化：`resetConfig` 增加 `configExplicitlySet` 标记，未显式 seed 的集成测试自动种 chat-only 配置（嵌入维度回退 1024）——否则从仓库根跑门禁时会继承真实 app.yaml 的维度（runner CWD 相关）；`db.test.ts` 直连 createDb，单独补 seed。
+3. `resetEmbedderForTests()`（embedder facade 测试重置缝）：引擎单例缓存跨 resetConfig 失效，维度变更类测试需要"新进程"语义；生产路径不受影响（配置每进程只读一次）。
+
+## verify 补充（2026-10-13）
+
+- 修复：research retrieveSources 工具重建期间返回部分证据 → 空集守卫 + 测试（r482 补全）。
+- 补测：studio slides 409 守卫直接测试（W1）。
+- 修剪：`index_jobs` 每笔记本仅保留最新一条历史（启动时 + 完成后修剪，running 永不剪）——表规模收敛到约每笔记本一行（suggestion 兑现）。
+- maas 网关 500 bug（W3）：根因为服务端长跑进程 ROCm fp32+sdpa 注意力 NaN（非 tokenizer）；服务端已修（`_encode_finite()` CPU 重算兜底 + 可读 500 + trace_id，附回归测试）。本仓六形态复测全 200、向量有限；`scripts/embedding-quality.ts` 恢复自然触发串措辞作为回归样例，docs 同步更新。
 
 ## 关联
 

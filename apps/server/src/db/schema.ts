@@ -22,6 +22,7 @@ import {
 import { messages, sessions } from './schema/sessions.ts';
 import {
   chunks,
+  indexJobs,
   sourceConnectorBindings,
   sourceTagMap,
   sourceTags,
@@ -49,6 +50,7 @@ export {
   sourceTagMapRelations,
   sourceConnectorBindings,
   sourceConnectorBindingRelations,
+  indexJobs,
 } from './schema/sources.ts';
 export { outputs } from './schema/outputs.ts';
 export { studioSlides, studioSlideRelations } from './schema/studio.ts';
@@ -108,6 +110,7 @@ export const schema = {
   sourceTags,
   sourceTagMap,
   sourceConnectorBindings,
+  indexJobs,
   outputs,
   studioSlides,
   researchRuns,

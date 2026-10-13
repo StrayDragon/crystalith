@@ -7,7 +7,10 @@
     "e2e/*.{ts,js}",
     "apps/web/scripts/*.{js,ts}",
     "apps/web/rstest.setup.ts",
-    "apps/web/src/test-utils/**/*.{ts,tsx}"
+    "apps/web/src/test-utils/**/*.{ts,tsx}",
+    // rstest 测试文件：fallow 未自动识别该 runner 的入口（109 个测试文件曾被
+    // 计入 dead-file 基线）；作为测试入口显式登记，与 test-utils 同类别。
+    "apps/web/src/**/*.test.{ts,tsx}"
   ],
   "workspaces": {
     "patterns": ["apps/server", "apps/web", "packages/*", "e2e"]

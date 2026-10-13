@@ -498,3 +498,36 @@ describe('config: embedding capability declaration', () => {
     expect(cfg.models.available[1]?.embedding).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// c131: embeddinggemma2-gateway catalog entry (T1)
+// ---------------------------------------------------------------------------
+
+describe('config: embeddinggemma2-gateway catalog entry (c131)', () => {
+  it('ships the eg2 entry with the full capability block and dedicated gateway', () => {
+    const cfg = loadConfig(join(import.meta.dir, '../../../config/app.yaml'));
+    const entry = cfg.models.available.find((m) => m.id === 'embeddinggemma2-gateway');
+    expect(entry).toBeDefined();
+    expect(entry?.provider).toBe('openai-compatible');
+    expect(entry?.model).toBe('embeddinggemma-2');
+    expect(entry?.roles).toContain('embed');
+    expect(entry?.embedding).toMatchObject({
+      dims: 768,
+      mrlDims: [768, 512, 256, 128],
+      modalities: ['text'],
+      prefixPreset: 'embeddinggemma2',
+    });
+    // Dedicated anchor (env-driven, defaults to the maas-embeddinggemma2 host).
+    expect(entry?.providerConfig?.baseUrl).toBe('http://tufa:50233/v1');
+  });
+
+  it('defaults.embedding points at the eg2 entry (c131 T8 flip)', () => {
+    delete process.env.CL_DEFAULT_EMBEDDING_MODEL;
+    const cfg = loadConfig(join(import.meta.dir, '../../../config/app.yaml'));
+    expect(cfg.models.defaults.embedding).toBe('embeddinggemma2-gateway');
+    // And that id actually resolves to the eg2 entry.
+    expect(cfg.models.available.find((m) => m.id === cfg.models.defaults.embedding)?.model).toBe(
+      'embeddinggemma-2',
+    );
+  });
+});

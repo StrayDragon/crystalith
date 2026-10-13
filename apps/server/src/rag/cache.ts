@@ -69,3 +69,8 @@ export function clearCache(): void {
   sourcesEpochs.clear();
   vectorEpochs.clear();
 }
+
+/** Test/status observability: current vector_epoch for a notebook (c131 r480). */
+export function vectorEpochOf(notebookId: number): number {
+  return vectorEpochs.get(notebookId) ?? 0;
+}

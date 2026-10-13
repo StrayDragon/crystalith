@@ -103,6 +103,11 @@ export async function resolvePipelineContextChunks(input: PipelineInput): Promis
   const query = buildOutputQuery(input.type, input.prompt);
   const { ragRegistry } = await import('../../rag/registry.ts');
 
+  // c131 r482: retrieval is a hard prerequisite — fail fast while the index is
+  // rebuilding (the try/catch below would otherwise silently degrade).
+  const { assertIndexNotRebuilding } = await import('../../rag/index-rebuild.ts');
+  await assertIndexNotRebuilding(input.notebookId);
+
   let searchResults: ChunkResult[];
   try {
     searchResults = await ragRegistry.retrieveWith('embed', input.notebookId, query, {

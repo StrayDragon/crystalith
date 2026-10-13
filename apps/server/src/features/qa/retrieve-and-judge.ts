@@ -16,7 +16,9 @@ import { countTokens } from '../../ai/tokenizer.ts';
 import { client, db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { truncateToTokenBudget } from '../../rag/context-window.ts';
+import { isIndexRebuilding } from '../../rag/index-rebuild.ts';
 import { ragRegistry } from '../../rag/registry.ts';
+import type { RAGStrategy } from '../../rag/types.ts';
 import { hydrateCitations } from '../../shared/citations.ts';
 import { getContextWindowSettings } from '../../shared/config.ts';
 import { logger } from '../../shared/logger.ts';
@@ -39,6 +41,8 @@ export const SOURCES_NOT_READY_ANSWER = '所选来源尚未完成索引或内容
 export const LOW_SIMILARITY_ANSWER =
   '检索到了片段，但与问题的相似度偏低，不足以作为可靠证据。请换个问法，或确认已勾选正确来源。';
 export const EMBEDDING_EMPTY_ANSWER = '问题向量化失败，请检查 Embedding 模型配置后重试。';
+const INDEX_REBUILDING_ANSWER =
+  '索引重建中，暂时无法检索来源；请等重建完成后再提问（可在来源面板查看进度）。';
 
 /** Localized answer for each no-evidence reason (v1 no_evidence_answer_for_reason). */
 export function noEvidenceAnswerForReason(reason: NoEvidenceReason | null): string {
@@ -53,6 +57,8 @@ export function noEvidenceAnswerForReason(reason: NoEvidenceReason | null): stri
       return LOW_SIMILARITY_ANSWER;
     case 'embedding_empty':
       return EMBEDDING_EMPTY_ANSWER;
+    case 'index_rebuilding':
+      return INDEX_REBUILDING_ANSWER;
     case null:
       return NO_EVIDENCE_ANSWER;
   }
@@ -63,7 +69,8 @@ export type NoEvidenceReason =
   | 'embedding_empty'
   | 'no_vector_hits'
   | 'no_valid_chunks'
-  | 'low_similarity';
+  | 'low_similarity'
+  | 'index_rebuilding';
 
 export interface JudgeResult {
   /** True when generation should proceed (grounded, ungrounded, or weak-grounded). */
@@ -108,6 +115,15 @@ export interface RetrieveAndJudgeOptions {
   historyTokens?: number;
   /** c60: system prompt for real system_tokens counting (v1 ContextWindow.build). */
   systemPrompt?: string;
+}
+
+/** Resolve the retrieval strategy for a QA judgment (explicit → notebook config → embed). */
+async function resolveQaStrategy(
+  opts: Parameters<typeof retrieveAndJudge>[0],
+): Promise<RAGStrategy> {
+  const strategyId =
+    opts.strategyId ?? (await ragRegistry.getForNotebook(opts.notebookId))[0] ?? 'embed';
+  return ragRegistry.get(strategyId);
 }
 
 /**
@@ -161,12 +177,16 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
     };
   }
 
+  // c131 r482: index rebuilding/interrupted → conversational degrade with an
+  // explicit notice; retrieval (and thus embedding) is never invoked.
+  if (await isIndexRebuilding(opts.notebookId)) {
+    return noEvidence('index_rebuilding', emptyStats);
+  }
+
   // Step 3-4: Retrieve via RAG strategy (embed + search happen inside).
   // Pass minScore: 0 so strategy does not pre-drop weak hits — Step 10 applies
   // the evidence threshold and can distinguish low_similarity from empty index.
-  const strategyId =
-    opts.strategyId ?? (await ragRegistry.getForNotebook(opts.notebookId))[0] ?? 'embed';
-  const strategy = ragRegistry.get(strategyId);
+  const strategy = await resolveQaStrategy(opts);
 
   let rawResults;
   try {

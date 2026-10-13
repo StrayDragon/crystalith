@@ -13,9 +13,10 @@ import {
   searchVectors,
   countVectors,
 } from '../db/vectors.ts';
-import { getDefaultEmbeddingModel, getEmbeddingSettings } from '../shared/config.ts';
+import { getEmbeddingSettings } from '../shared/config.ts';
 import { getCached, setCached, bumpVectorEpoch } from './cache.ts';
 import { applyDiversity } from './diversity.ts';
+import { markChunksEmbedded } from './embed-metadata.ts';
 import { embedSingle, embedBatch } from './embedder.ts';
 import { buildQuerySeeds, rrfFuseSeeds } from './multi-query.ts';
 import type { RAGStrategy, ChunkResult, RetrieveOptions } from './types.ts';
@@ -80,17 +81,9 @@ export class EmbedStrategy implements RAGStrategy {
       }
     }
 
-    // r479: stamp embedding index metadata on this source's chunk rows — a
-    // re-embed overwrites both columns, so no stale values survive.
-    await client().run(
-      db()
-        .update(chunks)
-        .set({
-          embeddingModel: getDefaultEmbeddingModel()?.id ?? null,
-          embeddingDims: vectorDims,
-        })
-        .where(eq(chunks.sourceId, sourceId)),
-    );
+    // r479/r483: stamp embedding index metadata on this source's chunk rows —
+    // a re-embed overwrites both columns, so no stale values survive.
+    await markChunksEmbedded(sourceId, vectorDims);
     // New vectors invalidate cached retrievals for this notebook.
     bumpVectorEpoch(notebookId);
   }

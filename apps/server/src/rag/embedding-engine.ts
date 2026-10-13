@@ -20,7 +20,7 @@ interface EmbeddingPrefixPreset {
   document: (title: string | undefined, text: string) => string;
 }
 
-const PREFIX_PRESETS = {
+export const PREFIX_PRESETS = {
   embeddinggemma2: {
     query: (q: string) => `task: search result | query: ${q}`,
     document: (title: string | undefined, text: string) =>

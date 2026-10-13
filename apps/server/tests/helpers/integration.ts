@@ -13,7 +13,7 @@ import {
   activeLoops,
   ensureRunAbortController,
 } from '../../src/features/research/research-core.ts';
-import { resetConfig } from '../../src/shared/config.ts';
+import { configExplicitlySet, resetConfig } from '../../src/shared/config.ts';
 
 const TMP_DIR = join(import.meta.dirname, '..', '..', 'data');
 
@@ -28,6 +28,11 @@ let orm: Orm;
 
 /** Point the db() singleton at a fresh temp DB (runs migrations + vec setup). */
 export function setupIntegrationEnv(): void {
+  // Hermetic default: files that never resetConfig their own fixture get a
+  // deterministic model config (chat ok; embedding dims fall back to 1024)
+  // instead of inheriting the REAL app.yaml depending on the runner's CWD
+  // (just qa runs from repo root; direct bun test from apps/server).
+  if (!configExplicitlySet()) seedChatModel();
   const db = join(TMP_DIR, `test-integration-${process.pid}-${crypto.randomUUID().slice(0, 8)}.db`);
   tmpDbPaths = [db, `${db}-wal`, `${db}-shm`];
   for (const f of tmpDbPaths) rmSync(f, { force: true });

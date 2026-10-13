@@ -155,3 +155,30 @@ export const sourceConnectorBindingRelations = relations(sourceConnectorBindings
     references: [notebooks.id],
   }),
 }));
+
+// ---------------------------------------------------------------------------
+// Embedding index rebuild jobs (c131 r480)
+// ---------------------------------------------------------------------------
+
+/**
+ * Async rebuild jobs for the embedding index. `notebook` mode re-embeds one
+ * notebook's ready sources; `global` mode (dimension change — vec_chunks is a
+ * single shared vec0 table) recreates the table and re-embeds every notebook.
+ * Jobs left `running` by a process restart are marked `interrupted` at boot.
+ */
+export const indexJobs = sqliteTable(
+  'index_jobs',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    notebookId: integer('notebook_id').notNull(),
+    mode: text('mode', { enum: ['notebook', 'global'] }).notNull(),
+    state: text('state', { enum: ['running', 'succeeded', 'failed', 'interrupted'] }).notNull(),
+    total: integer('total').notNull().default(0),
+    done: integer('done').notNull().default(0),
+    failed: integer('failed').notNull().default(0),
+    error: text('error'),
+    createdAt: ts('created_at'),
+    finishedAt: tsNull('finished_at'),
+  },
+  (t) => [index('ix_index_jobs_notebook_id_id').on(t.notebookId, t.id)],
+);
