@@ -43,3 +43,4 @@ depends_on: []
 
 - issue #7（本 change 主体）、#5（c131 消费本层）、#6（c132 消费 origin/modality 元数据）
 - 排序：c130 → c131 →（c129-pg-backend、c132）
+- **archive 约定（2026-10-13 用户指令）**：收口 commit 正文追加 `fixes #7`（GitHub 自动关闭 issue；finalize 走 `--no-commit` 后手工提交注入，或 amend）。

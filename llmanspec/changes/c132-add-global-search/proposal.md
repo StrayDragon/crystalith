@@ -41,3 +41,4 @@ depends_on: [c130-extend-embedding-capability]
 ## 关联
 
 - issue #6；依赖 c130-extend-embedding-capability（origin/modality 列 + 能力层）；建议在 c131 之后落地
+- **archive 约定（2026-10-13 用户指令）**：收口 commit 正文追加 `fixes #6`（GitHub 自动关闭 issue）。

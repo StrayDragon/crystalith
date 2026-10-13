@@ -32,3 +32,4 @@ depends_on: [c130-extend-embedding-capability]
 ## 关联
 
 - issue #5；依赖 c130-extend-embedding-capability；排序 c130 → **c131** →（c129、c132）
+- **archive 约定（2026-10-13 用户指令）**：收口 commit 正文追加 `fixes #5`（GitHub 自动关闭 issue）。默认翻转若晚于本 change 收口，翻转提交正文同样带 `fixes #5` 兜底。
