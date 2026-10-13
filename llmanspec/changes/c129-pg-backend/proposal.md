@@ -6,6 +6,7 @@ depends_on: [c128-asyncify-db-layer]
 
 > **草案**：调研与前置 review 已完成（2026-10-13），待正式 `/llman-sdd-propose` 充实 design/tasks。
 > 决策背景已锁定：外部 PG 服务形态（非 PGlite）、`database.dialect` 配置 opt-in（sqlite 默认档保留）、PG 侧全新启动（不做存量迁移）。
+> **排序决策（2026-10-13）**：嵌入线（c130 能力层 → c131 EmbeddingGemma 2）先行，本 change 排其后——c130 的 chunks 元数据迁移（modality/model/dims/origin）按方言可移植设计，pgvector 列与索引一次做对，避免 vec/FTS 层写两遍。
 
 ## Why
 
