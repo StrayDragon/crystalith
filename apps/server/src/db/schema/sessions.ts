@@ -2,8 +2,7 @@
 import { relations, sql } from 'drizzle-orm';
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
-import { ts, tsUpd } from './columns.ts';
-import { jsonReq } from './columns.ts';
+import { jsonReq, ts, tsUpd } from './columns.ts';
 import { notebooks } from './notebooks.ts';
 
 export const sessions = sqliteTable(

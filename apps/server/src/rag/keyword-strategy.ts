@@ -125,11 +125,13 @@ export class KeywordStrategy implements RAGStrategy {
     // FTS is always synced; check if notebook has any chunks. `raw` + [0]
     // (not rawOne): bun:sqlite's raw-SQL `.get()` returns array-shaped rows,
     // which made the former rawOne read `.c` off an array — always undefined.
-    const row = (await client().raw<{ c: number }>(sql`
+    const row = (
+      await client().raw<{ c: number }>(sql`
       SELECT COUNT(*) AS c FROM chunks c
       JOIN sources s ON s.id = c.sourceId
       WHERE s.notebook_id = ${notebookId};
-    `))[0];
+    `)
+    )[0];
     return (row?.c ?? 0) > 0;
   }
 
