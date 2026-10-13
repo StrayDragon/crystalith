@@ -100,9 +100,13 @@ export class PageIndexStrategy implements RAGStrategy {
   }
 
   async isIndexed(notebookId: number): Promise<boolean> {
-    const row = await client().rawOne<{ c: number }>(
-      sql`SELECT COUNT(*) AS c FROM ${chunks} c JOIN ${sources} s ON s.id = c.sourceId WHERE s.notebook_id = ${notebookId}`,
-    );
+    // `raw` + [0] (not rawOne): bun:sqlite's raw-SQL `.get()` returns
+    // array-shaped rows, which made the former rawOne read `.c` off an array.
+    const row = (
+      await client().raw<{ c: number }>(
+        sql`SELECT COUNT(*) AS c FROM ${chunks} c JOIN ${sources} s ON s.id = c.sourceId WHERE s.notebook_id = ${notebookId}`,
+      )
+    )[0];
     return (row?.c ?? 0) > 0;
   }
 

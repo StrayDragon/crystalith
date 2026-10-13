@@ -57,7 +57,7 @@ export function retrieveSourcesTool(
         sourceId: h.source_id,
         sourceName: sourceMap.get(h.source_id) ?? 'unknown',
         text: h.text,
-        // sqlite-vec distance is L2 — convert to a similarity score in [0,1].
+        // vec_chunks declares cosine; distance ∈ [0,2] — score = 1 - distance (see vectors.ts).
         score: Math.max(0, 1 - h.distance),
       }));
     },
