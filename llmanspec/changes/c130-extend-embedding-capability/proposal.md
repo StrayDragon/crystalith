@@ -46,6 +46,19 @@ depends_on: []
 5. specs：新增 `embedding-runtime` capability（vs 扩展 retrieval-and-cache / configuration-governance 的 requirement 划分，倾向新 capability）。
 6. 验证场景：前缀开启模型（假 embed）下 r229 score 语义与检索链路不回归。
 
+## Capabilities
+
+- **新增 `embedding-runtime`**：embedding 能力声明 SSOT、任务前缀应用、维度一致性、维度不匹配行为、chunks 索引元数据的 MUST 合约。
+- 不动 `retrieval-and-cache`（r229 score 语义不变，前缀开启后仍成立——验证场景放新 capability）；不动 `configuration-governance`（模型目录 schema 扩展属既有"可选字段向后兼容"条款覆盖）。
+
+## Impact
+
+- `packages/shared/src/schemas/model.ts`：ModelConfigSchema 增可选 `embedding` 块；ModelInfo 增可选透出（additive，Eden 类型自动跟随）。
+- `apps/server/src/rag/`：新 `embedding-engine.ts`；`embedder.ts` 降级 facade。
+- `apps/server/src/db/`：chunks 表加列迁移（modality / embedding_model / embedding_dims / origin_type / origin_id）；`vectors.ts` 维度感知。
+- `config/app.yaml`：既有 embed 条目补 `dims` 声明（无行为变化）。
+- Web：无必改（ModelInfo additive）；文档更新（网关矩阵、精度警告）。
+
 ## 关联
 
 - issue #7（本 change 主体）、#5（c131 消费本层）、#6（c132 消费 origin/modality 元数据）
