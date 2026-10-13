@@ -133,6 +133,8 @@ models:
       displayName: "text-embedding-3-small"
       description: "OpenAI embedding model"
       roles: [embed]
+      embedding:
+        dims: 1536
       providerConfig:
         <<: *openai_default
 
@@ -144,6 +146,8 @@ models:
       displayName: "BGE-M3 (gateway)"
       description: "Embedding model via OpenAI-compatible gateway"
       roles: [embed]
+      embedding:
+        dims: 1024
       providerConfig:
         <<: *openai_default
 
@@ -153,6 +157,8 @@ models:
       displayName: "Qwen3 Embedding 8B (gateway)"
       description: "Embedding model via OpenAI-compatible gateway"
       roles: [embed]
+      embedding:
+        dims: 4096
       providerConfig:
         <<: *openai_default
 
@@ -164,6 +170,8 @@ models:
       displayName: "Gateway Embedding"
       description: "Embedding via OpenAI-compatible gateway"
       roles: [embed]
+      embedding:
+        dims: 1024
       providerConfig:
         <<: *embed_gateway
 

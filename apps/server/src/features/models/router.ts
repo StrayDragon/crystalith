@@ -74,6 +74,9 @@ export const modelsRouter = new Elysia({ prefix: '/v2' })
           capabilities: m.capabilities,
           isDefaultChat: m.id === defaults.chat,
           isDefaultEmbedding: m.id === defaults.embedding,
+          // c130 (r474): surface the catalog's embedding declaration verbatim;
+          // entries without a declaration report null (defaults-envelope style).
+          embedding: m.embedding ?? null,
         })),
       };
     },

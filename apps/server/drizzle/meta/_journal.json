@@ -57,6 +57,13 @@
       "when": 1785900000000,
       "tag": "0007_generation_type_meta",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1791871151532,
+      "tag": "0008_chunks_embedding_meta",
+      "breakpoints": true
     }
   ]
 }

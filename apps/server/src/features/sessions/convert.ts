@@ -123,7 +123,13 @@ export async function convertSessionToSource(
     try {
       const { embedBatch } = await import('../../rag/embedder.ts');
       const { insertChunkVector } = await import('../../db/vectors.ts');
-      const vectors = await embedBatch(chunkRows.map((c) => c.text));
+      // Document prefixes get the generated source filename as title (c130).
+      const vectors = await embedBatch(
+        chunkRows.map((c) => c.text),
+        {
+          titles: chunkRows.map(() => filename),
+        },
+      );
 
       for (const [i, vec] of vectors.entries()) {
         await insertChunkVector(db(), chunkRows[i].id, nid, source.id, vec);

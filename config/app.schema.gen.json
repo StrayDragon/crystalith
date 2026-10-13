@@ -531,6 +531,43 @@
               "factory": {
                 "type": "string"
               },
+              "embedding": {
+                "type": "object",
+                "properties": {
+                  "dims": {
+                    "description": "嵌入维度（正整数）",
+                    "type": "number"
+                  },
+                  "mrlDims": {
+                    "description": "MRL 可选维度列表（仅声明与透出，无截断行为）",
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  "modalities": {
+                    "description": "支持的输入模态（默认仅 text）",
+                    "default": [
+                      "text"
+                    ],
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "textOnlyLoad": {
+                    "description": "是否仅接受文本输入加载",
+                    "type": "boolean"
+                  },
+                  "prefixPreset": {
+                    "description": "任务前缀内置预设名（engine 侧模板）",
+                    "type": "string",
+                    "enum": [
+                      "embeddinggemma2"
+                    ]
+                  }
+                }
+              },
               "providerOptions": {
                 "type": "object",
                 "additionalProperties": {}

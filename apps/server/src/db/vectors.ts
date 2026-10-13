@@ -7,11 +7,53 @@
 // of user-supplied values).
 import { sql } from 'drizzle-orm';
 
+import { AppHttpError, ErrorCode } from '../shared/errors.ts';
 import { createDbClient } from './client.ts';
 import type { Orm } from './index';
 
 /** Default embedding dimension (bge-m3 = 1024). Overridable per index. */
 const DEFAULT_EMBEDDING_DIM = 1024;
+
+/**
+ * Parse the declared embedding dimension (`embedding float[N]`) out of a
+ * vec_chunks CREATE statement. Returns null when the declaration is absent
+ * or unparseable (never built by us → no guard basis).
+ */
+function parseVecDim(ddl: string): number | null {
+  const m = /embedding\s+float\[(\d+)\]/iu.exec(ddl);
+  return m ? Number(m[1]) : null;
+}
+
+/**
+ * Read the dimension the existing vec_chunks table declares, or null when the
+ * table does not exist / has no parseable declaration. Async (DbClient port)
+ * because the callers — searchVectors / insertChunkVector — are runtime
+ * paths; boot-time initVecChunks reads sqlite_master synchronously instead.
+ */
+async function readVecTableDim(orm: Orm): Promise<number | null> {
+  const rows = await createDbClient(orm).raw<{ sql: string | null }>(
+    sql`SELECT sql FROM sqlite_master WHERE type='table' AND name='vec_chunks'`,
+  );
+  const ddl = rows[0]?.sql;
+  return ddl ? parseVecDim(ddl) : null;
+}
+
+/**
+ * Guard: refuse vectors whose length disagrees with the table's declared
+ * dimension (c130 r478) — sqlite-vec's native error for this is opaque and
+ * surfaces as a raw SQLiteError deep in KNN/insert. Point at the re-embed
+ * entry instead of letting retrieval silently degrade.
+ */
+async function assertVecDimMatchesTable(orm: Orm, vec: Float32Array | number[]): Promise<void> {
+  const tableDim = await readVecTableDim(orm);
+  if (tableDim !== null && vec.length !== tableDim) {
+    throw new AppHttpError(
+      ErrorCode.EMBEDDING_DIM_MISMATCH,
+      `维度不匹配：vec_chunks 表为 ${tableDim} 维 / 向量为 ${vec.length} 维，请重嵌/重建索引（sources/batch/re-embed，见 docs）`,
+      { tableDim, vecDim: vec.length },
+    );
+  }
+}
 
 export interface VectorHit {
   rowid: number;
@@ -50,6 +92,22 @@ export function initVecChunks(orm: Orm, dim = DEFAULT_EMBEDDING_DIM): void {
     orm.run(sql.raw(createDdl));
     return;
   }
+
+  // c130 r478: declared dim vs existing table dim. Warn but never block boot
+  // (BM25/keyword retrieval keeps working); the runtime guards in
+  // searchVectors/insertChunkVector turn mismatches into explicit errors.
+  // Also skip the cosine rebuild below — a cross-dim rebuild is doomed (the
+  // old rows cannot be re-inserted at the new width), so keep the old table
+  // and let the re-embed entry rebuild it wholesale.
+  const tableDim = parseVecDim(existing.sql);
+  if (tableDim !== null && tableDim !== dim) {
+    console.warn(
+      `[db] vec_chunks 维度不匹配：现表 ${tableDim} 维 / 配置声明 ${dim} 维；` +
+        '语义检索与向量写入将报错，keyword 检索不受影响；请重嵌/重建索引（sources/batch/re-embed，见 docs）',
+    );
+    return;
+  }
+
   if (existing.sql.includes('distance_metric=cosine')) return;
 
   // Legacy L2 table — rebuild from its own rows inside a transaction so the
@@ -99,6 +157,7 @@ export async function insertChunkVector(
   sourceId: number,
   embedding: Float32Array | number[],
 ): Promise<void> {
+  await assertVecDimMatchesTable(orm, embedding);
   await createDbClient(orm).rawRun(
     sql`INSERT INTO vec_chunks(rowid, embedding, notebook_id, source_id)
         VALUES (${rowid}, ${toBytes(embedding)}, ${notebookId}, ${sourceId});`,
@@ -133,6 +192,7 @@ export async function searchVectors(
   topK = 10,
   sourceIds?: number[],
 ): Promise<VectorHit[]> {
+  await assertVecDimMatchesTable(orm, queryVec);
   const queryBytes = toBytes(queryVec);
   const c = createDbClient(orm);
 

@@ -42,13 +42,13 @@ const PREFIX_PRESETS = {
 
 - 加列（全部带默认值，存量行回填）：
 
-| 列 | 类型 | 默认 | 说明 |
-|---|---|---|---|
-| `modality` | text | `'text'` | #7 要求；多模态摄取后续 connector 才会写非 text |
-| `embedding_model` | text | null | 写入点：indexSource 插向量时随 chunk 行落库；重嵌时更新 |
-| `embedding_dims` | integer | null | 同上 |
-| `origin_type` | text | `'source'` | c132 启用（origin 泛化预埋） |
-| `origin_id` | integer | `source_id` 回填 | c132 启用 |
+| 列                | 类型    | 默认             | 说明                                                    |
+| ----------------- | ------- | ---------------- | ------------------------------------------------------- |
+| `modality`        | text    | `'text'`         | #7 要求；多模态摄取后续 connector 才会写非 text         |
+| `embedding_model` | text    | null             | 写入点：indexSource 插向量时随 chunk 行落库；重嵌时更新 |
+| `embedding_dims`  | integer | null             | 同上                                                    |
+| `origin_type`     | text    | `'source'`       | c132 启用（origin 泛化预埋）                            |
+| `origin_id`       | integer | `source_id` 回填 | c132 启用                                               |
 
 - 迁移走 drizzle generate（存量 meta 有已知非 TTY 交互问题，见 docs/known-issues.md——必要时手写 migration 文件，DDL 极简）。
 - FTS5 `chunks_fts` 是 `content='chunks'` 外部内容表 + 触发器按 rowid 同步，加列不影响。

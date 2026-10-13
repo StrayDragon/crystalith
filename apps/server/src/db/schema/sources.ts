@@ -59,6 +59,15 @@ export const chunks = sqliteTable(
     startOffset: integer('start_offset'),
     endOffset: integer('end_offset'),
     metadata: json<JsonMetadata | null>('metadata'),
+    // Embedding index metadata (c130 r479): modality defaults to text until
+    // multimodal ingest lands; model/dims are stamped by indexSource (re-embed
+    // updates them). origin_* are write-only groundwork for c132 (origin
+    // generalization) — legacy rows are backfilled origin_id = source_id.
+    modality: text('modality').notNull().default('text'),
+    embeddingModel: text('embedding_model'),
+    embeddingDims: integer('embedding_dims'),
+    originType: text('origin_type').notNull().default('source'),
+    originId: integer('origin_id'),
     createdAt: ts('created_at'),
     updatedAt: tsUpd('updated_at'),
   },

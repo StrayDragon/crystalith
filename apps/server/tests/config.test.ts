@@ -402,3 +402,99 @@ ai:
     expect(getAiSettings()).toEqual({ timeout: 60, max_retries: 3 });
   });
 });
+
+// ---------------------------------------------------------------------------
+// c130: embedding capability declaration block (r474 — catalog SSOT)
+// ---------------------------------------------------------------------------
+
+describe('config: embedding capability declaration', () => {
+  it('parses a valid embedding block with all fields', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available:
+    - id: "emb-declared"
+      provider: "openai"
+      model: "bge-m3"
+      displayName: "Emb"
+      roles: [embed]
+      embedding:
+        dims: 1024
+        mrlDims: [256, 512]
+        textOnlyLoad: true
+        prefixPreset: "embeddinggemma2"
+`,
+    );
+    const cfg = loadConfig(TMP);
+    const emb = cfg.models.available[0]?.embedding;
+    expect(emb).toBeDefined();
+    expect(emb?.dims).toBe(1024);
+    expect(emb?.mrlDims).toEqual([256, 512]);
+    expect(emb?.textOnlyLoad).toBe(true);
+    expect(emb?.prefixPreset).toBe('embeddinggemma2');
+    // modalities 未声明时默认 ['text']
+    expect(emb?.modalities).toEqual(['text']);
+  });
+
+  it('rejects non-positive-integer dims', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available:
+    - id: "emb-bad-dims"
+      provider: "openai"
+      model: "bge-m3"
+      displayName: "Emb"
+      roles: [embed]
+      embedding:
+        dims: 0
+`,
+    );
+    expect(() => loadConfig(TMP)).toThrow();
+  });
+
+  it('rejects unknown prefixPreset name with a readable message', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available:
+    - id: "emb-bad-preset"
+      provider: "openai"
+      model: "bge-m3"
+      displayName: "Emb"
+      roles: [embed]
+      embedding:
+        dims: 1024
+        prefixPreset: "nonexistent"
+`,
+    );
+    expect(() => loadConfig(TMP)).toThrow(/nonexistent/);
+  });
+
+  it('parses entries without an embedding block unchanged (regression)', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available:
+    - id: "emb-legacy"
+      provider: "openai"
+      model: "bge-m3"
+      displayName: "Emb"
+      roles: [embed]
+    - id: "chat-legacy"
+      provider: "openai"
+      model: "gpt-4o"
+      displayName: "Chat"
+      roles: [chat]
+`,
+    );
+    const cfg = loadConfig(TMP);
+    expect(cfg.models.available).toHaveLength(2);
+    expect(cfg.models.available[0]?.embedding).toBeUndefined();
+    expect(cfg.models.available[1]?.embedding).toBeUndefined();
+  });
+});

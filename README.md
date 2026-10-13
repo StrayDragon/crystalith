@@ -138,6 +138,7 @@ just qa          # typecheck + lint + format + schema 漂移 + 全部测试 —�
 
 - [AGENTS.md](AGENTS.md) — 架构决策、分层合约（Zod SSOT + Eden + OpenAPI）、贡献约定
 - [docs/plugins.md](docs/plugins.md) — 插件作者指引（`extractor` 类型，样例 `@crystalith-plugin/extractor-arxiv`）
+- [docs/embedding.md](docs/embedding.md) — 嵌入模型接入：能力声明、任务前缀、网关矩阵（OMLX / Ollama / llama.cpp / TEI）、精度警告与维度不匹配处理
 - [docs/ROADMAP.md](docs/ROADMAP.md) — 路线图（分发 / 插件 / 产品深化 / 工程债）
 - [docs/known-issues.md](docs/known-issues.md) — 已知问题与工具链兼容性台账
 - `/openapi` — 运行时 API 文档（Scalar，随 server 启动）

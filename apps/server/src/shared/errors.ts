@@ -27,6 +27,7 @@ export const ErrorCode = {
   RATE_LIMITED: 'RATE_LIMITED',
   MODEL_UNAVAILABLE: 'MODEL_UNAVAILABLE',
   MODEL_ERROR: 'MODEL_ERROR',
+  EMBEDDING_DIM_MISMATCH: 'EMBEDDING_DIM_MISMATCH',
   NOT_IMPLEMENTED: 'NOT_IMPLEMENTED',
   CONNECTOR_UNAVAILABLE: 'CONNECTOR_UNAVAILABLE',
   RESEARCH_INVALID_STATE: 'RESEARCH_INVALID_STATE',
@@ -47,6 +48,9 @@ const STATUS_BY_CODE = {
   [ErrorCode.RATE_LIMITED]: 429,
   [ErrorCode.MODEL_UNAVAILABLE]: 503,
   [ErrorCode.MODEL_ERROR]: 503,
+  // 409: stored vec_chunks dimension conflicts with the configured embedding
+  // model — retrieval/insert refuse until the index is re-embedded/rebuilt.
+  [ErrorCode.EMBEDDING_DIM_MISMATCH]: 409,
   [ErrorCode.NOT_IMPLEMENTED]: 501,
   [ErrorCode.CONNECTOR_UNAVAILABLE]: 409,
   [ErrorCode.RESEARCH_INVALID_STATE]: 409,

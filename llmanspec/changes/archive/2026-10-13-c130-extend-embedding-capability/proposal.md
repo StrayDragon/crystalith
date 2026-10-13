@@ -1,5 +1,8 @@
 ---
 depends_on: []
+branch: sdd/c130-extend-embedding-capability
+base_branch: main
+base_sha: 1981c9e2a21293605a5a5bc6355c78c104508c1d
 ---
 
 # Embedding 能力层：声明式 registry + Engine + chunks 索引元数据

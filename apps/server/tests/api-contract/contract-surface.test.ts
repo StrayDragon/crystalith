@@ -36,6 +36,9 @@ const SEED_MODELS = {
       description: '',
       roles: ['embed'],
       capabilities: [],
+      // c130 (r474): embedding capability declaration — must pass through the
+      // models list ModelInfo verbatim.
+      embedding: { dims: 256, mrlDims: [128, 256], prefixPreset: 'embeddinggemma2' },
       providerConfig: { apiKey: 'test-key' },
     },
     {
@@ -176,6 +179,38 @@ describe('r364 models filter by provider availability', () => {
     const { status, body } = await get('/v2/models/chat-known');
     expect(status).toBe(200);
     expect((body as { id: string }).id).toBe('chat-known');
+  });
+});
+
+describe('r474 models list surfaces the embedding capability block', () => {
+  it('embed entry passes its embedding declaration through in ModelInfo', async () => {
+    // covers: r474 — GET /v2/models ModelInfo MUST expose the catalog's
+    // optional embedding declaration block (additive passthrough; the
+    // declared fields survive verbatim, catalog stays the SSOT).
+    const { status, body } = await get('/v2/models');
+    expect(status).toBe(200);
+    const list = body as {
+      models: Array<{
+        id: string;
+        embedding?: { dims?: number; mrlDims?: number[]; prefixPreset?: string } | null;
+      }>;
+    };
+    const embed = list.models.find((m) => m.id === 'embed-known');
+    expect(embed?.embedding).toMatchObject({
+      dims: 256,
+      mrlDims: [128, 256],
+      prefixPreset: 'embeddinggemma2',
+    });
+  });
+
+  it('entry without a declaration reports embedding as null', async () => {
+    // covers: r474 — additive: a chat entry carrying no embedding block
+    // reports null (defaults-envelope nullable style), never a stale block.
+    const { status, body } = await get('/v2/models');
+    expect(status).toBe(200);
+    const list = body as { models: Array<{ id: string; embedding?: unknown }> };
+    const chat = list.models.find((m) => m.id === 'chat-known');
+    expect(chat?.embedding ?? null).toBeNull();
   });
 });
 

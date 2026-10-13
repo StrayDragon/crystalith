@@ -1,12 +1,16 @@
+import { Database } from 'bun:sqlite';
 // Integration test: schema migration + sqlite-vec virtual table + vector CRUD.
 //
 // Uses a temp DB file under data/ so it never touches the real crystalith.db.
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
-import { rmSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { eq, sql } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/bun-sqlite';
+import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 
-import { createDb, type Orm } from '../src/db/index.ts';
+import { createDb, resetDb, type Orm } from '../src/db/index.ts';
 import { chunks, notebooks, sources } from '../src/db/schema.ts';
 import {
   countVectors,
@@ -15,17 +19,27 @@ import {
   insertChunkVector,
   searchVectors,
 } from '../src/db/vectors.ts';
+import { KeywordStrategy } from '../src/rag/keyword-strategy.ts';
 
 const TMP_DB = 'data/test-vector.db';
+
+// The real drizzle migrations folder (same one createDb() resolves in dev).
+const DRIZZLE_DIR = join(import.meta.dirname, '..', 'drizzle');
+const LEGACY_DB = 'data/test-legacy-migration.db';
+const LEGACY_MIGRATIONS = 'data/test-legacy-drizzle';
 
 let orm: Orm;
 
 beforeAll(async () => {
   for (const f of [TMP_DB, `${TMP_DB}-wal`, `${TMP_DB}-shm`]) rmSync(f, { force: true });
   orm = createDb(TMP_DB);
+  // KeywordStrategy goes through the client() singleton — point it at this
+  // file's temp DB so the FTS regression below never touches a real DB.
+  resetDb(orm);
 });
 
 afterAll(async () => {
+  resetDb(null);
   for (const f of [TMP_DB, `${TMP_DB}-wal`, `${TMP_DB}-shm`]) rmSync(f, { force: true });
 });
 
@@ -243,5 +257,152 @@ describe('db: sqlite-vec virtual table', () => {
     ortho[1] = 1;
     const [hit] = await searchVectors(orm, ortho, notebookId, 1);
     expect(hit.distance).toBeCloseTo(1, 5);
+  });
+});
+
+describe('db: chunks embedding metadata columns (c130 r479)', () => {
+  it('migration adds the 5 columns with correct defaults (PRAGMA table_info)', () => {
+    const cols = orm.all<{
+      name: string;
+      type: string;
+      notnull: number;
+      dflt_value: string | null;
+    }>(sql`PRAGMA table_info(chunks)`);
+    const byName = new Map(cols.map((c) => [c.name, c]));
+    const expectColumn = (name: string, type: string, notnull: number, dflt: string | null) => {
+      const col = byName.get(name);
+      expect(col).toBeDefined();
+      expect(col?.type.toLowerCase()).toBe(type);
+      expect(col?.notnull).toBe(notnull);
+      expect(col?.dflt_value).toBe(dflt);
+    };
+
+    expectColumn('modality', 'text', 1, "'text'");
+    expectColumn('embedding_model', 'text', 0, null);
+    expectColumn('embedding_dims', 'integer', 0, null);
+    expectColumn('origin_type', 'text', 1, "'source'");
+    expectColumn('origin_id', 'integer', 0, null);
+  });
+
+  it('rows inserted without the new columns get defaults; origin_id stays NULL (no backfill for new rows)', () => {
+    const [nb] = orm.insert(notebooks).values({ name: 'Meta Defaults NB' }).returning().all();
+    const [src] = orm
+      .insert(sources)
+      .values({ notebookId: nb.id, filename: 'meta.txt', status: 'ready' })
+      .returning()
+      .all();
+    const [chk] = orm
+      .insert(chunks)
+      .values({ sourceId: src.id, chunkIndex: 0, text: 'meta defaults check' })
+      .returning()
+      .all();
+
+    expect(chk.modality).toBe('text');
+    expect(chk.originType).toBe('source');
+    expect(chk.embeddingModel).toBeNull();
+    expect(chk.embeddingDims).toBeNull();
+    // New rows are NOT backfilled — only pre-migration rows get origin_id.
+    expect(chk.originId).toBeNull();
+  });
+
+  it('0008 backfills origin_id=source_id for pre-migration rows (legacy DB through the boot migrator)', () => {
+    // Build a migrations folder frozen at the pre-0008 state (journal entries
+    // 0–7 only; the migrator skips entries whose journal `when` is <= the last
+    // applied created_at, so 0000–0007 apply here and 0008 stays pending).
+    rmSync(LEGACY_MIGRATIONS, { recursive: true, force: true });
+    mkdirSync(join(LEGACY_MIGRATIONS, 'meta'), { recursive: true });
+    const journal = JSON.parse(
+      readFileSync(join(DRIZZLE_DIR, 'meta', '_journal.json'), 'utf8'),
+    ) as {
+      entries: Array<{ idx: number; tag: string }>;
+    };
+    const legacyEntries = journal.entries.filter((e) => e.idx <= 7);
+    writeFileSync(
+      join(LEGACY_MIGRATIONS, 'meta', '_journal.json'),
+      JSON.stringify({ ...journal, entries: legacyEntries }, null, 2),
+    );
+    for (const entry of legacyEntries) {
+      copyFileSync(
+        join(DRIZZLE_DIR, `${entry.tag}.sql`),
+        join(LEGACY_MIGRATIONS, `${entry.tag}.sql`),
+      );
+    }
+
+    for (const f of [LEGACY_DB, `${LEGACY_DB}-wal`, `${LEGACY_DB}-shm`]) rmSync(f, { force: true });
+    const raw = new Database(LEGACY_DB, { create: true });
+    const legacyOrm = drizzle({ client: raw });
+    try {
+      // Pre-0008 database: schema applied, legacy chunks already on disk.
+      migrate(legacyOrm, { migrationsFolder: LEGACY_MIGRATIONS });
+      legacyOrm.run(
+        sql`INSERT INTO notebooks (name, created_at, updated_at) VALUES ('legacy-nb', 0, 0)`,
+      );
+      legacyOrm.run(
+        sql`INSERT INTO sources (notebook_id, filename, status, created_at, updated_at)
+            VALUES (1, 'legacy.txt', 'ready', 0, 0)`,
+      );
+      legacyOrm.run(
+        sql`INSERT INTO chunks (source_id, chunk_index, text, created_at, updated_at) VALUES
+            (1, 0, 'legacy chunk zero', 0, 0),
+            (1, 1, 'legacy chunk one', 0, 0)`,
+      );
+
+      // Boot path: same migrator + real migrations folder as createDb() —
+      // applies only the pending 0008 entry.
+      migrate(legacyOrm, { migrationsFolder: DRIZZLE_DIR });
+
+      const rows = legacyOrm.all<{
+        id: number;
+        source_id: number;
+        modality: string;
+        embedding_model: string | null;
+        embedding_dims: number | null;
+        origin_type: string;
+        origin_id: number | null;
+      }>(sql`SELECT id, source_id, modality, embedding_model, embedding_dims, origin_type, origin_id
+             FROM chunks ORDER BY id`);
+      expect(rows).toHaveLength(2);
+      for (const row of rows) {
+        expect(row.modality).toBe('text');
+        expect(row.origin_type).toBe('source');
+        expect(row.embedding_model).toBeNull();
+        expect(row.embedding_dims).toBeNull();
+        // The backfill: pre-migration rows point at their own source.
+        expect(row.origin_id).toBe(row.source_id);
+      }
+    } finally {
+      raw.close();
+      rmSync(LEGACY_MIGRATIONS, { recursive: true, force: true });
+      for (const f of [LEGACY_DB, `${LEGACY_DB}-wal`, `${LEGACY_DB}-shm`])
+        rmSync(f, { force: true });
+    }
+  });
+
+  it('FTS5 content-sync triggers still mirror chunks inserts (keyword path regression)', async () => {
+    // KeywordStrategy.indexSource runs the real ensureFts() (chunks_fts +
+    // content-sync triggers). retrieve()'s regression (incl. the fixed
+    // source_id/chunk_index columns) lives in tests/rag/vector-dim-guard.test.ts;
+    // this case only checks the AFTER INSERT trigger sync via a direct FTS query.
+    const [nb] = orm.insert(notebooks).values({ name: 'FTS NB' }).returning().all();
+    const [src] = orm
+      .insert(sources)
+      .values({ notebookId: nb.id, filename: 'fts.txt', status: 'ready' })
+      .returning()
+      .all();
+
+    const strategy = new KeywordStrategy();
+    // ensureFts() must run before the insert so the AFTER INSERT trigger fires.
+    await strategy.indexSource(src.id, nb.id);
+
+    const [chk] = orm
+      .insert(chunks)
+      .values({ sourceId: src.id, chunkIndex: 0, text: 'zirconium lantern quay orchestrion' })
+      .returning()
+      .all();
+
+    const hits = orm.all<{ rowid: number }>(
+      sql`SELECT rowid FROM chunks_fts WHERE chunks_fts MATCH 'zirconium'`,
+    );
+    expect(hits.map((h) => h.rowid)).toContain(chk.id);
   });
 });

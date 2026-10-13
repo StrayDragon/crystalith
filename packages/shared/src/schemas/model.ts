@@ -71,6 +71,46 @@ export const ModelCapabilitySchema = z.enum([
 export type ModelCapability = z.infer<typeof ModelCapabilitySchema>;
 
 // ---------------------------------------------------------------------------
+// Embedding capability declaration (c130)
+// ---------------------------------------------------------------------------
+
+/**
+ * Built-in embedding prefix preset names (catalog SSOT for schema validation).
+ * The preset templates themselves live in the server embedding engine
+ * (`apps/server/src/rag/embedding-engine.ts`) — names are shared here so
+ * config validation and the engine stay in sync.
+ */
+export const EMBEDDING_PREFIX_PRESET_NAMES = ['embeddinggemma2'] as const;
+
+export const ModelEmbeddingCapabilitySchema = z
+  .object({
+    dims: z.number().int().positive().describe(desc('model.embedding_dims', '嵌入维度（正整数）')),
+    mrlDims: z
+      .array(z.number().int().positive())
+      .optional()
+      .describe(desc('model.embedding_mrl_dims', 'MRL 可选维度列表（仅声明与透出，无截断行为）')),
+    modalities: z
+      .array(z.string())
+      .default(['text'])
+      .describe(desc('model.embedding_modalities', '支持的输入模态（默认仅 text）')),
+    textOnlyLoad: z
+      .boolean()
+      .optional()
+      .describe(desc('model.embedding_text_only_load', '是否仅接受文本输入加载')),
+    prefixPreset: z
+      .enum(EMBEDDING_PREFIX_PRESET_NAMES, {
+        error: (iss) =>
+          `未知的前缀预设名：${String(iss.input)}（合法值：${EMBEDDING_PREFIX_PRESET_NAMES.join('、')}）`,
+      })
+      .optional()
+      .describe(desc('model.embedding_prefix_preset', '任务前缀内置预设名（engine 侧模板）')),
+  })
+  .openapi({
+    description: desc('model.embedding_capability', 'embedding 能力声明块（目录 SSOT）'),
+  });
+export type ModelEmbeddingCapability = z.infer<typeof ModelEmbeddingCapabilitySchema>;
+
+// ---------------------------------------------------------------------------
 // Model configuration (a single entry in `models.available`)
 // ---------------------------------------------------------------------------
 
@@ -90,6 +130,8 @@ export const ModelConfigSchema = z
     /** Advanced escape hatch: override the SDK package + factory directly. */
     sdk: z.string().optional(),
     factory: z.string().optional(),
+    /** Embedding capability declaration (dims / prefixPreset / ...; c130). */
+    embedding: ModelEmbeddingCapabilitySchema.nullable().optional(),
     /** Extra passthrough for provider-specific knobs. */
     providerOptions: JsonMetadataSchema.optional(),
   })
@@ -145,6 +187,8 @@ export const ModelInfoSchema = z
     capabilities: z.array(ModelCapabilitySchema),
     isDefaultChat: z.boolean(),
     isDefaultEmbedding: z.boolean(),
+    /** Embedding capability declaration passthrough (additive, c130). */
+    embedding: ModelEmbeddingCapabilitySchema.nullable().optional(),
   })
   .openapi({
     description: desc('model.info', 'GET /v2/models 只读模型信息'),

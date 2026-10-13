@@ -222,7 +222,13 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
         try {
           const { embedBatch } = await import('../../rag/embedder.ts');
           const { insertChunkVector } = await import('../../db/vectors.ts');
-          const vectors = await embedBatch(chunkRows.map((c) => c.text));
+          // Document prefixes get the generated QA source filename as title (c130).
+          const vectors = await embedBatch(
+            chunkRows.map((c) => c.text),
+            {
+              titles: chunkRows.map(() => filename),
+            },
+          );
           for (const [i, vec] of vectors.entries()) {
             await insertChunkVector(db(), chunkRows[i].id, source.notebookId, newSource.id, vec);
           }

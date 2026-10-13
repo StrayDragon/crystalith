@@ -13,7 +13,7 @@ import {
   searchVectors,
   countVectors,
 } from '../db/vectors.ts';
-import { getEmbeddingSettings } from '../shared/config.ts';
+import { getDefaultEmbeddingModel, getEmbeddingSettings } from '../shared/config.ts';
 import { getCached, setCached, bumpVectorEpoch } from './cache.ts';
 import { applyDiversity } from './diversity.ts';
 import { embedSingle, embedBatch } from './embedder.ts';
@@ -43,25 +43,54 @@ export class EmbedStrategy implements RAGStrategy {
 
   /**
    * Index a source: fetch all its chunks, embed them, and store vectors.
-   * Bumps the notebook's vector_epoch so cached retrievals are invalidated.
+   * Stamps embedding_model / embedding_dims on the chunk rows (c130 r479 — a
+   * re-embed refreshes both) and bumps the notebook's vector_epoch so cached
+   * retrievals are invalidated.
    */
   async indexSource(sourceId: number, notebookId: number): Promise<void> {
     const chunkRows = await client().all(
       db().select().from(chunks).where(eq(chunks.sourceId, sourceId)).orderBy(chunks.chunkIndex),
     );
+    if (chunkRows.length === 0) {
+      bumpVectorEpoch(notebookId);
+      return;
+    }
+
+    // Document-role titles: the source filename feeds the document prefix
+    // template (r475). One PK lookup — only when there are chunks to embed.
+    const sourceRow = await client().get(
+      db().select({ filename: sources.filename }).from(sources).where(eq(sources.id, sourceId)),
+    );
+    const title = sourceRow?.filename;
 
     const texts = chunkRows.map((c) => c.text);
     const batchSize = this.batchSize;
+    let vectorDims: number | null = null;
 
     for (let i = 0; i < texts.length; i += batchSize) {
       const batch = texts.slice(i, i + batchSize);
-      const embeddings = await embedBatch(batch);
+      const embeddings = await embedBatch(batch, {
+        titles: title ? batch.map(() => title) : undefined,
+      });
+      vectorDims = embeddings[0].length;
 
       for (let j = 0; j < batch.length; j++) {
         const chunkRow = chunkRows[i + j];
         await insertChunkVector(db(), chunkRow.id, notebookId, sourceId, embeddings[j]);
       }
     }
+
+    // r479: stamp embedding index metadata on this source's chunk rows — a
+    // re-embed overwrites both columns, so no stale values survive.
+    await client().run(
+      db()
+        .update(chunks)
+        .set({
+          embeddingModel: getDefaultEmbeddingModel()?.id ?? null,
+          embeddingDims: vectorDims,
+        })
+        .where(eq(chunks.sourceId, sourceId)),
+    );
     // New vectors invalidate cached retrievals for this notebook.
     bumpVectorEpoch(notebookId);
   }

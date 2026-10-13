@@ -94,14 +94,14 @@ export class KeywordStrategy implements RAGStrategy {
       rank: number;
     }>(sql`
       SELECT c.text AS text,
-             c.sourceId AS source_id,
-             c.chunkIndex AS chunk_index,
-             c.id AS chunk_id,
+             c.source_id AS sourceId,
+             c.chunk_index AS chunkIndex,
+             c.id AS chunkId,
              fts.rank AS rank
         FROM ${sql.raw(FTS_TABLE)} fts
         JOIN chunks c ON c.id = fts.rowid
-        JOIN sources s ON s.id = c.sourceId
-       WHERE ${FTS_TABLE} MATCH ${query}
+        JOIN sources s ON s.id = c.source_id
+       WHERE ${sql.raw(FTS_TABLE)} MATCH ${query}
          AND s.notebook_id = ${notebookId}
        ORDER BY fts.rank
        LIMIT ${topK};
@@ -128,7 +128,7 @@ export class KeywordStrategy implements RAGStrategy {
     const row = (
       await client().raw<{ c: number }>(sql`
       SELECT COUNT(*) AS c FROM chunks c
-      JOIN sources s ON s.id = c.sourceId
+      JOIN sources s ON s.id = c.source_id
       WHERE s.notebook_id = ${notebookId};
     `)
     )[0];

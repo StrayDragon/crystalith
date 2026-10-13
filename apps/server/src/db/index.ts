@@ -12,7 +12,7 @@ import { drizzle, type BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import * as sqliteVec from 'sqlite-vec';
 
-import { getDataRoot } from '../shared/config.ts';
+import { getDataRoot, getDefaultEmbeddingModel } from '../shared/config.ts';
 import { createDbClient, type DbClient } from './client.ts';
 import * as schema from './schema';
 import { initVecChunks } from './vectors';
@@ -128,7 +128,10 @@ export function createDb(path?: string): Orm {
   }
 
   // Provision the sqlite-vec virtual table (not managed by Drizzle).
-  initVecChunks(orm);
+  // Declared dimension: default embedding model's embedding.dims, falling
+  // back to initVecChunks' DEFAULT_EMBEDDING_DIM (1024) when undeclared /
+  // no model configured (undefined → default parameter kicks in).
+  initVecChunks(orm, getDefaultEmbeddingModel()?.embedding?.dims);
 
   return orm;
 }
