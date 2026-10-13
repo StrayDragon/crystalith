@@ -29,6 +29,12 @@ depends_on: [c130-extend-embedding-capability]
 4. 8K 共享上下文预算（eg2 模型卡）与现有 `chunk_size: 512` 的兼容性确认（512 token 窗口远小于 8K，无需调整；仅文档说明）。
 5. 多模态输入（image/video/audio placeholder token）在 OpenAI-compatible 字符串 API 下不可表达——明确本 change 仅文本侧，多模态摄取归后续 connector（与 #7 的 modality 元数据预留衔接）。
 
+## 深挖决策记录（2026-10-13，逐问确认）
+
+1. **重建入口形态**：API 端点 + **来源面板工具栏按钮**（重建按笔记本作用，与上传/批量操作同区）。点击后确认弹窗说明会清空并重嵌该笔记本全部向量；完成 bump vector_epoch（缓存失效走既有 r227 语义）。（用户选定"按钮或方式"，位置经确认。）
+2. **质量清单落点**：`scripts/` 手动脚本 + 文档记录基线数字。需要真实模型，不进 CI；确定性单测只覆盖引擎逻辑（前缀拼接、维度断言），不覆盖质量。
+3. **MRL 不在主线**：c131 只接原生 768 维；截断评估归 c133（见 c130 决策记录 2）。
+
 ## 关联
 
 - issue #5；依赖 c130-extend-embedding-capability；排序 c130 → **c131** →（c129、c132）

@@ -38,6 +38,12 @@ depends_on: [c130-extend-embedding-capability]
 6. 全局 KNN 去分区谓词后的延迟实测（vec0 全分区扫描）；若超标再考虑 notebook 级并行扇出。
 7. 与 c129（pg）衔接：SearchService 方言中立（经 DbClient/strategy），pgvector 迭代扫描天然吃 `source_id IN`。
 
+## 深挖决策记录（2026-10-13，逐问确认）
+
+1. **搜索入口形态**：workspace **顶栏常驻搜索框**，输入即搜；范围切换（当前笔记本/全局）在结果面板里选。（用户选定。）
+2. **结果分组**：按笔记本、对象类型、modality 分组（wire 细节留 design）。
+3. **FTS tokenizer 选型**：trigram vs 索引期 char-bigram，用中文样例实测召回后定（实现细节，不问用户）。
+
 ## 关联
 
 - issue #6；依赖 c130-extend-embedding-capability（origin/modality 列 + 能力层）；建议在 c131 之后落地
