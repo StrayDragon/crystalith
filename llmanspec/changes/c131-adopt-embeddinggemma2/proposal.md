@@ -48,6 +48,18 @@ depends_on: [c130-extend-embedding-capability]
 4. **重建任务异步化**（用户 2026-10-13 晚定，推翻早先同步方案）：同步等待容易卡用户操作；启动即返回 + 后台执行 + 进度查询。配套降级语义见 What Changes 3。
 5. **非文本 embed 的 API 风格**（用户 2026-10-13 晚定）：**port + DashScope 兼容适配器**。定义多模态 embed port（typed content parts 入参，落在 embedding 层），第一个适配器对接 DashScope 兼容形状（图文，公共云标准、tufa 服务 1:1 实现）；音频/视频/交错输入需要时再加 `/embed/st` 适配器。port 隔离保证选择可逆、不锁私有形状。实现留在后续多模态 connector 期，c131 仅记录方向。
 
+## Capabilities
+
+- **新增 `embedding-index-ops`**：重建任务生命周期（两模式 + 防重入 + 重启恢复）、索引状态面（ready/rebuilding/dim_mismatch/interrupted）、调用方降级分类（忽略+提示 vs 硬前置报错）、全向量写路径元数据（W2 收口）。
+- 不改 `embedding-runtime`（已归档 r474–r479）：W2 以新规则落 index-ops，避免编辑已锁定条款；默认翻转与目录条目为配置数据，由 config test 守护。
+
+## Impact
+
+- `config/app.yaml`（eg2 anchor + 条目 + 默认翻转）、`packages/shared`（重建/状态 Zod schema、qa no-evidence reason 增值——additive）。
+- `apps/server`：features/sources（search-index router）、rag（重建引擎 + 元数据 helper）、db（`index_jobs` 表 + 迁移 0009）、shared/errors（`INDEX_REBUILDING`）。
+- `apps/web`：sources 面板工具栏按钮 + 确认弹窗 + 进度轮询 + QA 降级提示。
+- `docs/embedding.md`（tufa 实测行、重建指引、质量基线）、`scripts/embedding-quality.ts`（新）。
+
 ## 关联
 
 - issue #5；依赖 c130-extend-embedding-capability；排序 c130 → **c131** →（c129、c132）
