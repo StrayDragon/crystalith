@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 
 import { and, eq } from 'drizzle-orm';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { sourceConnectorBindings, sources } from '../../db/schema.ts';
 import { getDedupEnabled } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
@@ -204,7 +204,7 @@ async function ingestConnectorEntry(
   // c57/P0-B: gate dedup by config (v1 source_connectors/api.py:898,1070)
   const dedupKey = connectorDedupKey(binding.connectorId, raw);
   const dedup = getDedupEnabled()
-    ? checkDedup(notebookId, dedupKey)
+    ? await checkDedup(notebookId, dedupKey)
     : { hit: false, existingSourceId: null as number | null };
   if (dedup.hit) {
     return {
@@ -242,22 +242,24 @@ async function ingestConnectorEntry(
     };
   }
 
-  const existing = db()
-    .select({ metadata: sources.metadata })
-    .from(sources)
-    .where(eq(sources.id, result.sourceId))
-    .get();
+  const existing = await client().get(
+    db()
+      .select({ metadata: sources.metadata })
+      .from(sources)
+      .where(eq(sources.id, result.sourceId)),
+  );
 
-  db()
-    .update(sources)
-    .set({
-      metadata: {
-        ...existing?.metadata,
-        sourceConnector: connectorMetadata,
-      },
-    })
-    .where(and(eq(sources.id, result.sourceId), eq(sources.notebookId, notebookId)))
-    .run();
+  await client().run(
+    db()
+      .update(sources)
+      .set({
+        metadata: {
+          ...existing?.metadata,
+          sourceConnector: connectorMetadata,
+        },
+      })
+      .where(and(eq(sources.id, result.sourceId), eq(sources.notebookId, notebookId))),
+  );
 
   return {
     vectorsChanged: true,
@@ -361,16 +363,17 @@ export async function applySyncCheckToBinding(
 
   let updatedBinding = binding;
   if (!hadFailures) {
-    updatedBinding = db()
-      .update(sourceConnectorBindings)
-      .set({
-        lastConfirmedSnapshot: stored.currentSnapshot,
-        lastSyncCheckResult: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(sourceConnectorBindings.id, binding.id))
-      .returning()
-      .get();
+    updatedBinding = (await client().get(
+      db()
+        .update(sourceConnectorBindings)
+        .set({
+          lastConfirmedSnapshot: stored.currentSnapshot,
+          lastSyncCheckResult: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(sourceConnectorBindings.id, binding.id))
+        .returning(),
+    ))!;
   }
 
   return {
@@ -406,21 +409,22 @@ export async function applyImportScopeToBinding(
   );
 
   const shouldConfirmSnapshot = importedSourceIds.length > 0 || reusedSourceIds.length > 0;
-  const updatedBinding = db()
-    .update(sourceConnectorBindings)
-    .set({
-      importScope: normalizedScope,
-      ...(shouldConfirmSnapshot
-        ? {
-            lastConfirmedSnapshot: currentSnapshot,
-            lastSyncCheckResult: null,
-          }
-        : {}),
-      updatedAt: new Date(),
-    })
-    .where(eq(sourceConnectorBindings.id, binding.id))
-    .returning()
-    .get();
+  const updatedBinding = (await client().get(
+    db()
+      .update(sourceConnectorBindings)
+      .set({
+        importScope: normalizedScope,
+        ...(shouldConfirmSnapshot
+          ? {
+              lastConfirmedSnapshot: currentSnapshot,
+              lastSyncCheckResult: null,
+            }
+          : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(sourceConnectorBindings.id, binding.id))
+      .returning(),
+  ))!;
 
   return {
     binding: serializeBinding(updatedBinding),

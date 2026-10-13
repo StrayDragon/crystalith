@@ -45,7 +45,7 @@ const BASE = 'http://test.local';
 let app: InstanceType<typeof createApp>;
 let notebookId: number;
 
-beforeAll(() => {
+beforeAll(async () => {
   setupIntegrationEnv();
   app = createApp();
   notebookId = getOrm().insert(notebooks).values({ name: 'research-c108-nb' }).returning().get().id;
@@ -54,14 +54,14 @@ beforeAll(() => {
 afterAll(teardownIntegrationEnv);
 
 describe('search budget helpers (c108)', () => {
-  it('computeSearchAddOnK = clamp(ceil(max * ratio), min, max)', () => {
+  it('computeSearchAddOnK = clamp(ceil(max * ratio), min, max)', async () => {
     expect(computeSearchAddOnK(50, 0.25, 5, 50)).toBe(13);
     expect(computeSearchAddOnK(8, 0.25, 5, 50)).toBe(5); // ceil(2)=2 → min 5
     expect(computeSearchAddOnK(400, 0.25, 5, 50)).toBe(50); // ceil(100)=100 → max 50
     expect(computeSearchAddOnK(20, 0.25, 5, 50)).toBe(5);
   });
 
-  it('computeSearchSoftCap = max(1, ceil(remaining / liveNodes))', () => {
+  it('computeSearchSoftCap = max(1, ceil(remaining / liveNodes))', async () => {
     expect(computeSearchSoftCap(9, 3)).toBe(3);
     expect(computeSearchSoftCap(1, 5)).toBe(1);
     expect(computeSearchSoftCap(0, 3)).toBe(1);
@@ -175,13 +175,13 @@ describe('add-budget + budget continue (r341/r343)', () => {
   });
 
   it('budget continue raises maxSearches and resumes (not completed)', async () => {
-    const created = createRun(notebookId, {
+    const created = await createRun(notebookId, {
       topic: 'c108 continue resume',
       useNotebookSources: false,
       allowWeb: true,
       depth: 'medium',
     });
-    updateRun(created.id, {
+    await updateRun(created.id, {
       status: 'awaiting_confirm',
       confirmKind: 'budget',
       searchesUsed: created.maxSearches,
@@ -195,17 +195,17 @@ describe('add-budget + budget continue (r341/r343)', () => {
     expect(out.status).not.toBe('completed');
   });
 
-  it('applySearchBudgetAddOn uses current maxSearches as base', () => {
-    const created = createRun(notebookId, {
+  it('applySearchBudgetAddOn uses current maxSearches as base', async () => {
+    const created = await createRun(notebookId, {
       topic: 'c108 compound addon',
       useNotebookSources: false,
       allowWeb: true,
       depth: 'medium',
     });
-    const first = applySearchBudgetAddOn(created.id);
+    const first = await applySearchBudgetAddOn(created.id);
     expect(first.k).toBe(13);
     expect(first.maxSearches).toBe(63);
-    const second = applySearchBudgetAddOn(created.id);
+    const second = await applySearchBudgetAddOn(created.id);
     expect(second.k).toBe(computeSearchAddOnK(63, 0.25, 5, 50));
     expect(second.maxSearches).toBe(63 + second.k);
   });
@@ -214,14 +214,14 @@ describe('add-budget + budget continue (r341/r343)', () => {
 describe('no mid-wave budget confirm (r306)', () => {
   it('finishWaveOrSynthesize does not enter budget when searches remain', async () => {
     const { finishWaveOrSynthesize } = await import('../../src/features/research/run-loop.ts');
-    const created = createRun(notebookId, {
+    const created = await createRun(notebookId, {
       topic: 'c108 no mid-wave',
       useNotebookSources: false,
       allowWeb: true,
       depth: 'medium',
     });
     // Seed a completed research node so drain has nothing pending; searchesUsed mid-range.
-    const rowAtStart = requireFresh(created.id);
+    const rowAtStart = await requireFresh(created.id);
     const graph = getGraph(rowAtStart);
     graph.nodes.push({
       id: 'node_research_done',
@@ -233,8 +233,8 @@ describe('no mid-wave budget confirm (r306)', () => {
       summary: 'done',
     });
     const { persistGraph } = await import('../../src/features/research/research-core.ts');
-    persistGraph(created.id, graph);
-    updateRun(created.id, {
+    await persistGraph(created.id, graph);
+    await updateRun(created.id, {
       status: 'running',
       searchesUsed: 10,
       allowWeb: true,
@@ -251,13 +251,13 @@ describe('partial completion prompt (r344)', () => {
   it('generateLlmResearchReport prompt includes 预算用尽 when missing research nodes', async () => {
     // Exercise helper path via report module by checking uncovered list behavior through synthesize stub.
     // Direct unit: markUnfinished path + e2e stub report still completes.
-    const created = createRun(notebookId, {
+    const created = await createRun(notebookId, {
       topic: 'c108 partial',
       useNotebookSources: false,
       allowWeb: true,
       depth: 'shallow',
     });
-    const rowAtStart = requireFresh(created.id);
+    const rowAtStart = await requireFresh(created.id);
     const graph = getGraph(rowAtStart);
     graph.nodes.push({
       id: 'node_research_gap',
@@ -269,8 +269,8 @@ describe('partial completion prompt (r344)', () => {
       summary: '预算用尽，未完成检索',
     });
     const { persistGraph } = await import('../../src/features/research/research-core.ts');
-    persistGraph(created.id, graph);
-    updateRun(created.id, {
+    await persistGraph(created.id, graph);
+    await updateRun(created.id, {
       status: 'awaiting_confirm',
       confirmKind: 'budget',
       searchesUsed: created.maxSearches,

@@ -20,17 +20,17 @@ const TMP_DB = 'data/test-vector.db';
 
 let orm: Orm;
 
-beforeAll(() => {
+beforeAll(async () => {
   for (const f of [TMP_DB, `${TMP_DB}-wal`, `${TMP_DB}-shm`]) rmSync(f, { force: true });
   orm = createDb(TMP_DB);
 });
 
-afterAll(() => {
+afterAll(async () => {
   for (const f of [TMP_DB, `${TMP_DB}-wal`, `${TMP_DB}-shm`]) rmSync(f, { force: true });
 });
 
 describe('db: schema migration', () => {
-  it('creates all relational tables incl. strategy_configs + vec_chunks', () => {
+  it('creates all relational tables incl. strategy_configs + vec_chunks', async () => {
     const rows = orm.all<{ name: string }>(
       sql`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name`,
     );
@@ -44,7 +44,7 @@ describe('db: schema migration', () => {
 });
 
 describe('db: sqlite-vec virtual table', () => {
-  it('inserts a notebook → source → chunk → vector and runs KNN search', () => {
+  it('inserts a notebook → source → chunk → vector and runs KNN search', async () => {
     const [nb] = orm.insert(notebooks).values({ name: 'Test Notebook' }).returning().all();
     const notebookId = nb.id;
 
@@ -74,9 +74,9 @@ describe('db: sqlite-vec virtual table', () => {
     // 1024-dim vector (default embedding dimension): one-hot at index 0.
     const vec = new Float32Array(1024);
     vec[0] = 1.0;
-    insertChunkVector(orm, chunkId, notebookId, sourceId, vec);
+    await insertChunkVector(orm, chunkId, notebookId, sourceId, vec);
 
-    expect(countVectors(orm, notebookId)).toBe(1);
+    expect(await countVectors(orm, notebookId)).toBe(1);
 
     // Second chunk with a different (orthogonal-ish) vector.
     const [chk2] = orm
@@ -90,27 +90,27 @@ describe('db: sqlite-vec virtual table', () => {
       .all();
     const vec2 = new Float32Array(1024);
     vec2[1] = 1.0;
-    insertChunkVector(orm, chk2.id, notebookId, sourceId, vec2);
+    await insertChunkVector(orm, chk2.id, notebookId, sourceId, vec2);
 
     // KNN: query vector close to `vec` → chunkId should rank first.
     const query = new Float32Array(1024);
     query[0] = 1.0;
-    const hits = searchVectors(orm, query, notebookId, 2);
+    const hits = await searchVectors(orm, query, notebookId, 2);
     expect(hits).toHaveLength(2);
     expect(hits[0].rowid).toBe(chunkId);
     expect(hits[0].text).toContain('Crystalith');
     expect(hits[0].distance).toBeLessThan(hits[1].distance);
 
     // Cleanup: delete vector then verify the chunk row survives.
-    deleteChunkVector(orm, chunkId);
-    expect(countVectors(orm, notebookId)).toBe(1);
+    await deleteChunkVector(orm, chunkId);
+    expect(await countVectors(orm, notebookId)).toBe(1);
 
     const [row] = orm.select().from(chunks).where(eq(chunks.id, chunkId)).all();
     expect(row).toBeDefined();
     expect(row.text).toContain('Crystalith');
   });
 
-  it('sourceIds filter finds a small source even when others dominate KNN', () => {
+  it('sourceIds filter finds a small source even when others dominate KNN', async () => {
     // Populate many vectors for source A so notebook-wide top-K would miss source B
     // under the old over-fetch+post-filter approach.
     const [nb] = orm.insert(notebooks).values({ name: 'Filter NB' }).returning().all();
@@ -134,7 +134,7 @@ describe('db: sqlite-vec virtual table', () => {
         .all();
       const vec = new Float32Array(1024);
       vec[0] = 1.0;
-      insertChunkVector(orm, chk.id, notebookId, srcA.id, vec);
+      await insertChunkVector(orm, chk.id, notebookId, srcA.id, vec);
     }
 
     const [smallChk] = orm
@@ -144,17 +144,17 @@ describe('db: sqlite-vec virtual table', () => {
       .all();
     const smallVec = new Float32Array(1024);
     smallVec[1] = 1.0; // orthogonal to source A → ranks last notebook-wide
-    insertChunkVector(orm, smallChk.id, notebookId, srcB.id, smallVec);
+    await insertChunkVector(orm, smallChk.id, notebookId, srcB.id, smallVec);
 
     const query = new Float32Array(1024);
     query[0] = 1.0; // closer to source A
 
     // Notebook-wide: source B should not appear in tiny top-K
-    const unscoped = searchVectors(orm, query, notebookId, 5);
+    const unscoped = await searchVectors(orm, query, notebookId, 5);
     expect(unscoped.every((h) => h.source_id === srcA.id)).toBe(true);
 
     // Scoped to B: must still return the needle via partition equality
-    const scoped = searchVectors(orm, query, notebookId, 5, [srcB.id]);
+    const scoped = await searchVectors(orm, query, notebookId, 5, [srcB.id]);
     expect(scoped).toHaveLength(1);
     expect(scoped[0].rowid).toBe(smallChk.id);
     expect(scoped[0].text).toContain('needle');
@@ -188,20 +188,20 @@ describe('db: sqlite-vec virtual table', () => {
         .values({ sourceId: src.id, chunkIndex: nextChunkIndex++, text })
         .returning()
         .all();
-      insertChunkVector(orm, chk.id, notebookId, src.id, vec);
+      await insertChunkVector(orm, chk.id, notebookId, src.id, vec);
       return chk.id;
     };
     const bId = await insert('same direction, longer', mk([1.5, 0]));
     const cId = await insert('0.9 cosine neighbor', mk([0.9, Math.sqrt(1 - 0.81)]));
 
-    const hits = searchVectors(orm, mk([1, 0]), notebookId, 2);
+    const hits = await searchVectors(orm, mk([1, 0]), notebookId, 2);
     expect(hits.map((h) => h.rowid)).toEqual([bId, cId]);
     // cosine distance ≈ 1 − cos similarity
     expect(hits[0].distance).toBeCloseTo(0, 3);
     expect(hits[1].distance).toBeCloseTo(0.1, 3);
   });
 
-  it('initVecChunks rebuilds a legacy L2 table in place (cosine migration)', () => {
+  it('initVecChunks rebuilds a legacy L2 table in place (cosine migration)', async () => {
     // Simulate a pre-cosine DB: create the old declaration, insert a vector,
     // then run initVecChunks — the table must come back with cosine semantics
     // and all rows preserved (no re-embed required).
@@ -227,7 +227,7 @@ describe('db: sqlite-vec virtual table', () => {
       .all();
     const v0 = new Float32Array(1024);
     v0[0] = 1;
-    insertChunkVector(orm, chk.id, notebookId, src.id, v0);
+    await insertChunkVector(orm, chk.id, notebookId, src.id, v0);
 
     initVecChunks(orm);
 
@@ -235,13 +235,13 @@ describe('db: sqlite-vec virtual table', () => {
       sql`SELECT sql FROM sqlite_master WHERE name='vec_chunks'`,
     )[0].sql;
     expect(ddl).toContain('distance_metric=cosine');
-    expect(countVectors(orm, notebookId)).toBe(1);
+    expect(await countVectors(orm, notebookId)).toBe(1);
 
     // Identical query vector → cosine distance ≈ 0 (L2 would also give 0, so
     // also assert the orthogonal case: distance must be exactly 1, not √1).
     const ortho = new Float32Array(1024);
     ortho[1] = 1;
-    const [hit] = searchVectors(orm, ortho, notebookId, 1);
+    const [hit] = await searchVectors(orm, ortho, notebookId, 1);
     expect(hit.distance).toBeCloseTo(1, 5);
   });
 });

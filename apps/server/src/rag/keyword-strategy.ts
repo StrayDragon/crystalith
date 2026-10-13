@@ -5,14 +5,15 @@
 // via content-sync triggers.
 import { sql } from 'drizzle-orm';
 
-import { db } from '../db/index.ts';
+import { client } from '../db/index.ts';
 import type { RAGStrategy, ChunkResult } from './types.ts';
 
 const FTS_TABLE = 'chunks_fts';
 
 /** Create the FTS5 virtual table if it doesn't exist + sync triggers. */
-function ensureFts(orm = db()) {
-  orm.run(
+async function ensureFts() {
+  const c = client();
+  await c.rawRun(
     sql.raw(
       `CREATE VIRTUAL TABLE IF NOT EXISTS ${FTS_TABLE} USING fts5(
         text,
@@ -23,21 +24,21 @@ function ensureFts(orm = db()) {
   );
 
   // Triggers to keep FTS in sync with chunks table
-  orm.run(
+  await c.rawRun(
     sql.raw(`
     CREATE TRIGGER IF NOT EXISTS chunks_ai AFTER INSERT ON chunks BEGIN
       INSERT INTO ${FTS_TABLE}(rowid, text) VALUES (new.id, new.text);
     END;
   `),
   );
-  orm.run(
+  await c.rawRun(
     sql.raw(`
     CREATE TRIGGER IF NOT EXISTS chunks_ad AFTER DELETE ON chunks BEGIN
       INSERT INTO ${FTS_TABLE}(${FTS_TABLE}, rowid, text) VALUES ('delete', old.id, old.text);
     END;
   `),
   );
-  orm.run(
+  await c.rawRun(
     sql.raw(`
     CREATE TRIGGER IF NOT EXISTS chunks_au AFTER UPDATE ON chunks BEGIN
       INSERT INTO ${FTS_TABLE}(${FTS_TABLE}, rowid, text) VALUES ('delete', old.id, old.text);
@@ -62,9 +63,9 @@ export class KeywordStrategy implements RAGStrategy {
   readonly version = '1.0.0';
   private ftsReady = false;
 
-  private init() {
+  private async init() {
     if (!this.ftsReady) {
-      ensureFts();
+      await ensureFts();
       this.ftsReady = true;
     }
   }
@@ -72,7 +73,7 @@ export class KeywordStrategy implements RAGStrategy {
   async indexSource(_sourceId: number, _notebookId: number): Promise<void> {
     // FTS5 content-sync triggers handle automatic indexing.
     // No-op: chunks insert automatically populates FTS.
-    this.init();
+    await this.init();
   }
 
   async retrieve(
@@ -80,12 +81,12 @@ export class KeywordStrategy implements RAGStrategy {
     notebookId: number,
     opts?: { topK?: number; minScore?: number },
   ): Promise<ChunkResult[]> {
-    this.init();
+    await this.init();
     const topK = opts?.topK ?? 8;
     const minScore = opts?.minScore ?? 0;
 
     // scope to notebook via JOIN
-    const rows = db().all<{
+    const rows = await client().raw<{
       text: string;
       sourceId: number;
       chunkIndex: number;
@@ -120,9 +121,9 @@ export class KeywordStrategy implements RAGStrategy {
   }
 
   async isIndexed(notebookId: number): Promise<boolean> {
-    this.init();
+    await this.init();
     // FTS is always synced; check if notebook has any chunks
-    const row = db().get<{ c: number }>(sql`
+    const row = await client().rawOne<{ c: number }>(sql`
       SELECT COUNT(*) AS c FROM chunks c
       JOIN sources s ON s.id = c.sourceId
       WHERE s.notebook_id = ${notebookId};
@@ -132,6 +133,6 @@ export class KeywordStrategy implements RAGStrategy {
 
   async deleteSource(_sourceId: number): Promise<void> {
     // FTS5 triggers handle cascade automatically
-    this.init();
+    await this.init();
   }
 }

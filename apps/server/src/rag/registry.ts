@@ -5,7 +5,7 @@
 // (Drizzle SSOT: `db/schema.ts`).
 import { eq } from 'drizzle-orm';
 
-import { db, strategyConfigs } from '../db/index.ts';
+import { client, db, strategyConfigs } from '../db/index.ts';
 import { EmbedStrategy } from './embed-strategy.ts';
 import { HybridStrategy } from './hybrid-strategy.ts';
 import { KeywordStrategy } from './keyword-strategy.ts';
@@ -46,17 +46,19 @@ class RAGRegistry {
   }
 
   /** Get strategies enabled for a notebook (persisted in DB). */
-  getForNotebook(notebookId: number): string[] {
-    return db()
-      .select({ strategyId: strategyConfigs.strategyId })
-      .from(strategyConfigs)
-      .where(eq(strategyConfigs.notebookId, notebookId))
-      .all()
-      .map((r) => r.strategyId);
+  async getForNotebook(notebookId: number): Promise<string[]> {
+    return (
+      await client().all(
+        db()
+          .select({ strategyId: strategyConfigs.strategyId })
+          .from(strategyConfigs)
+          .where(eq(strategyConfigs.notebookId, notebookId)),
+      )
+    ).map((r) => r.strategyId);
   }
 
   /** Set the enabled strategies for a notebook (replaces existing). */
-  setForNotebook(notebookId: number, strategyIds: string[]): void {
+  async setForNotebook(notebookId: number, strategyIds: string[]): Promise<void> {
     // Validate all strategy IDs exist
     for (const id of strategyIds) {
       if (!this.strategies.has(id)) {
@@ -65,10 +67,12 @@ class RAGRegistry {
     }
 
     // Replace existing configs for this notebook
-    db().delete(strategyConfigs).where(eq(strategyConfigs.notebookId, notebookId)).run();
+    await client().run(
+      db().delete(strategyConfigs).where(eq(strategyConfigs.notebookId, notebookId)),
+    );
 
     for (const sid of strategyIds) {
-      db().insert(strategyConfigs).values({ notebookId, strategyId: sid }).run();
+      await client().run(db().insert(strategyConfigs).values({ notebookId, strategyId: sid }));
     }
   }
 
@@ -76,7 +80,7 @@ class RAGRegistry {
    * Apply active strategies: index all enabled sources in the notebook.
    */
   async indexNotebook(notebookId: number, sourceIds: number[]): Promise<void> {
-    const activeIds = this.getForNotebook(notebookId);
+    const activeIds = await this.getForNotebook(notebookId);
     // Default to embed if nothing configured
     const ids = activeIds.length > 0 ? activeIds : ['embed'];
 
@@ -93,7 +97,7 @@ class RAGRegistry {
    * For hybrid/fusion, use retrieveAll() instead.
    */
   async retrieve(notebookId: number, query: string, opts?: { topK?: number; minScore?: number }) {
-    const activeIds = this.getForNotebook(notebookId);
+    const activeIds = await this.getForNotebook(notebookId);
     const ids = activeIds.length > 0 ? activeIds : ['embed'];
     const strategy = this.get(ids[0]);
     return strategy.retrieve(query, notebookId, opts);
@@ -114,7 +118,7 @@ class RAGRegistry {
 
   /** Check if any active strategy has indexed a notebook. */
   async isNotebookIndexed(notebookId: number): Promise<boolean> {
-    const activeIds = this.getForNotebook(notebookId);
+    const activeIds = await this.getForNotebook(notebookId);
     const ids = activeIds.length > 0 ? activeIds : ['embed'];
 
     for (const sid of ids) {

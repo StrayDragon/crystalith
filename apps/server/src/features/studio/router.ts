@@ -32,7 +32,7 @@ import { count, desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 import { z } from 'zod';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { notebooks, studioSlides } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
@@ -169,79 +169,86 @@ function serializeSlide(row: typeof studioSlides.$inferSelect) {
   };
 }
 
-function getSlideOrThrow(id: number): typeof studioSlides.$inferSelect {
-  const row = db().select().from(studioSlides).where(eq(studioSlides.id, id)).get();
+async function getSlideOrThrow(id: number): Promise<typeof studioSlides.$inferSelect> {
+  const row = await client().get(db().select().from(studioSlides).where(eq(studioSlides.id, id)));
   if (!row) throw new NotFoundError(`Slide ${id} not found`);
   return row;
 }
 
-function getSlideInNotebookOrThrow(
+async function getSlideInNotebookOrThrow(
   id: number,
   notebookId: number,
-): typeof studioSlides.$inferSelect {
-  return requireOwnedRow(studioSlides, id, notebookId, 'Slide');
+): Promise<typeof studioSlides.$inferSelect> {
+  return await requireOwnedRow(studioSlides, id, notebookId, 'Slide');
 }
 
 // ---------------------------------------------------------------------------
 // Handlers (shared by nested + flat)
 // ---------------------------------------------------------------------------
 
-function handleCreateSlide(notebookId: number, body: SlideDraftCreateBody) {
-  const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
+async function handleCreateSlide(notebookId: number, body: SlideDraftCreateBody) {
+  const nb = await client().get(db().select().from(notebooks).where(eq(notebooks.id, notebookId)));
   if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
 
-  const slide = db()
-    .insert(studioSlides)
-    .values({
-      notebookId,
-      title: body.title ?? null,
-      prompt: body.prompt ?? null,
-      engine: body.engine ?? 'slidev',
-      sourceIds: body.sourceIds,
-      generationConfig: body.generationConfig ?? null,
-      stage: 'input',
-      status: 'idle',
-    })
-    .returning()
-    .get();
+  const slide = (await client().get(
+    db()
+      .insert(studioSlides)
+      .values({
+        notebookId,
+        title: body.title ?? null,
+        prompt: body.prompt ?? null,
+        engine: body.engine ?? 'slidev',
+        sourceIds: body.sourceIds,
+        generationConfig: body.generationConfig ?? null,
+        stage: 'input',
+        status: 'idle',
+      })
+      .returning(),
+  ))!;
   return serializeSlide(slide);
 }
 
-function handleListSlides(notebookId: number, offset: number, limit: number) {
+async function handleListSlides(notebookId: number, offset: number, limit: number) {
   const total =
-    db()
-      .select({ n: count() })
-      .from(studioSlides)
-      .where(eq(studioSlides.notebookId, notebookId))
-      .get()?.n ?? 0;
-  const items = db()
-    .select()
-    .from(studioSlides)
-    .where(eq(studioSlides.notebookId, notebookId))
-    .limit(limit)
-    .offset(offset)
-    .all()
-    .map(serializeSlide);
+    (
+      await client().get(
+        db()
+          .select({ n: count() })
+          .from(studioSlides)
+          .where(eq(studioSlides.notebookId, notebookId)),
+      )
+    )?.n ?? 0;
+  const items = (
+    await client().all(
+      db()
+        .select()
+        .from(studioSlides)
+        .where(eq(studioSlides.notebookId, notebookId))
+        .limit(limit)
+        .offset(offset),
+    )
+  ).map(serializeSlide);
   return { items, total, offset, limit };
 }
 
-function handleLatestSlide(notebookId: number) {
-  const row = db()
-    .select()
-    .from(studioSlides)
-    .where(eq(studioSlides.notebookId, notebookId))
-    .orderBy(desc(studioSlides.updatedAt))
-    .get();
+async function handleLatestSlide(notebookId: number) {
+  const row = await client().get(
+    db()
+      .select()
+      .from(studioSlides)
+      .where(eq(studioSlides.notebookId, notebookId))
+      .orderBy(desc(studioSlides.updatedAt)),
+  );
   if (!row) throw new NotFoundError('Slide draft not found');
   return serializeSlide(row);
 }
 
-function handleGetSlide(id: number, notebookId: number) {
-  return serializeSlide(getSlideInNotebookOrThrow(id, notebookId));
+async function handleGetSlide(id: number, notebookId: number) {
+  return serializeSlide(await getSlideInNotebookOrThrow(id, notebookId));
 }
 
-function handlePatchSlide(id: number, notebookId: number, body: SlideDraftUpdate) {
-  getSlideInNotebookOrThrow(id, notebookId);
+async function handlePatchSlide(id: number, notebookId: number, body: SlideDraftUpdate) {
+  await getSlideInNotebookOrThrow(id, notebookId);
   const updateData: Record<string, unknown> = { errorMessage: null };
   if (body.title !== undefined) updateData.title = body.title;
   if (body.prompt !== undefined) updateData.prompt = body.prompt;
@@ -251,90 +258,97 @@ function handlePatchSlide(id: number, notebookId: number, body: SlideDraftUpdate
   if (body.outline !== undefined) updateData.outline = body.outline;
   if (body.markdown !== undefined) updateData.markdown = body.markdown;
   if (body.stage !== undefined) updateData.stage = body.stage;
-  db().update(studioSlides).set(updateData).where(eq(studioSlides.id, id)).run();
-  return serializeSlide(getSlideOrThrow(id));
+  await client().run(db().update(studioSlides).set(updateData).where(eq(studioSlides.id, id)));
+  return serializeSlide(await getSlideOrThrow(id));
 }
 
 async function handleGenerateOutline(id: number, notebookId: number) {
-  const slide = getSlideInNotebookOrThrow(id, notebookId);
+  const slide = await getSlideInNotebookOrThrow(id, notebookId);
   if (!clearStaleRunning(id)) {
     throw new AppHttpError(ErrorCode.CONFLICT, '演示正在生成中，请稍后重试。');
   }
 
   const context = await getContext(slide);
-  db()
-    .update(studioSlides)
-    .set({ status: 'running', stage: 'outline' })
-    .where(eq(studioSlides.id, id))
-    .run();
+  await client().run(
+    db()
+      .update(studioSlides)
+      .set({ status: 'running', stage: 'outline' })
+      .where(eq(studioSlides.id, id)),
+  );
   try {
     const outline = await generateOutline(slide, context);
-    db()
-      .update(studioSlides)
-      .set({ outline, stage: 'outline', status: 'idle' })
-      .where(eq(studioSlides.id, id))
-      .run();
-    return serializeSlide(getSlideOrThrow(id));
+    await client().run(
+      db()
+        .update(studioSlides)
+        .set({ outline, stage: 'outline', status: 'idle' })
+        .where(eq(studioSlides.id, id)),
+    );
+    return serializeSlide(await getSlideOrThrow(id));
   } catch (error) {
-    db()
-      .update(studioSlides)
-      .set({ status: 'error', errorMessage: String(error) })
-      .where(eq(studioSlides.id, id))
-      .run();
+    await client().run(
+      db()
+        .update(studioSlides)
+        .set({ status: 'error', errorMessage: String(error) })
+        .where(eq(studioSlides.id, id)),
+    );
     throw error;
   }
 }
 
-function handlePutOutline(id: number, notebookId: number, body: StudioOutlinePut) {
-  getSlideInNotebookOrThrow(id, notebookId);
-  db()
-    .update(studioSlides)
-    .set({
-      outline: body.outline,
-      stage: 'outline',
-      status: 'idle',
-      errorMessage: null,
-    })
-    .where(eq(studioSlides.id, id))
-    .run();
-  return serializeSlide(getSlideOrThrow(id));
+async function handlePutOutline(id: number, notebookId: number, body: StudioOutlinePut) {
+  await getSlideInNotebookOrThrow(id, notebookId);
+  await client().run(
+    db()
+      .update(studioSlides)
+      .set({
+        outline: body.outline,
+        stage: 'outline',
+        status: 'idle',
+        errorMessage: null,
+      })
+      .where(eq(studioSlides.id, id)),
+  );
+  return serializeSlide(await getSlideOrThrow(id));
 }
 
 async function handleGenerateMarkdown(id: number, notebookId: number) {
-  const slide = getSlideInNotebookOrThrow(id, notebookId);
+  const slide = await getSlideInNotebookOrThrow(id, notebookId);
   if (!slide.outline) throw new NotFoundError(`Slide ${id} has no outline — run /outline first`);
   if (!clearStaleRunning(id)) {
     throw new AppHttpError(ErrorCode.CONFLICT, '演示正在生成中，请稍后重试。');
   }
 
   const context = await getContext(slide);
-  db()
-    .update(studioSlides)
-    .set({ status: 'running', stage: 'markdown' })
-    .where(eq(studioSlides.id, id))
-    .run();
+  await client().run(
+    db()
+      .update(studioSlides)
+      .set({ status: 'running', stage: 'markdown' })
+      .where(eq(studioSlides.id, id)),
+  );
   try {
     const markdown = await generateMarkdown(slide, context);
-    db()
-      .update(studioSlides)
-      .set({ markdown, stage: 'markdown', status: 'idle' })
-      .where(eq(studioSlides.id, id))
-      .run();
+    await client().run(
+      db()
+        .update(studioSlides)
+        .set({ markdown, stage: 'markdown', status: 'idle' })
+        .where(eq(studioSlides.id, id)),
+    );
     writeSlideFile(slide.notebookId, id, markdown);
     syncSlideOutput(slide, markdown);
-    return serializeSlide(getSlideOrThrow(id));
+    return serializeSlide(await getSlideOrThrow(id));
   } catch (error) {
-    db()
-      .update(studioSlides)
-      .set({ status: 'error', errorMessage: String(error) })
-      .where(eq(studioSlides.id, id))
-      .run();
+    await client().run(
+      db()
+        .update(studioSlides)
+        .set({ status: 'error', errorMessage: String(error) })
+        .where(eq(studioSlides.id, id)),
+    );
     throw error;
   }
 }
 
-function handlePutMarkdown(id: number, notebookId: number, body: StudioMarkdownPut) {
-  const slide = getSlideInNotebookOrThrow(id, notebookId);
+async function handlePutMarkdown(id: number, notebookId: number, body: StudioMarkdownPut) {
+  const slide = await getSlideInNotebookOrThrow(id, notebookId);
   const { markdown } = body;
   try {
     writeSlideFile(slide.notebookId, id, markdown);
@@ -342,52 +356,56 @@ function handlePutMarkdown(id: number, notebookId: number, body: StudioMarkdownP
     logger.error('[studio] slidev file write failed:', error);
   }
   syncSlideOutput(slide, markdown);
-  db()
-    .update(studioSlides)
-    .set({ markdown, stage: 'markdown', status: 'idle', errorMessage: null })
-    .where(eq(studioSlides.id, id))
-    .run();
-  return serializeSlide(getSlideOrThrow(id));
+  await client().run(
+    db()
+      .update(studioSlides)
+      .set({ markdown, stage: 'markdown', status: 'idle', errorMessage: null })
+      .where(eq(studioSlides.id, id)),
+  );
+  return serializeSlide(await getSlideOrThrow(id));
 }
 
-function handleOutlineStream(id: number, notebookId: number) {
-  const slide = getSlideInNotebookOrThrow(id, notebookId);
+async function handleOutlineStream(id: number, notebookId: number) {
+  const slide = await getSlideInNotebookOrThrow(id, notebookId);
 
   return createSseResponse(id, async (emit, ctx) => {
     emit('progress', { stage: 'outline', progress: 5, message: '开始生成大纲' });
     const context = await getContext(slide);
-    db()
-      .update(studioSlides)
-      .set({ status: 'running', stage: 'outline' })
-      .where(eq(studioSlides.id, id))
-      .run();
+    await client().run(
+      db()
+        .update(studioSlides)
+        .set({ status: 'running', stage: 'outline' })
+        .where(eq(studioSlides.id, id)),
+    );
 
     // c51: emit toolcall before the generation stage (v1 api.py:401)
     emit('toolcall', { tool: 'slides_generate_outline', slideId: id });
     const outline = await generateOutline(slide, context);
     emit('progress', { stage: 'outline', progress: 90, message: '大纲生成完成' });
-    db()
-      .update(studioSlides)
-      .set({ outline, stage: 'outline', status: 'idle' })
-      .where(eq(studioSlides.id, id))
-      .run();
+    await client().run(
+      db()
+        .update(studioSlides)
+        .set({ outline, stage: 'outline', status: 'idle' })
+        .where(eq(studioSlides.id, id)),
+    );
     // c51: done payload = {traceId, slideId} (v1 api.py:428)
     emit('done', { traceId: ctx.traceId, slideId: id });
   });
 }
 
-function handleMarkdownStream(id: number, notebookId: number) {
-  const slide = getSlideInNotebookOrThrow(id, notebookId);
+async function handleMarkdownStream(id: number, notebookId: number) {
+  const slide = await getSlideInNotebookOrThrow(id, notebookId);
   if (!slide.outline) throw new NotFoundError(`Slide ${id} has no outline`);
 
   return createSseResponse(id, async (emit, ctx) => {
     emit('progress', { stage: 'markdown', progress: 5, message: '开始生成幻灯片' });
     const context = await getContext(slide);
-    db()
-      .update(studioSlides)
-      .set({ status: 'running', stage: 'markdown' })
-      .where(eq(studioSlides.id, id))
-      .run();
+    await client().run(
+      db()
+        .update(studioSlides)
+        .set({ status: 'running', stage: 'markdown' })
+        .where(eq(studioSlides.id, id)),
+    );
 
     // c51: emit toolcall before the generation stage (v1 api.py:506)
     emit('toolcall', { tool: 'slides_generate_markdown', slideId: id });
@@ -395,11 +413,12 @@ function handleMarkdownStream(id: number, notebookId: number) {
       emit('progress', { stage: 'markdown', delta });
     });
 
-    db()
-      .update(studioSlides)
-      .set({ markdown, stage: 'markdown', status: 'idle' })
-      .where(eq(studioSlides.id, id))
-      .run();
+    await client().run(
+      db()
+        .update(studioSlides)
+        .set({ markdown, stage: 'markdown', status: 'idle' })
+        .where(eq(studioSlides.id, id)),
+    );
     writeSlideFile(slide.notebookId, id, markdown);
     syncSlideOutput(slide, markdown);
     // c51: done payload = {traceId, slideId} (v1 api.py:538)

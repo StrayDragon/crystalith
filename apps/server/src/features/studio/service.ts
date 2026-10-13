@@ -15,7 +15,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { chunks, outputs, sources, studioSlides } from '../../db/schema.ts';
 import { getDataRoot, getDefaultChatModel } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
@@ -114,12 +114,13 @@ export async function getContext(slide: typeof studioSlides.$inferSelect): Promi
     logger.warn('[studio] RAG unavailable, falling back to direct query:', error);
   }
 
-  const chunkRows = db()
-    .select({ text: chunks.text })
-    .from(chunks)
-    .innerJoin(sources, eq(chunks.sourceId, sources.id))
-    .where(and(eq(sources.notebookId, slide.notebookId), inArray(sources.id, sourceIds)))
-    .all();
+  const chunkRows = await client().all(
+    db()
+      .select({ text: chunks.text })
+      .from(chunks)
+      .innerJoin(sources, eq(chunks.sourceId, sources.id))
+      .where(and(eq(sources.notebookId, slide.notebookId), inArray(sources.id, sourceIds))),
+  );
   return chunkRows.map((c) => c.text).join('\n\n');
 }
 
@@ -129,19 +130,20 @@ export async function getContext(slide: typeof studioSlides.$inferSelect): Promi
 
 const SLIDE_STALE_MS = 10 * 60 * 1000;
 
-export function clearStaleRunning(id: number): boolean {
-  const slide = db().select().from(studioSlides).where(eq(studioSlides.id, id)).get();
+export async function clearStaleRunning(id: number): Promise<boolean> {
+  const slide = await client().get(db().select().from(studioSlides).where(eq(studioSlides.id, id)));
   if (!slide || slide.status !== 'running') return true;
   const updatedAt = new Date(slide.updatedAt).getTime();
   if (Date.now() - updatedAt > SLIDE_STALE_MS) {
     // c51: v1 _clear_stale_running_status (api.py:107-118) sets status=IDLE +
     // clears error_message (None). Was: set a non-empty error string, which
     // made stale-cleared slides show an error in v2 where v1 shows none.
-    db()
-      .update(studioSlides)
-      .set({ status: 'idle', errorMessage: null })
-      .where(eq(studioSlides.id, id))
-      .run();
+    await client().run(
+      db()
+        .update(studioSlides)
+        .set({ status: 'idle', errorMessage: null })
+        .where(eq(studioSlides.id, id)),
+    );
     return true;
   }
   return false;
@@ -167,16 +169,20 @@ export function writeSlideFile(notebookId: number, slideId: number, markdown: st
  * prompt='studio:<id>' and never wrote the outputId FK (left it null),
  * and used a partial content shape {title, markdown, stage}.
  */
-export function syncSlideOutput(slide: typeof studioSlides.$inferSelect, markdown: string): void {
+export async function syncSlideOutput(
+  slide: typeof studioSlides.$inferSelect,
+  markdown: string,
+): Promise<void> {
   // Reuse existing output if the slide already has an outputId FK, else look
   // up by the studio:<id> prompt convention (for slides created pre-c51).
   let outputId = slide.outputId ?? null;
   if (!outputId) {
-    const legacy = db()
-      .select()
-      .from(outputs)
-      .where(eq(outputs.prompt, `studio:${slide.id}`))
-      .get();
+    const legacy = await client().get(
+      db()
+        .select()
+        .from(outputs)
+        .where(eq(outputs.prompt, `studio:${slide.id}`)),
+    );
     outputId = legacy?.id ?? null;
   }
 
@@ -189,29 +195,32 @@ export function syncSlideOutput(slide: typeof studioSlides.$inferSelect, markdow
   };
 
   if (outputId) {
-    db().update(outputs).set({ content }).where(eq(outputs.id, outputId)).run();
+    await client().run(db().update(outputs).set({ content }).where(eq(outputs.id, outputId)));
   } else {
-    const inserted = db()
-      .insert(outputs)
-      .values({
-        notebookId: slide.notebookId,
-        type: 'SLIDES',
-        prompt: `studio:${slide.id}`,
-        generationMeta: {
-          generationTypeId: 'slides',
-          outputType: 'SLIDES',
-          completion: 'sse-done',
-        },
-        content,
-      })
-      .returning()
-      .get();
+    const inserted = (await client().get(
+      db()
+        .insert(outputs)
+        .values({
+          notebookId: slide.notebookId,
+          type: 'SLIDES',
+          prompt: `studio:${slide.id}`,
+          generationMeta: {
+            generationTypeId: 'slides',
+            outputType: 'SLIDES',
+            completion: 'sse-done',
+          },
+          content,
+        })
+        .returning(),
+    ))!;
     outputId = inserted.id;
   }
 
   // c51: write the FK so slide→output joins work (column existed but was never set)
   if (slide.outputId !== outputId) {
-    db().update(studioSlides).set({ outputId }).where(eq(studioSlides.id, slide.id)).run();
+    await client().run(
+      db().update(studioSlides).set({ outputId }).where(eq(studioSlides.id, slide.id)),
+    );
   }
 }
 
@@ -316,10 +325,10 @@ export interface SseContext {
  * c51: generates a traceId per request; the done payload is {traceId, slideId}
  * (v1 api.py:428,538), not a full serialized slide.
  */
-export function createSseResponse(
+export async function createSseResponse(
   slideId: number,
   run: (emit: SseEmit, ctx: SseContext) => Promise<void>,
-): Response {
+): Promise<Response> {
   const traceId = crypto.randomUUID();
   const ctx: SseContext = { traceId, slideId };
   const sse = (event: string, data: unknown): string => {
@@ -331,7 +340,7 @@ export function createSseResponse(
   };
 
   // Check busy guard before starting stream
-  if (!clearStaleRunning(slideId)) {
+  if (!(await clearStaleRunning(slideId))) {
     return new Response(sse('busy', { message: '演示正在生成中，请稍后重试。', slideId }), {
       headers: SSE_HEADERS,
     });

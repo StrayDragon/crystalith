@@ -220,7 +220,7 @@ async function waitForStatus(runId: number, wanted: string[], timeoutMs = 10000)
 }
 
 describe('c106 parallel branch units', () => {
-  it('getParallelBranchUnits clamps to 1..8 (config default 2)', () => {
+  it('getParallelBranchUnits clamps to 1..8 (config default 2)', async () => {
     expect(getParallelBranchUnits()).toBe(2);
   });
 

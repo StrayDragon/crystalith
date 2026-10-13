@@ -16,7 +16,7 @@ import { desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 import { z } from 'zod';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { notebooks, sessions, sourceTags, sources, templates } from '../../db/schema.ts';
 import { deleteSourceVectors } from '../../db/vectors.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
@@ -133,8 +133,10 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
   // List all notebooks
   .get(
     '/notebooks',
-    () => {
-      const rows = db().select().from(notebooks).orderBy(desc(notebooks.updatedAt)).all();
+    async () => {
+      const rows = await client().all(
+        db().select().from(notebooks).orderBy(desc(notebooks.updatedAt)),
+      );
       return rows.map(serializeNotebook);
     },
     { response: NotebookSchema.array() },
@@ -143,14 +145,18 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
   // Create a notebook (c39 gap fix: templateId apply-on-create — v1 service.py:19-50)
   .post(
     '/notebooks',
-    ({ body, query, set }) => {
+    async ({ body, query, set }) => {
       const templateId = query.templateId ?? null;
 
-      const row = db().insert(notebooks).values({ name: body.name }).returning().get();
+      const row = (await client().get(
+        db().insert(notebooks).values({ name: body.name }).returning(),
+      ))!;
 
       // Apply template: create sessions + tags from config (v1 service.py:36-46)
       if (templateId) {
-        const template = db().select().from(templates).where(eq(templates.id, templateId)).get();
+        const template = (await client().get(
+          db().select().from(templates).where(eq(templates.id, templateId)),
+        ))!;
         if (!template) {
           throw new NotFoundError(`Template ${templateId} not found`);
         }
@@ -161,10 +167,10 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
         const templateSessionTitles = config.sessionTitles ?? [];
         const templateSourceTags = config.sourceTags ?? [];
         for (const title of templateSessionTitles) {
-          db().insert(sessions).values({ notebookId: row.id, title }).run();
+          await client().run(db().insert(sessions).values({ notebookId: row.id, title }));
         }
         for (const tagName of templateSourceTags) {
-          db().insert(sourceTags).values({ notebookId: row.id, name: tagName }).run();
+          await client().run(db().insert(sourceTags).values({ notebookId: row.id, name: tagName }));
         }
       }
 
@@ -177,9 +183,9 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
   // Get a single notebook
   .get(
     '/notebooks/:nid',
-    ({ params }) => {
+    async ({ params }) => {
       const id = params.nid;
-      const row = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
+      const row = (await client().get(db().select().from(notebooks).where(eq(notebooks.id, id))))!;
       if (!row) notFound(id);
       return serializeNotebook(row);
     },
@@ -189,16 +195,15 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
   // Update a notebook
   .patch(
     '/notebooks/:nid',
-    ({ params, body }) => {
+    async ({ params, body }) => {
       const id = params.nid;
-      const existing = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
+      const existing = (await client().get(
+        db().select().from(notebooks).where(eq(notebooks.id, id)),
+      ))!;
       if (!existing) notFound(id);
-      const updated = db()
-        .update(notebooks)
-        .set({ name: body.name })
-        .where(eq(notebooks.id, id))
-        .returning()
-        .get();
+      const updated = (await client().get(
+        db().update(notebooks).set({ name: body.name }).where(eq(notebooks.id, id)).returning(),
+      ))!;
       return serializeNotebook(updated);
     },
     { params: z.object({ nid: PathId }), body: NotebookUpdateSchema, response: NotebookSchema },
@@ -207,19 +212,19 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
   // Delete a notebook
   .delete(
     '/notebooks/:nid',
-    ({ params, set }) => {
+    async ({ params, set }) => {
       const id = params.nid;
-      const existing = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
+      const existing = (await client().get(
+        db().select().from(notebooks).where(eq(notebooks.id, id)),
+      ))!;
       if (!existing) notFound(id);
       // vec_chunks has no FK — cascade only cleans relational rows, so source
       // vectors must be dropped explicitly or they leak forever.
-      const notebookSources = db()
-        .select({ id: sources.id })
-        .from(sources)
-        .where(eq(sources.notebookId, id))
-        .all();
-      for (const s of notebookSources) deleteSourceVectors(db(), s.id);
-      db().delete(notebooks).where(eq(notebooks.id, id)).run();
+      const notebookSources = await client().all(
+        db().select({ id: sources.id }).from(sources).where(eq(sources.notebookId, id)),
+      );
+      for (const s of notebookSources) await deleteSourceVectors(db(), s.id);
+      await client().run(db().delete(notebooks).where(eq(notebooks.id, id)));
       set.status = 204;
       return;
     },

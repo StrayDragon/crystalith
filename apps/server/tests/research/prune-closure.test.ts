@@ -25,7 +25,7 @@ function edge(
 }
 
 describe('collectResearchPruneClosure', () => {
-  it('does not cascade into root/conclusion or along merge edges', () => {
+  it('does not cascade into root/conclusion or along merge edges', async () => {
     const nodes = [node('node_root_1'), node('a'), node('b'), node('node_conclusion_1')];
     const edges = [
       edge('e1', 'node_root_1', 'a', 'decompose'),
@@ -38,7 +38,7 @@ describe('collectResearchPruneClosure', () => {
     expect(closure.has('node_root_1')).toBe(false);
   });
 
-  it('keeps shared child live when another parent is still live (B)', () => {
+  it('keeps shared child live when another parent is still live (B)', async () => {
     const nodes = [node('node_root_1'), node('libs'), node('perf'), node('stream')];
     const edges = [
       edge('e1', 'node_root_1', 'libs', 'decompose'),
@@ -54,7 +54,7 @@ describe('collectResearchPruneClosure', () => {
     expect(closure.has('perf')).toBe(false);
   });
 
-  it('cascades when the only research parent is in the closure', () => {
+  it('cascades when the only research parent is in the closure', async () => {
     const nodes = [node('node_root_1'), node('data'), node('minimize')];
     const edges = [
       edge('e1', 'node_root_1', 'data', 'decompose'),
@@ -64,13 +64,13 @@ describe('collectResearchPruneClosure', () => {
     expect([...closure].sort()).toEqual(['data', 'minimize']);
   });
 
-  it('returns empty for protected root prune', () => {
+  it('returns empty for protected root prune', async () => {
     const nodes = [node('node_root_1'), node('a')];
     const edges = [edge('e1', 'node_root_1', 'a', 'decompose')];
     expect(collectResearchPruneClosure('node_root_1', nodes, edges).size).toBe(0);
   });
 
-  it('protects role=question/conclusion over non-prefix ids', () => {
+  it('protects role=question/conclusion over non-prefix ids', async () => {
     const q = node('q1', 'partial', 'question');
     const c = node('sink', 'pending', 'conclusion');
     const r = node('branch', 'partial', 'research');
@@ -83,7 +83,7 @@ describe('collectResearchPruneClosure', () => {
     expect(collectResearchPruneClosure('sink', [q, r, c], []).size).toBe(0);
   });
 
-  it('role=research wins over misleading conclusion-like id', () => {
+  it('role=research wins over misleading conclusion-like id', async () => {
     const n = node('node_conclusion_fake', 'partial', 'research');
     expect(isPruneProtectedNode(n)).toBe(false);
   });

@@ -13,7 +13,7 @@ import { ResearchRunStatusSchema } from '@crystalith/shared';
 import { and, desc, eq } from 'drizzle-orm';
 import { NotFoundError } from 'elysia';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import {
   researchReportEdits,
   researchRevisions,
@@ -52,110 +52,125 @@ function serializeRevision(row: typeof researchRevisions.$inferSelect): Research
   };
 }
 
-export function listRevisions(notebookId: number, runId: number): { items: ResearchRevision[] } {
-  requireRun(notebookId, runId);
-  const rows = db()
-    .select()
-    .from(researchRevisions)
-    .where(eq(researchRevisions.runId, runId))
-    .orderBy(desc(researchRevisions.createdAt))
-    .all();
+export async function listRevisions(
+  notebookId: number,
+  runId: number,
+): Promise<{ items: ResearchRevision[] }> {
+  await requireRun(notebookId, runId);
+  const rows = await client().all(
+    db()
+      .select()
+      .from(researchRevisions)
+      .where(eq(researchRevisions.runId, runId))
+      .orderBy(desc(researchRevisions.createdAt)),
+  );
   return { items: rows.map(serializeRevision) };
 }
 
 /** Fetch a revision row scoped to the run, or 404. Caller resolves the run first. */
-function requireRevision(runId: number, revId: string): typeof researchRevisions.$inferSelect {
-  const row = db()
-    .select()
-    .from(researchRevisions)
-    .where(and(eq(researchRevisions.runId, runId), eq(researchRevisions.id, revId)))
-    .get();
+async function requireRevision(
+  runId: number,
+  revId: string,
+): Promise<typeof researchRevisions.$inferSelect> {
+  const row = await client().get(
+    db()
+      .select()
+      .from(researchRevisions)
+      .where(and(eq(researchRevisions.runId, runId), eq(researchRevisions.id, revId))),
+  );
   if (!row) throw new NotFoundError(`Revision ${revId} not found`);
   return row;
 }
 
-export function getRevision(notebookId: number, runId: number, revId: string): ResearchRevision {
-  requireRun(notebookId, runId);
-  return serializeRevision(requireRevision(runId, revId));
+export async function getRevision(
+  notebookId: number,
+  runId: number,
+  revId: string,
+): Promise<ResearchRevision> {
+  await requireRun(notebookId, runId);
+  return serializeRevision(await requireRevision(runId, revId));
 }
 
-export function createRevision(
+export async function createRevision(
   notebookId: number,
   runId: number,
   body: ResearchRevisionCreateBody,
-): ResearchRevision {
-  const row = requireRun(notebookId, runId);
+): Promise<ResearchRevision> {
+  const row = await requireRun(notebookId, runId);
   const from = body.from ?? 'canonical';
   let report: ResearchReportJson | null = row.report ?? null;
   if (from === 'working') {
-    const edit = db()
-      .select()
-      .from(researchReportEdits)
-      .where(eq(researchReportEdits.runId, runId))
-      .get();
+    const edit = await client().get(
+      db().select().from(researchReportEdits).where(eq(researchReportEdits.runId, runId)),
+    );
     if (!edit) {
       throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'No working report to snapshot');
     }
     report = edit.report;
   }
   const id = newId('rev');
-  const inserted = db()
-    .insert(researchRevisions)
-    .values({
-      id,
-      runId,
-      notebookId,
-      // intentionally || — empty label gets timestamp default
-      // oxlint-disable-next-line typescript/prefer-nullish-coalescing
-      label: body.label?.trim() || `保存 ${new Date().toISOString()}`,
-      kind: 'user_save',
-      parentRevisionId: row.activeRevisionId ?? null,
-      graph: getGraph(row),
-      report,
-      searchesUsed: row.searchesUsed,
-      statusAtSave: row.status,
-    })
-    .returning()
-    .get();
-  updateRun(runId, { activeRevisionId: id });
-  appendProgressEvent(runId, 'revision_created', {
+  const inserted = (await client().get(
+    db()
+      .insert(researchRevisions)
+      .values({
+        id,
+        runId,
+        notebookId,
+        // intentionally || — empty label gets timestamp default
+        // oxlint-disable-next-line typescript/prefer-nullish-coalescing
+        label: body.label?.trim() || `保存 ${new Date().toISOString()}`,
+        kind: 'user_save',
+        parentRevisionId: row.activeRevisionId ?? null,
+        graph: getGraph(row),
+        report,
+        searchesUsed: row.searchesUsed,
+        statusAtSave: row.status,
+      })
+      .returning(),
+  ))!;
+  await updateRun(runId, { activeRevisionId: id });
+  await appendProgressEvent(runId, 'revision_created', {
     headline: inserted.label,
     payload: { revisionId: id, kind: 'user_save', from },
   });
   return serializeRevision(inserted);
 }
 
-export function restoreRevision(notebookId: number, runId: number, revId: string): ResearchRun {
-  const row = requireRun(notebookId, runId);
+export async function restoreRevision(
+  notebookId: number,
+  runId: number,
+  revId: string,
+): Promise<ResearchRun> {
+  const row = await requireRun(notebookId, runId);
   if (!isTerminalStatus(row.status)) {
     throw new AppHttpError(
       ErrorCode.RESEARCH_INVALID_STATE,
       'Restore only allowed on terminal runs',
     );
   }
-  const rev = requireRevision(runId, revId);
+  const rev = await requireRevision(runId, revId);
 
   const now = new Date();
-  updateRun(runId, {
+  await updateRun(runId, {
     graph: rev.graph,
     report: rev.report,
     reportUpdatedAt: rev.report ? now : row.reportUpdatedAt,
     activeRevisionId: revId,
   });
-  db().delete(researchReportEdits).where(eq(researchReportEdits.runId, runId)).run();
+  await client().run(db().delete(researchReportEdits).where(eq(researchReportEdits.runId, runId)));
 
-  emitGraphPatch(runId, {
+  await emitGraphPatch(runId, {
     nodes: rev.graph.nodes ?? [],
     edges: rev.graph.edges ?? [],
   });
-  appendProgressEvent(runId, 'revision_restored', {
+  await appendProgressEvent(runId, 'revision_restored', {
     headline: `恢复 ${rev.label}`,
     payload: { revisionId: revId },
   });
   if (rev.report) {
-    broadcast(runId, 'report_ready', { runId });
+    await broadcast(runId, 'report_ready', { runId });
   }
-  return serializeRun(requireRun(notebookId, runId));
+  return serializeRun(await requireRun(notebookId, runId));
 }
 
 function collectReferencedEvidenceIds(
@@ -223,15 +238,19 @@ function remapReportEvidenceIds(
  * Does NOT schedule; caller may call scheduleRun when body.schedule is true.
  * Source Run is never mutated.
  */
-export function forkRunFromRevision(notebookId: number, runId: number, revId: string): ResearchRun {
-  const source = requireRun(notebookId, runId);
-  const rev = requireRevision(runId, revId);
+export async function forkRunFromRevision(
+  notebookId: number,
+  runId: number,
+  revId: string,
+): Promise<ResearchRun> {
+  const source = await requireRun(notebookId, runId);
+  const rev = await requireRevision(runId, revId);
 
   const snapshotGraph = structuredClone(rev.graph);
   const snapshotReport = rev.report ? structuredClone(rev.report) : null;
 
   const referenced = collectReferencedEvidenceIds(snapshotGraph, snapshotReport);
-  const sourceEvidences = listEvidences(runId);
+  const sourceEvidences = await listEvidences(runId);
   const idMap = new Map<string, string>();
   for (const ev of sourceEvidences) {
     if (!referenced.has(ev.id)) continue;
@@ -241,36 +260,37 @@ export function forkRunFromRevision(notebookId: number, runId: number, revId: st
   const remappedGraph = remapGraphEvidenceIds(snapshotGraph, idMap);
   const remappedReport = snapshotReport ? remapReportEvidenceIds(snapshotReport, idMap) : null;
 
-  const inserted = db()
-    .insert(researchRuns)
-    .values({
-      notebookId,
-      topic: source.topic,
-      status: 'queued',
-      useNotebookSources: source.useNotebookSources,
-      allowWeb: source.allowWeb,
-      sourceIds: source.sourceIds,
-      depth: source.depth,
-      maxSearches: source.maxSearches,
-      maxNodes: source.maxNodes,
-      searchesUsed: 0,
-      maxPageFetches: source.maxPageFetches,
-      pagesUsed: 0,
-      modelId: source.modelId,
-      graph: remappedGraph,
-      checkpoint: null,
-      report: remappedReport,
-      confirmKind: null,
-      confirmBranchNodeId: null,
-      cancelRequested: false,
-      errorMessage: null,
-      activeRevisionId: null,
-      activeNodeId: null,
-      llmActivity: null,
-      reportUpdatedAt: remappedReport ? new Date() : null,
-    })
-    .returning()
-    .get();
+  const inserted = (await client().get(
+    db()
+      .insert(researchRuns)
+      .values({
+        notebookId,
+        topic: source.topic,
+        status: 'queued',
+        useNotebookSources: source.useNotebookSources,
+        allowWeb: source.allowWeb,
+        sourceIds: source.sourceIds,
+        depth: source.depth,
+        maxSearches: source.maxSearches,
+        maxNodes: source.maxNodes,
+        searchesUsed: 0,
+        maxPageFetches: source.maxPageFetches,
+        pagesUsed: 0,
+        modelId: source.modelId,
+        graph: remappedGraph,
+        checkpoint: null,
+        report: remappedReport,
+        confirmKind: null,
+        confirmBranchNodeId: null,
+        cancelRequested: false,
+        errorMessage: null,
+        activeRevisionId: null,
+        activeNodeId: null,
+        llmActivity: null,
+        reportUpdatedAt: remappedReport ? new Date() : null,
+      })
+      .returning(),
+  ))!;
 
   for (const ev of sourceEvidences) {
     const newIdValue = idMap.get(ev.id);
@@ -288,7 +308,7 @@ export function forkRunFromRevision(notebookId: number, runId: number, revId: st
     });
   }
 
-  appendProgressEvent(inserted.id, 'run_queued', {
+  await appendProgressEvent(inserted.id, 'run_queued', {
     headline: `从修订「${rev.label}」派生`,
     payload: {
       forkedFromRunId: runId,

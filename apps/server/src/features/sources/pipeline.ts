@@ -7,7 +7,7 @@
 // it runs in-process. The caller should wrap in a try/catch for error handling.
 import { eq } from 'drizzle-orm';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { chunkText } from '../../rag/chunker.ts';
@@ -118,18 +118,19 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
   }
 
   // 1. Create source record in 'processing' state
-  const sourceRow = db()
-    .insert(sources)
-    .values({
-      notebookId: input.notebookId,
-      filename: input.filename,
-      mimeType,
-      parserType: parser.id,
-      status: 'processing',
-      dedupKey: input.dedupKey ?? null,
-    })
-    .returning()
-    .get();
+  const sourceRow = (await client().get(
+    db()
+      .insert(sources)
+      .values({
+        notebookId: input.notebookId,
+        filename: input.filename,
+        mimeType,
+        parserType: parser.id,
+        status: 'processing',
+        dedupKey: input.dedupKey ?? null,
+      })
+      .returning(),
+  ))!;
 
   // New source invalidates cached retrievals for this notebook.
   bumpSourcesEpoch(input.notebookId);
@@ -173,7 +174,7 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
     // processing row (and best-effort the saved bytes) and 400, leaving no source.
     const hasPages = (result.pages?.length ?? 0) > 0;
     if (chunked.length === 0 || (!hasPages && !textForChunks.trim())) {
-      db().delete(sources).where(eq(sources.id, sourceRow.id)).run();
+      await client().run(db().delete(sources).where(eq(sources.id, sourceRow.id)));
       await contentStorage.delete(sourceRow.id).catch((error) => {
         logger.warn(`[pipeline] contentStorage cleanup failed for source ${sourceRow.id}:`, error);
       });
@@ -184,17 +185,18 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
     let offset = 0;
     for (const c of chunked) {
       const chunkMetadata = c.metadata ?? result.metadata ?? null;
-      db()
-        .insert(chunks)
-        .values({
-          sourceId: sourceRow.id,
-          chunkIndex: c.index,
-          text: c.text,
-          startOffset: offset,
-          endOffset: offset + c.text.length,
-          metadata: chunkMetadata,
-        })
-        .run();
+      await client().run(
+        db()
+          .insert(chunks)
+          .values({
+            sourceId: sourceRow.id,
+            chunkIndex: c.index,
+            text: c.text,
+            startOffset: offset,
+            endOffset: offset + c.text.length,
+            metadata: chunkMetadata,
+          }),
+      );
       // +1 for the separator
       offset += c.text.length + 1;
     }
@@ -212,14 +214,15 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
       ...(result.metadata as Record<string, unknown>),
     };
     if (markdownFrontmatter) readyMetadata.frontmatter = markdownFrontmatter;
-    db()
-      .update(sources)
-      .set({
-        status: 'ready',
-        metadata: readyMetadata,
-      })
-      .where(eq(sources.id, sourceRow.id))
-      .run();
+    await client().run(
+      db()
+        .update(sources)
+        .set({
+          status: 'ready',
+          metadata: readyMetadata,
+        })
+        .where(eq(sources.id, sourceRow.id)),
+    );
 
     // c74: async auto-summary after ready (must not block ingest response)
     const { scheduleSourceSummary } = await import('./source-summary.ts');
@@ -253,17 +256,18 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
       VECTOR_STORE_FAILED: '向量存储写入失败，请检查 sqlite-vec 扩展是否正常加载',
       INGESTION_FAILED: '摄取流程发生未知错误，请重试或检查日志',
     };
-    db()
-      .update(sources)
-      .set({
-        status: 'failed',
-        errorCode,
-        errorMessage: message,
-        recoveryHint: recoveryHints[errorCode] ?? null,
-        lastErrorAt: new Date(),
-      })
-      .where(eq(sources.id, sourceRow.id))
-      .run();
+    await client().run(
+      db()
+        .update(sources)
+        .set({
+          status: 'failed',
+          errorCode,
+          errorMessage: message,
+          recoveryHint: recoveryHints[errorCode] ?? null,
+          lastErrorAt: new Date(),
+        })
+        .where(eq(sources.id, sourceRow.id)),
+    );
 
     return {
       sourceId: sourceRow.id,

@@ -56,7 +56,7 @@ const BASE = 'http://test.local';
 let app: InstanceType<typeof createApp>;
 let notebookId: number;
 
-beforeAll(() => {
+beforeAll(async () => {
   setupIntegrationEnv();
   resetConfig({
     models: {
@@ -88,7 +88,7 @@ beforeAll(() => {
   notebookId = getOrm().insert(notebooks).values({ name: 'c124-lock' }).returning().get().id;
 });
 
-afterAll(() => {
+afterAll(async () => {
   teardownIntegrationEnv();
 });
 
@@ -97,7 +97,7 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 describe('r250 sync_check snapshot diff is deterministic and lightweight', () => {
-  it('classifies added/updated/missing from path + sizeBytes/modifiedAt, sorted by path', () => {
+  it('classifies added/updated/missing from path + sizeBytes/modifiedAt, sorted by path', async () => {
     // covers: r250
     const base = {
       generatedAt: '2026-09-29T00:00:00Z',
@@ -124,7 +124,7 @@ describe('r250 sync_check snapshot diff is deterministic and lightweight', () =>
     expect(result.added).not.toContainEqual(expect.objectContaining({ relativePath: 'same.md' }));
   });
 
-  it('sorts multiple candidates deterministically by relativePath', () => {
+  it('sorts multiple candidates deterministically by relativePath', async () => {
     // covers: r250
     const mk = (paths: string[]) => ({
       generatedAt: 't',
@@ -191,7 +191,7 @@ describe('r254 ready source has persisted chunks and retrievable vectors', () =>
     // Vector hit: sqlite-vec nearest-neighbor within the notebook scope
     // (probe vector ≡ the constant vectors the embedder stub stored).
     const { searchVectors } = await import('../../src/db/vectors.ts');
-    const hits = searchVectors(getOrm(), new Float32Array(1024), notebookId, 5);
+    const hits = await searchVectors(getOrm(), new Float32Array(1024), notebookId, 5);
     expect(hits.length).toBeGreaterThan(0);
     expect(hits.some((h) => h.source_id === result.sourceId)).toBe(true);
   });
@@ -224,7 +224,7 @@ describe('r310 busy and stale-running handling is explicit', () => {
       .returning()
       .get().id;
 
-    const response = createSseResponse(slideId, async () => {
+    const response = await createSseResponse(slideId, async () => {
       throw new Error('run must not start while busy');
     });
     const frames = await parseSse(response);
@@ -249,13 +249,13 @@ describe('r310 busy and stale-running handling is explicit', () => {
       })
       .returning()
       .get().id;
-    expect(clearStaleRunning(staleId)).toBe(true);
+    expect(await clearStaleRunning(staleId)).toBe(true);
     const row = orm.select().from(studioSlides).where(eq(studioSlides.id, staleId)).get();
     expect(row?.status).toBe('idle');
     expect(row?.errorMessage).toBeNull();
 
     // non-running slides clear trivially (idempotent true)
-    expect(clearStaleRunning(staleId)).toBe(true);
+    expect(await clearStaleRunning(staleId)).toBe(true);
   });
 
   it('fresh running slides are not treated as stale', async () => {
@@ -266,7 +266,7 @@ describe('r310 busy and stale-running handling is explicit', () => {
       .values({ notebookId, title: 'fresh', status: 'running' })
       .returning()
       .get().id;
-    expect(clearStaleRunning(freshId)).toBe(false);
+    expect(await clearStaleRunning(freshId)).toBe(false);
   });
 });
 
@@ -280,7 +280,7 @@ describe('r317 studio SSE done payload is {traceId, slideId} only', () => {
       .returning()
       .get().id;
 
-    const response = createSseResponse(slideId, async (emit) => {
+    const response = await createSseResponse(slideId, async (emit) => {
       emit('done', { slideId });
     });
     const frames = await parseSse(response);

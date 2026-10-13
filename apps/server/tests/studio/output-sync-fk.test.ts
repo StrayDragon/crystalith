@@ -31,10 +31,10 @@ function insertSlide(overrides?: Partial<typeof studioSlides.$inferInsert>) {
 }
 
 describe('studio output sync writes outputId FK + camelCase content (r306)', () => {
-  it('first sync inserts an Output row and backfills studioSlides.outputId', () => {
+  it('first sync inserts an Output row and backfills studioSlides.outputId', async () => {
     const slide = insertSlide();
 
-    syncSlideOutput(slide, '# R306\n- hello\n');
+    await syncSlideOutput(slide, '# R306\n- hello\n');
 
     const synced = db().select().from(studioSlides).where(eq(studioSlides.id, slide.id)).get()!;
     // (1) FK 已写入
@@ -57,12 +57,12 @@ describe('studio output sync writes outputId FK + camelCase content (r306)', () 
     expect(content.slideId).toBe(slide.id);
   });
 
-  it('re-sync updates the same Output row via the FK instead of inserting a new one', () => {
+  it('re-sync updates the same Output row via the FK instead of inserting a new one', async () => {
     const slide = insertSlide();
-    syncSlideOutput(slide, 'v1');
+    await syncSlideOutput(slide, 'v1');
     const first = db().select().from(studioSlides).where(eq(studioSlides.id, slide.id)).get()!;
 
-    syncSlideOutput(first, 'v2');
+    await syncSlideOutput(first, 'v2');
 
     const rows = db()
       .select()
@@ -82,7 +82,7 @@ describe('studio output sync writes outputId FK + camelCase content (r306)', () 
     ).toBe('v2');
   });
 
-  it('legacy slide (prompt convention, null FK) reuses the existing output and backfills the FK', () => {
+  it('legacy slide (prompt convention, null FK) reuses the existing output and backfills the FK', async () => {
     const slide = insertSlide();
     // pre-c51 遗留：已存在 prompt=studio:<id> 的 Output，但 slide.outputId 为空
     const legacy = db()
@@ -96,7 +96,7 @@ describe('studio output sync writes outputId FK + camelCase content (r306)', () 
       .returning()
       .get();
 
-    syncSlideOutput(slide, 'legacy markdown');
+    await syncSlideOutput(slide, 'legacy markdown');
 
     const outputsForPrompt = db()
       .select()

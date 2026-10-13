@@ -16,7 +16,7 @@ import { and, asc, eq, gt } from 'drizzle-orm';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import {
   researchProgressEvents,
   researchReportEdits,
@@ -194,8 +194,8 @@ async function generateLlmResearchReport(
   }
 }
 
-function failSynthesize(runId: number, reason: string): void {
-  updateRun(runId, {
+async function failSynthesize(runId: number, reason: string): Promise<void> {
+  await updateRun(runId, {
     status: 'failed',
     errorMessage: reason,
     confirmKind: null,
@@ -204,18 +204,22 @@ function failSynthesize(runId: number, reason: string): void {
     activeNodeId: null,
     report: null,
   });
-  appendProgressEvent(runId, 'unit_aborted', {
+  await appendProgressEvent(runId, 'unit_aborted', {
     headline: '结案失败',
     payload: { failureReason: reason },
   });
-  emitLog(runId, `结案失败：${reason}`);
-  broadcast(runId, 'error', { errorCode: ErrorCode.INTERNAL_ERROR, message: reason });
-  emitStatus(runId, 'failed', reason);
+  await emitLog(runId, `结案失败：${reason}`);
+  await broadcast(runId, 'error', { errorCode: ErrorCode.INTERNAL_ERROR, message: reason });
+  await emitStatus(runId, 'failed', reason);
 }
 
-function completeWithReport(runId: number, row: RunRow, report: ResearchReport): void {
+async function completeWithReport(
+  runId: number,
+  row: RunRow,
+  report: ResearchReport,
+): Promise<void> {
   const now = new Date();
-  updateRun(runId, {
+  await updateRun(runId, {
     status: 'completed',
     report,
     reportUpdatedAt: now,
@@ -228,60 +232,63 @@ function completeWithReport(runId: number, row: RunRow, report: ResearchReport):
   });
   const revId = newId('rev');
   const graph = getGraph(row);
-  db()
-    .insert(researchRevisions)
-    .values({
-      id: revId,
-      runId,
-      notebookId: row.notebookId,
-      label: '自动完成',
-      kind: 'auto_complete',
-      parentRevisionId: row.activeRevisionId ?? null,
-      graph,
-      report,
-      searchesUsed: row.searchesUsed,
-      statusAtSave: 'completed',
-    })
-    .run();
-  updateRun(runId, { activeRevisionId: revId });
-  appendProgressEvent(runId, 'revision_created', {
+  await client().run(
+    db()
+      .insert(researchRevisions)
+      .values({
+        id: revId,
+        runId,
+        notebookId: row.notebookId,
+        label: '自动完成',
+        kind: 'auto_complete',
+        parentRevisionId: row.activeRevisionId ?? null,
+        graph,
+        report,
+        searchesUsed: row.searchesUsed,
+        statusAtSave: 'completed',
+      }),
+  );
+  await updateRun(runId, { activeRevisionId: revId });
+  await appendProgressEvent(runId, 'revision_created', {
     headline: '自动完成快照',
     payload: { revisionId: revId, kind: 'auto_complete' },
   });
-  appendProgressEvent(runId, 'report_canonical_updated', {
+  await appendProgressEvent(runId, 'report_canonical_updated', {
     headline: '权威报告已生成',
   });
-  emitLog(runId, '报告已生成');
-  broadcast(runId, 'report_ready', { runId });
-  emitStatus(runId, 'completed');
+  await emitLog(runId, '报告已生成');
+  await broadcast(runId, 'report_ready', { runId });
+  await emitStatus(runId, 'completed');
 }
 
 export async function synthesizeAndComplete(runId: number): Promise<void> {
-  if (isCancelled(runId)) {
+  if (await isCancelled(runId)) {
     finalizeCancel(runId);
     return;
   }
-  const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+  const row = await client().get(
+    db().select().from(researchRuns).where(eq(researchRuns.id, runId)),
+  );
   if (!row) return;
 
-  emitLog(runId, '开始 LLM 结案成稿');
-  appendProgressEvent(runId, 'unit_started', { headline: 'synthesize' });
+  await emitLog(runId, '开始 LLM 结案成稿');
+  await appendProgressEvent(runId, 'unit_started', { headline: 'synthesize' });
 
   try {
-    const evidences = listEvidences(runId);
+    const evidences = await listEvidences(runId);
     const raw = await generateLlmResearchReport(row, evidences);
     const bound = validateAndBindCitations(raw, evidences);
     if (!bound.ok) {
       failSynthesize(runId, `${SYNTHESIZE_FAILED_PREFIX}${bound.reason}`);
       return;
     }
-    if (isCancelled(runId)) {
+    if (await isCancelled(runId)) {
       finalizeCancel(runId);
       return;
     }
     completeWithReport(runId, row, bound.report);
   } catch (error) {
-    if (isCancelled(runId)) {
+    if (await isCancelled(runId)) {
       finalizeCancel(runId);
       return;
     }
@@ -299,7 +306,7 @@ export async function retrySynthesize(
   runId: number,
   body: ResearchRetrySynthesizeBody = {},
 ): Promise<ResearchRun> {
-  const row = requireRun(notebookId, runId);
+  const row = await requireRun(notebookId, runId);
   if (row.status !== 'failed' || !isSynthesizeFailureReason(row.errorMessage)) {
     throw new AppHttpError(
       ErrorCode.RESEARCH_INVALID_STATE,
@@ -319,12 +326,12 @@ export async function retrySynthesize(
   if (override) {
     patch.modelId = override;
   }
-  updateRun(runId, patch);
-  emitStatus(runId, 'running', 'retry_synthesize');
-  emitLog(runId, override ? `换模重试结案：${override}` : '重试结案');
+  await updateRun(runId, patch);
+  await emitStatus(runId, 'running', 'retry_synthesize');
+  await emitLog(runId, override ? `换模重试结案：${override}` : '重试结案');
 
   await synthesizeAndComplete(runId);
-  return serializeRun(requireRun(notebookId, runId));
+  return serializeRun(await requireRun(notebookId, runId));
 }
 
 function reportToMarkdown(report: ResearchReport): string {
@@ -369,12 +376,12 @@ function reportToMarkdown(report: ResearchReport): string {
   return lines.join('\n');
 }
 
-export function resolveArtifactMarkdown(
+export async function resolveArtifactMarkdown(
   notebookId: number,
   runId: number,
   artifact: ResearchConvertBody['artifact'],
-): { title: string; markdown: string } {
-  const row = requireRun(notebookId, runId);
+): Promise<{ title: string; markdown: string }> {
+  const row = await requireRun(notebookId, runId);
   if (artifact.kind === 'report') {
     if (!row.report) {
       throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Run has no report yet');
@@ -388,7 +395,7 @@ export function resolveArtifactMarkdown(
     const md = `# ${node.title}\n\n${node.summary ?? ''}\n`;
     return { title: node.title, markdown: md };
   }
-  const ev = listEvidences(runId).find((e) => e.id === artifact.evidenceId);
+  const ev = (await listEvidences(runId)).find((e) => e.id === artifact.evidenceId);
   if (!ev) {
     throw new AppHttpError(ErrorCode.NOT_FOUND, `Evidence ${artifact.evidenceId} not found`);
   }
@@ -396,20 +403,21 @@ export function resolveArtifactMarkdown(
   return { title: ev.title, markdown: md };
 }
 
-export function listProgress(
+export async function listProgress(
   notebookId: number,
   runId: number,
   afterSeq = 0,
   limit = 100,
-): { items: ResearchProgressEvent[]; nextAfterSeq?: number } {
-  requireRun(notebookId, runId);
-  const rows = db()
-    .select()
-    .from(researchProgressEvents)
-    .where(and(eq(researchProgressEvents.runId, runId), gt(researchProgressEvents.seq, afterSeq)))
-    .orderBy(asc(researchProgressEvents.seq))
-    .limit(limit)
-    .all();
+): Promise<{ items: ResearchProgressEvent[]; nextAfterSeq?: number }> {
+  await requireRun(notebookId, runId);
+  const rows = await client().all(
+    db()
+      .select()
+      .from(researchProgressEvents)
+      .where(and(eq(researchProgressEvents.runId, runId), gt(researchProgressEvents.seq, afterSeq)))
+      .orderBy(asc(researchProgressEvents.seq))
+      .limit(limit),
+  );
   const items: ResearchProgressEvent[] = rows.map((r) => ({
     id: r.id,
     runId: r.runId,
@@ -433,13 +441,14 @@ function assertReportEditable(status: string, hasReport: boolean): void {
   );
 }
 
-export function getReportView(notebookId: number, runId: number): ResearchReportView {
-  const row = requireRun(notebookId, runId);
-  const edit = db()
-    .select()
-    .from(researchReportEdits)
-    .where(eq(researchReportEdits.runId, runId))
-    .get();
+export async function getReportView(
+  notebookId: number,
+  runId: number,
+): Promise<ResearchReportView> {
+  const row = await requireRun(notebookId, runId);
+  const edit = await client().get(
+    db().select().from(researchReportEdits).where(eq(researchReportEdits.runId, runId)),
+  );
   const canonical = row.report ?? null;
   const working = edit ? edit.report : null;
   return {
@@ -451,58 +460,61 @@ export function getReportView(notebookId: number, runId: number): ResearchReport
   };
 }
 
-export function putCanonicalReport(
+export async function putCanonicalReport(
   notebookId: number,
   runId: number,
   report: ResearchReport,
-): ResearchReportView {
-  const row = requireRun(notebookId, runId);
+): Promise<ResearchReportView> {
+  const row = await requireRun(notebookId, runId);
   assertReportEditable(row.status, Boolean(row.report));
   const now = new Date();
-  updateRun(runId, {
+  await updateRun(runId, {
     report,
     reportUpdatedAt: now,
   });
-  appendProgressEvent(runId, 'report_canonical_updated', { headline: '权威报告已更新' });
-  broadcast(runId, 'report_ready', { runId });
+  await appendProgressEvent(runId, 'report_canonical_updated', { headline: '权威报告已更新' });
+  await broadcast(runId, 'report_ready', { runId });
   return getReportView(notebookId, runId);
 }
 
-export function putWorkingReport(
+export async function putWorkingReport(
   notebookId: number,
   runId: number,
   report: ResearchReport,
-): ResearchReportView {
-  const row = requireRun(notebookId, runId);
+): Promise<ResearchReportView> {
+  const row = await requireRun(notebookId, runId);
   assertReportEditable(row.status, Boolean(row.report));
-  const existing = db()
-    .select()
-    .from(researchReportEdits)
-    .where(eq(researchReportEdits.runId, runId))
-    .get();
+  const existing = await client().get(
+    db().select().from(researchReportEdits).where(eq(researchReportEdits.runId, runId)),
+  );
   if (existing) {
-    db()
-      .update(researchReportEdits)
-      .set({ report, updatedAt: new Date() })
-      .where(eq(researchReportEdits.runId, runId))
-      .run();
+    await client().run(
+      db()
+        .update(researchReportEdits)
+        .set({ report, updatedAt: new Date() })
+        .where(eq(researchReportEdits.runId, runId)),
+    );
   } else {
-    db()
-      .insert(researchReportEdits)
-      .values({
-        runId,
-        baseReportUpdatedAt: row.reportUpdatedAt ?? null,
-        report,
-      })
-      .run();
+    await client().run(
+      db()
+        .insert(researchReportEdits)
+        .values({
+          runId,
+          baseReportUpdatedAt: row.reportUpdatedAt ?? null,
+          report,
+        }),
+    );
   }
-  appendProgressEvent(runId, 'report_working_updated', { headline: 'working 报告已更新' });
+  await appendProgressEvent(runId, 'report_working_updated', { headline: 'working 报告已更新' });
   return getReportView(notebookId, runId);
 }
 
-export function deleteWorkingReport(notebookId: number, runId: number): ResearchReportView {
-  requireRun(notebookId, runId);
-  db().delete(researchReportEdits).where(eq(researchReportEdits.runId, runId)).run();
-  appendProgressEvent(runId, 'report_working_discarded', { headline: '已丢弃 working 报告' });
+export async function deleteWorkingReport(
+  notebookId: number,
+  runId: number,
+): Promise<ResearchReportView> {
+  await requireRun(notebookId, runId);
+  await client().run(db().delete(researchReportEdits).where(eq(researchReportEdits.runId, runId)));
+  await appendProgressEvent(runId, 'report_working_discarded', { headline: '已丢弃 working 报告' });
   return getReportView(notebookId, runId);
 }

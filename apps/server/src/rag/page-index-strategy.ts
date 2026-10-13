@@ -5,7 +5,7 @@
 // document preview. Falls back to first page if no page metadata.
 import { eq, sql } from 'drizzle-orm';
 
-import { db } from '../db/index.ts';
+import { client, db } from '../db/index.ts';
 import { chunks, sources } from '../db/schema.ts';
 import type { RAGStrategy, ChunkResult } from './types.ts';
 
@@ -35,18 +35,19 @@ export class PageIndexStrategy implements RAGStrategy {
     const minScore = opts?.minScore ?? 0;
 
     // Get all chunks for this notebook, grouped by source + page
-    const chunkRows = db()
-      .select({
-        id: chunks.id,
-        text: chunks.text,
-        sourceId: chunks.sourceId,
-        chunkIndex: chunks.chunkIndex,
-        metadata: chunks.metadata,
-      })
-      .from(chunks)
-      .innerJoin(sources, eq(chunks.sourceId, sources.id))
-      .where(eq(sources.notebookId, notebookId))
-      .all();
+    const chunkRows = await client().all(
+      db()
+        .select({
+          id: chunks.id,
+          text: chunks.text,
+          sourceId: chunks.sourceId,
+          chunkIndex: chunks.chunkIndex,
+          metadata: chunks.metadata,
+        })
+        .from(chunks)
+        .innerJoin(sources, eq(chunks.sourceId, sources.id))
+        .where(eq(sources.notebookId, notebookId)),
+    );
 
     // Group by page
     const pageMap = new Map<string, PageGroup>();
@@ -99,7 +100,7 @@ export class PageIndexStrategy implements RAGStrategy {
   }
 
   async isIndexed(notebookId: number): Promise<boolean> {
-    const row = db().get<{ c: number }>(
+    const row = await client().rawOne<{ c: number }>(
       sql`SELECT COUNT(*) AS c FROM ${chunks} c JOIN ${sources} s ON s.id = c.sourceId WHERE s.notebook_id = ${notebookId}`,
     );
     return (row?.c ?? 0) > 0;

@@ -17,7 +17,7 @@ import type {
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { NotFoundError } from 'elysia';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import {
   researchEvidences,
   researchProgressEvents,
@@ -208,7 +208,7 @@ export function subscribeRun(runId: number, emit: SseEmit): () => void {
   };
 }
 
-export function serializeRun(row: RunRow): ResearchRun {
+export async function serializeRun(row: RunRow): Promise<ResearchRun> {
   const graph = getGraph(row);
   return {
     id: row.id,
@@ -226,7 +226,7 @@ export function serializeRun(row: RunRow): ResearchRun {
     pagesUsed: row.pagesUsed,
     nodes: graph.nodes,
     edges: graph.edges,
-    evidences: listEvidences(row.id),
+    evidences: await listEvidences(row.id),
     report: row.report ?? null,
     confirmKind: row.confirmKind ?? null,
     confirmBranchNodeId: row.confirmBranchNodeId ?? null,
@@ -268,12 +268,13 @@ export function serializeRunSummary(row: RunRow): ResearchRunSummary {
 
 export { requireNotebook } from '../../shared/notebook-scope.ts';
 
-export function requireRun(notebookId: number, runId: number): RunRow {
-  const row = db()
-    .select()
-    .from(researchRuns)
-    .where(and(eq(researchRuns.id, runId), eq(researchRuns.notebookId, notebookId)))
-    .get();
+export async function requireRun(notebookId: number, runId: number): Promise<RunRow> {
+  const row = await client().get(
+    db()
+      .select()
+      .from(researchRuns)
+      .where(and(eq(researchRuns.id, runId), eq(researchRuns.notebookId, notebookId))),
+  );
   if (!row) throw new NotFoundError(`Research run ${runId} not found`);
   return row;
 }
@@ -287,47 +288,52 @@ export function assertLiveMutable(status: string): void {
   }
 }
 
-export function updateRun(runId: number, patch: Partial<typeof researchRuns.$inferInsert>): RunRow {
-  const row = db()
-    .update(researchRuns)
-    .set({ ...patch, updatedAt: new Date() })
-    .where(eq(researchRuns.id, runId))
-    .returning()
-    .get();
+export async function updateRun(
+  runId: number,
+  patch: Partial<typeof researchRuns.$inferInsert>,
+): Promise<RunRow> {
+  const row = await client().get(
+    db()
+      .update(researchRuns)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(eq(researchRuns.id, runId))
+      .returning(),
+  );
   if (!row) throw new NotFoundError(`Research run ${runId} not found`);
   return row;
 }
 
-export function persistGraph(
+export async function persistGraph(
   runId: number,
   graph: ResearchGraphJson,
   extra?: Partial<RunRow>,
-): RunRow {
-  return updateRun(runId, { graph, ...extra });
+): Promise<RunRow> {
+  return await updateRun(runId, { graph, ...extra });
 }
 
-export function insertEvidence(
+export async function insertEvidence(
   runId: number,
   notebookId: number,
   evidence: Omit<ResearchEvidence, 'id'> & { id?: string },
-): ResearchEvidence {
+): Promise<ResearchEvidence> {
   const id = evidence.id ?? newId('ev');
-  db()
-    .insert(researchEvidences)
-    .values({
-      id,
-      runId,
-      notebookId,
-      kind: evidence.kind,
-      title: evidence.title,
-      snippet: evidence.snippet ?? null,
-      content: evidence.content ?? null,
-      url: evidence.url ?? null,
-      sourceId: evidence.sourceId ?? null,
-      chunkId: evidence.chunkId ?? null,
-      collectedAtNodeId: evidence.collectedAtNodeId ?? null,
-    })
-    .run();
+  await client().run(
+    db()
+      .insert(researchEvidences)
+      .values({
+        id,
+        runId,
+        notebookId,
+        kind: evidence.kind,
+        title: evidence.title,
+        snippet: evidence.snippet ?? null,
+        content: evidence.content ?? null,
+        url: evidence.url ?? null,
+        sourceId: evidence.sourceId ?? null,
+        chunkId: evidence.chunkId ?? null,
+        collectedAtNodeId: evidence.collectedAtNodeId ?? null,
+      }),
+  );
   return { ...evidence, id };
 }
 
@@ -336,35 +342,37 @@ export function insertEvidence(
  * Finds existing web evidence by runId+url; updates content (and title if provided);
  * otherwise inserts a new web row.
  */
-export function upsertWebEvidenceContent(
+export async function upsertWebEvidenceContent(
   runId: number,
   notebookId: number,
   nodeId: string,
   url: string,
   title: string,
   content: string,
-): ResearchEvidence {
-  const existing = db()
-    .select()
-    .from(researchEvidences)
-    .where(
-      and(
-        eq(researchEvidences.runId, runId),
-        eq(researchEvidences.kind, 'web'),
-        eq(researchEvidences.url, url),
+): Promise<ResearchEvidence> {
+  const existing = await client().get(
+    db()
+      .select()
+      .from(researchEvidences)
+      .where(
+        and(
+          eq(researchEvidences.runId, runId),
+          eq(researchEvidences.kind, 'web'),
+          eq(researchEvidences.url, url),
+        ),
       ),
-    )
-    .get();
+  );
 
   if (existing) {
-    db()
-      .update(researchEvidences)
-      .set({
-        content,
-        title: title.trim() || existing.title,
-      })
-      .where(eq(researchEvidences.id, existing.id))
-      .run();
+    await client().run(
+      db()
+        .update(researchEvidences)
+        .set({
+          content,
+          title: title.trim() || existing.title,
+        })
+        .where(eq(researchEvidences.id, existing.id)),
+    );
     return {
       id: existing.id,
       kind: 'web',
@@ -387,30 +395,29 @@ export function upsertWebEvidenceContent(
   });
 }
 
-export function listEvidences(runId: number): ResearchEvidence[] {
-  return db()
-    .select()
-    .from(researchEvidences)
-    .where(eq(researchEvidences.runId, runId))
-    .all()
-    .map((e) => ({
-      id: e.id,
-      kind: e.kind,
-      title: e.title,
-      snippet: e.snippet ?? undefined,
-      content: e.content ?? undefined,
-      url: e.url ?? undefined,
-      sourceId: e.sourceId ?? undefined,
-      chunkId: e.chunkId ?? undefined,
-      collectedAtNodeId: e.collectedAtNodeId ?? undefined,
-    }));
+export async function listEvidences(runId: number): Promise<ResearchEvidence[]> {
+  return (
+    await client().all(
+      db().select().from(researchEvidences).where(eq(researchEvidences.runId, runId)),
+    )
+  ).map((e) => ({
+    id: e.id,
+    kind: e.kind,
+    title: e.title,
+    snippet: e.snippet ?? undefined,
+    content: e.content ?? undefined,
+    url: e.url ?? undefined,
+    sourceId: e.sourceId ?? undefined,
+    chunkId: e.chunkId ?? undefined,
+    collectedAtNodeId: e.collectedAtNodeId ?? undefined,
+  }));
 }
 
 export function emitGraphPatch(runId: number, patch: ResearchGraphPatch): void {
   broadcast(runId, 'graph_patch', patch);
 }
 
-export function appendProgressEvent(
+export async function appendProgressEvent(
   runId: number,
   kind: ResearchProgressKind,
   opts?: {
@@ -418,40 +425,39 @@ export function appendProgressEvent(
     headline?: string | null;
     payload?: Record<string, unknown> | null;
   },
-): ResearchProgressEvent {
-  const maxSeq =
-    db()
-      .select({ value: sql<number>`coalesce(max(${researchProgressEvents.seq}), 0)` })
-      .from(researchProgressEvents)
-      .where(eq(researchProgressEvents.runId, runId))
-      .get()?.value ?? 0;
-  const seq = maxSeq + 1;
+): Promise<ResearchProgressEvent> {
   const id = newId('pe');
   const at = new Date();
-  db()
-    .insert(researchProgressEvents)
-    .values({
-      id,
-      runId,
-      seq,
-      at,
-      kind,
-      nodeId: opts?.nodeId ?? null,
-      headline: opts?.headline ?? null,
-      payload: opts?.payload ?? null,
-    })
-    .run();
+  // seq is computed inside the INSERT (atomic max+1): the async port made the
+  // former read-then-insert two-step racy — interleaved callers could read the
+  // same maxSeq and violate uq_research_progress_events_run_id_seq.
+  await client().rawRun(sql`
+    INSERT INTO research_progress_events (id, run_id, seq, at, kind, node_id, headline, payload)
+    VALUES (
+      ${id},
+      ${runId},
+      coalesce((SELECT max(seq) FROM research_progress_events WHERE run_id = ${runId}), 0) + 1,
+      ${Math.floor(at.getTime() / 1000)},
+      ${kind},
+      ${opts?.nodeId ?? null},
+      ${opts?.headline ?? null},
+      ${JSON.stringify(opts?.payload ?? null)}
+    )
+  `);
+  const row = await client().get(
+    db().select().from(researchProgressEvents).where(eq(researchProgressEvents.id, id)),
+  );
   const event: ResearchProgressEvent = {
     id,
     runId,
-    seq,
+    seq: row?.seq ?? 0,
     at: at.toISOString(),
     kind,
     nodeId: opts?.nodeId ?? null,
     headline: opts?.headline ?? null,
     payload: opts?.payload ?? null,
   };
-  broadcast(runId, 'progress', {
+  await broadcast(runId, 'progress', {
     seq: event.seq,
     kind: event.kind,
     at: event.at,
@@ -462,19 +468,22 @@ export function appendProgressEvent(
   return event;
 }
 
-function truncateProgressEvents(runId: number): void {
+async function truncateProgressEvents(runId: number): Promise<void> {
   const retain = getProgressEventRetain();
-  const rows = db()
-    .select({ id: researchProgressEvents.id, seq: researchProgressEvents.seq })
-    .from(researchProgressEvents)
-    .where(eq(researchProgressEvents.runId, runId))
-    .orderBy(desc(researchProgressEvents.seq))
-    .all();
+  const rows = await client().all(
+    db()
+      .select({ id: researchProgressEvents.id, seq: researchProgressEvents.seq })
+      .from(researchProgressEvents)
+      .where(eq(researchProgressEvents.runId, runId))
+      .orderBy(desc(researchProgressEvents.seq)),
+  );
   if (rows.length <= retain) return;
   const keep = new Set(rows.slice(0, retain).map((r) => r.id));
   for (const row of rows) {
     if (keep.has(row.id)) continue;
-    db().delete(researchProgressEvents).where(eq(researchProgressEvents.id, row.id)).run();
+    await client().run(
+      db().delete(researchProgressEvents).where(eq(researchProgressEvents.id, row.id)),
+    );
   }
 }
 
@@ -497,11 +506,15 @@ function statusToProgressKind(status: ResearchRunStatus): ResearchProgressKind |
   }
 }
 
-export function emitStatus(runId: number, status: ResearchRunStatus, reason?: string): void {
-  broadcast(runId, 'status', reason ? { status, reason } : { status });
+export async function emitStatus(
+  runId: number,
+  status: ResearchRunStatus,
+  reason?: string,
+): Promise<void> {
+  await broadcast(runId, 'status', reason ? { status, reason } : { status });
   const kind = statusToProgressKind(status);
   if (kind) {
-    appendProgressEvent(runId, kind, {
+    await appendProgressEvent(runId, kind, {
       headline: reason ?? status,
       payload: reason ? { reason } : null,
     });
@@ -515,29 +528,35 @@ export function emitLog(runId: number, message: string): void {
   broadcast(runId, 'log', { message, at: new Date().toISOString() });
 }
 
-export function isCancelled(runId: number): boolean {
-  const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+export async function isCancelled(runId: number): Promise<boolean> {
+  const row = await client().get(
+    db().select().from(researchRuns).where(eq(researchRuns.id, runId)),
+  );
   // AbortSignal is also used for cooperative reexpand pause — do not treat abort alone
   // as user cancel (c104/c108). Callers that need abort should check AbortSignal directly.
   return Boolean(row?.cancelRequested) || row?.status === 'cancelled';
 }
 
-export function requireFresh(runId: number): RunRow {
-  const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+export async function requireFresh(runId: number): Promise<RunRow> {
+  const row = await client().get(
+    db().select().from(researchRuns).where(eq(researchRuns.id, runId)),
+  );
   if (!row) throw new NotFoundError(`Research run ${runId} not found`);
   return row;
 }
 
-export function finalizeCancel(runId: number): void {
-  const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+export async function finalizeCancel(runId: number): Promise<void> {
+  const row = await client().get(
+    db().select().from(researchRuns).where(eq(researchRuns.id, runId)),
+  );
   // Never clobber a terminal Run (completed/failed/cancelled). Cooperative reexpand
   // abort can race with skip_reexpand → synthesize finishing first.
   if (!row || isTerminalStatus(row.status)) return;
-  updateRun(runId, {
+  await updateRun(runId, {
     status: 'cancelled',
     checkpoint: writeCheckpoint(row, 'cancel'),
     cancelRequested: true,
   });
-  emitStatus(runId, 'cancelled');
-  emitLog(runId, '研究已取消');
+  await emitStatus(runId, 'cancelled');
+  await emitLog(runId, '研究已取消');
 }

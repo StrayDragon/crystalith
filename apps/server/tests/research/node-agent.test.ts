@@ -3,7 +3,7 @@ import { describe, expect, it } from 'bun:test';
 import { proposalFromStructureToolCall } from '../../src/features/research/node-agent.ts';
 
 describe('proposalFromStructureToolCall', () => {
-  it('maps propose_prune to prune_node ActionProposal', () => {
+  it('maps propose_prune to prune_node ActionProposal', async () => {
     const p = proposalFromStructureToolCall({
       toolName: 'propose_prune',
       toolCallId: 'tc1',
@@ -19,7 +19,7 @@ describe('proposalFromStructureToolCall', () => {
     });
   });
 
-  it('maps rewrite query params', () => {
+  it('maps rewrite query params', async () => {
     const p = proposalFromStructureToolCall({
       toolName: 'propose_rewrite_query',
       toolCallId: 'tc2',
@@ -29,7 +29,7 @@ describe('proposalFromStructureToolCall', () => {
     expect(p?.params).toEqual({ query: '新查询', title: 'T' });
   });
 
-  it('returns null for work tools', () => {
+  it('returns null for work tools', async () => {
     expect(proposalFromStructureToolCall({ toolName: 'webSearch' })).toBeNull();
   });
 });

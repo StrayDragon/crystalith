@@ -7,7 +7,7 @@ import { NotFoundError } from 'elysia';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
@@ -15,7 +15,7 @@ import { logger } from '../../shared/logger.ts';
 
 const AUTO_SUMMARY_KEY = 'autoSummary';
 
-export interface AutoSummaryCache {
+interface AutoSummaryCache {
   summary: string;
   keyPoints: string[];
   topics: string[];
@@ -89,8 +89,8 @@ function parseSummaryResponse(response: string): {
   };
 }
 
-function requireReadySource(nid: number, sid: number): SourceRow {
-  const source = db().select().from(sources).where(eq(sources.id, sid)).get();
+async function requireReadySource(nid: number, sid: number): Promise<SourceRow> {
+  const source = await client().get(db().select().from(sources).where(eq(sources.id, sid)));
   if (!source) throw new NotFoundError(`Source ${sid} not found`);
   if (source.notebookId !== nid) throw new NotFoundError(`Source ${sid} not found`);
   if (source.status !== 'ready') {
@@ -99,13 +99,10 @@ function requireReadySource(nid: number, sid: number): SourceRow {
   return source;
 }
 
-function loadChunkTexts(sid: number): { texts: string[]; wordCount: number } {
-  const chunkRows = db()
-    .select()
-    .from(chunks)
-    .where(eq(chunks.sourceId, sid))
-    .orderBy(chunks.chunkIndex)
-    .all();
+async function loadChunkTexts(sid: number): Promise<{ texts: string[]; wordCount: number }> {
+  const chunkRows = await client().all(
+    db().select().from(chunks).where(eq(chunks.sourceId, sid)).orderBy(chunks.chunkIndex),
+  );
   if (chunkRows.length === 0) throw new NotFoundError('Source has no content');
   const texts = chunkRows.map((c) => c.text);
   const wordCount = texts.join(' ').split(/\s+/u).length;
@@ -140,12 +137,12 @@ function readCached(source: SourceRow): AutoSummaryCache | null {
   return isAutoSummaryCache(cached) ? cached : null;
 }
 
-function mergeAutoSummary(sourceId: number, cache: AutoSummaryCache): void {
-  const row = db().select().from(sources).where(eq(sources.id, sourceId)).get();
+async function mergeAutoSummary(sourceId: number, cache: AutoSummaryCache): Promise<void> {
+  const row = await client().get(db().select().from(sources).where(eq(sources.id, sourceId)));
   if (!row) return;
   const next = asMetadataRecord(row.metadata);
   next[AUTO_SUMMARY_KEY] = cache;
-  db().update(sources).set({ metadata: next }).where(eq(sources.id, sourceId)).run();
+  await client().run(db().update(sources).set({ metadata: next }).where(eq(sources.id, sourceId)));
 }
 
 async function generateSummaryPayload(
@@ -190,9 +187,9 @@ async function generateSummaryPayload(
 }
 
 /** GET: read cache only — never call LLM. */
-export function getSourceSummary(nid: number, sid: number): SourceSummary {
-  const source = requireReadySource(nid, sid);
-  const { wordCount } = loadChunkTexts(sid);
+export async function getSourceSummary(nid: number, sid: number): Promise<SourceSummary> {
+  const source = await requireReadySource(nid, sid);
+  const { wordCount } = await loadChunkTexts(sid);
   const cached = readCached(source);
   if (cached) return toWire(sid, cached);
   return emptyWire(sid, wordCount);
@@ -203,10 +200,10 @@ export async function generateAndPersistSourceSummary(
   nid: number,
   sid: number,
 ): Promise<SourceSummary> {
-  const source = requireReadySource(nid, sid);
-  const { texts, wordCount } = loadChunkTexts(sid);
+  const source = await requireReadySource(nid, sid);
+  const { texts, wordCount } = await loadChunkTexts(sid);
   const cache = await generateSummaryPayload(source, texts, wordCount);
-  mergeAutoSummary(sid, cache);
+  await mergeAutoSummary(sid, cache);
   return toWire(sid, cache);
 }
 
@@ -214,10 +211,15 @@ export async function generateAndPersistSourceSummary(
  * Fire-and-forget after ready. Failures are logged only — never flip status.
  * Skips when autoSummary already present (unless force).
  */
-export function scheduleSourceSummary(sourceId: number, opts?: { force?: boolean }): void {
+export async function scheduleSourceSummary(
+  sourceId: number,
+  opts?: { force?: boolean },
+): Promise<void> {
   void (async () => {
     try {
-      const source = db().select().from(sources).where(eq(sources.id, sourceId)).get();
+      const source = await client().get(
+        db().select().from(sources).where(eq(sources.id, sourceId)),
+      );
       if (!source || source.status !== 'ready') return;
       if (!opts?.force && readCached(source)) return;
       await generateAndPersistSourceSummary(source.notebookId, sourceId);

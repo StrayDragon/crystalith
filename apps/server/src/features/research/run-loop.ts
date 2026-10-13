@@ -5,7 +5,7 @@
  */
 import { eq } from 'drizzle-orm';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { researchRuns } from '../../db/schema.ts';
 import { getParallelBranchUnits } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
@@ -40,8 +40,10 @@ import { withRunWriteLock } from './run-locks.ts';
 import { patchNodePhase, runNodeWorkUnit, writeBackNodeWork } from './work-unit.ts';
 
 /** Cooperative pause: awaiting_confirm / reexpand abort must not finalize cancel (c104/c108). */
-function shouldFinalizeCancelOnAbort(runId: number): boolean {
-  const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+async function shouldFinalizeCancelOnAbort(runId: number): Promise<boolean> {
+  const row = await client().get(
+    db().select().from(researchRuns).where(eq(researchRuns.id, runId)),
+  );
   if (!row) return true;
   // AbortSignal is shared by cancel and cooperative reexpand pause — only user cancel
   // sets cancelRequested. Skipping this check races: skip_reexpand flips status back to
@@ -55,9 +57,9 @@ function shouldFinalizeCancelOnAbort(runId: number): boolean {
  * Returns true when the caller must stop; finalizes user-cancel unless a
  * cooperative pause owns the abort (see shouldFinalizeCancelOnAbort).
  */
-function bailIfAborted(runId: number, signal: AbortSignal): boolean {
-  if (!signal.aborted && !isCancelled(runId)) return false;
-  if (shouldFinalizeCancelOnAbort(runId)) finalizeCancel(runId);
+async function bailIfAborted(runId: number, signal: AbortSignal): Promise<boolean> {
+  if (!signal.aborted && !(await isCancelled(runId))) return false;
+  if (await shouldFinalizeCancelOnAbort(runId)) await finalizeCancel(runId);
   return true;
 }
 
@@ -91,16 +93,18 @@ export async function finishWaveOrSynthesize(runId: number): Promise<void> {
   } catch (error) {
     if (error instanceof AppHttpError && error.code === ErrorCode.RESEARCH_BUDGET) {
       // User-gated reexpand pause wins over automatic budget confirm (c104).
-      const paused = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+      const paused = await client().get(
+        db().select().from(researchRuns).where(eq(researchRuns.id, runId)),
+      );
       if (paused?.status === 'awaiting_confirm') return;
-      emitLog(runId, '搜索预算已尽，进入预算确认');
+      await emitLog(runId, '搜索预算已尽，进入预算确认');
       await enterConfirm(runId, 'budget');
       return;
     }
     throw error;
   }
-  if (bailIfAborted(runId, abort.signal)) return;
-  const row = requireFresh(runId);
+  if (await bailIfAborted(runId, abort.signal)) return;
+  const row = await requireFresh(runId);
   // Cooperative pause (request-reexpand) already owns the confirm gate.
   if (row.status === 'awaiting_confirm') return;
   // c108: no mid-wave remaining-budget confirm; only true exhaustion with work left.
@@ -129,8 +133,8 @@ export async function drainResearchWorkUnits(
 ): Promise<void> {
   const parallelN = getParallelBranchUnits();
 
-  while (!abortSignal.aborted && !isCancelled(runId)) {
-    const row = requireFresh(runId);
+  while (!abortSignal.aborted && !(await isCancelled(runId))) {
+    const row = await requireFresh(runId);
     const graph = getGraph(row);
     // F2=B: stable insertion-order queue (orderResearchNodesForWork); re-read each wave
     const pending = orderResearchNodesForWork(graph.nodes);
@@ -146,7 +150,7 @@ export async function drainResearchWorkUnits(
       await withRunWriteLock(runId, () => {
         patchNodePhase(runId, node.id, 'retrieving');
       });
-      appendProgressEvent(runId, 'node_phase', {
+      await appendProgressEvent(runId, 'node_phase', {
         nodeId: node.id,
         headline: 'retrieving',
         payload: { phase: 'retrieving' },
@@ -155,7 +159,7 @@ export async function drainResearchWorkUnits(
 
     const settled = await Promise.allSettled(
       batch.map(async (node) => {
-        const fresh = requireFresh(runId);
+        const fresh = await requireFresh(runId);
         const work = await runNodeWorkUnit({
           runId,
           notebookId: fresh.notebookId,
@@ -174,25 +178,25 @@ export async function drainResearchWorkUnits(
       }),
     );
 
-    if (abortSignal.aborted || isCancelled(runId)) return;
+    if (abortSignal.aborted || (await isCancelled(runId))) return;
 
     for (const result of settled) {
       if (result.status === 'rejected') {
-        if (abortSignal.aborted || isCancelled(runId)) return;
+        if (abortSignal.aborted || (await isCancelled(runId))) return;
         logger.warn('[research] parallel work-unit rejected:', result.reason);
         continue;
       }
       const { node, work } = result.value;
-      await withRunWriteLock(runId, () => {
-        const written = writeBackNodeWork(runId, node.id, work.evidenceIds, {
+      await withRunWriteLock(runId, async () => {
+        const written = await writeBackNodeWork(runId, node.id, work.evidenceIds, {
           summary: work.summary,
           conclusionStatus: work.conclusionStatus,
         });
         if (!written) {
-          emitLog(runId, `研究节点 ${node.id} 已剪枝，跳过写回`);
-          appendProgressEvent(runId, 'unit_skipped_pruned', { nodeId: node.id });
+          await emitLog(runId, `研究节点 ${node.id} 已剪枝，跳过写回`);
+          await appendProgressEvent(runId, 'unit_skipped_pruned', { nodeId: node.id });
         } else {
-          appendProgressEvent(runId, 'unit_finished', {
+          await appendProgressEvent(runId, 'unit_finished', {
             nodeId: node.id,
             headline: written.summary ?? '支路完成',
             payload: {
@@ -213,8 +217,8 @@ export async function drainResearchWorkUnits(
  * confirm, not here. Returns true when the caller loop must stop (cancelled).
  */
 async function maybeAutoDecompose(runId: number, abortSignal: AbortSignal): Promise<boolean> {
-  if (bailIfAborted(runId, abortSignal)) return true;
-  const row = requireFresh(runId);
+  if (await bailIfAborted(runId, abortSignal)) return true;
+  const row = await requireFresh(runId);
   const graph = getGraph(row);
   if (hasLiveResearchBranches(graph.nodes)) return false;
   const occupied = graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length;
@@ -232,32 +236,32 @@ async function maybeAutoDecompose(runId: number, abortSignal: AbortSignal): Prom
         persistGraph(runId, applied.graph, {
           checkpoint: writeCheckpoint({ ...row, status: 'running' }, 'decompose'),
         });
-        emitGraphPatch(runId, {
+        await emitGraphPatch(runId, {
           nodes: applied.addedNodes,
           edges: applied.addedEdges,
         });
-        appendProgressEvent(runId, 'graph_patched_summary', {
+        await appendProgressEvent(runId, 'graph_patched_summary', {
           headline: `已拆解 ${applied.addedNodes.length} 个研究支路`,
           payload: { researchNodes: applied.addedNodes.length },
         });
-        emitLog(runId, `已拆解 ${applied.addedNodes.length} 个研究支路`);
+        await emitLog(runId, `已拆解 ${applied.addedNodes.length} 个研究支路`);
       } else {
-        appendProgressEvent(runId, 'unit_aborted', {
+        await appendProgressEvent(runId, 'unit_aborted', {
           headline: '拆解结果未写入，改走单路径',
         });
-        emitLog(runId, '主题拆解未写入节点，改走单路径');
+        await emitLog(runId, '主题拆解未写入节点，改走单路径');
       }
     } else {
-      appendProgressEvent(runId, 'unit_aborted', {
+      await appendProgressEvent(runId, 'unit_aborted', {
         headline: '拆解跳过或为空，改走单路径',
       });
-      emitLog(runId, '主题拆解为空或不可用，改走单路径');
+      await emitLog(runId, '主题拆解为空或不可用，改走单路径');
     }
   } catch (error) {
-    appendProgressEvent(runId, 'unit_aborted', {
+    await appendProgressEvent(runId, 'unit_aborted', {
       headline: '拆解失败，改走单路径',
     });
-    emitLog(runId, `主题拆解失败：${String(error)}，改走单路径`);
+    await emitLog(runId, `主题拆解失败：${String(error)}，改走单路径`);
   }
   return false;
 }
@@ -269,18 +273,18 @@ async function maybeAutoDecompose(runId: number, abortSignal: AbortSignal): Prom
  * Returns true when the caller loop must stop (completed / confirmed / cancelled).
  */
 async function runQuestionPhaseOrSkip(runId: number, abortSignal: AbortSignal): Promise<boolean> {
-  const row = requireFresh(runId);
+  const row = await requireFresh(runId);
   const graph = getGraph(row);
   const question = findQuestionNode(graph.nodes)!;
   if (question.conclusionStatus === 'pruned') {
-    emitLog(runId, `跳过已剪枝节点 ${question.id}`);
+    await emitLog(runId, `跳过已剪枝节点 ${question.id}`);
     await synthesizeAndComplete(runId);
     return true;
   }
 
   if (hasLiveResearchBranches(graph.nodes)) {
-    emitLog(runId, '已有研究支路，跳过问题节点检索，直接调度支路');
-    appendProgressEvent(runId, 'unit_finished', {
+    await emitLog(runId, '已有研究支路，跳过问题节点检索，直接调度支路');
+    await appendProgressEvent(runId, 'unit_finished', {
       headline: '跳过问题节点，进入支路调度',
       payload: { skipQuestion: true },
     });
@@ -306,12 +310,12 @@ async function runQuestionPhaseOrSkip(runId: number, abortSignal: AbortSignal): 
     abortSignal,
   });
 
-  if (bailIfAborted(runId, abortSignal)) return true;
+  if (await bailIfAborted(runId, abortSignal)) return true;
 
-  const fresh = requireFresh(runId);
+  const fresh = await requireFresh(runId);
   const liveQuestion = findQuestionNode(getGraph(fresh).nodes);
   if (!liveQuestion || liveQuestion.conclusionStatus === 'pruned') {
-    emitLog(runId, '问题节点已剪枝，跳过写回');
+    await emitLog(runId, '问题节点已剪枝，跳过写回');
     await synthesizeAndComplete(runId);
     return true;
   }
@@ -328,7 +332,9 @@ export async function runLoop(runId: number, chatWaitBudgetMs = 60_000): Promise
   activeLoops.add(runId);
   const abort = ensureRunAbortController(runId);
   try {
-    let row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+    let row = await client().get(
+      db().select().from(researchRuns).where(eq(researchRuns.id, runId)),
+    );
     if (!row) return;
     if (row.status !== 'queued' && row.status !== 'running') return;
 
@@ -337,26 +343,30 @@ export async function runLoop(runId: number, chatWaitBudgetMs = 60_000): Promise
     // 调度而非抢占，Run 保持 queued/running，可再次手动继续。
     const chatWaitStart = Date.now();
     while (row.llmActivity === 'node_chat') {
-      if (bailIfAborted(runId, abort.signal)) return;
+      if (await bailIfAborted(runId, abort.signal)) return;
       if (Date.now() - chatWaitStart >= chatWaitBudgetMs) {
-        emitLog(runId, '节点对话长时间占用，研究循环暂缓（可手动继续）');
+        await emitLog(runId, '节点对话长时间占用，研究循环暂缓（可手动继续）');
         return;
       }
       // Abortable sleep: cancel must pre-empt the wait promptly instead of
       // waiting out the poll tick (tests rely on this too to settle detached
       // loops before the temp DB is closed).
       await sleepUnlessAborted(250, abort.signal);
-      row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+      row = await client().get(db().select().from(researchRuns).where(eq(researchRuns.id, runId)));
       if (!row) return;
       if (row.status !== 'queued' && row.status !== 'running') return;
     }
 
-    row = updateRun(runId, { status: 'running', llmActivity: 'work_unit', activeNodeId: null });
-    emitStatus(runId, 'running');
-    emitLog(runId, `开始研究「${row.topic}」`);
-    appendProgressEvent(runId, 'unit_started', { headline: 'work_unit' });
+    row = await updateRun(runId, {
+      status: 'running',
+      llmActivity: 'work_unit',
+      activeNodeId: null,
+    });
+    await emitStatus(runId, 'running');
+    await emitLog(runId, `开始研究「${row.topic}」`);
+    await appendProgressEvent(runId, 'unit_started', { headline: 'work_unit' });
 
-    if (bailIfAborted(runId, abort.signal)) return;
+    if (await bailIfAborted(runId, abort.signal)) return;
 
     // Seed single-sink DAG (question + conclusion) at start of loop (r317).
     let graph = getGraph(row);
@@ -367,14 +377,14 @@ export async function runLoop(runId: number, chatWaitBudgetMs = 60_000): Promise
       question = seeded.question;
       conclusion = seeded.conclusion;
       graph = seeded.graph;
-      row = persistGraph(runId, graph, {
+      row = await persistGraph(runId, graph, {
         checkpoint: writeCheckpoint({ ...row, status: 'running' }, 'seed_graph'),
       });
-      emitGraphPatch(runId, {
+      await emitGraphPatch(runId, {
         nodes: [question, conclusion],
         edges: [],
       });
-      emitLog(runId, '已种子单结论 DAG');
+      await emitLog(runId, '已种子单结论 DAG');
     }
 
     if (await maybeAutoDecompose(runId, abort.signal)) return;
@@ -382,20 +392,20 @@ export async function runLoop(runId: number, chatWaitBudgetMs = 60_000): Promise
     // c108 e2e: mid-wave budget confirm removed — give Playwright a short live
     // window to fork / request-reexpand before stub drain finishes.
     // Abortable sleep: request-reexpand must wake the loop immediately (not wait out the hold).
-    row = requireFresh(runId);
+    row = await requireFresh(runId);
     graph = getGraph(row);
     if (
       isResearchE2eStub() &&
       hasLiveResearchBranches(graph.nodes) &&
       !abort.signal.aborted &&
-      !isCancelled(runId)
+      !(await isCancelled(runId))
     ) {
-      emitLog(
+      await emitLog(
         runId,
         `e2e stub: hold ${E2E_INTERACTION_WINDOW_MS}ms before drain for live interaction window`,
       );
       await sleepUnlessAborted(E2E_INTERACTION_WINDOW_MS, abort.signal);
-      if (bailIfAborted(runId, abort.signal)) return;
+      if (await bailIfAborted(runId, abort.signal)) return;
     }
 
     // F1=A: live research branches → skip question work-unit; drain branches only.
@@ -403,26 +413,28 @@ export async function runLoop(runId: number, chatWaitBudgetMs = 60_000): Promise
     if (await runQuestionPhaseOrSkip(runId, abort.signal)) return;
 
     // Parallel-capable work units for live research nodes (c106; N=1 ≡ serial)
-    if (bailIfAborted(runId, abort.signal)) return;
+    if (await bailIfAborted(runId, abort.signal)) return;
     await finishWaveOrSynthesize(runId);
   } catch (error) {
-    if (bailIfAborted(runId, abort.signal)) return;
+    if (await bailIfAborted(runId, abort.signal)) return;
     if (error instanceof AppHttpError && error.code === ErrorCode.RESEARCH_BUDGET) {
-      emitLog(runId, '搜索预算已尽，进入预算确认');
+      await emitLog(runId, '搜索预算已尽，进入预算确认');
       await enterConfirm(runId, 'budget');
       return;
     }
     const message = error instanceof Error ? error.message : String(error);
     const code = error instanceof AppHttpError ? error.code : ErrorCode.INTERNAL_ERROR;
-    updateRun(runId, { status: 'failed', errorMessage: message });
-    broadcast(runId, 'error', { errorCode: code, message });
-    emitStatus(runId, 'failed', message);
+    await updateRun(runId, { status: 'failed', errorMessage: message });
+    await broadcast(runId, 'error', { errorCode: code, message });
+    await emitStatus(runId, 'failed', message);
   } finally {
     activeLoops.delete(runId);
     clearRunAbortController(runId);
-    const latest = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+    const latest = await client().get(
+      db().select().from(researchRuns).where(eq(researchRuns.id, runId)),
+    );
     if (latest?.llmActivity === 'work_unit') {
-      updateRun(runId, { llmActivity: null, activeNodeId: null });
+      await updateRun(runId, { llmActivity: null, activeNodeId: null });
     }
   }
 }
@@ -432,13 +444,13 @@ export async function enterConfirm(
   kind: 'budget' | 'expand_branch' | 'reexpand',
   branchNodeId?: string,
 ): Promise<void> {
-  let row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+  let row = await client().get(db().select().from(researchRuns).where(eq(researchRuns.id, runId)));
   if (!row) return;
   // Do not clobber a live user-gated reexpand confirm with automatic budget (c104).
   if (kind === 'budget' && row.status === 'awaiting_confirm' && row.confirmKind === 'reexpand') {
     return;
   }
-  row = updateRun(runId, {
+  row = await updateRun(runId, {
     status: 'awaiting_confirm',
     confirmKind: kind,
     confirmBranchNodeId: branchNodeId ?? null,
@@ -446,8 +458,8 @@ export async function enterConfirm(
     activeNodeId: null,
     checkpoint: writeCheckpoint(row, `before_confirm_${kind}`),
   });
-  emitStatus(runId, 'awaiting_confirm', kind);
-  broadcast(runId, 'confirm', {
+  await emitStatus(runId, 'awaiting_confirm', kind);
+  await broadcast(runId, 'confirm', {
     kind,
     branchNodeId,
     options: CONFIRM_OPTIONS[kind],

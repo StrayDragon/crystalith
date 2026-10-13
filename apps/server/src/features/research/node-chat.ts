@@ -10,7 +10,7 @@ import type {
 import { ResearchNodeChatStreamEventSchema } from '@crystalith/shared';
 import { eq } from 'drizzle-orm';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { researchRuns } from '../../db/schema.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { logger } from '../../shared/logger.ts';
@@ -119,14 +119,14 @@ function stubNodeChatTurn(
   return { text, proposals };
 }
 
-export function createNodeChatSseResponse(
+export async function createNodeChatSseResponse(
   notebookId: number,
   runId: number,
   nodeId: string,
   body: ResearchNodeChatBody,
   requestSignal?: AbortSignal,
-): Response {
-  const row = requireRun(notebookId, runId);
+): Promise<Response> {
+  const row = await requireRun(notebookId, runId);
   const graph = getGraph(row);
   const node = graph.nodes.find((n) => n.id === nodeId);
   if (!node) {
@@ -152,17 +152,19 @@ export function createNodeChatSseResponse(
   };
   requestSignal?.addEventListener('abort', onRequestAbort);
 
-  updateRun(runId, { llmActivity: 'node_chat', activeNodeId: nodeId });
-  appendProgressEvent(runId, 'chat_started', {
+  await updateRun(runId, { llmActivity: 'node_chat', activeNodeId: nodeId });
+  await appendProgressEvent(runId, 'chat_started', {
     nodeId,
     headline: '节点对话开始',
     payload: { messagePreview: body.message.slice(0, 80) },
   });
 
-  const clearChatMutex = () => {
-    const latest = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+  const clearChatMutex = async () => {
+    const latest = await client().get(
+      db().select().from(researchRuns).where(eq(researchRuns.id, runId)),
+    );
     if (latest?.llmActivity === 'node_chat') {
-      updateRun(runId, { llmActivity: null, activeNodeId: null });
+      await updateRun(runId, { llmActivity: null, activeNodeId: null });
     }
   };
 
@@ -202,7 +204,7 @@ export function createNodeChatSseResponse(
         emit({ event: 'log', data: { message: 'connected', nodeId } });
 
         if (ac.signal.aborted) {
-          appendProgressEvent(runId, 'chat_aborted', { nodeId, headline: '对话已中止' });
+          await appendProgressEvent(runId, 'chat_aborted', { nodeId, headline: '对话已中止' });
           emit({
             event: 'error',
             data: { errorCode: ErrorCode.INVALID_REQUEST, message: 'aborted' },
@@ -271,7 +273,7 @@ export function createNodeChatSseResponse(
                 }
               } else if (part.type === 'error') {
                 logger.error('[research] node chat agent stream error:', part.error);
-                appendProgressEvent(runId, 'chat_failed', {
+                await appendProgressEvent(runId, 'chat_failed', {
                   nodeId,
                   headline: '节点对话模型调用失败',
                   payload: { message: '模型暂时不可用，请稍后重试' },
@@ -306,7 +308,10 @@ export function createNodeChatSseResponse(
             const chunkSize = 48;
             for (let i = 0; i < turn.text.length; i += chunkSize) {
               if (ac.signal.aborted) {
-                appendProgressEvent(runId, 'chat_aborted', { nodeId, headline: '对话已中止' });
+                await appendProgressEvent(runId, 'chat_aborted', {
+                  nodeId,
+                  headline: '对话已中止',
+                });
                 emit({
                   event: 'error',
                   data: { errorCode: ErrorCode.INVALID_REQUEST, message: 'aborted' },
@@ -321,7 +326,7 @@ export function createNodeChatSseResponse(
               emit({ event: 'proposal', data: proposal });
             }
           } else {
-            appendProgressEvent(runId, 'chat_failed', {
+            await appendProgressEvent(runId, 'chat_failed', {
               nodeId,
               headline: '节点对话模型调用失败',
               payload: { message: failureMessage },
@@ -335,7 +340,7 @@ export function createNodeChatSseResponse(
         }
 
         if (ac.signal.aborted) {
-          appendProgressEvent(runId, 'chat_aborted', { nodeId, headline: '对话已中止' });
+          await appendProgressEvent(runId, 'chat_aborted', { nodeId, headline: '对话已中止' });
           emit({
             event: 'error',
             data: { errorCode: ErrorCode.INVALID_REQUEST, message: 'aborted' },
@@ -344,7 +349,7 @@ export function createNodeChatSseResponse(
         }
 
         emit({ event: 'done', data: { proposals } });
-        appendProgressEvent(runId, 'chat_finished', {
+        await appendProgressEvent(runId, 'chat_finished', {
           nodeId,
           headline: '节点对话结束',
           payload: { proposalCount: proposals.length, via: usedAgent ? 'agent' : 'stub' },

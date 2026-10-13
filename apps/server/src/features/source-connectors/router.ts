@@ -18,7 +18,7 @@ import { eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 import { z } from 'zod';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { sourceConnectorBindings } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
@@ -139,8 +139,8 @@ const apiDocs: OpenApiRoute[] = [
 // Helpers
 // ---------------------------------------------------------------------------
 
-function getBindingOr404(notebookId: number, bindingId: number) {
-  return requireOwnedRow(sourceConnectorBindings, bindingId, notebookId, 'Connector binding');
+async function getBindingOr404(notebookId: number, bindingId: number) {
+  return await requireOwnedRow(sourceConnectorBindings, bindingId, notebookId, 'Connector binding');
 }
 
 function getConnectorOr404(connectorId: string) {
@@ -239,14 +239,15 @@ async function runSyncCheck(
     candidates,
   };
 
-  db()
-    .update(sourceConnectorBindings)
-    .set({
-      lastSyncCheckResult: result,
-      updatedAt: new Date(),
-    })
-    .where(eq(sourceConnectorBindings.id, binding.id))
-    .run();
+  await client().run(
+    db()
+      .update(sourceConnectorBindings)
+      .set({
+        lastSyncCheckResult: result,
+        updatedAt: new Date(),
+      })
+      .where(eq(sourceConnectorBindings.id, binding.id)),
+  );
 
   return result;
 }
@@ -260,7 +261,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
     '/notebooks/:nid/source-connectors',
     async ({ params }) => {
       const nid = params.nid;
-      requireNotebook(nid);
+      await requireNotebook(nid);
 
       const connectors = await Promise.all(
         BUILTIN_CONNECTORS.map(async (connector) => ({
@@ -276,9 +277,9 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
 
   .post(
     '/notebooks/:nid/source-connectors/:connectorId/bindings',
-    ({ params, body, set }) => {
+    async ({ params, body, set }) => {
       const nid = params.nid;
-      requireNotebook(nid);
+      await requireNotebook(nid);
 
       const connectorId = (params.connectorId ?? '').trim();
       const connector = getConnectorOr404(connectorId);
@@ -292,15 +293,16 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
         throw new AppHttpError(ErrorCode.INVALID_REQUEST, validationError);
       }
 
-      const binding = db()
-        .insert(sourceConnectorBindings)
-        .values({
-          notebookId: nid,
-          connectorId,
-          connectionConfig: config,
-        })
-        .returning()
-        .get();
+      const binding = (await client().get(
+        db()
+          .insert(sourceConnectorBindings)
+          .values({
+            notebookId: nid,
+            connectorId,
+            connectionConfig: config,
+          })
+          .returning(),
+      ))!;
 
       set.status = 201;
       return serializeBinding(binding);
@@ -316,7 +318,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
     async ({ params }) => {
       const nid = params.nid;
       const bindingId = params.bindingId;
-      const binding = getBindingOr404(nid, bindingId);
+      const binding = await getBindingOr404(nid, bindingId);
       getConnectorOr404(binding.connectorId);
 
       try {
@@ -337,7 +339,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
     async ({ params }) => {
       const nid = params.nid;
       const bindingId = params.bindingId;
-      const binding = getBindingOr404(nid, bindingId);
+      const binding = await getBindingOr404(nid, bindingId);
       return runSyncCheck(nid, binding);
     },
     { params: z.object({ nid: PathId, bindingId: PathId }), response: SyncCheckResultSchema },
@@ -348,7 +350,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
     async ({ params, body }) => {
       const nid = params.nid;
       const bindingId = params.bindingId;
-      const binding = getBindingOr404(nid, bindingId);
+      const binding = await getBindingOr404(nid, bindingId);
       const syncCheckId = body.syncCheckId;
 
       // sync.ts throws AppHttpError (409 SYNC_CHECK_REQUIRED / SYNC_CHECK_OUTDATED)
@@ -367,7 +369,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
     async ({ params, body }) => {
       const nid = params.nid;
       const bindingId = params.bindingId;
-      const binding = getBindingOr404(nid, bindingId);
+      const binding = await getBindingOr404(nid, bindingId);
       getConnectorOr404(binding.connectorId);
 
       const scope = body;
@@ -409,11 +411,12 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
     '/source-connector-bindings/:id/sync',
     async ({ params }) => {
       const bindingId = params.id;
-      const binding = db()
-        .select()
-        .from(sourceConnectorBindings)
-        .where(eq(sourceConnectorBindings.id, bindingId))
-        .get();
+      const binding = (await client().get(
+        db()
+          .select()
+          .from(sourceConnectorBindings)
+          .where(eq(sourceConnectorBindings.id, bindingId)),
+      ))!;
       if (!binding) throw new NotFoundError(`Connector binding ${bindingId} not found`);
       return runSyncCheck(binding.notebookId, binding);
     },
@@ -422,16 +425,16 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
 
   .delete(
     '/source-connector-bindings/:id',
-    ({ params, set }) => {
+    async ({ params, set }) => {
       const id = params.id;
-      const existing = db()
-        .select()
-        .from(sourceConnectorBindings)
-        .where(eq(sourceConnectorBindings.id, id))
-        .get();
+      const existing = await client().get(
+        db().select().from(sourceConnectorBindings).where(eq(sourceConnectorBindings.id, id)),
+      );
       if (!existing) throw new NotFoundError(`Connector binding ${id} not found`);
 
-      db().delete(sourceConnectorBindings).where(eq(sourceConnectorBindings.id, id)).run();
+      await client().run(
+        db().delete(sourceConnectorBindings).where(eq(sourceConnectorBindings.id, id)),
+      );
       set.status = 204;
       return;
     },

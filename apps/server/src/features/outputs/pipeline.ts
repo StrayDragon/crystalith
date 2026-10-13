@@ -10,7 +10,7 @@ import type { Citation } from '@crystalith/shared';
 // RAG but never passed source_ids to the retrieval layer).
 import { and, eq, inArray } from 'drizzle-orm';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { chunks, outputs, sources } from '../../db/schema.ts';
 import type { ChunkResult } from '../../rag/types.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
@@ -44,38 +44,37 @@ export function applyCallerTitle(
 }
 
 /** Direct chunk fetch when scoped RAG misses (studio slides parity). */
-export function fetchChunksBySourceIds(notebookId: number, sourceIds: number[]): ChunkRow[] {
-  const rows = db()
-    .select({
-      id: chunks.id,
-      text: chunks.text,
-      sourceId: chunks.sourceId,
-      chunkIndex: chunks.chunkIndex,
-    })
-    .from(chunks)
-    .innerJoin(sources, eq(chunks.sourceId, sources.id))
-    .where(and(eq(sources.notebookId, notebookId), inArray(sources.id, sourceIds)))
-    .orderBy(chunks.sourceId, chunks.chunkIndex)
-    .all();
+export async function fetchChunksBySourceIds(
+  notebookId: number,
+  sourceIds: number[],
+): Promise<ChunkRow[]> {
+  const rows = await client().all(
+    db()
+      .select({
+        id: chunks.id,
+        text: chunks.text,
+        sourceId: chunks.sourceId,
+        chunkIndex: chunks.chunkIndex,
+      })
+      .from(chunks)
+      .innerJoin(sources, eq(chunks.sourceId, sources.id))
+      .where(and(eq(sources.notebookId, notebookId), inArray(sources.id, sourceIds)))
+      .orderBy(chunks.sourceId, chunks.chunkIndex),
+  );
   return rows.map((row) => ({ ...row, score: 1 }));
 }
 
 /** Resolve retrieval rows for the output pipeline (test seam). */
 export async function resolvePipelineContextChunks(input: PipelineInput): Promise<ChunkRow[]> {
   if (input.sourceIds && input.sourceIds.length > 0) {
-    const owned = db()
-      .select({ id: sources.id })
-      .from(sources)
-      .where(inArray(sources.id, input.sourceIds))
-      .all()
-      .filter((s) => {
-        const row = db()
-          .select({ notebookId: sources.notebookId })
-          .from(sources)
-          .where(eq(sources.id, s.id))
-          .get();
-        return row?.notebookId === input.notebookId;
-      });
+    // Ownership filter pushed into SQL (same semantics as the former per-id
+    // notebook check; also removes its N+1 queries).
+    const owned = await client().all(
+      db()
+        .select({ id: sources.id })
+        .from(sources)
+        .where(and(eq(sources.notebookId, input.notebookId), inArray(sources.id, input.sourceIds))),
+    );
     if (owned.length !== input.sourceIds.length) {
       throw new AppHttpError(
         ErrorCode.NOT_FOUND,
@@ -85,16 +84,17 @@ export async function resolvePipelineContextChunks(input: PipelineInput): Promis
   }
 
   if (input.chunkIds && input.chunkIds.length > 0) {
-    const rows = db()
-      .select({
-        id: chunks.id,
-        text: chunks.text,
-        sourceId: chunks.sourceId,
-        chunkIndex: chunks.chunkIndex,
-      })
-      .from(chunks)
-      .where(inArray(chunks.id, input.chunkIds))
-      .all();
+    const rows = await client().all(
+      db()
+        .select({
+          id: chunks.id,
+          text: chunks.text,
+          sourceId: chunks.sourceId,
+          chunkIndex: chunks.chunkIndex,
+        })
+        .from(chunks)
+        .where(inArray(chunks.id, input.chunkIds)),
+    );
     return rows.map((row) => ({ ...row, score: 1 }));
   }
 
@@ -140,7 +140,7 @@ export async function resolvePipelineContextChunks(input: PipelineInput): Promis
       sourceIds: input.sourceIds,
       type: input.type,
     });
-    chunkRows = fetchChunksBySourceIds(input.notebookId, input.sourceIds);
+    chunkRows = await fetchChunksBySourceIds(input.notebookId, input.sourceIds);
   }
 
   return chunkRows;
@@ -243,7 +243,7 @@ async function finishPipeline(
 
   // Map citations: LLM may reference chunks by index [1], [2] — map to full Citation objects
   // v1 output_graph.py:722-742. Build a citation map (1-based index → Citation).
-  const { citations, citationMap } = buildCitationMap(chunkRows);
+  const { citations, citationMap } = await buildCitationMap(chunkRows);
 
   // c50: sanitize citation indices BEFORE mapping (v1 sanitize_citations_indices,
   // output_postprocess.py:293-346). Strips out-of-range/duplicate/non-integer
@@ -289,27 +289,28 @@ async function finishPipeline(
 
   // Persist — content now has resolved citation objects (not bare integers)
   const content = isRecord(finalContent) ? finalContent : {};
-  const row = db()
-    .insert(outputs)
-    .values({
-      notebookId: input.notebookId,
-      type: input.type,
-      prompt: input.prompt ?? null,
-      chunkIds: chunkRows.map((c) => c.id),
-      generationMeta: {
-        generationTypeId: 'output',
-        outputType: input.type,
-        completion: 'output-row',
-        effectiveControls: {
-          preference: input.preference ?? 'quality',
-          ...(input.topK !== undefined ? { topK: input.topK } : {}),
-          ...(input.minScore !== undefined ? { minScore: input.minScore } : {}),
+  const row = (await client().get(
+    db()
+      .insert(outputs)
+      .values({
+        notebookId: input.notebookId,
+        type: input.type,
+        prompt: input.prompt ?? null,
+        chunkIds: chunkRows.map((c) => c.id),
+        generationMeta: {
+          generationTypeId: 'output',
+          outputType: input.type,
+          completion: 'output-row',
+          effectiveControls: {
+            preference: input.preference ?? 'quality',
+            ...(input.topK !== undefined ? { topK: input.topK } : {}),
+            ...(input.minScore !== undefined ? { minScore: input.minScore } : {}),
+          },
         },
-      },
-      content,
-    })
-    .returning()
-    .get();
+        content,
+      })
+      .returning(),
+  ))!;
 
   return {
     outputId: row.id,

@@ -17,7 +17,7 @@ import { count, desc, eq } from 'drizzle-orm';
 import { Elysia } from 'elysia';
 import { z } from 'zod';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { sessions } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
@@ -125,20 +125,24 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
   // List sessions for a notebook
   .get(
     '/notebooks/:nid/sessions',
-    ({ params, query }) => {
+    async ({ params, query }) => {
       const nid = params.nid;
       const { offset, limit } = query;
       const total =
-        db().select({ n: count() }).from(sessions).where(eq(sessions.notebookId, nid)).get()?.n ??
-        0;
-      const rows = db()
-        .select()
-        .from(sessions)
-        .where(eq(sessions.notebookId, nid))
-        .orderBy(desc(sessions.updatedAt))
-        .limit(limit)
-        .offset(offset)
-        .all();
+        (
+          await client().get(
+            db().select({ n: count() }).from(sessions).where(eq(sessions.notebookId, nid)),
+          )
+        )?.n ?? 0;
+      const rows = await client().all(
+        db()
+          .select()
+          .from(sessions)
+          .where(eq(sessions.notebookId, nid))
+          .orderBy(desc(sessions.updatedAt))
+          .limit(limit)
+          .offset(offset),
+      );
       return {
         items: rows.map(serializeSession),
         total,
@@ -152,10 +156,10 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
   // Get a single session (c39: v1 api.py:200-209)
   .get(
     '/notebooks/:nid/sessions/:sid',
-    ({ params }) => {
+    async ({ params }) => {
       const nid = params.nid;
       const sid = params.sid;
-      return serializeSession(requireOwnedRow(sessions, sid, nid, 'Session'));
+      return serializeSession(await requireOwnedRow(sessions, sid, nid, 'Session'));
     },
     { params: z.object({ nid: PathId, sid: PathId }), response: SessionSchema },
   )
@@ -163,16 +167,17 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
   // Create a session
   .post(
     '/notebooks/:nid/sessions',
-    ({ params, body, set }) => {
+    async ({ params, body, set }) => {
       const nid = params.nid;
-      const row = db()
-        .insert(sessions)
-        .values({
-          notebookId: nid,
-          title: body.title ?? null,
-        })
-        .returning()
-        .get();
+      const row = (await client().get(
+        db()
+          .insert(sessions)
+          .values({
+            notebookId: nid,
+            title: body.title ?? null,
+          })
+          .returning(),
+      ))!;
       set.status = 201;
       return serializeSession(row);
     },
@@ -182,10 +187,10 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
   // Update a session (c39: notebook ownership check)
   .patch(
     '/notebooks/:nid/sessions/:sid',
-    ({ params, body }) => {
+    async ({ params, body }) => {
       const nid = params.nid;
       const sid = params.sid;
-      const existing = requireOwnedRow(sessions, sid, nid, 'Session');
+      const existing = await requireOwnedRow(sessions, sid, nid, 'Session');
 
       const updateData: Record<string, unknown> = {};
       if (body.title !== undefined) updateData.title = body.title;
@@ -204,12 +209,9 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
         }
       }
 
-      const updated = db()
-        .update(sessions)
-        .set(updateData)
-        .where(eq(sessions.id, sid))
-        .returning()
-        .get();
+      const updated = (await client().get(
+        db().update(sessions).set(updateData).where(eq(sessions.id, sid)).returning(),
+      ))!;
       return serializeSession(updated);
     },
     {
@@ -222,11 +224,11 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
   // Delete a session (c39: notebook ownership check)
   .delete(
     '/notebooks/:nid/sessions/:sid',
-    ({ params, set }) => {
+    async ({ params, set }) => {
       const nid = params.nid;
       const sid = params.sid;
-      requireOwnedRow(sessions, sid, nid, 'Session');
-      db().delete(sessions).where(eq(sessions.id, sid)).run();
+      await requireOwnedRow(sessions, sid, nid, 'Session');
+      await client().run(db().delete(sessions).where(eq(sessions.id, sid)));
       set.status = 204;
       return;
     },
@@ -253,10 +255,10 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
   // Convert session to output (c34: v1 parity; c39: ownership + 201 + chunk_ids)
   .post(
     '/notebooks/:nid/sessions/:sid/convert-to-output',
-    ({ params, body, set }) => {
+    async ({ params, body, set }) => {
       const nid = params.nid;
       const sid = params.sid;
-      const result = convertSessionToOutput(nid, sid, body);
+      const result = await convertSessionToOutput(nid, sid, body);
       set.status = 201;
       return result;
     },

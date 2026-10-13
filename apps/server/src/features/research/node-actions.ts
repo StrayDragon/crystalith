@@ -26,7 +26,7 @@ import {
   writeCheckpoint,
 } from './research-core.ts';
 
-export function isPruneProtectedNodeId(nodeId: string, nodes: ResearchNode[] = []): boolean {
+function isPruneProtectedNodeId(nodeId: string, nodes: ResearchNode[] = []): boolean {
   const node = nodes.find((n) => n.id === nodeId);
   return isPruneProtectedNode(node, nodeId);
 }
@@ -80,8 +80,12 @@ export function collectResearchPruneClosure(
   return out;
 }
 
-export function pruneNode(notebookId: number, runId: number, nodeId: string): ResearchRun {
-  const row = requireRun(notebookId, runId);
+export async function pruneNode(
+  notebookId: number,
+  runId: number,
+  nodeId: string,
+): Promise<ResearchRun> {
+  const row = await requireRun(notebookId, runId);
   assertLiveMutable(row.status);
   const graph = getGraph(row);
   const target = graph.nodes.find((n) => n.id === nodeId);
@@ -101,20 +105,20 @@ export function pruneNode(notebookId: number, runId: number, nodeId: string): Re
   persistGraph(runId, graph, {
     checkpoint: writeCheckpoint(row, `prune_${nodeId}`),
   });
-  emitGraphPatch(runId, {
+  await emitGraphPatch(runId, {
     nodes: graph.nodes.filter((n) => toPrune.has(n.id)),
   });
-  emitLog(runId, `已剪枝节点 ${nodeId}${toPrune.size > 1 ? `（级联 ${toPrune.size}）` : ''}`);
-  return serializeRun(requireRun(notebookId, runId));
+  await emitLog(runId, `已剪枝节点 ${nodeId}${toPrune.size > 1 ? `（级联 ${toPrune.size}）` : ''}`);
+  return serializeRun(await requireRun(notebookId, runId));
 }
 
-export function patchNode(
+export async function patchNode(
   notebookId: number,
   runId: number,
   nodeId: string,
   body: ResearchNodePatchBody,
-): ResearchRun {
-  const row = requireRun(notebookId, runId);
+): Promise<ResearchRun> {
+  const row = await requireRun(notebookId, runId);
   assertLiveMutable(row.status);
   const graph = getGraph(row);
   const node = graph.nodes.find((n) => n.id === nodeId);
@@ -136,17 +140,17 @@ export function patchNode(
   persistGraph(runId, graph, {
     checkpoint: writeCheckpoint(row, `patch_${nodeId}`),
   });
-  emitGraphPatch(runId, { nodes: [node] });
-  return serializeRun(requireRun(notebookId, runId));
+  await emitGraphPatch(runId, { nodes: [node] });
+  return serializeRun(await requireRun(notebookId, runId));
 }
 
-export function forkNode(
+export async function forkNode(
   notebookId: number,
   runId: number,
   nodeId: string,
   body: ResearchForkBody,
-): ResearchRun {
-  const row = requireRun(notebookId, runId);
+): Promise<ResearchRun> {
+  const row = await requireRun(notebookId, runId);
   assertLiveMutable(row.status);
   const graph = getGraph(row);
   if (!graph.nodes.some((n) => n.id === nodeId)) {
@@ -156,20 +160,20 @@ export function forkNode(
     throw new AppHttpError(ErrorCode.RESEARCH_BUDGET, 'Node budget exhausted');
   }
   // Enter expand_branch confirm (same capability surface as M1)
-  emitLog(runId, `fork 请求${body.hint ? `：${body.hint}` : ''}`);
+  await emitLog(runId, `fork 请求${body.hint ? `：${body.hint}` : ''}`);
   // Synchronous status flip so caller sees awaiting_confirm immediately
-  const current = requireRun(notebookId, runId);
-  updateRun(runId, {
+  const current = await requireRun(notebookId, runId);
+  await updateRun(runId, {
     status: 'awaiting_confirm',
     confirmKind: 'expand_branch',
     confirmBranchNodeId: nodeId,
     checkpoint: writeCheckpoint(current, 'before_confirm_expand_branch'),
   });
-  emitStatus(runId, 'awaiting_confirm', 'expand_branch');
-  broadcast(runId, 'confirm', {
+  await emitStatus(runId, 'awaiting_confirm', 'expand_branch');
+  await broadcast(runId, 'confirm', {
     kind: 'expand_branch',
     branchNodeId: nodeId,
     options: CONFIRM_OPTIONS.expand_branch,
   });
-  return serializeRun(requireRun(notebookId, runId));
+  return serializeRun(await requireRun(notebookId, runId));
 }

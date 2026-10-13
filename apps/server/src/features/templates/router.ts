@@ -12,7 +12,7 @@ import { desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 import { z } from 'zod';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { templates } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
@@ -70,24 +70,27 @@ function serializeTemplate(row: typeof templates.$inferSelect) {
 export const templatesRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/templates',
-    () => {
-      const rows = db().select().from(templates).orderBy(desc(templates.createdAt)).all();
+    async () => {
+      const rows = await client().all(
+        db().select().from(templates).orderBy(desc(templates.createdAt)),
+      );
       return rows.map(serializeTemplate);
     },
     { response: TemplateArraySchema },
   )
   .post(
     '/templates',
-    ({ body, set }) => {
-      const row = db()
-        .insert(templates)
-        .values({
-          name: body.name,
-          description: body.description ?? null,
-          configJson: body.configJson,
-        })
-        .returning()
-        .get();
+    async ({ body, set }) => {
+      const row = (await client().get(
+        db()
+          .insert(templates)
+          .values({
+            name: body.name,
+            description: body.description ?? null,
+            configJson: body.configJson,
+          })
+          .returning(),
+      ))!;
       set.status = 201;
       return serializeTemplate(row);
     },
@@ -95,9 +98,9 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
   )
   .get(
     '/templates/:id',
-    ({ params }) => {
+    async ({ params }) => {
       const id = params.id;
-      const row = db().select().from(templates).where(eq(templates.id, id)).get();
+      const row = await client().get(db().select().from(templates).where(eq(templates.id, id)));
       if (!row) throw new NotFoundError(`Template ${id} not found`);
       return serializeTemplate(row);
     },
@@ -105,9 +108,11 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
   )
   .patch(
     '/templates/:id',
-    ({ params, body }) => {
+    async ({ params, body }) => {
       const id = params.id;
-      const existing = db().select().from(templates).where(eq(templates.id, id)).get();
+      const existing = await client().get(
+        db().select().from(templates).where(eq(templates.id, id)),
+      );
       if (!existing) throw new NotFoundError(`Template ${id} not found`);
       // c61: builtin templates cannot be modified (v1 service.py:110-111)
       if (existing.isBuiltin) {
@@ -119,12 +124,9 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
       if (body.description !== undefined) updateData.description = body.description ?? null;
       if (body.configJson !== undefined) updateData.configJson = body.configJson;
 
-      const updated = db()
-        .update(templates)
-        .set(updateData)
-        .where(eq(templates.id, id))
-        .returning()
-        .get();
+      const updated = (await client().get(
+        db().update(templates).set(updateData).where(eq(templates.id, id)).returning(),
+      ))!;
       return serializeTemplate(updated);
     },
     {
@@ -135,15 +137,17 @@ export const templatesRouter = new Elysia({ prefix: '/v2' })
   )
   .delete(
     '/templates/:id',
-    ({ params, set }) => {
+    async ({ params, set }) => {
       const id = params.id;
-      const existing = db().select().from(templates).where(eq(templates.id, id)).get();
+      const existing = await client().get(
+        db().select().from(templates).where(eq(templates.id, id)),
+      );
       if (!existing) throw new NotFoundError(`Template ${id} not found`);
       // c61: builtin templates cannot be deleted (v1 service.py:126-127)
       if (existing.isBuiltin) {
         throw new AppHttpError(ErrorCode.CONFLICT, 'Built-in templates cannot be deleted');
       }
-      db().delete(templates).where(eq(templates.id, id)).run();
+      await client().run(db().delete(templates).where(eq(templates.id, id)));
       set.status = 204;
       return;
     },

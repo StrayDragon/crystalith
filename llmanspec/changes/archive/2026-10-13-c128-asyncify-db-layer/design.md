@@ -9,13 +9,14 @@
 ```ts
 // apps/server/src/db/client.ts（形态示意）
 import type { SQLWrapper } from 'drizzle-orm';
+
 import type { Orm } from './index.ts';
 
 export interface DbClient {
   all<T>(q: SQLWrapper & { all(): T[] }): Promise<T[]>;
   get<T>(q: SQLWrapper & { get(): T | undefined }): Promise<T | undefined>;
   run(q: SQLWrapper & { run(): unknown }): Promise<void>;
-  raw<T>(stmt: SQLWrapper): Promise<T[]>;   // sql` 模板直发（vectors/FTS 用）
+  raw<T>(stmt: SQLWrapper): Promise<T[]>; // sql` 模板直发（vectors/FTS 用）
   tx<T>(fn: (tx: DbClient) => Promise<T>): Promise<T>;
 }
 ```
@@ -40,13 +41,16 @@ const rows = await client().all(db().select().from(notebooks).orderBy(desc(noteb
 
 ## D3 事务收编
 
-全 src 唯一手工事务在 `db/vectors.ts` cosine 重建（`BEGIN IMMEDIATE` → DDL + 批量 INSERT → `COMMIT`，失败 ROLLBACK 保旧表）。收编为：
+全 src 唯一手工事务在 `db/vectors.ts` cosine 重建（`BEGIN IMMEDIATE` → DDL + 批量 INSERT → `COMMIT`，失败 ROLLBACK 保旧表）。
 
-```ts
-await client().tx(async (tx) => { /* 重建逻辑，走 tx.raw */ });
-```
+**实施修订（apply 期）**：`initVecChunks` 整体属于 boot 链（`createDb` 同步调用，早于任何可 await 的调用方），其 DDL 与 legacy 重建保持**同步直调 orm**，不强行搬进 `tx()`——否则 `createDb`/`db()` 被迫异步化，超本 change 边界（那是 PG change 启动链的工作）。`tx()` 端口本身落地并由 `db-client.test.ts` 覆盖语义（成功提交 / 失败回滚重抛），PG 实现用 `sql.begin`（savepoint 语义天然满足）；端口文档注明「tx 内不可重入」。
 
-sqlite 实现：`BEGIN IMMEDIATE` / `COMMIT` / `ROLLBACK` 包裹（保留「失败保旧表」语义与 warn 日志）；PG 实现：`sql.begin`（savepoint 语义天然满足）。嵌套调用场景本 change 不存在，端口文档注明「tx 内不可重入」。
+## D3a 实施期发现：bun-sqlite 原生 SQL 的 `orm.get()` 数组形态怪癖
+
+drizzle bun-sqlite 对 `sql\`\``模板的`.get()` 返回**数组形态行**（`SELECT COUNT(*) AS c`→`[1]`，非 `{c:1}`；`.all()`不受影响，正常对象形态）。唯一受影响的现存调用是`keyword-strategy.ts`的`isIndexed`——`row?.c` 恒 undefined → 恒 false（**潜伏 bug，2026-10-12 实证**）。处置：
+
+- 端口 `rawOne` 透传 `orm.get`（位级兼容，含怪癖）；`raw` 走 `orm.all`（对象形态，与 vectors.ts 现行为一致）。
+- 修复 `isIndexed` 超出「行为零变化」边界 → 记 `docs/known-issues.md` 台账，单独 bugfix 承接。
 
 ## D4 明确的非目标（防 scope creep）
 
@@ -58,8 +62,10 @@ sqlite 实现：`BEGIN IMMEDIATE` / `COMMIT` / `ROLLBACK` 包裹（保留「失�
 
 - **先加后删**：批次 A 落端口（旁路新增）→ 批次 B 按域分批迁移调用点（每片 `just qa` 绿即 commit）→ 批次 C 清尾 + 完成判据。
 - **完成判据（在 change 分支测量，相对 merge-base）**：
-  1. `grep -rn "\.all()\|\.get()\|\.run()" apps/server/src --include='*.ts'` 在 `db/client.ts` 之外为 0（`.iterate()` 无使用，一并覆盖）；
-  2. `just qa` 全绿 + `just test-bdd` 绿。
+  1. 构建器终端清零：`grep -rnE "\.(all|get|run|iterate)\(\)" apps/server/src --include='*.ts'` 仅剩 `db/client.ts`（端口实现）与 `db/vectors.ts` 的 `initVecChunks` boot 块（见 D3 修订）；
+  2. 原生 SQL 终端清零：`grep -rnE "\b(orm|db\(\))\.(all|get|run)\b" apps/server/src --include='*.ts'` 同样仅剩上述豁免面；
+  3. tests 判据（apply 期修订）：测试的**被测路径**（断言、helper、经端口/HTTP 的调用）必须 await 化且无悬浮异步调用；**seeding 造数**（`orm/getOrm()` 直连 insert/select）允许保留——测试不是生产接缝，PG change 的测试策略届时统一处理（此处硬磨 60 个已绿文件只引入回归风险，无端口收益）；
+  4. `just qa` 全绿 + `just test-bdd` 绿。
 - 红批遇阻降级：某域迁移引入行为回归且 1 个批次日内修不完 → 回滚该片、记 `docs/known-issues.md`、裁出本 change（沿用 c127 纪律）。
 
 ## D6 测试边界（seam）

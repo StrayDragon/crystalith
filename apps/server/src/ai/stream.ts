@@ -61,7 +61,11 @@ export interface StreamQaOptions {
    * Callers use this to persist the final content on success, or delete the
    * empty placeholder on failure (mirrors v1 api.py:550-557).
    */
-  onMessageSettled?: (accumulatedText: string, failed: boolean, citations?: Citation[]) => void;
+  onMessageSettled?: (
+    accumulatedText: string,
+    failed: boolean,
+    citations?: Citation[],
+  ) => void | Promise<void>;
 }
 
 /** SSE-encode a single event. Delegates to the shared SSE helper. */
@@ -158,11 +162,11 @@ export function streamQaResponse(opts: StreamQaOptions): Response {
           generation: opts.generation,
         });
 
-        opts.onMessageSettled?.(stripLeakedToolCallXml(accumulated), false, citations);
+        await opts.onMessageSettled?.(stripLeakedToolCallXml(accumulated), false, citations);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Stream failed';
         emit('error', { message });
-        opts.onMessageSettled?.('', true, []);
+        await opts.onMessageSettled?.('', true, []);
       } finally {
         controller.close();
       }

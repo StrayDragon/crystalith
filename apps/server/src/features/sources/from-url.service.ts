@@ -8,7 +8,7 @@ import { SourceFromUrlRequestSchema } from '@crystalith/shared';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { pluginRegistry } from '../../plugins/registry.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
@@ -77,11 +77,12 @@ export async function ingestFromUrl(
   // c44: Dedup check — gated by config (v1 source_ingestion.dedup.enabled)
   const dedupKey = getDedupEnabled() ? urlDedupKey(url) : undefined;
   if (dedupKey && dedupAction !== 'create_new') {
-    const hit = db()
-      .select({ id: sources.id })
-      .from(sources)
-      .where(and(eq(sources.notebookId, nid), eq(sources.dedupKey, dedupKey)))
-      .get();
+    const hit = await client().get(
+      db()
+        .select({ id: sources.id })
+        .from(sources)
+        .where(and(eq(sources.notebookId, nid), eq(sources.dedupKey, dedupKey))),
+    );
     if (hit) {
       if (dedupAction === 'prompt') {
         throw new AppHttpError(ErrorCode.CONFLICT, 'Source dedup hit', {
@@ -115,45 +116,50 @@ async function createLinkSource(
   const content = snippet
     ? `# ${linkTitle}\n\n${snippet}\n\n来源: ${url}`
     : `# ${linkTitle}\n\n${url}\n\n来源链接（未抓取正文）`;
-  const sourceRow = db()
-    .insert(sources)
-    .values({
-      notebookId: nid,
-      filename: linkTitle,
-      mimeType: 'text/plain',
-      parserType: 'link',
-      status: 'processing',
-      dedupKey,
-      metadata: { url, mode: 'link' },
-    })
-    .returning()
-    .get();
-  db()
-    .insert(chunks)
-    .values({
-      sourceId: sourceRow.id,
-      chunkIndex: 0,
-      text: content,
-      metadata: { url, type: 'link' },
-    })
-    .run();
+  const sourceRow = (await client().get(
+    db()
+      .insert(sources)
+      .values({
+        notebookId: nid,
+        filename: linkTitle,
+        mimeType: 'text/plain',
+        parserType: 'link',
+        status: 'processing',
+        dedupKey,
+        metadata: { url, mode: 'link' },
+      })
+      .returning(),
+  ))!;
+  await client().run(
+    db()
+      .insert(chunks)
+      .values({
+        sourceId: sourceRow.id,
+        chunkIndex: 0,
+        text: content,
+        metadata: { url, type: 'link' },
+      }),
+  );
 
   try {
     const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
     const strategy = new EmbedStrategy();
     await strategy.indexSource(sourceRow.id, nid);
-    db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)).run();
+    await client().run(
+      db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)),
+    );
     const { scheduleSourceSummary } = await import('./source-summary.ts');
     scheduleSourceSummary(sourceRow.id);
   } catch (error) {
-    db()
-      .update(sources)
-      .set({
-        status: 'failed',
-        errorMessage: error instanceof Error ? error.message : String(error),
-      })
-      .where(eq(sources.id, sourceRow.id))
-      .run();
+    await client().run(
+      db()
+        .update(sources)
+        .set({
+          status: 'failed',
+          errorMessage: error instanceof Error ? error.message : String(error),
+        })
+        .where(eq(sources.id, sourceRow.id)),
+    );
   }
   bumpSourcesEpoch(nid);
   return {

@@ -7,6 +7,7 @@
 // of user-supplied values).
 import { sql } from 'drizzle-orm';
 
+import { createDbClient } from './client.ts';
 import type { Orm } from './index';
 
 /** Default embedding dimension (bge-m3 = 1024). Overridable per index. */
@@ -91,27 +92,27 @@ function toBytes(vec: Float32Array | number[]): Uint8Array {
 }
 
 /** Insert a chunk embedding. Call after the `chunks` row exists (rowid match). */
-export function insertChunkVector(
+export async function insertChunkVector(
   orm: Orm,
   rowid: number,
   notebookId: number,
   sourceId: number,
   embedding: Float32Array | number[],
-): void {
-  orm.run(
+): Promise<void> {
+  await createDbClient(orm).rawRun(
     sql`INSERT INTO vec_chunks(rowid, embedding, notebook_id, source_id)
         VALUES (${rowid}, ${toBytes(embedding)}, ${notebookId}, ${sourceId});`,
   );
 }
 
 /** Delete a chunk's vector (call before deleting the `chunks` row). */
-export function deleteChunkVector(orm: Orm, rowid: number): void {
-  orm.run(sql`DELETE FROM vec_chunks WHERE rowid = ${rowid};`);
+export async function deleteChunkVector(orm: Orm, rowid: number): Promise<void> {
+  await createDbClient(orm).rawRun(sql`DELETE FROM vec_chunks WHERE rowid = ${rowid};`);
 }
 
 /** Delete all vectors for a source. */
-export function deleteSourceVectors(orm: Orm, sourceId: number): void {
-  orm.run(sql`DELETE FROM vec_chunks WHERE source_id = ${sourceId};`);
+export async function deleteSourceVectors(orm: Orm, sourceId: number): Promise<void> {
+  await createDbClient(orm).rawRun(sql`DELETE FROM vec_chunks WHERE source_id = ${sourceId};`);
 }
 
 /**
@@ -125,17 +126,18 @@ export function deleteSourceVectors(orm: Orm, sourceId: number): void {
  * and an over-fetch+post-filter approach misses small sources when the
  * notebook has many other indexed chunks.
  */
-export function searchVectors(
+export async function searchVectors(
   orm: Orm,
   queryVec: Float32Array | number[],
   notebookId: number,
   topK = 10,
   sourceIds?: number[],
-): VectorHit[] {
+): Promise<VectorHit[]> {
   const queryBytes = toBytes(queryVec);
+  const c = createDbClient(orm);
 
   if (!sourceIds?.length) {
-    return orm.all<VectorHit>(sql`
+    return c.raw<VectorHit>(sql`
       SELECT v.rowid AS rowid,
              v.source_id AS source_id,
              v.notebook_id AS notebook_id,
@@ -155,7 +157,7 @@ export function searchVectors(
   const uniqueSourceIds = [...new Set(sourceIds.filter((id) => Number.isFinite(id) && id > 0))];
   const merged: VectorHit[] = [];
   for (const sourceId of uniqueSourceIds) {
-    const hits = orm.all<VectorHit>(sql`
+    const hits = await c.raw<VectorHit>(sql`
       SELECT v.rowid AS rowid,
              v.source_id AS source_id,
              v.notebook_id AS notebook_id,
@@ -177,8 +179,8 @@ export function searchVectors(
 }
 
 /** Count indexed vectors for a notebook (used to check `isIndexed`). */
-export function countVectors(orm: Orm, notebookId: number): number {
-  const rows = orm.all<{ c: number }>(
+export async function countVectors(orm: Orm, notebookId: number): Promise<number> {
+  const rows = await createDbClient(orm).raw<{ c: number }>(
     sql`SELECT COUNT(*) AS c FROM vec_chunks WHERE notebook_id = ${notebookId};`,
   );
   return rows[0]?.c ?? 0;

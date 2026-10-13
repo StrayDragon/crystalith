@@ -10,7 +10,7 @@ import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from '../helpers/
 
 const BASE = 'http://test.local';
 
-beforeAll(() => {
+beforeAll(async () => {
   setupIntegrationEnv();
 });
 
@@ -34,13 +34,13 @@ describe('notebook delete cleans vectors', () => {
       .get().id;
     const vec = new Float32Array(1024);
     vec[0] = 1;
-    insertChunkVector(orm, chunkId, notebookId, sourceId, vec);
-    expect(countVectors(orm, notebookId)).toBe(1);
+    await insertChunkVector(orm, chunkId, notebookId, sourceId, vec);
+    expect(await countVectors(orm, notebookId)).toBe(1);
 
     const res = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}`, { method: 'DELETE' }),
     );
     expect(res.status).toBe(204);
-    expect(countVectors(orm, notebookId)).toBe(0);
+    expect(await countVectors(orm, notebookId)).toBe(0);
   });
 });

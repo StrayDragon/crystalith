@@ -15,7 +15,7 @@ import type {
 import { RESEARCH_DEPTH_BUDGETS } from '@crystalith/shared';
 import { and, count, desc, eq, inArray } from 'drizzle-orm';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { researchProgressEvents, researchRuns } from '../../db/schema.ts';
 import { getPageRatio, getSearchAddOnSettings } from '../../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
@@ -53,14 +53,16 @@ import { drainResearchWorkUnits, finishWaveOrSynthesize, scheduleRun } from './r
 import { writeBackNodeWork } from './work-unit.ts';
 
 /** Raise maxSearches by formula K; does NOT touch maxNodes / maxPageFetches (c108). */
-export function applySearchBudgetAddOn(runId: number): { k: number; maxSearches: number } {
-  const row = requireFresh(runId);
+export async function applySearchBudgetAddOn(
+  runId: number,
+): Promise<{ k: number; maxSearches: number }> {
+  const row = await requireFresh(runId);
   const { addOnRatio, addOnMinK, addOnMaxK } = getSearchAddOnSettings();
   const k = computeSearchAddOnK(row.maxSearches, addOnRatio, addOnMinK, addOnMaxK);
   const maxSearches = row.maxSearches + k;
-  updateRun(runId, { maxSearches });
-  emitLog(runId, `检索预算加购 +${k} → maxSearches=${maxSearches}`);
-  appendProgressEvent(runId, 'budget_tick', {
+  await updateRun(runId, { maxSearches });
+  await emitLog(runId, `检索预算加购 +${k} → maxSearches=${maxSearches}`);
+  await appendProgressEvent(runId, 'budget_tick', {
     headline: `检索预算加购 +${k}`,
     payload: { k, maxSearches, maxNodes: row.maxNodes },
   });
@@ -68,8 +70,8 @@ export function applySearchBudgetAddOn(runId: number): { k: number; maxSearches:
 }
 
 /** Mark unfinished research nodes missing before partial-completion synthesize. */
-function markUnfinishedResearchMissing(runId: number): void {
-  const row = requireFresh(runId);
+async function markUnfinishedResearchMissing(runId: number): Promise<void> {
+  const row = await requireFresh(runId);
   const graph = getGraph(row);
   const pending = orderResearchNodesForWork(graph.nodes);
   for (const node of pending) {
@@ -82,7 +84,7 @@ function markUnfinishedResearchMissing(runId: number): void {
   }
 }
 
-export function validateCreateBody(body: ResearchCreateBody): {
+function validateCreateBody(body: ResearchCreateBody): {
   topic: string;
   useNotebookSources: boolean;
   allowWeb: boolean;
@@ -132,68 +134,74 @@ export function validateCreateBody(body: ResearchCreateBody): {
   };
 }
 
-export function createRun(notebookId: number, body: ResearchCreateBody): ResearchRun {
-  requireNotebook(notebookId);
+export async function createRun(
+  notebookId: number,
+  body: ResearchCreateBody,
+): Promise<ResearchRun> {
+  await requireNotebook(notebookId);
   const fields = validateCreateBody(body);
   const maxPageFetches = computeMaxPageFetches(fields.maxSearches, getPageRatio());
-  const row = db()
-    .insert(researchRuns)
-    .values({
-      notebookId,
-      topic: fields.topic,
-      status: 'queued',
-      useNotebookSources: fields.useNotebookSources,
-      allowWeb: fields.allowWeb,
-      sourceIds: fields.sourceIds,
-      depth: fields.depth,
-      maxSearches: fields.maxSearches,
-      maxNodes: fields.maxNodes,
-      searchesUsed: 0,
-      maxPageFetches,
-      pagesUsed: 0,
-      modelId: fields.modelId,
-      graph: emptyGraph(),
-      checkpoint: null,
-      report: null,
-      cancelRequested: false,
-    })
-    .returning()
-    .get();
+  const row = (await client().get(
+    db()
+      .insert(researchRuns)
+      .values({
+        notebookId,
+        topic: fields.topic,
+        status: 'queued',
+        useNotebookSources: fields.useNotebookSources,
+        allowWeb: fields.allowWeb,
+        sourceIds: fields.sourceIds,
+        depth: fields.depth,
+        maxSearches: fields.maxSearches,
+        maxNodes: fields.maxNodes,
+        searchesUsed: 0,
+        maxPageFetches,
+        pagesUsed: 0,
+        modelId: fields.modelId,
+        graph: emptyGraph(),
+        checkpoint: null,
+        report: null,
+        cancelRequested: false,
+      })
+      .returning(),
+  ))!;
   scheduleRun(row.id);
   return serializeRun(row);
 }
 
-export function listRuns(
+export async function listRuns(
   notebookId: number,
   offset: number,
   limit: number,
   statusFilter?: ResearchRunStatus[],
-): { items: ResearchRunSummary[]; total: number; offset: number; limit: number } {
-  requireNotebook(notebookId);
+): Promise<{ items: ResearchRunSummary[]; total: number; offset: number; limit: number }> {
+  await requireNotebook(notebookId);
   const whereClause =
     statusFilter && statusFilter.length > 0
       ? and(eq(researchRuns.notebookId, notebookId), inArray(researchRuns.status, statusFilter))
       : eq(researchRuns.notebookId, notebookId);
   const total =
-    db().select({ value: count() }).from(researchRuns).where(whereClause).get()?.value ?? 0;
-  const rows = db()
-    .select()
-    .from(researchRuns)
-    .where(whereClause)
-    .orderBy(desc(researchRuns.updatedAt))
-    .limit(limit)
-    .offset(offset)
-    .all();
+    (await client().get(db().select({ value: count() }).from(researchRuns).where(whereClause)))
+      ?.value ?? 0;
+  const rows = await client().all(
+    db()
+      .select()
+      .from(researchRuns)
+      .where(whereClause)
+      .orderBy(desc(researchRuns.updatedAt))
+      .limit(limit)
+      .offset(offset),
+  );
   return { items: rows.map(serializeRunSummary), total, offset, limit };
 }
 
-export function getRun(notebookId: number, runId: number): ResearchRun {
-  return serializeRun(requireRun(notebookId, runId));
+export async function getRun(notebookId: number, runId: number): Promise<ResearchRun> {
+  return serializeRun(await requireRun(notebookId, runId));
 }
 
 /** POST …/schedule — start kernel for a queued Run only (c105 / r335 Lab 续跑). */
-export function scheduleQueuedRun(notebookId: number, runId: number): ResearchRun {
-  const row = requireRun(notebookId, runId);
+export async function scheduleQueuedRun(notebookId: number, runId: number): Promise<ResearchRun> {
+  const row = await requireRun(notebookId, runId);
   if (row.status !== 'queued') {
     throw new AppHttpError(
       ErrorCode.RESEARCH_INVALID_STATE,
@@ -201,11 +209,11 @@ export function scheduleQueuedRun(notebookId: number, runId: number): ResearchRu
     );
   }
   scheduleRun(runId);
-  return serializeRun(requireRun(notebookId, runId));
+  return serializeRun(await requireRun(notebookId, runId));
 }
 
-export function cancelRun(notebookId: number, runId: number): ResearchRun {
-  const row = requireRun(notebookId, runId);
+export async function cancelRun(notebookId: number, runId: number): Promise<ResearchRun> {
+  const row = await requireRun(notebookId, runId);
   if (row.status === 'completed' || row.status === 'failed' || row.status === 'cancelled') {
     throw new AppHttpError(
       ErrorCode.RESEARCH_INVALID_STATE,
@@ -214,7 +222,7 @@ export function cancelRun(notebookId: number, runId: number): ResearchRun {
   }
   abortRunWorkUnit(runId);
   abortAllChatsForRun(runId);
-  updateRun(runId, {
+  await updateRun(runId, {
     cancelRequested: true,
     llmActivity: null,
     activeNodeId: null,
@@ -224,7 +232,7 @@ export function cancelRun(notebookId: number, runId: number): ResearchRun {
     finalizeCancel(runId);
   }
   // running: loop checks cancelRequested / AbortSignal
-  return serializeRun(requireRun(notebookId, runId));
+  return serializeRun(await requireRun(notebookId, runId));
 }
 
 export async function confirmRun(
@@ -232,7 +240,7 @@ export async function confirmRun(
   runId: number,
   body: ResearchConfirmBody,
 ): Promise<ResearchRun> {
-  const row = requireRun(notebookId, runId);
+  const row = await requireRun(notebookId, runId);
   if (row.status !== 'awaiting_confirm') {
     throw new AppHttpError(
       ErrorCode.RESEARCH_INVALID_STATE,
@@ -247,7 +255,7 @@ export async function confirmRun(
   } else {
     await confirmExpandBranchRun(notebookId, runId, row, body);
   }
-  return serializeRun(requireRun(notebookId, runId));
+  return serializeRun(await requireRun(notebookId, runId));
 }
 
 /** budget 确认：加购继续（c108）或预算触顶后出报告。 */
@@ -262,23 +270,23 @@ async function confirmBudgetRun(
       'budget confirm requires continue or finish_report',
     );
   }
-  updateRun(runId, {
+  await updateRun(runId, {
     status: 'running',
     confirmKind: null,
     confirmBranchNodeId: null,
   });
-  emitStatus(runId, 'running', body.action);
-  appendProgressEvent(runId, 'confirm_resolved', {
+  await emitStatus(runId, 'running', body.action);
+  await appendProgressEvent(runId, 'confirm_resolved', {
     headline: body.action === 'continue' ? '已加购并继续研究' : '预算触顶后出报告',
     payload: { action: body.action, confirmKind: 'budget' },
   });
   if (body.action !== 'continue') {
-    markUnfinishedResearchMissing(runId);
+    await markUnfinishedResearchMissing(runId);
     await synthesizeAndComplete(runId);
     return;
   }
   // c108: raise maxSearches by K and resume drain (NOT fake one-unit then synthesize).
-  applySearchBudgetAddOn(runId);
+  await applySearchBudgetAddOn(runId);
   scheduleRun(runId);
 }
 
@@ -296,15 +304,15 @@ async function confirmReexpandRun(
     );
   }
   const focusNodeId = body.branchNodeId ?? row.confirmBranchNodeId ?? undefined;
-  const hint = readLatestReexpandHint(runId);
-  updateRun(runId, {
+  const hint = await readLatestReexpandHint(runId);
+  await updateRun(runId, {
     status: 'running',
     confirmKind: null,
     confirmBranchNodeId: null,
     llmActivity: 'work_unit',
   });
-  emitStatus(runId, 'running', body.action);
-  appendProgressEvent(runId, 'confirm_resolved', {
+  await emitStatus(runId, 'running', body.action);
+  await appendProgressEvent(runId, 'confirm_resolved', {
     headline: body.action === 'approve_reexpand' ? '已批准再扩展' : '已跳过再扩展',
     payload: { action: body.action, focusNodeId: focusNodeId ?? null },
   });
@@ -319,7 +327,7 @@ async function confirmReexpandRun(
   }
 
   // approve_reexpand: planner → graph_patch → drain → budget/synthesize
-  const latest = requireRun(notebookId, runId);
+  const latest = await requireRun(notebookId, runId);
   const graph = getGraph(latest);
   const occupied = graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length;
   const abort = ensureRunAbortController(runId);
@@ -348,15 +356,15 @@ async function confirmReexpandRun(
     persistGraph(runId, applied.graph, {
       checkpoint: writeCheckpoint(latest, 'approve_reexpand'),
     });
-    emitGraphPatch(runId, {
+    await emitGraphPatch(runId, {
       nodes: applied.addedNodes,
       edges: applied.addedEdges,
     });
-    appendProgressEvent(runId, 'graph_patched_summary', {
+    await appendProgressEvent(runId, 'graph_patched_summary', {
       headline: `再扩展新增 ${applied.addedNodes.length} 个研究支路`,
       payload: { researchNodes: applied.addedNodes.length },
     });
-    emitLog(runId, `再扩展新增 ${applied.addedNodes.length} 个研究支路`);
+    await emitLog(runId, `再扩展新增 ${applied.addedNodes.length} 个研究支路`);
     await finishWaveOrSynthesize(runId);
   } catch (error) {
     await abortReexpandToSynthesize(
@@ -377,8 +385,8 @@ async function abortReexpandToSynthesize(
   payload?: Record<string, unknown>,
   logMessage?: string,
 ): Promise<void> {
-  appendProgressEvent(runId, 'unit_aborted', { headline, payload });
-  emitLog(runId, logMessage ?? headline);
+  await appendProgressEvent(runId, 'unit_aborted', { headline, payload });
+  await emitLog(runId, logMessage ?? headline);
   await synthesizeAndComplete(runId);
 }
 
@@ -399,18 +407,18 @@ async function confirmExpandBranchRun(
   if (!branchNodeId) {
     throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'branchNodeId is required');
   }
-  updateRun(runId, {
+  await updateRun(runId, {
     status: 'running',
     confirmKind: null,
     confirmBranchNodeId: null,
   });
-  emitStatus(runId, 'running', body.action);
+  await emitStatus(runId, 'running', body.action);
   if (body.action !== 'approve_branch') {
     await synthesizeAndComplete(runId);
     return;
   }
 
-  const latest = requireRun(notebookId, runId);
+  const latest = await requireRun(notebookId, runId);
   const graph = getGraph(latest);
   const liveCount = graph.nodes.filter((n) => n.conclusionStatus !== 'pruned').length;
   if (liveCount >= latest.maxNodes) {
@@ -447,7 +455,7 @@ async function confirmExpandBranchRun(
   persistGraph(runId, graph, {
     checkpoint: writeCheckpoint(latest, 'approve_branch'),
   });
-  emitGraphPatch(runId, { nodes: [child], edges: [forkEdge, mergeEdge] });
+  await emitGraphPatch(runId, { nodes: [child], edges: [forkEdge, mergeEdge] });
 
   // Run work_unit on the new research node before report (serial kernel)
   const abort = ensureRunAbortController(runId);
@@ -455,9 +463,9 @@ async function confirmExpandBranchRun(
     await drainResearchWorkUnits(runId, abort.signal);
   } catch (error) {
     if (error instanceof AppHttpError && error.code === ErrorCode.RESEARCH_BUDGET) {
-      emitLog(runId, '支路工作单元跳过：预算已尽');
+      await emitLog(runId, '支路工作单元跳过：预算已尽');
     } else {
-      emitLog(runId, `支路工作单元失败：${String(error)}`);
+      await emitLog(runId, `支路工作单元失败：${String(error)}`);
     }
   }
   await synthesizeAndComplete(runId);
@@ -467,8 +475,8 @@ async function confirmExpandBranchRun(
  * c108 / r343: proactive search budget add-on (same K as budget continue).
  * Allowed when running or awaiting_confirm(budget). Does not raise maxNodes / maxPageFetches.
  */
-export function addBudget(notebookId: number, runId: number): ResearchRun {
-  const row = requireRun(notebookId, runId);
+export async function addBudget(notebookId: number, runId: number): Promise<ResearchRun> {
+  const row = await requireRun(notebookId, runId);
   const isRunning = row.status === 'running';
   const isBudgetConfirm =
     row.status === 'awaiting_confirm' && (row.confirmKind ?? 'budget') === 'budget';
@@ -478,32 +486,33 @@ export function addBudget(notebookId: number, runId: number): ResearchRun {
       `add-budget only allowed when running or awaiting_confirm(budget); got ${row.status}`,
     );
   }
-  applySearchBudgetAddOn(runId);
+  await applySearchBudgetAddOn(runId);
   if (isBudgetConfirm) {
-    updateRun(runId, {
+    await updateRun(runId, {
       status: 'running',
       confirmKind: null,
       confirmBranchNodeId: null,
     });
-    emitStatus(runId, 'running', 'add_budget');
-    appendProgressEvent(runId, 'confirm_resolved', {
+    await emitStatus(runId, 'running', 'add_budget');
+    await appendProgressEvent(runId, 'confirm_resolved', {
       headline: '已加购并继续研究',
       payload: { action: 'add_budget', confirmKind: 'budget' },
     });
     scheduleRun(runId);
   }
-  return serializeRun(requireRun(notebookId, runId));
+  return serializeRun(await requireRun(notebookId, runId));
 }
 
 /** Read hint stored by requestReexpand in the latest confirm_entered progress payload. */
-function readLatestReexpandHint(runId: number): string | null {
-  const rows = db()
-    .select()
-    .from(researchProgressEvents)
-    .where(eq(researchProgressEvents.runId, runId))
-    .orderBy(desc(researchProgressEvents.seq))
-    .limit(40)
-    .all();
+async function readLatestReexpandHint(runId: number): Promise<string | null> {
+  const rows = await client().all(
+    db()
+      .select()
+      .from(researchProgressEvents)
+      .where(eq(researchProgressEvents.runId, runId))
+      .orderBy(desc(researchProgressEvents.seq))
+      .limit(40),
+  );
   for (const pe of rows) {
     if (pe.kind !== 'confirm_entered') continue;
     const payload = pe.payload;
@@ -518,12 +527,12 @@ function readLatestReexpandHint(runId: number): string | null {
  * c104 / r334: user-gated re-expand → awaiting_confirm + confirmKind=reexpand.
  * Allowed while running or awaiting_confirm; terminal statuses rejected.
  */
-export function requestReexpand(
+export async function requestReexpand(
   notebookId: number,
   runId: number,
   body: ResearchRequestReexpandBody = {},
-): ResearchRun {
-  const row = requireRun(notebookId, runId);
+): Promise<ResearchRun> {
+  const row = await requireRun(notebookId, runId);
   if (isTerminalStatus(row.status)) {
     throw new AppHttpError(
       ErrorCode.RESEARCH_INVALID_STATE,
@@ -551,7 +560,7 @@ export function requestReexpand(
   // running additionally clears LLM occupancy and aborts the in-flight work unit;
   // awaiting_confirm already has llmActivity / activeNodeId cleared.
   const wasRunning = row.status === 'running';
-  updateRun(runId, {
+  await updateRun(runId, {
     status: 'awaiting_confirm',
     confirmKind: 'reexpand',
     confirmBranchNodeId: focusNodeId,
@@ -563,7 +572,7 @@ export function requestReexpand(
   // intentionally || — empty trim becomes null
   // oxlint-disable-next-line typescript/prefer-nullish-coalescing
   const hint = body.hint?.trim() || null;
-  appendProgressEvent(runId, 'confirm_entered', {
+  await appendProgressEvent(runId, 'confirm_entered', {
     nodeId: focusNodeId,
     headline: '等待确认再扩展',
     payload: {
@@ -572,23 +581,17 @@ export function requestReexpand(
       focusNodeId,
     },
   });
-  emitStatus(runId, 'awaiting_confirm', 'reexpand');
-  emitLog(runId, `请求再扩展${hint ? `：${hint}` : ''}`);
-  broadcast(runId, 'confirm', {
+  await emitStatus(runId, 'awaiting_confirm', 'reexpand');
+  await emitLog(runId, `请求再扩展${hint ? `：${hint}` : ''}`);
+  await broadcast(runId, 'confirm', {
     kind: 'reexpand',
     branchNodeId: focusNodeId ?? undefined,
     options: CONFIRM_OPTIONS.reexpand,
   });
-  return serializeRun(requireRun(notebookId, runId));
+  return serializeRun(await requireRun(notebookId, runId));
 }
 
 // --- Facade re-exports: implementations split into single-concern modules (B1) ---
-export {
-  isPruneProtectedNodeId,
-  collectResearchPruneClosure,
-  pruneNode,
-  patchNode,
-  forkNode,
-} from './node-actions.ts';
+export { collectResearchPruneClosure, pruneNode, patchNode, forkNode } from './node-actions.ts';
 export { convertToNote, convertToSource } from './convert.ts';
-export { createResearchSseResponse, streamRun } from './run-sse.ts';
+export { createResearchSseResponse } from './run-sse.ts';

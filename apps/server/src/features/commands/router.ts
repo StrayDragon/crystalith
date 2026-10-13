@@ -4,7 +4,7 @@
 import { CommandListSchema } from '@crystalith/shared';
 import { Elysia } from 'elysia';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { promptPresets } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { listPresets } from '../qa/presets.ts';
@@ -59,7 +59,7 @@ registerApiDoc(apiDocs);
 
 export const commandsRouter = new Elysia({ prefix: '/v2' }).get(
   '/commands',
-  () => {
+  async () => {
     const commands: CommandRow[] = [...RESEARCH_NAV_COMMANDS];
 
     for (const { name, label } of listPresets()) {
@@ -73,7 +73,7 @@ export const commandsRouter = new Elysia({ prefix: '/v2' }).get(
       });
     }
 
-    const custom = db().select().from(promptPresets).all();
+    const custom = await client().all(db().select().from(promptPresets));
     for (const preset of custom) {
       commands.push({
         id: preset.trigger,

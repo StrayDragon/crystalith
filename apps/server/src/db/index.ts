@@ -13,6 +13,7 @@ import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import * as sqliteVec from 'sqlite-vec';
 
 import { getDataRoot } from '../shared/config.ts';
+import { createDbClient, type DbClient } from './client.ts';
 import * as schema from './schema';
 import { initVecChunks } from './vectors';
 
@@ -143,5 +144,17 @@ export function resetDb(orm: Orm | null = null): void {
   _orm = orm;
 }
 
+/**
+ * Port view over the process-wide `db()` singleton. Created fresh per call so
+ * it always tracks `resetDb()` swaps in tests (wrapping is allocation-cheap).
+ * Lives here (not in client.ts) to keep client.ts type-only on this module —
+ * vectors.ts imports createDbClient as a value, so a client.ts→index.ts value
+ * import would close a dependency cycle (oxlint import/no-cycle).
+ */
+export function client(): DbClient {
+  return createDbClient(db());
+}
+
 // Re-export schema + SQL helper for convenience.
 export * from './schema';
+export type { DbClient };

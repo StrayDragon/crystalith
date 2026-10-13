@@ -5,7 +5,7 @@
 // chunks table for full text results.
 import { and, eq, inArray } from 'drizzle-orm';
 
-import { db } from '../db/index.ts';
+import { client, db } from '../db/index.ts';
 import { chunks, sources } from '../db/schema.ts';
 import {
   insertChunkVector,
@@ -46,12 +46,9 @@ export class EmbedStrategy implements RAGStrategy {
    * Bumps the notebook's vector_epoch so cached retrievals are invalidated.
    */
   async indexSource(sourceId: number, notebookId: number): Promise<void> {
-    const chunkRows = db()
-      .select()
-      .from(chunks)
-      .where(eq(chunks.sourceId, sourceId))
-      .orderBy(chunks.chunkIndex)
-      .all();
+    const chunkRows = await client().all(
+      db().select().from(chunks).where(eq(chunks.sourceId, sourceId)).orderBy(chunks.chunkIndex),
+    );
 
     const texts = chunkRows.map((c) => c.text);
     const batchSize = this.batchSize;
@@ -62,7 +59,7 @@ export class EmbedStrategy implements RAGStrategy {
 
       for (let j = 0; j < batch.length; j++) {
         const chunkRow = chunkRows[i + j];
-        insertChunkVector(db(), chunkRow.id, notebookId, sourceId, embeddings[j]);
+        await insertChunkVector(db(), chunkRow.id, notebookId, sourceId, embeddings[j]);
       }
     }
     // New vectors invalidate cached retrievals for this notebook.
@@ -93,7 +90,7 @@ export class EmbedStrategy implements RAGStrategy {
 
     // chunk_id reuse path: skip embed/search/cache, fetch directly.
     if (opts?.chunkIds?.length) {
-      return applyDiversity(this.fetchByIds(opts.chunkIds, notebookId), opts.maxPerSource);
+      return applyDiversity(await this.fetchByIds(opts.chunkIds, notebookId), opts.maxPerSource);
     }
 
     // Epoch cache: identical query+params within the same epoch skips re-embed.
@@ -128,7 +125,7 @@ export class EmbedStrategy implements RAGStrategy {
     sourceIds?: number[],
   ): Promise<ChunkResult[]> {
     const queryVec = await embedSingle(query);
-    const hits = searchVectors(db(), queryVec, notebookId, topK, sourceIds);
+    const hits = await searchVectors(db(), queryVec, notebookId, topK, sourceIds);
     return hits
       .map((h) => ({
         chunkId: h.rowid,
@@ -142,18 +139,19 @@ export class EmbedStrategy implements RAGStrategy {
   }
 
   /** Fetch specific chunks by id (reuse path), scoped to a notebook via sources. */
-  private fetchByIds(chunkIds: number[], notebookId: number): ChunkResult[] {
-    const rows = db()
-      .select({
-        id: chunks.id,
-        text: chunks.text,
-        sourceId: chunks.sourceId,
-        chunkIndex: chunks.chunkIndex,
-      })
-      .from(chunks)
-      .innerJoin(sources, eq(chunks.sourceId, sources.id))
-      .where(and(inArray(chunks.id, chunkIds), eq(sources.notebookId, notebookId)))
-      .all();
+  private async fetchByIds(chunkIds: number[], notebookId: number): Promise<ChunkResult[]> {
+    const rows = await client().all(
+      db()
+        .select({
+          id: chunks.id,
+          text: chunks.text,
+          sourceId: chunks.sourceId,
+          chunkIndex: chunks.chunkIndex,
+        })
+        .from(chunks)
+        .innerJoin(sources, eq(chunks.sourceId, sources.id))
+        .where(and(inArray(chunks.id, chunkIds), eq(sources.notebookId, notebookId))),
+    );
     return rows.map((r) => ({
       chunkId: r.id,
       text: r.text,
@@ -168,13 +166,13 @@ export class EmbedStrategy implements RAGStrategy {
    * Check if a notebook has any indexed vectors.
    */
   async isIndexed(notebookId: number): Promise<boolean> {
-    return countVectors(db(), notebookId) > 0;
+    return (await countVectors(db(), notebookId)) > 0;
   }
 
   /**
    * Delete all vectors for a source.
    */
   async deleteSource(sourceId: number): Promise<void> {
-    deleteSourceVectors(db(), sourceId);
+    await deleteSourceVectors(db(), sourceId);
   }
 }

@@ -37,7 +37,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { Elysia } from 'elysia';
 import { z } from 'zod';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import {
   chunks,
   notebookExtractorPolicies,
@@ -333,11 +333,12 @@ async function handleSourceUpload(
   // c44: Dedup check — gated by config (v1 source_ingestion.dedup.enabled)
   const dedupKey = getDedupEnabled() ? uploadDedupKey(buffer) : undefined;
   if (dedupKey && dedupAction !== 'create_new') {
-    const hit = db()
-      .select({ id: sources.id })
-      .from(sources)
-      .where(and(eq(sources.notebookId, notebookId), eq(sources.dedupKey, dedupKey)))
-      .get();
+    const hit = await client().get(
+      db()
+        .select({ id: sources.id })
+        .from(sources)
+        .where(and(eq(sources.notebookId, notebookId), eq(sources.dedupKey, dedupKey))),
+    );
     if (hit) {
       if (dedupAction === 'prompt') {
         throw new AppHttpError(ErrorCode.CONFLICT, 'Source dedup hit', {
@@ -345,7 +346,7 @@ async function handleSourceUpload(
         });
       }
       if (dedupAction === 'reuse') {
-        return { reused: true as const, source: handleGetSource(hit.id, notebookId) };
+        return { reused: true as const, source: await handleGetSource(hit.id, notebookId) };
       }
     }
   }
@@ -359,46 +360,45 @@ async function handleSourceUpload(
   });
 }
 
-function handleGetSource(id: number, notebookId: number) {
-  const row = requireOwnedRow(sources, id, notebookId, 'Source');
+async function handleGetSource(id: number, notebookId: number) {
+  const row = await requireOwnedRow(sources, id, notebookId, 'Source');
 
-  const c = db()
-    .select({ c: sql<number>`COUNT(*)` })
-    .from(chunks)
-    .where(eq(chunks.sourceId, id))
-    .get();
+  const c = await client().get(
+    db()
+      .select({ c: sql<number>`COUNT(*)` })
+      .from(chunks)
+      .where(eq(chunks.sourceId, id)),
+  );
   const chunkCount = c?.c ?? 0;
 
-  const tagRows = db()
-    .select({ name: sourceTags.name })
-    .from(sourceTagMap)
-    .innerJoin(sourceTags, eq(sourceTagMap.tagId, sourceTags.id))
-    .where(eq(sourceTagMap.sourceId, id))
-    .all();
+  const tagRows = await client().all(
+    db()
+      .select({ name: sourceTags.name })
+      .from(sourceTagMap)
+      .innerJoin(sourceTags, eq(sourceTagMap.tagId, sourceTags.id))
+      .where(eq(sourceTagMap.sourceId, id)),
+  );
   const tags = tagRows.map((t) => t.name);
 
   return serializeSource({ ...row, chunkCount, tags });
 }
 
-function handleDeleteSource(id: number, notebookId: number, set: UploadSet) {
-  const row = requireOwnedRow(sources, id, notebookId, 'Source');
+async function handleDeleteSource(id: number, notebookId: number, set: UploadSet) {
+  const row = await requireOwnedRow(sources, id, notebookId, 'Source');
 
-  deleteSourceVectors(db(), id);
-  db().delete(sources).where(eq(sources.id, id)).run();
+  await deleteSourceVectors(db(), id);
+  await client().run(db().delete(sources).where(eq(sources.id, id)));
   if (row.notebookId) bumpSourcesEpoch(row.notebookId);
 
   set.status = 204;
   return;
 }
 
-function handleGetSourceChunks(id: number, notebookId: number) {
-  requireOwnedRow(sources, id, notebookId, 'Source');
-  const rows = db()
-    .select()
-    .from(chunks)
-    .where(eq(chunks.sourceId, id))
-    .orderBy(chunks.chunkIndex)
-    .all();
+async function handleGetSourceChunks(id: number, notebookId: number) {
+  await requireOwnedRow(sources, id, notebookId, 'Source');
+  const rows = await client().all(
+    db().select().from(chunks).where(eq(chunks.sourceId, id)).orderBy(chunks.chunkIndex),
+  );
   return rows.map((c) => ({
     id: c.id,
     chunkIndex: c.chunkIndex,
@@ -410,7 +410,7 @@ function handleGetSourceChunks(id: number, notebookId: number) {
 }
 
 async function handleReEmbedSource(id: number, notebookId: number) {
-  const row = requireOwnedRow(sources, id, notebookId, 'Source');
+  const row = await requireOwnedRow(sources, id, notebookId, 'Source');
   if (row.status !== 'failed') {
     throw new AppHttpError(
       ErrorCode.INVALID_REQUEST,
@@ -418,45 +418,47 @@ async function handleReEmbedSource(id: number, notebookId: number) {
     );
   }
 
-  db()
-    .update(sources)
-    .set({
-      status: 'processing',
-      errorCode: null,
-      errorMessage: null,
-      recoveryHint: null,
-      lastErrorAt: null,
-    })
-    .where(eq(sources.id, id))
-    .run();
+  await client().run(
+    db()
+      .update(sources)
+      .set({
+        status: 'processing',
+        errorCode: null,
+        errorMessage: null,
+        recoveryHint: null,
+        lastErrorAt: null,
+      })
+      .where(eq(sources.id, id)),
+  );
 
   try {
     const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
     const strategy = new EmbedStrategy();
-    deleteSourceVectors(db(), id);
+    await deleteSourceVectors(db(), id);
     await strategy.indexSource(id, row.notebookId);
-    db().update(sources).set({ status: 'ready' }).where(eq(sources.id, id)).run();
+    await client().run(db().update(sources).set({ status: 'ready' }).where(eq(sources.id, id)));
     bumpSourcesEpoch(row.notebookId);
     // c74: re-embed success → refresh auto-summary asynchronously
     const { scheduleSourceSummary } = await import('./source-summary.ts');
     scheduleSourceSummary(id, { force: true });
     return { sourceId: id, reEmbedded: true as const };
   } catch (error) {
-    db()
-      .update(sources)
-      .set({
-        status: 'failed',
-        errorMessage: error instanceof Error ? error.message : String(error),
-      })
-      .where(eq(sources.id, id))
-      .run();
+    await client().run(
+      db()
+        .update(sources)
+        .set({
+          status: 'failed',
+          errorMessage: error instanceof Error ? error.message : String(error),
+        })
+        .where(eq(sources.id, id)),
+    );
     bumpSourcesEpoch(row.notebookId);
     throw error;
   }
 }
 
 /** Enrich source rows with chunk counts and tags (batched: 2 queries per list, not per row). */
-function enrichSources(
+async function enrichSources(
   rows: Array<{
     id: number;
     notebookId: number;
@@ -478,22 +480,26 @@ function enrichSources(
   const ids = rows.map((r) => r.id);
 
   const chunkCountById = new Map(
-    db()
-      .select({ sourceId: chunks.sourceId, c: sql<number>`COUNT(*)` })
-      .from(chunks)
-      .where(inArray(chunks.sourceId, ids))
-      .groupBy(chunks.sourceId)
-      .all()
-      .map((r) => [r.sourceId, r.c] as const),
+    (
+      await client().all(
+        db()
+          .select({ sourceId: chunks.sourceId, c: sql<number>`COUNT(*)` })
+          .from(chunks)
+          .where(inArray(chunks.sourceId, ids))
+          .groupBy(chunks.sourceId),
+      )
+    ).map((r) => [r.sourceId, r.c] as const),
   );
 
   const tagsBySourceId = new Map<number, string[]>();
-  for (const t of db()
-    .select({ sourceId: sourceTagMap.sourceId, name: sourceTags.name })
-    .from(sourceTagMap)
-    .innerJoin(sourceTags, eq(sourceTagMap.tagId, sourceTags.id))
-    .where(inArray(sourceTagMap.sourceId, ids))
-    .all()) {
+  const tagRows = await client().all(
+    db()
+      .select({ sourceId: sourceTagMap.sourceId, name: sourceTags.name })
+      .from(sourceTagMap)
+      .innerJoin(sourceTags, eq(sourceTagMap.tagId, sourceTags.id))
+      .where(inArray(sourceTagMap.sourceId, ids)),
+  );
+  for (const t of tagRows) {
     const names = tagsBySourceId.get(t.sourceId) ?? [];
     names.push(t.name);
     tagsBySourceId.set(t.sourceId, names);
@@ -516,30 +522,33 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   // List sources for a notebook (c39: tag filter + sortBy; W4: batched size sort + enrichment)
   .get(
     '/notebooks/:nid/sources',
-    ({ params, query }) => {
+    async ({ params, query }) => {
       const nid = params.nid;
       const tagFilter = query.tag;
       const sortBy = query.sortBy ?? 'date';
       const sortOrder = query.sortOrder ?? 'desc';
       const { offset, limit } = query;
 
-      let rows = db().select().from(sources).where(eq(sources.notebookId, nid)).all();
+      let rows = await client().all(db().select().from(sources).where(eq(sources.notebookId, nid)));
 
       // Tag filter
       if (tagFilter) {
-        const tagRow = db()
-          .select({ id: sourceTags.id })
-          .from(sourceTags)
-          .where(and(eq(sourceTags.notebookId, nid), eq(sourceTags.name, tagFilter)))
-          .get();
+        const tagRow = await client().get(
+          db()
+            .select({ id: sourceTags.id })
+            .from(sourceTags)
+            .where(and(eq(sourceTags.notebookId, nid), eq(sourceTags.name, tagFilter))),
+        );
         if (tagRow) {
           const taggedSourceIds = new Set(
-            db()
-              .select({ sourceId: sourceTagMap.sourceId })
-              .from(sourceTagMap)
-              .where(eq(sourceTagMap.tagId, tagRow.id))
-              .all()
-              .map((r) => r.sourceId),
+            (
+              await client().all(
+                db()
+                  .select({ sourceId: sourceTagMap.sourceId })
+                  .from(sourceTagMap)
+                  .where(eq(sourceTagMap.tagId, tagRow.id)),
+              )
+            ).map((r) => r.sourceId),
           );
           rows = rows.filter((r) => taggedSourceIds.has(r.id));
         }
@@ -549,18 +558,20 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       const chunkCountById =
         sortBy === 'size'
           ? new Map(
-              db()
-                .select({ sourceId: chunks.sourceId, c: sql<number>`COUNT(*)` })
-                .from(chunks)
-                .where(
-                  inArray(
-                    chunks.sourceId,
-                    rows.map((r) => r.id),
-                  ),
+              (
+                await client().all(
+                  db()
+                    .select({ sourceId: chunks.sourceId, c: sql<number>`COUNT(*)` })
+                    .from(chunks)
+                    .where(
+                      inArray(
+                        chunks.sourceId,
+                        rows.map((r) => r.id),
+                      ),
+                    )
+                    .groupBy(chunks.sourceId),
                 )
-                .groupBy(chunks.sourceId)
-                .all()
-                .map((r) => [r.sourceId, r.c] as const),
+              ).map((r) => [r.sourceId, r.c] as const),
             )
           : null;
       rows.sort((a, b) => {
@@ -581,7 +592,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         return sortOrder === 'asc' ? cmp : -cmp;
       });
 
-      return paginateItems(enrichSources(rows), offset, limit);
+      return paginateItems(await enrichSources(rows), offset, limit);
     },
     {
       params: z.object({ nid: PathId }),
@@ -619,10 +630,10 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   // Delete a source (nested canonical)
   .delete(
     '/notebooks/:nid/sources/:sid',
-    ({ params, set }) => {
+    async ({ params, set }) => {
       const nid = params.nid;
       const sid = params.sid;
-      handleDeleteSource(sid, nid, set);
+      await handleDeleteSource(sid, nid, set);
     },
     { params: z.object({ nid: PathId, sid: PathId }), response: { 204: Empty204Schema } },
   )
@@ -653,9 +664,9 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
 
   .post(
     '/notebooks/:nid/sources/tags',
-    ({ params, body, set }) => {
+    async ({ params, body, set }) => {
       const nid = params.nid;
-      const tag = createTag(nid, body.name);
+      const tag = await createTag(nid, body.name);
       set.status = 201;
       return tag;
     },
@@ -829,7 +840,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       const nid = params.nid;
       const outcome = await ingestFromUrl(nid, body, query);
       if (outcome.kind === 'reused') {
-        return { reused: true as const, source: handleGetSource(outcome.sourceId, nid) };
+        return { reused: true as const, source: await handleGetSource(outcome.sourceId, nid) };
       }
       if (outcome.kind === 'created-link') {
         set.status = 201;
@@ -850,11 +861,12 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     async ({ params }) => {
       await pluginRegistry.ensureLoaded();
       const nid = params.nid;
-      const policy = db()
-        .select()
-        .from(notebookExtractorPolicies)
-        .where(eq(notebookExtractorPolicies.notebookId, nid))
-        .get();
+      const policy = await client().get(
+        db()
+          .select()
+          .from(notebookExtractorPolicies)
+          .where(eq(notebookExtractorPolicies.notebookId, nid)),
+      );
       const modeParsed = ExtractorPolicyModeSchema.safeParse(policy?.mode ?? 'inherit_global');
       const mode: ExtractorPolicyMode = modeParsed.success ? modeParsed.data : 'inherit_global';
       const enabledExtractors = policy?.enabledExtractors ?? null;
@@ -896,35 +908,39 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
           `Unknown extractor(s): ${invalid.join(', ')}`,
         );
       }
-      const existing = db()
-        .select()
-        .from(notebookExtractorPolicies)
-        .where(eq(notebookExtractorPolicies.notebookId, nid))
-        .get();
+      const existing = await client().get(
+        db()
+          .select()
+          .from(notebookExtractorPolicies)
+          .where(eq(notebookExtractorPolicies.notebookId, nid)),
+      );
       if (existing) {
-        db()
-          .update(notebookExtractorPolicies)
-          .set({
-            mode: mode ?? existing.mode,
-            enabledExtractors: enabledExtractorsBody ?? existing.enabledExtractors,
-          })
-          .where(eq(notebookExtractorPolicies.notebookId, nid))
-          .run();
+        await client().run(
+          db()
+            .update(notebookExtractorPolicies)
+            .set({
+              mode: mode ?? existing.mode,
+              enabledExtractors: enabledExtractorsBody ?? existing.enabledExtractors,
+            })
+            .where(eq(notebookExtractorPolicies.notebookId, nid)),
+        );
       } else {
-        db()
-          .insert(notebookExtractorPolicies)
-          .values({
-            notebookId: nid,
-            mode: mode ?? 'inherit_global',
-            enabledExtractors: enabledExtractorsBody ?? null,
-          })
-          .run();
+        await client().run(
+          db()
+            .insert(notebookExtractorPolicies)
+            .values({
+              notebookId: nid,
+              mode: mode ?? 'inherit_global',
+              enabledExtractors: enabledExtractorsBody ?? null,
+            }),
+        );
       }
-      const updated = db()
-        .select()
-        .from(notebookExtractorPolicies)
-        .where(eq(notebookExtractorPolicies.notebookId, nid))
-        .get();
+      const updated = await client().get(
+        db()
+          .select()
+          .from(notebookExtractorPolicies)
+          .where(eq(notebookExtractorPolicies.notebookId, nid)),
+      );
       const modeParsed = ExtractorPolicyModeSchema.safeParse(updated!.mode);
       const resolvedMode: ExtractorPolicyMode = modeParsed.success
         ? modeParsed.data

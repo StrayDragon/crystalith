@@ -30,7 +30,7 @@ import { z } from 'zod';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { outputs, notebooks, sources, chunks } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
@@ -50,8 +50,11 @@ const OutputExportResponseSchema = z.union([
   z.custom<Response>((value) => value instanceof Response),
 ]);
 
-function requireOutputInNotebook(id: number, notebookId: number): typeof outputs.$inferSelect {
-  return requireOwnedRow(outputs, id, notebookId, 'Output');
+async function requireOutputInNotebook(
+  id: number,
+  notebookId: number,
+): Promise<typeof outputs.$inferSelect> {
+  return await requireOwnedRow(outputs, id, notebookId, 'Output');
 }
 
 // ---------------------------------------------------------------------------
@@ -280,7 +283,7 @@ async function handleGenerateOutput(
   const normalizedType = (type ?? defaultOutputType('output')).toUpperCase();
 
   // Verify notebook
-  const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
+  const nb = await client().get(db().select().from(notebooks).where(eq(notebooks.id, notebookId)));
   if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
 
   // Manual markdown note: schema already allows `content`; honor it for PARAGRAPH
@@ -305,22 +308,23 @@ async function handleGenerateOutput(
         .slice(0, 80) ||
       '笔记';
     const content = { ...parsedContent.data, title, text };
-    const output = db()
-      .insert(outputs)
-      .values({
-        notebookId,
-        type: 'PARAGRAPH',
-        prompt: promptRaw?.trim() || title,
-        chunkIds: chunkIds?.length ? chunkIds : [],
-        generationMeta: {
-          generationTypeId: 'output',
-          outputType: 'PARAGRAPH',
-          completion: 'manual-note',
-        },
-        content,
-      })
-      .returning()
-      .get();
+    const output = (await client().get(
+      db()
+        .insert(outputs)
+        .values({
+          notebookId,
+          type: 'PARAGRAPH',
+          prompt: promptRaw?.trim() || title,
+          chunkIds: chunkIds?.length ? chunkIds : [],
+          generationMeta: {
+            generationTypeId: 'output',
+            outputType: 'PARAGRAPH',
+            completion: 'manual-note',
+          },
+          content,
+        })
+        .returning(),
+    ))!;
     /* oxlint-enable typescript/prefer-nullish-coalescing */
     set.status = 201;
     return serializeOutput(output);
@@ -406,24 +410,30 @@ async function handleGenerateOutput(
   }
 
   // c42: return v1 OutputRead contract (snake_case) instead of PipelineResult
-  const row = db().select().from(outputs).where(eq(outputs.id, result.outputId)).get();
+  const row = await client().get(
+    db().select().from(outputs).where(eq(outputs.id, result.outputId)),
+  );
   set.status = 201;
   return serializeOutput(row!);
 }
 
-function handleListOutputs(notebookId: number, offset: number, limit: number) {
+async function handleListOutputs(notebookId: number, offset: number, limit: number) {
   const total =
-    db().select({ n: count() }).from(outputs).where(eq(outputs.notebookId, notebookId)).get()?.n ??
-    0;
+    (
+      await client().get(
+        db().select({ n: count() }).from(outputs).where(eq(outputs.notebookId, notebookId)),
+      )
+    )?.n ?? 0;
 
-  const rows = db()
-    .select()
-    .from(outputs)
-    .where(eq(outputs.notebookId, notebookId))
-    .orderBy(desc(outputs.createdAt))
-    .limit(limit)
-    .offset(offset)
-    .all();
+  const rows = await client().all(
+    db()
+      .select()
+      .from(outputs)
+      .where(eq(outputs.notebookId, notebookId))
+      .orderBy(desc(outputs.createdAt))
+      .limit(limit)
+      .offset(offset),
+  );
 
   return {
     items: rows.map(serializeOutputListItem),
@@ -433,20 +443,20 @@ function handleListOutputs(notebookId: number, offset: number, limit: number) {
   };
 }
 
-function handleGetOutput(id: number, notebookId: number) {
-  const row = requireOutputInNotebook(id, notebookId);
+async function handleGetOutput(id: number, notebookId: number) {
+  const row = await requireOutputInNotebook(id, notebookId);
   return serializeOutput(row);
 }
 
-function handleDeleteOutput(id: number, notebookId: number, set: SetStatus) {
-  requireOutputInNotebook(id, notebookId);
-  db().delete(outputs).where(eq(outputs.id, id)).run();
+async function handleDeleteOutput(id: number, notebookId: number, set: SetStatus) {
+  await requireOutputInNotebook(id, notebookId);
+  await client().run(db().delete(outputs).where(eq(outputs.id, id)));
   set.status = 204;
   return;
 }
 
-function handleExportOutput(id: number, notebookId: number, format: 'markdown' | 'json') {
-  const row = requireOutputInNotebook(id, notebookId);
+async function handleExportOutput(id: number, notebookId: number, format: 'markdown' | 'json') {
+  const row = await requireOutputInNotebook(id, notebookId);
 
   const exportedAt = new Date().toISOString();
 
@@ -459,7 +469,7 @@ function handleExportOutput(id: number, notebookId: number, format: 'markdown' |
   const citations = collectCitedCitations(isRecord(row.content) ? row.content : null);
   const sourceIds = [...new Set(citations.map((c) => c.sourceId))];
   const sourceRows = sourceIds.length
-    ? db().select().from(sources).where(inArray(sources.id, sourceIds)).all()
+    ? await client().all(db().select().from(sources).where(inArray(sources.id, sourceIds)))
     : [];
 
   if (format === 'json') {
@@ -511,7 +521,7 @@ function handleExportOutput(id: number, notebookId: number, format: 'markdown' |
 }
 
 async function handleConvertOutputToSource(id: number, notebookId: number, set: SetStatus) {
-  const row = requireOutputInNotebook(id, notebookId);
+  const row = await requireOutputInNotebook(id, notebookId);
 
   // Render output content to type-aware markdown (not raw JSON)
   const markdown = renderOutputToMarkdown(
@@ -524,33 +534,35 @@ async function handleConvertOutputToSource(id: number, notebookId: number, set: 
   const chunkTexts = splitTextToChunks(markdown, 500, 50);
   const filename = `output-${row.id}-${row.type}.md`;
 
-  const sourceRow = db()
-    .insert(sources)
-    .values({
-      notebookId: row.notebookId,
-      filename,
-      mimeType: 'text/markdown',
-      parserType: 'text',
-      status: 'processing',
-      metadata: { type: row.type, source: 'output_conversion' },
-    })
-    .returning()
-    .get();
+  const sourceRow = (await client().get(
+    db()
+      .insert(sources)
+      .values({
+        notebookId: row.notebookId,
+        filename,
+        mimeType: 'text/markdown',
+        parserType: 'text',
+        status: 'processing',
+        metadata: { type: row.type, source: 'output_conversion' },
+      })
+      .returning(),
+  ))!;
 
   // Create chunks
   let offset = 0;
   for (let i = 0; i < chunkTexts.length; i++) {
     const text = chunkTexts[i];
-    db()
-      .insert(chunks)
-      .values({
-        sourceId: sourceRow.id,
-        chunkIndex: i,
-        text,
-        startOffset: offset,
-        endOffset: offset + text.length,
-      })
-      .run();
+    await client().run(
+      db()
+        .insert(chunks)
+        .values({
+          sourceId: sourceRow.id,
+          chunkIndex: i,
+          text,
+          startOffset: offset,
+          endOffset: offset + text.length,
+        }),
+    );
     // +2 for paragraph separator
     offset += text.length + 2;
   }
@@ -560,18 +572,21 @@ async function handleConvertOutputToSource(id: number, notebookId: number, set: 
     const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
     const strategy = new EmbedStrategy();
     await strategy.indexSource(sourceRow.id, sourceRow.notebookId);
-    db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)).run();
+    await client().run(
+      db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)),
+    );
     bumpSourcesEpoch(sourceRow.notebookId);
   } catch (error) {
     logger.error('[outputs] convert-to-source embed failed:', error);
-    db()
-      .update(sources)
-      .set({
-        status: 'failed',
-        errorMessage: error instanceof Error ? error.message : String(error),
-      })
-      .where(eq(sources.id, sourceRow.id))
-      .run();
+    await client().run(
+      db()
+        .update(sources)
+        .set({
+          status: 'failed',
+          errorMessage: error instanceof Error ? error.message : String(error),
+        })
+        .where(eq(sources.id, sourceRow.id)),
+    );
     bumpSourcesEpoch(sourceRow.notebookId);
   }
 
@@ -625,10 +640,10 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
   )
   .delete(
     '/notebooks/:nid/outputs/:id',
-    ({ params, set }) => {
+    async ({ params, set }) => {
       const nid = params.nid;
       const id = params.id;
-      handleDeleteOutput(id, nid, set);
+      await handleDeleteOutput(id, nid, set);
     },
     { params: z.object({ nid: PathId, id: PathId }), response: { 204: Empty204Schema } },
   )

@@ -27,10 +27,10 @@ export interface ChunkRow {
  * version: snippet NOT trimmed, page/paragraph via the strict
  * `typeof === 'number'` predicate (no string coercion).
  */
-function buildCitationMap(chunkRows: ChunkRow[]): {
+async function buildCitationMap(chunkRows: ChunkRow[]): Promise<{
   citations: Citation[];
   citationMap: Map<number, Citation>;
-} {
+}> {
   if (chunkRows.length === 0) return { citations: [], citationMap: new Map() };
 
   const retrieved = chunkRows.map((c) => ({
@@ -40,7 +40,7 @@ function buildCitationMap(chunkRows: ChunkRow[]): {
     text: c.text,
     score: c.score,
   }));
-  const citations = hydrateCitations(retrieved);
+  const citations = await hydrateCitations(retrieved);
 
   const citationMap = new Map<number, Citation>();
   // 1-based index

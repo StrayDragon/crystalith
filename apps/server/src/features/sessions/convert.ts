@@ -10,7 +10,7 @@ import { eq } from 'drizzle-orm';
 import { NotFoundError } from 'elysia';
 import type { z } from 'zod';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { chunks, messages, outputs, sessions, sources } from '../../db/schema.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { logger } from '../../shared/logger.ts';
@@ -24,13 +24,10 @@ type ConvertToOutputBody = z.infer<typeof SessionConvertToOutputRequestSchema>;
  * messageIds. 404 when any requested id is missing or nothing remains
  * (v1 api.py:262-268 / api.py:417-428).
  */
-function loadSessionMessages(sid: number, messageIds?: number[]) {
-  let msgRows = db()
-    .select()
-    .from(messages)
-    .where(eq(messages.sessionId, sid))
-    .orderBy(messages.createdAt)
-    .all();
+async function loadSessionMessages(sid: number, messageIds?: number[]) {
+  let msgRows = await client().all(
+    db().select().from(messages).where(eq(messages.sessionId, sid)).orderBy(messages.createdAt),
+  );
   if (messageIds && messageIds.length > 0) {
     const wanted = new Set(messageIds);
     const missing = messageIds.filter((id) => !msgRows.some((m) => m.id === id));
@@ -68,8 +65,8 @@ export async function convertSessionToSource(
   sid: number,
   body: ConvertToSourceBody,
 ): Promise<{ sourceId: number; filename: string; chunkCount: number; messageCount: number }> {
-  const sessionRow = requireOwnedRow(sessions, sid, nid, 'Session');
-  const msgRows = loadSessionMessages(sid, body.messageIds);
+  const sessionRow = await requireOwnedRow(sessions, sid, nid, 'Session');
+  const msgRows = await loadSessionMessages(sid, body.messageIds);
 
   // c52: v1 text format (api.py:110-123) — Chinese role labels + \n\n join.
   const text = msgRows
@@ -84,20 +81,21 @@ export async function convertSessionToSource(
   const filename = `对话_${title}_${timestamp}.md`;
 
   // Create source
-  const source = db()
-    .insert(sources)
-    .values({
-      notebookId: nid,
-      filename,
-      status: 'processing',
-      metadata: {
-        convertedFromSession: sid,
-        conversionTimestamp: new Date().toISOString(),
-        messageCount: msgRows.length,
-      },
-    })
-    .returning()
-    .get();
+  const source = (await client().get(
+    db()
+      .insert(sources)
+      .values({
+        notebookId: nid,
+        filename,
+        status: 'processing',
+        metadata: {
+          convertedFromSession: sid,
+          conversionTimestamp: new Date().toISOString(),
+          messageCount: msgRows.length,
+        },
+      })
+      .returning(),
+  ))!;
 
   // Chunk the conversation text
   const { chunkText } = await import('../../rag/chunker.ts');
@@ -106,16 +104,17 @@ export async function convertSessionToSource(
   // Insert chunks
   const chunkRows: Array<{ id: number; text: string }> = [];
   for (const chunk of reportChunks) {
-    const chunkRow = db()
-      .insert(chunks)
-      .values({
-        sourceId: source.id,
-        chunkIndex: chunk.index,
-        text: chunk.text,
-        metadata: { source_type: 'session_conversion' },
-      })
-      .returning()
-      .get();
+    const chunkRow = (await client().get(
+      db()
+        .insert(chunks)
+        .values({
+          sourceId: source.id,
+          chunkIndex: chunk.index,
+          text: chunk.text,
+          metadata: { source_type: 'session_conversion' },
+        })
+        .returning(),
+    ))!;
     chunkRows.push({ id: chunkRow.id, text: chunk.text });
   }
 
@@ -127,30 +126,35 @@ export async function convertSessionToSource(
       const vectors = await embedBatch(chunkRows.map((c) => c.text));
 
       for (const [i, vec] of vectors.entries()) {
-        insertChunkVector(db(), chunkRows[i].id, nid, source.id, vec);
+        await insertChunkVector(db(), chunkRows[i].id, nid, source.id, vec);
       }
 
       const { bumpVectorEpoch, bumpSourcesEpoch } = await import('../../rag/cache.ts');
       bumpVectorEpoch(nid);
       bumpSourcesEpoch(nid);
       // Only set ready after successful embedding (c39: fix ready-before-vectors race)
-      db().update(sources).set({ status: 'ready' }).where(eq(sources.id, source.id)).run();
+      await client().run(
+        db().update(sources).set({ status: 'ready' }).where(eq(sources.id, source.id)),
+      );
     } catch (error) {
       logger.error('[sessions] convert embedding failed:', error);
-      db()
-        .update(sources)
-        .set({
-          status: 'failed',
-          errorMessage: error instanceof Error ? error.message : 'Embedding failed',
-        })
-        .where(eq(sources.id, source.id))
-        .run();
+      await client().run(
+        db()
+          .update(sources)
+          .set({
+            status: 'failed',
+            errorMessage: error instanceof Error ? error.message : 'Embedding failed',
+          })
+          .where(eq(sources.id, source.id)),
+      );
       throw new AppHttpError(ErrorCode.INTERNAL_ERROR, 'Failed to embed session source', {
         reason: error instanceof Error ? error.message : String(error),
       });
     }
   } else {
-    db().update(sources).set({ status: 'ready' }).where(eq(sources.id, source.id)).run();
+    await client().run(
+      db().update(sources).set({ status: 'ready' }).where(eq(sources.id, source.id)),
+    );
   }
 
   return {
@@ -162,18 +166,18 @@ export async function convertSessionToSource(
 }
 
 /** Organize session messages into an output (PARAGRAPH / BULLETS / STRUCTURED) (c34/c39/c52). */
-export function convertSessionToOutput(
+export async function convertSessionToOutput(
   nid: number,
   sid: number,
   body: ConvertToOutputBody,
-): {
+): Promise<{
   outputId: number;
   outputType: ConvertToOutputBody['outputType'];
   title: string;
   messageCount: number;
-} {
-  const sessionRow = requireOwnedRow(sessions, sid, nid, 'Session');
-  const msgRows = loadSessionMessages(sid, body.messageIds);
+}> {
+  const sessionRow = await requireOwnedRow(sessions, sid, nid, 'Session');
+  const msgRows = await loadSessionMessages(sid, body.messageIds);
   const { outputType } = body;
 
   // c52: v1 text format (api.py:438 text_format="raw") — plain content, no
@@ -221,17 +225,18 @@ export function convertSessionToOutput(
   // Collect chunk_ids from message citations (v1 api.py:491-500, c39)
   const chunkIds = [...new Set(msgRows.flatMap((m) => citationChunkIds(m.citations)))];
 
-  const output = db()
-    .insert(outputs)
-    .values({
-      notebookId: nid,
-      type: outputType,
-      prompt: `Session conversion: ${title}`,
-      chunkIds,
-      content,
-    })
-    .returning()
-    .get();
+  const output = (await client().get(
+    db()
+      .insert(outputs)
+      .values({
+        notebookId: nid,
+        type: outputType,
+        prompt: `Session conversion: ${title}`,
+        chunkIds,
+        content,
+      })
+      .returning(),
+  ))!;
 
   return {
     outputId: output.id,

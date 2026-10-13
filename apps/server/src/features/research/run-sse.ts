@@ -4,7 +4,7 @@
 import type { ResearchGraphPatch } from '@crystalith/shared';
 import { eq } from 'drizzle-orm';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { researchRuns } from '../../db/schema.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { sseFrame, sseResponse } from '../../shared/sse-response.ts';
@@ -18,12 +18,8 @@ import {
 } from './research-core.ts';
 
 /** Replay current state to a new SSE subscriber, then keep listening. */
-export async function streamRun(
-  notebookId: number,
-  runId: number,
-  emit: SseEmit,
-): Promise<() => void> {
-  const row = requireRun(notebookId, runId);
+async function streamRun(notebookId: number, runId: number, emit: SseEmit): Promise<() => void> {
+  const row = await requireRun(notebookId, runId);
   const unsub = subscribeRun(runId, emit);
   emit('status', { status: row.status });
   const graph = getGraph(row);
@@ -46,8 +42,11 @@ export async function streamRun(
   return unsub;
 }
 
-export function createResearchSseResponse(notebookId: number, runId: number): Response {
-  requireRun(notebookId, runId);
+export async function createResearchSseResponse(
+  notebookId: number,
+  runId: number,
+): Promise<Response> {
+  await requireRun(notebookId, runId);
 
   let unsub: (() => void) | undefined;
   // Set by the terminal waiter; invoked when the client side dies so the
@@ -98,9 +97,11 @@ export function createResearchSseResponse(notebookId: number, runId: number): Re
           });
           onClosed = settleClosed;
 
-          const slowTick = () => {
+          const slowTick = async () => {
             if (done) return;
-            const row = db().select().from(researchRuns).where(eq(researchRuns.id, runId)).get();
+            const row = await client().get(
+              db().select().from(researchRuns).where(eq(researchRuns.id, runId)),
+            );
             if (row && isTerminalStatus(row.status)) {
               settleTerminal();
               return;

@@ -101,7 +101,7 @@ describe('runLoop chat mutex (W3 / r98)', () => {
     // poll then proceeds with the run; under the AI mock the whole pipeline
     // can finish fast, so assert the outcome (status left 'queued') instead
     // of racing the transient work_unit claim.
-    updateRun(runId, { llmActivity: null });
+    await updateRun(runId, { llmActivity: null });
     const deadline = Date.now() + 8000;
     while (Date.now() < deadline && row(runId).status === 'queued') {
       await Bun.sleep(50);
@@ -122,11 +122,11 @@ describe('runLoop chat mutex (W3 / r98)', () => {
 });
 
 describe('research settings SSOT (W3)', () => {
-  it('schema defaults equal the single defaults constant', () => {
+  it('schema defaults equal the single defaults constant', async () => {
     expect(ResearchSettingsSchema.parse({})).toEqual(RESEARCH_SETTINGS_DEFAULTS);
   });
 
-  it('node_chat_max_steps flows from config into getNodeChatMaxSteps', () => {
+  it('node_chat_max_steps flows from config into getNodeChatMaxSteps', async () => {
     resetConfig({
       models: { defaults: {}, available: [] },
       raw: { research: { node_chat_max_steps: 3 } },

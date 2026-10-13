@@ -231,7 +231,7 @@ describe('c117 r94: work-unit tool loop is bounded by config workUnitMaxSteps', 
 
     // The SERP hit is ingested as snippet-only evidence…
     const { listEvidences } = await import('../../src/features/research/research-core.ts');
-    const evidences = listEvidences(runId);
+    const evidences = await listEvidences(runId);
     expect(evidences).toHaveLength(1);
     expect(evidences[0]?.kind).toBe('web');
     expect(evidences[0]?.snippet).toBeTruthy();
@@ -325,7 +325,7 @@ function sseEventNames(schema: unknown): string[] {
 }
 
 describe('c117 r432: chat SSE is separate from the run stream event set', () => {
-  it('chat body events (chunk/proposal/done) are not run stream event names (schema lock)', () => {
+  it('chat body events (chunk/proposal/done) are not run stream event names (schema lock)', async () => {
     const runEvents = sseEventNames(ResearchStreamEventSchema);
     const chatEvents = sseEventNames(ResearchNodeChatStreamEventSchema);
 
@@ -353,7 +353,7 @@ describe('c117 r432: chat SSE is separate from the run stream event set', () => 
     };
     const runId = seedRun(graph);
 
-    const runRes = createResearchSseResponse(notebookId, runId);
+    const runRes = await createResearchSseResponse(notebookId, runId);
     const reader = (runRes.body as ReadableStream<Uint8Array>).getReader();
     const decoder = new TextDecoder();
     const readChunk = async (ms: number): Promise<string | null> =>
@@ -371,7 +371,7 @@ describe('c117 r432: chat SSE is separate from the run stream event set', () => 
     }
 
     // Node chat on the same run — body events must stay on the chat stream.
-    const chatRes = createNodeChatSseResponse(notebookId, runId, 'n1', { message: '你好' });
+    const chatRes = await createNodeChatSseResponse(notebookId, runId, 'n1', { message: '你好' });
     const chatText = await chatRes.text();
     expect(chatText).toContain('event: chunk');
     expect(chatText).toContain('event: done');

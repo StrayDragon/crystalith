@@ -54,7 +54,7 @@ let chunkSameId: number;
 let chunkOrthoId: number;
 let chunkMixId: number;
 
-beforeAll(() => {
+beforeAll(async () => {
   setupIntegrationEnv();
   resetConfig({
     models: {
@@ -107,12 +107,12 @@ beforeAll(() => {
     .get().id;
 
   // vec_chunks rowid must equal the chunk id (KNN joins chunks on it).
-  insertChunkVector(db(), chunkSameId, nbId, sourceId, [...MOCK_VECTOR]);
-  insertChunkVector(db(), chunkOrthoId, nbId, sourceId, orthogonalVector());
-  insertChunkVector(db(), chunkMixId, nbId, sourceId, mixtureVector());
+  await insertChunkVector(db(), chunkSameId, nbId, sourceId, [...MOCK_VECTOR]);
+  await insertChunkVector(db(), chunkOrthoId, nbId, sourceId, orthogonalVector());
+  await insertChunkVector(db(), chunkMixId, nbId, sourceId, mixtureVector());
 });
 
-afterAll(() => {
+afterAll(async () => {
   teardownIntegrationEnv();
   resetConfig();
 });
@@ -128,7 +128,7 @@ describe('r229 embed strategy converts distance to similarity', () => {
     expect(results).toHaveLength(3);
 
     // Raw distances straight from sqlite-vec for the same query vector.
-    const raw = searchVectors(db(), MOCK_VECTOR, nbId, 10);
+    const raw = await searchVectors(db(), MOCK_VECTOR, nbId, 10);
     const distanceByChunk = new Map(raw.map((hit) => [hit.rowid, hit.distance]));
 
     for (const result of results) {

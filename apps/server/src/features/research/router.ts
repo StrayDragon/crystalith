@@ -296,10 +296,10 @@ registerApiDoc([
 export const researchRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/research',
-    ({ params, body, set }) => {
+    async ({ params, body, set }) => {
       const nid = params.nid;
       const notebookId = resolveNestedNotebookId(nid, body.notebookId);
-      const run = createRun(notebookId, body);
+      const run = await createRun(notebookId, body);
       set.status = 201;
       return run;
     },
@@ -331,7 +331,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   )
   .get(
     '/notebooks/:nid/research/:rid/stream',
-    ({ params, request, server }) => {
+    async ({ params, request, server }) => {
       const { nid, rid } = parseRunScope(params);
       // Bun closes quiet SSE after idleTimeout (default 10s); keep run streams alive.
       try {
@@ -339,7 +339,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       } catch {
         // app.handle / non-Bun — no-op
       }
-      return createResearchSseResponse(nid, rid);
+      return await createResearchSseResponse(nid, rid);
     },
     { params: z.object({ nid: PathId, rid: PathId }) },
   )
@@ -509,9 +509,9 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   )
   .post(
     '/notebooks/:nid/research/:rid/revisions/:revId/fork-run',
-    ({ params, body, set }) => {
+    async ({ params, body, set }) => {
       const { nid, rid } = parseRunScope(params);
-      const run = forkRunFromRevision(nid, rid, params.revId);
+      const run = await forkRunFromRevision(nid, rid, params.revId);
       if (body.schedule) {
         scheduleRun(run.id);
       }

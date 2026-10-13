@@ -10,11 +10,11 @@ import type { QaControls } from '@crystalith/shared';
 // c122 typed-generation-framework: preset resolution is whitelist-based
 // across built-in + custom presets (r23), enabled-checked (r25), and the
 // bare `/prompt:<name>` form is a deterministic input error (r422).
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { promptPresets } from '../../db/schema.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 
-export interface QAPreset {
+interface QAPreset {
   name: string;
   /** Short label for the UI dropdown. */
   label: string;
@@ -26,7 +26,7 @@ export interface QAPreset {
 export type Directive = 'Sources_only' | 'Knowledge_only' | 'Mixed';
 
 /** Built-in QA preset names (UI + `/prompt:` directive). */
-export type QAPresetName = 'default' | 'analysis' | 'creative' | 'explainer' | 'stats';
+type QAPresetName = 'default' | 'analysis' | 'creative' | 'explainer' | 'stats';
 
 /**
  * c48: STATS_SYSTEM_PROMPT — verbatim port of v1 presets.py:59-66.
@@ -135,11 +135,10 @@ export function detectBarePromptDirective(question: string): string | null {
 }
 
 /** Stable whitelist for errors/usage hints: built-in registry order + custom triggers (r23). */
-export function listAllPresetNames(): string[] {
-  const customTriggers = db()
-    .select({ trigger: promptPresets.trigger })
-    .from(promptPresets)
-    .all()
+export async function listAllPresetNames(): Promise<string[]> {
+  const customTriggers = (
+    await client().all(db().select({ trigger: promptPresets.trigger }).from(promptPresets))
+  )
     .map((row) => row.trigger.trim().toLowerCase())
     .toSorted((a, b) => a.localeCompare(b));
   return [...Object.keys(PRESETS), ...customTriggers];
@@ -166,14 +165,12 @@ export async function resolveQaPreset(name: string): Promise<QaPresetResolution>
       source: 'builtin',
     };
   }
-  const custom = db()
-    .select()
-    .from(promptPresets)
-    .all()
-    .find((row) => row.trigger.trim().toLowerCase() === normalized);
+  const custom = (await client().all(db().select().from(promptPresets))).find(
+    (row) => row.trigger.trim().toLowerCase() === normalized,
+  );
   if (!custom) {
     throw new AppHttpError(ErrorCode.INVALID_REQUEST, `Unknown preset: ${name}`, {
-      availablePresets: listAllPresetNames(),
+      availablePresets: await listAllPresetNames(),
     });
   }
   if (!custom.enabled) {

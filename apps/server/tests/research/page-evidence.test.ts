@@ -48,7 +48,7 @@ beforeAll(() => {
 afterAll(teardownIntegrationEnv);
 
 describe('research-budget helpers', () => {
-  it('computeMaxPageFetches = max(1, ceil(maxSearches * pageRatio))', () => {
+  it('computeMaxPageFetches = max(1, ceil(maxSearches * pageRatio))', async () => {
     expect(computeMaxPageFetches(20, 1.5)).toBe(30);
     expect(computeMaxPageFetches(8, 1.5)).toBe(12);
     expect(computeMaxPageFetches(1, 1.5)).toBe(2);
@@ -56,7 +56,7 @@ describe('research-budget helpers', () => {
     expect(computeMaxPageFetches(0, 1.5)).toBe(1);
   });
 
-  it('computePageSoftCap divides remaining pages across live nodes', () => {
+  it('computePageSoftCap divides remaining pages across live nodes', async () => {
     expect(computePageSoftCap(30, 3)).toBe(10);
     expect(computePageSoftCap(5, 3)).toBe(2);
     expect(computePageSoftCap(0, 3)).toBe(1);
@@ -65,7 +65,7 @@ describe('research-budget helpers', () => {
 });
 
 describe('ingest fetchPage same-URL upgrade + truncate', () => {
-  it('upgrades existing web evidence content without new row; pagesDelta=1', () => {
+  it('upgrades existing web evidence content without new row; pagesDelta=1', async () => {
     const run = getOrm()
       .insert(researchRuns)
       .values({
@@ -85,7 +85,7 @@ describe('ingest fetchPage same-URL upgrade + truncate', () => {
       .returning()
       .get();
 
-    const snip = insertEvidence(run.id, notebookId, {
+    const snip = await insertEvidence(run.id, notebookId, {
       kind: 'web',
       title: 'SERP title',
       snippet: 'short snippet',
@@ -93,7 +93,7 @@ describe('ingest fetchPage same-URL upgrade + truncate', () => {
       collectedAtNodeId: 'n1',
     });
 
-    const ingested = ingestWorkToolResult(run.id, notebookId, 'n1', 'fetchPage', {
+    const ingested = await ingestWorkToolResult(run.id, notebookId, 'n1', 'fetchPage', {
       ok: true,
       url: 'https://example.com/page',
       title: 'Full title',
@@ -104,14 +104,14 @@ describe('ingest fetchPage same-URL upgrade + truncate', () => {
     expect(ingested.searchesDelta).toBe(0);
     expect(ingested.evidenceIds).toEqual([snip.id]);
 
-    const listed = listEvidences(run.id);
+    const listed = await listEvidences(run.id);
     expect(listed).toHaveLength(1);
     expect(listed[0]?.snippet).toBe('short snippet');
     expect(listed[0]?.content).toBe('Long body text from extractor.');
     expect(listed[0]?.title).toBe('Full title');
   });
 
-  it('token-truncates content to remaining node budget', () => {
+  it('token-truncates content to remaining node budget', async () => {
     const run = getOrm()
       .insert(researchRuns)
       .values({
@@ -133,7 +133,7 @@ describe('ingest fetchPage same-URL upgrade + truncate', () => {
 
     const long = 'word '.repeat(500);
     const budget = 20;
-    const ingested = ingestWorkToolResult(
+    const ingested = await ingestWorkToolResult(
       run.id,
       notebookId,
       'n2',
@@ -148,13 +148,13 @@ describe('ingest fetchPage same-URL upgrade + truncate', () => {
     );
 
     expect(ingested.pagesDelta).toBe(1);
-    const ev = listEvidences(run.id).find((e) => e.url === 'https://example.com/long');
+    const ev = (await listEvidences(run.id)).find((e) => e.url === 'https://example.com/long');
     expect(ev?.content).toBeTruthy();
     expect(countTokens(ev!.content!)).toBeLessThanOrEqual(budget);
     expect(ev!.content).toBe(truncateToTokens(long, budget));
   });
 
-  it('failed fetchPage does not increment pagesDelta', () => {
+  it('failed fetchPage does not increment pagesDelta', async () => {
     const run = getOrm()
       .insert(researchRuns)
       .values({
@@ -174,7 +174,7 @@ describe('ingest fetchPage same-URL upgrade + truncate', () => {
       .returning()
       .get();
 
-    insertEvidence(run.id, notebookId, {
+    await insertEvidence(run.id, notebookId, {
       kind: 'web',
       title: 'SERP',
       snippet: 'keep me',
@@ -182,7 +182,7 @@ describe('ingest fetchPage same-URL upgrade + truncate', () => {
       collectedAtNodeId: 'n3',
     });
 
-    const ingested = ingestWorkToolResult(run.id, notebookId, 'n3', 'fetchPage', {
+    const ingested = await ingestWorkToolResult(run.id, notebookId, 'n3', 'fetchPage', {
       ok: false,
       url: 'https://example.com/fail',
       error: 'All extractors failed',
@@ -190,12 +190,12 @@ describe('ingest fetchPage same-URL upgrade + truncate', () => {
 
     expect(ingested.pagesDelta).toBe(0);
     expect(ingested.searchesDelta).toBe(0);
-    const listed = listEvidences(run.id);
+    const listed = await listEvidences(run.id);
     expect(listed[0]?.snippet).toBe('keep me');
     expect(listed[0]?.content).toBeUndefined();
   });
 
-  it('upsertWebEvidenceContent inserts when URL is new', () => {
+  it('upsertWebEvidenceContent inserts when URL is new', async () => {
     const run = getOrm()
       .insert(researchRuns)
       .values({
@@ -215,7 +215,7 @@ describe('ingest fetchPage same-URL upgrade + truncate', () => {
       .returning()
       .get();
 
-    const ev = upsertWebEvidenceContent(
+    const ev = await upsertWebEvidenceContent(
       run.id,
       notebookId,
       'n4',
@@ -224,7 +224,7 @@ describe('ingest fetchPage same-URL upgrade + truncate', () => {
       'body',
     );
     expect(ev.content).toBe('body');
-    expect(listEvidences(run.id)).toHaveLength(1);
+    expect(await listEvidences(run.id)).toHaveLength(1);
   });
 });
 
@@ -281,7 +281,7 @@ describe('fork-run pages + content', () => {
     const created = (await create.json()) as { id: number; maxPageFetches: number };
 
     const evId = newId('ev');
-    insertEvidence(created.id, notebookId, {
+    await insertEvidence(created.id, notebookId, {
       id: evId,
       kind: 'web',
       title: 'With body',
@@ -333,7 +333,7 @@ describe('fork-run pages + content', () => {
       })
       .run();
 
-    const forked = forkRunFromRevision(notebookId, created.id, revId);
+    const forked = await forkRunFromRevision(notebookId, created.id, revId);
     expect(forked.pagesUsed).toBe(0);
     expect(forked.maxPageFetches).toBe(created.maxPageFetches);
     expect(forked.searchesUsed).toBe(0);

@@ -10,7 +10,7 @@ import {
 import { eq } from 'drizzle-orm';
 import type { z } from 'zod';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { sources } from '../../db/schema.ts';
 import { deleteSourceVectors } from '../../db/vectors.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
@@ -26,15 +26,15 @@ type BatchItemResult = {
 };
 
 /** Batch delete sources with vectors; per-item results, never throws per-item (c57). */
-export function batchDeleteSources(nid: number, body: BatchDeleteBody) {
+export async function batchDeleteSources(nid: number, body: BatchDeleteBody) {
   const { sourceIds } = body;
   const deletedIds: number[] = [];
   const results: BatchItemResult[] = [];
   for (const sid of sourceIds) {
-    const row = db().select().from(sources).where(eq(sources.id, sid)).get();
+    const row = await client().get(db().select().from(sources).where(eq(sources.id, sid)));
     if (row && row.notebookId === nid) {
-      deleteSourceVectors(db(), sid);
-      db().delete(sources).where(eq(sources.id, sid)).run();
+      await deleteSourceVectors(db(), sid);
+      await client().run(db().delete(sources).where(eq(sources.id, sid)));
       deletedIds.push(sid);
       results.push({ sourceId: sid, ok: true });
     } else {
@@ -62,7 +62,7 @@ export async function batchReembedSources(nid: number, body: BatchReembedBody) {
   const failed: number[] = [];
   const results: BatchItemResult[] = [];
   for (const sid of sourceIds) {
-    const row = db().select().from(sources).where(eq(sources.id, sid)).get();
+    const row = await client().get(db().select().from(sources).where(eq(sources.id, sid)));
     if (!row || row.notebookId !== nid) {
       failed.push(sid);
       results.push({
@@ -74,36 +74,38 @@ export async function batchReembedSources(nid: number, body: BatchReembedBody) {
       continue;
     }
     // c57: clear ALL error fields (v1 api_common.py:261-263)
-    db()
-      .update(sources)
-      .set({
-        status: 'processing',
-        errorCode: null,
-        errorMessage: null,
-        recoveryHint: null,
-        lastErrorAt: null,
-      })
-      .where(eq(sources.id, sid))
-      .run();
+    await client().run(
+      db()
+        .update(sources)
+        .set({
+          status: 'processing',
+          errorCode: null,
+          errorMessage: null,
+          recoveryHint: null,
+          lastErrorAt: null,
+        })
+        .where(eq(sources.id, sid)),
+    );
     try {
-      deleteSourceVectors(db(), sid);
+      await deleteSourceVectors(db(), sid);
       await strategy.indexSource(sid, nid);
-      db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sid)).run();
+      await client().run(db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sid)));
       reembedded.push(sid);
       results.push({ sourceId: sid, ok: true });
       const { scheduleSourceSummary } = await import('./source-summary.ts');
       scheduleSourceSummary(sid, { force: true });
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      db()
-        .update(sources)
-        .set({
-          status: 'failed',
-          errorCode: 'EMBEDDING_FAILED',
-          errorMessage: msg,
-        })
-        .where(eq(sources.id, sid))
-        .run();
+      await client().run(
+        db()
+          .update(sources)
+          .set({
+            status: 'failed',
+            errorCode: 'EMBEDDING_FAILED',
+            errorMessage: msg,
+          })
+          .where(eq(sources.id, sid)),
+      );
       failed.push(sid);
       results.push({ sourceId: sid, ok: false, errorCode: 'EMBEDDING_FAILED', message: msg });
     }

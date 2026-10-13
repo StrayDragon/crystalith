@@ -20,13 +20,12 @@ import { parseStatsPresetOutput } from './presets.ts';
 import {
   retrieveAndJudge,
   noEvidenceAnswerForReason,
-  type NoEvidenceReason,
   type JudgeResult,
 } from './retrieve-and-judge.ts';
 
 // Re-export for consumers (router, presets). ContextStats now comes from
 // @crystalith/shared (c54: moved out of server-local to honor Zod-SSOT).
-export type { NoEvidenceReason, JudgeResult, ContextStats };
+export type { ContextStats };
 
 // ---------------------------------------------------------------------------
 // c45: Inline citation fallback (v1 _ensure_inline_citations, api.py:107-112)
@@ -74,7 +73,7 @@ export interface QaHandlerOptions {
     accumulatedText: string,
     failed: boolean,
     citations?: import('@crystalith/shared').Citation[],
-  ) => void;
+  ) => void | Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -156,10 +155,10 @@ export async function streamQa(opts: QaHandlerOptions): Promise<Response> {
     // r326: main evidence path must echo generation metadata like the
     // no-evidence/stats short-circuit paths already do.
     generation: opts.generation,
-    onMessageSettled: (text, failed, citations) => {
+    onMessageSettled: async (text, failed, citations) => {
       // c45: apply inline citation fallback before persisting
       const finalText = failed ? text : ensureInlineCitations(text, citations ?? []);
-      opts.onMessageSettled?.(finalText, failed, citations);
+      await opts.onMessageSettled?.(finalText, failed, citations);
     },
   });
 }

@@ -13,7 +13,7 @@ import type { Citation, ContextStats } from '@crystalith/shared';
 import { and, eq, inArray } from 'drizzle-orm';
 
 import { countTokens } from '../../ai/tokenizer.ts';
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { truncateToTokenBudget } from '../../rag/context-window.ts';
 import { ragRegistry } from '../../rag/registry.ts';
@@ -164,7 +164,8 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
   // Step 3-4: Retrieve via RAG strategy (embed + search happen inside).
   // Pass minScore: 0 so strategy does not pre-drop weak hits — Step 10 applies
   // the evidence threshold and can distinguish low_similarity from empty index.
-  const strategyId = opts.strategyId ?? ragRegistry.getForNotebook(opts.notebookId)[0] ?? 'embed';
+  const strategyId =
+    opts.strategyId ?? (await ragRegistry.getForNotebook(opts.notebookId))[0] ?? 'embed';
   const strategy = ragRegistry.get(strategyId);
 
   let rawResults;
@@ -196,24 +197,25 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
 
   // Step 7: Filter — hydrate chunk metadata, check source.status==ready
   const chunkIds = rawResults.map((r) => r.chunkId);
-  const chunkRows = db()
-    .select({
-      id: chunks.id,
-      text: chunks.text,
-      sourceId: chunks.sourceId,
-      chunkIndex: chunks.chunkIndex,
-      metadata: chunks.metadata,
-    })
-    .from(chunks)
-    .innerJoin(sources, eq(chunks.sourceId, sources.id))
-    .where(
-      and(
-        inArray(chunks.id, chunkIds),
-        eq(sources.notebookId, opts.notebookId),
-        eq(sources.status, 'ready'),
+  const chunkRows = await client().all(
+    db()
+      .select({
+        id: chunks.id,
+        text: chunks.text,
+        sourceId: chunks.sourceId,
+        chunkIndex: chunks.chunkIndex,
+        metadata: chunks.metadata,
+      })
+      .from(chunks)
+      .innerJoin(sources, eq(chunks.sourceId, sources.id))
+      .where(
+        and(
+          inArray(chunks.id, chunkIds),
+          eq(sources.notebookId, opts.notebookId),
+          eq(sources.status, 'ready'),
+        ),
       ),
-    )
-    .all();
+  );
 
   const chunkMap = new Map(chunkRows.map((c) => [c.id, c]));
 
@@ -230,11 +232,12 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
 
   // Step 9: Build citations + context
   const sourceIds = [...new Set(validResults.map((r) => r.sourceId))];
-  const sourceRows = db()
-    .select({ id: sources.id, filename: sources.filename })
-    .from(sources)
-    .where(inArray(sources.id, sourceIds))
-    .all();
+  const sourceRows = await client().all(
+    db()
+      .select({ id: sources.id, filename: sources.filename })
+      .from(sources)
+      .where(inArray(sources.id, sourceIds)),
+  );
   const sourceMap = new Map(sourceRows.map((s) => [s.id, s.filename]));
 
   const citations: Citation[] = validResults.map((r) => {
@@ -281,11 +284,11 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
   }
 
   // Step 11: Confidence
-  const notebookSourceCount = db()
-    .select({ id: sources.id })
-    .from(sources)
-    .where(eq(sources.notebookId, opts.notebookId))
-    .all().length;
+  const notebookSourceCount = (
+    await client().all(
+      db().select({ id: sources.id }).from(sources).where(eq(sources.notebookId, opts.notebookId)),
+    )
+  ).length;
   const confidence = computeConfidence(citations, notebookSourceCount, topK);
 
   // Step 12: Evidence found.

@@ -50,13 +50,13 @@ function newId(prefix: string): string {
 }
 
 describe('research decompose (c93)', () => {
-  it('suggestedMaxResearchLeaves follows depth soft caps', () => {
+  it('suggestedMaxResearchLeaves follows depth soft caps', async () => {
     expect(suggestedMaxResearchLeaves('shallow')).toBe(4);
     expect(suggestedMaxResearchLeaves('medium')).toBe(8);
     expect(suggestedMaxResearchLeaves('deep')).toBe(16);
   });
 
-  it('repairDecomposePlanText wraps bare branch arrays', () => {
+  it('repairDecomposePlanText wraps bare branch arrays', async () => {
     const repaired = repairDecomposePlanText(
       JSON.stringify([{ title: 'A', query: 'qa', edgeKind: 'decompose' }]),
     );
@@ -72,7 +72,7 @@ describe('research decompose (c93)', () => {
     expect(repairDecomposePlanText('not-json')).toBeNull();
   });
 
-  it('clampDecomposePlan prefers decompose and respects room', () => {
+  it('clampDecomposePlan prefers decompose and respects room', async () => {
     const clamped = clampDecomposePlan(
       {
         branches: [
@@ -88,7 +88,7 @@ describe('research decompose (c93)', () => {
     expect(clamped.branches.every((b) => b.edgeKind === 'decompose')).toBe(true);
   });
 
-  it('applyDecomposePlanToGraph adds research nodes with decompose+merge', () => {
+  it('applyDecomposePlanToGraph adds research nodes with decompose+merge', async () => {
     seq = 0;
     const plan = {
       branches: [
@@ -108,7 +108,7 @@ describe('research decompose (c93)', () => {
     }
   });
 
-  it('empty plan does not mutate topology', () => {
+  it('empty plan does not mutate topology', async () => {
     seq = 0;
     const seed = seedGraph();
     const { graph, addedNodes, addedEdges } = applyDecomposePlanToGraph(
@@ -122,7 +122,7 @@ describe('research decompose (c93)', () => {
     expect(graph.edges).toHaveLength(0);
   });
 
-  it('applyDecomposePlanToGraph can attach from focusNodeId', () => {
+  it('applyDecomposePlanToGraph can attach from focusNodeId', async () => {
     seq = 0;
     const base = seedGraph();
     const withFocus = applyDecomposePlanToGraph(

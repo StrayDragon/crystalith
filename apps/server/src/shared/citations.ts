@@ -9,7 +9,7 @@
 import type { Citation } from '@crystalith/shared';
 import { inArray } from 'drizzle-orm';
 
-import { db } from '../db/index.ts';
+import { client, db } from '../db/index.ts';
 import { chunks, sources } from '../db/schema.ts';
 
 /**
@@ -55,27 +55,29 @@ function extractNumber(value: unknown, coerce: boolean): number | null {
  * hitting the DB. Behavior is identical to the previously-inlined blocks when
  * called with the matching `HydrateOptions`.
  */
-export function hydrateCitations(
+export async function hydrateCitations(
   retrieved: RetrievedChunk[],
   options: HydrateOptions = {},
-): Citation[] {
+): Promise<Citation[]> {
   if (retrieved.length === 0) return [];
   const { trimSnippet = false, coercePageNumber = false } = options;
 
   const sourceIds = [...new Set(retrieved.map((c) => c.sourceId))];
-  const sourceRows = db()
-    .select({ id: sources.id, filename: sources.filename })
-    .from(sources)
-    .where(inArray(sources.id, sourceIds))
-    .all();
+  const sourceRows = await client().all(
+    db()
+      .select({ id: sources.id, filename: sources.filename })
+      .from(sources)
+      .where(inArray(sources.id, sourceIds)),
+  );
   const sourceNameMap = new Map(sourceRows.map((s) => [s.id, s.filename]));
 
   const chunkIds = retrieved.map((c) => c.chunkId);
-  const chunkRows = db()
-    .select({ id: chunks.id, metadata: chunks.metadata })
-    .from(chunks)
-    .where(inArray(chunks.id, chunkIds))
-    .all();
+  const chunkRows = await client().all(
+    db()
+      .select({ id: chunks.id, metadata: chunks.metadata })
+      .from(chunks)
+      .where(inArray(chunks.id, chunkIds)),
+  );
   const chunkMetaMap = new Map(chunkRows.map((c) => [c.id, c.metadata]));
 
   return retrieved.map((c) => {

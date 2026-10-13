@@ -8,7 +8,7 @@ import { and, eq } from 'drizzle-orm';
 import { NotFoundError } from 'elysia';
 import type { z } from 'zod';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { sources, sourceTagMap, sourceTags } from '../../db/schema.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
@@ -35,72 +35,80 @@ function requireTagName(name: string): string {
   return rawName;
 }
 
-function findConflict(nid: number, rawName: string, excludeTagId?: number): TagRow | undefined {
-  return db()
-    .select()
-    .from(sourceTags)
-    .where(eq(sourceTags.notebookId, nid))
-    .all()
-    .find((t) => t.id !== excludeTagId && t.name.toLowerCase() === rawName.toLowerCase());
+async function findConflict(
+  nid: number,
+  rawName: string,
+  excludeTagId?: number,
+): Promise<TagRow | undefined> {
+  return (
+    await client().all(db().select().from(sourceTags).where(eq(sourceTags.notebookId, nid)))
+  ).find((t) => t.id !== excludeTagId && t.name.toLowerCase() === rawName.toLowerCase());
 }
 
 /** List all tags in a notebook. */
-export function listNotebookTags(nid: number): SourceTag[] {
-  return db().select().from(sourceTags).where(eq(sourceTags.notebookId, nid)).all().map(toTagDto);
+export async function listNotebookTags(nid: number): Promise<SourceTag[]> {
+  return (
+    await client().all(db().select().from(sourceTags).where(eq(sourceTags.notebookId, nid)))
+  ).map(toTagDto);
 }
 
 /** Create a tag; case-insensitive uniqueness within the notebook (v1 api_tags.py:56-63). */
-export function createTag(nid: number, name: string): SourceTag {
+export async function createTag(nid: number, name: string): Promise<SourceTag> {
   const rawName = requireTagName(name);
-  const existing = findConflict(nid, rawName);
+  const existing = await findConflict(nid, rawName);
   if (existing) {
     throw new AppHttpError(ErrorCode.CONFLICT, 'Tag name already exists', {
       existingTagId: existing.id,
     });
   }
-  const row = db().insert(sourceTags).values({ notebookId: nid, name: rawName }).returning().get();
+  const row = await client().get(
+    db().insert(sourceTags).values({ notebookId: nid, name: rawName }).returning(),
+  );
   // c57: invalidate sources cache (list-sources cache key includes tag filter)
   bumpSourcesEpoch(nid);
-  return toTagDto(row);
+  // insert-returning always yields a row; drizzle's sync .get() typed it non-null
+  return toTagDto(row!);
 }
 
 /** Rename a tag; validates ownership and uniqueness excluding self (v1 api_tags.py:81). */
-export function renameTag(nid: number, tid: number, name: string): SourceTag {
+export async function renameTag(nid: number, tid: number, name: string): Promise<SourceTag> {
   const rawName = requireTagName(name);
-  const existing = db()
-    .select()
-    .from(sourceTags)
-    .where(and(eq(sourceTags.id, tid), eq(sourceTags.notebookId, nid)))
-    .get();
+  const existing = await client().get(
+    db()
+      .select()
+      .from(sourceTags)
+      .where(and(eq(sourceTags.id, tid), eq(sourceTags.notebookId, nid))),
+  );
   if (!existing) throw new NotFoundError(`Tag ${tid} not found in notebook ${nid}`);
-  const conflict = findConflict(nid, rawName, tid);
+  const conflict = await findConflict(nid, rawName, tid);
   if (conflict) {
     throw new AppHttpError(ErrorCode.CONFLICT, 'Tag name already exists', {
       existingTagId: conflict.id,
     });
   }
-  db().update(sourceTags).set({ name: rawName }).where(eq(sourceTags.id, tid)).run();
+  await client().run(db().update(sourceTags).set({ name: rawName }).where(eq(sourceTags.id, tid)));
   // c57: invalidate sources cache
   bumpSourcesEpoch(nid);
-  const updated = db().select().from(sourceTags).where(eq(sourceTags.id, tid)).get();
+  const updated = await client().get(db().select().from(sourceTags).where(eq(sourceTags.id, tid)));
   return toTagDto(updated!);
 }
 
 /** Delete a tag and its bindings (ownership checked) (v1 api_tags.py:110). */
-export function deleteTag(nid: number, tid: number): void {
-  const existing = db()
-    .select()
-    .from(sourceTags)
-    .where(and(eq(sourceTags.id, tid), eq(sourceTags.notebookId, nid)))
-    .get();
+export async function deleteTag(nid: number, tid: number): Promise<void> {
+  const existing = await client().get(
+    db()
+      .select()
+      .from(sourceTags)
+      .where(and(eq(sourceTags.id, tid), eq(sourceTags.notebookId, nid))),
+  );
   if (!existing) throw new NotFoundError(`Tag ${tid} not found in notebook ${nid}`);
-  db().delete(sourceTags).where(eq(sourceTags.id, tid)).run();
+  await client().run(db().delete(sourceTags).where(eq(sourceTags.id, tid)));
   // c57: invalidate sources cache
   bumpSourcesEpoch(nid);
 }
 
 /** Assign sources to a tag; idempotent with per-item diagnostics. */
-export function assignSourcesToTag(nid: number, tid: number, body: TagBindingRequest) {
+export async function assignSourcesToTag(nid: number, tid: number, body: TagBindingRequest) {
   const { sourceIds } = body;
   // c53: per-item diagnostics (v1 api_tags.py:142-185 SourceBatchItemResult).
   const results: Array<{
@@ -112,26 +120,28 @@ export function assignSourcesToTag(nid: number, tid: number, body: TagBindingReq
   let applied = 0;
   let skipped = 0;
   for (const sid of sourceIds) {
-    const src = db()
-      .select({ id: sources.id })
-      .from(sources)
-      .where(and(eq(sources.id, sid), eq(sources.notebookId, nid)))
-      .get();
+    const src = await client().get(
+      db()
+        .select({ id: sources.id })
+        .from(sources)
+        .where(and(eq(sources.id, sid), eq(sources.notebookId, nid))),
+    );
     if (!src) {
       results.push({ sourceId: sid, ok: false, errorCode: 'SOURCE_NOT_FOUND' });
       continue;
     }
-    const existing = db()
-      .select()
-      .from(sourceTagMap)
-      .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
-      .get();
+    const existing = await client().get(
+      db()
+        .select()
+        .from(sourceTagMap)
+        .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid))),
+    );
     if (existing) {
       skipped++;
       results.push({ sourceId: sid, ok: true, message: 'already assigned' });
       continue;
     }
-    db().insert(sourceTagMap).values({ sourceId: sid, tagId: tid }).run();
+    await client().run(db().insert(sourceTagMap).values({ sourceId: sid, tagId: tid }));
     applied++;
     results.push({ sourceId: sid, ok: true });
   }
@@ -141,7 +151,7 @@ export function assignSourcesToTag(nid: number, tid: number, body: TagBindingReq
 }
 
 /** Remove sources from a tag; reports unassigned as skipped with per-item diagnostics. */
-export function removeSourcesFromTag(nid: number, tid: number, body: TagBindingRequest) {
+export async function removeSourcesFromTag(nid: number, tid: number, body: TagBindingRequest) {
   const { sourceIds } = body;
   // c53: per-item diagnostics (v1 api_tags.py:142-185)
   const results: Array<{
@@ -153,29 +163,32 @@ export function removeSourcesFromTag(nid: number, tid: number, body: TagBindingR
   let removed = 0;
   let skipped = 0;
   for (const sid of sourceIds) {
-    const src = db()
-      .select({ id: sources.id })
-      .from(sources)
-      .where(and(eq(sources.id, sid), eq(sources.notebookId, nid)))
-      .get();
+    const src = await client().get(
+      db()
+        .select({ id: sources.id })
+        .from(sources)
+        .where(and(eq(sources.id, sid), eq(sources.notebookId, nid))),
+    );
     if (!src) {
       results.push({ sourceId: sid, ok: false, errorCode: 'SOURCE_NOT_FOUND' });
       continue;
     }
-    const existing = db()
-      .select()
-      .from(sourceTagMap)
-      .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
-      .get();
+    const existing = await client().get(
+      db()
+        .select()
+        .from(sourceTagMap)
+        .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid))),
+    );
     if (!existing) {
       skipped++;
       results.push({ sourceId: sid, ok: true, message: 'not assigned' });
       continue;
     }
-    db()
-      .delete(sourceTagMap)
-      .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
-      .run();
+    await client().run(
+      db()
+        .delete(sourceTagMap)
+        .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid))),
+    );
     removed++;
     results.push({ sourceId: sid, ok: true });
   }

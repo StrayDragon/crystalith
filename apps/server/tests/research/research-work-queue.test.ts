@@ -19,7 +19,7 @@ function node(partial: Partial<ResearchNode> & Pick<ResearchNode, 'id' | 'title'
 }
 
 describe('research-work-queue (c94)', () => {
-  it('orderResearchNodesForWork preserves insertion order', () => {
+  it('orderResearchNodesForWork preserves insertion order', async () => {
     const nodes: ResearchNode[] = [
       node({ id: 'q', role: 'question', title: 'Q', conclusionStatus: 'pending' }),
       node({ id: 'r-b', title: 'B' }),
@@ -30,7 +30,7 @@ describe('research-work-queue (c94)', () => {
     expect(ordered).toEqual(['r-b', 'r-a']);
   });
 
-  it('does not re-queue missing after empty writeBack', () => {
+  it('does not re-queue missing after empty writeBack', async () => {
     expect(
       researchNodeNeedsWork(
         node({ id: 'r1', title: 'x', conclusionStatus: 'missing', evidenceIds: [] }),
@@ -38,7 +38,7 @@ describe('research-work-queue (c94)', () => {
     ).toBe(false);
   });
 
-  it('hasLiveResearchBranches ignores pruned', () => {
+  it('hasLiveResearchBranches ignores pruned', async () => {
     expect(
       hasLiveResearchBranches([
         node({ id: 'r1', title: 'x', conclusionStatus: 'pruned' }),

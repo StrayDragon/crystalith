@@ -4,6 +4,7 @@ import { tool } from 'ai';
 import { inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { createDbClient } from '../../db/client.ts';
 import type { Orm } from '../../db/index.ts';
 import { sources } from '../../db/schema.ts';
 import { searchVectors, type VectorHit } from '../../db/vectors.ts';
@@ -34,17 +35,18 @@ export function retrieveSourcesTool(
     inputSchema: RetrieveSourcesArgsSchema,
     execute: async ({ query, topK }): Promise<RetrievedChunk[]> => {
       const queryVec = await embedder(query);
-      const hits: VectorHit[] = searchVectors(orm, queryVec, notebookId, topK);
+      const hits: VectorHit[] = await searchVectors(orm, queryVec, notebookId, topK);
 
       if (hits.length === 0) return [];
 
       // Hydrate source names for citation metadata.
       const sourceIds = [...new Set(hits.map((h) => h.source_id))];
-      const sourceRows = orm
-        .select({ id: sources.id, filename: sources.filename })
-        .from(sources)
-        .where(inArray(sources.id, sourceIds))
-        .all();
+      const sourceRows = await createDbClient(orm).all(
+        orm
+          .select({ id: sources.id, filename: sources.filename })
+          .from(sources)
+          .where(inArray(sources.id, sourceIds)),
+      );
       const sourceMap = new Map(
         sourceRows.map((s: { id: number; filename: string }) => [s.id, s.filename]),
       );

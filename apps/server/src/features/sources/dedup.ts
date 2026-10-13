@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 
 import { and, eq } from 'drizzle-orm';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { sources } from '../../db/schema.ts';
 import { canonicalizeUrlForDedup } from '../../shared/net/url-normalize.ts';
 
@@ -29,8 +29,6 @@ export function urlDedupKey(url: string): string {
 // Dedup action
 // ---------------------------------------------------------------------------
 
-export type DedupAction = 'prompt' | 'reuse' | 'create_new';
-
 export interface DedupHit {
   hit: true;
   existingSourceId: number;
@@ -47,12 +45,13 @@ export type DedupResult = DedupHit | DedupMiss;
  * notebook. Returns the existing source id on hit (so the router can return
  * 409 / reuse), or { hit: false } otherwise.
  */
-export function checkDedup(notebookId: number, dedupKey: string): DedupResult {
-  const existing = db()
-    .select({ id: sources.id })
-    .from(sources)
-    .where(and(eq(sources.notebookId, notebookId), eq(sources.dedupKey, dedupKey)))
-    .get();
+export async function checkDedup(notebookId: number, dedupKey: string): Promise<DedupResult> {
+  const existing = await client().get(
+    db()
+      .select({ id: sources.id })
+      .from(sources)
+      .where(and(eq(sources.notebookId, notebookId), eq(sources.dedupKey, dedupKey))),
+  );
 
   if (existing) {
     return { hit: true, existingSourceId: existing.id };

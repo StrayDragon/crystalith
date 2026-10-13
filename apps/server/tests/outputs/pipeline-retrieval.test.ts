@@ -71,7 +71,7 @@ describe('resolvePipelineContextChunks', () => {
 });
 
 describe('fetchChunksBySourceIds', () => {
-  it('returns chunks scoped to notebook + source ids', () => {
+  it('returns chunks scoped to notebook + source ids', async () => {
     const nb = db().insert(notebooks).values({ name: 'pipeline-direct' }).returning().get().id;
     const source = db()
       .insert(sources)
@@ -89,7 +89,7 @@ describe('fetchChunksBySourceIds', () => {
       .values({ sourceId: source.id, chunkIndex: 0, text: 'direct chunk body' })
       .run();
 
-    const rows = fetchChunksBySourceIds(nb, [source.id]);
+    const rows = await fetchChunksBySourceIds(nb, [source.id]);
     expect(rows).toHaveLength(1);
     expect(rows[0]?.text).toBe('direct chunk body');
   });

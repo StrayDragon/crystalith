@@ -47,11 +47,11 @@ afterAll(teardownIntegrationEnv);
 describe('run SSE terminal wait (c64)', () => {
   it('status broadcast closes the stream promptly (no hot polling)', async () => {
     const runId = seedRun();
-    const res = createResearchSseResponse(notebookId, runId);
+    const res = await createResearchSseResponse(notebookId, runId);
     const textPromise = res.text();
     await Bun.sleep(30);
-    updateRun(runId, { status: 'completed' });
-    emitStatus(runId, 'completed');
+    await updateRun(runId, { status: 'completed' });
+    await emitStatus(runId, 'completed');
 
     const start = Date.now();
     const text = await textPromise;
@@ -63,7 +63,7 @@ describe('run SSE terminal wait (c64)', () => {
 
   it('missed broadcast → slow-poll fallback still closes', async () => {
     const runId = seedRun();
-    const res = createResearchSseResponse(notebookId, runId);
+    const res = await createResearchSseResponse(notebookId, runId);
     const textPromise = res.text();
     await Bun.sleep(30);
     // Bypass emitStatus: no broadcast — only the slow DB poll can notice.
@@ -78,7 +78,7 @@ describe('run SSE terminal wait (c64)', () => {
 
   it('client disconnect unsubscribes promptly', async () => {
     const runId = seedRun();
-    const res = createResearchSseResponse(notebookId, runId);
+    const res = await createResearchSseResponse(notebookId, runId);
     await Bun.sleep(30);
     expect(runEmitters.get(runId)?.size ?? 0).toBeGreaterThan(0);
 

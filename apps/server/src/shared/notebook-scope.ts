@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import type { AnySQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import { NotFoundError } from 'elysia';
 
-import { db } from '../db/index.ts';
+import { client, db } from '../db/index.ts';
 import { notebooks } from '../db/schema.ts';
 import { AppHttpError, ErrorCode } from './errors.ts';
 
@@ -15,8 +15,8 @@ import { AppHttpError, ErrorCode } from './errors.ts';
  * Shared single implementation — previously duplicated across
  * research-core / source-connectors / qa ownership asserts.
  */
-export function requireNotebook(notebookId: number) {
-  const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
+export async function requireNotebook(notebookId: number) {
+  const nb = await client().get(db().select().from(notebooks).where(eq(notebooks.id, notebookId)));
   if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
   return nb;
 }
@@ -54,10 +54,10 @@ export function resolveNestedNotebookId(
  * `label` names the entity for the error message, e.g. `'Session'` →
  * `"Session 3 not found"` (same wire shape as the previous NotFoundError throws).
  */
-export function requireOwnedRow<
+export async function requireOwnedRow<
   TTable extends SQLiteTable & { id: AnySQLiteColumn; notebookId: AnySQLiteColumn },
 >(table: TTable, id: number, nid: number, label: string) {
-  const row = db().select().from(table).where(eq(table.id, id)).get();
+  const row = await client().get(db().select().from(table).where(eq(table.id, id)));
   if (!row || row.notebookId !== nid) {
     throw new AppHttpError(ErrorCode.NOT_FOUND, `${label} ${id} not found`);
   }

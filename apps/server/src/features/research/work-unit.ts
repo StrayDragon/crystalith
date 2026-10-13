@@ -56,9 +56,9 @@ interface WorkUnitStreamState {
 }
 
 /** Remaining token budget for web evidence content on a node (c107). */
-function remainingNodeContentBudget(runId: number, nodeId: string): number {
+async function remainingNodeContentBudget(runId: number, nodeId: string): Promise<number> {
   const budget = getNodeContentTokenBudget();
-  const used = listEvidences(runId)
+  const used = (await listEvidences(runId))
     .filter((e) => e.kind === 'web' && e.collectedAtNodeId === nodeId && e.content)
     .reduce((sum, e) => sum + countTokens(e.content ?? ''), 0);
   return Math.max(0, budget - used);
@@ -68,36 +68,36 @@ function remainingNodeContentBudget(runId: number, nodeId: string): number {
  * Apply the latest pending Work-tool output (budget-aware, emits progress log).
  * Called under the run write lock from the stream consumer.
  */
-function flushPendingWorkIngest(
+async function flushPendingWorkIngest(
   runId: number,
   notebookId: number,
   nodeId: string,
   state: WorkUnitStreamState,
-): void {
+): Promise<void> {
   const pending = state.pendingIngest;
   if (!pending) return;
   state.pendingIngest = null;
   const { toolName, output } = pending;
-  const contentBudgetRemaining = remainingNodeContentBudget(runId, nodeId);
-  const ingested = ingestWorkToolResult(runId, notebookId, nodeId, toolName, output, {
+  const contentBudgetRemaining = await remainingNodeContentBudget(runId, nodeId);
+  const ingested = await ingestWorkToolResult(runId, notebookId, nodeId, toolName, output, {
     contentTokenBudgetRemaining: contentBudgetRemaining,
   });
   for (const id of ingested.evidenceIds) {
     if (!state.evidenceIds.includes(id)) state.evidenceIds.push(id);
   }
   if (ingested.searchesDelta > 0) {
-    const fresh = requireFresh(runId);
+    const fresh = await requireFresh(runId);
     state.searchesUsed = fresh.searchesUsed + ingested.searchesDelta;
     state.nodeSearchesUsed += ingested.searchesDelta;
-    updateRun(runId, { searchesUsed: state.searchesUsed });
+    await updateRun(runId, { searchesUsed: state.searchesUsed });
   }
   if (ingested.pagesDelta > 0) {
-    const fresh = requireFresh(runId);
+    const fresh = await requireFresh(runId);
     const pagesUsed = fresh.pagesUsed + ingested.pagesDelta;
     state.nodePagesUsed += ingested.pagesDelta;
-    updateRun(runId, { pagesUsed });
+    await updateRun(runId, { pagesUsed });
   }
-  emitLog(
+  await emitLog(
     runId,
     toolName === 'webSearch'
       ? `外网检索：${ingested.evidenceIds.length} 条`
@@ -112,14 +112,14 @@ function flushPendingWorkIngest(
 }
 
 /** Apply a Work tool result into research_evidences; returns new evidence ids + deltas. */
-export function ingestWorkToolResult(
+export async function ingestWorkToolResult(
   runId: number,
   notebookId: number,
   nodeId: string,
   toolName: string,
   output: unknown,
   opts?: { contentTokenBudgetRemaining?: number },
-): { evidenceIds: string[]; searchesDelta: number; pagesDelta: number } {
+): Promise<{ evidenceIds: string[]; searchesDelta: number; pagesDelta: number }> {
   const evidenceIds: string[] = [];
   let searchesDelta = 0;
   let pagesDelta = 0;
@@ -127,7 +127,7 @@ export function ingestWorkToolResult(
     searchesDelta = 1;
     for (const item of output) {
       if (!isRecord(item)) continue;
-      const ev = insertEvidence(runId, notebookId, {
+      const ev = await insertEvidence(runId, notebookId, {
         kind: 'web',
         title:
           typeof item.title === 'string'
@@ -151,7 +151,7 @@ export function ingestWorkToolResult(
           : undefined;
       const chunkIndex = typeof item.chunkIndex === 'number' ? item.chunkIndex : 0;
       const text = typeof item.text === 'string' ? item.text : '';
-      const ev = insertEvidence(runId, notebookId, {
+      const ev = await insertEvidence(runId, notebookId, {
         kind: 'chunk',
         title: `来源 ${sourceId ?? '?'} · chunk ${chunkIndex}`,
         snippet: text.slice(0, SNIPPET_PREVIEW_CHARS),
@@ -168,7 +168,7 @@ export function ingestWorkToolResult(
       const truncated = budget <= 0 ? '' : truncateToTokens(output.content, Math.max(0, budget));
       if (truncated) {
         const title = typeof output.title === 'string' ? output.title : url;
-        const ev = upsertWebEvidenceContent(runId, notebookId, nodeId, url, title, truncated);
+        const ev = await upsertWebEvidenceContent(runId, notebookId, nodeId, url, title, truncated);
         evidenceIds.push(ev.id);
         pagesDelta = 1;
       }
@@ -201,14 +201,14 @@ async function shortSynthesizeNodeSummary(opts: {
     return getDefaultChatModel();
   })();
   if (!modelConfig) {
-    emitLog(runId, `节点 ${node.id} 短综合跳过：无可用模型`);
+    await emitLog(runId, `节点 ${node.id} 短综合跳过：无可用模型`);
     return {
       summary: evidenceIds.length ? `已收集 ${evidenceIds.length} 条证据` : '未收集到证据',
       conclusionStatus: 'missing',
     };
   }
 
-  const evidenceLinesRaw = listEvidences(runId)
+  const evidenceLinesRaw = (await listEvidences(runId))
     .filter((e) => evidenceIds.includes(e.id))
     .map((e) => {
       if (e.content?.trim()) {
@@ -256,9 +256,9 @@ async function shortSynthesizeNodeSummary(opts: {
       conclusionStatus: evidenceIds.length > 0 ? 'partial' : 'missing',
     };
   } catch (error) {
-    if (abortSignal.aborted || isCancelled(runId)) throw error;
+    if (abortSignal.aborted || (await isCancelled(runId))) throw error;
     logger.warn('[research] node short synthesis failed:', error);
-    emitLog(runId, `节点 ${node.id} 短综合失败：${String(error)}`);
+    await emitLog(runId, `节点 ${node.id} 短综合失败：${String(error)}`);
     return {
       summary: evidenceIds.length ? `已收集 ${evidenceIds.length} 条证据（综合失败）` : '综合失败',
       conclusionStatus: 'missing',
@@ -304,7 +304,7 @@ export async function runNodeWorkUnit(opts: {
   const evidenceIds: string[] = [...(node.evidenceIds ?? [])];
   const role = resolveNodeRole(node);
 
-  const runAtStart = requireFresh(runId);
+  const runAtStart = await requireFresh(runId);
   const remainingPages = Math.max(0, runAtStart.maxPageFetches - runAtStart.pagesUsed);
   const liveResearchCount = getGraph(runAtStart).nodes.filter(
     (n) => resolveNodeRoleForWork(n) === 'research' && n.conclusionStatus !== 'pruned',
@@ -313,8 +313,8 @@ export async function runNodeWorkUnit(opts: {
   const searchesRemaining = Math.max(0, maxSearches - searchesUsed);
   const searchSoft = computeSearchSoftCap(searchesRemaining, liveResearchCount);
 
-  updateRun(runId, { llmActivity: 'work_unit', activeNodeId: node.id });
-  appendProgressEvent(runId, 'unit_started', {
+  await updateRun(runId, { llmActivity: 'work_unit', activeNodeId: node.id });
+  await appendProgressEvent(runId, 'unit_started', {
     nodeId: node.id,
     headline: `work_unit:${node.id}`,
   });
@@ -326,8 +326,8 @@ export async function runNodeWorkUnit(opts: {
       // intentionally || — empty query falls back to title/topic
       // oxlint-disable-next-line typescript/prefer-nullish-coalescing
       const query = node.query?.trim() || node.title || topic;
-      await withRunWriteLock(runId, () => {
-        const ingested = ingestWorkToolResult(
+      await withRunWriteLock(runId, async () => {
+        const ingested = await ingestWorkToolResult(
           runId,
           notebookId,
           node.id,
@@ -336,22 +336,22 @@ export async function runNodeWorkUnit(opts: {
         );
         evidenceIds.push(...ingested.evidenceIds);
         if (ingested.searchesDelta > 0) {
-          const fresh = requireFresh(runId);
+          const fresh = await requireFresh(runId);
           searchesUsed = fresh.searchesUsed + ingested.searchesDelta;
-          updateRun(runId, { searchesUsed });
+          await updateRun(runId, { searchesUsed });
         }
       });
-      emitLog(runId, `外网检索（e2e stub）：${evidenceIds.length} 条`);
+      await emitLog(runId, `外网检索（e2e stub）：${evidenceIds.length} 条`);
     }
     const synth = await shortSynthesizeNodeSummary({
       runId,
       node,
       topic,
       evidenceIds,
-      modelId: requireFresh(runId).modelId,
+      modelId: (await requireFresh(runId)).modelId,
       abortSignal,
     });
-    appendProgressEvent(runId, 'unit_finished', {
+    await appendProgressEvent(runId, 'unit_finished', {
       nodeId: node.id,
       headline: 'work_unit done (e2e-stub)',
       payload: {
@@ -411,17 +411,17 @@ export async function runNodeWorkUnit(opts: {
         });
 
         for await (const part of result.stream) {
-          if (abortSignal.aborted || isCancelled(runId)) break;
+          if (abortSignal.aborted || (await isCancelled(runId))) break;
           if (part.type === 'tool-result') {
             const toolName = 'toolName' in part ? part.toolName : '';
             const output: unknown = 'output' in part ? part.output : undefined;
             if (toolName === 'webSearch') {
-              const freshBudget = requireFresh(runId);
+              const freshBudget = await requireFresh(runId);
               if (
                 freshBudget.searchesUsed >= maxSearches ||
                 streamState.nodeSearchesUsed >= searchSoft
               ) {
-                emitLog(
+                await emitLog(
                   runId,
                   streamState.nodeSearchesUsed >= searchSoft
                     ? '外网检索跳过：本节点搜索软上限已尽'
@@ -431,12 +431,12 @@ export async function runNodeWorkUnit(opts: {
               }
             }
             if (toolName === 'fetchPage') {
-              const freshPages = requireFresh(runId);
+              const freshPages = await requireFresh(runId);
               if (
                 freshPages.pagesUsed >= freshPages.maxPageFetches ||
                 streamState.nodePagesUsed >= pageSoft
               ) {
-                emitLog(runId, '读页跳过：页面预算或节点软上限已尽（不触发 budget confirm）');
+                await emitLog(runId, '读页跳过：页面预算或节点软上限已尽（不触发 budget confirm）');
                 continue;
               }
             }
@@ -457,16 +457,16 @@ export async function runNodeWorkUnit(opts: {
       nodePagesUsed = streamState.nodePagesUsed;
       via = 'agent';
     } catch (error) {
-      if (abortSignal.aborted || isCancelled(runId)) throw error;
+      if (abortSignal.aborted || (await isCancelled(runId))) throw error;
       logger.warn('[research] work_unit agent failed (no fake-hit fallback):', error);
-      emitLog(runId, `节点 ${node.id} 工具环失败，保留已收集证据继续短综合`);
+      await emitLog(runId, `节点 ${node.id} 工具环失败，保留已收集证据继续短综合`);
       via = evidenceIds.length ? 'agent' : 'none';
     }
   } else {
-    emitLog(runId, `节点 ${node.id} 无可用模型，跳过工具检索`);
+    await emitLog(runId, `节点 ${node.id} 无可用模型，跳过工具检索`);
   }
 
-  const fresh = requireFresh(runId);
+  const fresh = await requireFresh(runId);
   const synth = await shortSynthesizeNodeSummary({
     runId,
     node,
@@ -476,7 +476,7 @@ export async function runNodeWorkUnit(opts: {
     abortSignal,
   });
 
-  appendProgressEvent(runId, 'unit_finished', {
+  await appendProgressEvent(runId, 'unit_finished', {
     nodeId: node.id,
     headline: `work_unit done (${via})`,
     payload: {
@@ -496,12 +496,12 @@ export async function runNodeWorkUnit(opts: {
   };
 }
 
-export function patchNodePhase(
+export async function patchNodePhase(
   runId: number,
   nodeId: string,
   phase: ResearchNode['phase'],
-): ResearchNode | null {
-  const row = requireFresh(runId);
+): Promise<ResearchNode | null> {
+  const row = await requireFresh(runId);
   const graph = getGraph(row);
   const live = graph.nodes.find((n) => n.id === nodeId);
   if (!live || live.conclusionStatus === 'pruned') return null;
@@ -510,12 +510,12 @@ export function patchNodePhase(
   if (idx >= 0) graph.nodes[idx] = updated;
   else graph.nodes.push(updated);
   persistGraph(runId, graph);
-  emitGraphPatch(runId, { nodes: [updated] });
+  await emitGraphPatch(runId, { nodes: [updated] });
   return updated;
 }
 
 /** Persist work-unit results onto a live node (discard-if-pruned). */
-export function writeBackNodeWork(
+export async function writeBackNodeWork(
   runId: number,
   nodeId: string,
   evidenceIds: string[],
@@ -523,8 +523,8 @@ export function writeBackNodeWork(
     summary?: string;
     conclusionStatus?: ResearchNode['conclusionStatus'];
   },
-): ResearchNode | null {
-  const row = requireFresh(runId);
+): Promise<ResearchNode | null> {
+  const row = await requireFresh(runId);
   const graph = getGraph(row);
   const live = graph.nodes.find((n) => n.id === nodeId);
   if (!live || live.conclusionStatus === 'pruned') return null;
@@ -543,9 +543,9 @@ export function writeBackNodeWork(
   if (idx >= 0) graph.nodes[idx] = updated;
   else graph.nodes.push(updated);
   persistGraph(runId, graph);
-  emitGraphPatch(runId, { nodes: [updated] });
-  updateRun(runId, {
-    checkpoint: writeCheckpoint(requireFresh(runId), 'node_complete'),
+  await emitGraphPatch(runId, { nodes: [updated] });
+  await updateRun(runId, {
+    checkpoint: writeCheckpoint(await requireFresh(runId), 'node_complete'),
   });
   return updated;
 }

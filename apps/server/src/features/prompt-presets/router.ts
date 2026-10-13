@@ -8,7 +8,7 @@ import { desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 import { z } from 'zod';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { promptPresets } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
@@ -24,16 +24,18 @@ const BUILTIN_TRIGGERS = new Set(listPresets().map((p) => p.name.toLowerCase()))
  * Returns an error message string if conflict, or null if OK.
  * `excludeId` allows PATCH to keep its own trigger (exclude self from dup check).
  */
-function checkTriggerConflict(trigger: string, excludeId?: number): string | null {
+async function checkTriggerConflict(trigger: string, excludeId?: number): Promise<string | null> {
   const normalized = trigger.trim().toLowerCase();
   if (BUILTIN_TRIGGERS.has(normalized)) {
     return `Trigger '${trigger}' conflicts with a built-in preset`;
   }
   const dupQuery = db().select().from(promptPresets);
   // no-op filter; we check below
-  const dup = excludeId ? dupQuery.where(eq(promptPresets.id, excludeId)).all() : dupQuery.all();
+  const dup = excludeId
+    ? await client().all(dupQuery.where(eq(promptPresets.id, excludeId)))
+    : await client().all(dupQuery);
   // Check all customs (excluding self if PATCH)
-  const customs = db().select().from(promptPresets).all();
+  const customs = await client().all(db().select().from(promptPresets));
   const conflict = customs.find(
     (c) => c.trigger.trim().toLowerCase() === normalized && c.id !== excludeId,
   );
@@ -106,32 +108,35 @@ function assertPresetCapableType(generationTypeId: string | undefined): void {
 export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/prompt-presets',
-    () => {
-      const rows = db().select().from(promptPresets).orderBy(desc(promptPresets.createdAt)).all();
+    async () => {
+      const rows = await client().all(
+        db().select().from(promptPresets).orderBy(desc(promptPresets.createdAt)),
+      );
       return rows.map(serializePreset);
     },
     { response: PromptPresetSchema.array() },
   )
   .post(
     '/prompt-presets',
-    ({ body, set }) => {
+    async ({ body, set }) => {
       // c61: trigger uniqueness + builtin conflict (v1 service.py:74-85)
-      const conflict = checkTriggerConflict(body.trigger);
+      const conflict = await checkTriggerConflict(body.trigger);
       if (conflict) {
         throw new AppHttpError(ErrorCode.CONFLICT, conflict);
       }
       assertPresetCapableType(body.generationTypeId);
-      const row = db()
-        .insert(promptPresets)
-        .values({
-          trigger: body.trigger,
-          description: body.description ?? null,
-          systemPrompt: body.systemPrompt,
-          enabled: body.enabled ?? true,
-          generationTypeId: body.generationTypeId ?? 'qa',
-        })
-        .returning()
-        .get();
+      const row = (await client().get(
+        db()
+          .insert(promptPresets)
+          .values({
+            trigger: body.trigger,
+            description: body.description ?? null,
+            systemPrompt: body.systemPrompt,
+            enabled: body.enabled ?? true,
+            generationTypeId: body.generationTypeId ?? 'qa',
+          })
+          .returning(),
+      ))!;
       set.status = 201;
       return serializePreset(row);
     },
@@ -139,14 +144,16 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
   )
   .patch(
     '/prompt-presets/:id',
-    ({ params, body }) => {
+    async ({ params, body }) => {
       const id = params.id;
-      const existing = db().select().from(promptPresets).where(eq(promptPresets.id, id)).get();
+      const existing = (await client().get(
+        db().select().from(promptPresets).where(eq(promptPresets.id, id)),
+      ))!;
       if (!existing) throw new NotFoundError(`Preset ${id} not found`);
 
       // c61: if changing trigger, check uniqueness + builtin conflict (exclude self)
       if (body.trigger !== undefined) {
-        const conflict = checkTriggerConflict(body.trigger, id);
+        const conflict = await checkTriggerConflict(body.trigger, id);
         if (conflict) {
           throw new AppHttpError(ErrorCode.CONFLICT, conflict);
         }
@@ -160,12 +167,9 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
       if (body.systemPrompt !== undefined) updateData.systemPrompt = body.systemPrompt;
       if (body.enabled !== undefined) updateData.enabled = body.enabled;
 
-      const updated = db()
-        .update(promptPresets)
-        .set(updateData)
-        .where(eq(promptPresets.id, id))
-        .returning()
-        .get();
+      const updated = (await client().get(
+        db().update(promptPresets).set(updateData).where(eq(promptPresets.id, id)).returning(),
+      ))!;
       return serializePreset(updated);
     },
     {
@@ -176,11 +180,13 @@ export const promptPresetsRouter = new Elysia({ prefix: '/v2' })
   )
   .delete(
     '/prompt-presets/:id',
-    ({ params, set }) => {
+    async ({ params, set }) => {
       const id = params.id;
-      const existing = db().select().from(promptPresets).where(eq(promptPresets.id, id)).get();
+      const existing = (await client().get(
+        db().select().from(promptPresets).where(eq(promptPresets.id, id)),
+      ))!;
       if (!existing) throw new NotFoundError(`Preset ${id} not found`);
-      db().delete(promptPresets).where(eq(promptPresets.id, id)).run();
+      await client().run(db().delete(promptPresets).where(eq(promptPresets.id, id)));
       set.status = 204;
       return;
     },

@@ -1,7 +1,6 @@
 /**
  * Deep Research runtime — thin barrel re-exporting the public API.
  */
-export type { SseEmit } from './research-core.ts';
 export { isPruneProtectedNode } from './research-core.ts';
 export { scheduleRun } from './run-loop.ts';
 export {
@@ -20,7 +19,6 @@ export {
   forkRunFromRevision,
 } from './report-revisions.ts';
 export {
-  validateCreateBody,
   createRun,
   listRuns,
   getRun,
@@ -35,7 +33,6 @@ export {
   requestReexpand,
   convertToNote,
   convertToSource,
-  streamRun,
   createResearchSseResponse,
 } from './commands.ts';
 export { createNodeChatSseResponse } from './node-chat.ts';

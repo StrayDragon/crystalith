@@ -18,7 +18,7 @@ import { z } from 'zod';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { messages, sessions, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { formatCitationBlock } from '../../shared/citations.ts';
@@ -76,18 +76,21 @@ const apiDocs: OpenApiRoute[] = [
 // Helpers
 // ---------------------------------------------------------------------------
 
-function loadHistory(
+async function loadHistory(
   sessionId: number,
-): { role: 'user' | 'assistant' | 'system'; content: string }[] {
-  const session = db().select().from(sessions).where(eq(sessions.id, sessionId)).get();
+): Promise<{ role: 'user' | 'assistant' | 'system'; content: string }[]> {
+  const session = await client().get(
+    db().select().from(sessions).where(eq(sessions.id, sessionId)),
+  );
   if (!session) throw new NotFoundError(`Session ${sessionId} not found`);
 
-  const msgRows = db()
-    .select()
-    .from(messages)
-    .where(eq(messages.sessionId, sessionId))
-    .orderBy(messages.createdAt)
-    .all();
+  const msgRows = await client().all(
+    db()
+      .select()
+      .from(messages)
+      .where(eq(messages.sessionId, sessionId))
+      .orderBy(messages.createdAt),
+  );
 
   return msgRows.map((m) => ({
     role: m.role,
@@ -99,35 +102,42 @@ function loadHistory(
  * Auto-generate session title from the first question (v1 generate_session_title).
  * Only sets the title if the session title is currently empty/default.
  */
-function maybeSetSessionTitle(sessionId: number, question: string): void {
-  const session = db().select().from(sessions).where(eq(sessions.id, sessionId)).get();
+async function maybeSetSessionTitle(sessionId: number, question: string): Promise<void> {
+  const session = await client().get(
+    db().select().from(sessions).where(eq(sessions.id, sessionId)),
+  );
   if (!session) return;
   if (session.title && session.title.trim() && session.title !== 'New session') return;
   const cleaned = question.trim().replaceAll(/\s+/gu, ' ').slice(0, 80) || 'New session';
-  db().update(sessions).set({ title: cleaned }).where(eq(sessions.id, sessionId)).run();
+  await client().run(
+    db().update(sessions).set({ title: cleaned }).where(eq(sessions.id, sessionId)),
+  );
 }
 
 /** Validate notebook exists + optional session/sourceIds ownership (v1 qa/api.py). */
-function assertQaOwnership(opts: {
+async function assertQaOwnership(opts: {
   notebookId: number;
   sessionId?: number;
   sourceIds?: number[];
-}): void {
-  requireNotebook(opts.notebookId);
+}): Promise<void> {
+  await requireNotebook(opts.notebookId);
 
   if (opts.sessionId !== undefined) {
-    const session = db().select().from(sessions).where(eq(sessions.id, opts.sessionId)).get();
+    const session = await client().get(
+      db().select().from(sessions).where(eq(sessions.id, opts.sessionId)),
+    );
     if (!session || session.notebookId !== opts.notebookId) {
       throw new NotFoundError(`Session ${opts.sessionId} not found`);
     }
   }
 
   if (opts.sourceIds?.length) {
-    const found = db()
-      .select({ id: sources.id })
-      .from(sources)
-      .where(and(eq(sources.notebookId, opts.notebookId), inArray(sources.id, opts.sourceIds)))
-      .all();
+    const found = await client().all(
+      db()
+        .select({ id: sources.id })
+        .from(sources)
+        .where(and(eq(sources.notebookId, opts.notebookId), inArray(sources.id, opts.sourceIds))),
+    );
     if (found.length !== opts.sourceIds.length) {
       throw new AppHttpError(ErrorCode.NOT_FOUND, 'Unknown source_id in sourceIds');
     }
@@ -175,7 +185,7 @@ async function prepareQa(body: QaBody) {
     throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Missing query after /prompt directive', {
       usage: '/prompt:<preset> <query>',
       presetId: bareDirective,
-      availablePresets: listAllPresetNames(),
+      availablePresets: await listAllPresetNames(),
     });
   }
 
@@ -192,11 +202,13 @@ async function prepareQa(body: QaBody) {
 
   assertQaOwnership({ notebookId, sessionId, sourceIds });
 
-  const history = sessionId ? loadHistory(sessionId) : [];
+  const history = sessionId ? await loadHistory(sessionId) : [];
 
   // Create user message + auto-title
   if (sessionId) {
-    db().insert(messages).values({ sessionId: sessionId, role: 'user', content: question }).run();
+    await client().run(
+      db().insert(messages).values({ sessionId: sessionId, role: 'user', content: question }),
+    );
     maybeSetSessionTitle(sessionId, question);
   }
 
@@ -208,11 +220,12 @@ async function prepareQa(body: QaBody) {
   // Create provisional assistant message
   let messageId: number | undefined;
   if (sessionId) {
-    const msg = db()
-      .insert(messages)
-      .values({ sessionId: sessionId, role: 'assistant', content: '' })
-      .returning()
-      .get();
+    const msg = (await client().get(
+      db()
+        .insert(messages)
+        .values({ sessionId: sessionId, role: 'assistant', content: '' })
+        .returning(),
+    ))!;
     messageId = msg.id;
   }
 
@@ -245,13 +258,14 @@ async function handleQaPost(body: QaBody) {
     topK: body.topK,
     minScore: body.minScore,
     sourceIds: body.sourceIds,
-    onMessageSettled: (text, _failed, citations) => {
+    onMessageSettled: async (text, _failed, citations) => {
       if (prepared.messageId) {
-        db()
-          .update(messages)
-          .set({ content: text, citations: citations ?? [] })
-          .where(eq(messages.id, prepared.messageId))
-          .run();
+        await client().run(
+          db()
+            .update(messages)
+            .set({ content: text, citations: citations ?? [] })
+            .where(eq(messages.id, prepared.messageId)),
+        );
       }
     },
   });
@@ -280,17 +294,18 @@ async function handleQaStream(body: QaBody) {
     sourceIds: body.sourceIds,
     // r326: streamed results echo generation metadata on the done event.
     generation: { ...prepared.generationBase, completion: 'streamed-answer' },
-    onMessageSettled: (text, failed, citations) => {
+    onMessageSettled: async (text, failed, citations) => {
       const { messageId } = prepared;
       if (!messageId) return;
       if (failed || text.trim() === '') {
-        db().delete(messages).where(eq(messages.id, messageId)).run();
+        await client().run(db().delete(messages).where(eq(messages.id, messageId)));
       } else {
-        db()
-          .update(messages)
-          .set({ content: text, citations: citations ?? [] })
-          .where(eq(messages.id, messageId))
-          .run();
+        await client().run(
+          db()
+            .update(messages)
+            .set({ content: text, citations: citations ?? [] })
+            .where(eq(messages.id, messageId)),
+        );
       }
     },
   });
@@ -303,12 +318,14 @@ type QaExportQuery = {
 };
 
 /** Export QA answer; session must belong to `pathNotebookId`. */
-function handleQaExport(query: QaExportQuery, pathNotebookId: number) {
+async function handleQaExport(query: QaExportQuery, pathNotebookId: number) {
   const sessionId = query.sessionId;
   const messageId = query.messageId;
   const format = query.format;
 
-  const sessionRow = db().select().from(sessions).where(eq(sessions.id, sessionId)).get();
+  const sessionRow = await client().get(
+    db().select().from(sessions).where(eq(sessions.id, sessionId)),
+  );
   if (!sessionRow || sessionRow.notebookId !== pathNotebookId) {
     throw new NotFoundError('Session not found');
   }
@@ -316,30 +333,37 @@ function handleQaExport(query: QaExportQuery, pathNotebookId: number) {
   // Find the assistant message to export
   let assistantMessage;
   if (messageId) {
-    assistantMessage = db().select().from(messages).where(eq(messages.id, messageId)).get();
+    assistantMessage = await client().get(
+      db().select().from(messages).where(eq(messages.id, messageId)),
+    );
     if (!assistantMessage || assistantMessage.sessionId !== sessionId) {
       throw new NotFoundError('Message not found');
     }
   } else {
     // Latest assistant message in the session
-    assistantMessage = db()
-      .select()
-      .from(messages)
-      .where(eq(messages.sessionId, sessionId))
-      .orderBy(messages.createdAt)
-      .all()
-      .find((m) => m.role === 'assistant');
+    assistantMessage = (
+      await client().all(
+        db()
+          .select()
+          .from(messages)
+          .where(eq(messages.sessionId, sessionId))
+          .orderBy(messages.createdAt),
+      )
+    ).find((m) => m.role === 'assistant');
   }
 
   if (!assistantMessage) throw new NotFoundError('No assistant message found to export');
 
   // Find the preceding user question
-  const precedingUser = db()
-    .select()
-    .from(messages)
-    .where(eq(messages.sessionId, sessionId))
-    .orderBy(messages.createdAt)
-    .all()
+  const precedingUser = (
+    await client().all(
+      db()
+        .select()
+        .from(messages)
+        .where(eq(messages.sessionId, sessionId))
+        .orderBy(messages.createdAt),
+    )
+  )
     .filter((m) => m.role === 'user')
     .find((m) => m.createdAt <= assistantMessage.createdAt);
   const question = precedingUser?.content ?? null;
@@ -366,11 +390,12 @@ function handleQaExport(query: QaExportQuery, pathNotebookId: number) {
   }
   const sourceRows =
     citedSourceIds.length && notebookId !== undefined
-      ? db()
-          .select()
-          .from(sources)
-          .where(and(inArray(sources.id, citedSourceIds), eq(sources.notebookId, notebookId)))
-          .all()
+      ? await client().all(
+          db()
+            .select()
+            .from(sources)
+            .where(and(inArray(sources.id, citedSourceIds), eq(sources.notebookId, notebookId))),
+        )
       : [];
   const foundIds = new Set(sourceRows.map((s) => s.id));
   const sourcesMeta = [

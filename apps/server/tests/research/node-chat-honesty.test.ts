@@ -144,7 +144,7 @@ function ledgerRows(): Array<{ kind: string; headline: string | null; payload: u
 }
 
 async function runChat(): Promise<SseFrame[]> {
-  const res = createNodeChatSseResponse(notebookId, runId, NODE_ID, { message: '总结一下' });
+  const res = await createNodeChatSseResponse(notebookId, runId, NODE_ID, { message: '总结一下' });
   return parseFrames(await res.text());
 }
 
@@ -221,7 +221,7 @@ describe('node chat failure honesty (c63 / r12)', () => {
 });
 
 describe('chat event contract (shared union)', () => {
-  it('all frame kinds conform to ResearchNodeChatStreamEventSchema', () => {
+  it('all frame kinds conform to ResearchNodeChatStreamEventSchema', async () => {
     const samples = [
       { event: 'log', data: { message: 'connected', nodeId: NODE_ID } },
       { event: 'chunk', data: { text: '增量' } },

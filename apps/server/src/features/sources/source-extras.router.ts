@@ -16,7 +16,7 @@ import { z } from 'zod';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
@@ -94,7 +94,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
     async ({ params, body }) => {
       const nid = params.nid;
       const sid = params.sid;
-      const source = requireOwnedRow(sources, sid, nid, 'Source');
+      const source = await requireOwnedRow(sources, sid, nid, 'Source');
       // c44: "not ready" → 400 (v1 api_qa.py:67)
       if (source.status !== 'ready') {
         throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Source is not ready');
@@ -123,12 +123,13 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
 
       // Fallback: if vector search returned nothing, take first chunks
       if (contextChunks.length === 0) {
-        const chunkRows = db()
-          .select({ text: chunks.text })
-          .from(chunks)
-          .where(eq(chunks.sourceId, sid))
-          .orderBy(chunks.chunkIndex)
-          .all();
+        const chunkRows = await client().all(
+          db()
+            .select({ text: chunks.text })
+            .from(chunks)
+            .where(eq(chunks.sourceId, sid))
+            .orderBy(chunks.chunkIndex),
+        );
         contextChunks = chunkRows.slice(0, 15).map((c) => ({ text: c.text, score: 0 }));
       }
 
@@ -165,7 +166,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
     async ({ params, body, set }) => {
       const nid = params.nid;
       const sid = params.sid;
-      const source = requireOwnedRow(sources, sid, nid, 'Source');
+      const source = await requireOwnedRow(sources, sid, nid, 'Source');
 
       // Multi-turn messages list (v1) OR single-turn {question, answer} shortcut.
       const { question, answer, messages } = body;
@@ -186,32 +187,34 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
         text = `# Q&A: ${question!.trim()}\n\n**Question**: ${question!.trim()}\n\n**Answer**: ${answer!.trim()}\n\n*Based on source: ${source.filename}*`;
       }
 
-      const newSource = db()
-        .insert(sources)
-        .values({
-          notebookId: source.notebookId,
-          filename,
-          status: 'processing',
-          metadata: { qa_from_source: sid, original_filename: source.filename },
-        })
-        .returning()
-        .get();
+      const newSource = (await client().get(
+        db()
+          .insert(sources)
+          .values({
+            notebookId: source.notebookId,
+            filename,
+            status: 'processing',
+            metadata: { qa_from_source: sid, original_filename: source.filename },
+          })
+          .returning(),
+      ))!;
 
       const { chunkText } = await import('../../rag/chunker.ts');
       const reportChunks = chunkText(text);
 
       const chunkRows: Array<{ id: number; text: string }> = [];
       for (const chunk of reportChunks) {
-        const chunkRow = db()
-          .insert(chunks)
-          .values({
-            sourceId: newSource.id,
-            chunkIndex: chunk.index,
-            text: chunk.text,
-            metadata: { source_type: 'qa_conversion' },
-          })
-          .returning()
-          .get();
+        const chunkRow = (await client().get(
+          db()
+            .insert(chunks)
+            .values({
+              sourceId: newSource.id,
+              chunkIndex: chunk.index,
+              text: chunk.text,
+              metadata: { source_type: 'qa_conversion' },
+            })
+            .returning(),
+        ))!;
         chunkRows.push({ id: chunkRow.id, text: chunk.text });
       }
 
@@ -221,31 +224,36 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
           const { insertChunkVector } = await import('../../db/vectors.ts');
           const vectors = await embedBatch(chunkRows.map((c) => c.text));
           for (const [i, vec] of vectors.entries()) {
-            insertChunkVector(db(), chunkRows[i].id, source.notebookId, newSource.id, vec);
+            await insertChunkVector(db(), chunkRows[i].id, source.notebookId, newSource.id, vec);
           }
           const { bumpVectorEpoch, bumpSourcesEpoch } = await import('../../rag/cache.ts');
           bumpVectorEpoch(source.notebookId);
           bumpSourcesEpoch(source.notebookId);
           // Only set ready after successful embedding (c39: fix ready-before-vectors race)
-          db().update(sources).set({ status: 'ready' }).where(eq(sources.id, newSource.id)).run();
+          await client().run(
+            db().update(sources).set({ status: 'ready' }).where(eq(sources.id, newSource.id)),
+          );
           scheduleSourceSummary(newSource.id);
         } catch (error) {
           logger.error('[source-extras] qa-to-source embedding failed:', error);
-          db()
-            .update(sources)
-            .set({
-              status: 'failed',
-              errorMessage: error instanceof Error ? error.message : 'Embedding failed',
-            })
-            .where(eq(sources.id, newSource.id))
-            .run();
+          await client().run(
+            db()
+              .update(sources)
+              .set({
+                status: 'failed',
+                errorMessage: error instanceof Error ? error.message : 'Embedding failed',
+              })
+              .where(eq(sources.id, newSource.id)),
+          );
           throw new AppHttpError(ErrorCode.INTERNAL_ERROR, 'Failed to embed QA source', {
             reason: error instanceof Error ? error.message : String(error),
           });
         }
       } else {
         // No chunks — safe to mark ready (no summary without content)
-        db().update(sources).set({ status: 'ready' }).where(eq(sources.id, newSource.id)).run();
+        await client().run(
+          db().update(sources).set({ status: 'ready' }).where(eq(sources.id, newSource.id)),
+        );
       }
 
       set.status = 201;

@@ -117,7 +117,7 @@ async function waitForStatus(runId: number, wanted: string[], timeoutMs = 5000):
 }
 
 describe('repairResearchReportText (unit)', () => {
-  it('unwraps fenced JSON and fills missing citations', () => {
+  it('unwraps fenced JSON and fills missing citations', async () => {
     const repaired = repairResearchReportText(`\`\`\`json
 {"title":"T","sections":[{"id":"s1","heading":"H","blocks":[{"type":"paragraph","text":"hi"}]}]}
 \`\`\``);
@@ -130,7 +130,7 @@ describe('repairResearchReportText (unit)', () => {
     expect(obj.sections[0]!.blocks[0]!.citeIds).toEqual([]);
   });
 
-  it('strips think tags and preamble before object', () => {
+  it('strips think tags and preamble before object', async () => {
     const repaired = repairResearchReportText(
       '<think>reasoning</think>\nHere is the report:\n{"title":"T","sections":[{"id":"s1","heading":"H","blocks":[{"type":"paragraph","text":"x","citeIds":[]}]}],"citations":{}}',
     );
@@ -138,7 +138,7 @@ describe('repairResearchReportText (unit)', () => {
     expect(JSON.parse(repaired!).title).toBe('T');
   });
 
-  it('normalizes incomplete citation objects', () => {
+  it('normalizes incomplete citation objects', async () => {
     const repaired = repairResearchReportText(
       JSON.stringify({
         title: 'T',
@@ -170,7 +170,7 @@ describe('repairResearchReportText (unit)', () => {
 });
 
 describe('validateAndBindCitations (unit)', () => {
-  it('strips illegal keys and keeps legal', () => {
+  it('strips illegal keys and keeps legal', async () => {
     const evidences = [
       {
         id: 'ev_ok',
@@ -208,7 +208,7 @@ describe('validateAndBindCitations (unit)', () => {
     });
   });
 
-  it('fails when all claimed cites are illegal', () => {
+  it('fails when all claimed cites are illegal', async () => {
     const bound = validateAndBindCitations(
       {
         title: 'T',
@@ -226,7 +226,7 @@ describe('validateAndBindCitations (unit)', () => {
     expect(bound.ok).toBe(false);
   });
 
-  it('allows 0 cites with 0 evidence', () => {
+  it('allows 0 cites with 0 evidence', async () => {
     const bound = validateAndBindCitations(
       {
         title: 'T',

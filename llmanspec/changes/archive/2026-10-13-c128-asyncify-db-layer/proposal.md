@@ -1,6 +1,9 @@
 ---
 depends_on: []
 needs_specs_change: false
+branch: sdd/c128-asyncify-db-layer
+base_branch: main
+base_sha: 924d4f74a570297a1cf57a2a85b2a559a4373a22
 ---
 
 # 数据层异步化：db/client 端口接缝
@@ -18,7 +21,8 @@ needs_specs_change: false
 
 - 新增 `apps/server/src/db/client.ts`：异步数据访问端口（`all` / `get` / `run` / `raw` / `tx`），sqlite 实现 = 现有 bun:sqlite 同步结果包 Promise；`db()` 单例与 `resetDb()` 语义不变。
 - 全部调用点终端 `.all()/.get()/.run()` 迁移为 `await client.xxx(builder)`；Elysia handler 本就是 async，改造机械。
-- `db/vectors.ts` 中唯一一处手工事务（`BEGIN IMMEDIATE`/`COMMIT`，cosine 重建）收编进端口 `tx()`。
+- `db/vectors.ts` 中唯一一处手工事务（`BEGIN IMMEDIATE`/`COMMIT`，cosine 重建）收编进端口 `tx()`（实施修订：boot 链的 `initVecChunks` 保持同步直调，见 design D3）。
+- 连带（apply 期发现）：`ai/stream.ts` 的 `onMessageSettled` 回调合约放宽为 `void | Promise<void>` 并在调用点 await——消息落库回调异步化所必需，无行为变化。
 - 测试文件同步 `await` 化（每文件自给自足纪律不变）。
 - **不做**：任何 pg 代码、`database.dialect` 配置、死配置段激活、compose、spec 改写、`vec_chunks`/`chunks_fts` SQL 方言调整（只换执行通道）。
 

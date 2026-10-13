@@ -15,7 +15,7 @@ import { count, eq } from 'drizzle-orm';
 import { Elysia } from 'elysia';
 import { z } from 'zod';
 
-import { db } from '../../db/index.ts';
+import { client, db } from '../../db/index.ts';
 import { messages, sessions } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { PathId } from '../../shared/ids.ts';
@@ -86,26 +86,31 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
   // List messages (paginated)
   .get(
     '/notebooks/:nid/sessions/:sid/messages',
-    ({ params, query }) => {
+    async ({ params, query }) => {
       const nid = params.nid;
       const sid = params.sid;
       const { offset, limit } = query;
 
       // Verify session exists AND belongs to notebook (c39 gap fix)
-      requireOwnedRow(sessions, sid, nid, 'Session');
+      await requireOwnedRow(sessions, sid, nid, 'Session');
 
       const total =
-        db().select({ n: count() }).from(messages).where(eq(messages.sessionId, sid)).get()?.n ?? 0;
+        (
+          await client().get(
+            db().select({ n: count() }).from(messages).where(eq(messages.sessionId, sid)),
+          )
+        )?.n ?? 0;
 
-      const rows = db()
-        .select()
-        .from(messages)
-        .where(eq(messages.sessionId, sid))
-        // ASC: chronological order
-        .orderBy(messages.createdAt)
-        .limit(limit)
-        .offset(offset)
-        .all();
+      const rows = await client().all(
+        db()
+          .select()
+          .from(messages)
+          .where(eq(messages.sessionId, sid))
+          // ASC: chronological order
+          .orderBy(messages.createdAt)
+          .limit(limit)
+          .offset(offset),
+      );
 
       return {
         items: rows.map(serializeMessage),
@@ -124,25 +129,28 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
   // Create a user message
   .post(
     '/notebooks/:nid/sessions/:sid/messages',
-    ({ params, body, set }) => {
+    async ({ params, body, set }) => {
       const nid = params.nid;
       const sid = params.sid;
-      requireOwnedRow(sessions, sid, nid, 'Session');
+      await requireOwnedRow(sessions, sid, nid, 'Session');
 
-      const row = db()
-        .insert(messages)
-        .values({
-          sessionId: sid,
-          role: body.role,
-          content: body.content,
-          citations: body.citations ?? null,
-        })
-        .returning()
-        .get();
+      const row = (await client().get(
+        db()
+          .insert(messages)
+          .values({
+            sessionId: sid,
+            role: body.role,
+            content: body.content,
+            citations: body.citations ?? null,
+          })
+          .returning(),
+      ))!;
 
       // Touch the parent session's updated_at so recency ordering stays correct
       // (mirrors v1 features/messages/service.py:29-31).
-      db().update(sessions).set({ updatedAt: new Date() }).where(eq(sessions.id, sid)).run();
+      await client().run(
+        db().update(sessions).set({ updatedAt: new Date() }).where(eq(sessions.id, sid)),
+      );
 
       set.status = 201;
       return serializeMessage(row);
