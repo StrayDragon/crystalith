@@ -40,10 +40,10 @@ depends_on: [c130-extend-embedding-capability]
 
 ## 真实业务验证发现（2026-10-13 浏览器回归，c131 归档后）
 
-- **B（高，server，既有缺陷——纳入本 change 检索质量范围）**：多来源 scope 下小来源被挤出——`searchVectors`（db/vectors.ts）按来源分区 KNN 合并后先 `slice(0, topK)`，`applyDiversity`（maxPerSource=3）在截断之后执行且不回填；5-chunk 来源占满 top-5，1-chunk 来源唯一命中被丢。复现：QA body `sourceIds:[1,3]` 默认 topK=5 丢来源 3，topK=8 命中。修法方向：per-source 配额合并（每来源保底名额）或先 diversity 后截断。
-- **C（中，web，未定位）**：上传新来源后聊天流消息不渲染（服务端已持久化 messages），页面曾一次性重置回默认笔记本且选中不持久化。需专项排查（SSE/状态刷新路径）。
-- **D（低，web）**：ConfirmPopover 确认按钮通用文案「确认删除」在「重建索引」语境误导——给 ConfirmPopover 加可选 confirmLabel。
-- **A（中，web）已修**（2026-10-13 main `fix(frontend)`）：IndexRebuildControl 警告色被 IconButton 基类压过 → `!` important 前缀（MindmapViewer 同款先例）。
+- **A（中，web）已修**（2026-10-13 main）：IndexRebuildControl 警告色被 IconButton 基类压过 → `!` important 前缀（MindmapViewer 同款先例）。
+- **B（高，server）已修**（2026-10-13 main `df7b7a77`）：`searchVectors` 多来源合并改轮转配额（按来源名次交错取、每来源保底名额，选完再全局距离排序保 r229）；真机复现 `sourceIds:[1,3]` 引用恢复 `[1,1,1,3]`。回归测试 `tests/rag/multi-source-search.test.ts`。c132 的 SearchService 复用该合并语义。
+- **C（中，web）已修主根**（2026-10-13 main `09efe3c0`）：workspace 选中态（activeNotebookId/activeSessionId）经 zustand persist 持久化——此前刷新即重置到最新笔记本、聊天区清空（消息服务端在，视图丢）。子代理观察到的"列表闪空后恢复旧状态"归并同根；若 c132 搜索 UI 期间复现独立渲染残留，再开专项。
+- **D（低，web）已修**（同 `09efe3c0`）：重建确认按钮传 `confirmText="开始重建"`（ConfirmPopover 既有 prop）。
 
 ## 深挖决策记录（2026-10-13，逐问确认）
 

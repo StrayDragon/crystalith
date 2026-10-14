@@ -24,7 +24,7 @@ import type {
 // ---------------------------------------------------------------------------
 // State shape — identical to the former WorkspaceState
 // ---------------------------------------------------------------------------
-export interface WorkspaceStoreState {
+interface WorkspaceStoreState {
   // --- Notebooks ---
   notebooks: Notebook[];
   activeNotebookId: number | null;
@@ -75,7 +75,7 @@ export interface WorkspaceStoreState {
 // ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
-export interface WorkspaceStoreActions {
+interface WorkspaceStoreActions {
   // --- Notebooks ---
   setNotebooks: (notebooks: Notebook[]) => void;
   setActiveNotebook: (id: number | null) => void;
@@ -129,7 +129,7 @@ export interface WorkspaceStoreActions {
   setError: (key: keyof ErrorsState, value: string) => void;
 }
 
-export type WorkspaceStore = WorkspaceStoreState & WorkspaceStoreActions;
+type WorkspaceStore = WorkspaceStoreState & WorkspaceStoreActions;
 
 // ---------------------------------------------------------------------------
 // Initial state
