@@ -1,2 +1,2 @@
-title: "B 区第二批：门禁元规则 + 服务侧（约 30 条）"
+title: 'B 区第二批：门禁元规则 + 服务侧（约 30 条）'
 depends_on: [c115-api-contract-b-class-tests]

@@ -1,2 +1,2 @@
-title: "Adopt EmbeddingGemma 2：目录接入 + 索引重建路径 + 质量清单 + 默认切换"
+title: 'Adopt EmbeddingGemma 2：目录接入 + 索引重建路径 + 质量清单 + 默认切换'
 depends_on: [c130-extend-embedding-capability]
