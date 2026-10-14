@@ -38,6 +38,13 @@ depends_on: [c130-extend-embedding-capability]
 6. 全局 KNN 去分区谓词后的延迟实测（vec0 全分区扫描）；若超标再考虑 notebook 级并行扇出。
 7. 与 c129（pg）衔接：SearchService 方言中立（经 DbClient/strategy），pgvector 迭代扫描天然吃 `source_id IN`。
 
+## 真实业务验证发现（2026-10-13 浏览器回归，c131 归档后）
+
+- **B（高，server，既有缺陷——纳入本 change 检索质量范围）**：多来源 scope 下小来源被挤出——`searchVectors`（db/vectors.ts）按来源分区 KNN 合并后先 `slice(0, topK)`，`applyDiversity`（maxPerSource=3）在截断之后执行且不回填；5-chunk 来源占满 top-5，1-chunk 来源唯一命中被丢。复现：QA body `sourceIds:[1,3]` 默认 topK=5 丢来源 3，topK=8 命中。修法方向：per-source 配额合并（每来源保底名额）或先 diversity 后截断。
+- **C（中，web，未定位）**：上传新来源后聊天流消息不渲染（服务端已持久化 messages），页面曾一次性重置回默认笔记本且选中不持久化。需专项排查（SSE/状态刷新路径）。
+- **D（低，web）**：ConfirmPopover 确认按钮通用文案「确认删除」在「重建索引」语境误导——给 ConfirmPopover 加可选 confirmLabel。
+- **A（中，web）已修**（2026-10-13 main `fix(frontend)`）：IndexRebuildControl 警告色被 IconButton 基类压过 → `!` important 前缀（MindmapViewer 同款先例）。
+
 ## 深挖决策记录（2026-10-13，逐问确认）
 
 1. **搜索入口形态**：workspace **顶栏常驻搜索框**，输入即搜；范围切换（当前笔记本/全局）在结果面板里选。（用户选定。）
