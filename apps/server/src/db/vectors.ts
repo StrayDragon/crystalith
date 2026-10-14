@@ -230,9 +230,10 @@ export async function searchVectors(
 
   // Unique positive ids only — avoid duplicate partition queries.
   const uniqueSourceIds = [...new Set(sourceIds.filter((id) => Number.isFinite(id) && id > 0))];
-  const merged: VectorHit[] = [];
+  const perSource: VectorHit[][] = [];
   for (const sourceId of uniqueSourceIds) {
-    const hits = await c.raw<VectorHit>(sql`
+    perSource.push(
+      await c.raw<VectorHit>(sql`
       SELECT v.rowid AS rowid,
              v.source_id AS source_id,
              v.notebook_id AS notebook_id,
@@ -246,11 +247,33 @@ export async function searchVectors(
          AND v.notebook_id = ${notebookId}
          AND v.source_id = ${sourceId}
        ORDER BY v.distance;
-    `);
-    merged.push(...hits);
+    `),
+    );
+  }
+
+  // Merge round-robin by per-source rank so every explicitly selected source
+  // keeps representation in the top-K: merging purely by distance lets a large
+  // source crowd a small one out entirely (2026-10-13 real-world regression —
+  // a 1-chunk source's only hit lost its slot to a 5-chunk source's 5th
+  // chunk, and the later diversity cap trimmed the winner further). Each
+  // per-source list is already distance-ordered; taking rank r from each
+  // source in turn guarantees a slot for every source while the final global
+  // sort keeps the r229 score-descending contract.
+  const merged: VectorHit[] = [];
+  for (let rank = 0; merged.length < topK; rank++) {
+    let added = false;
+    for (const hits of perSource) {
+      if (merged.length >= topK) break;
+      const hit = hits[rank];
+      if (hit) {
+        merged.push(hit);
+        added = true;
+      }
+    }
+    if (!added) break;
   }
   merged.sort((a, b) => a.distance - b.distance);
-  return merged.slice(0, topK);
+  return merged;
 }
 
 /** Count indexed vectors for a notebook (used to check `isIndexed`). */
