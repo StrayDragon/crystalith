@@ -7,8 +7,9 @@
 // it runs in-process. The caller should wrap in a try/catch for error handling.
 import { eq } from 'drizzle-orm';
 
+import { insertChunk } from '../../db/chunks.ts';
 import { client, db } from '../../db/index.ts';
-import { chunks, sources } from '../../db/schema.ts';
+import { sources } from '../../db/schema.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { chunkText } from '../../rag/chunker.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
@@ -185,18 +186,14 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
     let offset = 0;
     for (const c of chunked) {
       const chunkMetadata = c.metadata ?? result.metadata ?? null;
-      await client().run(
-        db()
-          .insert(chunks)
-          .values({
-            sourceId: sourceRow.id,
-            chunkIndex: c.index,
-            text: c.text,
-            startOffset: offset,
-            endOffset: offset + c.text.length,
-            metadata: chunkMetadata,
-          }),
-      );
+      await insertChunk({
+        sourceId: sourceRow.id,
+        chunkIndex: c.index,
+        text: c.text,
+        startOffset: offset,
+        endOffset: offset + c.text.length,
+        metadata: chunkMetadata,
+      });
       // +1 for the separator
       offset += c.text.length + 1;
     }

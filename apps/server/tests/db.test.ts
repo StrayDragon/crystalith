@@ -384,8 +384,8 @@ describe('db: chunks embedding metadata columns (c130 r479)', () => {
   });
 
   it('FTS5 content-sync triggers still mirror chunks inserts (keyword path regression)', async () => {
-    // KeywordStrategy.indexSource runs the real ensureFts() (chunks_fts +
-    // content-sync triggers). retrieve()'s regression (incl. the fixed
+    // Boot ensureFtsIndex (db/fts.ts) creates chunks_fts over text_tokens +
+    // content-sync triggers; retrieve()'s regression (incl. the fixed
     // source_id/chunk_index columns) lives in tests/rag/vector-dim-guard.test.ts;
     // this case only checks the AFTER INSERT trigger sync via a direct FTS query.
     const [nb] = orm.insert(notebooks).values({ name: 'FTS NB' }).returning().all();
@@ -395,13 +395,16 @@ describe('db: chunks embedding metadata columns (c130 r479)', () => {
       .returning()
       .all();
 
-    const strategy = new KeywordStrategy();
-    // ensureFts() must run before the insert so the AFTER INSERT trigger fires.
-    await strategy.indexSource(src.id, nb.id);
-
+    // c132 r487: keyword index reads chunks.text_tokens — populate it on this
+    // direct insert (production writes go through db/chunks.ts).
     const [chk] = orm
       .insert(chunks)
-      .values({ sourceId: src.id, chunkIndex: 0, text: 'zirconium lantern quay orchestrion' })
+      .values({
+        sourceId: src.id,
+        chunkIndex: 0,
+        text: 'zirconium lantern quay orchestrion',
+        textTokens: 'zirconium lantern quay orchestrion',
+      })
       .returning()
       .all();
 

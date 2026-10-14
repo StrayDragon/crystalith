@@ -189,10 +189,20 @@ export async function deleteSourceVectors(orm: Orm, sourceId: number): Promise<v
   await createDbClient(orm).rawRun(sql`DELETE FROM vec_chunks WHERE source_id = ${sourceId};`);
 }
 
+/** Origin types existing retrieval callers see by default (c132 r486):
+ * everything except source-origin chunks (e.g. indexed outputs) is excluded
+ * from QA/outputs/studio/research evidence paths unless explicitly requested
+ * by the global SearchService. */
+const DEFAULT_ORIGIN_TYPES: string[] = ['source'];
+
 /**
  * KNN search scoped to a notebook. Returns the top-K chunk rowids + distance,
  * joined with the `chunks` table for text. The query vector and integer
  * filters are bound as parameters (no injection surface).
+ *
+ * `originTypes` defaults to source-only chunks (r486 — existing retrieval
+ * callers' citation semantics are unchanged by output indexing); pass an
+ * explicit wider set (e.g. ['source', 'output']) for global search.
  *
  * When `sourceIds` is provided (c40 — v1 source-scoping), run one KNN per
  * source using the `source_id` partition equality predicate, then merge by
@@ -203,13 +213,22 @@ export async function deleteSourceVectors(orm: Orm, sourceId: number): Promise<v
 export async function searchVectors(
   orm: Orm,
   queryVec: Float32Array | number[],
-  notebookId: number,
+  notebookId: number | null,
   topK = 10,
   sourceIds?: number[],
+  originTypes?: string[],
 ): Promise<VectorHit[]> {
   await assertVecDimMatchesTable(orm, queryVec);
   const queryBytes = toBytes(queryVec);
   const c = createDbClient(orm);
+  const origins = originTypes ?? DEFAULT_ORIGIN_TYPES;
+  const originFilter = sql` AND c.origin_type IN (${sql.join(
+    origins.map((t) => sql`${t}`),
+    sql`, `,
+  )})`;
+  // notebookId null = global scope (c132 global search): drop the partition
+  // predicate and scan every notebook's partitions.
+  const notebookFilter = notebookId !== null ? sql` AND v.notebook_id = ${notebookId}` : sql``;
 
   if (!sourceIds?.length) {
     return c.raw<VectorHit>(sql`
@@ -222,8 +241,7 @@ export async function searchVectors(
         FROM vec_chunks v
         JOIN chunks c ON c.id = v.rowid
        WHERE v.embedding MATCH ${queryBytes}
-         AND v.k = ${topK}
-         AND v.notebook_id = ${notebookId}
+         AND v.k = ${topK}${notebookFilter}${originFilter}
        ORDER BY v.distance;
     `);
   }
@@ -245,7 +263,7 @@ export async function searchVectors(
        WHERE v.embedding MATCH ${queryBytes}
          AND v.k = ${topK}
          AND v.notebook_id = ${notebookId}
-         AND v.source_id = ${sourceId}
+         AND v.source_id = ${sourceId}${originFilter}
        ORDER BY v.distance;
     `),
     );

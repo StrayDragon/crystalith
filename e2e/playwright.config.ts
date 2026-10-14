@@ -68,6 +68,12 @@ function e2eServerEnv(): NodeJS.ProcessEnv {
     // pin the mock model name explicitly instead of inheriting nothing.
     CL_CHAT_MODEL: 'e2e-mock',
     CL_EMBEDDING_MODEL: 'e2e-embed',
+    // Hermetic embedding (c132): without this the default falls through to
+    // app.yaml's eg2 gateway (a REAL external service) — cold starts stretched
+    // the suite to 11m+ and made search/upload flows nondeterministic.
+    // gateway-embedding consumes CL_EMBEDDING_API_BASE/MODEL above and its
+    // declared 1024 dims match the mock gateway's embeddings.
+    CL_DEFAULT_EMBEDDING_MODEL: 'gateway-embedding',
     CL_RESEARCH_E2E_STUB: '1',
   };
 }

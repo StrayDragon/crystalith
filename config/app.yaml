@@ -301,6 +301,13 @@ search:
     # Milliseconds. 300s allows slow SearXNG / remote engines to return.
     timeout: 300000
     max_results: 10
+  # Knowledge-base (global) search — the top-bar search box (c132). Budget is
+  # advisory: SQLite executes synchronously, so over-budget searches finish
+  # and log a warning instead of being preempted (see docs/search.md).
+  kb:
+    default_top_k: 20
+    max_top_k: 100
+    budget_ms: 10000
 
 # ----------------------------------------------------------------------------
 # Optional service contracts (core remains available when these are unavailable)

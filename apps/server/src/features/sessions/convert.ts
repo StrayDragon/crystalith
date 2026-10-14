@@ -10,8 +10,9 @@ import { eq } from 'drizzle-orm';
 import { NotFoundError } from 'elysia';
 import type { z } from 'zod';
 
+import { insertChunk } from '../../db/chunks.ts';
 import { client, db } from '../../db/index.ts';
-import { chunks, messages, outputs, sessions, sources } from '../../db/schema.ts';
+import { messages, outputs, sessions, sources } from '../../db/schema.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { logger } from '../../shared/logger.ts';
 import { requireOwnedRow } from '../../shared/notebook-scope.ts';
@@ -104,17 +105,12 @@ export async function convertSessionToSource(
   // Insert chunks
   const chunkRows: Array<{ id: number; text: string }> = [];
   for (const chunk of reportChunks) {
-    const chunkRow = (await client().get(
-      db()
-        .insert(chunks)
-        .values({
-          sourceId: source.id,
-          chunkIndex: chunk.index,
-          text: chunk.text,
-          metadata: { source_type: 'session_conversion' },
-        })
-        .returning(),
-    ))!;
+    const chunkRow = await insertChunk({
+      sourceId: source.id,
+      chunkIndex: chunk.index,
+      text: chunk.text,
+      metadata: { source_type: 'session_conversion' },
+    });
     chunkRows.push({ id: chunkRow.id, text: chunk.text });
   }
 
@@ -246,6 +242,10 @@ export async function convertSessionToOutput(
       })
       .returning(),
   ))!;
+
+  // c132 r485: synchronous auto-index (searchable once the response returns).
+  const { indexOutputForSearch } = await import('../outputs/auto-index.ts');
+  await indexOutputForSearch(output);
 
   return {
     outputId: output.id,

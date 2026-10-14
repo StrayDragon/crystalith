@@ -16,6 +16,7 @@ import { z } from 'zod';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
+import { insertChunk } from '../../db/chunks.ts';
 import { client, db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
@@ -223,17 +224,12 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
 
       const chunkRows: Array<{ id: number; text: string }> = [];
       for (const chunk of reportChunks) {
-        const chunkRow = (await client().get(
-          db()
-            .insert(chunks)
-            .values({
-              sourceId: newSource.id,
-              chunkIndex: chunk.index,
-              text: chunk.text,
-              metadata: { source_type: 'qa_conversion' },
-            })
-            .returning(),
-        ))!;
+        const chunkRow = await insertChunk({
+          sourceId: newSource.id,
+          chunkIndex: chunk.index,
+          text: chunk.text,
+          metadata: { source_type: 'qa_conversion' },
+        });
         chunkRows.push({ id: chunkRow.id, text: chunk.text });
       }
 

@@ -20,6 +20,7 @@ export * from './command.js';
 export * from './workspace.js';
 export * from './generation-type.js';
 export * from './research.js';
+export * from './search.js';
 export * from './env.js';
 export * from './i18n.js';
 export * from './streaming/qa-stream.js';

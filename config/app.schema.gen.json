@@ -215,6 +215,31 @@
               "type": "number"
             }
           }
+        },
+        "kb": {
+          "default": {
+            "default_top_k": 20,
+            "max_top_k": 100,
+            "budget_ms": 10000
+          },
+          "type": "object",
+          "properties": {
+            "default_top_k": {
+              "description": "知识库搜索默认返回条数（顶栏全局搜索）",
+              "default": 20,
+              "type": "number"
+            },
+            "max_top_k": {
+              "description": "知识库搜索单次请求条数上限（请求 topK 会被钳制到该值）",
+              "default": 100,
+              "type": "number"
+            },
+            "budget_ms": {
+              "description": "知识库搜索全链路延迟预算（毫秒）；超预算记录告警日志（SQLite 同步执行不可中断，见 docs/search.md）",
+              "default": 10000,
+              "type": "number"
+            }
+          }
         }
       }
     },

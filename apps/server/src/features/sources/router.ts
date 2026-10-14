@@ -61,6 +61,7 @@ import { logger } from '../../shared/logger.ts';
 import { requireOwnedRow, resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import { batchDeleteSources, batchReembedSources } from './batch.service.ts';
 import { uploadDedupKey } from './dedup.ts';
+import { visibleSourcesOnly } from './derived-visibility.ts';
 import { ingestFromUrl } from './from-url.service.ts';
 import { listParsers } from './parser-registry.ts';
 import { ingestSource } from './pipeline.ts';
@@ -529,7 +530,13 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       const sortOrder = query.sortOrder ?? 'desc';
       const { offset, limit } = query;
 
-      let rows = await client().all(db().select().from(sources).where(eq(sources.notebookId, nid)));
+      // c132 r485: hidden derived rows (outputs auto-indexing) never list.
+      let rows = await client().all(
+        db()
+          .select()
+          .from(sources)
+          .where(and(eq(sources.notebookId, nid), visibleSourcesOnly())),
+      );
 
       // Tag filter
       if (tagFilter) {

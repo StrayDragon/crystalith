@@ -1,8 +1,11 @@
 /**
- * Workspace top-bar search — E1 anchored panel (Fast web search only).
+ * Workspace top-bar search — E1 anchored panel. Two modes (c132):
+ *  - 本地知识库 (default): debounced hybrid search over POST /v2/search with
+ *    scope toggle + grouped results + jump-to-source/output;
+ *  - Fast 联网: SearXNG web search (the E1 original).
  * Deep Research entry is the flask → `/research-lab/:nid` (Lab), not this panel.
  */
-import type { ExtractorInfo, SourceFromUrlMode } from '@crystalith/shared';
+import type { ExtractorInfo, SearchItem, SourceFromUrlMode } from '@crystalith/shared';
 import {
   ArrowForward as ArrowForwardIcon,
   Close as CloseIcon,
@@ -23,9 +26,12 @@ import { useSourcesPanelAddFromSearch } from '../domains/sources/components/useS
 import type { SearchResultItem } from '../domains/sources/SearchResultCard';
 import SearchResultsQueue from '../domains/sources/SearchResultsQueue';
 import type { SearchQueueItem } from '../domains/sources/useSources';
+import { useKnowledgeSearch } from './hooks/useKnowledgeSearch';
 
 /** Wire value for sources.search — channel metadata, not ResearchRun. */
 export const FAST_SEARCH_MODE = 'Fast Research' as const;
+
+type TopbarSearchMode = 'kb' | 'web';
 
 export interface WorkspaceTopbarSearchProps {
   open: boolean;
@@ -45,6 +51,11 @@ export interface WorkspaceTopbarSearchProps {
   defaultExtractor: ExtractorType | null;
   /** Imperative open from command palette */
   openRequestToken?: number;
+  /** c132 KB mode — scope anchor + jump handlers. */
+  activeNotebookId: number | null;
+  activeNotebookTitle?: string | null;
+  onJumpToSource?: (sourceId: number, chunkId: number, notebookId: number) => void;
+  onJumpToOutput?: (outputId: number) => void;
 }
 
 function FastSearchBody({
@@ -158,6 +169,188 @@ function FastSearchBody({
   );
 }
 
+function degradedText(
+  reason: NonNullable<ReturnType<typeof useKnowledgeSearch>['result']>['degraded'],
+): string | null {
+  if (!reason) return null;
+  return t(`search.kb.degraded.${reason}`);
+}
+
+function KbResultItem({ item, onJump }: { item: SearchItem; onJump: (item: SearchItem) => void }) {
+  const isOutput = item.originType === 'output';
+  return (
+    <button
+      type="button"
+      className="w-full text-left rounded-lg px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+      {...tid(TestIds.kbSearchResultItem)}
+      onClick={() => {
+        onJump(item);
+      }}
+    >
+      <div className="flex items-center gap-2">
+        <span
+          className={`text-[10px] px-1.5 py-0.5 rounded ${
+            isOutput
+              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
+              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+          }`}
+        >
+          {t(`search.kb.type.${item.originType}`)}
+        </span>
+        <span className="text-xs text-gray-500 dark:text-slate-400 truncate">
+          {item.sourceTitle}
+        </span>
+        <span className="ml-auto text-[10px] text-gray-400 dark:text-slate-500 tabular-nums">
+          {item.score.toFixed(2)}
+        </span>
+      </div>
+      <p className="mt-1 text-xs text-gray-600 dark:text-slate-300 line-clamp-2">{item.text}</p>
+    </button>
+  );
+}
+
+function KbScopeToggle({
+  mode,
+  activeNotebookId,
+  activeNotebookTitle,
+  onChange,
+}: {
+  mode: 'all' | 'notebook';
+  activeNotebookId: number | null;
+  activeNotebookTitle?: string | null;
+  onChange: (m: 'all' | 'notebook') => void;
+}) {
+  const cls = (active: boolean) =>
+    `text-xs px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-40 ${
+      active
+        ? 'border-blue-400 bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-600'
+        : 'border-gray-200 text-gray-500 dark:border-slate-600 dark:text-slate-400'
+    }`;
+  return (
+    <div className="flex items-center gap-2" role="group" aria-label={t('search.kb.scope.label')}>
+      <button
+        type="button"
+        className={cls(mode === 'all')}
+        {...tid(TestIds.kbSearchScopeAll)}
+        aria-pressed={mode === 'all'}
+        onClick={() => {
+          onChange('all');
+        }}
+      >
+        {t('search.kb.scope.all')}
+      </button>
+      <button
+        type="button"
+        className={cls(mode === 'notebook')}
+        {...tid(TestIds.kbSearchScopeNotebook)}
+        aria-pressed={mode === 'notebook'}
+        disabled={activeNotebookId == null}
+        onClick={() => {
+          onChange('notebook');
+        }}
+      >
+        {t('search.kb.scope.notebook')}
+        {activeNotebookTitle ? ` · ${activeNotebookTitle}` : ''}
+      </button>
+    </div>
+  );
+}
+
+function KbResultsList({
+  status,
+  groups,
+  onJump,
+}: {
+  status: 'idle' | 'loading' | 'done' | 'error';
+  groups: Array<{ notebookId: number; title: string; items: SearchItem[] }>;
+  onJump: (item: SearchItem) => void;
+}) {
+  return (
+    <div className="max-h-[min(420px,50vh)] overflow-y-auto" {...tid(TestIds.kbSearchResults)}>
+      {status === 'done' && groups.length === 0 ? (
+        <p className="py-6 text-center text-xs text-gray-400 dark:text-slate-500">
+          {t('search.kb.empty')}
+        </p>
+      ) : null}
+      {groups.map((g) => (
+        <div key={g.notebookId} className="mb-3">
+          <div className="flex items-center gap-2 px-3 py-1">
+            <span className="text-xs font-medium text-gray-700 dark:text-slate-200">{g.title}</span>
+            <span className="text-[10px] text-gray-400 dark:text-slate-500 tabular-nums">
+              {g.items.length}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            {g.items.map((item) => (
+              <KbResultItem key={item.chunkId} item={item} onJump={onJump} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// fallow-ignore-next-line complexity -- 估算 CRAP（无 coverage 数据）；行为由 rstest/e2e 覆盖，结构拆分到此为止（拆分准则：不为拆而拆）
+function KbSearchBody({
+  activeNotebookId,
+  activeNotebookTitle,
+  searchInputRef,
+  onJump,
+}: {
+  activeNotebookId: number | null;
+  activeNotebookTitle?: string | null;
+  searchInputRef: RefObject<HTMLInputElement>;
+  onJump: (item: SearchItem) => void;
+}) {
+  const kb = useKnowledgeSearch(activeNotebookId);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <SearchIcon className="text-gray-400" style={{ fontSize: 18 }} />
+        <input
+          ref={searchInputRef}
+          className="min-w-0 flex-1 h-10 px-3 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-blue-500/25"
+          placeholder={t('search.kb.placeholder')}
+          value={kb.query}
+          {...tid(TestIds.kbSearchInput)}
+          aria-label={t('search.kb.placeholder')}
+          onChange={(e) => {
+            kb.setQuery(e.target.value);
+          }}
+        />
+        {kb.status === 'loading' ? <Spinner className="h-4 w-4 text-gray-400" /> : null}
+      </div>
+
+      <KbScopeToggle
+        mode={kb.scopeMode}
+        activeNotebookId={activeNotebookId}
+        activeNotebookTitle={activeNotebookTitle}
+        onChange={kb.setScopeMode}
+      />
+
+      {kb.result?.degraded ? (
+        <div
+          className="rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-700/50 dark:bg-amber-900/30 dark:text-amber-300"
+          {...tid(TestIds.kbSearchDegraded)}
+        >
+          {degradedText(kb.result.degraded)}
+        </div>
+      ) : null}
+
+      {kb.status === 'error' ? (
+        <p className="text-xs text-red-500" role="alert">
+          {t('search.kb.error')}: {kb.error}
+        </p>
+      ) : null}
+
+      <KbResultsList status={kb.status} groups={kb.groups} onJump={onJump} />
+    </div>
+  );
+}
+
+// fallow-ignore-next-line complexity -- 估算 CRAP（无 coverage 数据）；行为由 rstest/e2e 覆盖，结构拆分到此为止（拆分准则：不为拆而拆）
 export default function WorkspaceTopbarSearch({
   open,
   onOpenChange,
@@ -171,7 +364,12 @@ export default function WorkspaceTopbarSearch({
   availableExtractors,
   defaultExtractor,
   openRequestToken = 0,
+  activeNotebookId,
+  activeNotebookTitle,
+  onJumpToSource,
+  onJumpToOutput,
 }: WorkspaceTopbarSearchProps) {
+  const [mode, setMode] = useState<TopbarSearchMode>('kb');
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null!);
   const { style: layerStyle } = useLayer('popover');
@@ -210,7 +408,7 @@ export default function WorkspaceTopbarSearch({
     window.requestAnimationFrame(() => {
       searchInputRef.current?.focus();
     });
-  }, [open]);
+  }, [open, mode]);
 
   const submitFastSearch = useCallback(() => {
     if (searchState === 'loading') return;
@@ -221,6 +419,19 @@ export default function WorkspaceTopbarSearch({
     }
     onSearch({ query: trimmed, engine: 'Web', mode: FAST_SEARCH_MODE });
   }, [onSearch, searchQuery, searchState]);
+
+  const handleKbJump = useCallback(
+    // fallow-ignore-next-line complexity -- 估算 CRAP（无 coverage 数据）；行为由 rstest/e2e 覆盖
+    (item: SearchItem) => {
+      if (item.originType === 'output') {
+        if (item.originId !== null) onJumpToOutput?.(item.originId);
+      } else {
+        onJumpToSource?.(item.sourceId, item.chunkId, item.notebookId);
+      }
+      onOpenChange(false);
+    },
+    [onJumpToOutput, onJumpToSource, onOpenChange],
+  );
 
   const triggerClass =
     'flex-1 min-w-[12rem] max-w-xl mx-auto flex items-center gap-2 h-9 px-3 rounded-lg border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-800/80 text-left text-sm text-gray-500 dark:text-slate-400 hover:border-blue-300 dark:hover:border-slate-500 transition-colors';
@@ -238,7 +449,7 @@ export default function WorkspaceTopbarSearch({
         }}
       >
         <SearchIcon style={{ fontSize: 16 }} />
-        <span className="truncate">{t('sources.search.placeholder')}</span>
+        <span className="truncate">{t('search.kb.placeholder')}</span>
       </button>
 
       {open
@@ -248,7 +459,7 @@ export default function WorkspaceTopbarSearch({
               style={layerStyle}
               role="dialog"
               aria-modal="true"
-              aria-label="网络搜索"
+              aria-label={t('search.kb.dialog_aria')}
               {...tid(TestIds.topbarSearchPanel)}
             >
               <button
@@ -261,9 +472,44 @@ export default function WorkspaceTopbarSearch({
               />
               <div className="absolute top-16 left-1/2 z-10 w-[min(960px,calc(100%-2rem))] -translate-x-1/2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl">
                 <div className="flex items-center justify-between gap-2 px-3 pt-3 pb-2 border-b border-gray-100 dark:border-slate-700">
-                  <p className="text-sm font-medium text-gray-700 dark:text-slate-200">
-                    {t('sources.search.action.fast')}
-                  </p>
+                  <div
+                    className="flex items-center gap-1"
+                    role="tablist"
+                    aria-label={t('search.kb.mode.label')}
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${
+                        mode === 'kb'
+                          ? 'bg-blue-500 text-white'
+                          : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800'
+                      }`}
+                      {...tid(TestIds.topbarSearchModeKb)}
+                      aria-selected={mode === 'kb'}
+                      onClick={() => {
+                        setMode('kb');
+                      }}
+                    >
+                      {t('search.kb.mode')}
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${
+                        mode === 'web'
+                          ? 'bg-blue-500 text-white'
+                          : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800'
+                      }`}
+                      {...tid(TestIds.topbarSearchModeWeb)}
+                      aria-selected={mode === 'web'}
+                      onClick={() => {
+                        setMode('web');
+                      }}
+                    >
+                      {t('sources.search.action.fast')}
+                    </button>
+                  </div>
                   <button
                     type="button"
                     className="w-8 h-8 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 flex items-center justify-center"
@@ -276,20 +522,29 @@ export default function WorkspaceTopbarSearch({
                   </button>
                 </div>
                 <div className="p-3">
-                  <FastSearchBody
-                    searchQuery={searchQuery}
-                    onSearchQueryChange={setSearchQuery}
-                    onSubmit={submitFastSearch}
-                    searchInputRef={searchInputRef}
-                    isSearching={searchState === 'loading'}
-                    searchQueue={searchQueue}
-                    onAddToSources={handleAddToSources}
-                    isAddingFromUrl={isAddingFromUrl}
-                    onRemoveSearchQueueItem={onRemoveSearchQueueItem}
-                    onRetrySearchQueueItem={onRetrySearchQueueItem}
-                    availableExtractors={availableExtractors}
-                    defaultExtractor={defaultExtractor}
-                  />
+                  {mode === 'kb' ? (
+                    <KbSearchBody
+                      activeNotebookId={activeNotebookId}
+                      activeNotebookTitle={activeNotebookTitle}
+                      searchInputRef={searchInputRef}
+                      onJump={handleKbJump}
+                    />
+                  ) : (
+                    <FastSearchBody
+                      searchQuery={searchQuery}
+                      onSearchQueryChange={setSearchQuery}
+                      onSubmit={submitFastSearch}
+                      searchInputRef={searchInputRef}
+                      isSearching={searchState === 'loading'}
+                      searchQueue={searchQueue}
+                      onAddToSources={handleAddToSources}
+                      isAddingFromUrl={isAddingFromUrl}
+                      onRemoveSearchQueueItem={onRemoveSearchQueueItem}
+                      onRetrySearchQueueItem={onRetrySearchQueueItem}
+                      availableExtractors={availableExtractors}
+                      defaultExtractor={defaultExtractor}
+                    />
+                  )}
                 </div>
               </div>
             </div>,

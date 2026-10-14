@@ -31,6 +31,7 @@ import { SOURCE_UPLOAD_ACCEPT } from '../shared/uploadTypes';
 import { buildCommandPaletteCommands } from './commandPaletteCommands';
 import MobilePanelShell from './components/MobilePanelShell';
 import { useDependencyHealth, useWorkspaceOverlays } from './hooks';
+import { useKbJumpHandlers } from './hooks/useKbJumpHandlers';
 import {
   ModularCanvas,
   type CommandItem,
@@ -58,6 +59,7 @@ const WORKSPACE_PANEL_TO_WIDGET = {
   refine: 'studio',
 } as const satisfies Record<PanelId, 'sources' | 'chat' | 'studio'>;
 
+// fallow-ignore-next-line complexity -- 估算 CRAP（无 coverage 数据）；行为由 rstest/e2e 覆盖，结构拆分到此为止（拆分准则：不为拆而拆）
 export default function WorkspaceLayout() {
   const selectedSourceIds_raw = useWorkspaceStore((s) => s.selectedSourceIds);
   const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
@@ -254,6 +256,15 @@ export default function WorkspaceLayout() {
     },
     [handleOpenCitationSourceDetail, sources, store],
   );
+
+  // c132: top-bar knowledge search jumps (hook owns the cross-notebook fetch).
+  const { jumpToSource: handleKbJumpToSource, jumpToOutput: handleKbJumpToOutput } =
+    useKbJumpHandlers({
+      sourceById,
+      openCitationSourceDetail: overlays.openCitationSourceDetail,
+      setJumpToCitationChunkId: sources.setJumpToCitationChunkId,
+      openOutputViewer: overlays.openOutputViewer,
+    });
 
   const focusPanel = useCallback(
     (panel: 'sources' | 'chat' | 'studio') => {
@@ -798,6 +809,12 @@ export default function WorkspaceLayout() {
               onAddSourceFromUrl={sources.addSourceFromUrl}
               availableExtractors={sources.availableExtractors}
               defaultExtractor={sources.defaultExtractor}
+              activeNotebookId={activeNotebookId}
+              activeNotebookTitle={
+                notebooks.notebooks.find((n) => n.id === activeNotebookId)?.title ?? null
+              }
+              onJumpToSource={handleKbJumpToSource}
+              onJumpToOutput={handleKbJumpToOutput}
             />
           }
         />

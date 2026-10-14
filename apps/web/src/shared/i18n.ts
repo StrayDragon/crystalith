@@ -13,6 +13,22 @@ const ZH_CN_MESSAGES = {
   'common.loading': '加载中…',
   'common.retry': '重试',
 
+  'search.kb.placeholder': '搜索全部笔记本的资料与产出…',
+  'search.kb.dialog_aria': '搜索面板',
+  'search.kb.mode': '本地知识库',
+  'search.kb.mode.label': '搜索模式',
+  'search.kb.scope.label': '搜索范围',
+  'search.kb.scope.all': '全局',
+  'search.kb.scope.notebook': '当前笔记本',
+  'search.kb.degraded.index_rebuilding': '索引重建中：当前结果仅来自关键词通道，语义结果稍后恢复。',
+  'search.kb.degraded.dim_mismatch':
+    '索引维度不匹配：当前结果仅来自关键词通道；可在来源面板发起重建恢复。',
+  'search.kb.degraded.embed_unavailable': '嵌入服务不可用：当前结果仅来自关键词通道。',
+  'search.kb.type.source': '资料',
+  'search.kb.type.output': '产出',
+  'search.kb.empty': '没有命中，换个关键词试试。',
+  'search.kb.error': '搜索失败',
+
   'workspace.error_boundary.title': '组件加载失败',
   'workspace.error_boundary.description': '请稍后重试，若问题持续请刷新页面。',
 

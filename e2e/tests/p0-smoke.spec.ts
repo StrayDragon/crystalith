@@ -140,10 +140,14 @@ test.describe('@p0 workspace smoke', () => {
     await expect(page.getByTestId(TestIds.sourcesUploadInput)).toBeAttached();
   });
 
-  test('S06: topbar search opens Fast-only panel', async ({ page }) => {
+  test('S06: topbar search panel opens with KB default + Fast mode reachable', async ({ page }) => {
     await expect(page.getByTestId(TestIds.topbarSearchTrigger)).toBeVisible();
     await page.getByTestId(TestIds.topbarSearchTrigger).click();
     await expect(page.getByTestId(TestIds.topbarSearchPanel)).toBeVisible();
+    // c132: KB mode is the default surface.
+    await expect(page.getByTestId(TestIds.kbSearchInput)).toBeVisible();
+    // Fast web search remains one click away.
+    await page.getByTestId(TestIds.topbarSearchModeWeb).click();
     await expect(page.getByTestId(TestIds.sourcesSearchInput)).toBeVisible();
     await expect(page.getByTestId(TestIds.sourcesSearchSubmit)).toBeVisible();
     await expect(page.getByTestId('topbar-search-tab-deep')).toHaveCount(0);
@@ -306,5 +310,93 @@ test.describe('@p0 workspace smoke', () => {
     expect(after).not.toBe(before);
     // restore
     await lock.click();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// c132 G — top-bar knowledge-base (global) search
+// ---------------------------------------------------------------------------
+
+test.describe('@p0 workspace smoke', () => {
+  test.beforeEach(async ({ page }) => {
+    await gotoWorkspace(page);
+  });
+
+  test('G01: KB search finds a seeded Chinese source and jumps to its detail', async ({ page }) => {
+    const nid = await activeNotebookId(page);
+    const res = await page.request.post(`/v2/notebooks/${nid}/sources/upload`, {
+      multipart: {
+        file: {
+          name: 'g01-种子.md',
+          mimeType: 'text/markdown',
+          // Unique per run: the content hash feeds upload dedup — a stale
+          // accumulated DB must not turn this seed into a 409.
+          buffer: Buffer.from(
+            `# 全局搜索夹具 ${Date.now()}\n\n祖冲之是中国古代数学家，以圆周率精算闻名。\n`,
+          ),
+        },
+      },
+    });
+    expect(res.status()).toBeLessThan(500);
+    // API-side seeding bypasses the UI store — reload so the jump handler's
+    // source lookup (sourceById) actually knows the new source.
+    await page.reload();
+    await gotoWorkspace(page);
+
+    await page.getByTestId(TestIds.topbarSearchTrigger).click();
+    await page.getByTestId(TestIds.kbSearchInput).fill('祖冲之');
+    await expect(page.getByTestId(TestIds.kbSearchResultItem).first()).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId(TestIds.kbSearchResults)).toContainText('祖冲之');
+
+    await page.getByTestId(TestIds.kbSearchResultItem).first().click();
+    await expect(page.getByTestId(TestIds.sourceDetailDialog).first()).toBeVisible();
+  });
+
+  test('G02: KB search finds an auto-indexed output and opens the viewer', async ({ page }) => {
+    const nid = await activeNotebookId(page);
+    // Generation is retrieval-backed (sourceIds required) — seed a source
+    // first; the mock-gateway LLM then falls back to template content that
+    // still carries the prompt keyword, and auto-indexing (r485) makes it
+    // searchable via the keyword channel.
+    const seed = await page.request.post(`/v2/notebooks/${nid}/sources/upload`, {
+      multipart: {
+        file: {
+          name: 'g02-种子.md',
+          mimeType: 'text/markdown',
+          buffer: Buffer.from(`# 输出生成夹具 ${Date.now()}\n\n元代天文学与历法编制的背景资料。\n`),
+        },
+      },
+    });
+    expect(seed.status()).toBeLessThan(500);
+    // Upload wire shape: { sourceId, ... } (not `id`).
+    const seedBody = (await seed.json()) as { sourceId: number };
+
+    const res = await page.request.post(`/v2/notebooks/${nid}/outputs`, {
+      data: {
+        generationTypeId: 'output',
+        type: 'GUIDE',
+        prompt: '介绍郭守敬与授时历',
+        sourceIds: [seedBody.sourceId],
+      },
+    });
+    expect(res.status()).toBeLessThan(500);
+    await page.reload();
+    await gotoWorkspace(page);
+
+    await page.getByTestId(TestIds.topbarSearchTrigger).click();
+    await page.getByTestId(TestIds.kbSearchInput).fill('郭守敬');
+    await expect(page.getByTestId(TestIds.kbSearchResultItem).first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const outputItem = page
+      .getByTestId(TestIds.kbSearchResultItem)
+      .filter({ hasText: 'GUIDE-' })
+      .first();
+    await outputItem.click();
+    await expect(page.getByTestId(TestIds.topbarSearchPanel)).toBeHidden();
+    await expect(page.getByTestId(TestIds.outputViewerDialog)).toBeVisible();
   });
 });

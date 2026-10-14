@@ -19,6 +19,7 @@ import { outputsRouter } from './features/outputs/router.ts';
 import { promptPresetsRouter } from './features/prompt-presets/router.ts';
 import { qaRouter } from './features/qa/router.ts';
 import { researchRouter } from './features/research/router.ts';
+import { searchRouter } from './features/search/router.ts';
 import { sessionsRouter } from './features/sessions/router.ts';
 import { sourceConnectorsRouter } from './features/source-connectors/router.ts';
 import { sourcesRouter } from './features/sources/router.ts';
@@ -195,6 +196,7 @@ export function createApp() {
       .use(sourcesRouter)
       .use(sourceExtrasRouter)
       .use(searchIndexRouter)
+      .use(searchRouter)
       .use(qaRouter)
       .use(generationTypesRouter)
       .use(researchRouter)

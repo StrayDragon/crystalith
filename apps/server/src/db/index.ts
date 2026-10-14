@@ -14,6 +14,7 @@ import * as sqliteVec from 'sqlite-vec';
 
 import { getDataRoot, getDefaultEmbeddingModel } from '../shared/config.ts';
 import { createDbClient, type DbClient } from './client.ts';
+import { ensureFtsIndex } from './fts';
 import * as schema from './schema';
 import { initVecChunks } from './vectors';
 
@@ -132,6 +133,10 @@ export function createDb(path?: string): Orm {
   // back to initVecChunks' DEFAULT_EMBEDDING_DIM (1024) when undeclared /
   // no model configured (undefined → default parameter kicks in).
   initVecChunks(orm, getDefaultEmbeddingModel()?.embedding?.dims);
+
+  // c132 r487: keyword index over chunks.text_tokens — legacy-shape migrate +
+  // token backfill + FTS rebuild (idempotent; see db/fts.ts).
+  ensureFtsIndex(orm);
 
   return orm;
 }

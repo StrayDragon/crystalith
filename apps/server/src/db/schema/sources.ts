@@ -32,6 +32,10 @@ export const sources = sqliteTable(
     errorMessage: text('error_message'),
     recoveryHint: text('recovery_hint'),
     lastErrorAt: tsNull('last_error_at'),
+    // c132 r485: non-null marks a HIDDEN derived container row auto-created to
+    // index an output (value = that output's id). Excluded from every
+    // user-visible sources surface; deleting the output cascades to this row.
+    derivedOutputId: integer('derived_output_id'),
     createdAt: ts('created_at'),
     updatedAt: tsUpd('updated_at'),
   },
@@ -68,6 +72,11 @@ export const chunks = sqliteTable(
     embeddingDims: integer('embedding_dims'),
     originType: text('origin_type').notNull().default('source'),
     originId: integer('origin_id'),
+    // Keyword-channel token space (c132 r487): space-joined CJK-bigram / word
+    // tokens computed application-side at write time (db/chunks.ts seam);
+    // chunks_fts indexes this column — unicode61 cannot segment CJK raw text.
+    // Nullable only during boot backfill; every write path populates it.
+    textTokens: text('text_tokens'),
     createdAt: ts('created_at'),
     updatedAt: tsUpd('updated_at'),
   },

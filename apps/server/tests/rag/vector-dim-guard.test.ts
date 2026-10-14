@@ -16,6 +16,7 @@ import {
   insertChunkVector,
   searchVectors,
 } from '../../src/db/vectors.ts';
+import { tokenizeForIndex } from '../../src/rag/cjk-tokenizer.ts';
 import { KeywordStrategy } from '../../src/rag/keyword-strategy.ts';
 import { AppHttpError, ErrorCode } from '../../src/shared/errors.ts';
 
@@ -155,9 +156,18 @@ describe('keyword regression: BM25 alive under dim mismatch (r478 + T7b fix)', (
     // ensureFts() must run before the insert so the AFTER INSERT trigger fires.
     await strategy.indexSource(src.id, nb.id);
 
+    // c132 r487: keyword retrieval reads chunks.text_tokens — populate the
+    // token column on this direct insert (production writes go through
+    // db/chunks.ts which computes it).
+    const kwText = 'zirconium lantern quay orchestrion';
     const [chk] = orm
       .insert(chunks)
-      .values({ sourceId: src.id, chunkIndex: 2, text: 'zirconium lantern quay orchestrion' })
+      .values({
+        sourceId: src.id,
+        chunkIndex: 2,
+        text: kwText,
+        textTokens: tokenizeForIndex(kwText),
+      })
       .returning()
       .all();
 

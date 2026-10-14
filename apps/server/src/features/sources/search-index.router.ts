@@ -11,6 +11,7 @@ import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getIndexState, startIndexRebuild } from '../../rag/index-rebuild.ts';
 import { PathId } from '../../shared/ids.ts';
 import { requireNotebook } from '../../shared/notebook-scope.ts';
+import { countFailedDerived } from './derived-visibility.ts';
 
 const apiDocs: OpenApiRoute[] = [
   {
@@ -48,9 +49,11 @@ export const searchIndexRouter = new Elysia({ prefix: '/v2' })
   )
   .get(
     '/notebooks/:nid/search-index',
-    ({ params }) => {
+    async ({ params }) => {
       requireNotebook(params.nid);
-      return getIndexState(params.nid);
+      // c132 r485: derived-failure observability merged at the feature layer.
+      const state = await getIndexState(params.nid);
+      return { ...state, derivedFailedCount: await countFailedDerived(params.nid) };
     },
     {
       params: z.object({ nid: PathId }),

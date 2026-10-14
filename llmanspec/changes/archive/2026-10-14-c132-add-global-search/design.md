@@ -37,24 +37,28 @@ POST /v2/search（wire Zod：packages/shared/src/schemas/search.ts）
 **端点**：`POST /v2/search`（顶层；notebook 范围经 body 参数复用同端点）。
 
 **请求**（`SearchRequestSchema`）：
+
 - `query: string`（min 1）
 - `scope: { kind: 'all' } | { kind: 'notebook', notebookId: number }`（缺省 `all`）
 - `topK?: number`（上限入 schema；默认值来自 config，spec 不写数值）
 - `originTypes?: ('source' | 'output')[]`（缺省全量——搜索面即索引面）
 
 **响应**（`SearchResponseSchema`）：**扁平结果 + 分组摘要**，不在服务端做嵌套分组（客户端按 facets 自由分组渲染）：
+
 - `results: SearchResultItem[]`，每项：`chunkId / text（chunk 全文，展示截断归前端）/ score（RRF 归一 0-1）/ originType / originId / sourceId（派生行的真实 id）/ sourceTitle（filename）/ notebookId / notebookTitle / chunkIndex / modality`
 - `facets: { notebooks: {notebookId, title, count}[], originTypes: {type, count}[] }`
 - `degraded?: 'index_rebuilding' | 'dim_mismatch' | 'embed_unavailable'`（见 D5）
 - 分页：top-k 截断 + 「更多」= 提高 topK 重查（无 cursor——分数随索引变化，cursor 无稳定语义）。
 
 **跳转引用**（前端语义，wire 只给字段）：
+
 - `originType='source'` → `setJumpToCitation(chunkId)` + 打开 source 详情；
 - `originType='output'` → `overlays.setViewerOutputId(originId)`。
 
 ## 3. 决策 D2：origin 泛化落地 = 派生 source 行
 
 **模型**：每个自动索引的 output 在 `sources` 表落一行**派生行**：
+
 - 新列 `sources.derived_output_id INTEGER NULL` + 索引（`ix_sources_derived_output_id`）。NULL = 普通行；非 NULL = 派生隐藏行，且是该 output 的级联句柄。
 - 派生行字段：`filename = "<type>-<outputId>"`（如 `GUIDE-42`）、`mimeType='text/markdown'`、`parserType='text'`、`status` 随嵌入 ready/failed（同 convert-to-source 语义）。
 - chunks 行：`origin_type='output'`、`origin_id=outputId`、`source_id=<派生行 id>`、`modality='text'`，嵌入元数据照 r483 落库。
@@ -62,6 +66,7 @@ POST /v2/search（wire Zod：packages/shared/src/schemas/search.ts）
 **为什么派生行而不是放宽 source_id**：FK 级联（删 source → chunks 净）、vec0 source_id 分区、FTS JOIN、唯一索引、全局重建枚举、多样性/轮转配额——全部原样复用，零特判。放宽列类型的方案每一处都要改且丢级联。
 
 **隐藏过滤清单**（派生行 MUST NOT 出现在用户可见的 sources 面）：
+
 - sources 列表/详情/统计类查询统一加 `derived_output_id IS NULL` 谓词（server 侧收口在一个查询 helper，禁止各处手写）。
 - QA/outputs/studio/单源 QA/research 的检索经 D4 的 origin 过滤天然排除派生 chunks。
 
@@ -74,6 +79,7 @@ POST /v2/search（wire Zod：packages/shared/src/schemas/search.ts）
 **触发点**：outputs 行持久化点统一收口（`finishPipeline` persist 之后、响应返回之前）。所有产出通路（outputs 生成、studio slides、qa 导出等落 outputs 表的路径）共享该收口。
 
 **语义**：
+
 - 生成响应返回 = 该产出**已入索引可搜**（成功路径）。
 - 嵌入失败**不拖垮生成**（产出行照常返回——LLM 已成功，丢产出才是惊诧）；派生行标 `failed + errorMessage`（同 convert-to-source 错误路径先例 `outputs/router.ts:579-591`）。
 - 失败可观测：`GET /v2/notebooks/:nid/search-index` 状态扩展 `derivedFailedCount`（该笔记本 failed 派生行数）——搜索框/状态 UI 可提示"N 个产出未入索引"；重建入口即恢复手段。
@@ -84,10 +90,11 @@ POST /v2/search（wire Zod：packages/shared/src/schemas/search.ts）
 ## 5. 决策 D4：中文 FTS = `text_tokens` bigram 列
 
 **Tokenizer 规则**（纯函数，`rag/cjk-tokenizer.ts`）：
+
 - CJK 连续段 → 逐字滑窗 bigram（"向量数据库" → `向量 量数 数据 据库`）；
 - 拉丁/数字连续段 → 整词小写（`EmbeddingGemma` → `embeddinggemma`）；
 - 输出空格连接的 token 串。
-- 纯 CJK 2 字查询产出单 token；查询侧各 token 以 `"…"` 引号包裹、` OR ` 连接（FTS 语法安全 + 搜索引擎式 OR 语义，bm25 排序）。
+- 纯 CJK 2 字查询产出单 token；查询侧各 token 以 `"…"` 引号包裹、`OR` 连接（FTS 语法安全 + 搜索引擎式 OR 语义，bm25 排序）。
 
 **存储**：`chunks` 新列 `text_tokens TEXT`（migration 先 nullable，boot 回填后应用层保证写入）；FTS 外部内容表改索引该列：
 
@@ -106,11 +113,11 @@ unicode61 对"空格连接的 bigram 串"恰好按空格切分（CJK 不再需�
 
 ## 6. 决策 D5：不可用期降级（UX 优先）
 
-| 状况 | KNN 通道 | keyword 通道 | 响应 |
-| --- | --- | --- | --- |
-| rebuilding / dim_mismatch / interrupted | 跳过（vec 表不可信） | 正常 | 200 + `degraded:'index_rebuilding'`（dim_mismatch 同字段值域透出原因） |
-| 嵌入网关失败/超时 | 跳过 | 正常 | 200 + `degraded:'embed_unavailable'` |
-| 正常 | 双通道 RRF | 正常 | 200 |
+| 状况                                    | KNN 通道             | keyword 通道 | 响应                                                                   |
+| --------------------------------------- | -------------------- | ------------ | ---------------------------------------------------------------------- |
+| rebuilding / dim_mismatch / interrupted | 跳过（vec 表不可信） | 正常         | 200 + `degraded:'index_rebuilding'`（dim_mismatch 同字段值域透出原因） |
+| 嵌入网关失败/超时                       | 跳过                 | 正常         | 200 + `degraded:'embed_unavailable'`                                   |
+| 正常                                    | 双通道 RRF           | 正常         | 200                                                                    |
 
 - 与 r482 分类一致：搜索属"对话类"——**可用面内继续服务 + 显式标志**，禁止无提示静默降级，也禁止整体 409（搜索框完全不可用才是差 UX）。
 - 重建期**新增**的 output 同步索引照常写入（见 D3），keyword 面即时可见。
@@ -134,11 +141,11 @@ unicode61 对"空格连接的 bigram 串"恰好按空格切分（CJK 不再需�
 
 ## 10. 测试缝映射（用户已确认六缝全要）
 
-| 缝 | 位置 | 覆盖 |
-| --- | --- | --- |
-| ① API 集成缝 | `apps/server/tests/search/api.test.ts`（setupIntegrationEnv + 假 embed） | wire 合约：scope 过滤、facets、originTypes、degraded、跳转字段 |
-| ② SearchService 单元缝 | `apps/server/tests/search/service.test.ts`（临时 DB + mock embed） | RRF 融合、双通道降级矩阵、topK/minScore |
-| ③ CJK 分词 + FTS 召回缝 | `apps/server/tests/rag/cjk-tokenizer.test.ts` + 中文召回用例 | 分词纯函数全规则；真 FTS 表上 2 字/多字中文查询 bm25 命中 |
-| ④ origin 过滤零变化缝 | 既有 `tests/rag/*`、`tests/qa/*` 保持绿 + `searchVectors` 过滤断言 | 5 消费方行为零变化；派生 chunks 不进 citation 路径 |
-| ⑤ outputs 索引生命周期缝 | `apps/server/tests/search/output-indexing.test.ts`（集成） | 建→隐藏+ready；嵌入失败→failed+生成不炸；删→级联净；重建覆盖派生行 |
-| ⑥ web + e2e 缝 | `WorkspaceTopbarSearch` 同居 rstest + e2e @p0 一条 happy path | 模式切换、防抖、范围切换、分组渲染、跳转回调；端到端搜到并跳转 |
+| 缝                       | 位置                                                                     | 覆盖                                                               |
+| ------------------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| ① API 集成缝             | `apps/server/tests/search/api.test.ts`（setupIntegrationEnv + 假 embed） | wire 合约：scope 过滤、facets、originTypes、degraded、跳转字段     |
+| ② SearchService 单元缝   | `apps/server/tests/search/service.test.ts`（临时 DB + mock embed）       | RRF 融合、双通道降级矩阵、topK/minScore                            |
+| ③ CJK 分词 + FTS 召回缝  | `apps/server/tests/rag/cjk-tokenizer.test.ts` + 中文召回用例             | 分词纯函数全规则；真 FTS 表上 2 字/多字中文查询 bm25 命中          |
+| ④ origin 过滤零变化缝    | 既有 `tests/rag/*`、`tests/qa/*` 保持绿 + `searchVectors` 过滤断言       | 5 消费方行为零变化；派生 chunks 不进 citation 路径                 |
+| ⑤ outputs 索引生命周期缝 | `apps/server/tests/search/output-indexing.test.ts`（集成）               | 建→隐藏+ready；嵌入失败→failed+生成不炸；删→级联净；重建覆盖派生行 |
+| ⑥ web + e2e 缝           | `WorkspaceTopbarSearch` 同居 rstest + e2e @p0 一条 happy path            | 模式切换、防抖、范围切换、分组渲染、跳转回调；端到端搜到并跳转     |

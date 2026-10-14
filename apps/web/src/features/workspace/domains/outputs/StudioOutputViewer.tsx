@@ -8,6 +8,7 @@ import { useMemo, useState, useCallback, useEffect } from 'react';
 
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { useLayer } from '../../../../shared/layer';
+import { TestIds, tid } from '../../../../shared/testids';
 import {
   IconButton,
   Typography,
@@ -121,6 +122,7 @@ export default function StudioOutputViewer({
       role="dialog"
       aria-modal="true"
       aria-label="Studio 输出详情"
+      {...tid(TestIds.outputViewerDialog)}
     >
       <button
         type="button"

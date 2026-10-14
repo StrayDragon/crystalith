@@ -15,6 +15,7 @@ import { chunks, outputs, sources } from '../../db/schema.ts';
 import type { ChunkResult } from '../../rag/types.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { logger } from '../../shared/logger.ts';
+import { indexOutputForSearch } from './auto-index.ts';
 import {
   buildCitationMap,
   mapCitationsIntoContent,
@@ -316,6 +317,11 @@ async function finishPipeline(
       })
       .returning(),
   ))!;
+
+  // c132 r485: synchronous auto-index — response returning means the output
+  // is searchable; embedding failure marks the derived row failed but never
+  // fails the generation (auto-index.ts owns that contract).
+  await indexOutputForSearch(row);
 
   return {
     outputId: row.id,

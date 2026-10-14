@@ -4,8 +4,9 @@
 import type { ResearchConvertBody } from '@crystalith/shared';
 import { eq } from 'drizzle-orm';
 
+import { insertChunk } from '../../db/chunks.ts';
 import { client, db } from '../../db/index.ts';
-import { chunks, outputs, sources } from '../../db/schema.ts';
+import { outputs, sources } from '../../db/schema.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { logger } from '../../shared/logger.ts';
 import { splitTextToChunks } from '../outputs/render.ts';
@@ -38,6 +39,9 @@ export async function convertToNote(
       })
       .returning(),
   ))!;
+  // c132 r485: synchronous auto-index (searchable once the response returns).
+  const { indexOutputForSearch } = await import('../outputs/auto-index.ts');
+  await indexOutputForSearch(output);
   return { outputId: output.id, type: 'PARAGRAPH' };
 }
 
@@ -72,17 +76,13 @@ export async function convertToSource(
 
   let offset = 0;
   for (const [i, text] of chunkTexts.entries()) {
-    await client().run(
-      db()
-        .insert(chunks)
-        .values({
-          sourceId: sourceRow.id,
-          chunkIndex: i,
-          text,
-          startOffset: offset,
-          endOffset: offset + text.length,
-        }),
-    );
+    await insertChunk({
+      sourceId: sourceRow.id,
+      chunkIndex: i,
+      text,
+      startOffset: offset,
+      endOffset: offset + text.length,
+    });
     offset += text.length + 2;
   }
 

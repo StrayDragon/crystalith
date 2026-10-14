@@ -71,6 +71,20 @@
       "when": 1791893158406,
       "tag": "0009_index_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1791955200000,
+      "tag": "0010_chunks_text_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1791955300000,
+      "tag": "0011_sources_derived_output_id",
+      "breakpoints": true
     }
   ]
 }

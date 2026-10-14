@@ -727,6 +727,16 @@ export const SearchIndexStatusSchema = z
     lastJob: SearchIndexLastJobSchema.optional().describe(
       desc('searchIndex.status.lastJob', '最近一次任务摘要（有历史时给出）'),
     ),
+    derivedFailedCount: z
+      .number()
+      .int()
+      .optional()
+      .describe(
+        desc(
+          'searchIndex.status.derivedFailedCount',
+          '产出自动索引派生行中嵌入失败的数量（大于 0 时可走重建恢复，c132）',
+        ),
+      ),
   })
   .openapi({ description: desc('searchIndex.status', '笔记本嵌入索引状态') });
 

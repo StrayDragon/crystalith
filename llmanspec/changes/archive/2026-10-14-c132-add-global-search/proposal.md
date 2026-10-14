@@ -1,6 +1,9 @@
 ---
 title: 全局搜索：SearchService + /v2/search API + 分组召回 UI
 depends_on: [c130-extend-embedding-capability]
+branch: sdd/c132-add-global-search
+base_branch: main
+base_sha: 728a54173cef561e021da80912eac6fcbe52093b
 ---
 
 # 全局搜索：SearchService + /v2/search API + 分组召回 UI

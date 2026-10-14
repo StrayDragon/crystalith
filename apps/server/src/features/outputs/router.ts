@@ -30,8 +30,9 @@ import { z } from 'zod';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
+import { insertChunk } from '../../db/chunks.ts';
 import { client, db } from '../../db/index.ts';
-import { outputs, notebooks, sources, chunks } from '../../db/schema.ts';
+import { outputs, notebooks, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { formatCitationBlock } from '../../shared/citations.ts';
@@ -41,6 +42,7 @@ import { PathId } from '../../shared/ids.ts';
 import { logger } from '../../shared/logger.ts';
 import { requireOwnedRow, resolveNestedNotebookId } from '../../shared/notebook-scope.ts';
 import { OUTPUT_GENERATION_OUTPUT_TYPES, defaultOutputType } from '../generation-types/registry.ts';
+import { deleteDerivedSources } from './auto-index.ts';
 import { runOutputPipeline } from './pipeline.ts';
 import { renderOutputToMarkdown, splitTextToChunks } from './render.ts';
 
@@ -450,6 +452,8 @@ async function handleGetOutput(id: number, notebookId: number) {
 
 async function handleDeleteOutput(id: number, notebookId: number, set: SetStatus) {
   await requireOutputInNotebook(id, notebookId);
+  // c132 r485: cascade the hidden derived index rows (vectors + chunks + FTS).
+  await deleteDerivedSources(notebookId, id);
   await client().run(db().delete(outputs).where(eq(outputs.id, id)));
   set.status = 204;
   return;
@@ -552,17 +556,13 @@ async function handleConvertOutputToSource(id: number, notebookId: number, set: 
   let offset = 0;
   for (let i = 0; i < chunkTexts.length; i++) {
     const text = chunkTexts[i];
-    await client().run(
-      db()
-        .insert(chunks)
-        .values({
-          sourceId: sourceRow.id,
-          chunkIndex: i,
-          text,
-          startOffset: offset,
-          endOffset: offset + text.length,
-        }),
-    );
+    await insertChunk({
+      sourceId: sourceRow.id,
+      chunkIndex: i,
+      text,
+      startOffset: offset,
+      endOffset: offset + text.length,
+    });
     // +2 for paragraph separator
     offset += text.length + 2;
   }

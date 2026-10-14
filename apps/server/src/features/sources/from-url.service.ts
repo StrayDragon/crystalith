@@ -8,8 +8,9 @@ import { SourceFromUrlRequestSchema } from '@crystalith/shared';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { insertChunk } from '../../db/chunks.ts';
 import { client, db } from '../../db/index.ts';
-import { chunks, sources } from '../../db/schema.ts';
+import { sources } from '../../db/schema.ts';
 import { pluginRegistry } from '../../plugins/registry.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { getDedupEnabled, getSecurityPolicy } from '../../shared/config.ts';
@@ -130,16 +131,12 @@ async function createLinkSource(
       })
       .returning(),
   ))!;
-  await client().run(
-    db()
-      .insert(chunks)
-      .values({
-        sourceId: sourceRow.id,
-        chunkIndex: 0,
-        text: content,
-        metadata: { url, type: 'link' },
-      }),
-  );
+  await insertChunk({
+    sourceId: sourceRow.id,
+    chunkIndex: 0,
+    text: content,
+    metadata: { url, type: 'link' },
+  });
 
   try {
     const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');

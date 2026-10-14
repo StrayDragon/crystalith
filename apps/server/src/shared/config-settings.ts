@@ -206,8 +206,17 @@ const SearXNGSettingsSchema = z.object({
 });
 export type SearXNGSettings = z.infer<typeof SearXNGSettingsSchema>;
 
+/** Knowledge-base (global) search settings — `search.kb.*` (c132 r489). */
+const KnowledgeSearchSettingsSchema = z.object({
+  default_top_k: z.number().int().min(1).default(20).describe(desc('search.kb.default_top_k')),
+  max_top_k: z.number().int().min(1).default(100).describe(desc('search.kb.max_top_k')),
+  budget_ms: z.number().int().positive().default(10_000).describe(desc('search.kb.budget_ms')),
+});
+export type KnowledgeSearchSettings = z.infer<typeof KnowledgeSearchSettingsSchema>;
+
 export const SearchSettingsSchema = z.object({
   searxng: SearXNGSettingsSchema.default(SearXNGSettingsSchema.parse({})),
+  kb: KnowledgeSearchSettingsSchema.default(KnowledgeSearchSettingsSchema.parse({})),
 });
 export type SearchSettings = z.infer<typeof SearchSettingsSchema>;
 
@@ -273,6 +282,12 @@ export function getContextWindowSettings(): ContextWindowSettings {
  */
 export function getSearchSettings(): SearchSettings {
   return parseSection(SearchSettingsSchema, config().raw.search);
+}
+
+/** Knowledge-base search settings from `search.kb.*` (c132 r489). */
+export function getKnowledgeSearchSettings(): KnowledgeSearchSettings {
+  const search = config().raw.search;
+  return parseSection(KnowledgeSearchSettingsSchema, isRecord(search) ? search.kb : undefined);
 }
 
 /** SearXNG host from `search.searxng.host` (yaml ← CL_SEARXNG_HOST) → env fallbacks. Empty disables web search. */
