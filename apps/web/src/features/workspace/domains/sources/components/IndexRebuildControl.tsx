@@ -43,6 +43,7 @@ export default function IndexRebuildControl({
       onConfirm={() => {
         void onStart();
       }}
+      confirmText="开始重建"
       placement="bottom"
     >
       <IconButton
