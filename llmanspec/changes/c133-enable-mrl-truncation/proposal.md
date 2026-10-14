@@ -1,4 +1,5 @@
 ---
+title: MRL 截断启用（后置优化，先补调研）
 depends_on: [c130-extend-embedding-capability]
 ---
 

@@ -1,7 +1,6 @@
 # language: zh-CN
 # capability: frontend-eden-migration
 # purpose: 固化前端 wire 约定：Eden + shared camelCase、无平行 Api SSOT、SSE 走 /v2、错误信封与 Rstest 夹具一致。本 spec 为持续约束，与 openapi-and-client-generation（Eden 一等 client canonical）互补。
-# scope: apps/web/
 
 功能: frontend-eden-migration
 

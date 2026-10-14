@@ -1,7 +1,6 @@
 # language: zh-CN
 # capability: openapi-and-client-generation
 # purpose: 定义一等 TypeScript client（Eden）与 OpenAPI 衍生文档面：共享 camelCase Zod SSOT；禁止再引入 hey-api / api/generated 一等 client。
-# scope: apps/, packages/
 
 功能: openapi-and-client-generation
 

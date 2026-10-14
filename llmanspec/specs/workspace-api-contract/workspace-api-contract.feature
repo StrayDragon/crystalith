@@ -1,7 +1,6 @@
 # language: zh-CN
 # capability: workspace-api-contract
 # purpose: 定义前后端协作所依赖的稳定 API 契约：版本前缀、错误信封、核心端点稳定字段与 SSE 事件最小形状。
-# scope: apps/, packages/
 
 功能: workspace-api-contract
 

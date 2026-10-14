@@ -1,7 +1,6 @@
 # language: zh-CN
 # capability: embedding-index-ops
 # purpose: 定义 embedding 索引的运维面：异步重建任务（笔记本级与全局两模式、防重入、重启恢复）、索引状态查询、重建期间调用方降级分类，以及全部向量写路径的 chunk 元数据落库。目录默认模型翻转与网关接入为配置数据，不在本能力内。
-# scope: apps/server/src/features/sources/, apps/server/src/rag/, apps/web/src/features/workspace/domains/sources/
 
 功能: embedding-index-ops
 

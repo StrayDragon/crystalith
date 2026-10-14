@@ -1,7 +1,6 @@
 # language: zh-CN
 # capability: quality-and-regression
 # purpose: 定义 v2 工程质量门槛：以 just qa 为主 PR 门禁，覆盖 typecheck/lint/format、配置漂移、server/shared 单测、web Rstest 与 Playwright @p0；BDD 与 type-aware lint 为可选。
-# scope: apps/, packages/, e2e/, scripts/
 
 功能: quality-and-regression
 

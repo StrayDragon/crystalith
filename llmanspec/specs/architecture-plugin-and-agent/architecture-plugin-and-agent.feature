@@ -1,7 +1,6 @@
 # language: zh-CN
 # capability: architecture-plugin-and-agent
 # purpose: 定义 v2 AI 运行时边界：Vercel AI SDK v7、@ai-sdk/* providers、generateObject/streamText、gpt-tokenizer；完整 ToolLoopAgent / maxSteps 产品化 MAY 延后（见 r11）；插件宿主以单一 CrystalithPlugin 接口承载注册/发现/配置（r16/r17）。
-# scope: apps/server/src/ai/, apps/server/src/features/, apps/server/src/plugins/
 
 功能: architecture-plugin-and-agent
 

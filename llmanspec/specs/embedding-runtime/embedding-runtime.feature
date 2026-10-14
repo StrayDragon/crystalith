@@ -1,7 +1,6 @@
 # language: zh-CN
 # capability: embedding-runtime
 # purpose: 定义 embedding 运行时能力面：模型目录的能力声明 SSOT、任务前缀预设、维度一致性、vec 表维度不匹配行为与 chunks 索引元数据。MRL 截断实现（c133）与重建入口（c131）不在本能力内。
-# scope: apps/server/src/rag/, apps/server/src/db/, packages/shared/src/schemas/
 
 功能: embedding-runtime
 

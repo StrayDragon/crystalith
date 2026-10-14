@@ -1,7 +1,6 @@
 # language: zh-CN
 # capability: public-repo-hygiene
 # purpose: 定义 Crystalith 公开仓库最小工程化基线：文档可发现性、贡献路径、安全披露、Issue/PR 模板与元数据一致性。SECURITY.md 当前 DEFERRED（见进度 P6.2）。
-# scope: ./, docs/
 
 功能: public-repo-hygiene
 

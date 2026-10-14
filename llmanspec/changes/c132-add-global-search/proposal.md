@@ -1,4 +1,5 @@
 ---
+title: 全局搜索：SearchService + /v2/search API + 分组召回 UI
 depends_on: [c130-extend-embedding-capability]
 ---
 

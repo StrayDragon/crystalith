@@ -1,7 +1,6 @@
 # language: zh-CN
 # capability: web-ui-foundation
 # purpose: 定义 Crystalith Web 共享 UI 基础层：展示件自研、行为件 headless、弹层走统一 Layer；替换组件库不得破坏 testid 与视觉 token。
-# scope: apps/web/
 
 功能: web-ui-foundation
 

@@ -1,7 +1,6 @@
 # language: zh-CN
 # capability: deep-research-runtime
 # purpose: ResearchRun HTTP/SSE 运行时：创建/列表/图命令口/报告/revisions 与编排约束（省略字段时外网优先默认）
-# scope: apps/server/src/features/research/, packages/shared/src/schemas/
 
 功能: deep-research-runtime
 

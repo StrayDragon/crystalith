@@ -1,7 +1,6 @@
 # language: zh-CN
 # capability: bdd-test-harness
 # purpose: 定义 Crystalith v2 可选中文 BDD：Gherkin runner + bun test，覆盖已对齐的 CRUD 子集；LLM/插件域可 SKIP。BDD 不在 just qa 主门禁内。
-# scope: apps/server/tests/bdd/
 
 功能: bdd-test-harness
 

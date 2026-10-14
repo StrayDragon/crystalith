@@ -1,7 +1,6 @@
 # language: zh-CN
 # capability: architecture-core
 # purpose: 定义 Crystalith v2 前后端基础结构约束：feature-sliced 布局、依赖方向、统一路由入口与出站 HTTP 代理合约。只覆盖结构与边界，不覆盖业务语义。
-# scope: apps/, packages/
 
 功能: architecture-core
 

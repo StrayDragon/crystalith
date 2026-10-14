@@ -1,7 +1,6 @@
 # language: zh-CN
 # capability: configuration-governance
 # purpose: 定义 Crystalith 的配置管理体系：配置源优先级、命名约定、加载校验流水线、存储路径派生规则、accessor 规范与确定性要求。该规范覆盖所有运行时配置的读取与管理行为，不覆盖业务语义。
-# scope: apps/server/src/shared/, apps/server/src/db/, apps/server/src/features/, config/
 
 功能: configuration-governance
 
