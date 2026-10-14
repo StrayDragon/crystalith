@@ -5,7 +5,7 @@ depends_on: [c130-extend-embedding-capability]
 
 # 全局搜索：SearchService + /v2/search API + 分组召回 UI
 
-> **草案**（2026-10-13，对应 issue #6）。待正式 `/llman-sdd-propose` 充实 design/tasks。
+> 对应 issue #6。2026-10-14 `/llman-sdd-propose` 深挖定稿：design.md 落全部设计输入决策（含三个新拍板：降级 UX 优先、outputs 同步索引、数据表可调整），tasks.md 按 6 个已确认测试缝拆 T1–T9。
 > 已锁定决策（2026-10-13）：索引面走 **决策 A（chunk origin 泛化）**——c130 预埋 `origin_type/origin_id` 列，本 change 启用（产出以 `origin_type='output'` chunks 入索引）；**notebooks 为平铺结构**（无 parent_id），#6 所述「递归」全局即「跨全部笔记本」，无树遍历需求。
 
 ## Why
