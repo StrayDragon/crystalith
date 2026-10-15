@@ -217,8 +217,10 @@ export async function drainSourceSummaries(timeoutMs = 2000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (pendingSummaryTasks.size > 0 && Date.now() < deadline) {
     await Promise.race([
-      Promise.allSettled([...pendingSummaryTasks]),
-      new Promise((resolve) => setTimeout(resolve, deadline - Date.now())),
+      Promise.allSettled(pendingSummaryTasks),
+      new Promise((resolve) => {
+        setTimeout(resolve, deadline - Date.now());
+      }),
     ]);
   }
 }
