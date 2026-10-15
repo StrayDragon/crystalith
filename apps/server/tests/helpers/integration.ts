@@ -79,9 +79,7 @@ export async function teardownIntegrationEnv(): Promise<void> {
   await drainResearchLoops();
   // 同类后台散兵：summary 任务若活过 resetDb(null)，其延续会经 db() 懒重建
   // 默认路径的库（= 真实 dev 库）。关连接前先排空。
-  const { drainSourceSummaries } = await import(
-    '../../src/features/sources/source-summary.ts'
-  );
+  const { drainSourceSummaries } = await import('../../src/features/sources/source-summary.ts');
   await drainSourceSummaries();
   // 显式关闭底层 bun:sqlite 连接: bun:test 同进程会创建几十个临时 DB,
   // 仅 resetDb(null) 指望 GC 释放会让文件描述符/锁耗尽, 后续文件的 createDb
@@ -338,7 +336,9 @@ export async function stubEmbedding(): Promise<void> {
  * expected degradation logs (e.g. embed provider down) without leaking them
  * as red noise into test output. console.error is always restored.
  */
-export async function captureErrorLogs<R>(fn: () => Promise<R>): Promise<{ lines: string[]; result: R }> {
+export async function captureErrorLogs<R>(
+  fn: () => Promise<R>,
+): Promise<{ lines: string[]; result: R }> {
   const lines: string[] = [];
   const orig = console.error;
   console.error = (...args: unknown[]) => {

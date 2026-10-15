@@ -229,10 +229,7 @@ export async function drainSourceSummaries(timeoutMs = 2000): Promise<void> {
  * Fire-and-forget after ready. Failures are logged only — never flip status.
  * Skips when autoSummary already present (unless force).
  */
-export function scheduleSourceSummary(
-  sourceId: number,
-  opts?: { force?: boolean },
-): Promise<void> {
+export function scheduleSourceSummary(sourceId: number, opts?: { force?: boolean }): Promise<void> {
   const task = runSummaryTask(sourceId, opts).finally(() => {
     pendingSummaryTasks.delete(task);
   });
@@ -242,9 +239,7 @@ export function scheduleSourceSummary(
 
 async function runSummaryTask(sourceId: number, opts?: { force?: boolean }): Promise<void> {
   try {
-    const source = await client().get(
-      db().select().from(sources).where(eq(sources.id, sourceId)),
-    );
+    const source = await client().get(db().select().from(sources).where(eq(sources.id, sourceId)));
     if (!source || source.status !== 'ready') return;
     if (!opts?.force && readCached(source)) return;
     await generateAndPersistSourceSummary(source.notebookId, sourceId);

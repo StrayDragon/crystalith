@@ -215,7 +215,8 @@ describe('c117 r281: conversion does not mark ready when embedding fails', () =>
           .all()
           .filter(
             (s) =>
-              (s.metadata as { convertedFromSession?: number } | null)?.convertedFromSession != null,
+              (s.metadata as { convertedFromSession?: number } | null)?.convertedFromSession !=
+              null,
           )
           .toSorted((a, b) => b.id - a.id);
         expect(rows[0]?.status).toBe('failed');
