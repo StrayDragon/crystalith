@@ -9,6 +9,7 @@ import { client, db } from '../../db/index.ts';
 import { outputs, sources } from '../../db/schema.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { logger } from '../../shared/logger.ts';
+import { indexOutputForSearch } from '../outputs/auto-index.ts';
 import { splitTextToChunks } from '../outputs/render.ts';
 import { resolveArtifactMarkdown } from './report.ts';
 
@@ -40,7 +41,6 @@ export async function convertToNote(
       .returning(),
   ))!;
   // c132 r485: synchronous auto-index (searchable once the response returns).
-  const { indexOutputForSearch } = await import('../outputs/auto-index.ts');
   await indexOutputForSearch(output);
   return { outputId: output.id, type: 'PARAGRAPH' };
 }

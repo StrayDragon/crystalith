@@ -16,6 +16,7 @@ import { messages, outputs, sessions, sources } from '../../db/schema.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { logger } from '../../shared/logger.ts';
 import { requireOwnedRow } from '../../shared/notebook-scope.ts';
+import { indexOutputForSearch } from '../outputs/auto-index.ts';
 
 type ConvertToSourceBody = z.infer<typeof SessionConvertToSourceRequestSchema>;
 type ConvertToOutputBody = z.infer<typeof SessionConvertToOutputRequestSchema>;
@@ -244,7 +245,6 @@ export async function convertSessionToOutput(
   ))!;
 
   // c132 r485: synchronous auto-index (searchable once the response returns).
-  const { indexOutputForSearch } = await import('../outputs/auto-index.ts');
   await indexOutputForSearch(output);
 
   return {

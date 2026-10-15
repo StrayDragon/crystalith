@@ -111,7 +111,8 @@ export interface FtsHit {
   text: string;
   sourceId: number;
   chunkIndex: number;
-  /** 1-based FTS5 rank position within the result set (1 = best). */
+  /** FTS5 bm25() score — NEGATIVE, more negative = more relevant. Correct
+   * ordering comes from `ORDER BY fts.rank`; do not treat it as a position. */
   rank: number;
 }
 
@@ -119,6 +120,9 @@ export interface FtsHit {
  * Keyword-channel search over the token column. `notebookId` null/undefined =
  * global scope; `originTypes` empty/undefined = no origin restriction.
  * Returns [] when the query tokenizes to nothing.
+ *
+ * The table + triggers are ensured once at boot (createDb → ensureFtsIndex —
+ * the only Orm construction path), not per request.
  */
 export async function ftsSearch(
   orm: Orm,
@@ -127,12 +131,6 @@ export async function ftsSearch(
 ): Promise<FtsHit[]> {
   const match = buildMatchQuery(query);
   if (!match) return [];
-
-  // Lazily ensure the current-shape table + triggers exist (cheap idempotent
-  // DDL) so retrieval works even on a connection that skipped the boot ensure.
-  const c = createDbClient(orm);
-  await c.rawRun(sql.raw(ftsTableDdl()));
-  for (const stmt of ftsTriggerStatements()) await c.rawRun(sql.raw(stmt));
 
   const conditions: SQL[] = [];
   const scopeNotebookId = opts.notebookId ?? null;

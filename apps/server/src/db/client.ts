@@ -12,7 +12,7 @@
 // on purpose: it runs before any caller can await. Runtime paths MUST NOT
 // call builder terminals (`.all()/.get()/.run()`) or raw `orm.all/get/run`
 // directly — route through a DbClient.
-import { sql, type SQLWrapper } from 'drizzle-orm';
+import type { SQLWrapper } from 'drizzle-orm';
 
 import type { Orm } from './index.ts';
 
@@ -26,22 +26,8 @@ export interface DbClient {
   run<R>(q: SQLWrapper & { run(): R }): Promise<R>;
   /** Run a raw `sql` template, returning all rows (object-shaped). */
   raw<T = unknown>(stmt: SQLWrapper): Promise<T[]>;
-  /**
-   * Run a raw `sql` template, returning the first result or undefined.
-   * Bit-compatible with `orm.get()` on raw SQL — which on bun-sqlite returns
-   * array-shaped rows (e.g. `SELECT COUNT(*) AS c` → `[1]`, not `{c:1}`).
-   * That quirk is preserved on purpose so migrated call sites keep their
-   * current observable behavior (see keyword-strategy isIndexed, logged in
-   * docs/known-issues.md); a PG implementation returns proper objects.
-   */
-  rawOne<T = unknown>(stmt: SQLWrapper): Promise<T | undefined>;
   /** Run a raw `sql` template statement (DDL / DML without row results). */
   rawRun(stmt: SQLWrapper): Promise<unknown>;
-  /**
-   * Run `fn` inside an IMMEDIATE transaction. On failure the transaction is
-   * rolled back and the error rethrown. Not re-entrant — do not nest `tx`.
-   */
-  tx<T>(fn: (tx: DbClient) => Promise<T>): Promise<T>;
 }
 
 /** Bind a DbClient to a specific ORM instance (tests / explicit lifecycles). */
@@ -51,22 +37,6 @@ export function createDbClient(orm: Orm): DbClient {
     get: (q) => Promise.resolve(q.get()),
     run: (q) => Promise.resolve(q.run()),
     raw: <T>(stmt: SQLWrapper) => Promise.resolve(orm.all<T>(stmt)),
-    rawOne: <T>(stmt: SQLWrapper) => Promise.resolve(orm.get<T>(stmt)),
     rawRun: (stmt: SQLWrapper) => Promise.resolve(orm.run(stmt)),
-    tx: async (fn) => {
-      orm.run(sql`BEGIN IMMEDIATE`);
-      try {
-        const result = await fn(createDbClient(orm));
-        orm.run(sql`COMMIT`);
-        return result;
-      } catch (error) {
-        try {
-          orm.run(sql`ROLLBACK`);
-        } catch {
-          // BEGIN itself failed — no active transaction to unwind.
-        }
-        throw error;
-      }
-    },
   };
 }

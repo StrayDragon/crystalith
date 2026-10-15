@@ -86,7 +86,10 @@ async function keywordChannel(
   ).map((h) => ({
     chunkId: h.chunkId,
     text: h.text,
-    score: 1 / h.rank,
+    // Seed scores are unused here: rrfFuseSeeds ranks purely by list position
+    // and overwrites `score` with the normalized RRF. (h.rank is a bm25 value,
+    // NOT a 1-based position — any transformation of it would be garbage.)
+    score: 0,
     sourceId: h.sourceId,
     chunkIndex: h.chunkIndex,
   }));

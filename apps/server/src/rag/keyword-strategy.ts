@@ -2,8 +2,8 @@
 //
 // The FTS index lives over `chunks.text_tokens` (db/fts.ts, c132 r487):
 // application-side CJK-bigram tokenization, since bun:sqlite exposes no
-// custom SQL function API. Retrieval delegates to `ftsSearch`; scores keep the
-// legacy rank-normalization semantics (1 = best, mapped to 0–1 by position).
+// custom SQL function API. Retrieval delegates to `ftsSearch`; scores keep
+// the legacy v1 normalization below (ordering-correct, values may exceed 1).
 import { sql } from 'drizzle-orm';
 
 import { ftsSearch } from '../db/fts.ts';
@@ -12,7 +12,12 @@ import { client, db } from '../db/index.ts';
 import type { RAGStrategy, ChunkResult } from './types.ts';
 
 function bm25Score(rank: number, totalResults: number): number {
-  // Normalize BM25 rank to 0–1 range (lower rank = better)
+  // Legacy v1 normalization — math assumed `rank` was a 1-based position, but
+  // FTS5's rank is the bm25() score (negative, more negative = better, see
+  // FtsHit.rank). The ORDER BY guarantees best-first rows, so scores still
+  // order correctly (better hit → higher score); only the 0–1 range claim was
+  // wrong (values land above 1). Kept as-is: changing the curve would shift
+  // every caller's minScore thresholds.
   if (totalResults <= 1) return 1;
   return 1 - (rank - 1) / totalResults;
 }
@@ -44,7 +49,7 @@ export class KeywordStrategy implements RAGStrategy {
       .map((r) => ({
         chunkId: r.chunkId,
         text: r.text,
-        // normalized BM25 rank (0-1, higher = better)
+        // legacy normalization — higher = better, values may exceed 1 (above)
         score: bm25Score(r.rank, total),
         sourceId: r.sourceId,
         chunkIndex: r.chunkIndex,

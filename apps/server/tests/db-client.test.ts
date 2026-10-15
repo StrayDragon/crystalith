@@ -1,4 +1,4 @@
-// Unit test: DbClient port semantics (all/get/run/raw*/tx incl. rollback).
+// Unit test: DbClient port semantics (all/get/run/raw/rawRun).
 //
 // Uses a temp DB file under data/ so it never touches the real crystalith.db.
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
@@ -43,7 +43,7 @@ describe('db-client: builder terminals', () => {
 });
 
 describe('db-client: raw sql templates', () => {
-  it('raw/rawOne/rawRun evaluate sql`` statements', async () => {
+  it('raw/rawRun evaluate sql`` statements', async () => {
     const c = createDbClient(orm);
 
     await c.run(orm.insert(notebooks).values({ name: 'raw' }));
@@ -54,35 +54,5 @@ describe('db-client: raw sql templates', () => {
     );
     expect(rows).toHaveLength(1);
     expect(rows[0]?.name).toBe('raw2');
-
-    // rawOne passes through orm.get's bun-sqlite quirk (array-shaped rows for
-    // raw SQL) — assert existence, not row shape; see client.ts rawOne docs.
-    const one = await c.rawOne(sql`SELECT COUNT(*) AS c FROM notebooks`);
-    expect(one).toBeDefined();
-  });
-});
-
-describe('db-client: tx', () => {
-  it('commits on success', async () => {
-    const c = createDbClient(orm);
-    const out = await c.tx(async (tx) => {
-      await tx.run(orm.insert(notebooks).values({ name: 'tx-ok' }));
-      return 'done';
-    });
-    expect(out).toBe('done');
-    const row = await c.get(orm.select().from(notebooks).where(eq(notebooks.name, 'tx-ok')));
-    expect(row?.name).toBe('tx-ok');
-  });
-
-  it('rolls back and rethrows on failure', async () => {
-    const c = createDbClient(orm);
-    await expect(
-      c.tx(async (tx) => {
-        await tx.run(orm.insert(notebooks).values({ name: 'tx-fail' }));
-        throw new Error('boom');
-      }),
-    ).rejects.toThrow('boom');
-    const row = await c.get(orm.select().from(notebooks).where(eq(notebooks.name, 'tx-fail')));
-    expect(row).toBeUndefined();
   });
 });
