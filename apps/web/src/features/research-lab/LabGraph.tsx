@@ -699,7 +699,9 @@ function Inner({
           pannable
           zoomable
           ariaLabel="思考图小地图"
-          // fallow-ignore-next-line css-broken-reference — tw3 important 前缀语法（压 reactflow 内置样式），工具不识别；tw4 迁移（known-issues c127 条目）时改后缀写法并撤抑制
+          // tw3 important 前缀语法（压 reactflow 内置样式），fallow 不识别该形态；
+          // tw4 迁移（known-issues c127 条目）时改后缀写法并撤抑制
+          // fallow-ignore-next-line css-broken-reference
           className="!m-3 !overflow-hidden !rounded-xl !border !border-gray-200 !bg-white/95 !shadow-sm"
           maskColor="rgb(15 23 42 / 0.08)"
           nodeStrokeWidth={2}
@@ -715,7 +717,7 @@ function Inner({
       <Controls
         showInteractive={false}
         position="bottom-left"
-        // fallow-ignore-next-line css-broken-reference — 同上：tw3 important 前缀语法
+        // fallow-ignore-next-line css-broken-reference
         className="!shadow-sm !border-gray-200 !rounded-lg"
       />
       <Panel position="bottom-left" className="!m-0 !mb-3 !ml-[52px]">
