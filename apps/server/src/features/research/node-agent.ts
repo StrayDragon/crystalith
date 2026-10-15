@@ -97,6 +97,10 @@ function isStructureToolName(name: string): name is StructureToolName {
   return (STRUCTURE_TOOL_NAMES as readonly string[]).includes(name);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 /** Map a Structure tool call (or approval) into a Desk ActionProposal. */
 export function proposalFromStructureToolCall(input: {
   toolName: string;
@@ -104,10 +108,7 @@ export function proposalFromStructureToolCall(input: {
   args?: unknown;
 }): ResearchNodeActionProposal | null {
   if (!isStructureToolName(input.toolName)) return null;
-  const args =
-    input.args && typeof input.args === 'object' && !Array.isArray(input.args)
-      ? (input.args as Record<string, unknown>)
-      : {};
+  const args = isRecord(input.args) ? input.args : {};
   const params: ResearchNodeActionProposal['params'] = {};
   if (typeof args.query === 'string') params.query = args.query;
   if (typeof args.title === 'string') params.title = args.title;
@@ -115,6 +116,7 @@ export function proposalFromStructureToolCall(input: {
   if (typeof args.conclusionStatus === 'string') {
     const allowed = ['clear', 'partial', 'missing', 'pending', 'pruned'] as const;
     if ((allowed as readonly string[]).includes(args.conclusionStatus)) {
+      // eslint-disable-next-line typescript/no-unsafe-type-assertion -- 上行 allowed.includes 已证明字面量成员
       params.conclusionStatus = args.conclusionStatus as NonNullable<
         ResearchNodeActionProposal['params']
       >['conclusionStatus'];
@@ -324,6 +326,7 @@ export async function createResearchNodeAgent(
 
   // Single construction boundary: prepareCall return shape vs ToolLoopAgentSettings Pick.
   return new ToolLoopAgent(
+    // eslint-disable-next-line typescript/no-unsafe-type-assertion -- AI SDK 泛型接缝：prepareCall 返回形 vs Settings Pick
     settings as unknown as ToolLoopAgentSettings<ResearchNodeAgentCallOptions, ToolSet>,
   );
 }

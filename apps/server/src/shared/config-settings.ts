@@ -326,13 +326,16 @@ export function getPluginsSettings(): {
 function overlayProxyEnv(settings: ProxySettings): ProxySettings {
   const enabledEnv = process.env.CL_PROXY_ENABLED?.trim().toLowerCase();
   const enabled = enabledEnv === 'true' ? true : enabledEnv === 'false' ? false : settings.enabled;
-  const httpEnv = process.env.CL_PROXY_HTTP_URL?.trim();
-  const httpsEnv = process.env.CL_PROXY_HTTPS_URL?.trim();
+  // '' in env means unset — collapse to undefined so `??` keeps the fallback exact.
+  const httpUrlRaw = process.env.CL_PROXY_HTTP_URL?.trim();
+  const httpsUrlRaw = process.env.CL_PROXY_HTTPS_URL?.trim();
+  const httpEnv = httpUrlRaw === '' ? undefined : httpUrlRaw;
+  const httpsEnv = httpsUrlRaw === '' ? undefined : httpsUrlRaw;
   return {
     ...settings,
     enabled,
-    http_url: httpEnv ? httpEnv : settings.http_url,
-    https_url: httpsEnv ? httpsEnv : settings.https_url,
+    http_url: httpEnv ?? settings.http_url,
+    https_url: httpsEnv ?? settings.https_url,
   };
 }
 

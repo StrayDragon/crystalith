@@ -309,7 +309,9 @@ export default function LabNodeDrawer({
                               className="rounded-md bg-blue-600 px-2 py-0.5 text-[10px] font-medium text-white hover:bg-blue-700"
                               {...tid(TestIds.researchLabChatActionAccept)}
                               onClick={() => {
-                                runAction(p, 'chat', () => patchProposal(m.id, p.id, 'accepted'));
+                                runAction(p, 'chat', () => {
+                                  patchProposal(m.id, p.id, 'accepted');
+                                });
                               }}
                             >
                               确认执行

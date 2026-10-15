@@ -165,7 +165,7 @@ async function generateLlmResearchReport(
       abortSignal,
       maxOutputTokens,
       temperature: modelConfig.completionOptions?.temperature ?? 0.3,
-      experimental_repairText: async ({ text }) => repairResearchReportText(text),
+      repairText: async ({ text }) => repairResearchReportText(text),
       prompt,
     });
 

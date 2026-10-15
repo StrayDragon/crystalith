@@ -183,7 +183,9 @@ export class PluginRegistry {
     return this.impls.has(id);
   }
 
+  // eslint-disable-next-line typescript/no-unnecessary-type-parameters -- service locator 泛型 API：T 由调用方显式指定
   implOf<T = unknown>(id: string): T | undefined {
+    // eslint-disable-next-line typescript/no-unsafe-type-assertion -- 异构注册表的取回收窄，调用方指定 T
     return this.impls.get(id) as T | undefined;
   }
 

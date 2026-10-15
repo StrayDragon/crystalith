@@ -194,7 +194,7 @@ export async function planTopicDecomposition(input: {
       abortSignal: input.abortSignal,
       maxOutputTokens,
       temperature: modelConfig.completionOptions?.temperature ?? 0.2,
-      experimental_repairText: async ({ text }) => repairDecomposePlanText(text),
+      repairText: async ({ text }) => repairDecomposePlanText(text),
       prompt: [
         '你是深度研究规划器。把研究主题拆成若干并行「研究支路」。',
         `主题：${input.topic}`,

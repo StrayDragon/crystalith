@@ -72,6 +72,18 @@ interface SetStatus {
  * Throw from handlers when the success body type must stay narrow for Eden.
  * Mapped to ErrorEnvelope by the global `onError` hook in `server.ts`.
  */
+/** Log-safe message for thrown non-Error values (plain `String(object)`
+ * collapses to "[object Object]"). */
+export function describeUnknownError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  try {
+    return JSON.stringify(error) ?? String(error);
+  } catch {
+    return String(error);
+  }
+}
+
 export class AppHttpError extends Error {
   constructor(
     public code: ErrorCodeKey,

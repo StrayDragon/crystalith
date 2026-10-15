@@ -13,6 +13,7 @@ import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import * as sqliteVec from 'sqlite-vec';
 
 import { getDataRoot, getDefaultEmbeddingModel } from '../shared/config.ts';
+import { describeUnknownError } from '../shared/errors.ts';
 import { createDbClient, type DbClient } from './client.ts';
 import { ensureFtsIndex } from './fts';
 import * as schema from './schema';
@@ -124,7 +125,7 @@ export function createDb(path?: string): Orm {
       // Migrations may not exist yet on a fresh checkout before `drizzle-kit
       // generate`; the schema is still usable for in-memory tests. Surface the
       // warning but keep the ORM alive so dev servers can boot.
-      console.warn('[db] migration skipped:', (error as Error).message);
+      console.warn('[db] migration skipped:', describeUnknownError(error));
     }
   }
 

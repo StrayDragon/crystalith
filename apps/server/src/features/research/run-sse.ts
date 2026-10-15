@@ -93,6 +93,7 @@ export async function createResearchSseResponse(
 
           unsubStatus = subscribeRun(runId, (event, data) => {
             if (event !== 'status') return;
+            // eslint-disable-next-line typescript/no-unsafe-type-assertion -- SSE 事件 payload 的最小形状读取
             const status = (data as { status?: string } | undefined)?.status;
             if (typeof status === 'string' && isTerminalStatus(status)) settleTerminal();
           });

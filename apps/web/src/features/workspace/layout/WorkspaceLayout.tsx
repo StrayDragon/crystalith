@@ -501,13 +501,13 @@ export default function WorkspaceLayout() {
         exportOutputMarkdown: () => {
           exportOutputMarkdownDownload({
             notebookId: activeNotebookId!,
-            outputId: overlays.viewerOutputId ?? refine.outputs[0]!.id,
+            outputId: overlays.viewerOutputId ?? refine.outputs[0].id,
           });
         },
         exportOutputJson: () => {
           void exportOutputJsonDownload({
             notebookId: activeNotebookId!,
-            outputId: overlays.viewerOutputId ?? refine.outputs[0]!.id,
+            outputId: overlays.viewerOutputId ?? refine.outputs[0].id,
           });
         },
         hasSlidesTool: Boolean(slidesTool),

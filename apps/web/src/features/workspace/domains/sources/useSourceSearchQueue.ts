@@ -84,6 +84,7 @@ export function useSourceSearchQueue(ctx: SourceSeamContext) {
 
         // c65: engine failure is a distinct error state, never "no hits".
         if (response?.status === 'service_error') {
+          // eslint-disable-next-line typescript/prefer-nullish-coalescing -- 空串/缺省消息回落默认文案，?? 会把 '' 透传
           const serviceErrorNotice = response.message || '搜索服务暂时不可用，请稍后重试。';
           setSearchQueue((prev) =>
             prev.map((item) =>

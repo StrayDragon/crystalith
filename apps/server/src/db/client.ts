@@ -37,6 +37,8 @@ export function createDbClient(orm: Orm): DbClient {
     get: (q) => Promise.resolve(q.get()),
     run: (q) => Promise.resolve(q.run()),
     raw: <T>(stmt: SQLWrapper) => Promise.resolve(orm.all<T>(stmt)),
-    rawRun: (stmt: SQLWrapper) => Promise.resolve(orm.run(stmt)),
+    rawRun: async (stmt: SQLWrapper) => {
+      orm.run(stmt);
+    },
   };
 }

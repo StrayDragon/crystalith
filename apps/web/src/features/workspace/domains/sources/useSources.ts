@@ -79,7 +79,12 @@ export function useSources() {
         }),
     // Toast lives in SWR onError (deduped per request) — an effect toast here
     // re-fired on every background revalidate failure (W5).
-    { revalidateOnFocus: false, onError: () => toast.error('来源加载失败，请检查后端状态。') },
+    {
+      revalidateOnFocus: false,
+      onError: () => {
+        toast.error('来源加载失败，请检查后端状态。');
+      },
+    },
   );
 
   useEffect(() => {

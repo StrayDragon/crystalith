@@ -214,7 +214,7 @@ export function Alert({
   action,
   ...rest
 }: AlertProps) {
-  if (open === false) return null;
+  if (!open) return null;
   return (
     <div
       role="alert"

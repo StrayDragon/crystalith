@@ -42,10 +42,12 @@ if (globalThis.PointerEvent === undefined) {
       this.width = params.width ?? 1;
     }
   }
+  // eslint-disable-next-line typescript/no-unsafe-type-assertion -- 测试 polyfill 对齐原生类型
   globalThis.PointerEvent = PointerEventPolyfill as typeof PointerEvent;
 }
 
 beforeAll(() => {
+  // eslint-disable-next-line typescript/prefer-nullish-coalescing, typescript/no-unsafe-type-assertion -- 测试基建：env 空串回落 + 字面量联合收窄
   const onUnhandledFrame = (process.env.RSTEST_MSW_ON_UNHANDLED || 'error') as
     | 'bypass'
     | 'warn'
@@ -63,6 +65,7 @@ afterAll(() => {
 
 if (!Element.prototype.animate) {
   Element.prototype.animate = () =>
+    // eslint-disable-next-line typescript/no-unsafe-type-assertion -- 测试 polyfill 对齐原生类型
     ({
       cancel: () => {},
       finished: Promise.resolve(),
@@ -104,12 +107,15 @@ if (typeof window !== 'undefined' && !window.IntersectionObserver) {
 if (typeof URL !== 'undefined' && !('createObjectURL' in URL)) {
   // Some optional dependencies (e.g. media encoder helpers) expect these to exist.
   // jsdom does not implement them by default.
+  // eslint-disable-next-line typescript/no-unsafe-type-assertion -- 测试 stub 补 jsdom 缺口
   (URL as unknown as { createObjectURL: (blob: Blob) => string }).createObjectURL = () =>
     'blob:rstest-mock';
+  // eslint-disable-next-line typescript/no-unsafe-type-assertion -- 测试 stub 补 jsdom 缺口
   (URL as unknown as { revokeObjectURL: (url: string) => void }).revokeObjectURL = () => {};
 }
 
 if (typeof window !== 'undefined' && !window.Worker) {
+  // eslint-disable-next-line typescript/no-unsafe-type-assertion -- 测试 stub 补 jsdom 缺口
   window.Worker = class Worker {
     postMessage() {}
 

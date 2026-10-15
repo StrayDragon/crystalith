@@ -41,7 +41,9 @@ export function useSearchIndexRebuild(
     if (!notebookId) return;
     void refreshNow();
     const timer = setInterval(() => void refreshNow(), rebuilding ? 1_000 : 5_000);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+    };
   }, [notebookId, refreshNow, rebuilding]);
 
   const startRebuild = useCallback(async () => {

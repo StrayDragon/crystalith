@@ -525,7 +525,9 @@ function Inner({
             ...n.data,
             selected: n.id === selectedRef.current,
             reshaping: reshaping && n.data.role === 'conclusion',
-            onSelectNode: (nid: string) => onSelectNodeRef.current(nid),
+            onSelectNode: (nid: string) => {
+              onSelectNodeRef.current(nid);
+            },
           },
         })),
       );

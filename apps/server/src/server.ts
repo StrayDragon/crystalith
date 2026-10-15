@@ -32,7 +32,7 @@ import { generateOpenApiDocument, registerApiDoc } from './openapi.ts';
 import { pluginRegistry } from './plugins/registry.ts';
 import { recoverInterruptedJobs } from './rag/index-rebuild.ts';
 import { getDefaultChatModel } from './shared/config.ts';
-import { ErrorCode, sendError, AppHttpError } from './shared/errors.ts';
+import { ErrorCode, sendError, AppHttpError, describeUnknownError } from './shared/errors.ts';
 import { probeHealthDependencies } from './shared/health.ts';
 import { logger, requestContext } from './shared/logger.ts';
 import { SERVER_VERSION } from './shared/version.ts';
@@ -212,18 +212,6 @@ export function createApp() {
       // API route wins over the `/*` catch-all; null root → API-only headless.
       .use(webStaticRoutes(resolveWebDistRoot()))
   );
-}
-
-/** Log-safe message for thrown non-Error values (stringified objects would
- * otherwise collapse to "[object Object]"). */
-function describeUnknownError(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === 'string') return error;
-  try {
-    return JSON.stringify(error) ?? String(error);
-  } catch {
-    return String(error);
-  }
 }
 
 // app.yaml renders gateway-chat-primary's model to the literal 'NOT-SET'

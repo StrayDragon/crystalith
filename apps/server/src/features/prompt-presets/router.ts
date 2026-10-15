@@ -95,6 +95,7 @@ function serializePreset(row: typeof promptPresets.$inferSelect) {
 function assertPresetCapableType(generationTypeId: string | undefined): void {
   if (
     generationTypeId !== undefined &&
+    // eslint-disable-next-line typescript/no-unsafe-type-assertion -- readonly 字面量数组 includes 的参数收窄
     !PRESET_CAPABLE_GENERATION_TYPES.includes(generationTypeId as 'qa')
   ) {
     throw new AppHttpError(

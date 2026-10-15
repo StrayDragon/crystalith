@@ -386,7 +386,7 @@ async function handleGenerateOutput(
       chunkIds: resolvedChunkIds,
       sourceIds: resolvedSourceIds,
       prompt: promptRaw ?? undefined,
-      title: titleRaw?.trim() || undefined,
+      title: titleRaw?.trim() === '' ? undefined : titleRaw?.trim(),
       preference: preference === 'speed' ? 'speed' : 'quality',
       topK: topK ?? undefined,
       minScore: minScore ?? undefined,

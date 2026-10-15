@@ -32,7 +32,7 @@ export function Chip({
   onClose,
   ...rest
 }: ChipProps) {
-  if (open === false) return null;
+  if (!open) return null;
   return (
     <span
       className={cx(

@@ -11,5 +11,6 @@ export function isLabDemoMode(
     readonly VITE_LAB_DEMO?: string;
   } = import.meta.env,
 ): boolean {
-  return env.DEV || env.VITE_LAB_DEMO === '1';
+  if (env.DEV) return true;
+  return env.VITE_LAB_DEMO === '1';
 }

@@ -128,6 +128,7 @@ export const MenuItem = forwardRef<HTMLDivElement, MenuItemProps>(function MenuI
           event.preventDefault();
           return;
         }
+        // eslint-disable-next-line typescript/no-unsafe-type-assertion -- portal 内 DOM 事件 vs React 合成事件边界
         onClick?.(event as unknown as MouseEvent<HTMLDivElement>);
         if (!closeOnItemPress) {
           event.preventDefault();

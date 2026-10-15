@@ -128,6 +128,7 @@ export function registerApiDoc(routes: OpenApiRoute[]): void {
 
     if (route.request?.params) {
       for (const [name, schema] of Object.entries(route.request.params)) {
+        // eslint-disable-next-line typescript/no-unsafe-type-assertion -- Elysia 路由 schema 内部形状，读 description 专用
         const s: Record<string, unknown> = schema as never;
         const desc = typeof s.description === 'string' ? s.description : undefined;
         parameters.push({
@@ -160,8 +161,10 @@ export function registerApiDoc(routes: OpenApiRoute[]): void {
       const querySpec = route.request.query;
       const fields: Record<string, z.ZodType> =
         querySpec instanceof z.ZodObject
-          ? (querySpec as unknown as { shape: Record<string, z.ZodType> }).shape
-          : (querySpec as Record<string, z.ZodType>);
+          ? // eslint-disable-next-line typescript/no-unsafe-type-assertion -- Zod ZodObject 泛型擦除后的 shape 取回
+            (querySpec as unknown as { shape: Record<string, z.ZodType> }).shape
+          : // eslint-disable-next-line typescript/no-unsafe-type-assertion -- 非 ZodObject query 的字段表收窄
+            (querySpec as Record<string, z.ZodType>);
       for (const [name, schema] of Object.entries(fields)) {
         parameters.push({
           name,

@@ -1,5 +1,6 @@
 /** Map Material Tailwind `color` names onto Tailwind 3 palettes we already ship. */
 export function textColorClass(color: string | undefined): string | undefined {
+  // eslint-disable-next-line typescript/switch-exhaustiveness-check -- string|undefined 无法穷举字符串，default 已兜底 undefined
   switch (color) {
     case 'red':
       return 'text-red-500';
@@ -21,6 +22,7 @@ export function textColorClass(color: string | undefined): string | undefined {
 }
 
 export function filledBgClass(color: string | undefined): string {
+  // eslint-disable-next-line typescript/switch-exhaustiveness-check -- string|undefined 无法穷举字符串，default 已兜底 undefined
   switch (color) {
     case 'red':
       return 'bg-red-500 text-white';
@@ -38,6 +40,7 @@ export function filledBgClass(color: string | undefined): string {
 }
 
 export function outlinedToneClass(color: string | undefined): string {
+  // eslint-disable-next-line typescript/switch-exhaustiveness-check -- string|undefined 无法穷举字符串，default 已兜底 undefined
   switch (color) {
     case 'red':
       return 'border-red-500 text-red-500';
@@ -56,6 +59,7 @@ export function outlinedToneClass(color: string | undefined): string {
 
 export function chipToneClass(variant: string | undefined, color: string | undefined): string {
   if (variant === 'ghost' || variant === 'outlined') {
+    // eslint-disable-next-line typescript/switch-exhaustiveness-check -- string|undefined 无法穷举字符串，default 已兜底 undefined
     switch (color) {
       case 'red':
         return 'bg-red-50 text-red-700';

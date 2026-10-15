@@ -46,17 +46,21 @@ async function loadProviderFactory(sdk: string, factory: string): Promise<Provid
   if (typeof factoryFn !== 'function') {
     throw new TypeError(`Factory '${factory}' not found in '${sdk}'`);
   }
+  // eslint-disable-next-line typescript/no-unsafe-type-assertion -- c127 cast wall：dual-provider hoist 边界
   return factoryFn as ProviderFactory;
 }
 
 function resolveChatModel(provider: unknown, modelId: string, sdk: string): LanguageModelV4 {
   if (typeof provider === 'function') {
+    // eslint-disable-next-line typescript/no-unsafe-type-assertion -- c127 cast wall：dual-provider hoist 边界
     return (provider as (id: string) => LanguageModelV4)(modelId);
   }
   if (isRecord(provider) && typeof provider.chat === 'function') {
+    // eslint-disable-next-line typescript/no-unsafe-type-assertion -- c127 cast wall：dual-provider hoist 边界
     return (provider.chat as (id: string) => LanguageModelV4)(modelId);
   }
   if (isRecord(provider) && typeof provider.languageModel === 'function') {
+    // eslint-disable-next-line typescript/no-unsafe-type-assertion -- c127 cast wall：dual-provider hoist 边界
     return (provider.languageModel as (id: string) => LanguageModelV4)(modelId);
   }
   throw new Error(`Provider from '${sdk}' is neither callable nor has .chat()/.languageModel()`);
@@ -79,9 +83,11 @@ function resolveEmbeddingAccessor(
   for (const key of accessors) {
     const candidate =
       typeof provider === 'function' || isRecord(provider)
-        ? (provider as Record<string, unknown>)[key]
+        ? // eslint-disable-next-line typescript/no-unsafe-type-assertion -- c127 cast wall：dual-provider hoist 边界
+          (provider as Record<string, unknown>)[key]
         : undefined;
     if (typeof candidate === 'function') {
+      // eslint-disable-next-line typescript/no-unsafe-type-assertion -- c127 cast wall：dual-provider hoist 边界
       return (candidate as (id: string) => EmbeddingModelV4)(modelId);
     }
   }
@@ -106,6 +112,7 @@ function buildProviderOpts(config: ModelConfig, includeHeaders: boolean): Record
 
 /** Resolve a ModelConfig into a concrete LanguageModelV4. */
 export async function resolveModel(config: ModelConfig): Promise<LanguageModelV4> {
+  // eslint-disable-next-line typescript/no-unsafe-type-assertion -- c127 cast wall：config provider id 收窄（registry 白名单已守卫）
   const entry = KNOWN_PROVIDERS[config.provider as keyof typeof KNOWN_PROVIDERS];
 
   const sdk = entry?.sdk ?? config.sdk;
@@ -124,6 +131,7 @@ export async function resolveModel(config: ModelConfig): Promise<LanguageModelV4
 
 /** Resolve an embedding model (same provider mechanism, .embedding() accessor). */
 export async function resolveEmbeddingModel(config: ModelConfig): Promise<EmbeddingModelV4> {
+  // eslint-disable-next-line typescript/no-unsafe-type-assertion -- c127 cast wall：config provider id 收窄（registry 白名单已守卫）
   const entry = KNOWN_PROVIDERS[config.provider as keyof typeof KNOWN_PROVIDERS];
 
   const sdk = entry?.sdk ?? config.sdk;

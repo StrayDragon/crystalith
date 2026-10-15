@@ -175,6 +175,7 @@ export async function createNodeChatSseResponse(
       // Chat SSE contract is enforced at the emit exit: typed as the shared
       // discriminated union, with a runtime assertion outside production
       // builds (deep-research-runtime r76 wiring).
+      // eslint-disable-next-line typescript/no-unsafe-type-assertion -- import.meta.env 类型缺口（Bun/Vite 差异）
       const chatContractCheck = (import.meta as { env?: { DEV?: boolean } }).env?.DEV ?? true;
       const emit = (event: ResearchNodeChatStreamEvent) => {
         if (chatContractCheck) {

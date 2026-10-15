@@ -116,7 +116,7 @@ export async function getIndexState(notebookId: number): Promise<IndexState> {
     row
       ? {
           id: row.id,
-          mode: row.mode as IndexJobMode,
+          mode: row.mode,
           state: row.state,
           total: row.total,
           done: row.done,

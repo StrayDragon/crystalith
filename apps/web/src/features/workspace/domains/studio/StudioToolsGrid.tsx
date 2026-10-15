@@ -41,7 +41,8 @@ const FALLBACK_QUANTITY_OPTIONS: ConfigOption[] = [
  * the diagnostics dialog.
  */
 export function isToolRenderable(tool: WorkspaceTool): boolean {
-  if (ToolOutputTypeSchema.safeParse(tool.outputType).success !== true) return false;
+  if (!ToolOutputTypeSchema.safeParse(tool.outputType).success) return false;
+  // eslint-disable-next-line typescript/no-unnecessary-boolean-literal-compare -- 三态语义：仅显式 false 拦截，undefined 放行（与 221 行 falsy 判断语义不同，属有意）
   if (tool.outputType === 'SLIDES' && tool.enabled === false) return false;
   return true;
 }

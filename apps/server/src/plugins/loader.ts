@@ -58,6 +58,7 @@ export function nodeModuleDirCandidates(): string[] {
  * `CrystalithPlugin` as the package default.
  */
 export async function importExternalPlugin(id: string): Promise<CrystalithPlugin> {
+  // eslint-disable-next-line typescript/no-unsafe-type-assertion -- 动态 import 的模块形状边界
   const mod = (await import(`${EXTERNAL_PLUGIN_SCOPE}/${id}`)) as {
     default?: CrystalithPlugin;
   };

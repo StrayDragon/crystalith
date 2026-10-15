@@ -166,7 +166,7 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
   let stage: 'parse' | 'embed' | 'vector_store' | 'ingestion' = 'parse';
   try {
     // 2. Parse
-    const result = await parser!.parse(input.buffer, input.filename);
+    const result = await parser.parse(input.buffer, input.filename);
 
     // r287/r464/r465: markdown semantic preprocessing (wikilink normalization
     // + frontmatter extraction) runs before chunk/embed/store; extracted
@@ -227,6 +227,7 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
 
     // 6. Mark ready (only after vectors are written)
     const readyMetadata: Record<string, unknown> = {
+      // eslint-disable-next-line typescript/no-unsafe-type-assertion -- 提取器 metadata 透传边界
       ...(result.metadata as Record<string, unknown>),
     };
     if (markdownFrontmatter) readyMetadata.frontmatter = markdownFrontmatter;

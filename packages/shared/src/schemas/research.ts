@@ -493,6 +493,7 @@ export const ResearchRunSchema = z
         description: desc('research.failure_reason', '失败原因（结案类带 synthesize_ 前缀）'),
       }),
     /** @deprecated Prefer failureReason; kept for older clients. */
+    // eslint-disable-next-line typescript/no-deprecated -- 自有 wire 兼容字段（见上行 @deprecated JSDoc，为旧客户端保留）
     errorMessage: z.string().nullable().optional(),
     /** XOR mutex with work_unit / node_chat; null when idle. */
     llmActivity: ResearchLlmActivitySchema.nullable().optional(),

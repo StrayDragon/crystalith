@@ -35,7 +35,8 @@ export const Tooltip = forwardRef<HTMLElement, TooltipProps>(function Tooltip(
   const { side, align } = parsePlacement(placement);
   const sideOffset = typeof offset === 'number' ? offset : 6;
   const trigger = isValidElement(children)
-    ? cloneElement(children as ReactElement<{ ref?: typeof ref }>, { ref })
+    ? // eslint-disable-next-line typescript/no-unsafe-type-assertion -- cloneElement ref 注入的 React 类型缺口
+      cloneElement(children as ReactElement<{ ref?: typeof ref }>, { ref })
     : children;
 
   return (

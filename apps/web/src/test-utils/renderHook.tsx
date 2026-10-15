@@ -22,6 +22,7 @@ export function renderHook<T>(
   );
 
   return {
+    // eslint-disable-next-line typescript/no-unsafe-type-assertion -- 测试工具：泛型穿透
     result: result as { current: T },
     rerender: renderResult.rerender,
     unmount: renderResult.unmount,

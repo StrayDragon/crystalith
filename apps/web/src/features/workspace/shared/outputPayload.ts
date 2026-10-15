@@ -264,7 +264,7 @@ export function formatOutputFieldText(value: unknown): string {
     return `${year}-${month}-${day}`;
   }
   if (typeof value === 'object') {
-    return pickTextValue(value as { text?: string | null });
+    return pickTextValue(value);
   }
   return '';
 }

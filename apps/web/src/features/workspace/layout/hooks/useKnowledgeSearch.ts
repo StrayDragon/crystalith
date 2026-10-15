@@ -104,7 +104,9 @@ export function useKnowledgeSearch(activeNotebookId: number | null): KnowledgeSe
         : undefined;
     const timer = window.setTimeout(() => {
       void runKbSearch(trimmed, scope, isStale, {
-        setLoading: () => setStatus('loading'),
+        setLoading: () => {
+          setStatus('loading');
+        },
         setData: (data) => {
           setResult(data);
           setStatus('done');

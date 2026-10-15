@@ -226,7 +226,7 @@ export async function layoutWithElk(
     const target = nodeById.get(e.target);
     const faded = source?.conclusionStatus === 'pruned' || target?.conclusionStatus === 'pruned';
     // r406/r15: terminal-run runs expose a read-only graph — no fork/prune on any edge.
-    const actionable = Boolean(target?.role === 'research' && target.conclusionStatus !== 'pruned');
+    const actionable = target?.role === 'research' && target.conclusionStatus !== 'pruned';
     const canPrune = actionable && !opts?.readOnly;
     const canFork = actionable && !opts?.readOnly;
     const inns = inEdges.get(e.target) ?? [e];

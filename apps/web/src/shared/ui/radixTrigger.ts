@@ -11,7 +11,7 @@ export function useRadixTriggerClickFallback() {
   const openedByPointerRef = useRef(false);
   return {
     onPointerDown(event: PointerEvent<HTMLElement>) {
-      if (event.button === 0 && event.ctrlKey === false) {
+      if (event.button === 0 && !event.ctrlKey) {
         openedByPointerRef.current = true;
       }
     },

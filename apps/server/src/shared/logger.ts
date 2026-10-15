@@ -21,6 +21,7 @@ const LEVEL_WEIGHT: Record<LogLevel, number> = {
 
 function resolveInitialLevel(): LogLevel {
   const fromEnv = process.env.CL_LOG_LEVEL?.trim().toLowerCase();
+  // eslint-disable-next-line typescript/no-unsafe-type-assertion -- 上行 in 检查已证明成员资格，规则不可见
   if (fromEnv && fromEnv in LEVEL_WEIGHT) return fromEnv as LogLevel;
   if (process.env.NODE_ENV === 'test') return 'warn';
   return 'info';
@@ -115,8 +116,9 @@ export interface Logger {
 function makeLogger(bound: LogFields): Logger {
   const log =
     (level: LogLevel) =>
-    (msg: string, ...rest: unknown[]): void =>
+    (msg: string, ...rest: unknown[]): void => {
       emit(level, msg, bound, rest);
+    };
   return {
     debug: log('debug'),
     info: log('info'),
