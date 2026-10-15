@@ -207,24 +207,46 @@ export async function generateAndPersistSourceSummary(
   return toWire(sid, cache);
 }
 
+// In-flight fire-and-forget summary tasks. Integration-test teardown drains
+// them: a continuation surviving resetDb(null) would lazily re-open the
+// DEFAULT-path DB via db() — i.e. the real dev database.
+const pendingSummaryTasks = new Set<Promise<void>>();
+
+/** Bounded wait for all in-flight summary tasks to settle (never throws). */
+export async function drainSourceSummaries(timeoutMs = 2000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (pendingSummaryTasks.size > 0 && Date.now() < deadline) {
+    await Promise.race([
+      Promise.allSettled([...pendingSummaryTasks]),
+      new Promise((resolve) => setTimeout(resolve, deadline - Date.now())),
+    ]);
+  }
+}
+
 /**
  * Fire-and-forget after ready. Failures are logged only — never flip status.
  * Skips when autoSummary already present (unless force).
  */
-export async function scheduleSourceSummary(
+export function scheduleSourceSummary(
   sourceId: number,
   opts?: { force?: boolean },
 ): Promise<void> {
-  void (async () => {
-    try {
-      const source = await client().get(
-        db().select().from(sources).where(eq(sources.id, sourceId)),
-      );
-      if (!source || source.status !== 'ready') return;
-      if (!opts?.force && readCached(source)) return;
-      await generateAndPersistSourceSummary(source.notebookId, sourceId);
-    } catch (error) {
-      logger.error(`[source-summary] async pregenerate failed for source ${sourceId}:`, error);
-    }
-  })();
+  const task = runSummaryTask(sourceId, opts).finally(() => {
+    pendingSummaryTasks.delete(task);
+  });
+  pendingSummaryTasks.add(task);
+  return task;
+}
+
+async function runSummaryTask(sourceId: number, opts?: { force?: boolean }): Promise<void> {
+  try {
+    const source = await client().get(
+      db().select().from(sources).where(eq(sources.id, sourceId)),
+    );
+    if (!source || source.status !== 'ready') return;
+    if (!opts?.force && readCached(source)) return;
+    await generateAndPersistSourceSummary(source.notebookId, sourceId);
+  } catch (error) {
+    logger.error(`[source-summary] async pregenerate failed for source ${sourceId}:`, error);
+  }
 }

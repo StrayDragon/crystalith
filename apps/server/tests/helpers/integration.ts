@@ -77,6 +77,12 @@ export async function teardownIntegrationEnv(): Promise<void> {
   // 先让后台研究循环沉降, 再关连接: --parallel 逐文件隔离下, 残留 loop 的
   // 尾部 updateRun 会打到已关闭的临时 DB → SQLiteError: database is locked.
   await drainResearchLoops();
+  // 同类后台散兵：summary 任务若活过 resetDb(null)，其延续会经 db() 懒重建
+  // 默认路径的库（= 真实 dev 库）。关连接前先排空。
+  const { drainSourceSummaries } = await import(
+    '../../src/features/sources/source-summary.ts'
+  );
+  await drainSourceSummaries();
   // 显式关闭底层 bun:sqlite 连接: bun:test 同进程会创建几十个临时 DB,
   // 仅 resetDb(null) 指望 GC 释放会让文件描述符/锁耗尽, 后续文件的 createDb
   // 报 'disk I/O error'。必须先 close 再删文件。
