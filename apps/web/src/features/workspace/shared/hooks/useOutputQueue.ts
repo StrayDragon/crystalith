@@ -1,6 +1,6 @@
 import type { Output as WireOutput, OutputListItem } from '@crystalith/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import useSWR from 'swr';
+import useSWR, { mutate as globalMutate } from 'swr';
 
 import { api } from '../../../../api/eden';
 import { edenFetchOptions } from '../../../../api/edenFetchOptions';
@@ -169,6 +169,7 @@ async function runSlidesGenerate(
   }
 }
 
+// fallow-ignore-next-line complexity -- 估算 CRAP（无 coverage 数据）；队列编排神文件（c14 拆分候选），行为由 rstest/e2e 覆盖
 export function useOutputQueue({
   isConnected,
   hasPendingRefineJobs,
@@ -188,6 +189,20 @@ export function useOutputQueue({
   const runNextOutputJobRef = useRef<() => void>(() => {});
   const outputAbortControllersRef = useRef(new Map<string, AbortController>());
 
+  // NotebookId-parametric so cross-notebook jumps can seed the TARGET key's
+  // cache before this hook's own SWR key switches on re-render.
+  // fallow-ignore-next-line complexity -- 估算 CRAP（无 coverage 数据）；错误收口三分支由 rstest 间接覆盖
+  const fetchOutputsList = useCallback(async (nid: number): Promise<OutputListItem[]> => {
+    const { data, error: fetchErr } = await api.v2.notebooks({ nid }).outputs.get({
+      query: { offset: 0, limit: 200 },
+    });
+    if (fetchErr)
+      throw new Error(
+        fetchErr instanceof Error ? fetchErr.message : typeof fetchErr === 'string' ? fetchErr : '',
+      );
+    return data?.items ?? [];
+  }, []);
+
   const {
     data: outputsData,
     error: outputsError,
@@ -195,19 +210,15 @@ export function useOutputQueue({
     mutate: mutateOutputs,
   } = useSWR<OutputListItem[], Error>(
     activeNotebookId && isConnected ? ['workspace/outputs', activeNotebookId] : null,
-    async (): Promise<OutputListItem[]> => {
-      const { data, error: fetchErr } = await api.v2
-        .notebooks({ nid: activeNotebookId! })
-        .outputs.get({
-          query: { offset: 0, limit: 200 },
-        });
-      if (fetchErr)
-        throw new Error(
-          typeof fetchErr === 'string' ? fetchErr : typeof fetchErr === 'string' ? fetchErr : '',
-        );
-      return data?.items ?? [];
-    },
+    () => fetchOutputsList(activeNotebookId!),
     { revalidateOnFocus: false },
+  );
+
+  const fetchOutputsForNotebook = useCallback(
+    async (nid: number) => {
+      await globalMutate(['workspace/outputs', nid], fetchOutputsList(nid));
+    },
+    [fetchOutputsList],
   );
 
   useEffect(() => {
@@ -720,5 +731,6 @@ export function useOutputQueue({
     fetchOutput,
     ensureOutputDetail,
     mutateOutputs,
+    fetchOutputsForNotebook,
   };
 }

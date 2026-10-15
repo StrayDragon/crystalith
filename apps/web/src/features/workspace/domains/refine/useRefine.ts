@@ -212,6 +212,7 @@ export function useRefine() {
     fetchOutput,
     ensureOutputDetail,
     mutateOutputs,
+    fetchOutputsForNotebook,
   } = useOutputQueue({
     isConnected,
     hasPendingRefineJobs,
@@ -414,5 +415,6 @@ export function useRefine() {
     mutateOutputs,
     fetchOutput,
     ensureOutputDetail,
+    fetchOutputsForNotebook,
   };
 }

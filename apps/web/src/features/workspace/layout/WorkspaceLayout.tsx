@@ -266,6 +266,7 @@ export default function WorkspaceLayout() {
       setJumpToCitationChunkId: sources.setJumpToCitationChunkId,
       openOutputViewer: overlays.openOutputViewer,
       refreshOutputs: () => refine.mutateOutputs(),
+      fetchOutputsFor: refine.fetchOutputsForNotebook,
       activeNotebookId,
       setActiveNotebook: (id) => {
         store.getState().setActiveNotebook(id);
@@ -391,9 +392,10 @@ export default function WorkspaceLayout() {
     if (!overlays.isViewerOpen) return;
     // c132: while the outputs list is (re)loading — e.g. right after a
     // notebook switch from a knowledge-search jump — the list is not yet
-    // evidence that the selected output is gone. Only reconcile on a loaded
-    // list.
-    if (refine.outputsLoading) return;
+    // evidence that the selected output is gone. A load ERROR is likewise
+    // not evidence (an empty-but-loaded list is). Only reconcile on a
+    // successfully loaded list.
+    if (refine.outputsLoading || refine.outputsError) return;
     if (refine.outputs.length === 0) {
       overlays.closeOutputViewer();
       overlays.setViewerOutputId(null);
@@ -406,7 +408,7 @@ export default function WorkspaceLayout() {
       return;
     }
     overlays.setViewerOutputId(refine.outputs[0].id);
-  }, [overlays, refine.outputs, refine.outputsLoading]);
+  }, [overlays, refine.outputs, refine.outputsLoading, refine.outputsError]);
 
   const isConnected = notebooks.isConnected;
 
