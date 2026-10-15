@@ -354,7 +354,7 @@ export type SourceFromUrlRequest = z.infer<typeof SourceFromUrlRequestSchema>;
  */
 export const SourceUploadNestedQuerySchema = z.object({
   notebookId: z.coerce.number().int().positive().optional(),
-  dedupAction: z.enum(['prompt', 'reuse', 'create_new']).default('prompt'),
+  dedupAction: z.enum(['prompt', 'reuse', 'create_new', 'replace']).default('prompt'),
 });
 export type SourceUploadNestedQuery = z.infer<typeof SourceUploadNestedQuerySchema>;
 

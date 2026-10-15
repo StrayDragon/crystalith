@@ -1,6 +1,9 @@
 ---
 title: 上传去重弹窗支持「替换旧来源」（内容更新工作流）
 depends_on: []
+branch: sdd/c135-replace-source-on-upload
+base_branch: main
+base_sha: bae87b4888347ca4709b675c0d06407058632f3e
 ---
 
 # 上传去重弹窗支持「替换旧来源」

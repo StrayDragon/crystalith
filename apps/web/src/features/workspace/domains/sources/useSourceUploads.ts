@@ -9,12 +9,17 @@ import type { SourceSeamContext } from './sourceSeamContext';
 
 type ExtractorType = import('@crystalith/shared').ExtractorInfo['type'];
 
-/** W5: pending dedup "reuse or create new" decision (rendered as a dialog). */
+/** Upload dedup choices; `replace` swaps the old source for the new bytes (r491). */
+export type DedupChoice = 'reuse' | 'create_new' | 'replace';
+
+/** W5: pending dedup decision (rendered as a dialog). */
 export interface DedupConfirmRequest {
   existingName: string;
   /** c134 r490: content = identical bytes hit; filename = same name, different bytes. */
   kind?: 'content' | 'filename';
-  resolve: (reuse: boolean) => void;
+  /** c135 r491: offer the replace option (upload flow only). */
+  allowReplace: boolean;
+  resolve: (choice: DedupChoice) => void;
 }
 
 export interface SourceUploadItem {
@@ -49,7 +54,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
 async function uploadSourceFile(
   notebookId: number,
   file: File,
-  dedupAction: 'prompt' | 'reuse' | 'create_new',
+  dedupAction: 'prompt' | 'reuse' | 'create_new' | 'replace',
 ): Promise<void> {
   const r = await api.v2
     .notebooks({ nid: notebookId })
@@ -70,17 +75,17 @@ export function useSourceUploads(ctx: SourceSeamContext) {
   // by SourceDedupConfirmDialog instead of window.confirm.
   const [dedupConfirm, setDedupConfirm] = useState<DedupConfirmRequest | null>(null);
 
-  const askDedupReuse = useCallback(
-    (existingName: string, kind?: 'content' | 'filename') =>
-      new Promise<boolean>((resolve) => {
-        setDedupConfirm({ existingName, kind, resolve });
+  const askDedup = useCallback(
+    (existingName: string, kind?: 'content' | 'filename', allowReplace = false) =>
+      new Promise<DedupChoice>((resolve) => {
+        setDedupConfirm({ existingName, kind, allowReplace, resolve });
       }),
     [],
   );
 
-  const resolveDedupConfirm = useCallback((reuse: boolean) => {
+  const resolveDedupConfirm = useCallback((choice: DedupChoice) => {
     setDedupConfirm((prev) => {
-      prev?.resolve(reuse);
+      prev?.resolve(choice);
       return null;
     });
   }, []);
@@ -145,11 +150,10 @@ export function useSourceUploads(ctx: SourceSeamContext) {
                 details && (details.kind === 'filename' || details.kind === 'content')
                   ? details.kind
                   : undefined;
-              const reuse = await askDedupReuse(existingFilename, kind);
-              const dedupAction = reuse ? 'reuse' : 'create_new';
+              const choice = await askDedup(existingFilename, kind, true);
               try {
                 // Keep per-file UI updates and dedup flow serial.
-                await uploadSourceFile(activeNotebookId, file, dedupAction);
+                await uploadSourceFile(activeNotebookId, file, choice);
                 successCount += 1;
                 setUploadQueue((prev) =>
                   prev.map((item) =>
@@ -157,7 +161,12 @@ export function useSourceUploads(ctx: SourceSeamContext) {
                       ? {
                           ...item,
                           status: 'success',
-                          message: reuse ? '已复用已有来源' : undefined,
+                          message:
+                            choice === 'reuse'
+                              ? '已复用已有来源'
+                              : choice === 'replace'
+                                ? '已替换旧来源'
+                                : undefined,
                         }
                       : item,
                   ),
@@ -202,7 +211,7 @@ export function useSourceUploads(ctx: SourceSeamContext) {
         store.getState().setUploadState('idle');
       }
     },
-    [askDedupReuse, activeNotebookId, isConnected, mutate, store],
+    [askDedup, activeNotebookId, isConnected, mutate, store],
   );
 
   const retryUpload = useCallback(async () => {
@@ -270,14 +279,15 @@ export function useSourceUploads(ctx: SourceSeamContext) {
           dedupDetails.existing_filename
             ? dedupDetails.existing_filename
             : url;
-        const reuse = await askDedupReuse(existingFilename);
+        const choice = await askDedup(existingFilename);
+        const reuse = choice === 'reuse';
         const result = await call(reuse ? 'reuse' : 'create_new');
         await mutate();
         if (reuse) toast.info('已复用已有来源');
         return result;
       }
     },
-    [askDedupReuse, isConnected, activeNotebookId, mutate],
+    [askDedup, isConnected, activeNotebookId, mutate],
   );
 
   return {

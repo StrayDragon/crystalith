@@ -373,3 +373,62 @@ describe('c134 r490: same-filename uploads prompt instead of silently duplicatin
     expect(b.status).toBe(200); // not 409 — both dedup layers skipped
   });
 });
+
+// ---------------------------------------------------------------------------
+// c135 r491 — dedup replace swaps the old source
+// ---------------------------------------------------------------------------
+
+describe('c135 r491: replace action', () => {
+  it('same-name replace deletes the old source (cascades) and ingests the new bytes', async () => {
+    const nb = makeNotebook('c135-replace');
+    const first = await uploadFile(nb, '更新文档.md', '# 旧版本内容', 'text/markdown');
+    expect(first.status).toBe(200);
+    const oldId = (first.body as { sourceId: number }).sourceId;
+
+    const replaced = await uploadFile(
+      nb,
+      '更新文档.md',
+      '# 新版本内容：毕昇活字印刷术',
+      'text/markdown',
+      'replace',
+    );
+    expect(replaced.status).toBe(200);
+    const newId = (replaced.body as { sourceId: number }).sourceId;
+    expect(newId).not.toBe(oldId);
+
+    // Old row + its chunks are gone; the new row carries the new text.
+    const oldRow = db().select().from(sources).where(eq(sources.id, oldId)).all();
+    expect(oldRow).toHaveLength(0);
+    const newChunks = db()
+      .select({ text: chunks.text })
+      .from(chunks)
+      .where(eq(chunks.sourceId, newId))
+      .all();
+    expect(newChunks.some((c) => c.text.includes('毕昇'))).toBe(true);
+  });
+
+  it('content-hit replace replaces that source and skips the filename prompt', async () => {
+    const nb = makeNotebook('c135-replace-content');
+    const first = await uploadFile(nb, '原文档.md', '# 完全相同内容丙', 'text/markdown');
+    expect(first.status).toBe(200);
+    const oldId = (first.body as { sourceId: number }).sourceId;
+
+    // Same bytes, direct replace → not a 409: old replaced by fresh ingest.
+    const replaced = await uploadFile(
+      nb,
+      '原文档.md',
+      '# 完全相同内容丙',
+      'text/markdown',
+      'replace',
+    );
+    expect(replaced.status).toBe(200);
+    expect((replaced.body as { sourceId: number }).sourceId).not.toBe(oldId);
+    expect(db().select().from(sources).where(eq(sources.id, oldId)).all()).toHaveLength(0);
+    const rows = db()
+      .select({ id: sources.id })
+      .from(sources)
+      .where(eq(sources.notebookId, nb))
+      .all();
+    expect(rows.length).toBe(1);
+  });
+});

@@ -156,3 +156,13 @@
       那么 返回 409 且 details.kind 为 filename
       而且 reuse 动作返回既有来源、create_new 动作创建独立新行
       而且 门控关闭时同名上传直接创建且不返回 409
+
+  @req:r491
+  规则: Dedup replace swaps the existing source for the new bytes
+    上传去重命中（内容或同名）且动作为 replace 时 MUST 删除既有来源（向量、块、关键词索引随级联清理）并按本次上传字节正常摄取新来源，响应为普通摄取结果；内容命中替换后 MUST 跳过同名检查。URL 导入流 MUST 保持既有动作集（不含 replace）。前端 MUST 在同名（kind='filename'）命中时提供替换选项；内容完全相同命中 MUST NOT 提供替换（无意义）。
+
+    场景: replace-swaps-old-source
+      假如 笔记本已有名为 X 的可见来源且上传同名但内容不同的文件（dedupAction=replace）
+      当 调用上传端点（sources 集成用例）
+      那么 旧来源连同其向量/块/关键词索引被清理且新来源可检索
+      而且 响应为普通摄取结果形态

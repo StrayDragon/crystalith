@@ -309,11 +309,18 @@ function serializeSource(row: {
 
 type UploadSet = { status?: number | string };
 
+/** r491: remove an existing source (vectors explicitly — vec_chunks has no FK)
+ * ahead of a replace; chunk rows + FTS entries follow the row delete. */
+async function deleteSourceRowCascade(sourceId: number): Promise<void> {
+  await deleteSourceVectors(db(), sourceId);
+  await client().run(db().delete(sources).where(eq(sources.id, sourceId)));
+}
+
 // fallow-ignore-next-line complexity -- 估算 CRAP（无 coverage 数据）；分支由 c117 集成用例覆盖
 async function handleSourceUpload(
   notebookId: number,
   body: unknown,
-  dedupAction: 'prompt' | 'reuse' | 'create_new' | undefined,
+  dedupAction: 'prompt' | 'reuse' | 'create_new' | 'replace' | undefined,
 ) {
   // body is FormData; Elysia parses multipart into { filename, file }
   const file = uploadFileFromBody(body);
@@ -334,6 +341,7 @@ async function handleSourceUpload(
 
   // c44: Dedup check — gated by config (v1 source_ingestion.dedup.enabled)
   const dedupKey = getDedupEnabled() ? uploadDedupKey(buffer) : undefined;
+  let replaced = false;
   if (dedupKey && dedupAction !== 'create_new') {
     const hit = await client().get(
       db()
@@ -352,14 +360,18 @@ async function handleSourceUpload(
       if (dedupAction === 'reuse') {
         return { reused: true as const, source: await handleGetSource(hit.id, notebookId) };
       }
+      if (dedupAction === 'replace') {
+        await deleteSourceRowCascade(hit.id);
+        replaced = true;
+      }
     }
   }
 
   // c134 r490: same-filename soft dedup — an identical-name upload with
   // different content must not silently add a second, indistinguishable row.
   // Content-identical hits win (stronger signal); hidden derived rows never
-  // participate.
-  if (getDedupEnabled() && dedupAction !== 'create_new') {
+  // participate. Skipped after a content-hit replace (the user already decided).
+  if (!replaced && getDedupEnabled() && dedupAction !== 'create_new') {
     const nameHit = await client().get(
       db()
         .select({ id: sources.id, filename: sources.filename })
@@ -382,6 +394,9 @@ async function handleSourceUpload(
       }
       if (dedupAction === 'reuse') {
         return { reused: true as const, source: await handleGetSource(nameHit.id, notebookId) };
+      }
+      if (dedupAction === 'replace') {
+        await deleteSourceRowCascade(nameHit.id);
       }
     }
   }
