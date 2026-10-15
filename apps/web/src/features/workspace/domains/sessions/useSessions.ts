@@ -7,6 +7,8 @@ import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { SessionSummary } from '../../shared/types';
 import { normalizeSession } from '../../shared/utils';
 
+type WorkspaceStoreState = ReturnType<typeof useWorkspaceStore.getState>;
+
 /**
  * Apply a fetched sessions list to the store. SWR mirror effect body, extracted
  * to keep the hook under fallow's complexity gate.
@@ -18,19 +20,27 @@ function applySessionsSnapshot(normalized: SessionSummary[]) {
   s.setSessions(normalized);
   s.setError('sessions', '');
   if (activeId == null) {
-    // Never auto-attach while a send is in flight: a stale list would attach
-    // the wrong session and its transcript swap would drop the pending bubble.
-    if (normalized[0] && !s.loading.send) s.setActiveSession(normalized[0].id);
+    attachSessionOnFirstList(s, normalized);
     return;
   }
-  const stillExists = normalized.some((item) => item.id === activeId);
-  if (!stillExists) {
-    // Keep activeId during create race (mutate not yet reflected). Only clear
-    // when the list is empty; delete handlers already switch explicitly.
-    // Same send guard: a transiently empty list mid-send must not wipe the
-    // transcript the optimistic bubble was written into.
-    if (normalized.length === 0 && !s.loading.send) s.setActiveSession(null);
-  }
+  clearSessionIfGone(s, normalized, activeId);
+}
+
+/** null → id: attach the newest session, but never mid-send — a wrong-session attach swaps the transcript and drops the optimistic bubble. */
+function attachSessionOnFirstList(s: WorkspaceStoreState, normalized: SessionSummary[]) {
+  if (!normalized[0] || s.loading.send) return;
+  s.setActiveSession(normalized[0].id);
+}
+
+/** Active session gone from the server list: clear only when the list is empty (create race may transiently look empty; mid-send never) and no delete handler already switched. */
+function clearSessionIfGone(
+  s: WorkspaceStoreState,
+  normalized: SessionSummary[],
+  activeId: number,
+) {
+  if (normalized.some((item) => item.id === activeId)) return;
+  if (normalized.length !== 0 || s.loading.send) return;
+  s.setActiveSession(null);
 }
 
 export function useSessions() {

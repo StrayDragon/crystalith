@@ -2,28 +2,6 @@
 
 > 已知问题与工具链兼容性台账。解决后条目应移入「已解决」段保留一段时间，防止重复踩坑。
 
-## 产品已知问题
-
-### 聊天区用户消息短暂丢失 + 完成时闪烁（局部刷新）（2026-10-15 端侧发现，已定位修复，待端侧复验）
-
-- **现象**：聊天区用户发送的文本有时会丢失，等 AI 回复有数据时才一并显示；且回复完成时
-  会闪一下（疑似局部整段重渲染）。不符合预期。
-- **预期形态**：用户发送后立即上行并**本地立即可见**（乐观渲染，不依赖回复数据到达）；
-  等待 API 回复期间进入打字机流式呈现；流式/完成路径**不得触发可见的闪烁或局部刷新**。
-- **根因**（2026-10-15 代码定位，两处竞态，均与业务无关）：
-  1. **完成闪烁**：`useChat` 流式 `done` 后 `void mutate()`（消息列表 refetch）尚未返回，
-     `finally` 就翻转 `isStreaming`/`loading.send` → 消息镜像 effect 以非保留模式用**发送前的
-     过期 SWR 数据**整体替换 store，本轮对话（用户气泡+回复）消失一个网络往返再回来。
-     非流式路径的 `void mutate()` 同理。
-  2. **用户气泡间歇丢失**：首发新会话时 `ensureSession` POST 期间 sessions SWR 数据落地，
-     effect 在 `activeSessionId == null` 时自动挂到「列表最新旧会话」，真会话创建完成后
-     `setActiveSession` 判定 switching → 清空 messages，乐观气泡被抹掉，直到 `done` 后
-     refetch 才随回复一起回来（即「等 AI 回复有数据时才一并显示」）。
-- **修复**（quick 路径，回归测试 `useChat.test.tsx` / `useSessions.test.tsx`，已验证旧代码变红）：
-  ① refetch await 后再清 flag（流式+非流式）；② 发送在途时 sessions effect 不自动挂载/清空
-  会话；③ `sendMessage` 先定会话再写乐观气泡（会话创建失败不再留悬挂气泡）。
-- **恢复/删除条件**：端侧各验证一次「发送即显 + 完成无闪烁」后删除本条目。
-
 ## 运行时怪癖（上游）
 
 ### Elysia `handle()` 对 ≤3 字符 Host 返回 404（上游，未解决）
@@ -92,19 +70,6 @@
   必需；darwin codesign 步骤同样保留，上游放开后即需）。
 
 ## 工具链兼容性（TypeScript 7 / tsgo）
-
-### just qa 的 fallow 门禁在未推送范围基线即红（2026-10-15 发现，存量债，未解决）
-
-- **现象**：`fallow audit`（scope = merge-base(origin/main) → 工作树，38 个未推送提交）
-  在**不含任何未提交改动的 HEAD 基线**即失败：`✗ 11 unused type exports`
-  （`apps/server/src/shared/config-settings.ts` 9 + `useSources.ts` re-export 1 + `testids.ts` 1）
-  与 `✗ High complexity functions`（80+，WorkspaceLayout / useOutputQueue / useChat 等大函数），
-  `just qa` 在 `audit-fallow` 步骤被挡（本地需 `node_modules/.bin` 入 PATH）。
-- **边界**：2026-10-15 聊天时序修复的 4 个文件经 `fallow audit --format json` 过滤贡献
-  **0 条**发现；useSessions 已通过抽取 `applySessionsSnapshot` 降回阈值内。
-- **恢复/删除条件**：unused types 需逐个判断「删除导出 vs 补消费方」（config 类型勿盲删），
-  complexity 清单按 cl-codebase-cleanup 方法分批消化；处理完或推送后 merge-base 前移使
-  门禁复绿，即删本条目。
 
 背景：TypeScript 7 是 Go 原生编译器，npm 包**不再附带经典 JS 编译器 API**
 （`ts.createProgram` 等）。任何在构建期 `import 'typescript'` 并调用这些 API 的代码生成器都会损坏。
