@@ -200,7 +200,7 @@ async function prepareQa(body: QaBody) {
     controls,
   );
 
-  assertQaOwnership({ notebookId, sessionId, sourceIds });
+  await assertQaOwnership({ notebookId, sessionId, sourceIds });
 
   const history = sessionId ? await loadHistory(sessionId) : [];
 
@@ -209,7 +209,7 @@ async function prepareQa(body: QaBody) {
     await client().run(
       db().insert(messages).values({ sessionId: sessionId, role: 'user', content: question }),
     );
-    maybeSetSessionTitle(sessionId, question);
+    await maybeSetSessionTitle(sessionId, question);
   }
 
   const modelConfig = getDefaultChatModel();

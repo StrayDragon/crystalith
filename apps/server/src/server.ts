@@ -145,7 +145,7 @@ export function createApp() {
           method: request.method,
           path: new URL(request.url).pathname,
           errCode: code,
-          message: error instanceof Error ? error.message : String(error),
+          message: describeUnknownError(error),
           stack: error instanceof Error ? error.stack : undefined,
         });
         const message =
@@ -212,6 +212,18 @@ export function createApp() {
       // API route wins over the `/*` catch-all; null root → API-only headless.
       .use(webStaticRoutes(resolveWebDistRoot()))
   );
+}
+
+/** Log-safe message for thrown non-Error values (stringified objects would
+ * otherwise collapse to "[object Object]"). */
+function describeUnknownError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  try {
+    return JSON.stringify(error) ?? String(error);
+  } catch {
+    return String(error);
+  }
 }
 
 // app.yaml renders gateway-chat-primary's model to the literal 'NOT-SET'

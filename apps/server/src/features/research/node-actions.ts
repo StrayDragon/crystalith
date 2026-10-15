@@ -102,7 +102,7 @@ export async function pruneNode(
       n.phase = 'idle';
     }
   }
-  persistGraph(runId, graph, {
+  await persistGraph(runId, graph, {
     checkpoint: writeCheckpoint(row, `prune_${nodeId}`),
   });
   await emitGraphPatch(runId, {
@@ -137,7 +137,7 @@ export async function patchNode(
   if (body.title !== undefined) node.title = body.title;
   if (body.query !== undefined) node.query = body.query;
   if (body.conclusionStatus !== undefined) node.conclusionStatus = body.conclusionStatus;
-  persistGraph(runId, graph, {
+  await persistGraph(runId, graph, {
     checkpoint: writeCheckpoint(row, `patch_${nodeId}`),
   });
   await emitGraphPatch(runId, { nodes: [node] });
@@ -170,7 +170,7 @@ export async function forkNode(
     checkpoint: writeCheckpoint(current, 'before_confirm_expand_branch'),
   });
   await emitStatus(runId, 'awaiting_confirm', 'expand_branch');
-  await broadcast(runId, 'confirm', {
+  broadcast(runId, 'confirm', {
     kind: 'expand_branch',
     branchNodeId: nodeId,
     options: CONFIRM_OPTIONS.expand_branch,

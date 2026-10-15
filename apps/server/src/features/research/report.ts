@@ -209,7 +209,7 @@ async function failSynthesize(runId: number, reason: string): Promise<void> {
     payload: { failureReason: reason },
   });
   await emitLog(runId, `结案失败：${reason}`);
-  await broadcast(runId, 'error', { errorCode: ErrorCode.INTERNAL_ERROR, message: reason });
+  broadcast(runId, 'error', { errorCode: ErrorCode.INTERNAL_ERROR, message: reason });
   await emitStatus(runId, 'failed', reason);
 }
 
@@ -257,13 +257,13 @@ async function completeWithReport(
     headline: '权威报告已生成',
   });
   await emitLog(runId, '报告已生成');
-  await broadcast(runId, 'report_ready', { runId });
+  broadcast(runId, 'report_ready', { runId });
   await emitStatus(runId, 'completed');
 }
 
 export async function synthesizeAndComplete(runId: number): Promise<void> {
   if (await isCancelled(runId)) {
-    finalizeCancel(runId);
+    await finalizeCancel(runId);
     return;
   }
   const row = await client().get(
@@ -279,21 +279,21 @@ export async function synthesizeAndComplete(runId: number): Promise<void> {
     const raw = await generateLlmResearchReport(row, evidences);
     const bound = validateAndBindCitations(raw, evidences);
     if (!bound.ok) {
-      failSynthesize(runId, `${SYNTHESIZE_FAILED_PREFIX}${bound.reason}`);
+      await failSynthesize(runId, `${SYNTHESIZE_FAILED_PREFIX}${bound.reason}`);
       return;
     }
     if (await isCancelled(runId)) {
-      finalizeCancel(runId);
+      await finalizeCancel(runId);
       return;
     }
-    completeWithReport(runId, row, bound.report);
+    await completeWithReport(runId, row, bound.report);
   } catch (error) {
     if (await isCancelled(runId)) {
-      finalizeCancel(runId);
+      await finalizeCancel(runId);
       return;
     }
     const message = error instanceof Error ? error.message : String(error);
-    failSynthesize(runId, `${SYNTHESIZE_MODEL_ERROR_PREFIX}${message}`);
+    await failSynthesize(runId, `${SYNTHESIZE_MODEL_ERROR_PREFIX}${message}`);
   }
 }
 
@@ -473,7 +473,7 @@ export async function putCanonicalReport(
     reportUpdatedAt: now,
   });
   await appendProgressEvent(runId, 'report_canonical_updated', { headline: '权威报告已更新' });
-  await broadcast(runId, 'report_ready', { runId });
+  broadcast(runId, 'report_ready', { runId });
   return getReportView(notebookId, runId);
 }
 

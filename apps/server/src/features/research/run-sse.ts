@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm';
 import { client, db } from '../../db/index.ts';
 import { researchRuns } from '../../db/schema.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
+import { logger } from '../../shared/logger.ts';
 import { sseFrame, sseResponse } from '../../shared/sse-response.ts';
 import {
   CONFIRM_OPTIONS,
@@ -99,16 +100,23 @@ export async function createResearchSseResponse(
 
           const slowTick = async () => {
             if (done) return;
-            const row = await client().get(
-              db().select().from(researchRuns).where(eq(researchRuns.id, runId)),
-            );
-            if (row && isTerminalStatus(row.status)) {
-              settleTerminal();
+            try {
+              const row = await client().get(
+                db().select().from(researchRuns).where(eq(researchRuns.id, runId)),
+              );
+              if (row && isTerminalStatus(row.status)) {
+                settleTerminal();
+                return;
+              }
+            } catch (error) {
+              logger.error('[research-sse] slow tick failed, stopping', error);
               return;
             }
-            setTimeout(slowTick, 2000);
+            setTimeout(() => {
+              void slowTick();
+            }, 2000);
           };
-          slowTick();
+          void slowTick();
         });
       } catch (error) {
         emit('error', {

@@ -339,7 +339,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       } catch {
         // app.handle / non-Bun — no-op
       }
-      return await createResearchSseResponse(nid, rid);
+      return createResearchSseResponse(nid, rid);
     },
     { params: z.object({ nid: PathId, rid: PathId }) },
   )

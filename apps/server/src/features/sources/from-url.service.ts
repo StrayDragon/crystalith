@@ -150,7 +150,7 @@ async function createLinkSource(
       db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)),
     );
     const { scheduleSourceSummary } = await import('./source-summary.ts');
-    scheduleSourceSummary(sourceRow.id);
+    void scheduleSourceSummary(sourceRow.id);
   } catch (error) {
     await client().run(
       db()

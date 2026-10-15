@@ -3,6 +3,22 @@
  * (chat, Lab, sources) reports failures with the same honest, actionable
  * wording instead of leaking raw `Error.message` / `[object Object]` (W5).
  */
+function stringifyUnknownObject(value: object): string {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    // circular / bigint
+    return '';
+  }
+}
+
+function unknownToMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (!error) return '';
+  if (typeof error === 'string') return error;
+  return stringifyUnknownObject(error);
+}
+
 export function mapTransportError(error: unknown, status?: number): string {
   if (status === 503) {
     return '可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置或稍后重试。';
@@ -13,7 +29,7 @@ export function mapTransportError(error: unknown, status?: number): string {
   if (status === 500) {
     return '服务器内部错误，请检查模型/Embedding 配置或稍后重试。';
   }
-  const message = error instanceof Error ? error.message : String(error ?? '');
+  const message = unknownToMessage(error);
   if (message.length > 0 && message.length < 120) {
     return message;
   }

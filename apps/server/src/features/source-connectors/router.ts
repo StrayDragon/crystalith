@@ -140,7 +140,7 @@ const apiDocs: OpenApiRoute[] = [
 // ---------------------------------------------------------------------------
 
 async function getBindingOr404(notebookId: number, bindingId: number) {
-  return await requireOwnedRow(sourceConnectorBindings, bindingId, notebookId, 'Connector binding');
+  return requireOwnedRow(sourceConnectorBindings, bindingId, notebookId, 'Connector binding');
 }
 
 function getConnectorOr404(connectorId: string) {
@@ -355,7 +355,7 @@ export const sourceConnectorsRouter = new Elysia({ prefix: '/v2' })
 
       // sync.ts throws AppHttpError (409 SYNC_CHECK_REQUIRED / SYNC_CHECK_OUTDATED)
       // which propagates via global onError.
-      return await applySyncCheckToBinding(nid, binding, syncCheckId);
+      return applySyncCheckToBinding(nid, binding, syncCheckId);
     },
     {
       params: z.object({ nid: PathId, bindingId: PathId }),

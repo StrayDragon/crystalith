@@ -28,7 +28,7 @@ export function useSearchIndexRebuild(
     if (!notebookId) return;
     try {
       const { data, error } = await api.v2.notebooks({ nid: notebookId })['search-index'].get();
-      if (error) throw error;
+      if (error) throw new Error(parseServerError(error).message);
       setStatus(data);
       setStatusError(null);
     } catch (error) {
@@ -52,7 +52,7 @@ export function useSearchIndexRebuild(
         .notebooks({ nid: notebookId })
         // eslint-disable-next-line no-unexpected-multiline
         ['search-index'].rebuild.post({});
-      if (error) throw error;
+      if (error) throw new Error(parseServerError(error).message);
       await refreshNow();
       toast.success('索引重建已启动');
     } catch (error) {

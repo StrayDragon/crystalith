@@ -93,7 +93,7 @@ export async function batchReembedSources(nid: number, body: BatchReembedBody) {
       reembedded.push(sid);
       results.push({ sourceId: sid, ok: true });
       const { scheduleSourceSummary } = await import('./source-summary.ts');
-      scheduleSourceSummary(sid, { force: true });
+      void scheduleSourceSummary(sid, { force: true });
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       await client().run(

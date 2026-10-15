@@ -179,7 +179,7 @@ async function getSlideInNotebookOrThrow(
   id: number,
   notebookId: number,
 ): Promise<typeof studioSlides.$inferSelect> {
-  return await requireOwnedRow(studioSlides, id, notebookId, 'Slide');
+  return requireOwnedRow(studioSlides, id, notebookId, 'Slide');
 }
 
 // ---------------------------------------------------------------------------
@@ -264,7 +264,7 @@ async function handlePatchSlide(id: number, notebookId: number, body: SlideDraft
 
 async function handleGenerateOutline(id: number, notebookId: number) {
   const slide = await getSlideInNotebookOrThrow(id, notebookId);
-  if (!clearStaleRunning(id)) {
+  if (!(await clearStaleRunning(id))) {
     throw new AppHttpError(ErrorCode.CONFLICT, '演示正在生成中，请稍后重试。');
   }
 
@@ -314,7 +314,7 @@ async function handlePutOutline(id: number, notebookId: number, body: StudioOutl
 async function handleGenerateMarkdown(id: number, notebookId: number) {
   const slide = await getSlideInNotebookOrThrow(id, notebookId);
   if (!slide.outline) throw new NotFoundError(`Slide ${id} has no outline — run /outline first`);
-  if (!clearStaleRunning(id)) {
+  if (!(await clearStaleRunning(id))) {
     throw new AppHttpError(ErrorCode.CONFLICT, '演示正在生成中，请稍后重试。');
   }
 
@@ -334,7 +334,7 @@ async function handleGenerateMarkdown(id: number, notebookId: number) {
         .where(eq(studioSlides.id, id)),
     );
     writeSlideFile(slide.notebookId, id, markdown);
-    syncSlideOutput(slide, markdown);
+    await syncSlideOutput(slide, markdown);
     return serializeSlide(await getSlideOrThrow(id));
   } catch (error) {
     await client().run(
@@ -355,7 +355,7 @@ async function handlePutMarkdown(id: number, notebookId: number, body: StudioMar
   } catch (error) {
     logger.error('[studio] slidev file write failed:', error);
   }
-  syncSlideOutput(slide, markdown);
+  await syncSlideOutput(slide, markdown);
   await client().run(
     db()
       .update(studioSlides)
@@ -420,7 +420,7 @@ async function handleMarkdownStream(id: number, notebookId: number) {
         .where(eq(studioSlides.id, id)),
     );
     writeSlideFile(slide.notebookId, id, markdown);
-    syncSlideOutput(slide, markdown);
+    await syncSlideOutput(slide, markdown);
     // c51: done payload = {traceId, slideId} (v1 api.py:538)
     emit('done', { traceId: ctx.traceId, slideId: id });
   });

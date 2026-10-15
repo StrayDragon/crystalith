@@ -147,8 +147,8 @@ export async function drainResearchWorkUnits(
     }
 
     for (const node of batch) {
-      await withRunWriteLock(runId, () => {
-        patchNodePhase(runId, node.id, 'retrieving');
+      await withRunWriteLock(runId, async () => {
+        await patchNodePhase(runId, node.id, 'retrieving');
       });
       await appendProgressEvent(runId, 'node_phase', {
         nodeId: node.id,
@@ -233,7 +233,7 @@ async function maybeAutoDecompose(runId: number, abortSignal: AbortSignal): Prom
     if (plan && plan.branches.length > 0) {
       const applied = applyDecomposePlanToGraph(graph, plan, newId);
       if (applied.addedNodes.length > 0) {
-        persistGraph(runId, applied.graph, {
+        await persistGraph(runId, applied.graph, {
           checkpoint: writeCheckpoint({ ...row, status: 'running' }, 'decompose'),
         });
         await emitGraphPatch(runId, {
@@ -320,7 +320,7 @@ async function runQuestionPhaseOrSkip(runId: number, abortSignal: AbortSignal): 
     return true;
   }
 
-  writeBackNodeWork(runId, liveQuestion.id, work.evidenceIds, {
+  await writeBackNodeWork(runId, liveQuestion.id, work.evidenceIds, {
     summary: work.summary,
     conclusionStatus: work.conclusionStatus,
   });
@@ -425,7 +425,7 @@ export async function runLoop(runId: number, chatWaitBudgetMs = 60_000): Promise
     const message = error instanceof Error ? error.message : String(error);
     const code = error instanceof AppHttpError ? error.code : ErrorCode.INTERNAL_ERROR;
     await updateRun(runId, { status: 'failed', errorMessage: message });
-    await broadcast(runId, 'error', { errorCode: code, message });
+    broadcast(runId, 'error', { errorCode: code, message });
     await emitStatus(runId, 'failed', message);
   } finally {
     activeLoops.delete(runId);
@@ -459,7 +459,7 @@ export async function enterConfirm(
     checkpoint: writeCheckpoint(row, `before_confirm_${kind}`),
   });
   await emitStatus(runId, 'awaiting_confirm', kind);
-  await broadcast(runId, 'confirm', {
+  broadcast(runId, 'confirm', {
     kind,
     branchNodeId,
     options: CONFIRM_OPTIONS[kind],

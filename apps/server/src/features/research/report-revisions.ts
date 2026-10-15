@@ -168,7 +168,7 @@ export async function restoreRevision(
     payload: { revisionId: revId },
   });
   if (rev.report) {
-    await broadcast(runId, 'report_ready', { runId });
+    broadcast(runId, 'report_ready', { runId });
   }
   return serializeRun(await requireRun(notebookId, runId));
 }
@@ -295,7 +295,7 @@ export async function forkRunFromRevision(
   for (const ev of sourceEvidences) {
     const newIdValue = idMap.get(ev.id);
     if (!newIdValue) continue;
-    insertEvidence(inserted.id, notebookId, {
+    await insertEvidence(inserted.id, notebookId, {
       id: newIdValue,
       kind: ev.kind,
       title: ev.title,

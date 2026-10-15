@@ -171,7 +171,7 @@ function streamNoEvidence(answer: string, judgment: JudgeResult, opts: QaHandler
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
+    async start(controller) {
       const emit = (event: string, data: unknown) => {
         controller.enqueue(encoder.encode(sseFrame(event, data)));
       };
@@ -196,9 +196,9 @@ function streamNoEvidence(answer: string, judgment: JudgeResult, opts: QaHandler
           generation: opts.generation,
         });
 
-        opts.onMessageSettled?.(answer, false);
+        await opts.onMessageSettled?.(answer, false);
       } catch {
-        opts.onMessageSettled?.('', true);
+        await opts.onMessageSettled?.('', true);
       } finally {
         controller.close();
       }
@@ -222,7 +222,7 @@ function streamStatsAnswer(
   const chunkSize = 240;
 
   const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
+    async start(controller) {
       const emit = (event: string, data: unknown) => {
         controller.enqueue(encoder.encode(sseFrame(event, data)));
       };
@@ -245,9 +245,9 @@ function streamStatsAnswer(
           toolCalls: [],
           generation: opts.generation,
         });
-        opts.onMessageSettled?.(answer, false, judgment.citations);
+        await opts.onMessageSettled?.(answer, false, judgment.citations);
       } catch {
-        opts.onMessageSettled?.('', true);
+        await opts.onMessageSettled?.('', true);
       } finally {
         controller.close();
       }
@@ -302,7 +302,7 @@ export async function generateQaDirect(opts: QaHandlerOptions): Promise<QaDirect
   // No evidence → short-circuit
   if (!judgment.evidence) {
     const answer = noEvidenceAnswerForReason(judgment.reason ?? null);
-    opts.onMessageSettled?.(answer, false);
+    await opts.onMessageSettled?.(answer, false);
     return {
       answer,
       citations: judgment.citations,
@@ -333,7 +333,7 @@ export async function generateQaDirect(opts: QaHandlerOptions): Promise<QaDirect
 
   // Apply inline citation fallback
   const finalText = ensureInlineCitations(answerText, judgment.citations);
-  opts.onMessageSettled?.(finalText, false, judgment.citations);
+  await opts.onMessageSettled?.(finalText, false, judgment.citations);
 
   return {
     answer: finalText,

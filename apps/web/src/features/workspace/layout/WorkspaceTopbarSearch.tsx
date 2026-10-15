@@ -54,8 +54,8 @@ export interface WorkspaceTopbarSearchProps {
   /** c132 KB mode — scope anchor + jump handlers. */
   activeNotebookId: number | null;
   activeNotebookTitle?: string | null;
-  onJumpToSource?: (sourceId: number, chunkId: number, notebookId: number) => void;
-  onJumpToOutput?: (outputId: number, notebookId: number) => void;
+  onJumpToSource?: (sourceId: number, chunkId: number, notebookId: number) => void | Promise<void>;
+  onJumpToOutput?: (outputId: number, notebookId: number) => void | Promise<void>;
 }
 
 function FastSearchBody({
@@ -426,9 +426,9 @@ export default function WorkspaceTopbarSearch({
     // fallow-ignore-next-line complexity -- 估算 CRAP（无 coverage 数据）；行为由 rstest/e2e 覆盖
     (item: SearchItem) => {
       if (item.originType === 'output') {
-        if (item.originId !== null) onJumpToOutput?.(item.originId, item.notebookId);
+        if (item.originId !== null) void onJumpToOutput?.(item.originId, item.notebookId);
       } else {
-        onJumpToSource?.(item.sourceId, item.chunkId, item.notebookId);
+        void onJumpToSource?.(item.sourceId, item.chunkId, item.notebookId);
       }
       onOpenChange(false);
     },

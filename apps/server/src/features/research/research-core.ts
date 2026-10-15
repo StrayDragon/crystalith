@@ -308,7 +308,7 @@ export async function persistGraph(
   graph: ResearchGraphJson,
   extra?: Partial<RunRow>,
 ): Promise<RunRow> {
-  return await updateRun(runId, { graph, ...extra });
+  return updateRun(runId, { graph, ...extra });
 }
 
 export async function insertEvidence(
@@ -413,7 +413,7 @@ export async function listEvidences(runId: number): Promise<ResearchEvidence[]> 
   }));
 }
 
-export function emitGraphPatch(runId: number, patch: ResearchGraphPatch): void {
+export async function emitGraphPatch(runId: number, patch: ResearchGraphPatch): Promise<void> {
   broadcast(runId, 'graph_patch', patch);
 }
 
@@ -457,7 +457,7 @@ export async function appendProgressEvent(
     headline: opts?.headline ?? null,
     payload: opts?.payload ?? null,
   };
-  await broadcast(runId, 'progress', {
+  broadcast(runId, 'progress', {
     seq: event.seq,
     kind: event.kind,
     at: event.at,
@@ -511,7 +511,7 @@ export async function emitStatus(
   status: ResearchRunStatus,
   reason?: string,
 ): Promise<void> {
-  await broadcast(runId, 'status', reason ? { status, reason } : { status });
+  broadcast(runId, 'status', reason ? { status, reason } : { status });
   const kind = statusToProgressKind(status);
   if (kind) {
     await appendProgressEvent(runId, kind, {
@@ -520,11 +520,11 @@ export async function emitStatus(
     });
   }
   if (isTerminalStatus(status)) {
-    truncateProgressEvents(runId);
+    await truncateProgressEvents(runId);
   }
 }
 
-export function emitLog(runId: number, message: string): void {
+export async function emitLog(runId: number, message: string): Promise<void> {
   broadcast(runId, 'log', { message, at: new Date().toISOString() });
 }
 

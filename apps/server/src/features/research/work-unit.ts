@@ -509,7 +509,7 @@ export async function patchNodePhase(
   const idx = graph.nodes.findIndex((n) => n.id === updated.id);
   if (idx >= 0) graph.nodes[idx] = updated;
   else graph.nodes.push(updated);
-  persistGraph(runId, graph);
+  await persistGraph(runId, graph);
   await emitGraphPatch(runId, { nodes: [updated] });
   return updated;
 }
@@ -542,7 +542,7 @@ export async function writeBackNodeWork(
   const idx = graph.nodes.findIndex((n) => n.id === updated.id);
   if (idx >= 0) graph.nodes[idx] = updated;
   else graph.nodes.push(updated);
-  persistGraph(runId, graph);
+  await persistGraph(runId, graph);
   await emitGraphPatch(runId, { nodes: [updated] });
   await updateRun(runId, {
     checkpoint: writeCheckpoint(await requireFresh(runId), 'node_complete'),

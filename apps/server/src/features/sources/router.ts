@@ -501,7 +501,7 @@ async function handleReEmbedSource(id: number, notebookId: number) {
     bumpSourcesEpoch(row.notebookId);
     // c74: re-embed success → refresh auto-summary asynchronously
     const { scheduleSourceSummary } = await import('./source-summary.ts');
-    scheduleSourceSummary(id, { force: true });
+    void scheduleSourceSummary(id, { force: true });
     return { sourceId: id, reEmbedded: true as const };
   } catch (error) {
     await client().run(
@@ -756,10 +756,10 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
 
   .delete(
     '/notebooks/:nid/sources/tags/:tid',
-    ({ params, set }) => {
+    async ({ params, set }) => {
       const nid = params.nid;
       const tid = params.tid;
-      deleteTag(nid, tid);
+      await deleteTag(nid, tid);
       set.status = 204;
       return;
     },

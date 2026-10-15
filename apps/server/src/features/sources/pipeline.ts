@@ -242,7 +242,7 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
 
     // c74: async auto-summary after ready (must not block ingest response)
     const { scheduleSourceSummary } = await import('./source-summary.ts');
-    scheduleSourceSummary(sourceRow.id);
+    void scheduleSourceSummary(sourceRow.id);
 
     return {
       sourceId: sourceRow.id,

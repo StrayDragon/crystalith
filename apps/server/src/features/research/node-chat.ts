@@ -366,7 +366,7 @@ export async function createNodeChatSseResponse(
         clearInterval(heartbeat);
         chatAbortControllers.delete(key);
         requestSignal?.removeEventListener('abort', onRequestAbort);
-        clearChatMutex();
+        await clearChatMutex();
         if (!closed) {
           try {
             controller.close();
@@ -379,7 +379,7 @@ export async function createNodeChatSseResponse(
     cancel() {
       ac.abort();
       // Eager mutex release if the client/Bun drops the socket mid-flight.
-      clearChatMutex();
+      void clearChatMutex();
     },
   });
 

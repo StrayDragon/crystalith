@@ -7,6 +7,7 @@ import type { SearchResponse } from '@crystalith/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '../../../../api/eden';
+import { parseServerError } from '../../../../api/parseServerError';
 
 export type KbScopeMode = 'all' | 'notebook';
 
@@ -51,7 +52,7 @@ async function runKbSearch(
       ...(scope ? { scope } : {}),
     });
     if (isStale()) return;
-    if (rpcError) throw rpcError;
+    if (rpcError) throw new Error(parseServerError(rpcError).message);
     setData(data);
   } catch (error) {
     if (isStale()) return;

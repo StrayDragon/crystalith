@@ -75,7 +75,7 @@ async function markUnfinishedResearchMissing(runId: number): Promise<void> {
   const graph = getGraph(row);
   const pending = orderResearchNodesForWork(graph.nodes);
   for (const node of pending) {
-    writeBackNodeWork(runId, node.id, node.evidenceIds ?? [], {
+    await writeBackNodeWork(runId, node.id, node.evidenceIds ?? [], {
       // intentionally || — empty summary gets budget message
       // oxlint-disable-next-line typescript/prefer-nullish-coalescing
       summary: node.summary?.trim() || '预算用尽，未完成检索',
@@ -229,7 +229,7 @@ export async function cancelRun(notebookId: number, runId: number): Promise<Rese
     checkpoint: writeCheckpoint(row, 'cancel_requested'),
   });
   if (row.status === 'awaiting_confirm' || row.status === 'queued') {
-    finalizeCancel(runId);
+    await finalizeCancel(runId);
   }
   // running: loop checks cancelRequested / AbortSignal
   return serializeRun(await requireRun(notebookId, runId));
@@ -353,7 +353,7 @@ async function confirmReexpandRun(
       await abortReexpandToSynthesize(runId, '再扩展未写入节点，不伪造支路');
       return;
     }
-    persistGraph(runId, applied.graph, {
+    await persistGraph(runId, applied.graph, {
       checkpoint: writeCheckpoint(latest, 'approve_reexpand'),
     });
     await emitGraphPatch(runId, {
@@ -452,7 +452,7 @@ async function confirmExpandBranchRun(
   };
   graph.nodes.push(child);
   graph.edges.push(forkEdge, mergeEdge);
-  persistGraph(runId, graph, {
+  await persistGraph(runId, graph, {
     checkpoint: writeCheckpoint(latest, 'approve_branch'),
   });
   await emitGraphPatch(runId, { nodes: [child], edges: [forkEdge, mergeEdge] });
@@ -583,7 +583,7 @@ export async function requestReexpand(
   });
   await emitStatus(runId, 'awaiting_confirm', 'reexpand');
   await emitLog(runId, `请求再扩展${hint ? `：${hint}` : ''}`);
-  await broadcast(runId, 'confirm', {
+  broadcast(runId, 'confirm', {
     kind: 'reexpand',
     branchNodeId: focusNodeId ?? undefined,
     options: CONFIRM_OPTIONS.reexpand,

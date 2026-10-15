@@ -56,7 +56,7 @@ async function requireOutputInNotebook(
   id: number,
   notebookId: number,
 ): Promise<typeof outputs.$inferSelect> {
-  return await requireOwnedRow(outputs, id, notebookId, 'Output');
+  return requireOwnedRow(outputs, id, notebookId, 'Output');
 }
 
 // ---------------------------------------------------------------------------

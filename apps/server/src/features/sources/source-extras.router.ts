@@ -257,7 +257,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
           await client().run(
             db().update(sources).set({ status: 'ready' }).where(eq(sources.id, newSource.id)),
           );
-          scheduleSourceSummary(newSource.id);
+          void scheduleSourceSummary(newSource.id);
         } catch (error) {
           logger.error('[source-extras] qa-to-source embedding failed:', error);
           await client().run(
