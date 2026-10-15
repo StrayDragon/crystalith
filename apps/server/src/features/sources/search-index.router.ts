@@ -37,7 +37,9 @@ export const searchIndexRouter = new Elysia({ prefix: '/v2' })
   .post(
     '/notebooks/:nid/search-index/rebuild',
     async ({ params, set }) => {
-      requireNotebook(params.nid);
+      // c128 made requireNotebook async — an un-awaited NotFoundError would be
+      // an unhandled rejection and the guard would not actually 404.
+      await requireNotebook(params.nid);
       const result = await startIndexRebuild(params.nid);
       set.status = 202;
       return result;
@@ -50,7 +52,7 @@ export const searchIndexRouter = new Elysia({ prefix: '/v2' })
   .get(
     '/notebooks/:nid/search-index',
     async ({ params }) => {
-      requireNotebook(params.nid);
+      await requireNotebook(params.nid);
       // c132 r485: derived-failure observability merged at the feature layer.
       const state = await getIndexState(params.nid);
       return { ...state, derivedFailedCount: await countFailedDerived(params.nid) };

@@ -27,10 +27,13 @@ function vecChunksDdl(dim: number): string {
  * Recreate vec_chunks wholesale at `dim` (c131 r480 global rebuild mode).
  * Destructive: every stored vector is dropped — callers re-embed all ready
  * sources afterwards. No in-place migration by policy (greenfield rebuild).
+ * Runtime-path (background rebuild): routed through the DbClient port per
+ * the client.ts invariant.
  */
-export function recreateVecChunks(orm: Orm, dim: number): void {
-  orm.run(sql`DROP TABLE IF EXISTS vec_chunks`);
-  orm.run(sql.raw(vecChunksDdl(dim)));
+export async function recreateVecChunks(orm: Orm, dim: number): Promise<void> {
+  const c = createDbClient(orm);
+  await c.rawRun(sql`DROP TABLE IF EXISTS vec_chunks`);
+  await c.rawRun(sql.raw(vecChunksDdl(dim)));
 }
 
 /**

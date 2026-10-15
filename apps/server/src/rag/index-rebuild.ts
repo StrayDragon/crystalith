@@ -23,6 +23,7 @@ import {
 } from '../db/vectors.ts';
 import { getDefaultEmbeddingModel } from '../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../shared/errors.ts';
+import { logger } from '../shared/logger.ts';
 import { EmbedStrategy } from './embed-strategy.ts';
 
 export type IndexJobMode = 'notebook' | 'global';
@@ -141,27 +142,42 @@ export async function startIndexRebuild(
       `笔记本 ${notebookId} 的索引重建任务正在进行，请等待完成后再试`,
     );
   }
+  // Reserve the slot SYNCHRONOUSLY, before the first await — otherwise the
+  // guard is check-then-act and two concurrent POSTs (double-tab / double
+  // click) would both pass it and run overlapping rebuilds. Reserving as
+  // 'global' is the conservative choice: until the real mode is determined,
+  // every notebook reports rebuilding. jobId -1 means the row insert is still
+  // in flight (progress reads as 0/0/0).
+  activeJobs.set(notebookId, { jobId: -1, mode: 'global' });
+  try {
+    await pruneIndexJobs();
 
-  await pruneIndexJobs();
+    const tableDims = await readVecTableDim(db());
+    const declared = declaredEmbeddingDims();
+    const mode: IndexJobMode = tableDims !== null && tableDims === declared ? 'notebook' : 'global';
 
-  const tableDims = await readVecTableDim(db());
-  const declared = declaredEmbeddingDims();
-  const mode: IndexJobMode = tableDims !== null && tableDims === declared ? 'notebook' : 'global';
+    const job = (await client().get(
+      db().insert(indexJobs).values({ notebookId, mode, state: 'running' }).returning(),
+    ))!;
+    activeJobs.set(notebookId, { jobId: job.id, mode });
 
-  const job = (await client().get(
-    db().insert(indexJobs).values({ notebookId, mode, state: 'running' }).returning(),
-  ))!;
-  activeJobs.set(notebookId, { jobId: job.id, mode });
-
-  void runRebuild(job.id, mode, notebookId).catch(async (error) => {
-    await client().run(
-      db()
-        .update(indexJobs)
-        .set({ state: 'failed', error: String(error), finishedAt: new Date() })
-        .where(eq(indexJobs.id, job.id)),
-    );
-  });
-  return { jobId: job.id, mode };
+    void runRebuild(job.id, mode, notebookId).catch(async (error) => {
+      try {
+        await client().run(
+          db()
+            .update(indexJobs)
+            .set({ state: 'failed', error: String(error), finishedAt: new Date() })
+            .where(eq(indexJobs.id, job.id)),
+        );
+      } catch (dbError) {
+        logger.error('[index-rebuild] failed to persist job failure:', dbError, error);
+      }
+    });
+    return { jobId: job.id, mode };
+  } catch (error) {
+    activeJobs.delete(notebookId);
+    throw error;
+  }
 }
 
 async function runRebuild(
@@ -173,7 +189,7 @@ async function runRebuild(
     if (mode === 'global') {
       // Destructive by policy (greenfield rebuild): all vectors go away, the
       // table comes back at the declared width, every ready source re-embeds.
-      recreateVecChunks(db(), declaredEmbeddingDims());
+      await recreateVecChunks(db(), declaredEmbeddingDims());
     }
 
     const targets =
@@ -205,18 +221,31 @@ async function runRebuild(
         // covered by the last per-source bump for every touched notebook).
         await strategy.indexSource(s.id, s.notebookId);
         done++;
-      } catch {
+      } catch (error) {
         failed++;
+        // Per-source failures keep the job running (partial progress beats
+        // all-or-nothing), but each one must be attributable afterwards —
+        // e.g. embedding model not configured fails EVERY source the same way.
+        logger.warn(`[index-rebuild] source ${s.id} (notebook ${s.notebookId}) failed:`, error);
       }
       await client().run(
         db().update(indexJobs).set({ done, failed }).where(eq(indexJobs.id, jobId)),
       );
     }
 
+    // Every source failing is a failed rebuild (typical root cause: embedding
+    // gateway/model unavailable) — reporting 'succeeded' there would hide it.
+    const allFailed = targets.length > 0 && done === 0;
     await client().run(
       db()
         .update(indexJobs)
-        .set({ done, failed, state: 'succeeded', finishedAt: new Date() })
+        .set({
+          done,
+          failed,
+          state: allFailed ? 'failed' : 'succeeded',
+          ...(allFailed ? { error: `所有 ${failed} 个来源重嵌均失败（详见服务端日志）` } : {}),
+          finishedAt: new Date(),
+        })
         .where(eq(indexJobs.id, jobId)),
     );
   } finally {

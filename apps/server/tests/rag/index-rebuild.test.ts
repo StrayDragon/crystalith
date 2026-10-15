@@ -304,6 +304,40 @@ describe('r481 status surface', () => {
       gate = null;
     }
   });
+
+  it('router 404s on a bogus notebook id (async scope guard is awaited)', async () => {
+    // Regression guard: requireNotebook went async in c128 — without the
+    // await the NotFoundError became an unhandled rejection and the bogus nid
+    // sailed through the guard (into a potentially destructive global
+    // rebuild when the vec table is dim-mismatched).
+    const { createApp } = await import('../../src/server.ts');
+    const app = createApp();
+    const BASE = 'http://test.local';
+
+    const rebuild = await app.handle(
+      new Request(`${BASE}/v2/notebooks/424242/search-index/rebuild`, { method: 'POST' }),
+    );
+    expect(rebuild.status).toBe(404);
+    expect(((await rebuild.json()) as { errorCode: string }).errorCode).toBe('NOT_FOUND');
+
+    const status = await app.handle(new Request(`${BASE}/v2/notebooks/424242/search-index`));
+    expect(status.status).toBe(404);
+  });
+
+  it('a same-tick second start is rejected — the reentry guard is not check-then-act', async () => {
+    // Regression guard: the slot must be reserved synchronously, before the
+    // first await — otherwise two concurrent POSTs both pass the check and
+    // run overlapping rebuild jobs.
+    const p1 = startIndexRebuild(nb1);
+    const p2 = startIndexRebuild(nb1);
+    await expect(p2).rejects.toThrow('正在进行');
+    const first = await p1;
+    await jobDone(first.jobId);
+
+    const rows = getOrm().select().from(indexJobs).where(eq(indexJobs.notebookId, nb1)).all();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.state).toBe('succeeded');
+  });
 });
 
 describe('r482 caller degradation during rebuild', () => {
