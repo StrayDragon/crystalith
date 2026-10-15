@@ -8,20 +8,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../../../api/eden';
 import { parseServerError } from '../../../../api/parseServerError';
 import { toast } from '../../../../shared/toast';
-
-export interface IndexControlProps {
-  state: 'ready' | 'rebuilding' | 'dim_mismatch' | 'interrupted';
-  progress: { total: number; done: number; failed: number };
-  starting: boolean;
-  onStart: () => void | Promise<void>;
-}
+import type { IndexControlProps } from './components/IndexRebuildControl';
 
 export interface SearchIndexRebuildApi {
   indexStatus: SearchIndexStatus | null;
   statusError: string | null;
   control: IndexControlProps | null;
   startRebuild: () => Promise<void>;
-  refreshNow: () => Promise<void>;
 }
 
 export function useSearchIndexRebuild(
@@ -80,5 +73,5 @@ export function useSearchIndexRebuild(
           onStart: startRebuild,
         };
 
-  return { indexStatus, statusError, control, startRebuild, refreshNow };
+  return { indexStatus, statusError, control, startRebuild };
 }
