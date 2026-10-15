@@ -27,14 +27,22 @@ mock.module('../../src/features/outputs/generator.ts', () => ({
 
 import { chunks, notebooks, sources } from '../../src/db/schema.ts';
 import { runOutputPipeline } from '../../src/features/outputs/pipeline.ts';
-import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from '../helpers/integration.ts';
+import {
+  getOrm,
+  setupIntegrationEnv,
+  stubEmbedding,
+  teardownIntegrationEnv,
+} from '../helpers/integration.ts';
 
 let notebookId: number;
 let chunkId: number;
 const MODEL = {} as Parameters<typeof runOutputPipeline>[0]['model'];
 
-beforeAll(() => {
+beforeAll(async () => {
   setupIntegrationEnv();
+  // 同 runtime.test.ts：stub 掉与修补环断言无关的 auto-index 副作用，
+  // 消除「No embedding model configured」error 级噪音。
+  await stubEmbedding();
   const orm = getOrm();
   notebookId = orm.insert(notebooks).values({ name: 'outputs-r330-repair' }).returning().get().id;
   const sourceId = orm

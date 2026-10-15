@@ -21,6 +21,7 @@ import {
   installAiMock,
   seedChatModel,
   setupIntegrationEnv,
+  stubEmbedding,
   teardownIntegrationEnv,
 } from '../helpers/integration.ts';
 
@@ -35,8 +36,11 @@ let app: InstanceType<typeof createApp>;
 let notebookId: number;
 let sourceId: number;
 
-beforeAll(() => {
+beforeAll(async () => {
   setupIntegrationEnv();
+  // convertToNote → finishPipeline 的 best-effort auto-index 否则会因测试环境
+  // 未配 embedding 模型每次打 error 级噪音日志；stub 掉与断言无关的索引副作用。
+  await stubEmbedding();
   app = createApp();
   notebookId = getOrm().insert(notebooks).values({ name: 'research-c76-nb' }).returning().get().id;
   sourceId = getOrm()
@@ -429,9 +433,6 @@ describe('research runtime', () => {
   });
 
   it('convertToSource creates ready source with chunks', async () => {
-    const { stubEmbedding } = await import('../helpers/integration.ts');
-    await stubEmbedding();
-
     const res = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {
         method: 'POST',
