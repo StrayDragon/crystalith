@@ -27,6 +27,7 @@ import {
   paginateItems,
   type ExtractorPolicyMode,
   type JsonMetadata,
+  type SourceDedupHitDetails,
 } from '@crystalith/shared';
 // Sources CRUD + upload router — /v2/notebooks/:nid/sources (canonical).
 // GET /v2/sources/parsers remains global flat (process registry).
@@ -64,7 +65,7 @@ import { uploadDedupKey } from './dedup.ts';
 import { visibleSourcesOnly } from './derived-visibility.ts';
 import { ingestFromUrl } from './from-url.service.ts';
 import { listParsers } from './parser-registry.ts';
-import { ingestSource } from './pipeline.ts';
+import { ingestSource, precheckIngestInput } from './pipeline.ts';
 import {
   assignSourcesToTag,
   createTag,
@@ -309,8 +310,12 @@ function serializeSource(row: {
 
 type UploadSet = { status?: number | string };
 
-/** r491: remove an existing source (vectors explicitly — vec_chunks has no FK)
- * ahead of a replace; chunk rows + FTS entries follow the row delete. */
+/**
+ * r491: remove an existing source (vectors explicitly — vec_chunks has no FK);
+ * chunk rows + FTS entries follow the row delete. Shared by the delete route
+ * and the upload-replace flow. Sources-epoch bump is caller-owned: the delete
+ * route bumps right away, replace lets the following ingestSource bump.
+ */
 async function deleteSourceRowCascade(sourceId: number): Promise<void> {
   await deleteSourceVectors(db(), sourceId);
   await client().run(db().delete(sources).where(eq(sources.id, sourceId)));
@@ -339,23 +344,29 @@ async function handleSourceUpload(
 
   const buffer = new Uint8Array(await file.arrayBuffer());
 
+  // r491: rule out certain-failure inputs (415 unsupported type / r290 empty
+  // file) BEFORE any dedup-hit handling — a replace deletes the old source,
+  // and a deterministic ingest failure after that would lose it for good.
+  precheckIngestInput({ filename: file.name, buffer, mimeType: file.type });
+
   // c44: Dedup check — gated by config (v1 source_ingestion.dedup.enabled)
   const dedupKey = getDedupEnabled() ? uploadDedupKey(buffer) : undefined;
   let replaced = false;
   if (dedupKey && dedupAction !== 'create_new') {
     const hit = await client().get(
       db()
-        .select({ id: sources.id })
+        .select({ id: sources.id, filename: sources.filename })
         .from(sources)
         .where(and(eq(sources.notebookId, notebookId), eq(sources.dedupKey, dedupKey))),
     );
     if (hit) {
       if (dedupAction === 'prompt') {
-        throw new AppHttpError(ErrorCode.CONFLICT, 'Source dedup hit', {
+        const details: SourceDedupHitDetails = {
           kind: 'content',
           existingSourceId: hit.id,
-          existing_filename: file.name,
-        });
+          existingFilename: hit.filename,
+        };
+        throw new AppHttpError(ErrorCode.CONFLICT, 'Source dedup hit', details);
       }
       if (dedupAction === 'reuse') {
         return { reused: true as const, source: await handleGetSource(hit.id, notebookId) };
@@ -386,11 +397,12 @@ async function handleSourceUpload(
     );
     if (nameHit) {
       if (dedupAction === 'prompt') {
-        throw new AppHttpError(ErrorCode.CONFLICT, 'Source dedup hit', {
+        const details: SourceDedupHitDetails = {
           kind: 'filename',
           existingSourceId: nameHit.id,
-          existing_filename: nameHit.filename,
-        });
+          existingFilename: nameHit.filename,
+        };
+        throw new AppHttpError(ErrorCode.CONFLICT, 'Source dedup hit', details);
       }
       if (dedupAction === 'reuse') {
         return { reused: true as const, source: await handleGetSource(nameHit.id, notebookId) };
@@ -436,8 +448,7 @@ async function handleGetSource(id: number, notebookId: number) {
 async function handleDeleteSource(id: number, notebookId: number, set: UploadSet) {
   const row = await requireOwnedRow(sources, id, notebookId, 'Source');
 
-  await deleteSourceVectors(db(), id);
-  await client().run(db().delete(sources).where(eq(sources.id, id)));
+  await deleteSourceRowCascade(id);
   if (row.notebookId) bumpSourcesEpoch(row.notebookId);
 
   set.status = 204;

@@ -16,6 +16,7 @@ import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
 import { logger } from '../../shared/logger.ts';
 import { contentStorage } from '../../shared/storage.ts';
 import { preprocessMarkdown } from './markdown-preprocess.ts';
+import type { Parser } from './parser-registry.ts';
 import { guessMimeType, getParser, registerParser, selectParser } from './parser-registry.ts';
 import { csvParser } from './parsers/csv.ts';
 import { htmlParser } from './parsers/html.ts';
@@ -80,16 +81,18 @@ export interface IngestResult {
 // ---------------------------------------------------------------------------
 
 /**
- * Process a file through the full ingestion pipeline.
- * Steps:
- *  1. Detect MIME type + select parser
- *  2. Create source record (processing)
- *  3. Parse file contents
- *  4. Chunk parsed text
- *  5. Insert chunk rows
- *  6. Mark source as ready (or failed)
+ * Deterministic input prechecks (r258/r290): parser resolution + empty-input
+ * rejection. Pure — no DB writes — so callers that destroy state before
+ * ingest (r491 replace deletes the old source first) can rule out
+ * certain-failure inputs before doing so. Returns the resolved parser for
+ * reuse by ingestSource.
  */
-export async function ingestSource(input: IngestInput): Promise<IngestResult> {
+export function precheckIngestInput(input: {
+  filename: string;
+  buffer: Uint8Array;
+  mimeType?: string;
+  parserType?: string;
+}): Parser {
   const mimeType = input.mimeType ?? guessMimeType(input.filename);
   // r257: explicit parserType overrides resolve by registry id; otherwise
   // deterministic exact-MIME → extension selection. Unmatched inputs are
@@ -117,6 +120,22 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
   if (input.buffer.length === 0) {
     throw new AppHttpError(ErrorCode.INVALID_REQUEST, 'Empty file');
   }
+  return parser;
+}
+
+/**
+ * Process a file through the full ingestion pipeline.
+ * Steps:
+ *  1. Detect MIME type + select parser
+ *  2. Create source record (processing)
+ *  3. Parse file contents
+ *  4. Chunk parsed text
+ *  5. Insert chunk rows
+ *  6. Mark source as ready (or failed)
+ */
+export async function ingestSource(input: IngestInput): Promise<IngestResult> {
+  const mimeType = input.mimeType ?? guessMimeType(input.filename);
+  const parser = precheckIngestInput(input);
 
   // 1. Create source record in 'processing' state
   const sourceRow = (await client().get(

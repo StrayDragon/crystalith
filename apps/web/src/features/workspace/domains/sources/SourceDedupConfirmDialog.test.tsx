@@ -8,7 +8,6 @@ import SourceDedupConfirmDialog from './SourceDedupConfirmDialog';
 
 function renderDialog(props: {
   kind?: 'content' | 'filename';
-  allowReplace?: boolean;
   onResolve: (choice: 'reuse' | 'create_new' | 'replace') => void;
 }) {
   render(
@@ -17,7 +16,6 @@ function renderDialog(props: {
         request={{
           existingName: '更新文档.md',
           kind: props.kind,
-          allowReplace: props.allowReplace ?? false,
           resolve: props.onResolve,
         }}
         onResolve={props.onResolve}
@@ -26,9 +24,9 @@ function renderDialog(props: {
   );
 }
 
-test('filename hit with replace allowed shows all three choices', () => {
+test('filename hit shows all three choices', () => {
   const onResolve = rs.fn();
-  renderDialog({ kind: 'filename', allowReplace: true, onResolve });
+  renderDialog({ kind: 'filename', onResolve });
 
   expect(screen.getByRole('button', { name: '仍创建新来源' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '替换旧来源' })).toBeInTheDocument();
@@ -46,16 +44,9 @@ test('filename hit with replace allowed shows all three choices', () => {
 
 test('content hit (or URL flow) hides the replace option', () => {
   const onResolve = rs.fn();
-  renderDialog({ kind: 'content', allowReplace: true, onResolve });
+  renderDialog({ kind: 'content', onResolve });
 
   expect(screen.queryByRole('button', { name: '替换旧来源' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '复用已有来源' }));
   expect(onResolve).toHaveBeenCalledWith('reuse');
-});
-
-test('filename hit without allowReplace (URL flow) hides replace', () => {
-  const onResolve = rs.fn();
-  renderDialog({ kind: 'filename', allowReplace: false, onResolve });
-
-  expect(screen.queryByRole('button', { name: '替换旧来源' })).not.toBeInTheDocument();
 });

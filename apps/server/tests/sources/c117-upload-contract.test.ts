@@ -59,7 +59,7 @@ async function uploadFile(
   filename: string,
   content: string,
   type = 'text/plain',
-  dedupAction?: 'prompt' | 'reuse' | 'create_new',
+  dedupAction?: 'prompt' | 'reuse' | 'create_new' | 'replace',
 ): Promise<{ status: number; body: unknown }> {
   const fd = new FormData();
   fd.append('file', new File([content], filename, { type }));
@@ -430,5 +430,29 @@ describe('c135 r491: replace action', () => {
       .where(eq(sources.notebookId, nb))
       .all();
     expect(rows.length).toBe(1);
+  });
+
+  it('replace of a deterministically-invalid upload is rejected BEFORE the old source is deleted', async () => {
+    // Regression guard (r491 review): the r290 empty-file precheck must run
+    // ahead of the cascade delete — otherwise an empty replace destroys the
+    // old source and loses the data for good. (415 unsupported-type is not
+    // reachable through a same-name hit: the old row's filename already
+    // resolved to a parser.)
+    const nb = makeNotebook('c135-replace-precheck');
+    const first = await uploadFile(nb, '保命文档.md', '# 不能丢的内容', 'text/markdown');
+    expect(first.status).toBe(200);
+    const oldId = (first.body as { sourceId: number }).sourceId;
+
+    const empty = await uploadFile(nb, '保命文档.md', '', 'text/markdown', 'replace');
+    expect(empty.status).toBe(400);
+    expect((empty.body as { errorCode: string }).errorCode).toBe('INVALID_REQUEST');
+
+    // The old source survived, chunks included.
+    const row = db().select().from(sources).where(eq(sources.id, oldId)).all();
+    expect(row).toHaveLength(1);
+    expect(row[0]?.status).toBe('ready');
+    expect(
+      db().select({ id: chunks.id }).from(chunks).where(eq(chunks.sourceId, oldId)).all().length,
+    ).toBeGreaterThan(0);
   });
 });

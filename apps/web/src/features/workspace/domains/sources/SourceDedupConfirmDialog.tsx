@@ -72,7 +72,7 @@ export default function SourceDedupConfirmDialog({
             仍创建新来源
           </button>
           <div className="flex items-center gap-2">
-            {request.kind === 'filename' && request.allowReplace ? (
+            {request.kind === 'filename' ? (
               <button
                 type="button"
                 onClick={() => {

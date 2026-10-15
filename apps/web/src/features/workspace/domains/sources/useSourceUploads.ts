@@ -1,8 +1,9 @@
 import type { SourceFromUrlMode } from '@crystalith/shared';
+import { SourceDedupHitDetailsSchema, type SourceDedupHitDetails } from '@crystalith/shared';
 import { useCallback, useEffect, useState } from 'react';
 
 import { api } from '../../../../api/eden';
-import { parseServerError } from '../../../../api/parseServerError';
+import { EdenHttpError, parseServerError } from '../../../../api/parseServerError';
 import { toast } from '../../../../shared/toast';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { SourceSeamContext } from './sourceSeamContext';
@@ -15,10 +16,10 @@ export type DedupChoice = 'reuse' | 'create_new' | 'replace';
 /** W5: pending dedup decision (rendered as a dialog). */
 export interface DedupConfirmRequest {
   existingName: string;
-  /** c134 r490: content = identical bytes hit; filename = same name, different bytes. */
+  /** c134 r490: content = identical bytes hit; filename = same name, different
+   * bytes. A filename hit implies the upload flow (replace applies); URL hits
+   * are content-keyed. */
   kind?: 'content' | 'filename';
-  /** c135 r491: offer the replace option (upload flow only). */
-  allowReplace: boolean;
   resolve: (choice: DedupChoice) => void;
 }
 
@@ -51,6 +52,18 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
   ]);
 }
 
+/**
+ * Parse a caught value into the dedup-hit handshake input, or undefined when
+ * it is not a dedup 409 (c54 sends the generic CONFLICT code; the details
+ * shape discriminates dedup hits from other conflicts).
+ */
+function parseDedupHit(error: unknown): SourceDedupHitDetails | undefined {
+  const { errorCode, details } = parseServerError(error);
+  if (errorCode !== 'CONFLICT') return undefined;
+  const hit = SourceDedupHitDetailsSchema.safeParse(details);
+  return hit.success ? hit.data : undefined;
+}
+
 async function uploadSourceFile(
   notebookId: number,
   file: File,
@@ -60,7 +73,8 @@ async function uploadSourceFile(
     .notebooks({ nid: notebookId })
     // Eden treats Zod .default() query fields as required on the client.
     .sources.upload.post({ file }, { query: { dedupAction } });
-  if (r.error) throw new Error(parseServerError(r.error).message);
+  // EdenHttpError keeps errorCode/details recoverable for the dedup handshake.
+  if (r.error) throw new EdenHttpError(parseServerError(r.error));
 }
 
 /** File upload + URL import seam (W6), incl. the dedup confirm handshake. */
@@ -76,9 +90,9 @@ export function useSourceUploads(ctx: SourceSeamContext) {
   const [dedupConfirm, setDedupConfirm] = useState<DedupConfirmRequest | null>(null);
 
   const askDedup = useCallback(
-    (existingName: string, kind?: 'content' | 'filename', allowReplace = false) =>
+    (existingName: string, kind?: 'content' | 'filename') =>
       new Promise<DedupChoice>((resolve) => {
-        setDedupConfirm({ existingName, kind, allowReplace, resolve });
+        setDedupConfirm({ existingName, kind, resolve });
       }),
     [],
   );
@@ -138,19 +152,9 @@ export function useSourceUploads(ctx: SourceSeamContext) {
               prev.map((item) => (item.id === queueId ? { ...item, status: 'success' } : item)),
             );
           } catch (error) {
-            const { errorCode, details } = parseServerError(error);
-            if (errorCode === 'SOURCE_DEDUP_HIT') {
-              const existingFilename =
-                details &&
-                typeof details.existing_filename === 'string' &&
-                details.existing_filename
-                  ? details.existing_filename
-                  : file.name;
-              const kind =
-                details && (details.kind === 'filename' || details.kind === 'content')
-                  ? details.kind
-                  : undefined;
-              const choice = await askDedup(existingFilename, kind, true);
+            const dedupHit = parseDedupHit(error);
+            if (dedupHit) {
+              const choice = await askDedup(dedupHit.existingFilename, dedupHit.kind);
               try {
                 // Keep per-file UI updates and dedup flow serial.
                 await uploadSourceFile(activeNotebookId, file, choice);
@@ -250,7 +254,8 @@ export function useSourceUploads(ctx: SourceSeamContext) {
                 .notebooks({ nid: activeNotebookId })
                 .sources['from-url'].post(body, { query: { dedupAction } })
             : await api.v2.notebooks({ nid: activeNotebookId }).sources['from-url'].post(body);
-          if (r.error) throw new Error(parseServerError(r.error).message);
+          // EdenHttpError keeps errorCode/details recoverable for the dedup handshake.
+          if (r.error) throw new EdenHttpError(parseServerError(r.error));
           return r.data;
         })();
         if (mode === 'fetch') {
@@ -268,18 +273,11 @@ export function useSourceUploads(ctx: SourceSeamContext) {
         await mutate();
         return result;
       } catch (error) {
-        const { errorCode, details } = parseServerError(error);
-        if (errorCode !== 'SOURCE_DEDUP_HIT') {
+        const dedupHit = parseDedupHit(error);
+        if (!dedupHit) {
           throw error;
         }
-        const dedupDetails = details;
-        const existingFilename =
-          dedupDetails &&
-          typeof dedupDetails.existing_filename === 'string' &&
-          dedupDetails.existing_filename
-            ? dedupDetails.existing_filename
-            : url;
-        const choice = await askDedup(existingFilename);
+        const choice = await askDedup(dedupHit.existingFilename, dedupHit.kind);
         const reuse = choice === 'reuse';
         const result = await call(reuse ? 'reuse' : 'create_new');
         await mutate();

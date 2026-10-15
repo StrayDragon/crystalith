@@ -1,4 +1,4 @@
-import { SourceFromUrlRequestSchema } from '@crystalith/shared';
+import { SourceFromUrlRequestSchema, type SourceDedupHitDetails } from '@crystalith/shared';
 // URL ingestion service — POST /sources/from-url (c39/c44/c62).
 //
 // Extracted from router.ts to keep the HTTP layer thin. The handler maps the
@@ -80,15 +80,19 @@ export async function ingestFromUrl(
   if (dedupKey && dedupAction !== 'create_new') {
     const hit = await client().get(
       db()
-        .select({ id: sources.id })
+        .select({ id: sources.id, filename: sources.filename })
         .from(sources)
         .where(and(eq(sources.notebookId, nid), eq(sources.dedupKey, dedupKey))),
     );
     if (hit) {
       if (dedupAction === 'prompt') {
-        throw new AppHttpError(ErrorCode.CONFLICT, 'Source dedup hit', {
+        const details: SourceDedupHitDetails = {
+          // URL hits are content-keyed (same URL → same dedup key).
+          kind: 'content',
           existingSourceId: hit.id,
-        });
+          existingFilename: hit.filename,
+        };
+        throw new AppHttpError(ErrorCode.CONFLICT, 'Source dedup hit', details);
       }
       if (dedupAction === 'reuse') {
         return { kind: 'reused', sourceId: hit.id };

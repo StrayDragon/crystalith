@@ -59,6 +59,30 @@ export function parseServerError(error: unknown): ParsedServerError {
   return { errorCode, message, details, status };
 }
 
+/**
+ * Re-throwable error that keeps an eden error envelope recoverable via
+ * parseServerError (fields on `.value`, mirroring eden's raw error shape)
+ * while still being a plain Error (message / instanceof) for generic display
+ * paths. Seams that need structured error handling (e.g. the upload dedup
+ * handshake) throw this instead of flattening to `new Error(message)`, which
+ * loses errorCode/details.
+ */
+export class EdenHttpError extends Error {
+  readonly status?: number;
+  readonly value: Pick<ParsedServerError, 'errorCode' | 'message' | 'details'>;
+
+  constructor(parsed: ParsedServerError) {
+    super(parsed.message);
+    this.name = 'EdenHttpError';
+    this.status = parsed.status;
+    this.value = {
+      errorCode: parsed.errorCode,
+      message: parsed.message,
+      details: parsed.details,
+    };
+  }
+}
+
 /** Max characters of server error copy inlined into a transport message. */
 const SERVER_ERROR_DETAIL_CAP = 72;
 

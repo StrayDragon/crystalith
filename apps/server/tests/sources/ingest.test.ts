@@ -112,7 +112,7 @@ describe('sources upload + ingest', () => {
 // ---------------------------------------------------------------------------
 
 describe('source dedup', () => {
-  it('returns 409 SOURCE_DEDUP_HIT on repeat upload with dedupAction=prompt', async () => {
+  it('returns 409 CONFLICT dedup details on repeat upload with dedupAction=prompt', async () => {
     const nb = makeNotebook('dedup-prompt');
     const content = 'identical content for dedup test';
     await uploadFile(nb, 'a.txt', content);
@@ -120,9 +120,17 @@ describe('source dedup', () => {
     const { status, body } = await uploadFile(nb, 'b.txt', content, 'prompt');
     expect(status).toBe(409);
     // c54: errors now use the unified ErrorEnvelope (errorCode + message).
-    // Dedup is surfaced as CONFLICT with existing_source_id in details.
+    // Dedup is surfaced as CONFLICT with SourceDedupHitDetails in details.
     expect((body as { errorCode: string }).errorCode).toBe('CONFLICT');
-    expect((body as { details: { existing_source_id?: number } }).details).toBeDefined();
+    const details = body as {
+      details?: { kind?: string; existingSourceId?: number; existingFilename?: string };
+    };
+    expect(details.details).toEqual({
+      kind: 'content',
+      existingSourceId: expect.any(Number),
+      // The stored filename of the EXISTING source — not this upload's name.
+      existingFilename: 'a.txt',
+    });
   });
 
   it('reuses the existing source with dedupAction=reuse', async () => {

@@ -358,6 +358,30 @@ export const SourceUploadNestedQuerySchema = z.object({
 });
 export type SourceUploadNestedQuery = z.infer<typeof SourceUploadNestedQuerySchema>;
 
+/**
+ * 409 CONFLICT details for a dedup hit (dedupAction='prompt' on upload or
+ * from-url). Discriminates the dedup conflict from other CONFLICTs so the
+ * client can run the reuse/create_new/replace handshake (c134 r490 / c135
+ * r491).
+ */
+export const SourceDedupHitDetailsSchema = z
+  .object({
+    /** content = identical bytes hit; filename = same name, different bytes. */
+    kind: z
+      .enum(['content', 'filename'])
+      .describe(desc('source.dedup_hit.kind', '命中类型：content=内容相同；filename=文件名相同')),
+    existingSourceId: IdSchema.describe(
+      desc('source.dedup_hit.existing_source_id', '命中的既有来源 id'),
+    ),
+    existingFilename: z
+      .string()
+      .describe(desc('source.dedup_hit.existing_filename', '既有来源文件名')),
+  })
+  .openapi({
+    description: desc('source.dedup_hit_details', '去重命中（409）的 details 载荷'),
+  });
+export type SourceDedupHitDetails = z.infer<typeof SourceDedupHitDetailsSchema>;
+
 /** Fresh ingest result from POST …/sources/upload. */
 export const SourceIngestResultSchema = z
   .object({
