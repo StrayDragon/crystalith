@@ -42,6 +42,7 @@ import { messages, notebooks, sessions, sources } from '../../src/db/schema.ts';
 import { getCached, setCached } from '../../src/rag/cache.ts';
 import { createApp } from '../../src/server.ts';
 import {
+  captureErrorLogs,
   getOrm,
   seedChatModel,
   setupIntegrationEnv,
@@ -174,19 +175,26 @@ describe('c117 r281: conversion does not mark ready when embedding fails', () =>
   it('qa-to-source marks the source failed when embedding throws', async () => {
     embedShouldFail = true;
     try {
-      const res = await postQaToSource(readySourceId);
-      expect(res.status).toBe(500);
+      // 预期失败路径：捕获降级 error 日志并断言，不作为噪音漏到测试输出。
+      // onAfterResponse 的 http 访问日志在 handle 之后异步触发，flush 一个
+      // macrotask 让它也落在捕获窗口内。
+      const { lines } = await captureErrorLogs(async () => {
+        const res = await postQaToSource(readySourceId);
+        expect(res.status).toBe(500);
+        await new Promise((r) => setTimeout(r, 5));
 
-      // The most recent qa-converted source row must be failed, never ready.
-      const rows = db()
-        .select()
-        .from(sources)
-        .where(eq(sources.notebookId, notebookId))
-        .all()
-        .filter((s) => (s.metadata as { qa_from_source?: number } | null)?.qa_from_source != null)
-        .toSorted((a, b) => b.id - a.id);
-      expect(rows[0]?.status).toBe('failed');
-      expect(rows[0]?.errorMessage).toContain('embedding provider down');
+        // The most recent qa-converted source row must be failed, never ready.
+        const rows = db()
+          .select()
+          .from(sources)
+          .where(eq(sources.notebookId, notebookId))
+          .all()
+          .filter((s) => (s.metadata as { qa_from_source?: number } | null)?.qa_from_source != null)
+          .toSorted((a, b) => b.id - a.id);
+        expect(rows[0]?.status).toBe('failed');
+        expect(rows[0]?.errorMessage).toContain('embedding provider down');
+      });
+      expect(lines.some((l) => l.includes('qa-to-source embedding failed'))).toBe(true);
     } finally {
       embedShouldFail = false;
     }
@@ -195,21 +203,25 @@ describe('c117 r281: conversion does not mark ready when embedding fails', () =>
   it('session convert-to-source marks the source failed when embedding throws', async () => {
     embedShouldFail = true;
     try {
-      const res = await postSessionConvertToSource();
-      expect(res.status).toBe(500);
+      const { lines } = await captureErrorLogs(async () => {
+        const res = await postSessionConvertToSource();
+        expect(res.status).toBe(500);
+        await new Promise((r) => setTimeout(r, 5));
 
-      const rows = db()
-        .select()
-        .from(sources)
-        .where(eq(sources.notebookId, notebookId))
-        .all()
-        .filter(
-          (s) =>
-            (s.metadata as { convertedFromSession?: number } | null)?.convertedFromSession != null,
-        )
-        .toSorted((a, b) => b.id - a.id);
-      expect(rows[0]?.status).toBe('failed');
-      expect(rows[0]?.errorMessage).toContain('embedding provider down');
+        const rows = db()
+          .select()
+          .from(sources)
+          .where(eq(sources.notebookId, notebookId))
+          .all()
+          .filter(
+            (s) =>
+              (s.metadata as { convertedFromSession?: number } | null)?.convertedFromSession != null,
+          )
+          .toSorted((a, b) => b.id - a.id);
+        expect(rows[0]?.status).toBe('failed');
+        expect(rows[0]?.errorMessage).toContain('embedding provider down');
+      });
+      expect(lines.some((l) => l.includes('convert embedding failed'))).toBe(true);
     } finally {
       embedShouldFail = false;
     }

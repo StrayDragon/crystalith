@@ -30,7 +30,12 @@ import { countVectors } from '../../src/db/vectors.ts';
 import { indexOutputForSearch } from '../../src/features/outputs/auto-index.ts';
 import { createApp } from '../../src/server.ts';
 import { resetConfig } from '../../src/shared/config.ts';
-import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from '../helpers/integration.ts';
+import {
+  captureErrorLogs,
+  getOrm,
+  setupIntegrationEnv,
+  teardownIntegrationEnv,
+} from '../helpers/integration.ts';
 
 beforeAll(() => {
   resetConfig({
@@ -127,11 +132,16 @@ describe('r485 output auto-indexing lifecycle', () => {
     const out = seedOutput(nid);
 
     embedShouldFail = true;
+    let lines: string[] = [];
     try {
-      await expect(indexOutputForSearch(out)).resolves.toBeUndefined();
+      // 预期降级路径：embed 失败只打 error 日志（此处捕获并断言），不炸管线
+      ({ lines } = await captureErrorLogs(async () => {
+        await expect(indexOutputForSearch(out)).resolves.toBeUndefined();
+      }));
     } finally {
       embedShouldFail = false;
     }
+    expect(lines.some((l) => l.includes('auto-index embed failed'))).toBe(true);
 
     const derived = getOrm()
       .select()

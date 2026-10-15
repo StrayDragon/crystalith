@@ -332,4 +332,24 @@ export async function stubEmbedding(): Promise<void> {
   EmbedStrategy.prototype.retrieve = async () => [];
 }
 
+/**
+ * Mute + capture console.error JSON log lines during an async block (the
+ * structured logger emits error level via console.error). Lets tests assert
+ * expected degradation logs (e.g. embed provider down) without leaking them
+ * as red noise into test output. console.error is always restored.
+ */
+export async function captureErrorLogs<R>(fn: () => Promise<R>): Promise<{ lines: string[]; result: R }> {
+  const lines: string[] = [];
+  const orig = console.error;
+  console.error = (...args: unknown[]) => {
+    lines.push(args.map(String).join(' '));
+  };
+  try {
+    const result = await fn();
+    return { lines, result };
+  } finally {
+    console.error = orig;
+  }
+}
+
 // Re-export beforeAll/afterAll so test files can import everything from here.

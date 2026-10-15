@@ -18,7 +18,12 @@ import {
 } from '../../src/features/qa/retrieve-and-judge.ts';
 import { ragRegistry } from '../../src/rag/registry.ts';
 import type { ChunkResult, RAGStrategy } from '../../src/rag/types.ts';
-import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from '../helpers/integration.ts';
+import {
+  captureErrorLogs,
+  getOrm,
+  setupIntegrationEnv,
+  teardownIntegrationEnv,
+} from '../helpers/integration.ts';
 
 function fakeStrategy(id: string, retrieve: () => Promise<ChunkResult[]>): RAGStrategy {
   return {
@@ -66,12 +71,16 @@ afterAll(teardownIntegrationEnv);
 describe('r174 distinct no-evidence reasons', () => {
   it('retrieval failure yields embedding_empty with its localized answer', async () => {
     // covers: r174
-    const result = await retrieveAndJudge({
-      notebookId: nbId,
-      question: 'anything',
-      sourceIds: [sourceId],
-      strategyId: 'fake-embed-boom',
-    });
+    // 预期失败路径：捕获 retrieve 降级 error 日志并断言，不作为噪音漏出
+    const { lines, result } = await captureErrorLogs(() =>
+      retrieveAndJudge({
+        notebookId: nbId,
+        question: 'anything',
+        sourceIds: [sourceId],
+        strategyId: 'fake-embed-boom',
+      }),
+    );
+    expect(lines.some((l) => l.includes('retrieve failed'))).toBe(true);
     expect(result.evidence).toBe(false);
     expect(result.reason).toBe('embedding_empty');
     expect(result.citations).toEqual([]);
