@@ -621,3 +621,115 @@ test('sendMessage keeps the optimistic user bubble if session create fetches []'
     result.current.stopStreaming();
   });
 });
+
+test('streaming completion holds send flags until the post-done refetch lands', async () => {
+  let sendStarted = false;
+  let releaseRefetch: (() => void) | null = null;
+  server.use(
+    http.get('*/v2/notebooks/:notebookId/sessions/:sessionId/messages', () => {
+      if (!sendStarted) {
+        return HttpResponse.json({ items: [], total: 0, offset: 0, limit: 200 });
+      }
+      return new Promise((resolve) => {
+        releaseRefetch = () =>
+          resolve(
+            HttpResponse.json({
+              items: [
+                { id: 1, role: 'user', content: '完成不闪', citations: null },
+                { id: 9005, role: 'assistant', content: 'Answer', citations: [] },
+              ],
+              total: 2,
+              offset: 0,
+              limit: 200,
+            }),
+          );
+      });
+    }),
+  );
+
+  streamRequestMock.mockImplementation(async function* () {
+    yield {
+      event: 'state_snapshot',
+      data: {
+        messageId: 9005,
+        shared_state: { ui: { v: 1, components: {}, datasets: {} } },
+        shared_state_revision: 0,
+      },
+    };
+    yield { event: 'chunk', data: { text: 'Answer' } };
+    yield { event: 'done', data: { messageId: 9005, citations: [] } };
+  });
+
+  const ensureSession = rs.fn().mockResolvedValue(123);
+  const { result } = renderHook(() => useChat({ ensureSession, enableStreaming: true }), {
+    wrapper: wrapSWR,
+  });
+
+  act(() => {
+    const s = useWorkspaceStore.getState();
+    s.setConnectionState('live');
+    s.setActiveNotebook(1);
+    s.setActiveSession(123);
+    s.setDraft('完成不闪');
+  });
+
+  await waitFor(() => {
+    expect(result.current.isLoadingMessages).toBe(false);
+  });
+
+  let sendSettled = false;
+  let sendPromise!: Promise<void>;
+  await act(async () => {
+    sendStarted = true;
+    sendPromise = result.current.sendMessage().then(() => {
+      sendSettled = true;
+    });
+  });
+
+  // done processed: the finished exchange is visible while the refetch is gated
+  await waitFor(() => {
+    expect(
+      useWorkspaceStore
+        .getState()
+        .messages.some((message) => message.id === '9005' && message.content === 'Answer'),
+    ).toBe(true);
+  });
+
+  // Regression (known-issues 2026-10-15): flags must hold until the refetch
+  // resolves — clearing them early re-runs the mirror with stale SWR data,
+  // swapping the finished exchange out for one round-trip (visible flicker).
+  expect(sendSettled).toBe(false);
+  expect(useWorkspaceStore.getState().loading.send).toBe(true);
+  expect(useWorkspaceStore.getState().messages.some((message) => message.role === 'user')).toBe(
+    true,
+  );
+
+  await act(async () => {
+    releaseRefetch?.();
+    await sendPromise;
+  });
+
+  expect(sendSettled).toBe(true);
+  expect(useWorkspaceStore.getState().messages.map((message) => message.id)).toEqual(['1', '9005']);
+});
+
+test('sendMessage session-create failure leaves no dangling optimistic bubble', async () => {
+  const ensureSession = rs.fn().mockResolvedValue(null);
+  const { result } = renderHook(() => useChat({ ensureSession, enableStreaming: true }), {
+    wrapper: wrapSWR,
+  });
+
+  act(() => {
+    const s = useWorkspaceStore.getState();
+    s.setConnectionState('live');
+    s.setActiveNotebook(1);
+    s.setDraft('会话创建失败的一问');
+  });
+
+  await act(async () => {
+    await result.current.sendMessage();
+  });
+
+  expect(result.current.sendError).toBe('会话创建失败。');
+  expect(useWorkspaceStore.getState().messages).toHaveLength(0);
+});

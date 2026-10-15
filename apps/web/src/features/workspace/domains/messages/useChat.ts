@@ -234,11 +234,11 @@ export function useChat({
 
     const selectedScope = buildSourceScopeSnapshot(selectedSourceTitles, 'selected');
 
-    const userMessage: WorkspaceChatMessage = { id: createId(), role: 'user', content: text };
-    const pendingMessages: WorkspaceChatMessage[] = [...s.messages, userMessage];
-    s.setMessages(pendingMessages);
     s.setDraft('');
 
+    // Attach/create the session BEFORE writing the optimistic bubble: session
+    // auto-attach/switch clears the transcript, which would drop the bubble
+    // mid-send on the first-message race.
     const sessionId = await ensureSession();
     if (!sessionId) {
       setLastFailedDraft(text);
@@ -246,6 +246,12 @@ export function useChat({
       store.getState().setError('send', '会话创建失败。');
       return;
     }
+
+    // Re-read messages: ensureSession may have attached a session and reset the
+    // transcript; the bubble must land in the post-attach list.
+    const userMessage: WorkspaceChatMessage = { id: createId(), role: 'user', content: text };
+    const pendingMessages: WorkspaceChatMessage[] = [...store.getState().messages, userMessage];
+    store.getState().setMessages(pendingMessages);
 
     if (enableStreaming) {
       const abortController = new AbortController();
@@ -273,8 +279,12 @@ export function useChat({
         streamingBufferRef.current = '';
       };
 
-      const resyncServerState = () => {
-        void mutate();
+      // Refetches are awaited so the finally below clears send/streaming flags
+      // only after fresh data landed. Flipping early re-runs the messages mirror
+      // with stale SWR data, swapping the just-finished exchange out for one
+      // round-trip — the visible flicker at stream completion.
+      const resyncServerState = async () => {
+        await mutate().catch(() => {});
       };
 
       const flushBufferedContent = () => {
@@ -393,7 +403,7 @@ export function useChat({
 
         if (!receivedDone) {
           rollbackLocalStreamingState();
-          resyncServerState();
+          await resyncServerState();
           if (!terminalErrorMessage) {
             terminalErrorMessage = '流式连接已断开，请重试。';
             store.getState().setError('send', terminalErrorMessage);
@@ -406,7 +416,7 @@ export function useChat({
         if (!receivedDone) {
           setLastFailedDraft(text);
         } else {
-          void mutate();
+          await mutate();
           setLastFailedDraft('');
         }
       } catch (error) {
@@ -417,7 +427,7 @@ export function useChat({
 
         if (!receivedDone) {
           rollbackLocalStreamingState();
-          resyncServerState();
+          await resyncServerState();
         }
 
         if (isAborted) {
@@ -486,7 +496,7 @@ export function useChat({
       const s2 = store.getState();
       s2.setMessages([...pendingMessages, assistantMessage]);
       s2.setCitations(normalizedCitations);
-      void mutate();
+      await mutate();
       if (refreshSessions) {
         void refreshSessions();
       }

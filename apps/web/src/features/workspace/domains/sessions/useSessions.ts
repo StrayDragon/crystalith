@@ -4,7 +4,34 @@ import useSWR from 'swr';
 
 import { api } from '../../../../api/eden';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
+import type { SessionSummary } from '../../shared/types';
 import { normalizeSession } from '../../shared/utils';
+
+/**
+ * Apply a fetched sessions list to the store. SWR mirror effect body, extracted
+ * to keep the hook under fallow's complexity gate.
+ */
+function applySessionsSnapshot(normalized: SessionSummary[]) {
+  const s = useWorkspaceStore.getState();
+  // Read latest from store — createSession may have set activeId before SWR data lands.
+  const activeId = s.activeSessionId;
+  s.setSessions(normalized);
+  s.setError('sessions', '');
+  if (activeId == null) {
+    // Never auto-attach while a send is in flight: a stale list would attach
+    // the wrong session and its transcript swap would drop the pending bubble.
+    if (normalized[0] && !s.loading.send) s.setActiveSession(normalized[0].id);
+    return;
+  }
+  const stillExists = normalized.some((item) => item.id === activeId);
+  if (!stillExists) {
+    // Keep activeId during create race (mutate not yet reflected). Only clear
+    // when the list is empty; delete handlers already switch explicitly.
+    // Same send guard: a transiently empty list mid-send must not wipe the
+    // transcript the optimistic bubble was written into.
+    if (normalized.length === 0 && !s.loading.send) s.setActiveSession(null);
+  }
+}
 
 export function useSessions() {
   const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
@@ -52,22 +79,7 @@ export function useSessions() {
       return;
     }
     if (data) {
-      const normalized = data.map(normalizeSession);
-      const s = store.getState();
-      // Read latest from store — createSession may have set activeId before SWR data lands.
-      const activeId = s.activeSessionId;
-      s.setSessions(normalized);
-      s.setError('sessions', '');
-      if (activeId == null) {
-        if (normalized[0]) s.setActiveSession(normalized[0].id);
-        return;
-      }
-      const stillExists = normalized.some((item) => item.id === activeId);
-      if (!stillExists) {
-        // Keep activeId during create race (mutate not yet reflected). Only clear
-        // when the list is empty; delete handlers already switch explicitly.
-        if (normalized.length === 0) s.setActiveSession(null);
-      }
+      applySessionsSnapshot(data.map(normalizeSession));
     }
   }, [data, error, isConnected, activeNotebookId, activeSessionId, store]);
 
