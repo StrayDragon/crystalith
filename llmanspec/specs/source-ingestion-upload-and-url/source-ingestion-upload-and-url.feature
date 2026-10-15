@@ -145,3 +145,14 @@
       当 重复上传同一内容且不带 create_new（见 sources/c117-upload-contract.test.ts）
       那么 跳过去重直接创建新来源且不返回 409
       而且 默认门控开启时重复上传仍返回 409 CONFLICT
+
+  @req:r490
+  规则: Same-filename uploads prompt instead of silently duplicating
+    门控开启时，上传与笔记本内既有可见来源**同名但内容不同**的文件 MUST NOT 静默创建第二行：默认动作（prompt）MUST 返回 409 SOURCE_DEDUP_HIT 且 details 标注 kind='filename' 与既有来源 id/文件名；调用方选择 reuse 时 MUST 跳过上传并返回既有来源，选择 create_new 时 MUST 创建独立副本。内容完全相同的命中（kind='content'）优先于同名命中。门控关闭时 MUST 直接创建新来源。
+
+    场景: same-filename-different-content-prompts
+      假如 笔记本已有名为 X 的可见来源且上传同名但内容不同的文件（不带 create_new）
+      当 调用上传端点（sources 集成用例）
+      那么 返回 409 且 details.kind 为 filename
+      而且 reuse 动作返回既有来源、create_new 动作创建独立新行
+      而且 门控关闭时同名上传直接创建且不返回 409

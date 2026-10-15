@@ -56,7 +56,9 @@ export default function SourceDedupConfirmDialog({
           <p className="mt-0.5 text-[11px] text-slate-500">{request.existingName}</p>
         </div>
         <div className="px-4 py-3 text-xs text-slate-600">
-          复用已有来源不会重复占用存储；选择「仍创建新来源」则保留两份独立副本。
+          {request.kind === 'filename'
+            ? '同名文件已存在，但内容不同。复用将跳过本次上传；选择「仍创建新来源」则保留两份独立副本。'
+            : '上传内容与已有来源完全相同。复用已有来源不会重复占用存储；选择「仍创建新来源」则保留两份独立副本。'}
         </div>
         <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
           <button

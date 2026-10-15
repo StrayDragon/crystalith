@@ -295,3 +295,81 @@ describe('c117 r298: dedup disabled by config', () => {
     expect((body as { errorCode: string }).errorCode).toBe('CONFLICT');
   });
 });
+
+// ---------------------------------------------------------------------------
+// c134 r490 — same-filename soft dedup
+// ---------------------------------------------------------------------------
+
+describe('c134 r490: same-filename uploads prompt instead of silently duplicating', () => {
+  it('prompt returns 409 kind=filename; reuse returns the existing; create_new makes an independent row', async () => {
+    const nb = makeNotebook('c134-filename-dedup');
+    const first = await uploadFile(nb, '同名笔记.md', '# 第一版内容甲', 'text/markdown');
+    expect(first.status).toBe(200);
+    const firstId = (first.body as { sourceId: number }).sourceId;
+
+    // Same name, different bytes — prompt (default) must not silently duplicate.
+    const prompt = await uploadFile(nb, '同名笔记.md', '# 第二版内容乙（更新版）', 'text/markdown');
+    expect(prompt.status).toBe(409);
+    const promptDetails = (
+      prompt.body as { details?: { kind?: string; existingSourceId?: number } }
+    ).details;
+    expect(promptDetails?.kind).toBe('filename');
+    expect(promptDetails?.existingSourceId).toBe(firstId);
+
+    // reuse skips the upload and returns the existing source.
+    const reuse = await uploadFile(
+      nb,
+      '同名笔记.md',
+      '# 第二版内容乙（更新版）',
+      'text/markdown',
+      'reuse',
+    );
+    expect(reuse.status).toBe(200);
+    const reuseBody = reuse.body as { reused?: boolean; source?: { id: number } };
+    expect(reuseBody.reused).toBe(true);
+    expect(reuseBody.source?.id).toBe(firstId);
+
+    // create_new keeps both as independent rows.
+    const created = await uploadFile(
+      nb,
+      '同名笔记.md',
+      '# 第二版内容乙（更新版）',
+      'text/markdown',
+      'create_new',
+    );
+    expect(created.status).toBe(200);
+    expect((created.body as { sourceId: number }).sourceId).not.toBe(firstId);
+
+    const rows = db()
+      .select({ id: sources.id })
+      .from(sources)
+      .where(eq(sources.notebookId, nb))
+      .all();
+    expect(rows.length).toBe(2);
+  });
+
+  it('identical content still wins as kind=content', async () => {
+    const nb = makeNotebook('c134-content-priority');
+    const content = '# 完全相同的字节内容';
+    const first = await uploadFile(nb, '原文档.md', content, 'text/markdown');
+    expect(first.status).toBe(200);
+
+    // Same bytes AND same name → content hit, not filename hit.
+    const dup = await uploadFile(nb, '原文档.md', content, 'text/markdown');
+    expect(dup.status).toBe(409);
+    const details = (dup.body as { details?: { kind?: string } }).details;
+    expect(details?.kind).toBe('content');
+  });
+
+  it('gate off → same-filename upload creates directly without 409', async () => {
+    const nb = makeNotebook('c134-gate-off');
+    resetConfig({
+      models: { defaults: {}, available: [] },
+      raw: { source_ingestion: { dedup: { enabled: false } } },
+    });
+    const a = await uploadFile(nb, '同门.md', '# 甲版', 'text/markdown');
+    const b = await uploadFile(nb, '同门.md', '# 乙版', 'text/markdown');
+    expect(a.status).toBe(200);
+    expect(b.status).toBe(200); // not 409 — both dedup layers skipped
+  });
+});

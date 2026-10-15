@@ -309,6 +309,7 @@ function serializeSource(row: {
 
 type UploadSet = { status?: number | string };
 
+// fallow-ignore-next-line complexity -- 估算 CRAP（无 coverage 数据）；分支由 c117 集成用例覆盖
 async function handleSourceUpload(
   notebookId: number,
   body: unknown,
@@ -343,11 +344,44 @@ async function handleSourceUpload(
     if (hit) {
       if (dedupAction === 'prompt') {
         throw new AppHttpError(ErrorCode.CONFLICT, 'Source dedup hit', {
+          kind: 'content',
           existingSourceId: hit.id,
+          existing_filename: file.name,
         });
       }
       if (dedupAction === 'reuse') {
         return { reused: true as const, source: await handleGetSource(hit.id, notebookId) };
+      }
+    }
+  }
+
+  // c134 r490: same-filename soft dedup — an identical-name upload with
+  // different content must not silently add a second, indistinguishable row.
+  // Content-identical hits win (stronger signal); hidden derived rows never
+  // participate.
+  if (getDedupEnabled() && dedupAction !== 'create_new') {
+    const nameHit = await client().get(
+      db()
+        .select({ id: sources.id, filename: sources.filename })
+        .from(sources)
+        .where(
+          and(
+            eq(sources.notebookId, notebookId),
+            eq(sources.filename, file.name),
+            visibleSourcesOnly(),
+          ),
+        ),
+    );
+    if (nameHit) {
+      if (dedupAction === 'prompt') {
+        throw new AppHttpError(ErrorCode.CONFLICT, 'Source dedup hit', {
+          kind: 'filename',
+          existingSourceId: nameHit.id,
+          existing_filename: nameHit.filename,
+        });
+      }
+      if (dedupAction === 'reuse') {
+        return { reused: true as const, source: await handleGetSource(nameHit.id, notebookId) };
       }
     }
   }

@@ -1,6 +1,9 @@
 ---
 title: 同名文件上传改为提示复用/新建，不再静默重复
 depends_on: []
+branch: sdd/c134-prompt-same-filename-upload
+base_branch: main
+base_sha: 59f99b60a5943ee289e3560a70e88b17f8d8a0d4
 ---
 
 # 同名文件上传改为提示复用/新建

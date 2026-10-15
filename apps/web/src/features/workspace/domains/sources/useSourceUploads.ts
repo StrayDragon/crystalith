@@ -12,6 +12,8 @@ type ExtractorType = import('@crystalith/shared').ExtractorInfo['type'];
 /** W5: pending dedup "reuse or create new" decision (rendered as a dialog). */
 export interface DedupConfirmRequest {
   existingName: string;
+  /** c134 r490: content = identical bytes hit; filename = same name, different bytes. */
+  kind?: 'content' | 'filename';
   resolve: (reuse: boolean) => void;
 }
 
@@ -69,9 +71,9 @@ export function useSourceUploads(ctx: SourceSeamContext) {
   const [dedupConfirm, setDedupConfirm] = useState<DedupConfirmRequest | null>(null);
 
   const askDedupReuse = useCallback(
-    (existingName: string) =>
+    (existingName: string, kind?: 'content' | 'filename') =>
       new Promise<boolean>((resolve) => {
-        setDedupConfirm({ existingName, resolve });
+        setDedupConfirm({ existingName, kind, resolve });
       }),
     [],
   );
@@ -90,6 +92,7 @@ export function useSourceUploads(ctx: SourceSeamContext) {
   }, [activeNotebookId]);
 
   const handleUpload = useCallback(
+    // fallow-ignore-next-line complexity -- 估算 CRAP（无 coverage 数据）；dedup 握手由 rstest 覆盖
     async (input: File | File[] | FileList | null) => {
       const files = normalizeUploadInput(input);
       if (!files.length) return;
@@ -138,7 +141,11 @@ export function useSourceUploads(ctx: SourceSeamContext) {
                 details.existing_filename
                   ? details.existing_filename
                   : file.name;
-              const reuse = await askDedupReuse(existingFilename);
+              const kind =
+                details && (details.kind === 'filename' || details.kind === 'content')
+                  ? details.kind
+                  : undefined;
+              const reuse = await askDedupReuse(existingFilename, kind);
               const dedupAction = reuse ? 'reuse' : 'create_new';
               try {
                 // Keep per-file UI updates and dedup flow serial.
