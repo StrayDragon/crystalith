@@ -18,7 +18,7 @@ import { useSourceUploads } from './useSourceUploads';
 type QaMessage = QAMessage;
 
 export type { DedupChoice, DedupConfirmRequest, SourceUploadItem } from './useSourceUploads';
-export type { SearchQueueItem, SearchQueueItemStatus } from './useSourceSearchQueue';
+export type { SearchQueueItem } from './useSourceSearchQueue';
 
 export type SourceSortBy = 'date' | 'name' | 'size' | 'type';
 export type SourceSortOrder = 'asc' | 'desc';

@@ -37,7 +37,6 @@ function wrapToolIoOutsideLlmLock<T extends { execute?: (...args: never[]) => un
     execute: async (...args: never[]) => withRunLlmLockReleased(() => execute(...args)),
   };
 }
-export type ResearchAgentMode = 'work_unit' | 'node_chat';
 
 const ResearchNodeAgentCallOptionsSchema = z.object({
   mode: z.enum(['work_unit', 'node_chat']),

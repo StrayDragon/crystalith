@@ -57,7 +57,6 @@ export const SsrfPolicyConfigSchema = z.object({
   allowlist_cidrs: z.array(z.string()).default([]).describe(desc('ssrf.allowlist_cidrs')),
   max_redirects: z.number().int().min(0).max(20).default(5).describe(desc('ssrf.max_redirects')),
 });
-export type SsrfPolicyConfig = z.infer<typeof SsrfPolicyConfigSchema>;
 
 /**
  * App-level settings schema — maps from `app.*`.
@@ -99,7 +98,6 @@ export const AppSettingsSchema = z.object({
     })
     .optional(),
 });
-export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
 /**
  * Source ingestion settings schema — maps from `source_ingestion.*`.
@@ -111,7 +109,6 @@ const SourceIngestionSettingsSchema = z.object({
     })
     .optional(),
 });
-export type SourceIngestionSettings = z.infer<typeof SourceIngestionSettingsSchema>;
 
 /** Parse SSRF security policy from config YAML. */
 export function getSecurityPolicy(): SsrfPolicy {
@@ -204,7 +201,6 @@ const SearXNGSettingsSchema = z.object({
     .default(20_000)
     .describe(desc('search.searxng.timeout')),
 });
-export type SearXNGSettings = z.infer<typeof SearXNGSettingsSchema>;
 
 /** Knowledge-base (global) search settings — `search.kb.*` (c132 r489). */
 const KnowledgeSearchSettingsSchema = z.object({
@@ -236,7 +232,6 @@ export type CompletionOptions = z.infer<typeof CompletionOptionsSchema>;
 export const StorageSettingsSchema = z.object({
   data_root: z.string().default('./data').describe(desc('storage.data_root')),
 });
-export type StorageSettings = z.infer<typeof StorageSettingsSchema>;
 
 /**
  * Resolve the data root directory path.
@@ -385,7 +380,6 @@ export const OptionalServicesSchema = z.object({
   searxng: OptionalServiceEntrySchema.optional(),
   cache_redis: OptionalServiceEntrySchema.optional(),
 });
-export type OptionalServicesSettings = z.infer<typeof OptionalServicesSchema>;
 
 /**
  * Optional services for `/health/dependencies`.
@@ -431,7 +425,6 @@ export const CacheSettingsSchema = z.object({
     .default(2048)
     .describe(desc('cache.max_size', '缓存最大条目数')),
 });
-export type CacheSettings = z.infer<typeof CacheSettingsSchema>;
 
 /**
  * Slides preview (Slidev) probe — SSOT for SLIDES availability diagnostics
@@ -474,7 +467,6 @@ export const DatabaseSettingsSchema = z.object({
     .default([])
     .describe(desc('database.url_candidates', '备用数据库 URL 列表')),
 });
-export type DatabaseSettings = z.infer<typeof DatabaseSettingsSchema>;
 
 /** Plugin discovery configuration. */
 export const PluginsSettingsSchema = z.object({
@@ -492,7 +484,6 @@ export const PluginsSettingsSchema = z.object({
     .default([])
     .describe(desc('plugins.load_order', '插件加载顺序（后加载优先）')),
 });
-export type PluginsSettings = z.infer<typeof PluginsSettingsSchema>;
 
 /** Outbound proxy settings — used by URL fetchers. */
 export const ProxySettingsSchema = z.object({

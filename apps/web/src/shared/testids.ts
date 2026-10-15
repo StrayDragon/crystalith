@@ -201,8 +201,6 @@ export const TestIds = {
   citationPopover: 'citation-popover',
 } as const;
 
-export type TestId = (typeof TestIds)[keyof typeof TestIds];
-
 /** Spread onto JSX: <button {...tid(TestIds.chatSend)} /> */
 export function tid(id: string): { 'data-testid': string } {
   return { 'data-testid': id };
