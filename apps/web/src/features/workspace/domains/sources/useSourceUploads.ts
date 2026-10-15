@@ -1,5 +1,8 @@
-import type { SourceFromUrlMode } from '@crystalith/shared';
-import { SourceDedupHitDetailsSchema, type SourceDedupHitDetails } from '@crystalith/shared';
+import {
+  SourceDedupHitDetailsSchema,
+  type SourceDedupHitDetails,
+  type SourceFromUrlMode,
+} from '@crystalith/shared';
 import { useCallback, useEffect, useState } from 'react';
 
 import { api } from '../../../../api/eden';

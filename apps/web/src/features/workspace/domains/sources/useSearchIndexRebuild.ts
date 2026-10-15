@@ -50,6 +50,7 @@ export function useSearchIndexRebuild(
     try {
       const { error } = await api.v2
         .notebooks({ nid: notebookId })
+        // eslint-disable-next-line no-unexpected-multiline
         ['search-index'].rebuild.post({});
       if (error) throw error;
       await refreshNow();
