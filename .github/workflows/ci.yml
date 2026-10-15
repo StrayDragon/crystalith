@@ -65,8 +65,8 @@ jobs:
       - name: Fallow annotations
         if: github.event_name == 'pull_request' && failure()
         run: |
-          fallow audit --format json --quiet > /tmp/fallow-audit.json || true
-          fallow report --from /tmp/fallow-audit.json --format github-annotations || true
+          bun run fallow audit --format json --quiet > /tmp/fallow-audit.json || true
+          bun run fallow report --from /tmp/fallow-audit.json --format github-annotations || true
 
   test:
     name: Tests (server / shared / web / e2e @p0)

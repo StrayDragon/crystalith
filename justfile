@@ -138,14 +138,15 @@ check: typecheck lint format-check
 
 # Fallow PR 审计 — 只对变更文件 gate（新增问题才 fail，继承问题豁免）。
 # L0: 仅 verdict + 摘要; L2: 全量报告。本地未提交时 scope=工作树 vs merge-base。
-# CI (GitHub Actions) 用 `fallow audit --base origin/$GITHUB_BASE_REF`，见 ci.yml。
+# fallow 是 devDependency，经 `bun run` 走 node_modules/.bin（bun install 后即可用）。
+# CI (GitHub Actions) 用 `bun run fallow audit --base origin/$GITHUB_BASE_REF`，见 ci.yml。
 audit-fallow:
-    @fallow audit {{ _qfallow }}
+    @bun run fallow audit {{ _qfallow }}
 
 # 架构图 gate：循环依赖（全量二值检查，无存量债问题，恒可 gate）+ 边界（已配置时）。
 # 0.2s 级；新增环立即红。boundary rules 未配置前该段自动空转。
 audit-fallow-arch:
-    @fallow architecture --cycles {{ _qfallow }}
+    @bun run fallow architecture --cycles {{ _qfallow }}
 
 # Type-aware linting (oxlint with tsconfig) — advisory; NOT part of `just qa`
 # (pre-existing errors, especially in test files). Run manually before large PRs.
