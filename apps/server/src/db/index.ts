@@ -76,17 +76,23 @@ export type Orm = BunSQLiteDatabase<typeof schema>;
 
 let _orm: Orm | null = null;
 
-/** Open the SQLite database + apply migrations + load extensions. */
-export function createDb(path?: string): Orm {
-  // bun test guard: a path-less createDb resolves to the REAL dev database.
-  // Tests must use a temp DB (setupIntegrationEnv / explicit path); fail fast
-  // instead of silently reading/writing the user's data.
+/**
+ * bun test guard: a path-less createDb resolves to the REAL dev database.
+ * Tests must use a temp DB (setupIntegrationEnv / explicit path); fail fast
+ * instead of silently reading/writing the user's data.
+ */
+function assertExplicitPathInTest(path: string | undefined): void {
   if (path === undefined && process.env.BUN_TEST) {
     throw new Error(
       '[db] createDb() without an explicit path under bun test would open the ' +
         'default (real) database — use setupIntegrationEnv or pass a temp path',
     );
   }
+}
+
+/** Open the SQLite database + apply migrations + load extensions. */
+export function createDb(path?: string): Orm {
+  assertExplicitPathInTest(path);
   const dbPath = path ?? getDbPath();
   const dir = dirname(dbPath);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
