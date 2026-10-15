@@ -411,6 +411,7 @@ export function useRefine() {
     retryOutputJob,
     cancelOutputJob,
     onClearOutputs: clearOutputs,
+    mutateOutputs,
     fetchOutput,
     ensureOutputDetail,
   };

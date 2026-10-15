@@ -209,7 +209,7 @@ test('kb search: output item jumps to the output viewer', async () => {
   });
 
   fireEvent.click(screen.getAllByTestId('kb-search-result-item')[1]);
-  expect(props.onJumpToOutput).toHaveBeenCalledWith(9);
+  expect(props.onJumpToOutput).toHaveBeenCalledWith(9, 8);
   expect(props.onJumpToSource).not.toHaveBeenCalled();
 });
 

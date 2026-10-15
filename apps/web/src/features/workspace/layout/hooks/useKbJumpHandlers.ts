@@ -1,7 +1,10 @@
 // c132: top-bar knowledge search jump handlers, kept out of the giant
 // WorkspaceLayout scope — source chunk → source detail with citation
 // highlight (global hits may live in another notebook: on-demand fetch via
-// normalizeSource), output → the outputs viewer overlay.
+// normalizeSource), output → the outputs viewer overlay. Output jumps are
+// fetch-then-open: the outputs list is refreshed (and the notebook switched
+// when the output lives elsewhere) BEFORE the viewer opens, so the layout's
+// viewer-recovery effect never races a stale list into closing it.
 import { useCallback } from 'react';
 
 import { api } from '../../../../api/eden';
@@ -14,10 +17,23 @@ export interface KbJumpDeps {
   openCitationSourceDetail: (source: SourceItem) => void;
   setJumpToCitationChunkId: (chunkId: number) => void;
   openOutputViewer: (outputId: number) => void;
+  /** Refresh the active notebook's outputs list (fetch-then-open). */
+  refreshOutputs: () => Promise<unknown>;
+  activeNotebookId: number | null;
+  /** Switch the active notebook for cross-notebook output jumps. */
+  setActiveNotebook: (id: number | null) => void;
 }
 
 export function useKbJumpHandlers(deps: KbJumpDeps) {
-  const { sourceById, openCitationSourceDetail, setJumpToCitationChunkId, openOutputViewer } = deps;
+  const {
+    sourceById,
+    openCitationSourceDetail,
+    setJumpToCitationChunkId,
+    openOutputViewer,
+    refreshOutputs,
+    activeNotebookId,
+    setActiveNotebook,
+  } = deps;
 
   const jumpToSource = useCallback(
     // fallow-ignore-next-line complexity -- 估算 CRAP（无 coverage 数据）；行为由 rstest/e2e 覆盖
@@ -41,12 +57,24 @@ export function useKbJumpHandlers(deps: KbJumpDeps) {
   );
 
   const jumpToOutput = useCallback(
-    (outputId: number) => {
+    // fallow-ignore-next-line complexity -- 估算 CRAP（无 coverage 数据）；行为由 rstest/e2e 覆盖
+    async (outputId: number, notebookId: number) => {
+      if (activeNotebookId !== null && notebookId !== activeNotebookId) {
+        // Cross-notebook hit: switch first so the whole workspace (incl. the
+        // outputs list the viewer reads) lands on the owning notebook.
+        setActiveNotebook(notebookId);
+      }
+      try {
+        await refreshOutputs();
+      } catch {
+        // Best-effort refresh — the recovery effect tolerates a loading
+        // list, so still open the viewer afterwards.
+      }
       // openOutputViewer sets BOTH the selected id and the open flag —
       // setViewerOutputId alone leaves the viewer closed.
       openOutputViewer(outputId);
     },
-    [openOutputViewer],
+    [activeNotebookId, openOutputViewer, refreshOutputs, setActiveNotebook],
   );
 
   return { jumpToSource, jumpToOutput };

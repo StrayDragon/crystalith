@@ -55,7 +55,7 @@ export interface WorkspaceTopbarSearchProps {
   activeNotebookId: number | null;
   activeNotebookTitle?: string | null;
   onJumpToSource?: (sourceId: number, chunkId: number, notebookId: number) => void;
-  onJumpToOutput?: (outputId: number) => void;
+  onJumpToOutput?: (outputId: number, notebookId: number) => void;
 }
 
 function FastSearchBody({
@@ -320,7 +320,9 @@ function KbSearchBody({
             kb.setQuery(e.target.value);
           }}
         />
-        {kb.status === 'loading' ? <Spinner className="h-4 w-4 text-gray-400" /> : null}
+        {kb.status === 'loading' && kb.groups.length === 0 ? (
+          <Spinner className="h-4 w-4 text-gray-400" />
+        ) : null}
       </div>
 
       <KbScopeToggle
@@ -424,7 +426,7 @@ export default function WorkspaceTopbarSearch({
     // fallow-ignore-next-line complexity -- 估算 CRAP（无 coverage 数据）；行为由 rstest/e2e 覆盖
     (item: SearchItem) => {
       if (item.originType === 'output') {
-        if (item.originId !== null) onJumpToOutput?.(item.originId);
+        if (item.originId !== null) onJumpToOutput?.(item.originId, item.notebookId);
       } else {
         onJumpToSource?.(item.sourceId, item.chunkId, item.notebookId);
       }

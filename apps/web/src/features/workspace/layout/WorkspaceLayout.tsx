@@ -257,13 +257,19 @@ export default function WorkspaceLayout() {
     [handleOpenCitationSourceDetail, sources, store],
   );
 
-  // c132: top-bar knowledge search jumps (hook owns the cross-notebook fetch).
+  // c132: top-bar knowledge search jumps (hook owns the cross-notebook fetch
+  // and the outputs-list refresh for output jumps).
   const { jumpToSource: handleKbJumpToSource, jumpToOutput: handleKbJumpToOutput } =
     useKbJumpHandlers({
       sourceById,
       openCitationSourceDetail: overlays.openCitationSourceDetail,
       setJumpToCitationChunkId: sources.setJumpToCitationChunkId,
       openOutputViewer: overlays.openOutputViewer,
+      refreshOutputs: () => refine.mutateOutputs(),
+      activeNotebookId,
+      setActiveNotebook: (id) => {
+        store.getState().setActiveNotebook(id);
+      },
     });
 
   const focusPanel = useCallback(
@@ -380,8 +386,14 @@ export default function WorkspaceLayout() {
 
   useKeyboardShortcuts(shortcutBindings);
 
+  // fallow-ignore-next-line complexity -- 估算 CRAP（无 coverage 数据）；行为由 rstest/e2e 覆盖
   useEffect(() => {
     if (!overlays.isViewerOpen) return;
+    // c132: while the outputs list is (re)loading — e.g. right after a
+    // notebook switch from a knowledge-search jump — the list is not yet
+    // evidence that the selected output is gone. Only reconcile on a loaded
+    // list.
+    if (refine.outputsLoading) return;
     if (refine.outputs.length === 0) {
       overlays.closeOutputViewer();
       overlays.setViewerOutputId(null);
@@ -394,7 +406,7 @@ export default function WorkspaceLayout() {
       return;
     }
     overlays.setViewerOutputId(refine.outputs[0].id);
-  }, [overlays, refine.outputs]);
+  }, [overlays, refine.outputs, refine.outputsLoading]);
 
   const isConnected = notebooks.isConnected;
 
