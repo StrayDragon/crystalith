@@ -3,12 +3,13 @@
  *
  * streamdown dist 内消费的 tailwind 类不经过本仓源码——供给靠
  * `streamdown-sources.css` 的 `@source inline(...)` 白名单（oxide 拒绝相对
- * 路径扫 node_modules，见 c136 design）。本测试双锁：
- *   1. 动态扫描 dist 中「本仓 @theme token 消费类」（丢了即白屏级）⊆ 白名单；
- *   2. 白名单经真实 @tailwindcss/postcss 编译后全部生成（锁配置有效性）。
+ * 路径扫 node_modules，见 c136 design）。本测试锁：动态扫描 dist 中「本仓
+ * @theme token 消费类」（丢了即白屏级）⊆ 白名单。
  *
- * streamdown 升级若引入新 token 类 → 第 1 锁红 → 按白名单文件头注释的
- * 权威差分法更新清单；标准 palette 类缺失属视觉退化，由 e2e/巡检兜底。
+ * 白名单「能被真实 @tailwindcss/postcss 编译生成」无 rstest 锁（测试环境加载不了
+ * lightningcss 原生模块），由 e2e / 亮暗巡检兜底。streamdown 升级若引入新 token
+ * 类 → 本测试红 → 按白名单文件头注释的权威差分法更新清单；标准 palette 类缺失属
+ * 视觉退化，同样由 e2e/巡检兜底。
  */
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -64,8 +65,4 @@ describe('c136 streamdown 样式供给 lock-test', () => {
     const missing = [...collectTokenClassesFromDist()].filter((c) => !whitelist.has(c));
     expect(missing).toEqual([]);
   });
-
-  // 「白名单经真实 tailwind 编译全部生成」的配置有效性锁在
-  // scripts/verify-streamdown-css.mjs（rstest/Rspack 环境加载不了 lightningcss
-  // 原生模块）；T6 回归与后续维护时运行之。
 });

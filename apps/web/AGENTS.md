@@ -134,6 +134,16 @@ import { MenuList } from '../shared/ui';
 **恢复条件**：fallow 支持 tw4 css-first（识别 `@import "tailwindcss"` 与后缀 important 语法）后，
 撤掉全部 16 处抑制并删除本节；升级 fallow 后先跑 `bun run fallow audit` 看 broken-reference 是否归零。
 
+### streamdown 样式供给（v4 `@source inline` 白名单）
+
+streamdown（含 `@streamdown/code`）dist 消费的 tailwind 类**不经过本仓源码**，供给靠
+`src/app/streamdown-sources.css` 的 `@source inline(...)` 白名单（oxide 拒绝相对路径扫
+node_modules，见 change c136）。`src/app/streamdown-classes.test.ts` 锁「dist 消费的
+`@theme` token 类 ⊆ 白名单」——streamdown 升级引入新 token 类即红。白名单「能被真实
+`@tailwindcss/postcss` 编译生成」无 rstest 锁（测试环境加载不了 lightningcss 原生模块），
+由 `e2e` / 亮暗巡检兜底。升级 streamdown 后若 lock-test 红，按 `streamdown-sources.css`
+头注释的权威差分法（临时绝对路径 `@source` 构建，diff 产物类集）更新清单。
+
 ## Configuration & Security
 
 - Settings via `config/app.yaml`

@@ -5,7 +5,7 @@
     // 各 workspace 由插件自动识别；此处补齐 CLI/构建/CI 辅助脚本入口
     "scripts/*.{ts,js}",
     "e2e/*.{ts,js}",
-    "apps/web/scripts/*.{js,ts,mjs}",
+    "apps/web/scripts/*.{js,ts}",
     "apps/web/rstest.setup.ts",
     "apps/web/src/test-utils/**/*.{ts,tsx}",
     // rstest 测试文件：fallow 未自动识别该 runner 的入口（109 个测试文件曾被
