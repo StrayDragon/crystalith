@@ -120,6 +120,20 @@ import { MenuList } from '../shared/ui';
 - Run targeted tests for changed areas
 - `test:ci` runs deterministic quality gate; `test:core` covers critical paths
 
+## 工具链守则（fallow × Tailwind v4）
+
+本包已无 `tailwind.config.cjs`（c136 起 v4 css-first：`@import "tailwindcss"` + `@theme`），fallow
+因此失去 Tailwind 项目识别，两类误报需要人工压制：
+
+- 模板里 v4 important 后缀（`class!`）与 `shadow-xl` 等引擎生成类被判 `css-broken-reference` ——
+  靠 **16 处 inline 抑制**：属性区 `// fallow-ignore-next-line css-broken-reference` ×14、
+  JSX children 区 `{/* fallow-ignore-next-line … */}` ×2（children 区**不能**用 `//`，会渲染成文本）。
+- `src/app/tailwind.css` 的暗色 `!important` 覆盖块（c127 既有设计）报 `important-density` /
+  `selector-complexity` —— warn 级、不参与 `fallow audit` verdict fail，未抑制。
+
+**恢复条件**：fallow 支持 tw4 css-first（识别 `@import "tailwindcss"` 与后缀 important 语法）后，
+撤掉全部 16 处抑制并删除本节；升级 fallow 后先跑 `bun run fallow audit` 看 broken-reference 是否归零。
+
 ## Configuration & Security
 
 - Settings via `config/app.yaml`

@@ -5,7 +5,7 @@
 // css-tree's top-level `require('../data/patch.json')` (reached via jsdom →
 // @asamuzakjp/dom-selector → css-tree), so the compiled binary aborted on boot
 // with "Cannot find module '../data/patch.json'". The plugin below inlines the
-// JSON as a literal; see docs/known-issues.md.
+// JSON as a literal; see AGENTS.md ("Single Binary" build rules).
 //
 // Version injection (design D2): the release git tag is the version authority;
 // without a tag on HEAD the workspace package version is used.

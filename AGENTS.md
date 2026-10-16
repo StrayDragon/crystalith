@@ -14,7 +14,7 @@
 # Crystalith v2 — AI Agent Guidelines
 
 > Bun + TypeScript rewrite (Elysia + React). **v1 Python SSOT (`backend/py/`) has been removed as of c14** — all behavior is now parity-confirmed in TypeScript.
-> **Status**: c00–c66 DONE, c14 DONE；Deep Research runtime + Eden Lab 已落地（约 c80–c110）；c13 v1（web 模式 server 单二进制分发管线）已随 `v2.0.0-pre` 首发（linux-x64/arm64），darwin/win32 暂缓（见 `docs/known-issues.md`）。
+> **Status**: c00–c66 DONE, c14 DONE；Deep Research runtime + Eden Lab 已落地（约 c80–c110）；c13 v1（web 模式 server 单二进制分发管线）已随 `v2.0.0-pre` 首发（linux-x64/arm64），darwin/win32 暂缓（原因见下文「Single Binary」）。
 
 ## Project Structure
 
@@ -55,7 +55,7 @@ crystalith/
 - ✅ Frontend: all output renderers aligned with v1 interactive components
 - 🔬 **Research Lab**：产品 `research-lab/`（Eden）；演示 `research-lab-demo/`（`/demo/research-lab`，DEV / `VITE_LAB_DEMO`）；细则 `apps/web/AGENTS.md`
 - ✅ c14: `backend/py/` + `api/generated/` deleted；wire 类型走 Eden + `@crystalith/shared`（`shared-types.ts` 已移除）
-- 🚧 **c13** distribution — v1（web 模式 server 单二进制）已随 `v2.0.0-pre` 首发（linux-x64/arm64）：`just build-binary` / `just release`、静态 web 托管（`CL_WEB_DIST` 或二进制旁 `web/dist`）、tag 版本注入；Tauri 桌面端 delay，darwin/win32 暂缓（见 `docs/known-issues.md`；变更档案 `llmanspec/changes/archive/2026-09-09-ship-server-binary`）
+- 🚧 **c13** distribution — v1（web 模式 server 单二进制）已随 `v2.0.0-pre` 首发（linux-x64/arm64）：`just build-binary` / `just release`、静态 web 托管（`CL_WEB_DIST` 或二进制旁 `web/dist`）、tag 版本注入；Tauri 桌面端 delay，darwin/win32 暂缓（原因见「Single Binary」段；变更档案 `llmanspec/changes/archive/2026-09-09-ship-server-binary`）
 - 📦 作业法见 `.agents/skills/crystalith-ssot-qa-batches/`
 
 ## v2 Stack
@@ -95,6 +95,8 @@ Fast path:
 - `cd apps/web && bun dev` — Rsbuild (port 3000)
 - `just dev-connect server` — attach to Overmind process
 - `just dev-quit` — stop Overmind session
+- 后台常驻进程（agent / CI 会话里）用 `setsid nohup … < /dev/null &` 脱离进程组；
+  裸 `nohup … &` 会随命令超时被 SIGTERM（exit 143）
 
 ## Coding Style
 
@@ -189,6 +191,31 @@ v2 重写初期为避免「第二套编排 SSOT」与 ResearchRun/状态机打�
 
 `bun build --compile` → ~75MB. All deps bundled (sqlite-vec, unpdf, cheerio).
 
+**构建守则**：新依赖若在模块顶层 `createRequire` / `require` JSON 或原生文件，编译产物会挂——
+Bun 的编译产物不内嵌这类运行期解析（如 jsdom → css-tree 的 `lib/data-patch.js`），
+`import.meta.resolve` 定位的平台包（sqlite-vec 的 `.so`）在 `$bunfs` 内也不可见。
+构建 MUST 走 `apps/server/scripts/build-binary.ts`（Bun.build API：插件把 css-tree 字面量 JSON
+内联；注入 `CL_BUILD_VERSION`），sqlite-vec 回退加载二进制旁 `native/vec0.*`（`CL_SQLITE_VEC_PATH`
+可覆盖），Drizzle 迁移目录按「源码树 → 二进制旁 → CWD」解析。接入这类依赖后 MUST 跑
+`just build-binary` + 启动冒烟（`/health` + 建一次笔记本）验证。
+
+**分发边界**：Release 矩阵仅 Linux x64/arm64（`just release` 逐平台冒烟，产物质量门禁；不发布
+RAG 残缺产物）。darwin 暂缓——Bun 在 macOS 链接 Apple 系统 SQLite，`loadExtension` 报
+"does not support dynamic extension loading"（上游 [oven-sh/bun#5756](https://github.com/oven-sh/bun/issues/5756)），
+编译产物上向量检索完全不可用；出路 `Database.setCustomSQLite()` 要求终端用户预装 sqlite 且路径
+脆弱，破坏「自包含」交付，故不采纳。win32 与 Linux 同为静态链接自带 SQLite，待 Windows 冒烟
+解锁。恢复条件 = 落纯 TS 向量检索降级路径（vec0 不可用时暴力扫描）。`native/vec0.*` 随包 +
+`CL_SQLITE_VEC_PATH` 回退机制 MUST 保留（Linux 必需；darwin codesign 步骤同样保留）。
+
+### TS 经典编译器 API 禁入（TypeScript 7 / tsgo）
+
+TypeScript 7 是 Go 原生编译器，npm 包**不再附带经典 JS 编译器 API**（`ts.createProgram` 等）：
+任何构建期 `import 'typescript'` 并调用这些 API 的 codegen 工具都会损坏。新增「读 `.ts` 源码做
+生成 / 转换」的工具前 MUST 先确认其不依赖这些 API；TS 大版本升级后 MUST 冒烟所有 codegen
+脚本（`just gen-all`、`bunx drizzle-kit`）。唯一已知例外是 `@slidev/cli`（真依赖
+`typescript@^6`，bun 落嵌套副本，与根 TS 7 隔离——twoslash 检查按 TS 6 语义，可用性不受影响，
+待上游 peer 升 ^7 自然收敛）。
+
 ### RAG Strategies
 
 Pluggable registry: Embed, BM25, Hybrid, Page Index. GraphRAG / HyDE / Self-RAG deferred.
@@ -196,6 +223,9 @@ Pluggable registry: Embed, BM25, Hybrid, Page Index. GraphRAG / HyDE / Self-RAG 
 ### Provider Registry
 
 Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `openai-compatible`.
+
+`@ai-sdk/*` 六件套按 range 锁步、单份 hoist 已验证；若再遇 dual-provider hoist，参考 c127 design
+「cast wall 收敛」预案（该 change 正文已冻结：`llman-sdd archive thaw --change 2026-10-11-c127-deps-refresh-major-minor`）。
 
 ### Other
 
@@ -273,4 +303,4 @@ agent 日常跑 `just qa` 即可，token 开销极低。
 - SDD workflow: `/llman-sdd-*` skills; conventions in `llmanspec/config.yaml`
 - Design decisions: `llmanspec/changes/`（已完成的在 `archive/`，行为合约以 `llmanspec/specs/` 为准）
 - Package-level rules: `apps/server/AGENTS.md`, `apps/web/AGENTS.md`, `config/AGENTS.md`
-- **文档一致性纪律**：文档里的状态声明与路径引用必须随代码变更同步——归档的 llman change 引用改指 `archive/` 或对应 `specs/`；迁移走完的旧工具名（如 vitest→rstest、Vite→Rsbuild）不留残句；台账条目（`docs/known-issues.md`）须带可验证的恢复/删除条件，解决后及时删除条目
+- **文档一致性纪律**：文档里的状态声明与路径引用必须随代码变更同步——归档的 llman change 引用改指 `archive/` 或对应 `specs/`；迁移走完的旧工具名（如 vitest→rstest、Vite→Rsbuild）不留残句；**已知问题不留中央台账**：一次性存量债入 change / specs，未解上游缺口与本地怪癖就近写入归属包 AGENTS 守则段（或代码旁注释）并带可验证的恢复条件，解除后及时删句

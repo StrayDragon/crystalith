@@ -28,8 +28,8 @@ jobs:
       fail-fast: false
       matrix:
         # Native runners so each artifact gets a real smoke test (design D3).
-        # darwin/win32 are SUSPENDED until RAG works there — see
-        # docs/known-issues.md ("Bun compiled binaries: sqlite-vec"):
+        # darwin/win32 are SUSPENDED until RAG works there — see AGENTS.md
+        # ("Single Binary"):
         #   - darwin: Bun links Apple's system SQLite, compiled without
         #     extension loading (oven-sh/bun#5756) -> vec0.dylib cannot load.
         #   - win32: compiled binary never becomes healthy in the smoke
@@ -130,7 +130,7 @@ jobs:
           cat > release-notes.md <<'EOF'
           自托管单二进制发布。压缩包 = `crystalith-server` + `web/dist` + `drizzle` + `native` + `config`，解压后 `CL_CHAT_MODEL=… ./crystalith-server` 即可运行（详见 README「部署」）。
 
-          _当前发布目标为 Linux（x64 / arm64）；macOS / Windows 因上游 Bun 限制暂缓，见 `docs/known-issues.md`。_
+          _当前发布目标为 Linux（x64 / arm64）；macOS / Windows 因上游 Bun 限制暂缓，见 `AGENTS.md` 架构决策「Single Binary」。_
           EOF
           gh release create "${GITHUB_REF_NAME}" dist/* \
             --repo "${GITHUB_REPOSITORY}" \

@@ -119,7 +119,7 @@ CL_CHAT_MODEL=… CL_CHAT_API_BASE=… ./crystalith-server   # :8032，API + Web
 - 目录里没有 `web/dist/` 时即**纯 API 模式**（headless）：适合裸 CLI / TUI / 第三方 client 直接对接 HTTP API，类型从 `/openapi.json` 衍生。
 - 版本号来自发布 tag，注入 `/health` 与 OpenAPI 文档。
 - **Slidev 幻灯片**：server 自动探测预览进程（`slides_preview.base_url`，默认 `http://127.0.0.1:3030`，env `CL_SLIDEV_BASE_URL` 覆盖）；不可达时 Studio 生成入口自动移除 SLIDES 选项，原因与恢复提示见「诊断」面板。需要幻灯片能力时，把 base_url 指向任一可达的 Slidev 实例即可。
-- 当前发布目标：**Linux x64 / arm64**（由 tag 驱动的 Release 工作流原生构建并逐平台冒烟，推送 `v*.*.*` tag 即自动发版）。macOS / Windows 产物暂缓：Bun 编译产物在 macOS 链接的 Apple SQLite 禁用扩展加载，向量检索不可用（见 `docs/known-issues.md`）；Windows 待排查。
+- 当前发布目标：**Linux x64 / arm64**（由 tag 驱动的 Release 工作流原生构建并逐平台冒烟，推送 `v*.*.*` tag 即自动发版）。macOS / Windows 产物暂缓：Bun 编译产物在 macOS 链接的 Apple SQLite 禁用扩展加载，向量检索不可用（见 [AGENTS.md](AGENTS.md) 架构决策「Single Binary」）；Windows 待排查。
 
 **从源码运行**：`bun run build`（前端）+ `just build-binary`（编译二进制），运行方式同上。
 
@@ -140,7 +140,6 @@ just qa          # typecheck + lint + format + schema 漂移 + 全部测试 —�
 - [docs/plugins.md](docs/plugins.md) — 插件作者指引（`extractor` 类型，样例 `@crystalith-plugin/extractor-arxiv`）
 - [docs/embedding.md](docs/embedding.md) — 嵌入模型接入：能力声明、任务前缀、网关矩阵（OMLX / Ollama / llama.cpp / TEI）、精度警告与维度不匹配处理
 - [docs/ROADMAP.md](docs/ROADMAP.md) — 路线图（分发 / 插件 / 产品深化 / 工程债）
-- [docs/known-issues.md](docs/known-issues.md) — 已知问题与工具链兼容性台账
 - `/openapi` — 运行时 API 文档（Scalar，随 server 启动）
 
 ## 许可证

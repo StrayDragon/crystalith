@@ -19,7 +19,7 @@
 
 > **进展**：c13 v1 已随 `v2.0.0-pre` 首发——linux-x64/arm64 原生构建 + 冒烟 +
 > GitHub Release 自动化；darwin 暂缓（Apple SQLite 扩展限制），win32 与 Linux
-> 同链路、待 Windows 冒烟解锁（见 [known-issues.md](known-issues.md)）。
+> 同链路、待 Windows 冒烟解锁（见 [AGENTS.md](../AGENTS.md) 架构决策「Single Binary」）。
 
 ### 已定方向
 
@@ -103,7 +103,7 @@
 
 ### D4 上游跟踪 🔄（例行）
 
-- Elysia / Bun / TS 大版本升级纪律与已知怪癖台账见 [known-issues.md](known-issues.md)
+- Elysia / Bun / TS 大版本升级纪律与已知怪癖见 [AGENTS.md](../AGENTS.md) 架构决策段与各包 AGENTS 守则段（不留中央台账）
 
 ### D5 依赖升级纪律 🔄（例行）
 

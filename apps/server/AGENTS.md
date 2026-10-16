@@ -52,6 +52,11 @@ From repo root:
 - Config: `config/app.yaml`；API keys 走 `CL_*` env 或 gitignored `.env`（see `config/AGENTS.md`；legacy `config/secret.env` 机制已移除，加载即抛错）
 - **Outbound HTTP (non-LLM)**: use `shared/net/outbound-fetch.ts` (`outboundFetch`) — or helpers that wrap it (`fetchWithRedirectGuard`). Do **not** bare-`fetch` search / URL fetch / web extractors. AI SDK providers stay direct unless a future per-provider proxy lands. Global switch: `proxy_settings` in `config/app.yaml`.
 - Research prune closure（`collectResearchPruneClosure` / product B）须与 Web Lab `research-lab/model/pruneClosure.collectPruneClosure` 同步；规格见 `llmanspec/specs/deep-research-runtime`（r69 剪枝语义）
+- **探针脚本基址**：用 `app.handle(new Request(…))` 写临时探针时基址 MUST 用
+  `http://test.local`（或任何 host ≥4 字符的域名，与集成测试基址一致）。Elysia 1.4.x 的
+  `replaceUrlPath` / 路径提取写死 `url.indexOf("/", 11)`（偏移 11 假设 `http://` + host ≥4），
+  host ≤3 字符（`x`/`ab`/`abc`）时 path 退化成完整 URL，**所有路由**稳定 404。仅影响怪异 host 的
+  探针；真实流量不受影响。上游改按 scheme 计算后删本条
 
 ## Progress
 
