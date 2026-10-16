@@ -19,7 +19,7 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
 
 interface UseFocusTrapOptions {
   active: boolean;
-  containerRef: RefObject<HTMLElement>;
+  containerRef: RefObject<HTMLElement | null>;
   onEscape?: () => void;
 }
 

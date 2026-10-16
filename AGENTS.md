@@ -199,7 +199,7 @@ Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `ope
 
 ### Other
 
-- React 18.2.0 locked
+- React 19.3（c137 解锁；原 18.2.0 resolutions pin 已撤，生态位 MUI 9 / emotion 11.14 / radix / xyflow 全就绪）
 - Rivu dropped (message-embedded JSON components instead of server state machine)
 - Built-in Eval Benchmark Harness removed in c73 (no UI/CI/CLI consumer)
 

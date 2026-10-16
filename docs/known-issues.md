@@ -84,6 +84,18 @@
   与后缀 important 语法）后，撤掉全部 18 处抑制注释并删除本条目；升级 fallow 后
   先跑 `bun run fallow audit` 观察 broken-reference 是否归零。
 
+## E2E 存量债（非门禁项）
+
+### S12 删除来源确认气泡不出现（`@p1`，非 qa 门禁，c137 前已存在）
+
+- **现象**：`e2e:all` 中 S12（`p1-sources.spec.ts` 删除 seeded source）失败——点击行菜单
+  「删除来源」后 `confirm-popover-confirm` 永不出现。
+- **归因（c137 二分实证）**：与依赖升级无关——升级前 main（d24416a7 树）同签名失败。
+  结构性原因：`ConfirmPopover` 挂在 Radix `DropdownMenuContent` 内部，删除项 select 后
+  菜单关闭连带卸载 ConfirmPopover，其 `open` 状态随卸载丢失，portal 永不渲染。
+- **修复方向**（独立 change/quick）：`SourceListRow` 删除项改 `dismiss={{ itemPress: false }}`
+  或把 ConfirmPopover 提出菜单树；修复合入后删除本条目并恢复 S12 进 `e2e:all` 绿基线。
+
 ## 工具链兼容性（TypeScript 7 / tsgo）
 
 背景：TypeScript 7 是 Go 原生编译器，npm 包**不再附带经典 JS 编译器 API**
@@ -106,5 +118,4 @@ JS API；TS 大版本升级后优先冒烟所有 codegen 类 script（`just gen-
 
 | 项                              | 状态                                                                                                                                                                                                                                                                                                                                                                  | 恢复/删除条件                                                                   |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| tailwindcss 3→4                 | **✅ 已完成（c136，2026-10）**：CSS-first `@theme` 一步到位（零 `@config` 兼容层）、`@source` 显式化、工具类重命名与 important 后缀化、暗色覆盖块 `.dark !important` 系实测等价；streamdown dist 类走 `@source inline` 白名单（oxide 拒绝相对路径进 node_modules，见 c136 design）；tailwind-scrollbar 为死依赖直接删除（v4.3 内置 scrollbar 工具，需要时零成本启用） | 无待办；本行随下次 known-issues 清理删除                                        |
 | `@ai-sdk/*` 精确 pin→range 收尾 | 六件套已升 4.0.78 系并改 range 锁步；`provider` 单一 hoist 已验证                                                                                                                                                                                                                                                                                                     | 无需动作；仅当再遇 dual-provider hoist 时参考 c127 design「cast wall 收敛」预案 |

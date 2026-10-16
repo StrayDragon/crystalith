@@ -28,7 +28,7 @@ interface SourceDetailQAPanelProps {
   isSavingAsSource: boolean;
   exportMenuOpen: string | null;
   onExportMenuOpenChange: (messageId: string | null) => void;
-  messagesEndRef: RefObject<HTMLDivElement>;
+  messagesEndRef: RefObject<HTMLDivElement | null>;
   onSend: () => void;
   onCopyToClipboard: () => void;
   onDownloadAsFile: () => void;

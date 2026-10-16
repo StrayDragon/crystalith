@@ -75,7 +75,7 @@ function FastSearchBody({
   searchQuery: string;
   onSearchQueryChange: (v: string) => void;
   onSubmit: () => void;
-  searchInputRef: RefObject<HTMLInputElement>;
+  searchInputRef: RefObject<HTMLInputElement | null>;
   isSearching: boolean;
   searchQueue: SearchQueueItem[];
   onAddToSources: (
@@ -300,7 +300,7 @@ function KbSearchBody({
 }: {
   activeNotebookId: number | null;
   activeNotebookTitle?: string | null;
-  searchInputRef: RefObject<HTMLInputElement>;
+  searchInputRef: RefObject<HTMLInputElement | null>;
   onJump: (item: SearchItem) => void;
 }) {
   const kb = useKnowledgeSearch(activeNotebookId);

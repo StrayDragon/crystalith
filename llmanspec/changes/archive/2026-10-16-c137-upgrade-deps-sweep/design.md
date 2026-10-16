@@ -5,7 +5,8 @@
 用户明确要求单一 change 吃下全部推荐升级、失败二分定位降级。落地方式：
 
 - task 按「一个可独立回退的升级簇」切分（in-range sweep / 每个小 major 各一 task / React 19 拆安装面+编译适配+回归三 task）。
-- 每 task 完成即跑 `just qa`，绿才勾；红则**在该 task 的包集合内**二分（先回退最可疑单包至前一版本，收窄到确因子的包），降级项连同原因与证据记入台账（proposal 报告的一部分）。
+- 验证节奏（实施修正：T1 时按成本校准，避免每 task 重复 10 分钟 e2e）：每 task 完成跑 **task 文本指定的验证命令 + `just check`**（typecheck/lint/format）；**stage 边界**（T2/T8/T10 后）与 T11 跑全量 `just qa`。task 级 targeted gate + stage 级全量 qa 仍构成完整二分边界：stage 内出问题先重放该 stage 各 task 的指定验证收窄，再包级二分。
+- 红则**在该 task 的包集合内**二分（先回退最可疑单包至前一版本，收窄到确因子的包），降级项连同原因与证据记入台账（proposal 报告的一部分）。
 - Stage 1 → Stage 2 → Stage 3 顺序推进：低风险先行，React 19 最后，避免高风险项污染前置 stage 的归因。
 - 该 stage/task 结构即未来周期性 deps sweep 的模板。
 

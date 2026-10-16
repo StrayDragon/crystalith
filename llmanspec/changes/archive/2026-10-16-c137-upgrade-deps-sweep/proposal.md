@@ -2,6 +2,9 @@
 depends_on: []
 needs_specs_change: false
 title: 周期性依赖升级 sweep——单 change 一轮完成全部推荐升级（in-range 清扫 + 六个小 major + React 19 解锁）
+branch: sdd/c137-upgrade-deps-sweep
+base_branch: main
+base_sha: a4d0b4dd90d0ad1a5c6c75aa256629987d56b76c
 ---
 
 ## Why
@@ -37,3 +40,30 @@ title: 周期性依赖升级 sweep——单 change 一轮完成全部推荐升�
 - **风险面（降序）**：React 19 类型面（`@types/react` 19 的 useRef 初值必填、ReactNode 含 Promise、JSX namespace 迁移）与 e2e 视觉回归；rstest 0.12 的 JS API/reporter 破坏（自定义 `core_suite.mjs` 编排）；jest-dom 7 的 required peer。
 - **验证面**：每 stage `just qa` 全绿；React 19 stage 额外 `e2e:all`；BDD（`just test-bdd`）随 gherkin 42 task 单独跑绿。
 - **不动项**：elysia 1.4.30、drizzle 0.45.4/0.31.11、zod 4.6.7、MUI 9.5.0、msw 3.0.3、`@xyflow/react` 12.12.0、tailwindcss 4.3.3、TS 7.0.2、fallow 3.33.1、Bun 1.4.3——审计时已是最新。
+
+## 结果（2026-10-16 实施收口）
+
+**判定：全部 12 task 完成，零降级**（唯一 e2e:all 失败 S12 为存量债，二分实证与升级无关，见 known-issues 台账）。
+
+### 版本矩阵（关键项）
+
+| 项 | 前 → 后 | 验证 |
+|---|---|---|
+| React / react-dom / @types | 18.2.0 / 18.3.x → **19.3.1 / 19.3.x**（撤根 resolutions） | typecheck 清零（7 处 `RefObject<T\|null>` 声明适配）；web 442 测试；e2e @p0 ×33 + e2e:all ×34；三面视觉点检（工作台 / /research-lab/1 / /demo/research-lab/1：react-flow 画布、MiniMap、Eden 模型列表全在） |
+| @emotion/react + styled | 11.13.5 → 11.14.x | 同上（MUI 9.5 peer 全绿，安装零冲突） |
+| @asteasolutions/zod-to-openapi (shared) | 8.5 → **9.1**（与 server 统一） | openapi-generation 测试 + check-app-schema 零漂移；lock 单条 9.1.0 |
+| @streamdown/code + streamdown | 1.1.1+2.6 → **2.0.0**+2.7（Shiki v4） | AssistantMarkdown/streamdown-classes 双锁测试绿；消费点 API 面（`code` 导出）不变 |
+| @testing-library/jest-dom | 6.10 → **7.0.1** | web 442 绿（required peer @testing-library/dom 已在位） |
+| @rstest/core + adapter-rsbuild | 0.11.12 → **0.12.3** | test:ci 442 + test:core 46 双编排绿（纯 config-file 用法免改） |
+| @cucumber/gherkin | 41 → **42.0.1** | test-bdd 30 绿 |
+| @types/node (web+e2e) | 22 → **26.6.5** | typecheck 绿 |
+| in-range 全家（ai/@ai-sdk×6/radix×3/swr/zustand/rsbuild/postcss/oxlint/oxfmt/playwright…） | 见 bun.lock diff | Stage 1/2/3 边界 just qa 三连绿 |
+| 钉子对齐 | .bun-version 1.4.2→1.4.3；web packageManager bun@1.4.0→1.4.3；server @types/bun latest→^1.4.3 | bun outdated 全工作区 CLEAN |
+
+### 降级台账
+
+**空**——无任何包需要回退。（e2e:all S12 失败经二分定论为存量债：升级前 main 同签名失败，非依赖因子。）
+
+### 体积对比（apps/web/dist）
+
+raw 16.17 MB → 16.96 MB（**+4.9%**）；gzip 4.14 MB → 4.27 MB（**+3.1%**）。主要贡献 React 19 + Shiki v4 运行时。可接受，未做进一步分包优化（如需可后续独立 change）。

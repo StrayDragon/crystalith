@@ -36,14 +36,10 @@
   "devDependencies": {
     "@crystalith-plugin/extractor-arxiv": "workspace:*",
     "fallow": "3.33.1",
-    "oxfmt": "^0.72.0",
-    "oxlint": "^1.87.0",
+    "oxfmt": "^0.73.0",
+    "oxlint": "^1.88.0",
     "oxlint-tsgolint": "^7.0.2004",
     "typescript": "^7.0.2"
-  },
-  "resolutions": {
-    "react": "18.2.0",
-    "react-dom": "18.2.0"
   },
   "engines": {
     "bun": ">=1.4.0"
