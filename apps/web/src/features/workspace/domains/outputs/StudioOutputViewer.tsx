@@ -309,7 +309,10 @@ export default function StudioOutputViewer({
                                 }}
                                 placement="left"
                               >
-                                <MenuItem className="flex items-center gap-2 text-red-500 hover:bg-red-50 hover:text-red-700 py-2 dark:hover:bg-red-500/20 dark:hover:text-red-300">
+                                <MenuItem
+                                  keepMenuOpen
+                                  className="flex items-center gap-2 text-red-500 hover:bg-red-50 hover:text-red-700 py-2 dark:hover:bg-red-500/20 dark:hover:text-red-300"
+                                >
                                   <DeleteIcon style={{ fontSize: 16 }} />
                                   <span className="text-xs font-medium">删除</span>
                                 </MenuItem>

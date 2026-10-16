@@ -57,3 +57,11 @@
   规则: Tokens stay on the existing design system
     共享 UI 层的颜色与排版 MUST 对齐既有设计系统 token 与语义色；本能力的组件替换 MUST NOT 借机重做产品视觉。
     图标集 MAY 继续使用现有图标包；MUST NOT 把图标替换绑进本能力。
+  @req:r492
+  规则: Overlays triggered inside transient containers stay interactive
+    由瞬态容器（如菜单）内的控件触发的交互弹层（确认气泡 / popover）MUST 在触发容器关闭后仍能渲染，并可完成确认或取消；其交互状态 MUST NOT 因宿主容器卸载而丢失。
+
+    场景: confirm-overlay-survives-menu-close
+      假如 破坏性操作项位于菜单（瞬态容器）内且其确认弹层由该菜单项触发
+      当 触发该菜单项
+      那么 确认弹层仍渲染，且可完成确认或取消

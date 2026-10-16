@@ -106,13 +106,20 @@ export const MenuList = forwardRef<HTMLDivElement, MenuListProps>(function MenuL
 export interface MenuItemProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onSelect'> {
   children?: ReactNode;
   disabled?: boolean;
+  /**
+   * Keep the menu open after this item is selected (only this item). Needed when
+   * the item hosts an interactive overlay (e.g. `ConfirmPopover`): closing the
+   * menu unmounts the item's subtree and drops the overlay's open state.
+   */
+  keepMenuOpen?: boolean;
 }
 
 export const MenuItem = forwardRef<HTMLDivElement, MenuItemProps>(function MenuItem(
-  { children, className, disabled, onClick, ...rest },
+  { children, className, disabled, onClick, keepMenuOpen, ...rest },
   ref,
 ) {
   const { closeOnItemPress } = useContext(MenuPlacementContext);
+  const preventMenuClose = !closeOnItemPress || keepMenuOpen;
   return (
     <DropdownMenuItem
       ref={ref}
@@ -130,7 +137,7 @@ export const MenuItem = forwardRef<HTMLDivElement, MenuItemProps>(function MenuI
         }
         // eslint-disable-next-line typescript/no-unsafe-type-assertion -- portal 内 DOM 事件 vs React 合成事件边界
         onClick?.(event as unknown as MouseEvent<HTMLDivElement>);
-        if (!closeOnItemPress) {
+        if (preventMenuClose) {
           event.preventDefault();
         }
       }}

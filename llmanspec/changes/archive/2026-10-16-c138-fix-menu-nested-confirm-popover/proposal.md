@@ -2,6 +2,9 @@
 depends_on: []
 title: 修复菜单内嵌确认弹层不渲染（共享 MenuItem 保持菜单开启）
 needs_specs_change: true
+branch: sdd/c138-fix-menu-nested-confirm-popover
+base_branch: main
+base_sha: cc748a01fb51e367811bfccd20fbe67243a2e107
 ---
 
 ## Why
@@ -24,12 +27,15 @@ portal 永不渲染 —— 点击「删除」变成死路。当前共有 4 处�
 - 共享 `MenuItem` 新增可选 prop，使**单个**菜单项在被选中后保持菜单开启（其余项行为不变），
   供内嵌确认弹层的破坏性项使用。
 - 4 处 menu-nested 删除项应用该 prop，恢复确认气泡渲染与确认/取消流程。
+- `ConfirmPopover` 的 portal 容器显式 `pointerEvents: 'auto'`：`Menu` 是 Radix **modal**，
+  打开时对 `body` 施加 `pointer-events: none`，会让挂在其下的确认气泡在真实浏览器点不动
+  （jsdom 测不出）。该调整同时修正其它「弹层嵌在 modal 宿主内」的同源隐患。
 - 新增 web-ui-foundation 条款 + 场景，锁定「瞬态容器内触发的交互弹层不得因容器关闭而失效」。
 - 测试：共享 UI 组件级 Rstest（最小复现）+ `SourceListRow` / `StudioOutputsList`
   站点级 Rstest；现有 e2e S12 恢复绿。
 
-**非目标**：不改 `ConfirmPopover` 的定位/Layer 策略；不把 4 处菜单改成受控 Menu；
-不引入新的 dialog 运行时。
+**非目标**：不改 `ConfirmPopover` 的定位/Layer 层级策略（仅补 portal 可点击性）；不把 4 处
+菜单改成受控 Menu；不引入新的 dialog 运行时。
 
 ## Capabilities
 

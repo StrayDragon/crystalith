@@ -221,6 +221,7 @@ export default function SourcesPanelToolbar({
               >
                 <MenuItem
                   disabled={removeDisabled}
+                  keepMenuOpen
                   className="flex items-center gap-2 py-1.5 px-3 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                   {...tid(TestIds.sourcesBatchDelete)}
                 >

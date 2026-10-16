@@ -197,6 +197,7 @@ function SourceListRow({
             >
               <MenuItem
                 disabled={!isConnected || removeState === 'loading'}
+                keepMenuOpen
                 className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
                 {...tid(TestIds.sourceRowDelete)}
               >

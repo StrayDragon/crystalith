@@ -506,7 +506,10 @@ export default function StudioOutputsList({
                         }}
                         placement="left"
                       >
-                        <MenuItem className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700">
+                        <MenuItem
+                          keepMenuOpen
+                          className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
+                        >
                           <DeleteIcon className="h-3.5 w-3.5" />
                           <span>删除</span>
                         </MenuItem>

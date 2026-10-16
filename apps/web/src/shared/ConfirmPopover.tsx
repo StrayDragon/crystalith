@@ -292,7 +292,10 @@ const ConfirmPopover = forwardRef<HTMLElement, ConfirmPopoverProps>(function Con
         ? createPortal(
             <div
               className="fixed inset-0"
-              style={style}
+              // Modal parents (Radix menu/dialog) set `pointer-events: none` on
+              // body while open; opt this portal back in so the confirm is
+              // clickable above the still-mounted trigger container.
+              style={{ ...style, pointerEvents: 'auto' }}
               data-confirm-popover=""
               // Keep parent dropdown click-outside handlers from treating this
               // portal as an outside click (Confirm lives on document.body).

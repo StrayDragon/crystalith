@@ -1,0 +1,38 @@
+# Tasks
+
+每个 task 是一条可独立验证的窄切片；`[blocked-by]` 标明实现依赖。
+
+## T1 — 共享 MenuItem keep-open 机制 + 共享 UI 回归
+
+- [x] `shared/ui/Menu.tsx`：`MenuItem` 新增可选 prop（`keepMenuOpen?: boolean`，默认
+      false），置位时其 `onSelect` 走 `event.preventDefault()` 保留菜单；默认行为不变。
+- [x] 新增共享 UI Rstest：`Menu + MenuList + ConfirmPopover + MenuItem` 最小复现，
+      断言点击菜单项后 `confirm-popover-confirm` 出现；并断言未置位 prop 时菜单正常关闭。
+- [x] 验证：`cd apps/web && bun run test:ci`
+- [x] 验证：`bun typecheck`
+
+## T2 — SourceListRow 删除项应用 + 站点 Rstest [blocked-by: T1]
+
+- [x] `SourceListRow` 删除项 `MenuItem` 置 `keepMenuOpen`，其余项（放大查看 / 复制修复建议 /
+      重新嵌入）行为不变。
+- [x] 新增/扩展 `SourceListRow.test.tsx`：打开行菜单 → 点删除 → 断言确认气泡出现并可确认。
+- [x] 验证：`cd apps/web && bun run test:ci`
+
+## T3 — StudioOutputsList 删除项应用 + 站点 Rstest [blocked-by: T1]
+
+- [x] `StudioOutputsList` 卡片删除项 `MenuItem` 置 `keepMenuOpen`。
+- [x] 新增 `StudioOutputsList` 组件级 Rstest：菜单删除项触发确认气泡渲染。
+- [x] 验证：`cd apps/web && bun run test:ci`
+
+## T4 — SourcesPanelToolbar 批量删除 + StudioOutputViewer 应用 [blocked-by: T1]
+
+- [x] `SourcesPanelToolbar` 批量删除项 `MenuItem` 置 `keepMenuOpen`。
+- [x] `StudioOutputViewer` 卡片删除项 `MenuItem` 置 `keepMenuOpen`。
+- [x] 验证：`cd apps/web && bun run test:ci`
+
+## T5 — 收尾验证
+
+- [x] 现有 e2e S12（`@p1`）恢复绿：`just e2e-p1`
+- [x] `just qa`（typecheck + lint + format + drift + server/shared + web Rstest + e2e @p0）全绿
+- [x] 确认 4 处 menu-nested 删除均无残留 `dismiss`/受控改动；`ConfirmPopover` 仅补 portal
+      可点击性（`pointerEvents`），定位/Layer 层级策略未动

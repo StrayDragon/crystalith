@@ -1,9 +1,11 @@
 import { beforeEach, expect, test, rs } from '@rstest/core';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { forwardRef } from 'react';
 
+import { TestIds } from '../../../../shared/testids';
+import { TestProviders } from '../../../../test-utils/providers';
 import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';
-import type { OutputTypeId } from '../../shared/types';
+import type { OutputItem, OutputTypeId } from '../../shared/types';
 import StudioOutputsList from './StudioOutputsList';
 
 // Mock reason: react-virtuoso depends on layout/observer behaviors that are unstable in jsdom.
@@ -47,6 +49,19 @@ function buildJob(overrides: Partial<OutputQueueJob> = {}): OutputQueueJob {
 }
 
 const typeLabelMap = new Map<OutputTypeId, string>([['FAQ', 'FAQ']]);
+
+function createOutput(): OutputItem {
+  return {
+    id: 1,
+    type: 'FAQ',
+    prompt: 'faq prompt',
+    chunkIds: [1],
+    content: null,
+    contentLoaded: false,
+    createdAt: '2026-01-01 10:00',
+    updatedAt: '2026-01-01 10:00',
+  };
+}
 
 function baseProps(overrides: Record<string, unknown> = {}) {
   return {
@@ -113,4 +128,27 @@ test('studio queue exposes retry entry for failed jobs and shows cancelled state
 
   // 已取消项不再提供取消入口
   expect(screen.queryByRole('button', { name: '取消' })).not.toBeInTheDocument();
+});
+
+// covers: r492 — 输出卡片菜单内的删除确认气泡须渲染（菜单保持开启，ConfirmPopover 不随菜单卸载）
+test('output card menu delete opens confirm popover and confirms removal', async () => {
+  const onDeleteOutput = rs.fn();
+  render(
+    <TestProviders>
+      <StudioOutputsList
+        {...baseProps({
+          outputs: [createOutput()],
+          onDeleteOutput,
+        })}
+      />
+    </TestProviders>,
+  );
+
+  fireEvent.click(screen.getByTestId('MoreHorizIcon').closest('button')!);
+  fireEvent.click(await screen.findByText('删除'));
+  fireEvent.click(await screen.findByTestId(TestIds.confirmPopoverConfirm));
+
+  await waitFor(() => {
+    expect(onDeleteOutput).toHaveBeenCalledWith(1);
+  });
 });

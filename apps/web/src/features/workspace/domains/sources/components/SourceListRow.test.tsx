@@ -1,6 +1,7 @@
 import { expect, test, rs } from '@rstest/core';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
+import { TestIds } from '../../../../../shared/testids';
 import { TestProviders } from '../../../../../test-utils/providers';
 import type { SourceItem } from '../../../shared/types';
 import SourceListRow from './SourceListRow';
@@ -69,4 +70,22 @@ test('failed source renders red error status with recovery info and remove actio
   expect(screen.getByText(/解析失败|请重试上传/)).toBeInTheDocument();
   // 失败来源不可勾选（仅 READY 可选）
   expect((screen.getByRole('checkbox') as HTMLInputElement).disabled).toBe(true);
+});
+
+// covers: r492 — 行菜单内的删除确认气泡须渲染（菜单保持开启，ConfirmPopover 不随菜单卸载）
+test('row menu delete opens confirm popover and confirms removal', async () => {
+  const onRemoveSource = rs.fn().mockResolvedValue(true);
+  render(
+    <TestProviders>
+      <SourceListRow {...baseProps} source={buildSource({})} onRemoveSource={onRemoveSource} />
+    </TestProviders>,
+  );
+
+  fireEvent.click(screen.getByTestId(TestIds.sourceRowMenu));
+  fireEvent.click(await screen.findByTestId(TestIds.sourceRowDelete));
+  fireEvent.click(await screen.findByTestId(TestIds.confirmPopoverConfirm));
+
+  await waitFor(() => {
+    expect(onRemoveSource).toHaveBeenCalledWith(1);
+  });
 });
