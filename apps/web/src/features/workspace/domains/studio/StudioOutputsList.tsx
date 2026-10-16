@@ -439,10 +439,12 @@ export default function StudioOutputsList({
                       <IconButton
                         variant="text"
                         size="sm"
+                        aria-label={`输出操作 ${note.title}`}
                         className="opacity-0 group-hover:opacity-100 w-7 h-7 min-w-[28px] rounded-full hover:bg-gray-200 text-gray-500 dark:text-slate-400 transition-opacity"
                         onClick={(e: React.MouseEvent) => {
                           e.stopPropagation();
                         }}
+                        {...tid(TestIds.studioOutputMenu)}
                       >
                         <MoreHorizIcon fontSize="small" />
                       </IconButton>

@@ -144,7 +144,7 @@ test('output card menu delete opens confirm popover and confirms removal', async
     </TestProviders>,
   );
 
-  fireEvent.click(screen.getByTestId('MoreHorizIcon').closest('button')!);
+  fireEvent.click(screen.getByTestId(TestIds.studioOutputMenu));
   fireEvent.click(await screen.findByText('删除'));
   fireEvent.click(await screen.findByTestId(TestIds.confirmPopoverConfirm));
 

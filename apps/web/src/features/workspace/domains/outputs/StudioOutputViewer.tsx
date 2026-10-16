@@ -288,6 +288,7 @@ export default function StudioOutputViewer({
                               <IconButton
                                 variant="text"
                                 size="sm"
+                                aria-label={`输出操作 ${getOutputTitle(output)}`}
                                 className={`rounded-full w-7 h-7 text-gray-500 opacity-0 transition-opacity dark:text-slate-300 dark:hover:bg-slate-700 ${
                                   isActive || activeMenuId === output.id
                                     ? 'opacity-100'
@@ -297,6 +298,7 @@ export default function StudioOutputViewer({
                                   e.stopPropagation();
                                   setActiveMenuId(output.id);
                                 }}
+                                {...tid(TestIds.outputViewerItemMenu)}
                               >
                                 <MoreVertIcon style={{ fontSize: 16 }} />
                               </IconButton>
