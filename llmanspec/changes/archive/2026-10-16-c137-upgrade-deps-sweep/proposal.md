@@ -47,18 +47,18 @@ base_sha: a4d0b4dd90d0ad1a5c6c75aa256629987d56b76c
 
 ### 版本矩阵（关键项）
 
-| 项 | 前 → 后 | 验证 |
-|---|---|---|
-| React / react-dom / @types | 18.2.0 / 18.3.x → **19.3.1 / 19.3.x**（撤根 resolutions） | typecheck 清零（7 处 `RefObject<T\|null>` 声明适配）；web 442 测试；e2e @p0 ×33 + e2e:all ×34；三面视觉点检（工作台 / /research-lab/1 / /demo/research-lab/1：react-flow 画布、MiniMap、Eden 模型列表全在） |
-| @emotion/react + styled | 11.13.5 → 11.14.x | 同上（MUI 9.5 peer 全绿，安装零冲突） |
-| @asteasolutions/zod-to-openapi (shared) | 8.5 → **9.1**（与 server 统一） | openapi-generation 测试 + check-app-schema 零漂移；lock 单条 9.1.0 |
-| @streamdown/code + streamdown | 1.1.1+2.6 → **2.0.0**+2.7（Shiki v4） | AssistantMarkdown/streamdown-classes 双锁测试绿；消费点 API 面（`code` 导出）不变 |
-| @testing-library/jest-dom | 6.10 → **7.0.1** | web 442 绿（required peer @testing-library/dom 已在位） |
-| @rstest/core + adapter-rsbuild | 0.11.12 → **0.12.3** | test:ci 442 + test:core 46 双编排绿（纯 config-file 用法免改） |
-| @cucumber/gherkin | 41 → **42.0.1** | test-bdd 30 绿 |
-| @types/node (web+e2e) | 22 → **26.6.5** | typecheck 绿 |
-| in-range 全家（ai/@ai-sdk×6/radix×3/swr/zustand/rsbuild/postcss/oxlint/oxfmt/playwright…） | 见 bun.lock diff | Stage 1/2/3 边界 just qa 三连绿 |
-| 钉子对齐 | .bun-version 1.4.2→1.4.3；web packageManager bun@1.4.0→1.4.3；server @types/bun latest→^1.4.3 | bun outdated 全工作区 CLEAN |
+| 项                                                                                         | 前 → 后                                                                                       | 验证                                                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| React / react-dom / @types                                                                 | 18.2.0 / 18.3.x → **19.3.1 / 19.3.x**（撤根 resolutions）                                     | typecheck 清零（7 处 `RefObject<T\|null>` 声明适配）；web 442 测试；e2e @p0 ×33 + e2e:all ×34；三面视觉点检（工作台 / /research-lab/1 / /demo/research-lab/1：react-flow 画布、MiniMap、Eden 模型列表全在） |
+| @emotion/react + styled                                                                    | 11.13.5 → 11.14.x                                                                             | 同上（MUI 9.5 peer 全绿，安装零冲突）                                                                                                                                                                       |
+| @asteasolutions/zod-to-openapi (shared)                                                    | 8.5 → **9.1**（与 server 统一）                                                               | openapi-generation 测试 + check-app-schema 零漂移；lock 单条 9.1.0                                                                                                                                          |
+| @streamdown/code + streamdown                                                              | 1.1.1+2.6 → **2.0.0**+2.7（Shiki v4）                                                         | AssistantMarkdown/streamdown-classes 双锁测试绿；消费点 API 面（`code` 导出）不变                                                                                                                           |
+| @testing-library/jest-dom                                                                  | 6.10 → **7.0.1**                                                                              | web 442 绿（required peer @testing-library/dom 已在位）                                                                                                                                                     |
+| @rstest/core + adapter-rsbuild                                                             | 0.11.12 → **0.12.3**                                                                          | test:ci 442 + test:core 46 双编排绿（纯 config-file 用法免改）                                                                                                                                              |
+| @cucumber/gherkin                                                                          | 41 → **42.0.1**                                                                               | test-bdd 30 绿                                                                                                                                                                                              |
+| @types/node (web+e2e)                                                                      | 22 → **26.6.5**                                                                               | typecheck 绿                                                                                                                                                                                                |
+| in-range 全家（ai/@ai-sdk×6/radix×3/swr/zustand/rsbuild/postcss/oxlint/oxfmt/playwright…） | 见 bun.lock diff                                                                              | Stage 1/2/3 边界 just qa 三连绿                                                                                                                                                                             |
+| 钉子对齐                                                                                   | .bun-version 1.4.2→1.4.3；web packageManager bun@1.4.0→1.4.3；server @types/bun latest→^1.4.3 | bun outdated 全工作区 CLEAN                                                                                                                                                                                 |
 
 ### 降级台账
 
