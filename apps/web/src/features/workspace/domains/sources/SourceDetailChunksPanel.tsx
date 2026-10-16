@@ -24,8 +24,8 @@ function ChunkItem({ chunk }: { chunk: ChunkRead }) {
         }}
       >
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-xs font-medium">
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-sm bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-xs font-medium">
               #{chunk.chunkIndex + 1}
             </span>
           </div>
@@ -37,7 +37,7 @@ function ChunkItem({ chunk }: { chunk: ChunkRead }) {
               {expanded || !needsTruncate ? chunk.text : `${chunk.text.slice(0, previewLength)}...`}
             </Typography>
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {needsTruncate &&
               (expanded ? (
                 <ExpandLessIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
@@ -60,7 +60,7 @@ function ChunkItem({ chunk }: { chunk: ChunkRead }) {
       </button>
       {expanded && chunk.metadata && Object.keys(chunk.metadata).length > 0 && (
         <div className="px-3 pb-3 pt-0">
-          <div className="p-2 bg-gray-50 dark:bg-slate-800 rounded text-[10px] font-mono text-gray-500 dark:text-slate-400 overflow-x-auto">
+          <div className="p-2 bg-gray-50 dark:bg-slate-800 rounded-sm text-[10px] font-mono text-gray-500 dark:text-slate-400 overflow-x-auto">
             {JSON.stringify(chunk.metadata, null, 2)}
           </div>
         </div>
@@ -90,10 +90,10 @@ export function SourceDetailChunksPanel({
               className="border border-gray-200 dark:border-slate-700 rounded-lg p-3 animate-pulse"
             >
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-6 h-6 bg-gray-200 rounded" />
-                <div className="h-4 bg-gray-200 rounded w-3/4" />
+                <div className="w-6 h-6 bg-gray-200 rounded-sm" />
+                <div className="h-4 bg-gray-200 rounded-sm w-3/4" />
               </div>
-              <div className="h-3 bg-gray-200 rounded w-1/4" />
+              <div className="h-3 bg-gray-200 rounded-sm w-1/4" />
             </div>
           ))}
         </div>

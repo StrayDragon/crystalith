@@ -61,7 +61,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         <input
           ref={ref}
           className={cx(
-            'w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none',
+            'w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-hidden',
             'focus:border-gray-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100',
             size === 'lg' ? 'h-11' : 'h-9',
             icon ? 'pl-9' : undefined,
@@ -118,7 +118,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
       <textarea
         ref={ref}
         className={cx(
-          'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none',
+          'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-hidden',
           'focus:border-gray-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100',
           resize ? 'resize-y' : 'resize-none',
           error && 'border-red-500',
@@ -161,7 +161,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Che
       <input
         ref={ref}
         type="checkbox"
-        className={cx('h-4 w-4 rounded border-gray-300 accent-blue-600', className)}
+        className={cx('h-4 w-4 rounded-sm border-gray-300 accent-blue-600', className)}
         {...rest}
       />
       {label ? <span className={cx('text-sm', labelProps?.className)}>{label}</span> : null}

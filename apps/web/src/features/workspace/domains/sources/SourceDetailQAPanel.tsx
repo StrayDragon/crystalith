@@ -53,7 +53,7 @@ export function SourceDetailQAPanel({
 }: SourceDetailQAPanelProps) {
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-white dark:bg-slate-900">
-      <div className="px-4 py-2 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
+      <div className="px-4 py-2 border-b border-gray-100 dark:border-slate-700 shrink-0">
         <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400">
           <QuestionAnswerIcon style={{ fontSize: 14 }} />
           <Typography variant="small" className="font-medium text-xs">
@@ -161,10 +161,10 @@ export function SourceDetailQAPanel({
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-3 border-t border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-900 flex-shrink-0">
+      <div className="p-3 border-t border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-900 shrink-0">
         <div className="relative">
           <input
-            className="w-full h-9 pl-3 pr-10 rounded-full bg-gray-50 dark:bg-slate-800 border border-transparent focus:bg-white dark:bg-slate-900 focus:border-gray-200 dark:border-slate-700 focus:ring-0 text-sm outline-none transition-all placeholder:text-gray-400 dark:text-slate-500"
+            className="w-full h-9 pl-3 pr-10 rounded-full bg-gray-50 dark:bg-slate-800 border border-transparent focus:bg-white dark:bg-slate-900 focus:border-gray-200 dark:border-slate-700 focus:ring-0 text-sm outline-hidden transition-all placeholder:text-gray-400 dark:text-slate-500"
             placeholder="基于此来源内容提问..."
             value={inputValue}
             onChange={(e) => {

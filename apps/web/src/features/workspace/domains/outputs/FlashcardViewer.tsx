@@ -76,7 +76,7 @@ export default function FlashcardViewer({ items, className }: FlashcardViewerPro
         <div className="relative h-56 w-full [perspective:1200px]">
           <button
             type="button"
-            className="absolute inset-0 h-full w-full rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:shadow-none"
+            className="absolute inset-0 h-full w-full rounded-2xl border border-gray-200 bg-white shadow-xs dark:border-slate-700 dark:bg-slate-900 dark:shadow-none"
             onClick={handleFlip}
             aria-pressed={flipped}
             aria-label={flipped ? '查看问题' : '查看答案'}

@@ -506,13 +506,14 @@ function ChatPanel({
           onSend();
         }}
       >
-        <div className="relative mx-auto w-full max-w-2xl rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm transition-all duration-200 focus-within:border-gray-400 dark:focus-within:border-slate-500 focus-within:ring-2 focus-within:ring-gray-100 dark:focus-within:ring-slate-700">
+        <div className="relative mx-auto w-full max-w-2xl rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xs transition-all duration-200 focus-within:border-gray-400 dark:focus-within:border-slate-500 focus-within:ring-2 focus-within:ring-gray-100 dark:focus-within:ring-slate-700">
           {isCommandMenuOpen && commandContext?.token.startsWith('/') ? (
             <div
               className="absolute bottom-full left-0 right-0 mb-2"
               style={dropdownStyle}
               role="presentation"
             >
+              {/* fallow-ignore-next-line css-broken-reference */}
               <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl overflow-hidden">
                 <div className="px-3 py-2 flex items-center justify-between gap-2 border-b border-gray-100 dark:border-slate-800">
                   <div className="text-[11px] font-semibold text-gray-700 dark:text-slate-200">
@@ -599,7 +600,7 @@ function ChatPanel({
           ) : null}
 
           <textarea
-            className="w-full bg-transparent text-sm text-gray-700 dark:text-slate-100 outline-none resize-none border-none focus:ring-0 min-h-[44px] py-3 leading-5 pl-4 pr-28 text-left placeholder:text-left"
+            className="w-full bg-transparent text-sm text-gray-700 dark:text-slate-100 outline-hidden resize-none border-none focus:ring-0 min-h-[44px] py-3 leading-5 pl-4 pr-28 text-left placeholder:text-left"
             name="chatPrompt"
             ref={inputRef}
             {...tid(TestIds.chatInput)}

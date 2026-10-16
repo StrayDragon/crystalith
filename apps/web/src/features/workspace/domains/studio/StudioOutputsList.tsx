@@ -243,7 +243,7 @@ export default function StudioOutputsList({
               const content = (
                 <>
                   <div
-                    className={`flex items-center justify-center w-6 h-6 rounded-md border border-dashed flex-shrink-0 ${
+                    className={`flex items-center justify-center w-6 h-6 rounded-md border border-dashed shrink-0 ${
                       isError
                         ? 'bg-red-50 border-red-300 text-red-500'
                         : isCancelled
@@ -313,7 +313,7 @@ export default function StudioOutputsList({
                   >
                     <button
                       type="button"
-                      className="flex flex-1 items-center gap-2 text-left transition-colors hover:bg-white/70 dark:hover:bg-slate-800 rounded"
+                      className="flex flex-1 items-center gap-2 text-left transition-colors hover:bg-white/70 dark:hover:bg-slate-800 rounded-sm"
                       onClick={() => {
                         if (!note.slideId) return;
                         onOpenSlides?.({
@@ -329,7 +329,7 @@ export default function StudioOutputsList({
                     {!isCancelled && onCancelOutputJob && note.queueJobId ? (
                       <button
                         type="button"
-                        className="flex-shrink-0 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 text-[10px] font-semibold text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700"
+                        className="shrink-0 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 text-[10px] font-semibold text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700"
                         onClick={() => {
                           onCancelOutputJob(note.queueJobId!);
                         }}
@@ -360,7 +360,7 @@ export default function StudioOutputsList({
                   {isError && onRetryOutputJob && note.queueJobId ? (
                     <button
                       type="button"
-                      className="flex-shrink-0 rounded-md border border-red-300 bg-white dark:bg-slate-900 px-2 py-1 text-[10px] font-semibold text-red-700 hover:bg-red-100"
+                      className="shrink-0 rounded-md border border-red-300 bg-white dark:bg-slate-900 px-2 py-1 text-[10px] font-semibold text-red-700 hover:bg-red-100"
                       onClick={() => {
                         onRetryOutputJob(note.queueJobId!);
                       }}
@@ -371,7 +371,7 @@ export default function StudioOutputsList({
                   {!isError && !isCancelled && onCancelOutputJob && note.queueJobId ? (
                     <button
                       type="button"
-                      className="flex-shrink-0 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 text-[10px] font-semibold text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700"
+                      className="shrink-0 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 text-[10px] font-semibold text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700"
                       onClick={() => {
                         onCancelOutputJob(note.queueJobId!);
                       }}
@@ -392,7 +392,7 @@ export default function StudioOutputsList({
             const exportFormats = output ? getSupportedFormats(output.type) : [];
 
             return (
-              <div className="group relative flex items-center rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 mb-2 ux-slide-in">
+              <div className="group relative flex items-center rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xs transition-all hover:bg-gray-50 dark:hover:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 mb-2 ux-slide-in">
                 <button
                   type="button"
                   className="flex flex-1 items-center gap-2 p-2 text-left min-w-0"
@@ -408,7 +408,7 @@ export default function StudioOutputsList({
                   disabled={!note.outputId}
                 >
                   <div
-                    className="flex items-center justify-center w-6 h-6 rounded-md border flex-shrink-0"
+                    className="flex items-center justify-center w-6 h-6 rounded-md border shrink-0"
                     style={{
                       backgroundColor: colors.bg,
                       borderColor: colors.border,
@@ -433,7 +433,7 @@ export default function StudioOutputsList({
                   </div>
                 </button>
 
-                <div className="flex-shrink-0 pr-1">
+                <div className="shrink-0 pr-1">
                   <Menu placement="bottom-end">
                     <MenuHandler>
                       <IconButton

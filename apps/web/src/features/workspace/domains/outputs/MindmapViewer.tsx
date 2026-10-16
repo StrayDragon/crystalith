@@ -408,8 +408,8 @@ function InnerFlow({ data, autoCollapseDepth, isDarkTheme }: InnerFlowProps) {
           showInteractive={false}
           className={
             isDarkTheme
-              ? '!bg-slate-800 !border-slate-700 !shadow-lg [&_button]:!bg-slate-700 [&_button]:!border-slate-600 [&_button]:!text-slate-300 [&_button:hover]:!bg-slate-600'
-              : '!bg-white !border-gray-200 !shadow-md [&_button]:!bg-white [&_button]:!border-gray-200 [&_button]:!text-gray-600 [&_button:hover]:!bg-gray-100'
+              ? 'bg-slate-800! border-slate-700! shadow-lg! [&_button]:bg-slate-700! [&_button]:border-slate-600! [&_button]:text-slate-300! [&_button:hover]:bg-slate-600!'
+              : 'bg-white! border-gray-200! shadow-md! [&_button]:bg-white! [&_button]:border-gray-200! [&_button]:text-gray-600! [&_button:hover]:bg-gray-100!'
           }
         />
         <Background
@@ -483,5 +483,3 @@ const btnStyleDark: React.CSSProperties = {
   cursor: 'pointer',
   color: '#cbd5e1',
 };
-
-export default MindmapViewer;

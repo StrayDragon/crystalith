@@ -28,7 +28,7 @@ export function SourceDetailSummaryPanel({
   canGenerate,
 }: SourceDetailSummaryPanelProps) {
   return (
-    <div className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
+    <div className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700 shrink-0">
       <div className="w-full px-4 py-3 flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-800/50 transition-colors">
         <button
           type="button"
@@ -73,9 +73,9 @@ export function SourceDetailSummaryPanel({
         <div id="source-detail-auto-summary" className="px-4 pb-4">
           {isBriefLoading ? (
             <div className="space-y-2">
-              <div className="h-4 bg-gray-200 rounded w-full animate-pulse" />
-              <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse" />
-              <div className="h-4 bg-gray-200 rounded w-4/6 animate-pulse" />
+              <div className="h-4 bg-gray-200 rounded-sm w-full animate-pulse" />
+              <div className="h-4 bg-gray-200 rounded-sm w-5/6 animate-pulse" />
+              <div className="h-4 bg-gray-200 rounded-sm w-4/6 animate-pulse" />
             </div>
           ) : briefError ? (
             <div className="space-y-2">

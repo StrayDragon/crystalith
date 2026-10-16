@@ -81,13 +81,13 @@ export default function SourcesPanelToolbar({
   const mark = (active: boolean) => (active ? '✓ ' : '   ');
 
   return (
-    <div className="flex-shrink-0 px-3 sm:px-4 py-1.5 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700">
+    <div className="shrink-0 px-3 sm:px-4 py-1.5 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700">
       <div className="flex items-center gap-1">
         <Checkbox
           checked={allSelected}
           onChange={onToggleAll}
           containerProps={{ className: 'p-0.5' }}
-          className="h-4 w-4 rounded border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"
+          className="h-4 w-4 rounded-sm border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"
           iconProps={{ className: 'text-white' }}
         />
         <Typography

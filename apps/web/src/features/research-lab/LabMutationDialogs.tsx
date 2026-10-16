@@ -200,7 +200,7 @@ export function LabPruneDialog({
           <button
             type="button"
             onClick={onConfirm}
-            className="min-w-[7rem] rounded-lg px-4 py-2 text-xs font-semibold shadow-sm"
+            className="min-w-[7rem] rounded-lg px-4 py-2 text-xs font-semibold shadow-xs"
             style={{ backgroundColor: '#b91c1c', color: '#ffffff' }}
             {...tid(TestIds.researchLabPruneConfirm)}
           >

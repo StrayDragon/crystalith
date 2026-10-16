@@ -20,7 +20,7 @@ export interface ToastOptions {
   action?: ToastAction;
 }
 
-export interface Toast {
+interface Toast {
   id: string;
   message: string;
   type: ToastType;
@@ -123,7 +123,7 @@ function ToastItem({ toast: toastItem, onClose }: { toast: Toast; onClose: () =>
       className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white ${colorMap[toastItem.type]} ux-slide-in`}
       role="alert"
     >
-      <Icon className="h-5 w-5 flex-shrink-0" />
+      <Icon className="h-5 w-5 shrink-0" />
       <div className="flex-1 min-w-0">
         <span className="text-sm font-medium">{toastItem.message}</span>
         {toastItem.action ? (

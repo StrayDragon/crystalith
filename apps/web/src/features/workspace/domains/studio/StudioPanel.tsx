@@ -152,6 +152,7 @@ function ToolsPopover({
             />
             {/* Popover panel — fixed positioning to escape overflow clipping */}
             <div
+              // fallow-ignore-next-line css-broken-reference
               className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-xl p-3"
               style={{ ...popoverStyle, ...popoverLayerStyle }}
               {...tid(TestIds.studioToolsPopover)}
@@ -300,7 +301,7 @@ function StudioPanel({
       </div>
 
       {/* ── Bottom action buttons ── */}
-      <div className="flex flex-col gap-2 flex-shrink-0">
+      <div className="flex flex-col gap-2 shrink-0">
         <Button
           variant="filled"
           fullWidth
@@ -371,7 +372,7 @@ function StudioPanel({
               onChange={(e) => {
                 setNoteEditorContent(e.target.value);
               }}
-              className="!border-t-blue-gray-200 focus:!border-t-gray-900"
+              className="border-t-blue-gray-200! focus:border-t-gray-900!"
               labelProps={{
                 className: 'before:content-none after:content-none',
               }}

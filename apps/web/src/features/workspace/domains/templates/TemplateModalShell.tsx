@@ -44,7 +44,7 @@ export function TemplateModalShell({
     >
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-xs"
         onClick={onClose}
         aria-label="关闭"
         tabIndex={-1}

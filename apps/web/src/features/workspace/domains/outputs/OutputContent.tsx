@@ -345,7 +345,7 @@ function SlidesMarkdownRenderer({ content }: { content: SlidesOutputContent }) {
                   .slice(0, 10)
                   .map((line, j) => (
                     <div key={j} className="flex gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gray-300 dark:bg-slate-600" />
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300 dark:bg-slate-600" />
                       <span>{line.replace(/^[-*]\s+/u, '').trim()}</span>
                     </div>
                   ))}

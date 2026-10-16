@@ -1,6 +1,39 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+/* streamdown dist 类白名单（@source inline）——理由与维护见该文件头注释 */
+@import './streamdown-sources.css';
+
+/* c136: 显式 source（确定性优先）；路径相对本 CSS 文件 */
+@source "../**/*.{ts,tsx,js,jsx}";
+@source "../../../../packages/crystalith-slidev/src/**/*.{ts,tsx}";
+
+/* c136: 等价迁移 v3 darkMode: 'class'（@config 桥接已撤，此处生效） */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * c136 @theme：仅迁移有真实消费的 token（审计见 change c136 design）。
+ * - --sd-* 桥接（streamdown shadcn 类：bg-muted/80 等）——rgb(var()) 延迟求值
+ *   + v4 color-mix 原生透明度修饰，:root.dark 切换 --sd-* 时同步生效。
+ * - v3 config 中的 brand 色板 / ui 语义色 / slide-in-out 动画 / shadow-soft-glow
+ *   为零消费死配置，不携带（前人栽树：不把死债搬进新 SSOT）。
+ */
+@theme {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+
+  --color-background: rgb(var(--sd-background));
+  --color-foreground: rgb(var(--sd-foreground));
+  --color-muted: rgb(var(--sd-muted));
+  --color-muted-foreground: rgb(var(--sd-muted-foreground));
+  --color-border: rgb(var(--sd-border));
+  --color-sidebar: rgb(var(--sd-sidebar));
+  --color-primary: rgb(var(--sd-primary));
+  --color-primary-foreground: rgb(var(--sd-primary-foreground));
+}
 
 @layer base {
   :root {
@@ -9,8 +42,9 @@
     --cl-text: #111827;
 
     /*
-     * streamdown（shadcn token 体系）语义色，RGB 三元组供 tailwind.config
-     * 以 `rgb(var() / <alpha-value>)` 消费（支持 bg-muted/80 等透明度修饰）。
+     * streamdown（shadcn token 体系）语义色，RGB 三元组供 @theme 的
+     * --color-* token 以 rgb(var()) 桥接消费（c136：原 v3 tailwind.config
+     * colors 映射迁至 @theme，支持 bg-muted/80 等透明度修饰）。
      * 取值对齐仓库配色：light = gray，dark = slate。
      */
     --sd-background: 255 255 255;
@@ -115,7 +149,9 @@
     border-color: #64748b !important;
   }
 
-  .dark .shadow-sm {
+  /* c136：v3 shadow-sm 已更名 shadow-xs（档位整体上移），覆盖块跟语义走；
+     v3 裸 shadow（→v4 shadow-sm）v3 时即不被覆盖，维持不受覆盖 */
+  .dark .shadow-xs {
     box-shadow: 0 1px 3px rgba(2, 6, 23, 0.45) !important;
   }
 }
@@ -126,21 +162,12 @@
     height: 100dvh;
   }
 
-  .ux-fade-in {
-    animation: ux-fade-in 150ms ease-out;
-  }
-
   .ux-slide-in {
     animation: ux-slide-in 180ms ease-out;
   }
 
   .ux-modal-in {
     animation: ux-modal-in 180ms cubic-bezier(0.2, 0, 0, 1);
-  }
-
-  .ux-animated-gradient {
-    background-size: 200% 200%;
-    animation: ux-gradient-shift 4.5s ease infinite;
   }
 
   /* Source locate: flash the card body (not just a static ring). */
@@ -152,15 +179,6 @@
   .dark .ux-source-locate-flash {
     animation-name: ux-source-locate-flash-dark;
     border-color: rgb(59 130 246); /* blue-500 */
-  }
-}
-
-@keyframes ux-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
   }
 }
 
@@ -183,18 +201,6 @@
   to {
     opacity: 1;
     transform: scale(1);
-  }
-}
-
-@keyframes ux-gradient-shift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
   }
 }
 
@@ -374,10 +380,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ux-fade-in,
   .ux-slide-in,
   .ux-modal-in,
-  .ux-animated-gradient,
   .ux-source-locate-flash {
     animation: none !important;
     transition-duration: 0ms !important;

@@ -68,7 +68,7 @@ export function SlidesPreviewPanel({
 
   return (
     <div
-      className={`rounded-xl border border-gray-200 dark:border-slate-700 bg-gradient-to-br from-white via-white to-slate-50 p-3 flex flex-col min-h-0 shadow-sm ${isPreviewMode ? 'order-1 lg:order-2' : ''}`}
+      className={`rounded-xl border border-gray-200 dark:border-slate-700 bg-linear-to-br from-white via-white to-slate-50 p-3 flex flex-col min-h-0 shadow-xs ${isPreviewMode ? 'order-1 lg:order-2' : ''}`}
     >
       <div className="flex items-center justify-between gap-2 border-b border-gray-200 dark:border-slate-700 pb-2">
         <div className="flex items-center gap-2">

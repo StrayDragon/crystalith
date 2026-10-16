@@ -10,8 +10,8 @@ interface MobilePanelShellProps {
 
 export default function MobilePanelShell({ title, headerExtras, children }: MobilePanelShellProps) {
   return (
-    <section className="flex flex-col flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
-      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-100 dark:border-slate-700 bg-gray-50/60 dark:bg-slate-800/60 flex-shrink-0">
+    <section className="flex flex-col flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-xs overflow-hidden">
+      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-100 dark:border-slate-700 bg-gray-50/60 dark:bg-slate-800/60 shrink-0">
         <h2 className="text-[11px] font-semibold text-gray-500 dark:text-slate-400 tracking-wide uppercase">
           {title}
         </h2>

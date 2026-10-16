@@ -207,7 +207,7 @@ function LabNodeStatusFooter({
 }
 
 /** Invisible connection anchors — edges still attach, dots stay hidden. */
-const HIDDEN_HANDLE = '!w-2 !h-2 !min-w-0 !min-h-0 !border-0 !bg-transparent !opacity-0';
+const HIDDEN_HANDLE = 'w-2! h-2! min-w-0! min-h-0! border-0! bg-transparent! opacity-0!';
 
 // fallow-ignore-next-line complexity -- CRAP 估算无 coverage 数据；cyc/cog 已达标，覆盖率集成后移除
 function LabFlowNodeView({ data, id }: NodeProps<LabFlowNode>) {
@@ -221,7 +221,7 @@ function LabFlowNodeView({ data, id }: NodeProps<LabFlowNode>) {
 
   return (
     <div
-      className={`lab-node-in relative rounded-xl border-2 px-3 py-2.5 text-xs shadow-sm outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 ${containerSizeClass(d.role)} ${isConclusion ? 'ring-1 ring-amber-900/10' : ''} ${d.reshaping ? 'lab-node-reshape' : ''}`}
+      className={`lab-node-in relative rounded-xl border-2 px-3 py-2.5 text-xs shadow-xs outline-hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 ${containerSizeClass(d.role)} ${isConclusion ? 'ring-1 ring-amber-900/10' : ''} ${d.reshaping ? 'lab-node-reshape' : ''}`}
       role="button"
       tabIndex={0}
       aria-label={`${d.title}（打开节点详情）`}
@@ -257,7 +257,7 @@ function LabFlowNodeView({ data, id }: NodeProps<LabFlowNode>) {
 
       {d.showProgress && d.statusHint ? (
         <div className="pointer-events-none absolute -right-1 -top-2 translate-x-full pl-1">
-          <span className="lab-status-float inline-block whitespace-nowrap rounded-md bg-slate-900/70 px-1.5 py-0.5 text-[9px] text-white/90 shadow">
+          <span className="lab-status-float inline-block whitespace-nowrap rounded-md bg-slate-900/70 px-1.5 py-0.5 text-[9px] text-white/90 shadow-sm">
             {d.statusHint}
           </span>
         </div>
@@ -326,12 +326,12 @@ const LabActionEdge = memo(function LabActionEdge({
             <span
               className={
                 hovered
-                  ? `rounded bg-white/95 px-1.5 py-0.5 text-[9px] border shadow-sm ${
+                  ? `rounded-sm bg-white/95 px-1.5 py-0.5 text-[9px] border shadow-xs ${
                       d?.faded
                         ? 'text-slate-400 border-slate-100'
                         : 'text-slate-500 border-slate-200'
                     }`
-                  : `rounded bg-white/80 px-1 py-0.5 text-[9px] border border-transparent ${
+                  : `rounded-sm bg-white/80 px-1 py-0.5 text-[9px] border border-transparent ${
                       d?.faded ? 'text-slate-300' : 'text-slate-400'
                     }`
               }
@@ -350,7 +350,7 @@ const LabActionEdge = memo(function LabActionEdge({
                   <button
                     type="button"
                     title="沿此边分叉研究支路"
-                    className="rounded-md border border-teal-200 bg-teal-50 px-1.5 py-0.5 text-[10px] font-medium text-teal-800 hover:bg-teal-100 shadow-sm"
+                    className="rounded-md border border-teal-200 bg-teal-50 px-1.5 py-0.5 text-[10px] font-medium text-teal-800 hover:bg-teal-100 shadow-xs"
                     onClick={(e) => {
                       e.stopPropagation();
                       d.onFork(id);
@@ -363,7 +363,7 @@ const LabActionEdge = memo(function LabActionEdge({
                   <button
                     type="button"
                     title="淡化此研究支路（保留汇入）"
-                    className="rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-800 hover:bg-rose-100 shadow-sm"
+                    className="rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-800 hover:bg-rose-100 shadow-xs"
                     onClick={(e) => {
                       e.stopPropagation();
                       d.onPrune(id);
@@ -699,10 +699,9 @@ function Inner({
           pannable
           zoomable
           ariaLabel="思考图小地图"
-          // tw3 important 前缀语法（压 reactflow 内置样式），fallow 不识别该形态；
-          // tw4 迁移（known-issues c127 条目）时改后缀写法并撤抑制
+          // c136：tw4 important 后缀语法（压 reactflow 内置样式）
           // fallow-ignore-next-line css-broken-reference
-          className="!m-3 !overflow-hidden !rounded-xl !border !border-gray-200 !bg-white/95 !shadow-sm"
+          className="m-3! overflow-hidden! rounded-xl! border! border-gray-200! bg-white/95! shadow-xs!"
           maskColor="rgb(15 23 42 / 0.08)"
           nodeStrokeWidth={2}
           nodeColor={(n: LabFlowNode) => {
@@ -718,9 +717,9 @@ function Inner({
         showInteractive={false}
         position="bottom-left"
         // fallow-ignore-next-line css-broken-reference
-        className="!shadow-sm !border-gray-200 !rounded-lg"
+        className="shadow-xs! border-gray-200! rounded-lg!"
       />
-      <Panel position="bottom-left" className="!m-0 !mb-3 !ml-[52px]">
+      <Panel position="bottom-left" className="m-0! mb-3! ml-[52px]!">
         <LabCanvasSettings
           direction={direction}
           onDirection={onDirection}

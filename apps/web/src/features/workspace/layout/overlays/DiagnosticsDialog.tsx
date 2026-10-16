@@ -181,7 +181,7 @@ export default function DiagnosticsDialog({
     >
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-xs"
         onClick={onClose}
         aria-label={t('common.close')}
         tabIndex={-1}
@@ -352,7 +352,7 @@ export default function DiagnosticsDialog({
                         ) : null}
                       </div>
 
-                      <div className="flex-shrink-0 text-[10px] text-gray-500 dark:text-slate-400">
+                      <div className="shrink-0 text-[10px] text-gray-500 dark:text-slate-400">
                         {item.lastProbe
                           ? t('workspace.diagnostics.label.last_probe', {
                               timestamp: item.lastProbe,

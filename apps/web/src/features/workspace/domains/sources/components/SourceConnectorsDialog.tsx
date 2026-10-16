@@ -1125,7 +1125,7 @@ export default function SourceConnectorsDialog({
         if (event.key === 'Escape') onClose();
       }}
     >
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-xs" />
 
       <div
         ref={modalRef}

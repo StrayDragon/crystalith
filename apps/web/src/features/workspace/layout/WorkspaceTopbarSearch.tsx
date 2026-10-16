@@ -111,7 +111,7 @@ function FastSearchBody({
         <SearchIcon className="text-gray-400" style={{ fontSize: 18 }} />
         <input
           ref={searchInputRef}
-          className="min-w-0 flex-1 h-10 px-3 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-blue-500/25"
+          className="min-w-0 flex-1 h-10 px-3 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm outline-hidden focus:ring-2 focus:ring-blue-500/25"
           placeholder={t('sources.search.placeholder')}
           value={searchQuery}
           {...tid(TestIds.sourcesSearchInput)}
@@ -145,7 +145,7 @@ function FastSearchBody({
       </div>
       {isSearching ? (
         <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50/80 px-3 py-2 text-[11px] text-blue-900">
-          <Spinner className="h-3.5 w-3.5 text-blue-600 mt-0.5 flex-shrink-0" />
+          <Spinner className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
           <div className="min-w-0 space-y-0.5">
             <p className="font-medium">{t('sources.search.searching_detail')}</p>
             <p className="text-blue-800/80">
@@ -189,7 +189,7 @@ function KbResultItem({ item, onJump }: { item: SearchItem; onJump: (item: Searc
     >
       <div className="flex items-center gap-2">
         <span
-          className={`text-[10px] px-1.5 py-0.5 rounded ${
+          className={`text-[10px] px-1.5 py-0.5 rounded-sm ${
             isOutput
               ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
               : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
@@ -311,7 +311,7 @@ function KbSearchBody({
         <SearchIcon className="text-gray-400" style={{ fontSize: 18 }} />
         <input
           ref={searchInputRef}
-          className="min-w-0 flex-1 h-10 px-3 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-blue-500/25"
+          className="min-w-0 flex-1 h-10 px-3 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm outline-hidden focus:ring-2 focus:ring-blue-500/25"
           placeholder={t('search.kb.placeholder')}
           value={kb.query}
           {...tid(TestIds.kbSearchInput)}
@@ -472,6 +472,7 @@ export default function WorkspaceTopbarSearch({
                 }}
                 aria-label="关闭搜索面板"
               />
+              {/* fallow-ignore-next-line css-broken-reference */}
               <div className="absolute top-16 left-1/2 z-10 w-[min(960px,calc(100%-2rem))] -translate-x-1/2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl">
                 <div className="flex items-center justify-between gap-2 px-3 pt-3 pb-2 border-b border-gray-100 dark:border-slate-700">
                   <div

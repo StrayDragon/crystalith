@@ -69,6 +69,21 @@
 - **注意**：`native/vec0.*` 随包 + `CL_SQLITE_VEC_PATH` 回退机制保留（Linux 上
   必需；darwin codesign 步骤同样保留，上游放开后即需）。
 
+## 工具链兼容性（fallow × Tailwind v4）
+
+### fallow styling 检测不识别 tw4 css-first（上游缺口，已抑制）
+
+- **现象**：删除 `tailwind.config.cjs` 后（c136 改为 `@import "tailwindcss"` + `@theme`），
+  fallow 失去 tailwind 项目识别：模板中 `class!` 后缀（v4 important 语法）与
+  `shadow-xl` 等引擎生成类被误报 `css-broken-reference`；`tailwind.css` 的暗色
+  `!important` 覆盖块（c127 既有设计）报 `important-density`/`selector-complexity`。
+- **处置**：TSX 侧 18 处 inline `fallow-ignore-next-line css-broken-reference`
+  （属性区 `//` 形态 ×16、JSX children 区 `{/* */}` 形态 ×2——后者不能用 `//`，
+  会渲染为文本）；`tailwind.css` 侧 34 条 warn 级不参与 audit verdict fail，未抑制。
+- **恢复/删除条件**：fallow 升级支持 tw4 css-first（识别 `@import "tailwindcss"`
+  与后缀 important 语法）后，撤掉全部 18 处抑制注释并删除本条目；升级 fallow 后
+  先跑 `bun run fallow audit` 观察 broken-reference 是否归零。
+
 ## 工具链兼容性（TypeScript 7 / tsgo）
 
 背景：TypeScript 7 是 Go 原生编译器，npm 包**不再附带经典 JS 编译器 API**
@@ -89,7 +104,7 @@ JS API；TS 大版本升级后优先冒烟所有 codegen 类 script（`just gen-
 
 ## 依赖升级遗留（c127 裁剪项）
 
-| 项                              | 状态                                                                                                                                                                                                                                                        | 恢复/删除条件                                                                   |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| tailwindcss 3→4                 | **裁延**：v4 需 css-first theme 重写（`@tailwind`→`@import "tailwindcss"`+`@theme`）、`@source` 替代 content、`tailwind-scrollbar@4`（peer 强制 tw4）连动、Layer 系统 `z-[N]` arbitrary 与 43 处 `!important` 交互回归——预估 >1 天，按 c127 design 阈值裁出 | 单独 change 承接；完成后删除本条并升 `tailwind-scrollbar` 4                     |
-| `@ai-sdk/*` 精确 pin→range 收尾 | 六件套已升 4.0.78 系并改 range 锁步；`provider` 单一 hoist 已验证                                                                                                                                                                                           | 无需动作；仅当再遇 dual-provider hoist 时参考 c127 design「cast wall 收敛」预案 |
+| 项                              | 状态                                                                                                                                                                                                                                                                                                                                                                  | 恢复/删除条件                                                                   |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| tailwindcss 3→4                 | **✅ 已完成（c136，2026-10）**：CSS-first `@theme` 一步到位（零 `@config` 兼容层）、`@source` 显式化、工具类重命名与 important 后缀化、暗色覆盖块 `.dark !important` 系实测等价；streamdown dist 类走 `@source inline` 白名单（oxide 拒绝相对路径进 node_modules，见 c136 design）；tailwind-scrollbar 为死依赖直接删除（v4.3 内置 scrollbar 工具，需要时零成本启用） | 无待办；本行随下次 known-issues 清理删除                                        |
+| `@ai-sdk/*` 精确 pin→range 收尾 | 六件套已升 4.0.78 系并改 range 锁步；`provider` 单一 hoist 已验证                                                                                                                                                                                                                                                                                                     | 无需动作；仅当再遇 dual-provider hoist 时参考 c127 design「cast wall 收敛」预案 |

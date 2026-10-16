@@ -30,7 +30,7 @@ export type LabRfData = {
   askOnInterrupt?: boolean;
   /** Conclusion footer when some merges are pruned failures. */
   statusOverride?: string;
-  /** Soft ring from citation multi-match (in addition to selected). */
+  /** Soft ring-3 from citation multi-match (in addition to selected). */
   highlighted?: boolean;
   /** Keyboard: Enter/Space on the focused node opens the inspector (r15). */
   onSelectNode?: (id: string) => void;

@@ -192,6 +192,7 @@ export default function CitationPopover({
     <div className="fixed inset-0 pointer-events-none" style={popoverStyle}>
       <div
         ref={popoverRef}
+        // fallow-ignore-next-line css-broken-reference
         className="absolute w-[320px] max-w-[90vw] rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden pointer-events-auto"
         style={{
           left: position.x,
@@ -209,7 +210,7 @@ export default function CitationPopover({
           <button
             type="button"
             onClick={onClose}
-            className="w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer flex-shrink-0"
+            className="w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer shrink-0"
             aria-label="关闭"
           >
             <svg
@@ -242,7 +243,7 @@ export default function CitationPopover({
                   }}
                 >
                   {/* Index Badge */}
-                  <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                  <span className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
                     {index + 1}
                   </span>
 
@@ -265,7 +266,7 @@ export default function CitationPopover({
                 </button>
 
                 {/* Actions — stay in-card; no second-level drawer */}
-                <div className="flex-shrink-0 flex flex-col items-center gap-2 self-start">
+                <div className="shrink-0 flex flex-col items-center gap-2 self-start">
                   {onLocateSource && (
                     <button
                       type="button"

@@ -53,8 +53,8 @@ export default function IndexRebuildControl({
         disabled={starting}
         className={
           warning
-            ? 'w-6 h-6 min-w-[24px] rounded-full !text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
-            : 'w-6 h-6 min-w-[24px] rounded-full !text-gray-400 dark:!text-slate-500 hover:bg-gray-100 dark:hover:bg-slate-800'
+            ? 'w-6 h-6 min-w-[24px] rounded-full text-amber-500! hover:bg-amber-50 dark:hover:bg-amber-900/20'
+            : 'w-6 h-6 min-w-[24px] rounded-full text-gray-400! dark:text-slate-500! hover:bg-gray-100 dark:hover:bg-slate-800'
         }
         {...tid(TestIds.sourcesIndexRebuildButton)}
       >

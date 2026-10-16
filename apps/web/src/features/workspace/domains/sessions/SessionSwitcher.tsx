@@ -172,7 +172,7 @@ export default function SessionSwitcher({
               </div>
               <input
                 ref={searchInputRef}
-                className="w-full h-8 pl-9 pr-3 rounded-lg bg-gray-100 border border-gray-300 text-xs text-gray-900 focus:outline-none focus:border-gray-500 focus:ring-0"
+                className="w-full h-8 pl-9 pr-3 rounded-lg bg-gray-100 border border-gray-300 text-xs text-gray-900 focus:outline-hidden focus:border-gray-500 focus:ring-0"
                 placeholder="搜索会话"
                 value={searchValue}
                 onChange={(e) => {
@@ -218,7 +218,7 @@ export default function SessionSwitcher({
                     <div className="flex items-center gap-1 p-1 pr-2">
                       <input
                         ref={editInputRef}
-                        className="flex-1 h-7 px-2 text-sm rounded border border-gray-400 focus:border-blue-500 focus:outline-none"
+                        className="flex-1 h-7 px-2 text-sm rounded-sm border border-gray-400 focus:border-blue-500 focus:outline-hidden"
                         value={editingTitle}
                         onChange={(e) => {
                           setEditingTitle(e.target.value);
@@ -239,7 +239,7 @@ export default function SessionSwitcher({
                       <IconButton
                         size="sm"
                         variant="text"
-                        className="w-6 h-6 min-w-[24px] rounded text-blue-500 hover:bg-blue-50"
+                        className="w-6 h-6 min-w-[24px] rounded-sm text-blue-500 hover:bg-blue-50"
                         onClick={() => {
                           void handleSaveEdit();
                         }}
@@ -254,7 +254,7 @@ export default function SessionSwitcher({
                       <IconButton
                         size="sm"
                         variant="text"
-                        className="w-6 h-6 min-w-[24px] rounded text-gray-600 hover:bg-gray-200"
+                        className="w-6 h-6 min-w-[24px] rounded-sm text-gray-600 hover:bg-gray-200"
                         onClick={() => {
                           setEditingSessionId(null);
                           setEditingTitle('');
@@ -291,7 +291,7 @@ export default function SessionSwitcher({
                           <IconButton
                             size="sm"
                             variant="text"
-                            className="w-6 h-6 min-w-[24px] rounded hover:bg-gray-300 text-gray-600"
+                            className="w-6 h-6 min-w-[24px] rounded-sm hover:bg-gray-300 text-gray-600"
                             onClick={(e) => {
                               e.stopPropagation();
                               startEditing(item);
@@ -310,7 +310,7 @@ export default function SessionSwitcher({
                             <IconButton
                               size="sm"
                               variant="text"
-                              className="w-6 h-6 min-w-[24px] rounded hover:bg-red-50 text-gray-500 hover:text-red-600"
+                              className="w-6 h-6 min-w-[24px] rounded-sm hover:bg-red-50 text-gray-500 hover:text-red-600"
                               onClick={(e) => {
                                 e.stopPropagation();
                               }}

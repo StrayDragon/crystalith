@@ -82,7 +82,7 @@ export default function LabProgressBar({
                 ? 'bg-rose-500'
                 : pct >= 100
                   ? 'bg-blue-600'
-                  : 'bg-gradient-to-r from-blue-500 to-sky-400'
+                  : 'bg-linear-to-r from-blue-500 to-sky-400'
             }`}
             style={{ width: `${pct}%` }}
           />
@@ -102,6 +102,7 @@ export default function LabProgressBar({
       {detailsOpen ? (
         <div className="absolute left-0 right-0 top-full pt-2" style={layerStyle}>
           <div
+            // fallow-ignore-next-line css-broken-reference
             className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-[11px] shadow-xl"
             {...tid(TestIds.researchLabProgressLedger)}
           >

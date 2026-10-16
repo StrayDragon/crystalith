@@ -2,7 +2,7 @@
  * GridStack CSS overrides for Modular Canvas.
  * Injected via <style> to override GridStack's default styles.
  *
- * NOTE: All visual card styling (bg, border, shadow, border-radius) lives on
+ * NOTE: All visual card styling (bg, border, shadow-sm, border-radius) lives on
  * WidgetShell so that empty GridStack DOM nodes are invisible until React
  * portals mount.
  */

@@ -294,7 +294,7 @@ export default function LabControlConsole({ lab }: { lab: LabController }) {
                   {label}
                   <input
                     type="number"
-                    className="mt-0.5 h-7 w-full rounded border border-gray-200 px-1.5 text-[11px]"
+                    className="mt-0.5 h-7 w-full rounded-sm border border-gray-200 px-1.5 text-[11px]"
                     value={lab.metricsOverride?.[key] ?? ''}
                     placeholder="自动"
                     onChange={(e) => {

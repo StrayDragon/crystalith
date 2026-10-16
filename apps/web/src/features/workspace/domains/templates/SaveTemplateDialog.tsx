@@ -122,7 +122,8 @@ export default function SaveTemplateDialog({
           <Input
             variant="outlined"
             labelProps={{ className: 'hidden' }}
-            className="!border !border-gray-300 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-lg shadow-gray-900/5 ring-4 ring-transparent placeholder:text-gray-500 focus:!border-gray-900 focus:!border-t-gray-900 focus:ring-gray-900/10"
+            // fallow-ignore-next-line css-broken-reference
+            className="border! border-gray-300! bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-lg shadow-gray-900/5 ring-4 ring-transparent placeholder:text-gray-500 focus:border-gray-900! focus:border-t-gray-900! focus:ring-gray-900/10"
             containerProps={{ className: 'min-w-0' }}
             value={name}
             onChange={(e) => {
@@ -148,7 +149,8 @@ export default function SaveTemplateDialog({
           <Input
             variant="outlined"
             labelProps={{ className: 'hidden' }}
-            className="!border !border-gray-300 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-lg shadow-gray-900/5 ring-4 ring-transparent placeholder:text-gray-500 focus:!border-gray-900 focus:!border-t-gray-900 focus:ring-gray-900/10"
+            // fallow-ignore-next-line css-broken-reference
+            className="border! border-gray-300! bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-lg shadow-gray-900/5 ring-4 ring-transparent placeholder:text-gray-500 focus:border-gray-900! focus:border-t-gray-900! focus:ring-gray-900/10"
             containerProps={{ className: 'min-w-0' }}
             value={description}
             onChange={(e) => {
@@ -166,7 +168,7 @@ export default function SaveTemplateDialog({
             输出偏好（可选）
           </Typography>
           <select
-            className="w-full h-9 px-3 rounded-lg bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 text-xs text-gray-900 dark:text-slate-100 focus:outline-none focus:border-gray-900"
+            className="w-full h-9 px-3 rounded-lg bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 text-xs text-gray-900 dark:text-slate-100 focus:outline-hidden focus:border-gray-900"
             value={outputType ?? ''}
             onChange={(e) => {
               const next = e.target.value;

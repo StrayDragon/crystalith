@@ -101,7 +101,7 @@ export default function SlidesStudioDialog(props: SlidesStudioDialogProps) {
       >
         <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-slate-700 p-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 flex-shrink-0">
+            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 shrink-0">
               <SlideshowIcon fontSize="small" />
             </div>
             <div className="min-w-0">
@@ -119,7 +119,7 @@ export default function SlidesStudioDialog(props: SlidesStudioDialogProps) {
               </Typography>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {/* intentionally || — empty engine is missing */}
             {/* oxlint-disable-next-line typescript/prefer-nullish-coalescing */}
             <Chip value={slidesEngine || '未配置'} size="sm" variant="ghost" />

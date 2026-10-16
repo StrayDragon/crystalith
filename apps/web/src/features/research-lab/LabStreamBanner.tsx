@@ -23,7 +23,7 @@ export function LabStreamBanner({ streamState, streamAttempt, retryStream }: Lab
   if (streamState === 'reconnecting') {
     return (
       <div
-        className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-[11px] font-medium text-amber-900 shadow-md backdrop-blur"
+        className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-[11px] font-medium text-amber-900 shadow-md backdrop-blur-sm"
         style={style}
         {...tid(TestIds.researchLabStreamReconnecting)}
       >
@@ -34,7 +34,7 @@ export function LabStreamBanner({ streamState, streamAttempt, retryStream }: Lab
 
   return (
     <div
-      className="absolute left-1/2 top-3 flex -translate-x-1/2 items-center gap-2 rounded-full border border-red-200 bg-red-50/95 px-3 py-1.5 text-[11px] font-medium text-red-900 shadow-md backdrop-blur"
+      className="absolute left-1/2 top-3 flex -translate-x-1/2 items-center gap-2 rounded-full border border-red-200 bg-red-50/95 px-3 py-1.5 text-[11px] font-medium text-red-900 shadow-md backdrop-blur-sm"
       style={style}
       {...tid(TestIds.researchLabStreamExhausted)}
     >

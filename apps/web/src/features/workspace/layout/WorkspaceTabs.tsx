@@ -14,7 +14,7 @@ const tabs: { id: PanelId; label: string }[] = [
 export default function WorkspaceTabs({ activePanel, onChange }: WorkspaceTabsProps) {
   return (
     <nav
-      className="flex items-center gap-2 px-2 pt-2 border-t border-gray-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur"
+      className="flex items-center gap-2 px-2 pt-2 border-t border-gray-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm"
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.5rem)' }}
       aria-label="工作区面板切换"
     >

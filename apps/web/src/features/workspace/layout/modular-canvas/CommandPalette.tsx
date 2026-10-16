@@ -37,7 +37,7 @@ export default function CommandPalette({ open, onClose, commands }: CommandPalet
 
   return createPortal(
     <div
-      className="fixed inset-0 flex items-start justify-center pt-[18vh] bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 flex items-start justify-center pt-[18vh] bg-black/40 backdrop-blur-xs"
       style={modalStyle}
       role="dialog"
       aria-modal="true"
@@ -73,7 +73,7 @@ export default function CommandPalette({ open, onClose, commands }: CommandPalet
             }
           }}
           placeholder="搜索命令…"
-          className="w-full px-5 py-3.5 text-sm border-b border-gray-100 dark:border-slate-700 outline-none bg-transparent text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-slate-500"
+          className="w-full px-5 py-3.5 text-sm border-b border-gray-100 dark:border-slate-700 outline-hidden bg-transparent text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-slate-500"
         />
         <div className="max-h-[280px] overflow-y-auto p-1.5">
           {filtered.map((cmd) => (
@@ -86,7 +86,7 @@ export default function CommandPalette({ open, onClose, commands }: CommandPalet
               }}
               className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-left text-gray-700 dark:text-gray-200 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
             >
-              <span className="text-base w-6 text-center flex-shrink-0">{cmd.icon}</span>
+              <span className="text-base w-6 text-center shrink-0">{cmd.icon}</span>
               <span className="text-xs font-medium">{cmd.label}</span>
             </button>
           ))}

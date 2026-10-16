@@ -118,7 +118,7 @@ export const MenuItem = forwardRef<HTMLDivElement, MenuItemProps>(function MenuI
       ref={ref}
       disabled={disabled}
       className={cx(
-        'flex cursor-pointer select-none items-center rounded-lg px-3 py-2 text-xs outline-none',
+        'flex cursor-pointer select-none items-center rounded-lg px-3 py-2 text-xs outline-hidden',
         'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         'data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-slate-800',
         className,

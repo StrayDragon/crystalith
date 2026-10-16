@@ -117,7 +117,7 @@ export default function StudioOutputViewer({
 
   return (
     <div
-      className={`fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm ${isFullscreen ? 'p-0' : 'p-4 sm:p-6'}`}
+      className={`fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-xs ${isFullscreen ? 'p-0' : 'p-4 sm:p-6'}`}
       style={modalStyle}
       role="dialog"
       aria-modal="true"
@@ -153,7 +153,7 @@ export default function StudioOutputViewer({
               {selectedOutput ? resolveOutputMeta(selectedOutput) : '请先生成输出内容'}
             </Typography>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {researchLabOrigin ? (
               <Tooltip content="打开深度研究报告">
                 <button
@@ -238,7 +238,7 @@ export default function StudioOutputViewer({
           </div>
         </div>
         <div className="flex flex-1 min-h-0">
-          <aside className="flex flex-col w-64 border-r border-gray-200 bg-gray-100/50 p-3 flex-shrink-0 dark:border-slate-700 dark:bg-slate-800/60">
+          <aside className="flex flex-col w-64 border-r border-gray-200 bg-gray-100/50 p-3 shrink-0 dark:border-slate-700 dark:bg-slate-800/60">
             <Typography
               variant="small"
               className="mb-2 font-semibold text-gray-600 text-xs px-2 dark:text-slate-300"
@@ -256,7 +256,7 @@ export default function StudioOutputViewer({
                       key={output.id}
                       className={`group relative flex items-center rounded-lg transition-colors ${
                         isActive
-                          ? 'bg-white shadow-sm border border-gray-300 dark:bg-slate-800 dark:border-slate-600'
+                          ? 'bg-white shadow-xs border border-gray-300 dark:bg-slate-800 dark:border-slate-600'
                           : 'hover:bg-gray-200 border border-gray-200 dark:hover:bg-slate-800 dark:border-slate-700'
                       }`}
                     >

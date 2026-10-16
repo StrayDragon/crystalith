@@ -783,7 +783,7 @@ export default function WorkspaceLayout() {
 
       <SystemConfigDialog open={overlays.isSystemConfigOpen} onClose={overlays.closeSystemConfig} />
 
-      <div className="flex-shrink-0 relative z-10 px-4 pt-1">
+      <div className="shrink-0 relative z-10 px-4 pt-1">
         <WorkspaceHeader
           notebooks={notebooks.notebooks}
           activeNotebookId={notebooks.activeNotebookId}

@@ -56,7 +56,7 @@ export default function LabCanvasSettings({
             </span>
             <button
               type="button"
-              className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              className="rounded-sm p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
               onClick={() => {
                 setOpen(false);
               }}
@@ -181,7 +181,7 @@ export default function LabCanvasSettings({
           setOpen((v) => !v);
         }}
         aria-expanded={open}
-        className={`inline-flex h-[34px] items-center gap-1 rounded-lg border px-2 text-[11px] font-medium shadow-sm transition-colors ${
+        className={`inline-flex h-[34px] items-center gap-1 rounded-lg border px-2 text-[11px] font-medium shadow-xs transition-colors ${
           open
             ? 'border-blue-200 bg-blue-50 text-blue-800'
             : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'

@@ -170,7 +170,7 @@ export default function LabNodeDrawer({
     <aside
       className={
         overlay
-          ? 'absolute top-3 right-3 bottom-3 flex w-[min(380px,calc(100%-1.5rem))] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white/95 shadow-xl backdrop-blur'
+          ? 'absolute top-3 right-3 bottom-3 flex w-[min(380px,calc(100%-1.5rem))] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white/95 shadow-xl backdrop-blur-sm'
           : 'flex w-[380px] shrink-0 flex-col overflow-hidden border-l border-gray-200 bg-white'
       }
       style={overlay ? drawerLayerStyle : undefined}
@@ -398,7 +398,7 @@ export default function LabNodeDrawer({
                 rows={2}
                 disabled={sendBusy}
                 placeholder="对本节点提问…或点上方「定态 / 结构」徽章"
-                className="min-h-[56px] flex-1 resize-none rounded-md border border-gray-200 px-2.5 py-2 text-[12px] outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-200 disabled:opacity-50"
+                className="min-h-[56px] flex-1 resize-none rounded-md border border-gray-200 px-2.5 py-2 text-[12px] outline-hidden focus:border-blue-300 focus:ring-1 focus:ring-blue-200 disabled:opacity-50"
                 {...tid(TestIds.researchLabChatInput)}
               />
               <button
@@ -449,7 +449,7 @@ export default function LabNodeDrawer({
                   }`}
                 >
                   <span
-                    className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                    className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
                       node.askOnInterrupt !== false ? 'translate-x-4' : 'translate-x-0'
                     }`}
                   />
@@ -482,7 +482,7 @@ export default function LabNodeDrawer({
           {node.query ? (
             <section>
               <h3 className="mb-1 text-[10px] uppercase tracking-wider text-gray-400">检索查询</h3>
-              <p className="break-all rounded bg-gray-50 px-2 py-1.5 font-mono text-[11px] text-gray-500">
+              <p className="break-all rounded-sm bg-gray-50 px-2 py-1.5 font-mono text-[11px] text-gray-500">
                 {node.query}
               </p>
             </section>
@@ -545,7 +545,7 @@ export default function LabNodeDrawer({
                     <div className="mt-1.5 flex flex-wrap gap-1 opacity-70">
                       <button
                         type="button"
-                        className="rounded border border-gray-200 bg-white/80 px-1.5 py-0.5 text-[10px] text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                        className="rounded-sm border border-gray-200 bg-white/80 px-1.5 py-0.5 text-[10px] text-gray-500 hover:border-gray-300 hover:text-gray-700"
                         data-testid={`research-lab-evidence-convert-note-${c.id}`}
                         onClick={() => {
                           if (mode === 'eden' && notebookId && runId) {
@@ -562,7 +562,7 @@ export default function LabNodeDrawer({
                       </button>
                       <button
                         type="button"
-                        className="rounded border border-gray-200 bg-white/80 px-1.5 py-0.5 text-[10px] text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                        className="rounded-sm border border-gray-200 bg-white/80 px-1.5 py-0.5 text-[10px] text-gray-500 hover:border-gray-300 hover:text-gray-700"
                         data-testid={`research-lab-evidence-convert-source-${c.id}`}
                         onClick={() => {
                           if (mode === 'eden' && notebookId && runId) {
@@ -610,7 +610,7 @@ export default function LabNodeDrawer({
             <div className="flex flex-wrap gap-1.5">
               <button
                 type="button"
-                className="rounded border border-gray-200 bg-white/80 px-2 py-0.5 text-[10px] text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                className="rounded-sm border border-gray-200 bg-white/80 px-2 py-0.5 text-[10px] text-gray-500 hover:border-gray-300 hover:text-gray-700"
                 data-testid="research-lab-node-convert-note"
                 onClick={() => {
                   if (mode === 'eden' && notebookId && runId) {
@@ -627,7 +627,7 @@ export default function LabNodeDrawer({
               </button>
               <button
                 type="button"
-                className="rounded border border-gray-200 bg-white/80 px-2 py-0.5 text-[10px] text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                className="rounded-sm border border-gray-200 bg-white/80 px-2 py-0.5 text-[10px] text-gray-500 hover:border-gray-300 hover:text-gray-700"
                 data-testid="research-lab-node-convert-source"
                 onClick={() => {
                   if (mode === 'eden' && notebookId && runId) {

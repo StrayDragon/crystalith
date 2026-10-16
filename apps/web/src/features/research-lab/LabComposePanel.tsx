@@ -19,7 +19,7 @@ import {
 
 export type LabComposeMode = 'eden' | 'fixture';
 
-export interface LabComposeSourceOption {
+interface LabComposeSourceOption {
   id: number;
   filename: string;
   status: string;
@@ -144,7 +144,7 @@ export default function LabComposePanel({
             onChange={(e) => {
               onChange({ topic: e.target.value });
             }}
-            className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/25"
+            className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-hidden focus:ring-2 focus:ring-blue-500/25"
             {...tid(TestIds.researchLabComposeTopic)}
           />
           <button
@@ -206,7 +206,7 @@ export default function LabComposePanel({
                   }}
                   className={`flex-1 rounded-md px-2 py-1.5 text-[12px] font-medium transition-colors ${
                     active
-                      ? 'bg-white text-blue-700 shadow-sm'
+                      ? 'bg-white text-blue-700 shadow-xs'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                   {...tid(depthTid)}

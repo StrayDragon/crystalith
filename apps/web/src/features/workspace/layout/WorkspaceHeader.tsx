@@ -165,7 +165,7 @@ export default function WorkspaceHeader({
   return (
     <>
       <header
-        className="flex items-center justify-between gap-3 px-3 py-1.5 sm:px-4 sm:py-1.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-xl shadow-sm flex-wrap"
+        className="flex items-center justify-between gap-3 px-3 py-1.5 sm:px-4 sm:py-1.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-xl shadow-xs flex-wrap"
         {...tid(TestIds.workspaceHeader)}
       >
         <div className="flex items-center gap-3 min-w-0">
@@ -281,7 +281,7 @@ export default function WorkspaceHeader({
                 type="button"
                 onClick={dismissAutoNotebookHint}
                 aria-label="关闭默认笔记本提示"
-                className="flex-shrink-0 flex items-center gap-0.5 rounded-lg px-1 py-0.5 text-gray-500 dark:text-slate-400 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors"
+                className="shrink-0 flex items-center gap-0.5 rounded-lg px-1 py-0.5 text-gray-500 dark:text-slate-400 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors"
               >
                 <CoachMarkCountdown
                   actionId={AUTO_NOTEBOOK_HINT_COUNTDOWN_ACTION_ID}
@@ -374,7 +374,7 @@ export default function WorkspaceHeader({
                   {...tid(TestIds.userMenuCommandPalette)}
                 >
                   <span className="flex-1">命令面板</span>
-                  <kbd className="ml-auto text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded text-gray-400 dark:text-slate-500 font-mono">
+                  <kbd className="ml-auto text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded-sm text-gray-400 dark:text-slate-500 font-mono">
                     ⌘K
                   </kbd>
                 </MenuItem>
@@ -395,7 +395,7 @@ export default function WorkspaceHeader({
                   {...tid(TestIds.userMenuShortcutHelp)}
                 >
                   <span className="flex-1">快捷键帮助</span>
-                  <kbd className="ml-auto text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded text-gray-400 dark:text-slate-500 font-mono">
+                  <kbd className="ml-auto text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded-sm text-gray-400 dark:text-slate-500 font-mono">
                     Ctrl+?
                   </kbd>
                 </MenuItem>

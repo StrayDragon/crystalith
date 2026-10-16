@@ -336,7 +336,7 @@ function CiteFootnoteReference(props: PlateElementProps) {
             e.stopPropagation();
             onLocateNode?.(nodeId);
           }}
-          className="lab-report-node-ui relative z-[1] inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none cursor-pointer align-baseline bg-teal-50 text-teal-800 ring-1 ring-inset ring-teal-200 hover:bg-teal-100"
+          className="lab-report-node-ui relative z-[1] inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-semibold leading-none cursor-pointer align-baseline bg-teal-50 text-teal-800 ring-1 ring-inset ring-teal-200 hover:bg-teal-100"
         >
           图
         </button>
@@ -390,7 +390,7 @@ function CiteFootnoteReference(props: PlateElementProps) {
           e.stopPropagation();
           onCite(identifier, { anchorEl: e.currentTarget });
         }}
-        className={`lab-report-cite-ui relative z-[1] inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none cursor-pointer align-baseline ${
+        className={`lab-report-cite-ui relative z-[1] inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-semibold leading-none cursor-pointer align-baseline ${
           active
             ? 'bg-blue-600 text-white'
             : 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200 hover:bg-blue-100'
@@ -703,7 +703,7 @@ export default function LabReportPlateEditor({
             >
               <PlateContent
                 readOnly={readOnly}
-                className="outline-none min-h-[50vh] text-gray-800 [&_code]:mx-0.5 [&_code]:rounded [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[12.5px] [&_code]:text-gray-700 [&_strong]:font-semibold [&_strong]:text-gray-900"
+                className="outline-hidden min-h-[50vh] text-gray-800 [&_code]:mx-0.5 [&_code]:rounded-sm [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[12.5px] [&_code]:text-gray-700 [&_strong]:font-semibold [&_strong]:text-gray-900"
                 placeholder={readOnly ? undefined : '编辑研究报告…'}
               />
             </Plate>

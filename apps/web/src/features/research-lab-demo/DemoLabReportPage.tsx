@@ -398,7 +398,7 @@ export default function DemoLabReportPage({ notebookId }: DemoLabReportPageProps
       className="flex h-screen w-screen flex-col overflow-hidden bg-[var(--cl-bg)] text-gray-900"
       {...tid(TestIds.researchLabReportPage)}
     >
-      <header className="flex shrink-0 items-center gap-2 border-b border-gray-200 bg-white px-3 py-2 shadow-sm">
+      <header className="flex shrink-0 items-center gap-2 border-b border-gray-200 bg-white px-3 py-2 shadow-xs">
         <button
           type="button"
           onClick={() => {
@@ -411,14 +411,14 @@ export default function DemoLabReportPage({ notebookId }: DemoLabReportPageProps
           返回图谱
         </button>
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-gray-100 bg-blue-50 text-blue-700 shadow-sm">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-gray-100 bg-blue-50 text-blue-700 shadow-xs">
             <ScienceIcon sx={{ fontSize: 16 }} />
           </span>
           <div className="min-w-0">
             <div className="flex items-center gap-2 truncate text-sm font-semibold">
               研究报告
               <span
-                className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                className={`rounded-sm px-1.5 py-0.5 text-[10px] font-medium ${
                   editing
                     ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-200'
                     : viewing === 'working'
@@ -570,7 +570,7 @@ export default function DemoLabReportPage({ notebookId }: DemoLabReportPageProps
                 }`}
               >
                 <span
-                  className={`absolute h-2.5 w-2.5 rounded-full bg-white shadow-sm transition-transform ${
+                  className={`absolute h-2.5 w-2.5 rounded-full bg-white shadow-xs transition-transform ${
                     showCitations ? 'translate-x-3' : 'translate-x-0.5'
                   }`}
                 />

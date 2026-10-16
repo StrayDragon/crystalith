@@ -359,7 +359,7 @@ function LabWorkbench({
       className="flex h-screen w-screen flex-col overflow-hidden bg-gray-50 text-gray-900"
       {...tid(TestIds.researchLabPage)}
     >
-      <header className="flex shrink-0 items-center gap-2 border-b border-gray-200 bg-white px-3 py-2 shadow-sm">
+      <header className="flex shrink-0 items-center gap-2 border-b border-gray-200 bg-white px-3 py-2 shadow-xs">
         <button
           type="button"
           onClick={() => {
@@ -372,7 +372,7 @@ function LabWorkbench({
           返回
         </button>
         <div className="flex min-w-0 shrink-0 items-center gap-2">
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-blue-700 shadow-sm">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-blue-700 shadow-xs">
             <ScienceIcon sx={{ fontSize: 16 }} />
           </span>
           <div className="hidden min-w-0 md:block">
@@ -547,7 +547,7 @@ function LabWorkbench({
                 onChange={(modelId) => {
                   lab.setModelId(modelId);
                 }}
-                className="rounded border border-amber-300 bg-white px-1.5 py-1 text-[11px]"
+                className="rounded-sm border border-amber-300 bg-white px-1.5 py-1 text-[11px]"
                 data-testid={TestIds.researchLabRetrySynthesizeModel}
               />
             </label>
@@ -624,7 +624,7 @@ function LabWorkbench({
             className="absolute inset-0 flex items-center justify-center bg-gray-50/80 backdrop-blur-[1px]"
             style={overlayLayerStyle}
           >
-            <p className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm">
+            <p className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-xs">
               正在加载 Run #{urlRid}…
             </p>
           </div>
@@ -632,7 +632,7 @@ function LabWorkbench({
 
         {!showCompose && lab.reshaping ? (
           <div
-            className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-[11px] font-medium text-amber-900 shadow-md backdrop-blur"
+            className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-[11px] font-medium text-amber-900 shadow-md backdrop-blur-sm"
             style={bannerLayerStyle}
           >
             流程重塑中 · 重算布局
@@ -645,7 +645,7 @@ function LabWorkbench({
           phase: lab.phase,
         }) ? (
           <div
-            className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-blue-200 bg-blue-50/95 px-3 py-1.5 text-[11px] font-medium text-blue-900 shadow-md backdrop-blur"
+            className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-blue-200 bg-blue-50/95 px-3 py-1.5 text-[11px] font-medium text-blue-900 shadow-md backdrop-blur-sm"
             style={bannerLayerStyle}
           >
             {labPausedBannerText(lab.phase, lab.confirmKind)}
@@ -661,7 +661,7 @@ function LabWorkbench({
           nodes: lab.derived.nodes,
         }) ? (
           <div
-            className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-[11px] font-medium text-amber-950 shadow-md backdrop-blur"
+            className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-[11px] font-medium text-amber-950 shadow-md backdrop-blur-sm"
             style={bannerLayerStyle}
             {...tid(TestIds.researchLabPartialCompletionBanner)}
           >
@@ -670,7 +670,7 @@ function LabWorkbench({
         ) : null}
         {shouldShowLabPlayingTip({ showCompose, playing: lab.playing }) ? (
           <div
-            className="pointer-events-none absolute left-3 top-3 max-w-[240px] rounded-lg border border-gray-200 bg-white/90 px-2.5 py-1.5 text-[10px] text-gray-500 shadow-sm"
+            className="pointer-events-none absolute left-3 top-3 max-w-[240px] rounded-lg border border-gray-200 bg-white/90 px-2.5 py-1.5 text-[10px] text-gray-500 shadow-xs"
             style={bannerLayerStyle}
           >
             点节点打开会话 · 边上分叉/剪枝 · 左下角画布设置

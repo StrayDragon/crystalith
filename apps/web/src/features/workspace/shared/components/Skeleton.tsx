@@ -16,7 +16,7 @@ type SkeletonListProps = {
 };
 
 export const SkeletonLine = memo(function SkeletonLine({ className = '' }: SkeletonLineProps) {
-  return <div className={`h-3 rounded bg-gray-200 animate-pulse ${className}`.trim()} />;
+  return <div className={`h-3 rounded-sm bg-gray-200 animate-pulse ${className}`.trim()} />;
 });
 
 export const SkeletonCard = memo(function SkeletonCard({

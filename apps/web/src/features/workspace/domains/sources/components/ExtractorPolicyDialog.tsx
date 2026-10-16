@@ -150,7 +150,7 @@ export default function ExtractorPolicyDialog({
     >
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-xs"
         onClick={onClose}
         aria-label="关闭提取器设置"
         tabIndex={-1}
@@ -334,7 +334,7 @@ export default function ExtractorPolicyDialog({
                       ) : null}
                     </div>
 
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                       <label
                         className={`flex items-center gap-2 text-[11px] ${toggleDisabled ? 'opacity-60' : ''}`}
                       >

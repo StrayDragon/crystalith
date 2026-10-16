@@ -82,7 +82,7 @@ export const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
         align={align}
         sideOffset={sideOffset}
         className={cx(
-          'rounded-xl border border-gray-200 bg-white shadow-lg outline-none dark:border-slate-700 dark:bg-slate-900',
+          'rounded-xl border border-gray-200 bg-white shadow-lg outline-hidden dark:border-slate-700 dark:bg-slate-900',
           className,
         )}
         style={{ ...layerStyle, ...style }}

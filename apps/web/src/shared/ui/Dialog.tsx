@@ -50,7 +50,7 @@ export function Dialog({
     >
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-xs"
         aria-label="关闭对话框"
         onClick={() => handler?.(false)}
       />
@@ -75,7 +75,7 @@ export function Dialog({
 
 export function DialogHeader({ children, className, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cx('flex-shrink-0', className)} {...rest}>
+    <div className={cx('shrink-0', className)} {...rest}>
       {children}
     </div>
   );
@@ -96,7 +96,7 @@ export function DialogBody({
 
 export function DialogFooter({ children, className, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cx('flex-shrink-0', className)} {...rest}>
+    <div className={cx('shrink-0', className)} {...rest}>
       {children}
     </div>
   );

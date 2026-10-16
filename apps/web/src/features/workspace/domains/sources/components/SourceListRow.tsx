@@ -26,7 +26,7 @@ import {
 } from '../../../../../shared/ui';
 import type { SourceItem } from '../../../shared/types';
 
-export interface SourceListRowProps {
+interface SourceListRowProps {
   source: SourceItem;
   isHighlighted: boolean;
   isSelected: boolean;
@@ -65,7 +65,7 @@ function SourceListRow({
 
   return (
     <div
-      className={`group relative flex items-center rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-[border-color,box-shadow] hover:border-gray-300 hover:shadow mb-1.5 ${
+      className={`group relative flex items-center rounded-xl border bg-white dark:bg-slate-900 shadow-xs transition-[border-color,box-shadow] hover:border-gray-300 hover:shadow-sm mb-1.5 ${
         isHighlighted ? 'ux-source-locate-flash' : 'border-gray-200 dark:border-slate-700'
       }`}
     >
@@ -85,7 +85,7 @@ function SourceListRow({
         }}
         aria-label={`打开来源 ${source.title}`}
       >
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-200 text-gray-600 flex-shrink-0">
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-200 text-gray-600 shrink-0">
           <DescriptionIcon style={{ fontSize: 18 }} />
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -101,7 +101,7 @@ function SourceListRow({
               size="sm"
               variant="ghost"
               color={statusColor}
-              className="h-5 px-2 py-0 text-[10px] font-medium flex-shrink-0"
+              className="h-5 px-2 py-0 text-[10px] font-medium shrink-0"
             />
           </div>
           <div className="flex items-center gap-2 overflow-hidden">
@@ -230,7 +230,7 @@ function SourceListRow({
                   onToggleSource(source.id);
                 }}
                 containerProps={{ className: 'p-1' }}
-                className="h-4 w-4 rounded border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"
+                className="h-4 w-4 rounded-sm border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"
                 iconProps={{ className: 'text-white' }}
                 disabled
                 {...tid(TestIds.sourceRowCheckbox)}
@@ -244,7 +244,7 @@ function SourceListRow({
               onToggleSource(source.id);
             }}
             containerProps={{ className: 'p-1' }}
-            className="h-4 w-4 rounded border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"
+            className="h-4 w-4 rounded-sm border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"
             iconProps={{ className: 'text-white' }}
             {...tid(TestIds.sourceRowCheckbox)}
           />

@@ -100,7 +100,7 @@ export default function SourceDetailDialog({
     >
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-xs"
         onClick={onClose}
         aria-label={t('sources.detail.close_aria')}
         tabIndex={-1}
@@ -115,9 +115,9 @@ export default function SourceDetailDialog({
         data-testid={TestIds.sourceDetailDialog}
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-slate-700 p-4 flex-shrink-0">
+        <div className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-slate-700 p-4 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 flex-shrink-0">
+            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 shrink-0">
               <DescriptionIcon fontSize="small" />
             </div>
             <div className="min-w-0">
@@ -135,7 +135,7 @@ export default function SourceDetailDialog({
               </Typography>
             </div>
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {onToggleFullscreen && (
               <IconButton
                 variant="text"
@@ -196,7 +196,7 @@ export default function SourceDetailDialog({
                   <DataObjectIcon style={{ fontSize: 14 }} />
                   <span>原始数据</span>
                   {source.chunks > 0 && (
-                    <span className="ml-1 px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded text-[10px] text-gray-500 dark:text-slate-400">
+                    <span className="ml-1 px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded-sm text-[10px] text-gray-500 dark:text-slate-400">
                       {source.chunks}
                     </span>
                   )}

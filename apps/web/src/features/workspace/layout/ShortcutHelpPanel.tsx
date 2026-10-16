@@ -23,7 +23,7 @@ function renderShortcutCombo(combo: string) {
     .map((part) => (
       <kbd
         key={`${combo}-${part}`}
-        className="inline-flex min-w-[32px] items-center justify-center rounded-md border border-gray-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-gray-700 shadow-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+        className="inline-flex min-w-[32px] items-center justify-center rounded-md border border-gray-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-gray-700 shadow-xs dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
       >
         {part}
       </kbd>
@@ -55,7 +55,7 @@ export default function ShortcutHelpPanel({ open, shortcuts, onClose }: Shortcut
       role="dialog"
       aria-modal="true"
       aria-label="快捷键帮助"
-      className="fixed inset-0 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm"
+      className="fixed inset-0 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-xs"
       style={modalStyle}
       {...tid(TestIds.shortcutHelp)}
     >

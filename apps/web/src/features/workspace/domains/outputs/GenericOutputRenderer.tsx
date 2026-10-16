@@ -348,7 +348,7 @@ function GenericCards({
       {items.map((item) => (
         <div
           key={keyForItem(item)}
-          className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+          className="rounded-xl border border-gray-200 bg-white p-3 shadow-xs dark:border-slate-700 dark:bg-slate-900"
         >
           {fields.length > 0 ? (
             renderFields(item, fields, { depth: 0 })
@@ -383,7 +383,7 @@ function GenericTimeline({
         const date = dateKey && isRecord(item) ? item[dateKey] : null;
         return (
           <div key={keyForItem(item)} className="flex gap-3">
-            <div className="w-20 flex-shrink-0 text-right">
+            <div className="w-20 shrink-0 text-right">
               <div className="text-xs font-semibold text-gray-500 dark:text-slate-400">
                 {date ? coerceText(date) : ''}
               </div>

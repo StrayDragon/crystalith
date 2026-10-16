@@ -131,7 +131,7 @@ export default function LabReportCiteAside({
                 onClick={() => {
                   onCite(c.id, { occurrence: card.occurrence });
                 }}
-                className={`w-full rounded-md border px-2.5 py-1.5 text-left text-[11px] leading-snug shadow-sm transition-opacity hover:border-blue-300 ${
+                className={`w-full rounded-md border px-2.5 py-1.5 text-left text-[11px] leading-snug shadow-xs transition-opacity hover:border-blue-300 ${
                   isFocus || !activeCiteKey ? 'opacity-100' : 'opacity-45'
                 } ${
                   orphanIds.has(c.id)

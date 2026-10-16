@@ -202,7 +202,7 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
     >
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-xs"
         onClick={() => {
           setEditor(null);
           onClose();
@@ -490,7 +490,7 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                             ) : null}
                           </div>
 
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="flex items-center gap-2 shrink-0">
                             {presetId ? (
                               <label className="flex items-center gap-2 text-[11px] text-gray-600 dark:text-slate-300">
                                 <input

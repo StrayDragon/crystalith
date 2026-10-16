@@ -140,7 +140,7 @@ export default function AddSourceFromUrlDialog({
     >
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-xs"
         onClick={handleClose}
         aria-label="关闭对话框"
       />
@@ -148,6 +148,7 @@ export default function AddSourceFromUrlDialog({
       <div
         ref={modalRef}
         tabIndex={-1}
+        // fallow-ignore-next-line css-broken-reference
         className="relative bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-lg mx-4 ux-modal-in"
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-slate-700">
@@ -207,7 +208,7 @@ export default function AddSourceFromUrlDialog({
               placeholder="https://example.com/article"
               aria-label="URL"
               {...tid(TestIds.urlImportInput)}
-              className="mt-1 w-full h-9 px-3 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-gray-900 dark:text-slate-100 focus:outline-none focus:border-gray-500"
+              className="mt-1 w-full h-9 px-3 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-gray-900 dark:text-slate-100 focus:outline-hidden focus:border-gray-500"
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
                   event.preventDefault();

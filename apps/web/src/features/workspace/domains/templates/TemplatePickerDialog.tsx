@@ -153,7 +153,8 @@ export default function TemplatePickerDialog({
           <Input
             variant="outlined"
             labelProps={{ className: 'hidden' }}
-            className="!border !border-gray-300 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-lg shadow-gray-900/5 ring-4 ring-transparent placeholder:text-gray-500 focus:!border-gray-900 focus:!border-t-gray-900 focus:ring-gray-900/10"
+            // fallow-ignore-next-line css-broken-reference
+            className="border! border-gray-300! bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-lg shadow-gray-900/5 ring-4 ring-transparent placeholder:text-gray-500 focus:border-gray-900! focus:border-t-gray-900! focus:ring-gray-900/10"
             containerProps={{ className: 'min-w-0' }}
             value={notebookName}
             onChange={(e) => {

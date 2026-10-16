@@ -454,7 +454,6 @@ Crystalith 使用丰富但克制的圆角体系，通过不同半径表达层次
 
 | Animation           | Duration | Easing                     | 使用场景                            |
 | ------------------- | -------- | -------------------------- | ----------------------------------- |
-| ux-fade-in          | 150ms    | ease-out                   | 元素显现（简单出现）                |
 | ux-slide-in         | 180ms    | ease-out                   | toast、新插入元素（translateY 6px） |
 | ux-modal-in         | 180ms    | cubic-bezier(0.2, 0, 0, 1) | dialog 入场（scale 0.96 → 1）       |
 | typing-cursor-blink | 0.9s     | steps(1) infinite          | AI 流式输出光标                     |

@@ -220,7 +220,7 @@ export default function AddSearchResultDialog({
       {/* Backdrop */}
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-xs"
         onClick={allDone ? handleClose : undefined}
         disabled={!allDone}
         aria-label="关闭"
@@ -231,6 +231,7 @@ export default function AddSearchResultDialog({
       <div
         ref={modalRef}
         tabIndex={-1}
+        // fallow-ignore-next-line css-broken-reference
         className="relative bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-md mx-4 ux-modal-in"
       >
         {/* Header */}
@@ -297,7 +298,7 @@ export default function AddSearchResultDialog({
                   }`}
                 >
                   {/* Status Icon */}
-                  <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                  <div className="shrink-0 w-5 h-5 flex items-center justify-center">
                     {status?.status === 'loading' && (
                       <div className="w-4 h-4 border-2 border-gray-300 dark:border-slate-600 border-t-gray-900 rounded-full animate-spin" />
                     )}

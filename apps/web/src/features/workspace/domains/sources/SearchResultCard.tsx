@@ -52,17 +52,17 @@ const SearchResultCard = forwardRef<HTMLDivElement, SearchResultCardProps>(
       return (
         <div
           ref={ref}
-          className="group relative flex items-center gap-1 py-1 px-1.5 rounded border border-transparent hover:border-gray-200 hover:bg-gray-50 transition-all"
+          className="group relative flex items-center gap-1 py-1 px-1.5 rounded-sm border border-transparent hover:border-gray-200 hover:bg-gray-50 transition-all"
         >
           {/* Checkbox */}
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <Checkbox
               checked={isSelected}
               onChange={() => {
                 onToggle(result);
               }}
               containerProps={{ className: 'p-0' }}
-              className="h-3.5 w-3.5 rounded border-gray-300 bg-white checked:bg-blue-600 checked:border-blue-600"
+              className="h-3.5 w-3.5 rounded-sm border-gray-300 bg-white checked:bg-blue-600 checked:border-blue-600"
               iconProps={{ className: 'text-white' }}
             />
           </div>
@@ -83,13 +83,13 @@ const SearchResultCard = forwardRef<HTMLDivElement, SearchResultCardProps>(
           </button>
 
           {/* Menu - only visible on hover */}
-          <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
             <Menu placement="bottom-end">
               <MenuHandler>
                 <IconButton
                   variant="text"
                   size="sm"
-                  className="w-5 h-5 min-w-[20px] rounded hover:bg-gray-200 text-gray-400"
+                  className="w-5 h-5 min-w-[20px] rounded-sm hover:bg-gray-200 text-gray-400"
                 >
                   <MoreHorizIcon style={{ fontSize: 14 }} />
                 </IconButton>
@@ -145,7 +145,7 @@ const SearchResultCard = forwardRef<HTMLDivElement, SearchResultCardProps>(
           flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition-all duration-200
           ${
             isSelected
-              ? 'bg-gray-100 border-gray-400 shadow-sm'
+              ? 'bg-gray-100 border-gray-400 shadow-xs'
               : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
           }
         `}
@@ -159,7 +159,7 @@ const SearchResultCard = forwardRef<HTMLDivElement, SearchResultCardProps>(
             e.stopPropagation();
           }}
           containerProps={{ className: 'p-0 mt-0.5' }}
-          className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
+          className="h-4 w-4 rounded-sm border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
           iconProps={{ className: 'text-white' }}
         />
 

@@ -219,7 +219,7 @@ export default function SearchResultsQueue({
     return (
       <div
         key={queueItem.id}
-        className={`border rounded-xl shadow-sm overflow-hidden ${
+        className={`border rounded-xl shadow-xs overflow-hidden ${
           isLoading
             ? 'border-blue-300 bg-blue-50/30'
             : isError
@@ -240,7 +240,7 @@ export default function SearchResultsQueue({
             {...tid(TestIds.searchQueueToggle)}
           >
             <div
-              className={`flex items-center justify-center w-5 h-5 rounded border flex-shrink-0 ${
+              className={`flex items-center justify-center w-5 h-5 rounded-sm border shrink-0 ${
                 isLoading
                   ? 'bg-blue-100 border-blue-300'
                   : isError
@@ -263,36 +263,36 @@ export default function SearchResultsQueue({
               <Chip
                 value="查询中…"
                 size="sm"
-                className="bg-blue-400 text-[10px] h-5 py-0 px-2 flex-shrink-0"
+                className="bg-blue-400 text-[10px] h-5 py-0 px-2 shrink-0"
               />
             ) : isError ? (
               <Chip
                 value="失败"
                 size="sm"
-                className="bg-red-500 text-[10px] h-5 py-0 px-2 flex-shrink-0"
+                className="bg-red-500 text-[10px] h-5 py-0 px-2 shrink-0"
               />
             ) : (
               <Chip
                 value={`${itemResults.length} 条`}
                 size="sm"
-                className="bg-blue-600 text-[10px] h-5 py-0 px-2 flex-shrink-0"
+                className="bg-blue-600 text-[10px] h-5 py-0 px-2 shrink-0"
               />
             )}
             {itemSelectedCount > 0 && (
               <Chip
                 value={`已选 ${itemSelectedCount}`}
                 size="sm"
-                className="bg-gray-900 text-[10px] h-5 py-0 px-2 flex-shrink-0"
+                className="bg-gray-900 text-[10px] h-5 py-0 px-2 shrink-0"
               />
             )}
             {(isLoading || (!isLoading && itemResults.length > 0)) &&
               (isItemExpanded ? (
-                <ExpandLessIcon style={{ fontSize: 18 }} className="text-blue-600 flex-shrink-0" />
+                <ExpandLessIcon style={{ fontSize: 18 }} className="text-blue-600 shrink-0" />
               ) : (
-                <ExpandMoreIcon style={{ fontSize: 18 }} className="text-blue-600 flex-shrink-0" />
+                <ExpandMoreIcon style={{ fontSize: 18 }} className="text-blue-600 shrink-0" />
               ))}
           </button>
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {!isLoading && itemResults.length > 0 && (
               <button
                 type="button"
@@ -380,7 +380,7 @@ export default function SearchResultsQueue({
                     }
                   }}
                   containerProps={{ className: 'p-0' }}
-                  className="h-3.5 w-3.5 rounded border-gray-300 bg-white checked:bg-blue-600 checked:border-blue-600"
+                  className="h-3.5 w-3.5 rounded-sm border-gray-300 bg-white checked:bg-blue-600 checked:border-blue-600"
                   iconProps={{ className: 'text-white' }}
                   aria-label="全选此搜索结果"
                 />
@@ -450,7 +450,7 @@ export default function SearchResultsQueue({
                   onClick={() => {
                     onRetryQueueItem(queueItem);
                   }}
-                  className="flex-shrink-0 rounded-md border border-red-300 bg-white/80 px-2 py-0.5 text-[11px] font-medium text-red-700 hover:bg-red-100 transition-colors"
+                  className="shrink-0 rounded-md border border-red-300 bg-white/80 px-2 py-0.5 text-[11px] font-medium text-red-700 hover:bg-red-100 transition-colors"
                   {...tid(TestIds.searchQueueRetry)}
                 >
                   重试
@@ -481,7 +481,7 @@ export default function SearchResultsQueue({
           className="rounded-xl"
         >
           <DialogHeader className="flex items-start gap-3 pb-2">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 border border-blue-200 flex-shrink-0">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 border border-blue-200 shrink-0">
               <SearchIcon className="text-blue-600" />
             </div>
             <div className="flex-1 min-w-0">
@@ -505,7 +505,7 @@ export default function SearchResultsQueue({
               onClick={() => {
                 setExpandedResult(null);
               }}
-              className="flex-shrink-0"
+              className="shrink-0"
             >
               <CloseIcon />
             </IconButton>
@@ -579,7 +579,7 @@ export default function SearchResultsQueue({
         className="rounded-xl max-h-[90vh] flex flex-col"
         dismiss={{ outsidePress: false }}
       >
-        <DialogHeader className="flex items-center justify-between border-b border-gray-200 flex-shrink-0">
+        <DialogHeader className="flex items-center justify-between border-b border-gray-200 shrink-0">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-100 border border-blue-200">
               <SearchIcon className="text-blue-600" style={{ fontSize: 24 }} />
@@ -631,7 +631,7 @@ export default function SearchResultsQueue({
                     flex gap-3 p-4 rounded-xl border transition-all mb-3
                     ${
                       isSelected
-                        ? 'bg-blue-50 border-blue-300 shadow-sm'
+                        ? 'bg-blue-50 border-blue-300 shadow-xs'
                         : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                     }
                   `}
@@ -642,7 +642,7 @@ export default function SearchResultsQueue({
                       handleToggle(result);
                     }}
                     containerProps={{ className: 'p-0 mt-1' }}
-                    className="h-5 w-5 rounded border-gray-300 bg-white checked:bg-blue-600 checked:border-blue-600"
+                    className="h-5 w-5 rounded-sm border-gray-300 bg-white checked:bg-blue-600 checked:border-blue-600"
                     iconProps={{ className: 'text-white' }}
                   />
                   <div className="flex-1 min-w-0">
@@ -739,13 +739,13 @@ export default function SearchResultsQueue({
           />
         </DialogBody>
         {/* Footer Actions */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50 shrink-0">
           <div className="flex items-center gap-3">
             <Checkbox
               checked={allSelected}
               onChange={handleToggleAll}
               containerProps={{ className: 'p-0' }}
-              className="h-5 w-5 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
+              className="h-5 w-5 rounded-sm border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
               iconProps={{ className: 'text-white' }}
               aria-label="全选搜索结果"
             />

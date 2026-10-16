@@ -1,0 +1,10 @@
+/*
+ * c136: streamdown（含 @streamdown/code）dist 内消费、而本仓源码不出现的类白名单。
+ *
+ * 为什么不用 @source 扫 dist：oxide 对相对路径进 node_modules 的 @source 不放行
+ * （bun symlink/.gitignore 布局），绝对路径不可移植——见 change c136 design。
+ *
+ * 维护：升级 streamdown 后若 rstest lock-test（streamdown-classes.test.ts）红，
+ * 先跑权威差分更新本清单：临时用绝对路径 @source 构建，diff 产物类集。
+ */
+@source inline("appearance-none before:[counter-increment:line] before:content-[counter(line)] before:font-mono before:inline-block before:mr-4 before:select-none before:text-[13px] before:text-muted-foreground/50 before:text-right before:w-6 bg-[var(--sdm-tbg)] bg-background bg-background/50 bg-background/70 bg-background/80 bg-background/90 bg-background/95 bg-black/10 bg-muted bg-muted/80 bg-primary bg-sidebar bg-sidebar/80 border-border border-collapse border-current border-l-4 border-muted-foreground/30 border-sidebar contents dark:bg-[var(--shiki-dark-bg,var(--sdm-tbg))] dark:text-[var(--shiki-dark,var(--sdm-c,inherit))] divide-border divide-y duration-150 group-hover:block h-[46px] hover:bg-background hover:bg-muted hover:bg-muted/40 hover:bg-primary/90 hover:text-foreground left-4 list-inside list-item lowercase max-h-32 min-h-28 min-h-[200px] my-4 my-6 origin-center size-4 size-full space-x-2 sr-only sticky supports-[backdrop-filter]:backdrop-blur supports-[backdrop-filter]:backdrop-blur-sm supports-[backdrop-filter]:bg-background/70 supports-[backdrop-filter]:bg-sidebar/70 table-cell table-row text-[var(--sdm-c,inherit)] text-muted-foreground text-primary text-primary-foreground whitespace-normal wrap-anywhere z-20");
