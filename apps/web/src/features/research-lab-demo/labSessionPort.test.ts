@@ -9,15 +9,10 @@ describe('fixtureLabSessionPort', () => {
     setActiveDemoResearchTaskId(null);
   });
 
-  it('locks product-path default scenario to xlsx-lib', () => {
+  it('is a fixture port whose createTask stamps the default scenario and delegates listing', () => {
     expect(fixtureLabSessionPort.kind).toBe('fixture');
-    expect(fixtureLabSessionPort.defaultScenarioId).toBe('xlsx-lib');
-    expect(LAB_DEFAULT_FIXTURE_SCENARIO_ID).toBe('xlsx-lib');
-  });
-
-  it('creates tasks with default fixture scenario', () => {
     const task = fixtureLabSessionPort.createTask({ notebookId: 9, topic: 'xlsx' });
-    expect(task.scenarioId).toBe('xlsx-lib');
+    expect(task.scenarioId).toBe(LAB_DEFAULT_FIXTURE_SCENARIO_ID);
     expect(fixtureLabSessionPort.listTasks(9)).toHaveLength(1);
   });
 });

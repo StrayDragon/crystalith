@@ -51,11 +51,8 @@ describe('useEdenLabController compose depth (r447)', () => {
     createResearchRun.mockReset();
   });
 
-  it('defaults depth to medium', () => {
-    const { result } = renderHook(() => useEdenLabController(62));
-    expect(result.current.depth).toBe('medium');
-  });
-
+  // 「defaults depth to medium」常量镜像用例已删：默认值由下方 create payload
+  // 用例的初始状态与 labComposeDepth 预算映射间接锁定。
   it('POST createResearchRun includes selected depth', async () => {
     createResearchRun.mockResolvedValue({
       id: 99,

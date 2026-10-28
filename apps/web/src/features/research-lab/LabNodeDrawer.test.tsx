@@ -49,11 +49,7 @@ describe('r102 run detail layer keeps the desk mounted', () => {
     // the desk was never unmounted by opening/closing the detail
     expect(screen.getByTestId('lab-desk')).toBeTruthy();
   });
-
-  it('inline (non-overlay) mode keeps the same single-instance close semantics', () => {
-    const calls = renderDrawer(false);
-    expect(screen.getByTestId('research-lab-node-drawer')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '关闭' }));
-    expect(calls.close).toBe(1);
-  });
 });
+
+// 删除 inline (overlay=false) 用例：产品与 demo 两个调用方均显式传 overlay，
+// falsy 分支为死 API 面；prop 本身的移除另行处理。
