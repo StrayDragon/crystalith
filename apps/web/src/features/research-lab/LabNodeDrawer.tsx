@@ -26,7 +26,6 @@ export default function LabNodeDrawer({
   phase,
   onClose,
   onEdit,
-  overlay,
   reportAvailable,
   onOpenReport,
   constraintsNote,
@@ -44,7 +43,6 @@ export default function LabNodeDrawer({
   phase: LabPhase;
   onClose: () => void;
   onEdit?: (nodeId: string, patch: Partial<LabNode>) => void;
-  overlay?: boolean;
   reportAvailable?: boolean;
   onOpenReport?: () => void;
   constraintsNote?: string | null;
@@ -168,12 +166,8 @@ export default function LabNodeDrawer({
 
   return (
     <aside
-      className={
-        overlay
-          ? 'absolute top-3 right-3 bottom-3 flex w-[min(380px,calc(100%-1.5rem))] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white/95 shadow-xl backdrop-blur-sm'
-          : 'flex w-[380px] shrink-0 flex-col overflow-hidden border-l border-gray-200 bg-white'
-      }
-      style={overlay ? drawerLayerStyle : undefined}
+      className="absolute top-3 right-3 bottom-3 flex w-[min(380px,calc(100%-1.5rem))] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white/95 shadow-xl backdrop-blur-sm"
+      style={drawerLayerStyle}
       {...tid(TestIds.researchLabNodeDrawer)}
     >
       <div className="flex items-start justify-between gap-2 border-b border-gray-100 px-3 py-2.5">

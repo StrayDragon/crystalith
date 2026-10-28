@@ -679,7 +679,6 @@ function LabWorkbench({
 
         {!showCompose ? (
           <LabNodeDrawer
-            overlay
             mode="eden"
             notebookId={notebookId}
             runId={lab.runId ?? readActiveRunIdFromUrl()}

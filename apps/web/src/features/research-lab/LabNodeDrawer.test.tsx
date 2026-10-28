@@ -18,7 +18,7 @@ const NODE: LabNode = {
   citationIds: [],
 };
 
-function renderDrawer(overlay = true) {
+function renderDrawer() {
   const calls = { close: 0 };
   render(
     <LayerProvider>
@@ -27,7 +27,6 @@ function renderDrawer(overlay = true) {
         node={NODE}
         phase="explore"
         citations={{}}
-        overlay={overlay}
         onClose={() => {
           calls.close += 1;
         }}
@@ -39,7 +38,7 @@ function renderDrawer(overlay = true) {
 
 describe('r102 run detail layer keeps the desk mounted', () => {
   it('renders as an overlay detail while the desk stays mounted; close only hides the detail', () => {
-    const calls = renderDrawer(true);
+    const calls = renderDrawer();
     expect(screen.getByTestId('lab-desk')).toBeTruthy();
     expect(screen.getByTestId('research-lab-node-drawer')).toBeTruthy();
     expect(screen.getByText('研究节点甲')).toBeTruthy();
@@ -51,5 +50,5 @@ describe('r102 run detail layer keeps the desk mounted', () => {
   });
 });
 
-// 删除 inline (overlay=false) 用例：产品与 demo 两个调用方均显式传 overlay，
+// overlay prop 已随死 API 面一并移除（产品与 demo 调用方原本均显式传 true）。
 // falsy 分支为死 API 面；prop 本身的移除另行处理。
