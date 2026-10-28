@@ -70,7 +70,7 @@ const sampleReport = {
   },
 };
 
-function stubReady(opts?: { working?: typeof sampleReport | null }) {
+function stubReady({ working }: { working?: typeof sampleReport | null } = {}) {
   getResearchRun.mockResolvedValue({
     id: 9,
     notebookId: 62,
@@ -82,8 +82,8 @@ function stubReady(opts?: { working?: typeof sampleReport | null }) {
   });
   getResearchReportView.mockResolvedValue({
     canonical: sampleReport,
-    working: opts?.working ?? undefined,
-    viewing: opts?.working ? 'working' : 'canonical',
+    working: working ?? undefined,
+    viewing: working ? 'working' : 'canonical',
   });
   listResearchRevisions.mockResolvedValue({
     items: [
@@ -103,7 +103,7 @@ function stubReady(opts?: { working?: typeof sampleReport | null }) {
   });
 }
 
-describe('LabReportPage eden revisions/convert (c89)', () => {
+describe('LabReportPage eden revisions/convert', () => {
   beforeEach(() => {
     getResearchRun.mockReset();
     getResearchReportView.mockReset();
