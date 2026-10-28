@@ -63,5 +63,18 @@ describe('r219 just test scope is server+shared only', () => {
     expect(test.body).not.toContain('e2e');
     expect(test.deps).not.toContain('test-web');
     expect(test.deps).not.toContain('e2e');
+    // r219 细则：BDD 子集经 --path-ignore-patterns 排除在 just test 外（独立走 test-bdd）。
+    expect(test.body).toContain('--path-ignore-patterns');
+    expect(test.body).toContain('apps/server/tests/bdd');
+  });
+});
+
+describe('r223 BDD and type-aware lint stay out of the primary gate', () => {
+  it('qa does not depend on test-bdd/type-aware-lint; both remain separate entrypoints', () => {
+    const qa = recipe('qa');
+    expect(qa.deps).not.toContain('test-bdd');
+    expect(qa.deps).not.toContain('type-aware-lint');
+    expect(recipe('test-bdd').body).toContain('bun test');
+    expect(recipe('type-aware-lint').body).toContain('lint:type-aware');
   });
 });

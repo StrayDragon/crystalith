@@ -164,6 +164,7 @@ check-bun:
 # Output minimized — only errors and warnings shown.
 #
 # Out of gate (run separately when relevant):
+#   - `just test-bdd` — server BDD CRUD subset
 #   - `just type-aware-lint` — advisory type-aware oxlint
 # Requires Chromium once: `just e2e-install` (or system Chrome; see e2e recipe)
 qa: check check-env-examples check-app-schema check-i18n-keys check-provider-deps audit-fallow audit-fallow-arch test test-web e2e
@@ -174,13 +175,20 @@ qa: check check-env-examples check-app-schema check-i18n-keys check-provider-dep
 # --parallel（implied --isolate）：每测试文件独立模块表/全局对象/worker 进程，
 # 杜绝跨文件泄漏（mock.module、module 单例、DB、timer）造成的顺序依赖 —— 测试
 # 文件必须自给自足（自己在 import 被测模块前装好 'ai' mock 等）。
+# BDD (apps/server/tests/bdd) 经 --path-ignore-patterns 排除在门禁外：
+# 它是补充性的 CRUD 子集，单独跑 `just test-bdd`（见下与根 AGENTS.md）。
 test:
-    @CL_LOG_LEVEL={{ _qlog }} bun test --parallel {{ _qtest }} apps/server/tests/ packages/shared/test/
+    @CL_LOG_LEVEL={{ _qlog }} bun test --parallel {{ _qtest }} --path-ignore-patterns='apps/server/tests/bdd/**' apps/server/tests/ packages/shared/test/
 
 # Frontend Rstest CI suite (MSW on-unhandled=error). Part of `just qa`.
 # L0: mock 报告静默 + dot reporter + passed-only 静默 (仅失败显示 console)
 test-web:
     @cd apps/web && node ./scripts/test_mock_report.mjs --check-mock-reasons {{ _qtmock }} && TZ=UTC RSTEST_MSW_ON_UNHANDLED=error bunx rstest run {{ _qrstest }}
+
+# Server BDD (Gherkin) — CRUD subset only; see apps/server/tests/bdd/run.test.ts
+# SKIP_FEATURE_DIRS. Not part of `just qa`.
+test-bdd:
+    @bun test apps/server/tests/bdd/run.test.ts
 
 # Critical browser E2E gate (Playwright @p0). Independent of unit tests.
 # Uses isolated ports 13000/18032 + temp DB under e2e/.tmp/

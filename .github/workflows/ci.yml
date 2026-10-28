@@ -105,6 +105,7 @@ jobs:
 
       # SSOT: 都调 just 配方(定义在 justfile, 与本地完全一致)
       - run: just test
+      - run: just test-bdd
       - run: just test-web
 
       # Playwright 浏览器引导(just e2e 不负责装浏览器; 与本地 e2e-install

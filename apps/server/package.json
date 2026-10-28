@@ -43,6 +43,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@cucumber/gherkin": "^42.0.1",
     "@types/bun": "^1.4.3",
     "@types/jsdom": "^30.0.0",
     "drizzle-kit": "^0.31.11",
