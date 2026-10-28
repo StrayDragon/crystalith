@@ -19,7 +19,7 @@ import {
   getSearxngHost,
   getOptionalServices,
   getCompletionOptions,
-} from '../src/shared/config.ts';
+} from '../../src/shared/config.ts';
 
 const TMP = join(tmpdir(), `crystalith-test-config-${process.pid}.yaml`);
 
@@ -227,7 +227,7 @@ app:
 // c40: AI / concurrency / embedding / search / completion_options config
 // ---------------------------------------------------------------------------
 
-describe('config: c40 typed sections', () => {
+describe('config: typed sections', () => {
   it('returns defaults when sections are absent', () => {
     writeFileSync(TMP, `models:\n  defaults: {}\n  available: []\n`);
     resetConfig(loadConfig(TMP));
@@ -503,9 +503,9 @@ describe('config: embedding capability declaration', () => {
 // c131: embeddinggemma2-gateway catalog entry (T1)
 // ---------------------------------------------------------------------------
 
-describe('config: embeddinggemma2-gateway catalog entry (c131)', () => {
+describe('config: embeddinggemma2-gateway catalog entry)', () => {
   it('ships the eg2 entry with the full capability block and dedicated gateway', () => {
-    const cfg = loadConfig(join(import.meta.dir, '../../../config/app.yaml'));
+    const cfg = loadConfig(join(import.meta.dir, '../../../../config/app.yaml'));
     const entry = cfg.models.available.find((m) => m.id === 'embeddinggemma2-gateway');
     expect(entry).toBeDefined();
     expect(entry?.provider).toBe('openai-compatible');
@@ -523,7 +523,7 @@ describe('config: embeddinggemma2-gateway catalog entry (c131)', () => {
 
   it('defaults.embedding points at the eg2 entry (c131 T8 flip)', () => {
     delete process.env.CL_DEFAULT_EMBEDDING_MODEL;
-    const cfg = loadConfig(join(import.meta.dir, '../../../config/app.yaml'));
+    const cfg = loadConfig(join(import.meta.dir, '../../../../config/app.yaml'));
     expect(cfg.models.defaults.embedding).toBe('embeddinggemma2-gateway');
     // And that id actually resolves to the eg2 entry.
     expect(cfg.models.available.find((m) => m.id === cfg.models.defaults.embedding)?.model).toBe(

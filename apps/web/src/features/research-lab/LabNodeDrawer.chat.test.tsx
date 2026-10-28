@@ -35,7 +35,7 @@ const researchNode: LabNode = {
   query: 'q',
 };
 
-describe('LabNodeDrawer chat mode (c88)', () => {
+describe('LabNodeDrawer chat mode)', () => {
   beforeEach(() => {
     streamNodeChat.mockReset();
     proposeNodeChatTurn.mockReset();

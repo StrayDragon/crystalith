@@ -96,7 +96,7 @@ function csvContent(rows: number): string {
 // r288 — CSV upload is parser-driven supported format
 // ---------------------------------------------------------------------------
 
-describe('c117 r288: core CSV upload', () => {
+describe('r288: core CSV upload', () => {
   it('routes a text/csv upload to the CSV parser and marks it ready', async () => {
     const nb = makeNotebook('c117-csv-mime');
     const { status, body } = await uploadFile(nb, 'data.csv', csvContent(5), 'text/csv');
@@ -138,7 +138,7 @@ describe('c117 r288: core CSV upload', () => {
 // r289 — CSV chunking by rows
 // ---------------------------------------------------------------------------
 
-describe('c117 r289: CSV chunked by rows', () => {
+describe('r289: CSV chunked by rows', () => {
   it('splits 120 rows into 50-row markdown-table chunks with contiguous csv_row metadata', async () => {
     const nb = makeNotebook('c117-csv-rows');
     const { status, body } = await uploadFile(nb, 'big.csv', csvContent(120), 'text/csv');
@@ -181,7 +181,7 @@ describe('c117 r289: CSV chunked by rows', () => {
 // r286 — supported formats are parser-driven
 // ---------------------------------------------------------------------------
 
-describe('c117 r286: supported formats are parser-driven', () => {
+describe('r286: supported formats are parser-driven', () => {
   it('exposes parser capabilities (mime types + extensions) via the parsers listing', async () => {
     const res = await app.handle(new Request(`${BASE}/v2/sources/parsers`));
     expect(res.status).toBe(200);
@@ -215,7 +215,7 @@ describe('c117 r286: supported formats are parser-driven', () => {
 // r291 — oversized uploads rejected with 413 before creating a source
 // ---------------------------------------------------------------------------
 
-describe('c117 r291: upload_max_bytes 413 guard', () => {
+describe('r291: upload_max_bytes 413 guard', () => {
   it('rejects uploads over the configured limit with 413 and creates no source row', async () => {
     const nb = makeNotebook('c117-413');
     const before = db()
@@ -253,7 +253,7 @@ describe('c117 r291: upload_max_bytes 413 guard', () => {
 // r298 — dedup gated by config
 // ---------------------------------------------------------------------------
 
-describe('c117 r298: dedup disabled by config', () => {
+describe('r298: dedup disabled by config', () => {
   it('skips dedup and creates a new source when source_ingestion.dedup.enabled=false', async () => {
     const nb = makeNotebook('c117-dedup-off');
     const content = 'identical bytes for the dedup gate test';
@@ -300,7 +300,7 @@ describe('c117 r298: dedup disabled by config', () => {
 // c134 r490 — same-filename soft dedup
 // ---------------------------------------------------------------------------
 
-describe('c134 r490: same-filename uploads prompt instead of silently duplicating', () => {
+describe('r490: same-filename uploads prompt instead of silently duplicating', () => {
   it('prompt returns 409 kind=filename; reuse returns the existing; create_new makes an independent row', async () => {
     const nb = makeNotebook('c134-filename-dedup');
     const first = await uploadFile(nb, '同名笔记.md', '# 第一版内容甲', 'text/markdown');
@@ -378,7 +378,7 @@ describe('c134 r490: same-filename uploads prompt instead of silently duplicatin
 // c135 r491 — dedup replace swaps the old source
 // ---------------------------------------------------------------------------
 
-describe('c135 r491: replace action', () => {
+describe('r491: replace action', () => {
   it('same-name replace deletes the old source (cascades) and ingests the new bytes', async () => {
     const nb = makeNotebook('c135-replace');
     const first = await uploadFile(nb, '更新文档.md', '# 旧版本内容', 'text/markdown');

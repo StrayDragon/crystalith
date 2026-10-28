@@ -2,7 +2,7 @@ import { describe, expect, it, rs } from '@rstest/core';
 
 import { consumeSlidesStageStream, slidesStageStreamPath } from './consumeSlidesStageStream';
 
-describe('consumeSlidesStageStream (c70 GET SSE)', () => {
+describe('consumeSlidesStageStream (GET SSE)', () => {
   it('builds nested stream paths', () => {
     expect(slidesStageStreamPath(2, 9, 'outline')).toBe(
       '/v2/notebooks/2/studio/slides/9/outline/stream',

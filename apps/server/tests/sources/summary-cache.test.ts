@@ -61,7 +61,7 @@ beforeAll(() => {
 
 afterAll(teardownIntegrationEnv);
 
-describe('c74 source summary cache', () => {
+describe('source summary cache', () => {
   it('GET without cache returns empty state and does not call LLM', async () => {
     generateTextCalls = 0;
     const res = await app.handle(

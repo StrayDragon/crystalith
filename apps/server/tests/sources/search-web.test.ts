@@ -9,7 +9,7 @@ import { afterAll, beforeAll, describe, expect, it, mock, spyOn } from 'bun:test
 type EngineMode = 'reject' | 'empty' | 'hits';
 const engineModeKey = '__c65SearchEngineMode' as const;
 
-mock.module('../src/ai/tools/web-search.ts', () => ({
+mock.module('../../src/ai/tools/web-search.ts', () => ({
   searchWeb: async () => {
     const mode = ((globalThis as Record<symbol | string, unknown>)[engineModeKey] ??
       'hits') as EngineMode;
@@ -27,9 +27,9 @@ mock.module('../src/ai/tools/web-search.ts', () => ({
   webSearchTool: () => ({}),
 }));
 
-import { notebooks } from '../src/db/schema.ts';
-import { createApp } from '../src/server.ts';
-import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from './helpers/integration.ts';
+import { notebooks } from '../../src/db/schema.ts';
+import { createApp } from '../../src/server.ts';
+import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from '../helpers/integration.ts';
 
 const BASE = 'http://test.local';
 let app: InstanceType<typeof createApp>;
@@ -61,7 +61,7 @@ async function postSearch(): Promise<{ status: number; body: Record<string, unkn
   return { status: res.status, body: (await res.json()) as Record<string, unknown> };
 }
 
-describe('sources search error contract (c65)', () => {
+describe('sources search error contract (search-web r-priority)', () => {
   it('engine failure → service_error with readable message, empty results', async () => {
     (globalThis as Record<symbol | string, unknown>)[engineModeKey] = 'reject';
     // 刻意失败场景: 吞掉应用层 error 日志, 避免门禁输出把预期内的错误当误报

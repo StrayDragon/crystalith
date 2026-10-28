@@ -104,7 +104,7 @@ async function createAndAwaitConfirm(): Promise<{ id: number; researchCount: num
   };
 }
 
-describe('research request-reexpand (c104)', () => {
+describe('research request-reexpand)', () => {
   it('request-reexpand → awaiting_confirm + confirmKind=reexpand', async () => {
     const { id } = await createAndAwaitConfirm();
     const res = await app.handle(

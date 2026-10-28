@@ -148,7 +148,7 @@ async function runChat(): Promise<SseFrame[]> {
   return parseFrames(await res.text());
 }
 
-describe('node chat failure honesty (c63 / r12)', () => {
+describe('node chat failure honesty (r12)', () => {
   it('agent rejection → error frame + chat_failed ledger, no stub chunks', async () => {
     (globalThis as Record<symbol | string, unknown>)[agentModeKey] = 'reject';
     // 刻意失败场景: 吞掉应用层 error 日志, 避免门禁输出把预期内的错误当误报

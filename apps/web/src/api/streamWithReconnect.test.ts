@@ -23,7 +23,7 @@ function failingStream(): AsyncGenerator<SseEvent> {
   } as AsyncGenerator<SseEvent>;
 }
 
-describe('streamWithReconnect (c64 / r13)', () => {
+describe('streamWithReconnect (r13)', () => {
   it('retries with backoff until reconcile reports terminal', async () => {
     rs.useFakeTimers();
     try {

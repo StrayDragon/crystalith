@@ -20,7 +20,7 @@ afterAll(() => {
   pluginRegistry.reset();
 });
 
-describe('c62: listExtractorMetadata field shape', () => {
+describe('listExtractorMetadata field shape', () => {
   it('each extractor has type, enabled, description, requiresService', () => {
     const meta = listExtractorMetadata({});
     for (const e of meta) {
@@ -52,7 +52,7 @@ describe('c62: listExtractorMetadata field shape', () => {
   });
 });
 
-describe('c62: getDefaultExtractor by availability', () => {
+describe('getDefaultExtractor by availability', () => {
   it('returns first available extractor', () => {
     // With empty config, readability should be available (no key needed)
     const def = getDefaultExtractor({});

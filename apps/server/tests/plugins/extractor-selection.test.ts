@@ -167,7 +167,7 @@ async function postFromUrl(extractor?: string): Promise<{
   return { status: res.status, body };
 }
 
-describe('c117 r468: preferred extractor attempted first', () => {
+describe('r468: preferred extractor attempted first', () => {
   it('orchestration tries the preferred extractor before any default-chain entry', async () => {
     attempts.length = 0;
     // Default chain starts with alpha, but the preference pins beta first.
@@ -185,7 +185,7 @@ describe('c117 r468: preferred extractor attempted first', () => {
   });
 });
 
-describe('c117 r332: preference and controlled, observable fallback', () => {
+describe('r332: preference and controlled, observable fallback', () => {
   it('uses the config-defined fallback order when no preference is given', async () => {
     attempts.length = 0;
     const result = await extractUrl(URL_HINTED, {}, undefined);
@@ -216,7 +216,7 @@ describe('c117 r332: preference and controlled, observable fallback', () => {
   });
 });
 
-describe('c117 r337: urlPatterns are hints, not fall-through logic', () => {
+describe('r337: urlPatterns are hints, not fall-through logic', () => {
   it('does not prefer a urlPatterns-matching extractor in the execution chain', async () => {
     attempts.length = 0;
     // The hinted URL matches extractor-patterned's urlPatterns, but the chain
@@ -291,7 +291,7 @@ function registerFakeSlice(): void {
   });
 }
 
-describe('c117 r334: global policy and per-notebook policy', () => {
+describe('r334: global policy and per-notebook policy', () => {
   it('GET defaults to inherit_global with fallbackEnabled and global enabled flags', async () => {
     const { status, body } = await getExtractors(notebookId);
     expect(status).toBe(200);
@@ -372,7 +372,7 @@ describe('c117 r334: global policy and per-notebook policy', () => {
   });
 });
 
-describe('c117 r469: no available extractor yields a stable failure', () => {
+describe('r469: no available extractor yields a stable failure', () => {
   it('configured chain without any available extractor fails stably, fabricating nothing', async () => {
     attempts.length = 0;
     // The configured chain holds only an unavailable extractor — no attempt

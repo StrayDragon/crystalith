@@ -21,7 +21,7 @@ function renderBanner(props: {
   );
 }
 
-describe('LabStreamBanner (c64 / r13)', () => {
+describe('LabStreamBanner (r13)', () => {
   it('renders nothing while connected', () => {
     const { container } = renderBanner({
       streamState: 'ok',

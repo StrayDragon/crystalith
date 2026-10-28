@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 
-import { generateAsyncApiDocument } from '../src/asyncapi.ts';
+import { generateAsyncApiDocument } from '../../src/asyncapi.ts';
 
-describe('c70 AsyncAPI stream verbs', () => {
+describe('AsyncAPI stream verbs', () => {
   it('documents QA/studio GET with nested paths', () => {
     const doc = generateAsyncApiDocument() as {
       channels: Record<string, { address: string; bindings?: { http?: { method?: string } } }>;

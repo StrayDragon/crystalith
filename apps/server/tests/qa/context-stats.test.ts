@@ -3,7 +3,7 @@ import { describe, expect, it } from 'bun:test';
 
 import { retrieveAndJudge } from '../../src/features/qa/retrieve-and-judge.ts';
 
-describe('c60: ContextStats system_tokens real counting', () => {
+describe('ContextStats system_tokens real counting', () => {
   it('system_tokens is nonzero when systemPrompt is provided', async () => {
     // Use ungrounded path (no sourceIds) to get emptyStats quickly
     const result = await retrieveAndJudge({

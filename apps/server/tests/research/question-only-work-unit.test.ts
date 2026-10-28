@@ -63,7 +63,7 @@ async function waitForStatus(runId: number, wanted: string[], timeoutMs = 8000):
   throw new Error(`timeout status; last=${last}`);
 }
 
-describe('research question-only path (c94)', () => {
+describe('research question-only path)', () => {
   it('runs question work-unit when decompose yields no branches', async () => {
     const create = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {

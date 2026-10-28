@@ -141,7 +141,7 @@ function lastQaPrompt(): string {
   return prompt ?? '';
 }
 
-describe('c117 r282: per-source QA uses relevance-ordered vector retrieval', () => {
+describe('r282: per-source QA uses relevance-ordered vector retrieval', () => {
   it('retrieves via scoped vector search and ranks by relevance, not insertion order', async () => {
     capturedPrompts.length = 0;
     const res = await postQa(notebookId, sourceAId, 'alpha');
@@ -160,7 +160,7 @@ describe('c117 r282: per-source QA uses relevance-ordered vector retrieval', () 
   });
 });
 
-describe('c117 r274: per-source QA hard-bounded by sourceId', () => {
+describe('r274: per-source QA hard-bounded by sourceId', () => {
   it('never leaks other-source chunks into the QA context, even when they rank higher', async () => {
     capturedPrompts.length = 0;
     // 'beta' is the best global match (source B), but QA is scoped to source A.
@@ -184,7 +184,7 @@ describe('c117 r274: per-source QA hard-bounded by sourceId', () => {
   });
 });
 
-describe('c117 r278: summary/QA 400 for not-ready + notebook ownership', () => {
+describe('r278: summary/QA 400 for not-ready + notebook ownership', () => {
   it('returns 400 (not 404) for a not-ready source on summary and per-source QA', async () => {
     const sumRes = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/sources/${processingSourceId}/summary`),

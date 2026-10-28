@@ -46,7 +46,7 @@ const citations: Record<string, LabCitation> = {
   },
 };
 
-describe('LabNodeDrawer evidence convert (c91 / r445)', () => {
+describe('LabNodeDrawer evidence convert (r445)', () => {
   beforeEach(() => {
     runConvertToNote.mockReset();
     runConvertToSource.mockReset();

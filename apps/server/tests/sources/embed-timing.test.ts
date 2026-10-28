@@ -31,7 +31,7 @@ beforeAll(() => {
 
 afterAll(teardownIntegrationEnv);
 
-describe('embedding timing (c30: sync embed before ready)', () => {
+describe('embedding timing (sync embed before ready)', () => {
   it('marks ready only after indexSource completes', async () => {
     const orm = getOrm();
     const nb = orm.insert(notebooks).values({ name: 'timing-nb' }).returning().get();

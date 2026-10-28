@@ -2,11 +2,11 @@ import { describe, expect, it } from 'bun:test';
 
 // Side-effect: server + feature routers call registerApiDoc at module load
 // (no listen — import.meta.main is false).
-import '../src/server.ts';
-import { generateOpenApiDocument } from '../src/openapi.ts';
-import { createApp } from '../src/server.ts';
+import '../../src/server.ts';
+import { generateOpenApiDocument } from '../../src/openapi.ts';
+import { createApp } from '../../src/server.ts';
 
-describe('c71 OpenAPI generation (Zod v4)', () => {
+describe('OpenAPI generation (Zod v4)', () => {
   it('generates a document without throwing and includes key paths', () => {
     const doc = generateOpenApiDocument() as {
       openapi: string;

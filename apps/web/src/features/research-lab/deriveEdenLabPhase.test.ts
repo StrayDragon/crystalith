@@ -13,7 +13,7 @@ function ev(
   };
 }
 
-describe('deriveEdenLabPhase (c97)', () => {
+describe('deriveEdenLabPhase)', () => {
   it('status awaiting_confirm wins (r437)', () => {
     expect(
       deriveEdenLabPhase({

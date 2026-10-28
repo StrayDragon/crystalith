@@ -66,7 +66,7 @@ async function waitForStatus(runId: number, wanted: string[], timeoutMs = 8000):
   throw new Error(`timeout status; last=${last}`);
 }
 
-describe('research branch work-units (c94)', () => {
+describe('research branch work-units)', () => {
   it('drains each research node with evidenceIds; merge edges remain', async () => {
     const create = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {

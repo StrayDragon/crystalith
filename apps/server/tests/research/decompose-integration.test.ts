@@ -65,7 +65,7 @@ async function waitForStatus(runId: number, wanted: string[], timeoutMs = 4000):
   throw new Error(`timeout status; last=${last}`);
 }
 
-describe('research decompose integration (c93)', () => {
+describe('research decompose integration)', () => {
   it('seeds research nodes with decompose+merge when planner returns branches', async () => {
     const create = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {

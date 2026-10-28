@@ -10,22 +10,22 @@ import { eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 
-import { createDb, resetDb, type Orm } from '../src/db/index.ts';
-import { chunks, notebooks, sources } from '../src/db/schema.ts';
+import { createDb, resetDb, type Orm } from '../../src/db/index.ts';
+import { chunks, notebooks, sources } from '../../src/db/schema.ts';
 import {
   countVectors,
   deleteChunkVector,
   initVecChunks,
   insertChunkVector,
   searchVectors,
-} from '../src/db/vectors.ts';
-import { KeywordStrategy } from '../src/rag/keyword-strategy.ts';
-import { seedChatModel } from './helpers/integration.ts';
+} from '../../src/db/vectors.ts';
+import { KeywordStrategy } from '../../src/rag/keyword-strategy.ts';
+import { seedChatModel } from '../helpers/integration.ts';
 
 const TMP_DB = 'data/test-vector.db';
 
 // The real drizzle migrations folder (same one createDb() resolves in dev).
-const DRIZZLE_DIR = join(import.meta.dirname, '..', 'drizzle');
+const DRIZZLE_DIR = join(import.meta.dirname, '..', '..', 'drizzle');
 const LEGACY_DB = 'data/test-legacy-migration.db';
 const LEGACY_MIGRATIONS = 'data/test-legacy-drizzle';
 
@@ -265,7 +265,7 @@ describe('db: sqlite-vec virtual table', () => {
   });
 });
 
-describe('db: chunks embedding metadata columns (c130 r479)', () => {
+describe('db: chunks embedding metadata columns (r479)', () => {
   it('migration adds the 5 columns with correct defaults (PRAGMA table_info)', () => {
     const cols = orm.all<{
       name: string;

@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it } from '@rstest/core';
+// demo 任务面合并测试：fake 任务存储 + fixture 端口默认场景戳。
+// （原 demoResearchTasks / labSessionPort 两个碎片文件收敛于此。）
 
 import {
   countActiveDemoResearchTasks,
@@ -7,6 +9,7 @@ import {
   setActiveDemoResearchTaskId,
   updateDemoResearchTask,
 } from './demoResearchTasks';
+import { fixtureLabSessionPort, LAB_DEFAULT_FIXTURE_SCENARIO_ID } from './labSessionPort';
 
 describe('demoResearchTasks', () => {
   beforeEach(() => {
@@ -29,5 +32,19 @@ describe('demoResearchTasks', () => {
     expect(countActiveDemoResearchTasks(1)).toBe(1);
     updateDemoResearchTask(t.id, { status: 'completed' });
     expect(countActiveDemoResearchTasks(1)).toBe(0);
+  });
+});
+
+describe('fixtureLabSessionPort', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    setActiveDemoResearchTaskId(null);
+  });
+
+  it('is a fixture port whose createTask stamps the default scenario and delegates listing', () => {
+    expect(fixtureLabSessionPort.kind).toBe('fixture');
+    const task = fixtureLabSessionPort.createTask({ notebookId: 9, topic: 'xlsx' });
+    expect(task.scenarioId).toBe(LAB_DEFAULT_FIXTURE_SCENARIO_ID);
+    expect(fixtureLabSessionPort.listTasks(9)).toHaveLength(1);
   });
 });

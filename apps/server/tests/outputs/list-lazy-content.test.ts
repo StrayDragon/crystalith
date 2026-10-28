@@ -6,7 +6,7 @@ import { db } from '../../src/db/index.ts';
 import { notebooks, outputs } from '../../src/db/schema.ts';
 import { createApp } from '../../src/server.ts';
 
-describe('c72 output list omits full content', () => {
+describe('output list omits full content', () => {
   let app: ReturnType<typeof createApp>;
   let notebookId: number;
   let outputId: number;

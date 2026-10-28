@@ -219,7 +219,7 @@ async function waitForStatus(runId: number, wanted: string[], timeoutMs = 10000)
   throw new Error(`timeout status; last=${last}`);
 }
 
-describe('c106 parallel branch units', () => {
+describe('parallel branch units', () => {
   it('getParallelBranchUnits clamps to 1..8 (config default 2)', async () => {
     expect(getParallelBranchUnits()).toBe(2);
   });

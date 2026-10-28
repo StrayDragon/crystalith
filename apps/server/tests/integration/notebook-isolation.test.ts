@@ -88,7 +88,7 @@ async function post(path: string, body: unknown) {
   return { status: res.status, body: parsed };
 }
 
-describe('c67/c69 notebook isolation (nested paths)', () => {
+describe('notebook isolation (nested paths)', () => {
   it('GET nested source cross-notebook → 404 ErrorEnvelope', async () => {
     const { status, body } = await get(`/v2/notebooks/${notebookB}/sources/${sourceId}`);
     expect(status).toBe(404);
@@ -117,7 +117,7 @@ describe('c67/c69 notebook isolation (nested paths)', () => {
   });
 });
 
-describe('c69 nested notebook paths', () => {
+describe('nested notebook paths', () => {
   it('GET nested outputs list for notebook A', async () => {
     const { status, body } = await get(`/v2/notebooks/${notebookA}/outputs`);
     expect(status).toBe(200);

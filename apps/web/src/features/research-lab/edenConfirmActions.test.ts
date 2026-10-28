@@ -60,7 +60,7 @@ rs.mock('./researchTasksCache', () => ({
 
 import { useEdenLabController } from './useEdenLabController';
 
-describe('eden confirm actions (c96)', () => {
+describe('eden confirm actions)', () => {
   beforeEach(() => {
     confirmResearchRun.mockReset();
     createResearchRun.mockReset();
@@ -114,7 +114,7 @@ describe('eden confirm actions (c96)', () => {
   });
 });
 
-describe('eden reexpand actions (c104)', () => {
+describe('eden reexpand actions)', () => {
   beforeEach(() => {
     confirmResearchRun.mockReset();
     createResearchRun.mockReset();

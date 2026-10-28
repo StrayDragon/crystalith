@@ -97,7 +97,7 @@ async function waitFor(predicate: () => boolean, timeoutMs = 3000, stepMs = 25):
   throw new Error('condition not met within timeout');
 }
 
-describe('c117 r284: async summary pregenerate after ready', () => {
+describe('r284: async summary pregenerate after ready', () => {
   it('does not block the ingest response and eventually writes metadata.autoSummary', async () => {
     const nb = getOrm()
       .select()

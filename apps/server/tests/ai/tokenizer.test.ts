@@ -1,7 +1,7 @@
 // Tests for the tokenizer (gpt-tokenizer).
 import { describe, expect, it } from 'bun:test';
 
-import { countTokens, countMessageTokens, truncateToTokens } from '../src/ai/tokenizer.ts';
+import { countTokens, countMessageTokens, truncateToTokens } from '../../src/ai/tokenizer.ts';
 
 describe('tokenizer', () => {
   it('counts tokens in a string', () => {

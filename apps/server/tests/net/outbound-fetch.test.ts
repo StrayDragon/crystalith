@@ -14,7 +14,7 @@ function settings(partial: Partial<ProxySettings>): ProxySettings {
   };
 }
 
-describe('resolveOutboundProxy (c109)', () => {
+describe('resolveOutboundProxy)', () => {
   it('returns undefined when disabled', () => {
     expect(
       resolveOutboundProxy(

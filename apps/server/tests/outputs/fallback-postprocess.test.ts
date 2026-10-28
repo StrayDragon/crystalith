@@ -6,7 +6,7 @@ import {
   generateFallbackContent,
 } from '../../src/features/outputs/postprocess.ts';
 
-describe('c59: generateFallbackContent uses prompt as title', () => {
+describe('generateFallbackContent uses prompt as title', () => {
   it('FAQ fallback question contains the user prompt', () => {
     const fb = generateFallbackContent('FAQ', '量子计算原理');
     const items = fb.items as Array<Record<string, unknown>>;
@@ -36,7 +36,7 @@ describe('c59: generateFallbackContent uses prompt as title', () => {
   });
 });
 
-describe('c59: ensureMinimumContentFields nested backfill', () => {
+describe('ensureMinimumContentFields nested backfill', () => {
   it('GUIDE backfills objective {text, citations:[1]}', () => {
     const content = ensureMinimumContentFields({ modules: [{ title: 'My Guide' }] }, 'GUIDE');
     const mod = (content.modules as Array<Record<string, unknown>>)[0]!;

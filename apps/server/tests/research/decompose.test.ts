@@ -49,7 +49,7 @@ function newId(prefix: string): string {
   return `${prefix}_${seq}`;
 }
 
-describe('research decompose (c93)', () => {
+describe('research decompose)', () => {
   it('suggestedMaxResearchLeaves follows depth soft caps', async () => {
     expect(suggestedMaxResearchLeaves('shallow')).toBe(4);
     expect(suggestedMaxResearchLeaves('medium')).toBe(8);

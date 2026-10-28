@@ -112,7 +112,7 @@ async function postSessionConvertToSource(): Promise<Response> {
   );
 }
 
-describe('c117 r276: conversion keeps traceable lineage metadata', () => {
+describe('r276: conversion keeps traceable lineage metadata', () => {
   it('session convert-to-source records convertedFromSession lineage metadata', async () => {
     const res = await postSessionConvertToSource();
     expect(res.status).toBe(201);
@@ -141,7 +141,7 @@ describe('c117 r276: conversion keeps traceable lineage metadata', () => {
   });
 });
 
-describe('c117 r277: conversion follows lifecycle and epoch rules', () => {
+describe('r277: conversion follows lifecycle and epoch rules', () => {
   it('qa-to-source lands ready and invalidates the notebook epoch caches', async () => {
     const epochInvalidated = probeEpoch(notebookId);
 
@@ -171,7 +171,7 @@ describe('c117 r277: conversion follows lifecycle and epoch rules', () => {
   });
 });
 
-describe('c117 r281: conversion does not mark ready when embedding fails', () => {
+describe('r281: conversion does not mark ready when embedding fails', () => {
   it('qa-to-source marks the source failed when embedding throws', async () => {
     embedShouldFail = true;
     try {

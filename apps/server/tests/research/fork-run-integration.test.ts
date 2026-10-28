@@ -66,7 +66,7 @@ async function waitForStatus(runId: number, wanted: string[], timeoutMs = 8000):
   throw new Error(`timeout status; last=${last}`);
 }
 
-describe('research revision fork-run (c105)', () => {
+describe('research revision fork-run)', () => {
   it('fork-creates-new-run-id + copies graph/report + remaps evidence; source unchanged', async () => {
     const create = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {

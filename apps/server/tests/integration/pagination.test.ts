@@ -93,7 +93,7 @@ function expectPage(
   return page;
 }
 
-describe('c68 paginated list envelope', () => {
+describe('paginated list envelope', () => {
   it('GET messages returns PaginatedSchema with real total', async () => {
     const { status, body } = await get(
       `/v2/notebooks/${notebookId}/sessions/${sessionId}/messages?offset=0&limit=2`,

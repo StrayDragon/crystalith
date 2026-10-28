@@ -53,7 +53,7 @@ beforeAll(async () => {
 
 afterAll(teardownIntegrationEnv);
 
-describe('search budget helpers (c108)', () => {
+describe('search budget helpers)', () => {
   it('computeSearchAddOnK = clamp(ceil(max * ratio), min, max)', async () => {
     expect(computeSearchAddOnK(50, 0.25, 5, 50)).toBe(13);
     expect(computeSearchAddOnK(8, 0.25, 5, 50)).toBe(5); // ceil(2)=2 → min 5

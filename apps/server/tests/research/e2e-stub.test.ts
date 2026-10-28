@@ -7,7 +7,7 @@ import {
   isResearchE2eStub,
 } from '../../src/features/research/e2e-stub.ts';
 
-describe('research e2e stub (c100/c102)', () => {
+describe('research e2e stub', () => {
   it('reads CL_RESEARCH_E2E_STUB', async () => {
     const prev = process.env.CL_RESEARCH_E2E_STUB;
     process.env.CL_RESEARCH_E2E_STUB = '1';

@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { LayerProvider } from './layer';
 import { toast, ToastContainer, useToastStore } from './toast';
 
-describe('toast action (c91 / r446)', () => {
+describe('toast action (r446)', () => {
   beforeEach(() => {
     act(() => {
       useToastStore.setState({ toasts: [] });

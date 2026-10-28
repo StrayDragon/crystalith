@@ -7,7 +7,7 @@ import {
   mergeProgressBySeq,
 } from './labProgressLedger';
 
-describe('labProgressLedger (c95)', () => {
+describe('labProgressLedger)', () => {
   it('mergeProgressBySeq dedupes and sorts by seq', () => {
     const merged = mergeProgressBySeq(
       [

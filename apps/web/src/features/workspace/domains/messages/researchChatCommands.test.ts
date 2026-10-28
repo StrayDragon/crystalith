@@ -6,7 +6,7 @@ import {
   parseResearchChatCommand,
 } from './researchChatCommands';
 
-describe('researchChatCommands (c99)', () => {
+describe('researchChatCommands)', () => {
   it('parses bare /research and /深研 as open_compose', () => {
     expect(parseResearchChatCommand('/research')).toEqual({
       type: 'open_compose',

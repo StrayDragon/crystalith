@@ -6,7 +6,7 @@ import {
   peekLabRunNeedsReload,
 } from './labRunReloadGate';
 
-describe('labRunReloadGate (c98)', () => {
+describe('labRunReloadGate)', () => {
   beforeEach(() => {
     sessionStorage.clear();
   });

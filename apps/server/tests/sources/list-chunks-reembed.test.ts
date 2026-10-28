@@ -188,7 +188,7 @@ async function assignTag(tagId: number, sourceIds: number[]): Promise<void> {
 // r262 — list query semantics: exact tag filter + stable sort
 // ---------------------------------------------------------------------------
 
-describe('c117 r262: source list query semantics are stable', () => {
+describe('r262: source list query semantics are stable', () => {
   it('filters exactly by tag name and does not match similarly named tags', async () => {
     const coreTag = await createTag('core');
     const coreExtTag = await createTag('core-extra');
@@ -256,7 +256,7 @@ describe('c117 r262: source list query semantics are stable', () => {
 // r264 — chunks endpoint deterministic order
 // ---------------------------------------------------------------------------
 
-describe('c117 r264: chunks endpoint returns deterministic order', () => {
+describe('r264: chunks endpoint returns deterministic order', () => {
   it('returns chunks by chunk_index ascending regardless of insertion order', async () => {
     // srcGamma chunks were inserted 0,1,2; seed an out-of-order source to prove
     // the endpoint (not the insertion) defines the order.
@@ -292,7 +292,7 @@ describe('c117 r264: chunks endpoint returns deterministic order', () => {
 // r265 — delete and re-embed keep storage and epochs consistent
 // ---------------------------------------------------------------------------
 
-describe('c117 r265: delete and re-embed keep storage and epochs consistent', () => {
+describe('r265: delete and re-embed keep storage and epochs consistent', () => {
   it('delete removes the DB row, its vectors, and invalidates the retrieval cache', async () => {
     // Fresh source with real vector rows.
     const orm = getOrm();

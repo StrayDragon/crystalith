@@ -2,7 +2,7 @@ import { describe, expect, it } from '@rstest/core';
 
 import { confirmHighlightIds } from './confirmHighlight';
 
-describe('confirmHighlightIds (c96)', () => {
+describe('confirmHighlightIds)', () => {
   it('includes branch and direct neighbors', () => {
     expect(
       confirmHighlightIds('b', [

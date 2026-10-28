@@ -44,7 +44,7 @@ beforeAll(() => {
 
 afterAll(teardownIntegrationEnv);
 
-describe('run SSE terminal wait (c64)', () => {
+describe('run SSE terminal wait)', () => {
   it('status broadcast closes the stream promptly (no hot polling)', async () => {
     const runId = seedRun();
     const res = await createResearchSseResponse(notebookId, runId);

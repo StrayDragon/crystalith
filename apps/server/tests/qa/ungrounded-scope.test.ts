@@ -8,7 +8,7 @@ import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from '../helpers/
 beforeAll(setupIntegrationEnv);
 afterAll(teardownIntegrationEnv);
 
-describe('c63 retrieveAndJudge empty source scope', () => {
+describe('retrieveAndJudge empty source scope', () => {
   it('returns ungrounded evidence when notebook has zero sources', async () => {
     const nb = getOrm().insert(notebooks).values({ name: 'c63-empty-nb' }).returning().get();
     const result = await retrieveAndJudge({

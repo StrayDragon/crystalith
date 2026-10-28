@@ -247,7 +247,7 @@ describe('validateAndBindCitations (unit)', () => {
   });
 });
 
-describe('research synthesize + retry (c102)', () => {
+describe('research synthesize + retry)', () => {
   it('create persists modelId and GET exposes failureReason alias', async () => {
     const res = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {

@@ -18,7 +18,7 @@ function node(partial: Partial<ResearchNode> & Pick<ResearchNode, 'id' | 'title'
   };
 }
 
-describe('research-work-queue (c94)', () => {
+describe('research-work-queue)', () => {
   it('orderResearchNodesForWork preserves insertion order', async () => {
     const nodes: ResearchNode[] = [
       node({ id: 'q', role: 'question', title: 'Q', conclusionStatus: 'pending' }),

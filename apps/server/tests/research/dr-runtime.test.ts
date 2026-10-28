@@ -159,7 +159,7 @@ interface PrepareCallShape {
   };
 }
 
-describe('c117 r94: work-unit tool loop is bounded by config workUnitMaxSteps', () => {
+describe('r94: work-unit tool loop is bounded by config workUnitMaxSteps', () => {
   it('work_unit stop condition takes workUnitMaxSteps from config; chat uses its own cap', async () => {
     const { createResearchNodeAgent } = await import('../../src/features/research/node-agent.ts');
     const agent = await createResearchNodeAgent(notebookId);
@@ -257,7 +257,7 @@ describe('c117 r94: work-unit tool loop is bounded by config workUnitMaxSteps', 
 // r431 — client-authored closure / whole-graph submission is rejected
 // ---------------------------------------------------------------------------
 
-describe('c117 r431: client-authored graph submission is rejected', () => {
+describe('r431: client-authored graph submission is rejected', () => {
   it('non-command-port graph/closure routes do not exist and the graph is unchanged', async () => {
     const graph = {
       nodes: [
@@ -324,7 +324,7 @@ function sseEventNames(schema: unknown): string[] {
   return union.options.map((o) => o.shape.event.value);
 }
 
-describe('c117 r432: chat SSE is separate from the run stream event set', () => {
+describe('r432: chat SSE is separate from the run stream event set', () => {
   it('chat body events (chunk/proposal/done) are not run stream event names (schema lock)', async () => {
     const runEvents = sseEventNames(ResearchStreamEventSchema);
     const chatEvents = sseEventNames(ResearchNodeChatStreamEventSchema);

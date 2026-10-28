@@ -16,15 +16,15 @@ import { writeFileSync, rmSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { resolveMigrationsFolder, resolveSqliteVecNativePath } from '../src/db/index.ts';
+import { resolveMigrationsFolder, resolveSqliteVecNativePath } from '../../src/db/index.ts';
 import {
   loadConfig,
   resetConfig,
   getDataRoot,
   envValue,
   resetEnvOverlay,
-} from '../src/shared/config.ts';
-import { resolveWebDistRoot } from '../src/shared/web-static.ts';
+} from '../../src/shared/config.ts';
+import { resolveWebDistRoot } from '../../src/shared/web-static.ts';
 
 const TMP_YAML = join(tmpdir(), `crystalith-c125-${process.pid}.yaml`);
 

@@ -6,9 +6,9 @@ import { rmSync } from 'node:fs';
 
 import { eq, sql } from 'drizzle-orm';
 
-import { createDbClient } from '../src/db/client.ts';
-import { createDb, type Orm } from '../src/db/index.ts';
-import { notebooks } from '../src/db/schema.ts';
+import { createDbClient } from '../../src/db/client.ts';
+import { createDb, type Orm } from '../../src/db/index.ts';
+import { notebooks } from '../../src/db/schema.ts';
 
 const TMP_DB = 'data/test-db-client.db';
 
