@@ -86,7 +86,7 @@ From repo root:
 - `just e2e` / `bun run e2e` — Playwright critical browser gate (`@p0`, testid-based)
 - `just e2e-install` — install Playwright Chromium (optional; local defaults to system Chrome)
 - `just qa` — **primary PR gate**: typecheck + lint + format + schema drift + **server/shared unit** + **web Rstest** + **e2e @p0**
-  - **Not in `just qa`**: `just test-bdd` · `just type-aware-lint`
+  - **Not in `just qa`**: `just type-aware-lint`
 - Env setup: prefer `cp .env.example .env` (`CL_*` SSOT via `just gen-env-examples`). API keys go in shell env (e.g. `~/.bashrc`) or the gitignored `.env`; `config/secret.env` is no longer read.
 
 Fast path:
@@ -250,7 +250,7 @@ Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `ope
 `just qa`（typecheck + lint + format-check + env/schema drift + **server/shared** tests + **web Rstest** + **e2e @p0**）必须全员通过才算一次成功的 PR。
 
 **门禁组成（与 `justfile` 一致）**：
-`check` → `check-env-examples` → `check-app-schema` → `check-i18n-keys` → `check-provider-deps` → `test`（`apps/server/tests/` + `packages/shared/test/`，`--parallel` 逐文件隔离，`--path-ignore-patterns` 排除 `bdd/`）→ `test-web`（`apps/web` `test:ci`）→ `e2e`。
+`check` → `check-env-examples` → `check-app-schema` → `check-i18n-keys` → `check-provider-deps` → `audit-fallow` → `audit-fallow-arch` → `test`（`apps/server/tests/` + `packages/shared/test/`，`--parallel` 逐文件隔离）→ `test-web`（`apps/web` `test:ci`）→ `e2e`。
 
 **测试逐文件隔离纪律（`--parallel` implied `--isolate`）**：
 server 测试每个文件跑在自己的 fresh module registry / global / worker 进程里 —
@@ -267,7 +267,6 @@ agent 日常跑 `just qa` 即可，token 开销极低。
 
 **门外（相关 PR 请另跑）**：
 
-- `just test-bdd` — server BDD（CRUD 子集；见 `apps/server/tests/bdd/`）
 - `just type-aware-lint` — **advisory** type-aware oxlint（未入 qa；测试文件仍有历史债）
   - `typescript/prefer-readonly-parameter-types` 全局关闭：大量 React/Elysia/AI SDK 等回调签名不可控，仅在自研纯 helper 上按需手写 `Readonly`。
 
@@ -279,7 +278,7 @@ agent 日常跑 `just qa` 即可，token 开销极低。
 
 - **lint error** — 立即修复（指 `just qa` 内的非 type-aware `oxlint`）
 - **lint warning** — 具体分析，优先重构代码消除 warning；仅在极少数工具误报（如 oxlint 的 `no-unexpected-multiline` vs Eden Treaty 链式调用）时允许 inline disable
-- **tests failure** — 必须修复 **门禁内** 的失败（server/shared unit + web Rstest + e2e @p0）；BDD 不在 `just qa` 内但仍应在相关 PR 自行跑绿
+- **tests failure** — 必须修复 **门禁内** 的失败（server/shared unit + web Rstest + e2e @p0）
 
 ### Tier 1 — 可忽略（谨慎使用）
 

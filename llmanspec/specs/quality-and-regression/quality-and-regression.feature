@@ -19,7 +19,7 @@
 
     场景: lint-entrypoint-is-root-oxlint
       假如 打开根 package.json 与 justfile 的 lint 配方
-      当 运行 gate-composition.test.ts 的 lint 入口用例
+      当 检查 lint 入口定义
       那么 根 scripts.lint 即 oxlint 且 just lint 委托 bun lint
       而且 apps/web 仍提供 lint / lint:all 增量与全量入口
   @req:r215
@@ -28,7 +28,7 @@
 
     场景: format-check-uses-oxfmt
       假如 打开根 package.json 与 justfile 的 format-check 配方
-      当 运行 gate-composition.test.ts 的 format-check 用例
+      当 检查 format 入口定义
       那么 format:check 即 oxfmt --check 且 just format-check 委托 bun format:check
       而且 format:write 提供 oxfmt --write 写入模式
   @req:r216
@@ -73,7 +73,7 @@
 
     场景: test-ci-msw-and-mock-gates
       假如 打开 apps/web/package.json 与 justfile 的 test-web 配方
-      当 运行 gate-composition.test.ts 的 frontend suites 用例
+      当 检查前端稳定套件入口定义
       那么 test:ci 在 RSTEST_MSW_ON_UNHANDLED=error 下运行，未处理请求导致失败
       而且 test:ci 先执行 test-mock-report-check，test:core 可单独运行核心子集
   @req:r221
@@ -82,18 +82,18 @@
 
     场景: mock-report-entrypoints-wired-into-test-ci
       假如 打开 apps/web/package.json 的 scripts
-      当 运行 gate-composition.test.ts 的 test-double 用例
+      当 检查 test doubles 报告入口定义
       那么 test-mock-report 与 test-mock-report-check（--check-mock-reasons）入口存在
       而且 test:ci 内嵌 test-mock-report-check 使报告可观测
   @req:r222
   规则: Remote CI status checks are optional
     仓库 MAY 提供 GitHub Actions 等远程 CI；在未提供 workflows 时，贡献者 MUST 以本地 just qa 作为 PR 自检门禁（PR 模板 SHALL 要求勾选本地 just qa），MUST NOT 假定 push/PR 上已有强制 CI 状态检查。
   @req:r223
-  规则: BDD and type-aware lint are out of primary gate
-    just test-bdd 与 just type-aware-lint MUST NOT 作为 just qa 的硬性组成部分；BDD 为 CRUD 子集可选回归，type-aware lint 为 advisory。本条为该门禁组成的 canonical 约束（bdd-test-harness r20/r_integration_tests 引用此处）。
+  规则: Type-aware lint is out of primary gate
+    just type-aware-lint MUST NOT 作为 just qa 的硬性组成部分，定位为 advisory。本条为该门禁组成的 canonical 约束。（中文 BDD 套件已随测试精简整体裁撤：CRUD 合约由 integration 深测 + e2e 接线覆盖。）
 
-    场景: bdd-and-type-aware-lint-out-of-just-qa
+    场景: type-aware-lint-out-of-just-qa
       假如 检查 justfile 的 qa 配方
-      当 运行 gate-composition.test.ts 的 BDD/type-aware 排除用例
-      那么 qa 配方不依赖 test-bdd 与 type-aware-lint
-      而且 两者仍作为独立配方单独可用（bun test BDD / lint:type-aware）
+      当 检查 qa 的依赖列表
+      那么 qa 配方不依赖 type-aware-lint
+      而且 type-aware-lint 仍作为独立配方单独可用（lint:type-aware）

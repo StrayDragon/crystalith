@@ -53,7 +53,7 @@ Bun 提供 `--parallel=<N>`：
 
 ```make
 test:
-    @CL_LOG_LEVEL={{ _qlog }} bun test --parallel {{ _qtest }} --path-ignore-patterns='apps/server/tests/bdd/**' apps/server/tests/ packages/shared/test/
+    @CL_LOG_LEVEL={{ _qlog }} bun test --parallel {{ _qtest }} apps/server/tests/ packages/shared/test/
 ```
 
 - L0（`--only-failures`）与 `--parallel` 兼容：`--only-failures` 仅控制显示；

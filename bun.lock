@@ -28,7 +28,6 @@
         "@ai-sdk/provider": "^4.0.28",
         "@asteasolutions/zod-to-openapi": "^9.1.0",
         "@crystalith/shared": "workspace:*",
-        "@cucumber/gherkin": "^42.0.1",
         "@elysiajs/eden": "^1.4.9",
         "@elysiajs/openapi": "^1.4.16",
         "@mozilla/readability": "^0.6.0",
@@ -215,10 +214,6 @@
     "@csstools/css-syntax-patches-for-csstree": ["@csstools/css-syntax-patches-for-csstree@1.1.15", "", { "peerDependencies": { "css-tree": "^3.2.1" }, "optionalPeers": ["css-tree"] }, "sha512-J0u7HkVl2nzSlhsiTOp4AmwcUQ3D+mGEEKfBy/7To5/y7F2OHwyLrXfrhR0SMgr4p5Lo+eaMVSeai24zUcBIxA=="],
 
     "@csstools/css-tokenizer": ["@csstools/css-tokenizer@4.0.2", "", {}, "sha512-OoKoR0f76dCY666JlcbhmVTs2drYj1GUXZTYTcbUgJjh9Nv41aFfZ21bPQTERm5+L5cBDo466NltB2lplS5GBw=="],
-
-    "@cucumber/gherkin": ["@cucumber/gherkin@42.0.1", "", { "dependencies": { "@cucumber/messages": ">=34.0.0 <35" } }, "sha512-Kqg0ULhWqbXp/a1c04ND4sS4KTlIL831tQ0NhZLXWdEhT6LiNsZ5LFRzy/lBy7QQpcKhroKp/i3C2WdEnRBKNg=="],
-
-    "@cucumber/messages": ["@cucumber/messages@34.2.1", "", {}, "sha512-aj2iCAG9ZOpMVcMxcgShifv5fbR96b7SMgdWcPXXh2QbFp7OEcAnQ5MC5YfWUDSDasmw7FU5NJEsOrXdTQOU1A=="],
 
     "@drizzle-team/brocli": ["@drizzle-team/brocli@0.10.2", "", {}, "sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w=="],
 
