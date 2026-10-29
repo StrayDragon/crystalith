@@ -119,6 +119,6 @@
 
     场景: sourceids-filters-qa-and-knn
       假如 QA 检索与向量 KNN 支持 sourceIds 参数
-      当 sourceIds 缺失或为空时执行 QA 检索（见 qa/c63-ungrounded.test.ts）
+      当 sourceIds 缺失或为空时执行 QA 检索（见 qa/ungrounded-scope.test.ts）
       那么 跳过向量检索且不回退为全库检索
       而且 指定 sourceIds 时检索范围限定到该子集并受可配置 minScore 门控（见 qa/low-similarity-passthrough.test.ts）

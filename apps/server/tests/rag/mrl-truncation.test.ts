@@ -1,4 +1,4 @@
-// c133 r494（embedding-mrl-truncation）：截断双路径行为锁测。
+// covers: r494（embedding-mrl-truncation）——截断双路径行为锁测（c133）。
 // 路径①网关认 dimensions（透传 + 模长校验 warn）；路径②网关忽略/拒绝时
 // 客户端切片 + L2 再归一化（降级 warn 一次，后续不再带参）；开关关闭零变化。
 import { beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';

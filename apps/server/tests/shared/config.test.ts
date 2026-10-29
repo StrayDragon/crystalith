@@ -532,7 +532,7 @@ describe('config: embeddinggemma2-gateway catalog entry)', () => {
   });
 });
 
-// c133 r493：MRL 截断配置开关——合法域 = 默认 embedding 模型声明的 mrlDims 成员。
+// covers: r493（embedding-mrl-truncation）——MRL 截断配置开关：合法域 = 默认 embedding 模型声明的 mrlDims 成员。
 describe('mrl truncation config (r493)', () => {
   const mrlYaml = (truncationLine: string, mrlBlock: string) => `models:
   defaults:

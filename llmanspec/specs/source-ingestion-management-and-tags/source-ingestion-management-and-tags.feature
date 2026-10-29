@@ -10,7 +10,7 @@
 
     场景: list-tag-filter-and-stable-sort
       假如 笔记本内有文件名/类型/chunk 数/更新时间各异的来源且部分绑定标签
-      当 以 tag 过滤并以 sortBy=date/name/size/type 加 asc/desc 查询列表（见 sources/c117-mgmt-tags.test.ts）
+      当 以 tag 过滤并以 sortBy=date/name/size/type 加 asc/desc 查询列表（见 sources/list-chunks-reembed.test.ts）
       那么 tag 过滤为精确匹配且仅返回绑定该标签的来源
       而且 各排序键按请求方向返回稳定顺序且重复查询结果一致
   @req:r263
@@ -28,7 +28,7 @@
 
     场景: chunks-ascending-deterministic
       假如 一篇来源的 chunks 以乱序 chunk_index 插入
-      当 请求 GET /v2/notebooks/:nid/sources/:sid/chunks（见 sources/c117-mgmt-tags.test.ts）
+      当 请求 GET /v2/notebooks/:nid/sources/:sid/chunks（见 sources/list-chunks-reembed.test.ts）
       那么 返回的 chunkIndex 为升序（0,1,2）
       而且 重复请求返回相同顺序
   @req:r265
@@ -37,7 +37,7 @@
 
     场景: delete-and-reembed-consistency
       假如 一篇已索引来源与一篇 failed 且已有 chunks 无向量的来源
-      当 删除前者并对后者执行 POST re-embed（见 sources/c117-mgmt-tags.test.ts）
+      当 删除前者并对后者执行 POST re-embed（见 sources/list-chunks-reembed.test.ts）
       那么 删除同步清除 DB 行与 vec_chunks 向量行且 sources_epoch 递增使检索缓存失效
       而且 re-embed 复用既有 chunks 重算向量（不新增 chunk 行）、来源置 ready 并失效缓存
   @req:r266
@@ -46,7 +46,7 @@
 
     场景: failure-includes-diagnostics
       假如 一个会在解析或嵌入阶段失败的来源
-      当 摄取该来源直至失败（见 sources/c57-safety-diagnostics.test.ts）
+      当 摄取该来源直至失败（解析阶段路径见 apps/server/tests/integration/parse-error.test.ts）
       那么 失败来源携带结构化诊断信息
       而且 四阶段错误码（含 PARSE_ERROR、EMBEDDING_FAILED）均有恢复提示
   @req:r267

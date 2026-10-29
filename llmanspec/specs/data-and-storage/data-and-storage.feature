@@ -19,7 +19,7 @@
 
     场景: sqlite-vec-knn-with-notebook-isolation
       假如 同一 SQLite 库内已写入多个 notebook 的 vec_chunks 向量
-      当 运行 apps/server/tests/db.test.ts 的 sqlite-vec 虚表用例
+      当 运行 apps/server/tests/db/db.test.ts 的 sqlite-vec 虚表用例
       那么 同进程内 KNN 检索按 distance 返回最近邻且不依赖外部向量服务
       而且 按 notebook_id 分区使不同 notebook 的向量互相隔离
   @req:r51

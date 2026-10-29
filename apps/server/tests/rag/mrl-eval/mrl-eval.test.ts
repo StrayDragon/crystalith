@@ -1,4 +1,4 @@
-// r495 eval 框架自测：指标纯函数、切片归一化、fixture 完整性、no-go 判据。
+// covers: r495（embedding-mrl-truncation）——eval 框架自测：指标纯函数、切片归一化、fixture 完整性、no-go 判据。
 import { describe, expect, it } from 'bun:test';
 
 import { CORPUS } from './corpus.ts';

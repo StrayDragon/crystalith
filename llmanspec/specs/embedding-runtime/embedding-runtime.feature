@@ -10,7 +10,7 @@
 
     场景: config-rejects-invalid-embedding-block
       假如 app.yaml 的某个 embed 模型条目携带 embedding 块
-      当 运行 apps/server/tests/config.test.ts 的 embedding 声明解析用例（dims 非正整数 / prefixPreset 未知名 / 合法块）
+      当 运行 apps/server/tests/shared/config.test.ts 的 embedding 声明解析用例（dims 非正整数 / prefixPreset 未知名 / 合法块）
       那么 非法块被拒绝并给出可读错误
       而且 合法块解析出的字段与声明一致并在 ModelInfo 中原样透出
 
@@ -61,7 +61,7 @@
 
     场景: migration-adds-metadata-with-defaults
       假如 存量库已包含 chunks 行
-      当 执行迁移后运行 apps/server/tests/db.test.ts 的元数据列用例
+      当 执行迁移后运行 apps/server/tests/db/db.test.ts 的元数据列用例
       那么 新列存在且 modality 全为 text、origin_type 全为 source、origin_id 等于 source_id
       而且 FTS5 同步触发器行为不变（keyword 策略回归通过）
 

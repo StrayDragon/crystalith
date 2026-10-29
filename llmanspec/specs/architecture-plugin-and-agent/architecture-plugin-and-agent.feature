@@ -31,7 +31,7 @@
 
     场景: token-counting-uses-gpt-tokenizer
       假如 AI 调用需要 token 计数与截断
-      当 运行 apps/server/tests/tokenizer.test.ts 的计数用例
+      当 运行 apps/server/tests/ai/tokenizer.test.ts 的计数用例
       那么 countTokens/countMessageTokens/truncateToTokens 按 gpt-tokenizer 纯 JS 实现产出
       而且 主路径不依赖 tiktoken/wasm
   @req:r15
