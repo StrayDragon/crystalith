@@ -1,3 +1,4 @@
+// covers: r197（output-rendering-and-typing）——未知插件输出类型安全回退 UnknownOutputPayload。
 import { describe, expect, it } from '@rstest/core';
 
 import {
