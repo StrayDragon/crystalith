@@ -10,7 +10,7 @@
 
     场景: config-rejects-dims-outside-mrl-declaration
       假如 app.yaml 为 embeddinggemma2-gateway（声明 mrlDims [768,512,256,128]）配置目标维度 300
-      当 运行 apps/server/tests/shared/config.test.ts 的 mrl 截断配置用例
+      当 装载声明 mrlDims 的模型配置并设定截断目标维度（非成员值/成员值/缺省各一）
       那么 配置加载失败并提示合法域为 mrlDims 成员
       而且 配置 256（成员）与缺省（关闭）均被接受
 
@@ -20,7 +20,7 @@
 
     场景: truncated-vectors-are-normalized-and-dimension-exact
       假如 注入假 embed 模型并启用目标维度 256
-      当 运行 apps/server/tests/rag/mrl-truncation.test.ts 的双路径用例
+      当 启用截断发起嵌入且网关对 dimensions 参数呈 认参数/忽略/拒绝 三态
       那么 客户端路径切片后向量模长 ≈ 1 且维度 = 256
       而且 网关路径携带 dimensions 参数；网关违约（模长越界）产生 warn 且向量照常入库
 
@@ -30,6 +30,6 @@
 
     场景: eval-baseline-runs-and-reports-recall
       假如 仓库内存在 mrl-eval 语料 fixture 与已知查询对
-      当 运行 apps/server/tests/rag/mrl-eval/ 的 eval runner
+      当 对固定语料评估 768/512/256 三档截断的检索质量
       那么 输出 768/512/256 三组 recall@10 与 nDCG@10 并落盘报告
       而且 衰减超阈值的结论使 runner 以非 0 退出（no-go 可判定）

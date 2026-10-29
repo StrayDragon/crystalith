@@ -46,7 +46,7 @@
 
     场景: p0-smoke-gated-by-just-qa
       假如 检查 justfile 的 qa 与 e2e 目标
-      当 just e2e 运行 e2e/tests/p0-smoke.spec.ts
+      当 运行 @p0 浏览器冒烟（工作区 shell 挂载 / API 健康 / 关键流）
       那么 @p0 workspace 冒烟用例（shell 挂载/API 健康等）被执行
       而且 just qa 的目标列表包含 e2e
   @req:r218

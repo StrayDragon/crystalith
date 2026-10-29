@@ -18,7 +18,7 @@
     系统 MUST 允许用户在允许范围内以结构化方式覆盖生成约束（如长度、证据要求），而不是只能依赖隐式默认值。
   
     场景: structured-constraint-overrides
-      假如 generation-types 集成环境就绪（tests/generation/generation-types.test.ts）
+      假如 以某生成类型发起一次输出生成
       当 携带 controls（lengthHint/requireCitations）发起 qa 生成
       那么 约束以指令形式注入 system prompt 且结果回传 effectiveControls 集合
 

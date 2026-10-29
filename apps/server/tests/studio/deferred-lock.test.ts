@@ -1,3 +1,4 @@
+// covers: r254/r250/r252/r310/r316（source-connectors + studio-slides-workflow）——ready 来源已持久化 chunks 且向量可检索命中。
 // c124 — deferred testable batch, server-side lock tests:
 //   r250 — sync_check snapshot diff uses deterministic lightweight rules
 //   r252 — unavailable connector → 409 with hint + pluginDiagnostic
