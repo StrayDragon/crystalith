@@ -1,4 +1,4 @@
-// covers: r213/r216/r218/r219/r223（quality-and-regression）
+// covers: r213/r216/r218/r219/r223（quality-and-regression）+ r20/r21（bdd-test-harness）——BDD 为可选回归入口（qa 不依赖 test-bdd、配方独立可用）与集成测试经 just test 计入门禁。
 import { describe, expect, it } from 'bun:test';
 // Gate composition lock — 结构性事实：just qa 门禁组成与 just test 范围。
 // 瘦身说明：原 r214/r215/r220/r221/r223 段（断言 package.json script 字符串、

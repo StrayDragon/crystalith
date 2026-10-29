@@ -1,3 +1,4 @@
+// covers: r305/r314（studio-output-types + studio-slides-workflow）+ r321（studio-slides-workflow）——输出类型集合由 /v2/workspace/tools 动态列表驱动（未知类型不渲染）；SLIDES 卡片仅随 tools enabled 出现/移除，其余工具渲染不受影响。
 // isToolRenderable — the generate-entry filter behind r272 (tools contract is
 // the availability SSOT). SLIDES disappears while the server reports the
 // preview unavailable; every other valid output type renders.

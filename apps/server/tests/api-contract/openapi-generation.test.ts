@@ -1,4 +1,4 @@
-// covers: r193/r196（openapi-and-client-generation）
+// covers: r193/r196/r194（openapi-and-client-generation）——route↔doc 双向 parity：notebook-scoped 操作仅以嵌套 /v2/notebooks/:nid/... 登记，已删扁平 alias 一旦回流文档即 phantom 失败。
 import { describe, expect, it } from 'bun:test';
 
 // Side-effect: server + feature routers call registerApiDoc at module load

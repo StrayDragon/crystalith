@@ -1,3 +1,4 @@
+// covers: r309（studio-slides-workflow）+ r376（workspace-api-contract）——outline/markdown SSE 稳定事件集合（done resolve、error 携可读消息结束）且既有资源进度流以 GET 建立。
 import { describe, expect, it, rs } from '@rstest/core';
 
 import { consumeSlidesStageStream, slidesStageStreamPath } from './consumeSlidesStageStream';

@@ -1,3 +1,4 @@
+// covers: r175（generation-core）——computeConfidence 依相似度/覆盖度/引用数计算 0-1 区间 confidence 并随响应返回。
 // QA confidence + citation resolution — real function tests.
 //
 // The old confidence.test.ts redefined computeConfidence inline with a

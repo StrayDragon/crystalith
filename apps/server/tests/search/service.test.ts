@@ -1,3 +1,4 @@
+// covers: r488/r489（global-search）——索引/嵌入不可用显式降级为关键词通道并携带 degraded 标志（绝不整体失败）；延迟预算 budget_ms 与 topK 上限经 config 解析并对请求生效。
 // c132 (seam ②) — SearchService unit seam: RRF fusion over both channels,
 // scope filtering, facets, topK clamping (r489), and the degradation matrix
 // (r488: keyword-only + explicit flag; never a hard failure).

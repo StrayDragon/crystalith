@@ -1,4 +1,4 @@
-// covers: r14（architecture-plugin-and-agent）
+// covers: r13/r14（architecture-plugin-and-agent）+ r354/r375（workspace-api-contract）——streamText fullStream 经 Elysia SSE 中继；QA 端点族流式/非流式字段语义稳定；qa/stream 保持 POST 且问题经 body 携带。
 // API contract B-class integration tests — QA / presets / session conversion
 // domains: prompt preset CRUD status family (r352), plain-text assistant
 // content (r350), QA confidence/evidence + stream done payload (r369), QA

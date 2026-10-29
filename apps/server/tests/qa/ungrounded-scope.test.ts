@@ -1,4 +1,4 @@
-// covers: r235（retrieval-and-cache）——sourceIds 缺失/为空时跳过向量检索不回退全库。
+// covers: r235（retrieval-and-cache）+ r173（generation-core）——sourceIds 缺失/为空时跳过向量检索不回退全库，以 citations=[] 直接进入生成。
 // c63: empty source_ids → ungrounded chat regardless of notebook source count.
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 

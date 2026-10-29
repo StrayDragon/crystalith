@@ -1,3 +1,4 @@
+// covers: r169（generation-core）——逐类型逐字段补默认值（GUIDE/MINDMAP/BRIEFING 等嵌套 backfill）与以用户 prompt 为标题的类型化 fallback。
 // c59 tests — fallback title source + nested backfill + _postprocessed flag.
 import { describe, expect, it } from 'bun:test';
 

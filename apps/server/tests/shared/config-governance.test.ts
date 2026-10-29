@@ -1,4 +1,4 @@
-// covers: r30/r38（configuration-governance）
+// covers: r30/r32/r34/r37/r38（configuration-governance）
 //   r30 — CL_* env overrides YAML, which overrides hardcoded defaults
 //   r32 — three-stage loading pipeline (template render → YAML parse → Zod
 //         validation) fails loudly on any stage

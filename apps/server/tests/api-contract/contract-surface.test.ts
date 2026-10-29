@@ -1,3 +1,4 @@
+// covers: r374（workspace-api-contract）+ r238（slides-workflow-plugins）——path id 格式非法统一 422 SCHEMA_VALIDATION_FAILED 信封；官方 reference 插件（slides-slidev）经 tools 面暴露 rich configSchema 与 preview 契约。
 // API contract B-class integration tests — surface endpoints that need no AI
 // runtime: health guardrail exemption (r348), models list envelope
 // (r363/r367) + provider-availability filter (r364), workspace tools

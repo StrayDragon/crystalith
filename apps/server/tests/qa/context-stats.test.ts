@@ -1,3 +1,4 @@
+// covers: r170（generation-core）——ContextStats camelCase 合约与真实 token 计数（systemTokens 计入 totalTokens）。
 // c60 tests — ContextStats system_tokens real counting + max_tokens from config.
 import { describe, expect, it } from 'bun:test';
 

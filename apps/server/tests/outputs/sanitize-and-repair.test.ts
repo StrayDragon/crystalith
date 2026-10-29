@@ -1,3 +1,4 @@
+// covers: r165（generation-core）+ r329（typed-generation-framework）——citation 索引清洗：越界/重复/非整数递归剥离 + warnings 与 _postprocessed/_warnings 标记，非阻塞主链路。
 // Wave D.3 — citation sanitize + needsRepair (c50) regression tests.
 import { describe, expect, it } from 'bun:test';
 

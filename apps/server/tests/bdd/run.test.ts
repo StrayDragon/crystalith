@@ -1,3 +1,4 @@
+// covers: r19（bdd-test-harness）——BDD features 树维护中文 .feature（API 路径走 /v2 嵌套前缀），跳过白名单 SKIP_FEATURE_DIRS 在运行器入口显式声明。
 // BDD entry point — auto-scans all .feature files and runs them.
 //
 // Importing this module (via `bun test tests/bdd/run.test.ts`) registers the

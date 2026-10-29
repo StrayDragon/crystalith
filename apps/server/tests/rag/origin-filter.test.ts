@@ -1,3 +1,4 @@
+// covers: r486（global-search）——既有检索双通道（KNN+关键词）默认仅来源块，产出入索引不改变引用语义；全局 KNN 跨笔记本。
 // c132 r486 (seam ④) — origin filter at the two retrieval choke points:
 // searchVectors (KNN) and the keyword channel default to source-origin chunks
 // only, so output indexing (r485) cannot change existing citation semantics.

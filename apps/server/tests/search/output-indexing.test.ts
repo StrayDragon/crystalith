@@ -1,3 +1,4 @@
+// covers: r485（global-search）——产出自动入索引为隐藏派生条目：同步可搜且列表不可见、嵌入失败可观测（derivedFailedCount）、删除级联清理块/向量/FTS 无孤儿。
 // c132 r485 (seam ⑤) — output auto-indexing lifecycle:
 //   create → hidden derived row, ready, chunks origin='output', searchable;
 //   embed failure → derived failed + derivedFailedCount, generation untouched;

@@ -1,3 +1,4 @@
+// covers: r351/r370/r373/r470（workspace-api-contract）——嵌套路径 :nid 归属 SSOT（body notebookId 不一致 400、跨 notebook 访问 404 统一信封）与 session sharedStateRevision 乐观锁 409 走 AppHttpError。
 // c67 — notebook isolation: required notebookId + cross-notebook → 404.
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 

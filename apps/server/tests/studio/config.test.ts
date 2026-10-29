@@ -1,3 +1,4 @@
+// covers: r318/r319（studio-slides-workflow）——generationConfig 展开为具体区间与本地化中文提示（不携带原始 token）；frontmatter 6-key 模板与 override 逐字采用/缺 title 补一行。
 // Tests for c56 studio config interpretation — range expansion, frontmatter
 // 6-key shape, override path, preference→retrieval tuning, and config_schema
 // completeness. Verifies v1 slides/config.py + generator.py parity.

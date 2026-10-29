@@ -1,3 +1,4 @@
+// covers: r161（generation-core）——非空 sourceIds 限定 outputs pipeline 检索范围（仅按所选来源解析 chunk）。
 // Output pipeline retrieval — scoped RAG miss falls back to direct source chunks.
 import { afterAll, beforeAll, describe, expect, it, mock } from 'bun:test';
 

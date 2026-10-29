@@ -1,3 +1,4 @@
+// covers: r307/r308/r311/r312（studio-slides-workflow）——draft 围绕 input/outline/markdown 三阶段推进且逐阶段持久化、draft API 稳定合约（创建/生成/404）、无 outline 时 markdown 404、生成成功先落库再返回。
 // Studio two-stage generation integration test.
 //
 // Exercises the full outline → markdown flow via the in-process Elysia app:

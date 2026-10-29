@@ -1,3 +1,4 @@
+// covers: r18（bdd-test-harness）——基于 @cucumber/gherkin 的 zh-CN BDD runner：规则块嵌套场景展平注册执行、与 bun:test 集成。
 import { describe, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 
