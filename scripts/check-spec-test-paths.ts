@@ -1,74 +1,22 @@
 #!/usr/bin/env bun
-import { existsSync, type Dirent } from 'node:fs';
 /**
- * Spec test-path drift check — 校验 llmanspec specs 场景引用的测试文件都真实存在。
+ * Spec 场景测试路径禁令（终态）—— llmanspec specs 的场景步骤 MUST NOT 引用测试文件。
  *
- * Why: spec 场景以「当 运行 <path> 的 X 用例」绑定代码；测试改名/归位/删除时
- * 该引用会静默腐化（2026-10 测试精简时发现 11 处漂移）。本门禁让漂移在
- * `just qa` 即红，而非等人工反查。
+ * 背景：历史上 spec 场景以「当 运行 <测试路径> 的 X 用例」做绑定，属前向引用，
+ * 测试改名/移动/删除即碎（2026-10 曾漂移 26 处）。迁移已完成（171 处引用清零，
+ * 绑定改由代码侧 `// covers: rN` 反向锚点承载，见 llmanspec/AGENTS.md 书写守则）。
+ * 本门禁现为「出现即拒」：spec 场景中出现任何 .test/.spec 文件引用即 fail。
  *
- * 解析规则：
- *   - 含 `/` 的引用：依次按 repo 根、apps/server/tests、apps/web/src、
- *     e2e/tests、packages/shared/test 解析，任一存在即通过；
- *   - 裸文件名：按全仓测试文件 basename 集合匹配。
- *
- * Usage: bun scripts/check-spec-test-paths.ts  （just qa 内置）
- * Self-test: CHECK_SPECS_DIR=<临时目录> 指向含坏引用的副本验证负例。
+ * Usage: bun scripts/check-spec-test-paths.ts（just qa 内置）
+ * Self-test: CHECK_SPECS_DIR=<临时目录> 指向含违规引用的副本验证负例。
  */
 import { readdir, readFile } from 'node:fs/promises';
-import { join, relative } from 'node:path';
+import { relative, join } from 'node:path';
 
 const ROOT = import.meta.dir + '/..';
 const SPECS_DIR = process.env.CHECK_SPECS_DIR ?? join(ROOT, 'llmanspec/specs');
 
-// 相对形态引用的解析根（历史出现过 sources/xxx、qa/xxx 等 tests 内相对路径）
-const RELATIVE_ROOTS = [
-  join(ROOT, 'apps/server/tests'),
-  join(ROOT, 'apps/web/src'),
-  join(ROOT, 'e2e/tests'),
-  join(ROOT, 'packages/shared/test'),
-];
-
-// 全仓真实测试文件（paths + basenames）
-const TEST_GLOBBED_ROOTS = ['apps', 'packages', 'e2e'].map((d) => join(ROOT, d));
-const realPaths = new Set<string>();
-const realBasenames = new Set<string>();
-
-/** 递归旁路：node_modules / 构建产物不进扫描。 */
-function isSkippedDir(name: string): boolean {
-  return name === 'node_modules' || name === 'dist' || name === '.tmp';
-}
-
-function isTestFile(name: string): boolean {
-  return /\.(test|spec)\.(ts|tsx)$/u.test(name);
-}
-
-async function listDirSafe(dir: string): Promise<Dirent[]> {
-  try {
-    return await readdir(dir, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-}
-
-async function addEntry(dir: string, e: Dirent): Promise<void> {
-  const p = join(dir, e.name);
-  if (!e.isDirectory()) {
-    if (isTestFile(e.name)) {
-      realPaths.add(p);
-      realBasenames.add(e.name);
-    }
-    return;
-  }
-  await collect(p);
-}
-
-async function collect(dir: string): Promise<void> {
-  for (const e of await listDirSafe(dir)) {
-    if (isSkippedDir(e.name)) continue;
-    await addEntry(dir, e);
-  }
-}
+const REF_RE = /\b[A-Za-z0-9_.\-/]+\.(?:test|spec)\.(?:ts|tsx)\b/gu;
 
 async function listFeatures(dir: string): Promise<string[]> {
   const out: string[] = [];
@@ -80,49 +28,23 @@ async function listFeatures(dir: string): Promise<string[]> {
   return out;
 }
 
-const REF_RE = /\b[A-Za-z0-9_.\-/]+\.(?:test|spec)\.(?:ts|tsx)\b/gu;
-
-/** repo 根 + 相对根（apps/server/tests 等）逐根存在性解析。 */
-function existsUnderRoots(ref: string): boolean {
-  if (existsSync(join(ROOT, ref))) return true;
-  for (const r of RELATIVE_ROOTS) {
-    if (existsSync(join(r, ref))) return true;
-  }
-  return false;
-}
-
-/** 前缀容忍：spec 里可能写 tests/sources/x 而 real 是 apps/server/tests/sources/x。 */
-function endsWithKnownPath(ref: string): boolean {
-  for (const p of realPaths) {
-    if (p.endsWith(ref)) return true;
-  }
-  return false;
-}
-
-function resolves(ref: string): boolean {
-  if (ref.includes('/')) return existsUnderRoots(ref) || endsWithKnownPath(ref);
-  return realBasenames.has(ref);
-}
-
-for (const r of TEST_GLOBBED_ROOTS) await collect(r);
-
-const missing: Array<{ feature: string; line: number; ref: string }> = [];
-let refCount = 0;
+const violations: Array<{ feature: string; line: number; ref: string }> = [];
 for (const f of await listFeatures(SPECS_DIR)) {
   const lines = (await readFile(f, 'utf8')).split('\n');
   lines.forEach((text, i) => {
     for (const m of text.matchAll(REF_RE)) {
-      refCount += 1;
-      if (!resolves(m[0])) {
-        missing.push({ feature: relative(ROOT, f), line: i + 1, ref: m[0] });
-      }
+      violations.push({ feature: relative(ROOT, f), line: i + 1, ref: m[0] });
     }
   });
 }
 
-if (missing.length > 0) {
-  console.error(`[check-spec-test-paths] FAIL — ${missing.length} 个 spec 引用的测试文件不存在:`);
-  for (const m of missing) console.error(`  - ${m.ref}  (${m.feature}:${m.line})`);
+if (violations.length > 0) {
+  console.error(
+    `[check-spec-test-paths] FAIL — spec 场景出现 ${violations.length} 处测试文件引用（守则：场景=产品桥梁，绑定走代码侧 covers:rN）:`,
+  );
+  for (const v of violations) {
+    console.error(`  - ${v.ref}  (${v.feature}:${v.line})`);
+  }
   process.exit(1);
 }
-console.log(`[check-spec-test-paths] OK — ${refCount} 处场景测试引用全部可解析`);
+console.log('[check-spec-test-paths] OK — spec 场景 0 处测试文件引用（终态禁令）');

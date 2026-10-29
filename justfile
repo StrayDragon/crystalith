@@ -239,7 +239,7 @@ check-app-schema:
 check-i18n-keys:
     bun scripts/check-i18n-keys.ts
 
-# Check every test path referenced in spec scenarios exists (防 spec 绑定漂移)
+# Spec 场景禁止测试文件引用——出现即拒（绑定走代码侧 covers:rN；终态）
 check-spec-test-paths:
     bun scripts/check-spec-test-paths.ts
 
