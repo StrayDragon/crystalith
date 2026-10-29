@@ -9,7 +9,7 @@
     系统 MUST 支持三级配置源优先级链：1) 环境变量（CL_* 前缀）最高优先级；2) YAML 配置文件（config/app.yaml）中间优先级；3) 硬编码默认值最低优先级。高优先级源 MUST 覆盖低优先级源的对应键（如 storage.data_root 配置为 ./data_local 且环境变量 CL_DATA_ROOT=/prod 并存时，数据根 accessor SHALL 返回 /prod）。MUST NOT 出现配置源绕过优先级链直接生效的行为。
   
     场景: cl-env-overrides-yaml-overrides-default
-      假如 config-governance 集成环境就绪（apps/server/tests/shared/config-governance.test.ts）
+      假如 在隔离的数据目录与配置环境下启动
       当 YAML 设 storage.data_root=./data_local 且 CL_DATA_ROOT=/tmp/c125-prod-root 并存
       那么 数据根 accessor 返回 /tmp/c125-prod-root
       而且 无 env 时 YAML 生效、两者皆无时硬编码默认 ./data 生效
@@ -58,7 +58,7 @@
     二进制分发形态下，配置解析 MUST 与源码运行保持同一 CL_* 优先级语义：配置文件默认按 CWD 相对定位（CL_CONFIG_PATH 可覆盖）；Drizzle 迁移目录 MUST 按「源码树 → 可执行文件旁 → CWD」顺序解析；sqlite-vec 原生扩展 MUST 支持以可执行文件旁 native/ 目录（或 CL_SQLITE_VEC_PATH）加载作为包解析回退；静态 web 资源根 MUST 由 CL_WEB_DIST 或可执行文件旁 web/dist 定位，两者均缺席时 server MUST 以纯 API 模式运行（headless），MUST NOT 因资源缺席拒绝启动。MUST NOT 假设源码仓库布局存在。
 
     场景: distribution-resolution-without-repo-assumptions
-      假如 config-governance 集成环境就绪（apps/server/tests/shared/config-governance.test.ts）
+      假如 在隔离的数据目录与配置环境下启动
       当 调用 resolveMigrationsFolder/resolveSqliteVecNativePath/resolveWebDistRoot
       那么 迁移目录按三级候选解析、sqlite-vec native 缺席优雅降级不抛错、web-dist 缺席允许 headless（返回 null 或可用根）
 

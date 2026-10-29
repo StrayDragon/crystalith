@@ -1,3 +1,4 @@
+// covers: r475/r476/r477（embedding-runtime）
 import { describe, expect, it } from 'bun:test';
 
 // embedding-runtime r475/r476/r477 — engine prefix presets & dimension assertion.

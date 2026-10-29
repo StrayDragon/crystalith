@@ -10,7 +10,7 @@
 
     场景: lint-and-format-inside-just-check
       假如 检查 justfile 的 qa 与 check 配方
-      当 运行 apps/server/tests/meta/gate-composition.test.ts 的 just qa/check 用例
+      当 检查 justfile 的 qa 与 check 配方组成
       那么 qa 配方依赖 check 且 check 依赖 typecheck、lint、format-check
       而且 任一检查失败时主门禁以非 0 退出
   @req:r214
@@ -37,7 +37,7 @@
 
     场景: qa-runs-test-and-test-web
       假如 检查 justfile 的 qa 配方与 apps/web 的 test:ci 脚本
-      当 运行 gate-composition.test.ts 的 test/test-web 依赖用例
+      当 检查 justfile 的 qa 配方与前端 test:ci 入口
       那么 qa 配方同时依赖 test 与 test-web
       而且 test-web 调用 apps/web 的 Rstest CI（rstest run）
   @req:r217
@@ -55,7 +55,7 @@
 
     场景: drift-checks-gated-by-just-qa
       假如 检查 justfile 的 qa、check-env-examples 与 check-app-schema 配方
-      当 运行 gate-composition.test.ts 的 drift checks 用例
+      当 检查 check-env-examples 与 check-app-schema 配方的 --check 形态
       那么 qa 配方依赖 check-env-examples 与 check-app-schema
       而且 两个配方都以 --check 运行，发现漂移即非 0 退出
   @req:r219
@@ -64,7 +64,7 @@
 
     场景: just-test-scope-limited-to-server-and-shared
       假如 检查 justfile 的 test 配方
-      当 运行 gate-composition.test.ts 的 just test 范围用例
+      当 检查 justfile 的 test 配方作用域
       那么 配方执行 apps/server/tests/ 与 packages/shared/test/
       而且 不运行 web Rstest 也不运行 e2e
   @req:r220
@@ -94,6 +94,6 @@
 
     场景: bdd-and-type-aware-lint-out-of-just-qa
       假如 检查 justfile 的 qa 配方
-      当 运行 gate-composition.test.ts 的 BDD/type-aware 排除用例
+      当 检查 qa 配方的依赖列表与独立配方可用性
       那么 qa 配方不依赖 test-bdd 与 type-aware-lint
       而且 两者仍作为独立配方单独可用（bun test BDD / lint:type-aware）

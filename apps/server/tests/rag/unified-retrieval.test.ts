@@ -1,3 +1,4 @@
+// covers: r476（embedding-runtime）
 // retrieval-and-cache — unified retrieval paths:
 //   r224 — outputs and slides reuse the same retrieval strategy family: both
 //          resolve through ragRegistry's 'embed' registration

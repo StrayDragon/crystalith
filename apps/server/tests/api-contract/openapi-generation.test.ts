@@ -1,3 +1,4 @@
+// covers: r193/r196（openapi-and-client-generation）
 import { describe, expect, it } from 'bun:test';
 
 // Side-effect: server + feature routers call registerApiDoc at module load

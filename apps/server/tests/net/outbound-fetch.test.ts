@@ -1,3 +1,4 @@
+// covers: r420/r421（architecture-core）
 import { describe, expect, it } from 'bun:test';
 
 import type { ProxySettings } from '../../src/shared/config.ts';

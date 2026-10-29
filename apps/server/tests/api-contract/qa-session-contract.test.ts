@@ -1,3 +1,4 @@
+// covers: r14（architecture-plugin-and-agent）
 // API contract B-class integration tests — QA / presets / session conversion
 // domains: prompt preset CRUD status family (r352), plain-text assistant
 // content (r350), QA confidence/evidence + stream done payload (r369), QA

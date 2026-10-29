@@ -1,4 +1,4 @@
-// covers: r331/r335（web-extractor-plugins）+ r7/r11（architecture-plugin-and-agent）
+// covers: r331/r335/r7/r11/r17（architecture-plugin-and-agent）
 // ——registry 策略/装载语义、提取器实现注册与结构化错误。
 import { describe, expect, it, test } from 'bun:test';
 import { afterAll, beforeAll } from 'bun:test';

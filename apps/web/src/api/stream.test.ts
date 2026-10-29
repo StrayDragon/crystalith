@@ -1,3 +1,4 @@
+// covers: r155（frontend-eden-migration）
 import { describe, expect, test } from '@rstest/core';
 
 import { parseSseBlock, streamRequest } from './stream';

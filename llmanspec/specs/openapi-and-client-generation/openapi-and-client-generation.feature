@@ -19,7 +19,7 @@
 
     场景: route-doc-parity-gate
       假如 全部对外 router 已挂载 shared Zod
-      当 运行 apps/server/tests/api-contract/openapi-generation.test.ts 的 route 与 registerApiDoc parity 检查
+      当 对照真实路由与 OpenAPI 文档做双向 parity 检查
       那么 每个 handler 的文档 path/method 与实现一致且分页列表登记为含 items/total 的 PaginatedSchema 信封
       而且 登记过时 apiDocs 路径或裸数组响应描述时 parity 检查失败
   @req:r194
@@ -37,7 +37,7 @@
 
     场景: asyncapi-stream-verbs-match-handlers
       假如 已加载全部对外 router 并生成 AsyncAPI 文档
-      当 运行 apps/server/tests/api-contract/asyncapi-verbs.test.ts 对照 Elysia handler
+      当 对照 Elysia 路由与 AsyncAPI 通道文档
       那么 QA stream 为 POST、studio 流式通道为 GET、researchStream 为 GET /v2/notebooks/{nid}/research/{rid}/stream
       而且 每个流式通道的 method/path 与 handler 完全一致
   @req:r196
@@ -46,6 +46,6 @@
 
     场景: openapi-json-generates-without-crash
       假如 已加载全部对外 router
-      当 调用 generateOpenApiDocument 生成 /openapi.json（apps/server/tests/api-contract/openapi-generation.test.ts 首用例）
+      当 调用文档生成器产出 /openapi.json
       那么 生成在合理时间内完成且不 stack overflow、不 hang、不因 Zod 转换崩溃
       而且 生成结果包含 notebooks、qa、outputs、citations context 关键 path

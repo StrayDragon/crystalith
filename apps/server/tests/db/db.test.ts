@@ -1,3 +1,4 @@
+// covers: r49/r479（data-and-storage + embedding-runtime）
 import { Database } from 'bun:sqlite';
 // Integration test: schema migration + sqlite-vec virtual table + vector CRUD.
 //

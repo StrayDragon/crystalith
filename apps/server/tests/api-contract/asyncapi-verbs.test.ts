@@ -1,3 +1,4 @@
+// covers: r195（openapi-and-client-generation）
 import { describe, expect, it } from 'bun:test';
 
 // AsyncAPI parity gate — 原「手写字面量镜像」用例（逐 channel 复读 asyncapi.ts 的

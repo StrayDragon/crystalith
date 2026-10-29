@@ -38,7 +38,7 @@
 
     场景: no-proxy-hit-connects-directly
       假如 proxy_settings.enabled=true 且 no_proxy 含 localhost 与 127.0.0.1
-      当 运行 apps/server/tests/net/outbound-fetch.test.ts 的 "skips hosts in no_proxy" 用例
+      当 出站请求目标命中 no_proxy 列表中的主机
       那么 127.0.0.1 目标的解析结果为 undefined（直连）
       而且 不注入任何 HTTP(S) 代理
   @req:r421
@@ -48,7 +48,7 @@
 
     场景: https-target-uses-https-url-proxy
       假如 proxy_settings.enabled=true 且 https_url 与 http_url 均非空
-      当 运行 apps/server/tests/net/outbound-fetch.test.ts 的 "uses https_url for https targets" 用例
+      当 出站目标为 https 且代理配置提供 https_url
       那么 https://api.firecrawl.dev/v2/scrape 解析为 https_url 代理
       而且 http 目标仍解析为 http_url 互不混用
   @req:r8
@@ -57,6 +57,6 @@
 
     场景: retired-tasks-routes-return-404
       假如 应用已按统一入口聚合挂载全部路由
-      当 运行 apps/server/tests/integration/retired-tasks-routes.test.ts 对 GET /v2/tasks、GET /v2/notebooks/:nid/tasks 与 POST cancel 的请求
+      当 请求 GET /v2/tasks、GET /v2/notebooks/:nid/tasks 或 POST 任务取消端点
       那么 三个请求均返回 404
       而且 响应体为统一错误信封（errorCode=NOT_FOUND）

@@ -1,3 +1,4 @@
+// covers: r474（embedding-runtime）
 // Tests for the template-rendering config loader.
 import { afterEach, describe, expect, it } from 'bun:test';
 import { writeFileSync, rmSync } from 'node:fs';

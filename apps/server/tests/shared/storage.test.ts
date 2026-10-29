@@ -1,3 +1,4 @@
+// covers: r51（data-and-storage）
 // Tests for LocalStorage content persistence (uses OS temp dir, no network).
 import { afterAll, describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';

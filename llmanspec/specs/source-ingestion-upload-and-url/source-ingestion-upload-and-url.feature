@@ -114,7 +114,7 @@
     当上传/URL 抓取的内容无匹配 parser（例如缺失对应插件）时，系统 MUST 返回 415 且 MUST 提供可机器读取的诊断信息（errorCode/message/details），其中 details MUST 包含恢复提示（例如需要安装/启用的 `parser-*` 插件 id）。
   
     场景: unsupported-format-415-diagnostics
-      假如 ingestion 集成环境就绪（tests/sources/parser-selection.test.ts）
+      假如 上传摄取管线就绪
       当 上传无匹配 parser 的文件（未知扩展名或未知显式 parserType）
       那么 415 信封 errorCode=UNSUPPORTED_MEDIA_TYPE 且 details 携带 mimeType/filename 与 parser-<ext> 形式的 pluginHint
 
