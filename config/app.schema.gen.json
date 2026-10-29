@@ -142,7 +142,7 @@
           "type": "number"
         },
         "truncation_dims": {
-          "description": "embedding.truncation_dims",
+          "description": "MRL 截断目标维度：须为默认 embedding 模型声明的 mrlDims 成员，缺省/null 即不截断（默认关闭）。切换默认 embedding 模型后需复核此值；生效维度变更需经索引重建入口。",
           "type": "number"
         }
       }
