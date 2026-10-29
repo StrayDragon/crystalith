@@ -1,3 +1,4 @@
+// covers: r71/r90/r430（deep-research-runtime）——work-unit 内核波次排空全部 research 节点、per-Run LLM 队列串行化（跨 Run 不互斥）、进行中单元经 cancel 协作中止至 cancelled。
 /**
  * c106: parallel branch work-units — drain wave, per-run LLM queue, cancel.
  */

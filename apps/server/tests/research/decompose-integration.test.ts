@@ -1,3 +1,4 @@
+// covers: r80（deep-research-runtime）——seed 后结构化规划自动拆解：question 经 decompose 边扩展 research 节点并以 merge 边汇入结论。
 /**
  * Integration: when generateObject returns branches, run graph gains research nodes + edges.
  * Mocks AI before importing createApp (same pattern as runtime.test.ts).

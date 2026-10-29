@@ -1,3 +1,4 @@
+// covers: r92/r93/r439（deep-research-runtime）——maxPageFetches 公式与 pagesUsed 初始化/成功读页递增、fetchPage 同 URL 证据 content 升级保留 snippet 并按 token 预算截断、每节点读页软上限均分。
 /**
  * c107 — page evidence budget, ingest upgrade, token truncate, create maxPageFetches.
  */

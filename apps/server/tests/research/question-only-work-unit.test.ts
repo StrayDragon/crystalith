@@ -1,3 +1,4 @@
+// covers: r80（deep-research-runtime）——规划输出为空时回退仅 question work-unit 路径且不伪造多支路拓扑。
 /**
  * c94 regression: empty decompose → question-only work-unit still completes.
  */

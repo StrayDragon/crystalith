@@ -1,3 +1,4 @@
+// covers: r433（deep-research-runtime）——规划钳制遵守 maxNodes/深度软上限，节点数不超预算。
 /**
  * c93 / r326 pure decompose helpers.
  *

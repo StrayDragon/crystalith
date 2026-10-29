@@ -1,3 +1,4 @@
+// covers: r58/r59/r425/r95/r96/r97/r440/r441（deep-research-runtime）——深度档预算映射（默认中档）、budget 确认仅限真触顶且动作限 continue/finish_report、剩余额度不触发 budget 确认、加购公式 clamp 与 add-budget 命令口不加 maxNodes、每节点搜索软上限均分公式。
 /**
  * c108 — research budget commitment: L1 numbers, add-on formula, confirm timing, soft cap.
  */

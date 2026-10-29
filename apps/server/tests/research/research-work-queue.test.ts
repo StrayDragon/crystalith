@@ -1,3 +1,4 @@
+// covers: r434（deep-research-runtime）——已拆出活 research 支路时调度队列仅排 research 节点、跳过 question/conclusion 单元。
 import { describe, expect, it } from 'bun:test';
 
 import type { ResearchNode } from '@crystalith/shared';

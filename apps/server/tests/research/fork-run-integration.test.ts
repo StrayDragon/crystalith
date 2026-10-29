@@ -1,3 +1,4 @@
+// covers: r89/r438（deep-research-runtime）——从 revision fork 派生新 Run：拷贝 graph/report/evidence 并重置预算、默认不自动 schedule，源 Run 与 revisions 保持不变。
 /**
  * c105 / r335: revision fork-run creates a new ResearchRun; source unchanged.
  */

@@ -1,3 +1,4 @@
+// covers: r87/r88（deep-research-runtime）——request-reexpand 确认门控：approve 追加受 maxNodes 约束的支路、skip 不新增、无余量不伪造支路，且无用户请求不自动二次拆解。
 /**
  * c104 / r333–r334: request-reexpand confirm gate + approve/skip/planner failure.
  */

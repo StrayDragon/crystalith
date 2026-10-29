@@ -1,4 +1,4 @@
-// covers: r94/r431/r432（deep-research-runtime）——work-unit 步数/预算门控、非命令口图变更拒绝与 chat/Run 流事件分离。
+// covers: r64/r73/r94/r431/r432（deep-research-runtime）——work-unit 步数/预算门控、非命令口图变更拒绝与 chat/Run 流事件分离。
 // c117 — deep-research runtime bare rules:
 // - r94: agent-chosen page reads — the work-unit tool loop is bounded by config
 //   workUnitMaxSteps, budgets are exposed to the agent, and the runtime never
