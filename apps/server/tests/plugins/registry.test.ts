@@ -1,5 +1,5 @@
-// plugin-interface-ssot tests — registry policy/load semantics (r7/r11) and
-// extractor metadata derivation over the registry-backed factory.
+// covers: r331/r335（web-extractor-plugins）+ r7/r11（architecture-plugin-and-agent）
+// ——registry 策略/装载语义、提取器实现注册与结构化错误。
 import { describe, expect, it, test } from 'bun:test';
 import { afterAll, beforeAll } from 'bun:test';
 

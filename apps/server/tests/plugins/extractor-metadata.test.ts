@@ -1,4 +1,4 @@
-// c62 tests — extractors response field shape + default by availability.
+// covers: r333/r336（web-extractor-plugins）——提取器清单字段形状与按可用性定默认。
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 
 import { pluginRegistry } from '../../src/plugins/registry.ts';

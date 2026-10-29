@@ -1,4 +1,4 @@
-// c117 — extractor selection bare rules (web-extractor-plugins):
+// covers: r332/r468/r469/r334/r337（web-extractor-plugins）——提取器选择裸规则（c117）：
 // - r332: single-fetch preference + controlled, observable fallback order
 // - r468: preferredExtractor=X is attempted first when X is available
 // - r469: no available extractor in the configured chain → stable failure, no
