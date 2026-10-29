@@ -1,4 +1,4 @@
-// covers: r138（deep-research-ui）——证据转化以 ResearchArtifactRef kind=evidence 调用 convert 端点。
+// covers: r138/r453（deep-research-ui）——证据转化以 ResearchArtifactRef kind=evidence 调用 convert 端点。
 import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, render, screen } from '@testing-library/react';
 

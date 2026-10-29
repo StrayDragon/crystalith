@@ -1,4 +1,4 @@
-// covers: r100（deep-research-ui）——Compose 表单门控：topic/来源/双开关不满足时禁用开始。
+// covers: r100/r443（deep-research-ui）——Compose 表单门控：topic/来源/双开关不满足时禁用开始。
 import { expect, test } from '@rstest/core';
 
 import { DEFAULT_LAB_COMPOSE_DEPTH } from './labComposeDepth';

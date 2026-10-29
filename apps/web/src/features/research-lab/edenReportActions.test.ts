@@ -1,4 +1,4 @@
-// covers: r124（deep-research-ui）——openReport 导航 /research-lab/:nid/report 并携带当前 ?rid=。
+// covers: r108/r124/r126/r127/r452（deep-research-ui）——openReport 导航 /research-lab/:nid/report 并携带当前 ?rid=。
 import { describe, expect, it } from '@rstest/core';
 
 import { resolveEdenExportFromReport, resolveEdenOpenReport } from './edenReportActions';

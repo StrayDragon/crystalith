@@ -1,4 +1,4 @@
-// covers: r146/r460（deep-research-ui）——生产构建 Eden Lab 全链路演练（R01）与图节点/边稳定锚点断言。
+// covers: r111/r146/r151/r460（deep-research-ui）——生产构建 Eden Lab 全链路演练（R01）与图节点/边稳定锚点断言。
 import {
   attachResearchDiagnostics,
   openLabCompose,

@@ -1,4 +1,4 @@
-// covers: r130（deep-research-ui）——终态或 report_ready 后全量刷新对齐 node.phase/conclusionStatus/evidenceIds。
+// covers: r128/r129/r130/r132/r154/r454（deep-research-ui）——终态或 report_ready 后全量刷新对齐 node.phase/conclusionStatus/evidenceIds。
 import { describe, expect, it } from '@rstest/core';
 
 import {

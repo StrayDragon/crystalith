@@ -1,4 +1,4 @@
-// covers: r149（deep-research-ui）——演示模式仅在 DEV 或 VITE_LAB_DEMO=1 下可达 /demo 前缀。
+// covers: r149/r461（deep-research-ui）——演示模式仅在 DEV 或 VITE_LAB_DEMO=1 下可达 /demo 前缀。
 import { describe, expect, it } from '@rstest/core';
 
 import { isLabDemoMode } from './labDemoMode';

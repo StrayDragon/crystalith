@@ -1,4 +1,4 @@
-// covers: r112/r344（deep-research-ui + workspace-api-contract）——p0 冒烟以 testid 断言 Lab 入口可达；业务 API 请求路径均以 /v2 开头。
+// covers: r112/r344/r444（deep-research-ui + workspace-api-contract）——p0 冒烟以 testid 断言 Lab 入口可达；业务 API 请求路径均以 /v2 开头。
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
