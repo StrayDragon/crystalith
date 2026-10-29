@@ -10,7 +10,7 @@
 
     场景: outputs-and-slides-share-embed-strategy
       假如 已用记录型假策略覆盖 registry 的 embed 注册
-      当 运行 apps/server/tests/rag/unified-retrieval.test.ts 分别驱动 outputs pipeline 与 studio getContext
+      当 分别在 outputs 生成与 studio 上下文装配中发起检索
       那么 两条路径都经同一 registry embed 注册发出检索
       而且 返回的 chunk 文本即该策略产出的内容
   @req:r225
@@ -21,14 +21,14 @@
       假如 检索上下文装配就绪
       当 上下文超出 token 预算
       那么 按优先级保留高分块并部分修剪低分块且 compressed 标记置 true
-      而且 修剪后不产生孤立 citation 引用（见 rag/context-window.test.ts）
+      而且 修剪后不产生孤立 citation 引用
   @req:r226
   规则: Multi-query retrieval is bounded
     启用 multi-query 时 MUST 受 seed 上限、融合策略与去重规则约束。
 
     场景: multi-query-seeds-capped
       假如 multi-query 扩展已启用
-      当 运行 rag/multi-query.test.ts 的 SEED_CAP 用例
+      当 生成 multi-query 扩展的 query seeds
       那么 生成的 query seeds 数量不超过 seed 上限
       而且 融合与去重规则约束下不出现无界扩展
   @req:r227
@@ -37,7 +37,7 @@
 
     场景: epoch-bump-invalidates-cache
       假如 检索缓存中已有同 epoch 命中的条目
-      当 运行 rag/cache.test.ts 的 bumpSourcesEpoch/bumpVectorEpoch 用例
+      当 递增 sources_epoch 与 vector_epoch
       那么 对应 epoch 递增后旧缓存条目不再命中
       而且 epoch 递增在并发下原子且单调
   @req:r228
@@ -48,14 +48,14 @@
       假如 检索组装缓存已启用
       当 sources/vector epoch 递增后以相同输入读取缓存
       那么 缓存 key 因包含 epoch 版本信息而不命中旧值
-      而且 缓存按 notebook 隔离互不污染（见 rag/cache.test.ts per-notebook 用例）
+      而且 缓存按 notebook 隔离互不污染
   @req:r229
   规则: Embed strategy converts distance to similarity
     Embed 检索策略 MUST 将 sqlite-vec 返回的 distance 转换为 similarity score (score = 1 - distance)。过滤 MUST 使用 score >= minScore 比较并按 score 降序排序（MUST NOT 直接用 distance 做 >= 比较，方向相反）。minScore 与 topK 的默认值 MUST 来自配置。
 
     场景: distance-converted-to-similarity
       假如 vec_chunks 以余弦距离返回受控向量的 KNN 命中
-      当 运行 apps/server/tests/rag/embed-similarity.test.ts 的转换用例
+      当 embed 检索策略处理这些命中
       那么 每个命中的 score 满足 score = 1 - distance 且按 score 降序
       而且 过滤按 score >= minScore 执行（近 1 相似度保留，0.3 与约 0 的命中被丢弃）
   @req:r230
@@ -64,7 +64,7 @@
 
     场景: sliding-window-chunk-with-overlap
       假如 文本分块器以默认配置就绪
-      当 运行 rag/chunker.test.ts 的 DEFAULT_CHUNKER_CONFIG 用例
+      当 对样例文本执行默认配置分块
       那么 块大小 512、重叠 102 且每块文本长度不超过 maxLen
       而且 分块参数可由配置覆盖且不退化为无重叠的段落切分
   @req:r231
@@ -73,7 +73,7 @@
 
     场景: rrf-fuses-multi-query-seeds
       假如 已按 outputType 生成多个 query seeds
-      当 运行 rag/multi-query.test.ts 的 rrfFuseSeeds 用例
+      当 执行多查询检索并融合结果
       那么 多查询结果按 RRF（参数来自 config schema）融合为单一排序列表
       而且 融合结果受 seedCap 限制避免无界扩展
   @req:r232
@@ -82,7 +82,7 @@
 
     场景: mutations-bump-epochs-invalidate-cache
       假如 已为笔记本写入一条检索缓存
-      当 运行 apps/server/tests/rag/epoch-wiring.test.ts 的两个用例（HTTP 删除来源 / indexSource 重嵌）
+      当 触发会使缓存失效的写入（HTTP 删除来源 / 向量重嵌）
       那么 来源删除 bump sources_epoch 后旧缓存不再命中
       而且 向量重嵌 bump vector_epoch 后旧缓存不再命中
   @req:r233
@@ -91,7 +91,7 @@
 
     场景: studio-context-via-unified-registry
       假如 studio slide 已选定来源
-      当 运行 apps/server/tests/rag/unified-retrieval.test.ts 的 studio 用例
+      当 装配该 slide 的生成上下文
       那么 getContext 经 ragRegistry 的 embed 注册取得上下文（假策略文本原样返回）
       而且 检索按 slide 来源过滤并携带默认 tuning（topK=8、minScore=0.2）
   @req:r234
@@ -100,7 +100,7 @@
 
     场景: qa-retrieval-single-embed-no-multi-query
       假如 以记录型假策略驱动 retrieveAndJudge
-      当 运行 apps/server/tests/qa/single-embed.test.ts 的 single-embed 用例
+      当 发起一次笔记本问答
       那么 每次问答只发出一次检索调用且 multiQuery 为 false
       而且 检索 query 即原问题并按 sourceIds 过滤
   @req:r463
@@ -110,7 +110,7 @@
 
     场景: qa-retrieval-deterministic-repeats
       假如 同一 question、同一组 sourceIds 与同一策略命中连续执行两次问答检索
-      当 运行 apps/server/tests/qa/single-embed.test.ts 的 deterministic 用例
+      当 以完全相同的输入完成第二次问答检索
       那么 两次执行各只触发一次策略检索（无 seed 扩张）
       而且 citations/上下文/confidence 完全一致（无 RRF 归一化）
   @req:r235
@@ -119,6 +119,6 @@
 
     场景: sourceids-filters-qa-and-knn
       假如 QA 检索与向量 KNN 支持 sourceIds 参数
-      当 sourceIds 缺失或为空时执行 QA 检索（见 qa/ungrounded-scope.test.ts）
+      当 sourceIds 缺失或为空时执行 QA 检索
       那么 跳过向量检索且不回退为全库检索
-      而且 指定 sourceIds 时检索范围限定到该子集并受可配置 minScore 门控（见 qa/low-similarity-passthrough.test.ts）
+      而且 指定 sourceIds 时检索范围限定到该子集并受可配置 minScore 门控

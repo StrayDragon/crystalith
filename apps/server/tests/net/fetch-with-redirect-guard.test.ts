@@ -1,3 +1,4 @@
+// covers: r293（source-ingestion-upload-and-url）——逐跳重定向重验 SSRF。
 // Tests for fetchWithRedirectGuard — per-hop SSRF redirect validation (P0-3).
 // Mocks global.fetch so no real network calls happen; asserts that redirect
 // chains are walked manually and every Location is re-validated.

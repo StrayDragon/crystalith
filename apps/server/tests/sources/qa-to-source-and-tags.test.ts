@@ -1,3 +1,4 @@
+// covers: r270（source-ingestion-management-and-tags）+ r275/r279/r280（source-ingestion-summary-and-conversion）——qa-to-source 转换、多轮 messages 与 tag 逐项结果。
 // Wave D.2 — qa-to-source multi-turn + tag binding per-item diagnostics.
 import { afterAll, beforeAll, describe, expect, it, mock } from 'bun:test';
 

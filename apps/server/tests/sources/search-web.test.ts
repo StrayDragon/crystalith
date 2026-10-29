@@ -1,3 +1,4 @@
+// covers: r297（source-ingestion-upload-and-url）——引擎故障 service_error 与零命中 no_results 区分。
 /**
  * c65 / sources-search-web: engine failure is `service_error` (distinct from
  * `no_results`), with a user-readable message. The zero-hit path must stay

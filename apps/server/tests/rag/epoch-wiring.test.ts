@@ -1,3 +1,4 @@
+// covers: r232（retrieval-and-cache）——来源删除/向量重嵌 bump epoch 使缓存失效。
 // retrieval-and-cache r232 — epoch cache is wired to source mutations and
 // re-embedding (never dead code):
 //   - source delete (mutation) bumps sources_epoch → cached retrievals drop

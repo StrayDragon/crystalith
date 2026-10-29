@@ -1,3 +1,4 @@
+// covers: r262/r264/r265（source-ingestion-management-and-tags）——列表过滤排序、chunks 升序、删除与 re-embed 一致性。
 // c117 — source ingestion management bare rules:
 // - r262: source list query semantics are stable (exact tag filter + stable
 //   sort over date/name/size/type with asc/desc)

@@ -1,3 +1,4 @@
+// covers: r260（source-ingestion-core）——CSV 产出 markdown-table 分块并携带行号元数据。
 // CSV parser — markdown-table cell escape/truncate (c53 / Wave D.1 regression).
 import { describe, expect, it } from 'bun:test';
 

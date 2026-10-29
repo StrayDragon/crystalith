@@ -1,3 +1,4 @@
+// covers: r284（source-ingestion-summary-and-conversion）——ready 后异步预生成摘要且不阻塞摄取。
 // c117 — r284: ingest async-pregenerates the summary after ready.
 //
 // The LLM call is parked on a test-controlled deferred so we can prove:

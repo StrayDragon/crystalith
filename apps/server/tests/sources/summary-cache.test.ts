@@ -1,3 +1,4 @@
+// covers: r273/r283（source-ingestion-summary-and-conversion）——GET 摘要不调 LLM、POST 持久化 autoSummary。
 // c74 — source summary cache: GET side-effect free, POST persists metadata.autoSummary
 import { afterAll, beforeAll, describe, expect, it, mock } from 'bun:test';
 

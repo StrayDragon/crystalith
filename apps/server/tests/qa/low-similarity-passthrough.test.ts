@@ -1,3 +1,4 @@
+// covers: r235（retrieval-and-cache）——sourceIds 过滤检索受可配置 minScore 门控。
 // allow-low-similarity-qa — low-similarity QA no longer short-circuits:
 // it passes through ungrounded with a weak-grounding notice (c60 ungrounded
 // semantics reused).

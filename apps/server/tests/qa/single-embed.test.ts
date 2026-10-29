@@ -1,3 +1,4 @@
+// covers: r234/r463（retrieval-and-cache）——QA 单次 embed 检索且重复执行结果确定。
 // retrieval-and-cache r234 / r463 — QA retrieval is a deterministic
 // single-embed path:
 //   r234 — retrieveAndJudge must not enable multiQuery on its retrieval call

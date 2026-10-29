@@ -1,3 +1,4 @@
+// covers: r256（source-ingestion-core）——删除来源同步清除 DB 行与向量行。
 // Regression: DELETE /v2/notebooks/:nid must drop the notebook's vectors too.
 // vec_chunks has no FK — before the fix, notebook cascade deleted sources and
 // chunks rows but leaked their vectors forever.

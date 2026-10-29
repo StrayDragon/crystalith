@@ -18,7 +18,7 @@
     `ready` 来源 MUST 已持久化 chunks 且对应向量可被检索命中（本条约束 ready⇒可检索的结果语义；ready 之前的同步完成时序由 r2_sync 单独约束）。
   
     场景: ready-source-is-retrievable
-      假如 ingest 集成环境就绪（tests/studio/deferred-lock.test.ts）
+      假如 ingest 集成环境就绪
       当 一个来源完成 ingest 并标记 ready
       那么 该来源已持久化 chunks 且其向量可被 notebook 范围内的最近邻检索命中
 
@@ -28,7 +28,7 @@
 
     场景: mutations-bump-epochs
       假如 同一 notebook 内已有按 sources_epoch 与 vector_epoch 缓存的查询结果
-      当 执行影响来源集合或向量集合的变更并 bump 相应 epoch（见 rag/cache.test.ts bump 失效用例）
+      当 执行影响来源集合或向量集合的变更并 bump 相应 epoch
       那么 同 epoch 写入的缓存不再命中
       而且 其他 notebook 的 epoch 不受影响
   @req:r256
@@ -37,7 +37,7 @@
 
     场景: source-delete-removes-vectors
       假如 笔记本内已有完成向量化的来源
-      当 删除该来源（见 integration/notebook-delete-cleans-vectors.test.ts）
+      当 删除该来源
       那么 sqlite-vec 中对应向量被清除
       而且 后续检索不再命中该来源分块
   @req:r257
@@ -66,7 +66,7 @@
 
     场景: ready-follows-synchronous-embedding
       假如 一个空白笔记本
-      当 上传一个文本文件并跟踪 indexSource 完成时序（见 sources/embed-timing.test.ts）
+      当 上传一个文本文件并跟踪摄取完成时序
       那么 来源仅在向量写入完成后才标记为 ready
       而且 embedding 抛出异常时来源被标记为 failed 而非 ready
   @req:r260
@@ -75,7 +75,7 @@
 
     场景: csv-chunks-as-markdown-table
       假如 一个含长文本与特殊字符单元格的 CSV 文件
-      当 通过上传创建来源并查看其 chunks（见 sources/csv-parser.test.ts）
+      当 通过上传创建来源并查看其 chunks
       那么 分块为 markdown-table 格式且携带 csv_row_start 与 csv_row_end 元数据
       而且 单元格内的"|"与换行被转义、超限截断以"…"结尾
   @req:r261
@@ -83,7 +83,7 @@
     POST …/sources/search 的 mode 字段 MUST 仅表示网搜通道元数据（默认 Fast Research 或等价）；MUST NOT 用 mode=Deep Research（或同义）触发或冒充 ResearchRun 深研编排；本约束 MUST NOT 删除或削弱 /v2/notebooks/:nid/research* ResearchRun API。
 
     场景: search-mode-normalized-fast-research
-      假如 mock 网搜引擎可用并向 POST …/sources/search 分别提交 mode=Deep Research、自定义通道与缺省（mode-normalization.test.ts）
+      假如 mock 网搜引擎可用并向 POST …/sources/search 分别提交 mode=Deep Research、自定义通道与缺省
       当 路由回显 search 响应的 mode 字段
       那么 Deep Research 被归一化为 Fast Research、其余 mode 按元数据 echo、缺省为 Fast Research
       而且 全程 ResearchRun 表零写入且 /v2/notebooks/:nid/research* 保持不受影响

@@ -1,4 +1,4 @@
-// covers: r476（embedding-runtime）
+// covers: r229（retrieval-and-cache）+ r476（embedding-runtime）——distance→similarity 转换、score 过滤与降序排序。
 // retrieval-and-cache r229 — Embed strategy distance→similarity conversion.
 // sqlite-vec returns cosine `distance`; the embed strategy must score
 // `score = max(0, 1 - distance)`, filter with `score >= minScore` (higher

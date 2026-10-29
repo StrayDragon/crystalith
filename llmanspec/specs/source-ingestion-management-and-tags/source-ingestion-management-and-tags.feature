@@ -10,7 +10,7 @@
 
     场景: list-tag-filter-and-stable-sort
       假如 笔记本内有文件名/类型/chunk 数/更新时间各异的来源且部分绑定标签
-      当 以 tag 过滤并以 sortBy=date/name/size/type 加 asc/desc 查询列表（见 sources/list-chunks-reembed.test.ts）
+      当 以 tag 过滤并以 sortBy=date/name/size/type 加 asc/desc 查询列表
       那么 tag 过滤为精确匹配且仅返回绑定该标签的来源
       而且 各排序键按请求方向返回稳定顺序且重复查询结果一致
   @req:r263
@@ -19,7 +19,7 @@
 
     场景: list-cache-follows-epoch
       假如 已按 sources_epoch 缓存的来源列表结果
-      当 来源集合或 tag 相关变更成功（见 rag/cache.test.ts bump 失效用例）
+      当 来源集合或 tag 相关变更成功
       那么 sources_epoch 递增使列表缓存失效
       而且 下次列表查询基于新数据重建
   @req:r264
@@ -28,7 +28,7 @@
 
     场景: chunks-ascending-deterministic
       假如 一篇来源的 chunks 以乱序 chunk_index 插入
-      当 请求 GET /v2/notebooks/:nid/sources/:sid/chunks（见 sources/list-chunks-reembed.test.ts）
+      当 请求 GET /v2/notebooks/:nid/sources/:sid/chunks
       那么 返回的 chunkIndex 为升序（0,1,2）
       而且 重复请求返回相同顺序
   @req:r265
@@ -37,7 +37,7 @@
 
     场景: delete-and-reembed-consistency
       假如 一篇已索引来源与一篇 failed 且已有 chunks 无向量的来源
-      当 删除前者并对后者执行 POST re-embed（见 sources/list-chunks-reembed.test.ts）
+      当 删除前者并对后者执行 POST re-embed
       那么 删除同步清除 DB 行与 vec_chunks 向量行且 sources_epoch 递增使检索缓存失效
       而且 re-embed 复用既有 chunks 重算向量（不新增 chunk 行）、来源置 ready 并失效缓存
   @req:r266
@@ -46,7 +46,7 @@
 
     场景: failure-includes-diagnostics
       假如 一个会在解析或嵌入阶段失败的来源
-      当 摄取该来源直至失败（解析阶段路径见 apps/server/tests/integration/parse-error.test.ts）
+      当 摄取该来源直至失败
       那么 失败来源携带结构化诊断信息
       而且 四阶段错误码（含 PARSE_ERROR、EMBEDDING_FAILED）均有恢复提示
   @req:r267
@@ -64,7 +64,7 @@
 
     场景: dedup-explicit-choice
       假如 笔记本内已有一篇相同内容的来源
-      当 不带 dedupAction 重复上传同一内容（见 sources/ingest.test.ts 三分支用例）
+      当 不带 dedupAction 重复上传同一内容
       那么 返回 409 SOURCE_DEDUP_HIT 而不静默丢弃导入请求
       而且 dedupAction=reuse 复用既有来源、dedupAction=create_new 创建新来源
   @req:r269
@@ -82,7 +82,7 @@
 
     场景: tag-binding-batch-shape-and-ownership
       假如 一个空白笔记本
-      当 发送 POST 请求"/v2/notebooks/{当前笔记本[id]}/sources/tags/{当前标签[id]}/sources"批量绑定且混入缺失的 source id（见 sources/qa-to-source-and-tags.test.ts）
+      当 发送 POST 请求"/v2/notebooks/{当前笔记本[id]}/sources/tags/{当前标签[id]}/sources"批量绑定且混入缺失的 source id
       那么 响应返回 {count, results:[SourceBatchItemResult]} 结构且逐项含 errorCode
       而且 对跨 notebook 的 source 执行 DELETE binding 时返回 404
   @req:r271

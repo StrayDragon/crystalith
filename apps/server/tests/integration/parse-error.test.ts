@@ -1,3 +1,4 @@
+// covers: r266（source-ingestion-management-and-tags）——解析阶段错误以结构化信封返回。
 // Regression: malformed JSON request bodies must return 400 INVALID_REQUEST
 // with the ErrorEnvelope shape — not the 500 INTERNAL_ERROR fallthrough.
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';

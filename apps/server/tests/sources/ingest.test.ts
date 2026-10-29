@@ -1,3 +1,4 @@
+// covers: r268（source-ingestion-management-and-tags）+ r285/r296（source-ingestion-upload-and-url）——上传摄取至 ready、去重三分支与未知提取器拒绝。
 // Sources ingest + dedup + SSRF integration tests.
 //
 // Exercises the real sources router (POST /v2/notebooks/:nid/sources/upload +

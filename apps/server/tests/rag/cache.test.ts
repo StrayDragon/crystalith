@@ -1,3 +1,4 @@
+// covers: r227/r228（retrieval-and-cache）+ r255（source-ingestion-core）+ r263（source-ingestion-management-and-tags）——epoch 递增失效缓存且按 notebook 隔离。
 // Tests for the epoch-based retrieval cache.
 import { afterEach, describe, expect, it } from 'bun:test';
 

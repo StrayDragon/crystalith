@@ -1,3 +1,4 @@
+// covers: r235（retrieval-and-cache）——sourceIds 缺失/为空时跳过向量检索不回退全库。
 // c63: empty source_ids → ungrounded chat regardless of notebook source count.
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 

@@ -1,3 +1,4 @@
+// covers: r276/r277/r281（source-ingestion-summary-and-conversion）——转换 lineage 元数据、生命周期 epoch 与失败置 failed。
 // c117 — conversion bare rules:
 // - r276: conversation/output → source conversions keep traceable lineage metadata
 // - r277: conversion follows the source lifecycle (processing → ready only after embed)

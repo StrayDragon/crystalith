@@ -1,3 +1,4 @@
+// covers: r286/r288/r289/r291/r298（source-ingestion-upload-and-url）——parser 能力路由、CSV 行分块、413 超限与去重门控。
 // c117 — upload contract bare rules:
 // - r286: supported formats are parser-driven (parsers listing + parserType routing)
 // - r288: .csv extension + text/csv MIME are recognized and handled by the CSV parser

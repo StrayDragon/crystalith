@@ -1,3 +1,4 @@
+// covers: r274/r278/r282（source-ingestion-summary-and-conversion）——per-source QA 硬边界、not-ready 400 与相关度排序。
 // c117 — per-source QA bare rules:
 // - r274: source-scoped QA is hard-bounded by sourceId (retrieval never leaks other sources)
 // - r282: per-source QA uses embed question + scoped vector search, ordered by relevance
