@@ -1,3 +1,4 @@
+// covers: r395（workspace-ui-core）——依赖健康数据面：核心与可选服务（redis/searxng）状态可见、degraded 可呈现且可经 force 端点强制刷新。
 import { beforeEach, expect, test } from '@rstest/core';
 import { act, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';

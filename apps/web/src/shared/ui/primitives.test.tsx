@@ -1,3 +1,4 @@
+// covers: r338/r341（web-ui-foundation）——共享 UI 层展示件契约（Button ref/disabled、Chip 开关）且新基础件透传调用面 testid。
 import { describe, expect, it } from '@rstest/core';
 import { render, screen } from '@testing-library/react';
 import { createRef } from 'react';

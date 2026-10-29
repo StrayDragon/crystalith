@@ -1,3 +1,4 @@
+// covers: r418（workspace-ui-panels）——URL 导入对话框 fetch 模式呈现推荐提取器并默认预选、取消勾选后以无 extractor 提交，link 模式不展示提取器 UI。
 import { expect, test, rs } from '@rstest/core';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 

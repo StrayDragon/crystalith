@@ -2,7 +2,7 @@ import { expect, test } from '@rstest/core';
 
 import { DEFAULT_LAYOUT, WIDGET_REGISTRY } from './widgetRegistry';
 
-// covers: r398
+// covers: r386/r398（workspace-ui-core + workspace-ui-panels）——默认模块化画布装配稳定 Sources/Chat/Studio 面板集（label/网格区域互不重叠）。
 test('default canvas assembles the stable Sources/Chat/Studio panel set', () => {
   // 面板集合稳定：三个核心模块固定存在
   expect(Object.keys(WIDGET_REGISTRY).sort()).toEqual(['chat', 'sources', 'studio']);

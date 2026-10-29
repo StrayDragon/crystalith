@@ -1,3 +1,4 @@
+// covers: r399（workspace-ui-panels）——流式 send/chunk/done 状态驱动 UI，stopStreaming 经 AbortController 立即停止追加并回滚临时消息、无尾部 reconcile。
 import { beforeEach, expect, test, rs } from '@rstest/core';
 import { act, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';

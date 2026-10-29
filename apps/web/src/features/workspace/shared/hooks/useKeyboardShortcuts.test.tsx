@@ -1,3 +1,4 @@
+// covers: r391（workspace-ui-core）——全局快捷键基线：非输入焦点触发、输入聚焦时忽略、Ctrl+K 等 allowInInput 例外与 Ctrl+? 匹配。
 import { afterEach, beforeEach, expect, test, rs } from '@rstest/core';
 
 import { renderHook } from '../../../../test-utils/renderHook';

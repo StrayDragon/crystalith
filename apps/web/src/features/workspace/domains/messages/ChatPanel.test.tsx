@@ -1,3 +1,4 @@
+// covers: r399（workspace-ui-panels）——Chat 面板显式呈现流式反馈：停止生成按钮触发取消、发送失败给出错误提示与重试入口。
 import { beforeEach, expect, test, rs } from '@rstest/core';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';

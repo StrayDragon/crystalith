@@ -1,3 +1,4 @@
+// covers: r418（workspace-ui-panels）——fetch 模式按提取器 urlPatterns 本地匹配：命中按优先级预选、可取消，未命中走默认提取链。
 import type { ExtractorInfo } from '@crystalith/shared';
 import { describe, expect, it } from '@rstest/core';
 

@@ -1,3 +1,4 @@
+// covers: r408（workspace-ui-panels）——splitUploadFiles：PDF 支持 / zip 预检拒绝 / 类型分派。
 import { expect, test } from '@rstest/core';
 
 import { formatSnapshotTimestamp } from './source-connector-utils';

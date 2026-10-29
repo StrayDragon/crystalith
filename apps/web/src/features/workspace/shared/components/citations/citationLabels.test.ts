@@ -1,3 +1,4 @@
+// covers: r410（workspace-ui-panels）——citationLabels 按 sourceId（缺失回退 sourceName）去重，唯一来源数与片段数同时展示。
 import { describe, expect, it } from '@rstest/core';
 
 import type { Citation } from '../../types';
