@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { existsSync } from 'node:fs';
+import { existsSync, type Dirent } from 'node:fs';
 /**
  * Spec test-path drift check — 校验 llmanspec specs 场景引用的测试文件都真实存在。
  *
@@ -16,7 +16,7 @@ import { existsSync } from 'node:fs';
  * Self-test: CHECK_SPECS_DIR=<临时目录> 指向含坏引用的副本验证负例。
  */
 import { readdir, readFile } from 'node:fs/promises';
-import { basename, join, relative } from 'node:path';
+import { join, relative } from 'node:path';
 
 const ROOT = import.meta.dir + '/..';
 const SPECS_DIR = process.env.CHECK_SPECS_DIR ?? join(ROOT, 'llmanspec/specs');
@@ -34,21 +34,39 @@ const TEST_GLOBBED_ROOTS = ['apps', 'packages', 'e2e'].map((d) => join(ROOT, d))
 const realPaths = new Set<string>();
 const realBasenames = new Set<string>();
 
-async function collect(dir: string): Promise<void> {
-  let entries;
+/** 递归旁路：node_modules / 构建产物不进扫描。 */
+function isSkippedDir(name: string): boolean {
+  return name === 'node_modules' || name === 'dist' || name === '.tmp';
+}
+
+function isTestFile(name: string): boolean {
+  return /\.(test|spec)\.(ts|tsx)$/u.test(name);
+}
+
+async function listDirSafe(dir: string): Promise<Dirent[]> {
   try {
-    entries = await readdir(dir, { withFileTypes: true });
+    return await readdir(dir, { withFileTypes: true });
   } catch {
-    return;
+    return [];
   }
-  for (const e of entries) {
-    if (e.name === 'node_modules' || e.name === 'dist' || e.name === '.tmp') continue;
-    const p = join(dir, e.name);
-    if (e.isDirectory()) await collect(p);
-    else if (/\.(test|spec)\.(ts|tsx)$/.test(e.name)) {
+}
+
+async function addEntry(dir: string, e: Dirent): Promise<void> {
+  const p = join(dir, e.name);
+  if (!e.isDirectory()) {
+    if (isTestFile(e.name)) {
       realPaths.add(p);
       realBasenames.add(e.name);
     }
+    return;
+  }
+  await collect(p);
+}
+
+async function collect(dir: string): Promise<void> {
+  for (const e of await listDirSafe(dir)) {
+    if (isSkippedDir(e.name)) continue;
+    await addEntry(dir, e);
   }
 }
 
@@ -62,16 +80,27 @@ async function listFeatures(dir: string): Promise<string[]> {
   return out;
 }
 
-const REF_RE = /\b[A-Za-z0-9_.\-/]+\.(?:test|spec)\.(?:ts|tsx)\b/g;
+const REF_RE = /\b[A-Za-z0-9_.\-/]+\.(?:test|spec)\.(?:ts|tsx)\b/gu;
+
+/** repo 根 + 相对根（apps/server/tests 等）逐根存在性解析。 */
+function existsUnderRoots(ref: string): boolean {
+  if (existsSync(join(ROOT, ref))) return true;
+  for (const r of RELATIVE_ROOTS) {
+    if (existsSync(join(r, ref))) return true;
+  }
+  return false;
+}
+
+/** 前缀容忍：spec 里可能写 tests/sources/x 而 real 是 apps/server/tests/sources/x。 */
+function endsWithKnownPath(ref: string): boolean {
+  for (const p of realPaths) {
+    if (p.endsWith(ref)) return true;
+  }
+  return false;
+}
 
 function resolves(ref: string): boolean {
-  if (ref.includes('/')) {
-    if (existsSync(join(ROOT, ref))) return true;
-    for (const r of RELATIVE_ROOTS) if (existsSync(join(r, ref))) return true;
-    // 前缀容忍：spec 里可能写 tests/sources/x 而 real 是 apps/server/tests/sources/x
-    for (const p of realPaths) if (p.endsWith(ref)) return true;
-    return false;
-  }
+  if (ref.includes('/')) return existsUnderRoots(ref) || endsWithKnownPath(ref);
   return realBasenames.has(ref);
 }
 
