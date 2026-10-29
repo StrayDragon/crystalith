@@ -166,6 +166,7 @@ export default function LabNodeDrawer({
 
   return (
     <aside
+      // fallow-ignore-next-line css-broken-reference
       className="absolute top-3 right-3 bottom-3 flex w-[min(380px,calc(100%-1.5rem))] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white/95 shadow-xl backdrop-blur-sm"
       style={drawerLayerStyle}
       {...tid(TestIds.researchLabNodeDrawer)}

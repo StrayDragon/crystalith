@@ -1,6 +1,9 @@
 ---
 title: MRL 截断可选启用——eval 基准先行、网关参数优先、客户端兜底
 depends_on: [c130-extend-embedding-capability]
+branch: sdd/c133-enable-mrl-truncation
+base_branch: main
+base_sha: 608ef9d92d81ea83b289c5e0695a44404f1deb29
 ---
 
 # MRL 截断可选启用（eval 基准先行）
@@ -44,3 +47,12 @@ depends_on: [c130-extend-embedding-capability]
   `apps/server/tests/rag/`（eval 基准 + 行为锁测）。
 - wire 面（`/v2/models`）**零变化**：mrlDims 声明已由 c130/r474 透出，本 change 只消费它。
 - 不改 OpenAPI/AsyncAPI；不影响 e2e。
+
+## Further Notes
+
+- **diff 内 1 行跨主题改动**（verify W1）：`LabNodeDrawer.tsx` 的 fallow
+  `css-broken-reference` 抑制注释——`shadow-xl` 为 tw4 引擎生成类的已知误报
+  （apps/web/AGENTS.md 记载、LabProgressBar 有同款先例）；本分支过 `just qa`
+  的 audit-fallow diff 门所需，随本 change 一并落地。
+- 实现细节与 verify 报告：T1.3 实测数据见 tasks.md 结论区；S2（非整数
+  truncation_dims 的类型守卫）已按 verify 建议修复并补测。

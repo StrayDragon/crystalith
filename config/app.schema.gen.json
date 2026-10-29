@@ -140,6 +140,10 @@
           "description": "嵌入 API 批处理大小，最小 1",
           "default": 32,
           "type": "number"
+        },
+        "truncation_dims": {
+          "description": "embedding.truncation_dims",
+          "type": "number"
         }
       }
     },

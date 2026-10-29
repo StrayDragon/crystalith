@@ -35,6 +35,32 @@ export function loadConfig(path?: string): AppConfig {
 
   const models = ModelsSettingsSchema.parse(parsed.models ?? {});
 
+  // c133 r493：embedding.truncation_dims 的合法域 = 默认 embedding 模型声明的
+  // mrlDims 成员（消费 embedding-runtime r474 的声明 SSOT）；非法值启动即拒。
+  const embeddingSection = isRecord(parsed.embedding) ? parsed.embedding : {};
+  const truncationDims = embeddingSection.truncation_dims;
+  if (truncationDims !== undefined && truncationDims !== null) {
+    const defaultId = models.defaults.embedding;
+    const entry = models.available.find((m) => m.id === defaultId);
+    const mrlDims = entry?.embedding?.mrlDims;
+    if (!mrlDims || mrlDims.length === 0) {
+      throw new Error(
+        `embedding.truncation_dims=${truncationDims} 需要默认 embedding 模型（${defaultId ?? '未配置'}）声明 embedding.mrlDims`,
+      );
+    }
+    // 先做类型守卫（S2）：非正整数值直接拒，避免成员校验信息里渲染 NaN。
+    if (typeof truncationDims !== 'number' || !Number.isInteger(truncationDims)) {
+      throw new Error(
+        `embedding.truncation_dims 必须是正整数，收到 ${JSON.stringify(truncationDims)}`,
+      );
+    }
+    if (!mrlDims.includes(truncationDims)) {
+      throw new Error(
+        `embedding.truncation_dims=${truncationDims} 不在模型 ${defaultId} 声明的 mrlDims [${mrlDims.join('/')}] 内`,
+      );
+    }
+  }
+
   return { models, raw: parsed };
 }
 

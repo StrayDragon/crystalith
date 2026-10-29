@@ -531,3 +531,53 @@ describe('config: embeddinggemma2-gateway catalog entry)', () => {
     );
   });
 });
+
+// c133 r493：MRL 截断配置开关——合法域 = 默认 embedding 模型声明的 mrlDims 成员。
+describe('mrl truncation config (r493)', () => {
+  const mrlYaml = (truncationLine: string, mrlBlock: string) => `models:
+  defaults:
+    embedding: egw
+  available:
+    - id: egw
+      provider: openai
+      model: gemma-test
+      displayName: EGW
+      description: test
+      roles: [embed]
+      capabilities: []
+      embedding:
+        dims: 768
+${mrlBlock}
+      providerConfig:
+        apiKey: test-key
+embedding:
+  truncation_dims: ${truncationLine}
+`;
+  const withMrl = '        mrlDims: [768, 512, 256, 128]';
+
+  it('rejects a target dims outside the declared mrlDims', () => {
+    writeFileSync(TMP, mrlYaml('300', withMrl));
+    expect(() => loadConfig(TMP)).toThrow(/不在模型 egw 声明的 mrlDims/);
+  });
+
+  it('accepts a member target and null/absent (default off)', () => {
+    writeFileSync(TMP, mrlYaml('256', withMrl));
+    expect(() => loadConfig(TMP)).not.toThrow();
+    resetConfig(loadConfig(TMP));
+    expect(getEmbeddingSettings().truncation_dims).toBe(256);
+
+    writeFileSync(TMP, mrlYaml('null', withMrl));
+    resetConfig(loadConfig(TMP));
+    expect(getEmbeddingSettings().truncation_dims ?? null).toBeNull();
+  });
+
+  it('rejects truncation when the default embedding model lacks mrlDims', () => {
+    writeFileSync(TMP, mrlYaml('256', '        prefixPreset: embeddinggemma2'));
+    expect(() => loadConfig(TMP)).toThrow(/声明 embedding.mrlDims/);
+  });
+
+  it('rejects non-integer truncation_dims with a readable type error (S2)', () => {
+    writeFileSync(TMP, mrlYaml('"256"', withMrl));
+    expect(() => loadConfig(TMP)).toThrow(/必须是正整数/);
+  });
+});

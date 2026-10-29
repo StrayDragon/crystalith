@@ -6,7 +6,7 @@
 // preserved so consumers stay unchanged; undeclared models embed verbatim
 // (r476). Falls back gracefully when no embedding model is configured.
 import { resolveEmbeddingModel } from '../ai/providers.ts';
-import { getDefaultEmbeddingModel } from '../shared/config.ts';
+import { getDefaultEmbeddingModel, getEmbeddingSettings } from '../shared/config.ts';
 import { createEmbeddingEngine, type EmbeddingEngine } from './embedding-engine.ts';
 
 let _engine: EmbeddingEngine | null = null;
@@ -23,7 +23,13 @@ async function getEmbedEngine(): Promise<EmbeddingEngine | null> {
   if (!config) return null;
 
   const model = await resolveEmbeddingModel(config);
-  _engine = createEmbeddingEngine(model, config.embedding);
+  // c133 r493：截断开关（默认关闭）；合法域已在 loadConfig 校验（∈ mrlDims）。
+  const truncationDims = getEmbeddingSettings().truncation_dims ?? null;
+  _engine = createEmbeddingEngine(
+    model,
+    config.embedding,
+    truncationDims ? { targetDims: truncationDims } : null,
+  );
   return _engine;
 }
 
