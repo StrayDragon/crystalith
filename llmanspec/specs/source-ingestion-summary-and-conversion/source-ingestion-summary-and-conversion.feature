@@ -19,7 +19,7 @@
 
     场景: qa-scoped-to-source-id
       假如 笔记本内有两篇已索引来源且问题在另一篇来源中得分更高
-      当 对来源 A 发起 per-source QA（见 sources/c117-per-source-qa.test.ts）
+      当 对来源 A 发起 per-source QA（见 sources/per-source-qa.test.ts）
       那么 检索上下文仅含来源 A 的分块而不泄漏其它来源分块
       而且 scoped 检索无命中时回退也只读取来源 A 自身分块
   @req:r275
@@ -37,7 +37,7 @@
 
     场景: conversion-records-lineage-metadata
       假如 笔记本内有一篇 ready 来源及其 QA 结果与一段会话消息
-      当 分别执行 qa-to-source 与 session convert-to-source（见 sources/c117-conversion-lineage.test.ts）
+      当 分别执行 qa-to-source 与 session convert-to-source（见 sources/conversion-lineage.test.ts）
       那么 新来源 metadata 记录 qa_from_source 与 original_filename
       而且 会话转换新来源 metadata 记录 convertedFromSession、messageCount 与 conversionTimestamp
   @req:r277
@@ -46,7 +46,7 @@
 
     场景: conversion-follows-lifecycle-and-epochs
       假如 已按当前 epoch 写入检索缓存哨兵
-      当 执行 qa-to-source 与 session convert-to-source（见 sources/c117-conversion-lineage.test.ts）
+      当 执行 qa-to-source 与 session convert-to-source（见 sources/conversion-lineage.test.ts）
       那么 两类转换的新来源在向量写入成功后置 ready
       而且 notebook 的 vector/sources epoch 递增使原缓存失效
   @req:r278
@@ -55,7 +55,7 @@
 
     场景: summary-qa-not-ready-and-ownership
       假如 笔记本内有一篇 processing 来源与一篇属于其它笔记本的 ready 来源
-      当 对二者分别请求 summary 与 per-source QA（见 sources/c117-per-source-qa.test.ts）
+      当 对二者分别请求 summary 与 per-source QA（见 sources/per-source-qa.test.ts）
       那么 未 ready 的来源返回 400 INVALID_REQUEST 而非 404
       而且 跨 notebook 的来源返回 404 且其自身状态不受影响
   @req:r279
@@ -82,7 +82,7 @@
 
     场景: conversion-embedding-failure-marks-failed
       假如 embedding provider 抛出异常
-      当 执行 qa-to-source 与 session convert-to-source（见 sources/c117-conversion-lineage.test.ts）
+      当 执行 qa-to-source 与 session convert-to-source（见 sources/conversion-lineage.test.ts）
       那么 两类转换的新来源均被标记为 failed 而非 ready
       而且 错误信息携带失败原因（HTTP 500 INTERNAL_ERROR）
   @req:r282
@@ -91,7 +91,7 @@
 
     场景: qa-vector-relevance-ordering
       假如 来源内强相关分块的 chunkIndex 大于弱相关分块
-      当 对该来源发起问答（见 sources/c117-per-source-qa.test.ts 的 r282 用例）
+      当 对该来源发起问答（见 sources/per-source-qa.test.ts 的 r282 用例）
       那么 QA 上下文经 embed question + scoped vector search 检索
       而且 上下文按相关度排序（弱相关分块不因插入顺序靠前而排在强相关之前）
   @req:r283
@@ -109,6 +109,6 @@
 
     场景: async-pregenerate-after-ready
       假如 一个来源刚经摄取完成并标记 ready
-      当 观察摄取响应与后台预生成（见 sources/c117-summary-pregenerate.test.ts）
+      当 观察摄取响应与后台预生成（见 sources/summary-pregenerate.test.ts）
       那么 摄取响应不被摘要预生成阻塞且 metadata.autoSummary 最终写入
       而且 预生成失败不将来源标为 failed 也不影响成功响应
