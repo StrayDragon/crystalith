@@ -1,3 +1,4 @@
+// covers: r122（deep-research-ui）——顶栏主操作按 Run 生命周期映射（queued/running → 协作 cancel）。
 import { describe, expect, it } from '@rstest/core';
 
 import { applyEdenPrimaryActionOverlay, resolveLabPrimaryAction } from './resolveLabPrimaryAction';

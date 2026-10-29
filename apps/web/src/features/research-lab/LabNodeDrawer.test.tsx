@@ -1,3 +1,4 @@
+// covers: r102（deep-research-ui）——Run 详情以 overlay 叠加层渲染且 Desk 保持挂载，关闭仅收起。
 import { describe, expect, it } from '@rstest/core';
 import { fireEvent, render, screen } from '@testing-library/react';
 
@@ -5,7 +6,6 @@ import { LayerProvider } from '../../shared/layer';
 import LabNodeDrawer from './LabNodeDrawer';
 import type { LabNode } from './model/types';
 
-// covers: r102
 // Run 详情层（LabNodeDrawer）以 overlay 叠加层渲染（高于图区），宿主区保持
 // 挂载不被替换；点击关闭仅收起详情；同一时刻最多一个详情（由单值
 // selectedNodeId 派生，切换卡片替换当前详情）。

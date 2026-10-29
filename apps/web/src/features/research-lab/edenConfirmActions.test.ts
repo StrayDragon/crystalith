@@ -1,3 +1,4 @@
+// covers: r142（deep-research-ui）——M1 确认动作经 Eden confirm 命令口执行。
 import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 import { act, renderHook, waitFor } from '@testing-library/react';
 

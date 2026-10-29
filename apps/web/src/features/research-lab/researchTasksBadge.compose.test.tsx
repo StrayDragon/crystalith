@@ -1,3 +1,4 @@
+// covers: r447（deep-research-ui）——Compose 创建成功后任务列表包含新 Run 且 badge activeCount 0→1 递增。
 import { afterEach, beforeEach, expect, test } from '@rstest/core';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -9,7 +10,6 @@ import { clearResearchTasksCache, refreshResearchTasks } from './researchTasksCa
 import ResearchTasksTrigger from './ResearchTasksTrigger';
 import { useResearchTasks } from './useResearchTasks';
 
-// covers: r447
 // Lab 已接线 Eden（MSW mock listRuns/POST research）：
 // activeCount 为 0 时 Compose 创建 Run 成功后，
 // 任务列表 MUST 包含新 Run 且 badge activeCount MUST 相应增加（0 → 1）。

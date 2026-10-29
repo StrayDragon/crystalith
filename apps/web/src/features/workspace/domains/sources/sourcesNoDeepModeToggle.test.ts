@@ -1,9 +1,9 @@
+// covers: r442（deep-research-ui）——来源面板负向静态扫描：无 Fast/Deep 深研模式切换或队列主入口残留。
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { expect, test } from '@rstest/core';
 
-// covers: r442
 // 负向静态扫描：工作区来源面板（sources/）MUST NOT 出现 Fast/Deep 深研模式切换、
 // 深研队列主入口等旧深研模式残留文案（仿 noSnakeToCamel.test.ts 的负向扫描范式）。
 

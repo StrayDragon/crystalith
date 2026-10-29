@@ -1,3 +1,4 @@
+// covers: r104（deep-research-ui）——SSE graph_patch 增量按 upsert/remove 合并节点与边。
 import { describe, expect, it } from '@rstest/core';
 
 import { applyGraphPatch } from './applyGraphPatch';

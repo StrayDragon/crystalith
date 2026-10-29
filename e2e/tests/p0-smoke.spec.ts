@@ -1,3 +1,4 @@
+// covers: r112（deep-research-ui）——p0 冒烟以 testid 断言 Lab 入口可达。
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 

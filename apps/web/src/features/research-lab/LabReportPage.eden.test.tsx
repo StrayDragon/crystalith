@@ -1,3 +1,4 @@
+// covers: r125（deep-research-ui）——报告页以 GET research/:rid 返回的 report/citations 为权威渲染结构化 sections。
 import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement } from 'react';

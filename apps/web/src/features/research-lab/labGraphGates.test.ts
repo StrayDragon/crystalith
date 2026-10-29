@@ -1,3 +1,4 @@
+// covers: r148/r445（deep-research-ui）——failed run 报告可见性门控与 conclusion 节点剪枝保护。
 import type { ResearchRun } from '@crystalith/shared';
 import { describe, expect, it } from '@rstest/core';
 
@@ -5,7 +6,6 @@ import { layoutWithElk } from './model/labLayout';
 import type { LabNode } from './model/types';
 import { deriveLabStateFromRun } from './researchGraphAdapter';
 
-// covers: r148, r445
 // r148 — 报告可见性门控：failed run 不展示报告（含启发式清单）；
 //        0 证据但 completed 且有 report 的诚实成稿仍按普通报告渲染。
 // r445 — conclusion 节点（显式 role 或 node_conclusion_ id 前缀）不作为

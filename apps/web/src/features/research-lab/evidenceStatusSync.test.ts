@@ -1,3 +1,4 @@
+// covers: r130（deep-research-ui）——终态或 report_ready 后全量刷新对齐 node.phase/conclusionStatus/evidenceIds。
 import { describe, expect, it } from '@rstest/core';
 
 import {

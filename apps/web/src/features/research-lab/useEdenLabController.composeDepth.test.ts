@@ -1,3 +1,4 @@
+// covers: r140（deep-research-ui）——POST research 创建 body 显式携带所选 depth。
 import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 import { act, waitFor } from '@testing-library/react';
 

@@ -10,7 +10,7 @@
 
     场景: lab-entry-only-eden-authority
       假如 用户从工作区烧瓶导航、slash 命令或任务抽屉进入深研
-      当 labRouting.test.ts 断言唯一产品入口为 /research-lab/:nid
+      当 深研产品入口路径解析为 /research-lab/:nid
       那么 创建与状态流转仅经 Eden ResearchRun 权威接口驱动
       而且 不存在环境变量或查询参数等 fixture 切换面可改变权威
   @req:r100
@@ -20,14 +20,14 @@
     场景: compose-form-gates-and-payload
       假如 LabComposePanel 中 useNotebookSources 与 allowWeb 初始均开启
       当 topic 为空、或 useNotebookSources 开启但未选来源、或两开关皆关时尝试开始
-      那么 labComposeGate.test.ts 验证开始控件禁用且不发出创建请求
+      那么 开始控件禁用且不发出创建请求
       而且 可用时的创建请求显式携带两开关所选值与所选 depth
   @req:r101
   规则: Queue freshness without list SSE
     Desk 队列 MUST 在打开时拉取 notebook 作用域 listRuns；当存在非终态 Run 时 MUST 以短间隔轮询刷新，全终态或关闭 Desk 时 MUST 停止轮询；创建成功、关闭详情返回、以及详情内导致状态变化的操作之后 MUST 立即再拉 list；MUST NOT 引入 notebook 级 list SSE。
   
     场景: queue-polls-only-while-active
-      假如 Desk 打开并已拉取 notebook 作用域 listRuns（researchQueuePoll.test）
+      假如 Desk 打开并已拉取 notebook 作用域 listRuns
       当 队列存在非终态 Run 时
       那么 轮询节流为 5s 短间隔（researchQueuePollInterval>0）
       而且 全终态或队列关闭时
@@ -39,7 +39,7 @@
     打开 Run 详情时 MUST 使用不替换工作区的叠加层（LabNodeDrawer overlay 模式，经 Layer 系统 z-index 高于图区），Desk（图/队列）MUST 保持挂载；关闭详情（关闭按钮）MUST 仅收起详情层并恢复 Desk 原样；同时 MUST 最多展示一个 Run 详情（单值 selectedNodeId 派生，切换卡片替换当前详情）。
   
     场景: detail-overlay-keeps-desk-mounted
-      假如 Lab 打开且选中一个研究节点（LabNodeDrawer.test）
+      假如 Lab 打开且选中一个研究节点
       当 详情叠加层渲染
       那么 Desk 仍在 DOM 中且详情层以 overlay+Layer 系统样式呈现
       而且 点击关闭仅触发 onClose（收起详情）且 Desk 未被卸载
@@ -60,7 +60,7 @@
     场景: graph-applies-sse-patches
       假如 详情内 ResearchGraph（xyflow）已渲染当前 Run 的研究图
       当 SSE 通道推送 graph_patch 增量
-      那么 applyGraphPatch.test.ts 验证节点与边按 upsert/remove 合并
+      那么 图中节点与边按 upsert/remove 合并
       而且 节点按 conclusionStatus 语义色渲染且 pruned 降透明度，未复用 MindmapViewer
   @req:r105
   规则: Node inspector prune fork convert
@@ -78,7 +78,7 @@
     场景: graph-keyboard-reaches-node-actions
       假如 Run 处于 running 或 awaiting_confirm 且键盘用户将焦点移至研究图节点
       当 以 Enter/Space（或等价）打开 inspector 并以键盘遍历边上的剪枝与 fork 操作
-      那么 LabGraph.keyboard.test.tsx 验证这些操作不依赖 hover 即键盘可达
+      那么 这些操作不依赖 hover 即键盘可达
       而且 只读终态下键盘路径与鼠标路径同等禁用且既有鼠标交互不变
   @req:r107
   规则: M1 confirm bar on detail
@@ -87,7 +87,7 @@
     场景: confirm-bar-highlights-branch
       假如 Run 进入 awaiting_confirm
       当 详情顶栏展示 M1 确认条
-      那么 confirmHighlight.test.ts 验证确认动作可用且图上对应节点/区域高亮
+      那么 确认动作可用且图上对应节点/区域高亮
       而且 不出现逐步审批计划 UI
   @req:r108
   规则: CitationsControl adapter for report
@@ -105,7 +105,7 @@
     场景: convert-feedback-toast-only
       假如 用户触发 convertToNote 或 convertToSource
       当 转化请求成功或失败返回
-      那么 edenConvertActions.test.ts 验证以 toast（或同等非模态反馈）通知结果且无强制确认对话框
+      那么 以 toast（或同等非模态反馈）通知结果且无强制确认对话框
       而且 Eden 模式成功 toast 提供可点击打开工作区动作
   @req:r110
   规则: Research error surfacing
@@ -131,7 +131,7 @@
 
     场景: lab-entry-regression-reachable
       假如 深研相关文案均经 t() 走前端 i18n
-      当 运行 e2e/tests/p0-smoke.spec.ts 的 Lab 入口可达回归
+      当 检查端到端冒烟回归工件中的 Lab 入口可达回归
       那么 仓库至少保留一条以 testid（或等价）断言 Lab 入口可达的用例
       而且 用户可见文案不出现绕过 i18n 的硬编码字符串
   @req:r113
@@ -168,7 +168,7 @@
     场景: chat-proposals-call-commands
       假如 节点对话 UI 消费独立 chat SSE 并收到剪枝/分叉/改查询/定态/确认类提案
       当 用户接受某一提案（含 Eden ActionProposal 的 open_report 导航）
-      那么 acceptNodeChatAction.test.ts 验证调用对应 prune/fork/PATCH/confirm 命令口
+      那么 调用对应 prune/fork/PATCH/confirm 命令口
       而且 不以本地改图作为权威且打开报告类动作为纯前端导航
   @req:r117
   规则: Desk canvas prefs from Lab mechanisms
@@ -176,7 +176,7 @@
 
     场景: canvas-prefs-client-only-zero-requests
       假如 Desk 研究图提供画布设置入口（方向 / 布局算法 / 连线 / 小地图）
-      当 运行 LabCanvasSettings.test.tsx 并逐一切换画布偏好
+      当 用户逐一切换画布偏好
       那么 仅触发客户端回调且 fetch 记录为零请求（无 research graph 命令口或服务端编排 API 调用）
       而且 图 SSOT 不因偏好切换改变
   @req:r118
@@ -198,7 +198,7 @@
     场景: task-inbox-refreshes-on-run-events
       假如 Lab 任务抽屉与 ResearchTasksTrigger badge 共享 notebook 作用域 listRuns 缓存键
       当 Compose 创建成功、HTTP confirm/cancel/prune/fork 成功或 SSE status/confirm/report_ready 到达
-      那么 researchTasksCache.test.ts 验证任务列表立即 mutate 刷新且 activeCount 仅计 queued/running/awaiting_confirm
+      那么 任务列表立即刷新且 activeCount 仅计 queued/running/awaiting_confirm
       而且 切换 notebook 时丢弃旧 notebook 的 SWR 缓存
   @req:r121
   规则: Lab exposes cancel for active Eden runs
@@ -207,7 +207,7 @@
     场景: cancel-entry-for-active-runs
       假如 Eden Run status 为 queued、running 或 awaiting_confirm
       当 用户从顶栏操作或任务抽屉行触发取消
-      那么 edenCancelFlow.test.ts 验证调用 POST research/:rid/cancel 且终态后按 r120 刷新任务 inbox
+      那么 取消经 POST research/:rid/cancel 执行且终态后按 r120 刷新任务 inbox
       而且 completed、failed、cancelled 状态不再提供取消入口
   @req:r122
   规则: Eden primary action maps to cancel not fixture pause
@@ -215,7 +215,7 @@
 
     场景: primary-action-maps-lifecycle
       假如 Eden 模式下 Run 处于 queued 或 running
-      当 resolveLabPrimaryAction.test.ts 计算顶栏主操作
+      当 Lab 顶栏解析当前 Run 的主操作
       那么 主操作映射为协作 cancel 且不调用 fixture pause 空操作
       而且 awaiting_confirm 时保持「生成结论」主操作与「继续深挖」次操作，cancel 成功后展示 cancelled 终态说明
   @req:r123
@@ -233,7 +233,7 @@
 
     场景: open-report-navigates-with-rid
       假如 Eden 模式下用户触发顶栏、抽屉或等价 CTA 的 openReport
-      当 edenReportActions.test.ts 执行导航
+      当 openReport 导航执行
       那么 页面导航至 /research-lab/:nid/report 并携带当前 Run 的 ?rid= query
       而且 不以 toast 代替报告页且不走 fixture 专用默认修订创建函数
   @req:r125
@@ -243,7 +243,7 @@
     场景: report-page-loads-run-report
       假如 Eden 模式下 LabReportPage 打开
       当 经 GET research/:rid 加载 ResearchRun
-      那么 LabReportPage.eden.test.tsx 验证 report 正文与 citations 以服务端返回为权威并渲染结构化 sections
+      那么 report 正文与 citations 以服务端返回为权威并渲染结构化 sections
       而且 labRevisions 或 sessionStorage 不作为 Eden 默认权威
   @req:r126
   规则: Eden report uses CitationsControl adapter
@@ -288,7 +288,7 @@
     场景: sse-then-terminal-get-refresh
       假如 Eden Lab 收到 SSE graph_patch 并合并节点与边
       当 status 进入 completed、failed 或 cancelled 或 report_ready 到达
-      那么 evidenceStatusSync.test.ts 验证触发 getResearchRun 或等效全量刷新对齐 node.phase、conclusionStatus 与 evidenceIds
+      那么 触发 getResearchRun 或等效全量刷新对齐 node.phase、conclusionStatus 与 evidenceIds
       而且 刷新后的服务端字段覆盖本地合并结果
   @req:r131
   规则: Run SSE reconnects with bounded backoff and visible state
@@ -315,7 +315,7 @@
     场景: node-chat-http-sse
       假如 Eden 模式下用户在 LabNodeDrawer 发送节点对话
       当 请求发出
-      那么 streamNodeChat.test.ts 验证调用 POST research/:rid/nodes/:nodeId/chat 并独立消费 chat SSE 的 chunk/proposal/done/error
+      那么 请求发往 POST research/:rid/nodes/:nodeId/chat 并独立消费 chat SSE 的 chunk/proposal/done/error
       而且 chat 事件不混入 Run progress stream 处理器且 error 事件在对话区呈现可见错误
   @req:r134
   规则: Eden chat accept maps proposals to command ports
@@ -324,7 +324,7 @@
     场景: eden-chat-accept-maps-commands
       假如 Eden 模式下节点 chat 返回 ActionProposal
       当 用户接受 prune、fork、PATCH、confirm 或 open_report 类提案
-      那么 acceptNodeChatAction.test.ts 验证调用对应 HTTP 命令口或执行前端导航
+      那么 调用对应 HTTP 命令口或执行前端导航
       而且 不以本地 mutate 图作为权威
   @req:r135
   规则: Eden Lab report revisions use server API
@@ -351,7 +351,7 @@
     场景: eden-convert-endpoints
       假如 用户在 Eden 报告页或节点抽屉触发转化
       当 转化请求发出
-      那么 edenConvertActions.test.ts 验证调用 POST research/:rid/convert-to-note 或 convert-to-source 且 body 使用 ResearchArtifactRef（report、node 或 evidence）
+      那么 转化调用 POST research/:rid/convert-to-note 或 convert-to-source 且 body 使用 ResearchArtifactRef（report、node 或 evidence）
       而且 成功或失败以 toast 反馈且无强制确认对话框
   @req:r138
   规则: Lab drawer converts listed evidence via artifact ref
@@ -360,7 +360,7 @@
     场景: drawer-evidence-convert-artifact-ref
       假如 LabNodeDrawer 信息引用源列表非空
       当 用户对某条证据点击转为笔记或转为来源
-      那么 LabNodeDrawer.evidenceConvert.test.tsx 验证调用对应 convert 端点且 body 为 ResearchArtifactRef kind=evidence 与对应 evidenceId
+      那么 调用对应 convert 端点且 body 为 ResearchArtifactRef kind=evidence 与对应 evidenceId
       而且 结果以 toast 反馈且 fixture 模式仅 stub toast 不调用 Eden convert
   @req:r139
   规则: Convert success toast offers workspace action link
@@ -378,7 +378,7 @@
     场景: compose-sends-explicit-depth
       假如 用户在 Lab Compose 选择浅/中/深 depth 并提交创建
       当 Eden 路径发出 POST research 请求
-      那么 useEdenLabController.composeDepth.test.ts 验证 body 显式携带所选 depth
+      那么 请求 body 显式携带所选 depth
       而且 不因隐式省略 depth 导致与 UI 选择不一致
   @req:r141
   规则: Lab progress ledger panel
@@ -387,7 +387,7 @@
     场景: progress-ledger-panel-surfaced
       假如 Eden Run 打开且 GET research/:rid/progress 账本与 SSE progress 事件可用
       当 加载 Run 并流式追加进度事件
-      那么 labProgressLedger.test.ts 验证面板展示结构化事件（至少 kind、headline、时间戳，可选 nodeId）且追加与 ledger seq 对齐
+      那么 面板展示结构化事件（至少 kind、headline、时间戳，可选 nodeId）且追加与 ledger seq 对齐
       而且 不以 fixture LabPhase 定时百分比或前端 timer 作为权威进度来源
   @req:r142
   规则: Eden M1 confirm surface by confirmKind
@@ -396,7 +396,7 @@
     场景: confirm-surface-by-kind
       假如 Run status 为 awaiting_confirm 且 confirmKind 为 budget、expand_branch 或 reexpand
       当 M1 确认面按 confirmKind 渲染文案与动作
-      那么 edenConfirmActions.test.ts 验证 budget 文案表达搜索预算触顶且 continue/finish_report/approve_branch/skip_branch 经 Eden confirm 命令口执行
+      那么 budget 文案表达搜索预算触顶且 continue/finish_report/approve_branch/skip_branch 经 Eden confirm 命令口执行
       而且 confirmBranchNodeId 对应图区域高亮且预算错误映射可见且不恢复逐步计划审批 UI
   @req:r143
   规则: Eden Lab phase labels from progress and graph
@@ -405,7 +405,7 @@
     场景: phase-labels-from-progress-graph
       假如 Eden Run 收到 progress 事件且节点 phase/图状态更新
       当 顶栏与 progress ledger 推导相位标签
-      那么 deriveEdenLabPhase.test.ts 验证两者共用同一推导并富化出 evaluate/integrate 等相位
+      那么 两者共用同一推导并富化出 evaluate/integrate 等相位
       而且 Eden 路径不以 fixture timer 回放作为相位权威态
   @req:r144
   规则: Eden revision restore reloads graph on return
@@ -414,7 +414,7 @@
     场景: restore-reload-graph-on-return
       假如 用户在 Eden 报告页经 revisions API 恢复某一快照
       当 返回图作业台
-      那么 labRunReloadGate.test.ts 验证经 GET ResearchRun 重载并应用 nodes/edges 使画布与 restored 快照一致
+      那么 图作业台经 GET ResearchRun 重载并应用 nodes/edges 使画布与 restored 快照一致
       而且 报告已恢复而图仍显示旧态时不以本地切片恢复函数静默吞掉刷新
   @req:r145
   规则: Workspace chat deep research commands
@@ -423,14 +423,14 @@
     场景: chat-slash-commands-nav
       假如 用户在工作区 chat 输入深研 slash 命令
       当 确认执行
-      那么 researchChatCommands.test.ts 验证导航 /research-lab/:nid（可选 ?rid= 或 ?topic=）且命令由 GET /v2/commands 以 kind=nav 暴露
+      那么 导航至 /research-lab/:nid（可选 ?rid= 或 ?topic=）且命令由 GET /v2/commands 以 kind=nav 暴露
       而且 深研 slash 不被当作普通 QA 消息发送且 chat 不成为唯一深研入口
   @req:r146
   规则: Eden Lab production e2e gate
     仓库 MUST 提供 @p0（或等价）Playwright 路径，在默认（生产）构建配置下演练 Eden Lab：Compose 创建 → 图含 nodes/edges → M1 confirm → 报告页 → convert；该门禁 MUST 作为生产默认深研路径对拍证明；MUST NOT 仅以 fixture 回放 smoke 充当生产 parity 门禁。
 
     场景: p0-eden-lab-gate
-      假如 默认（生产）构建配置下运行 e2e/tests/p0-eden-lab.spec.ts 的 R01
+      假如 默认（生产）构建配置下的端到端冒烟用例 R01 运行
       当 演练 Compose 创建 → 图含 nodes/edges → M1 confirm → 报告页 → convert 全链路
       那么 全链路在生产默认路径通过且数据来自 Eden
       而且 不以 fixture 回放 smoke 充当生产 parity 门禁
@@ -441,14 +441,14 @@
     场景: compose-model-and-retry-synthesize
       假如 用户在 Lab Compose 可选选择 modelId 并提交创建
       当 POST create 发出
-      那么 useEdenLabController.modelRetry.test.ts 验证 body 携带所选 modelId（省略则服务端默认）
+      那么 请求 body 携带所选 modelId（省略则服务端默认）
       而且 Run failed 且 failureReason 为结案类失败时展示可见错误与「重试结案」入口并可换 model 调用 retry-synthesize
   @req:r148
   规则: Failed synthesize has no heuristic report UI
     当结案失败导致 Run failed 时 Lab MUST NOT 将启发式证据清单展示为权威报告正文；用户 MUST 能通过重试结案（可换模）恢复；0 证据但 completed 的诚实成稿 MUST 仍按普通报告渲染。
   
     场景: failed-run-report-gating
-      假如 Lab 派生状态来自 run（labGraphGates.test）
+      假如 Lab 派生状态来自当前 run
       当 run status=failed 时
       那么 reportVisible=false（报告入口隐藏，不渲染启发式清单为正文）且合成失败横幅提供换模+重试结案入口
       而且 status=completed 且携带 report（含 0 证据诚实成稿）时 reportVisible=true 按普通报告渲染
@@ -460,7 +460,7 @@
     场景: demo-lab-isolated-prefix
       假如 xlsx-lib/fake 演示（fixture 节点对话、本地修订与 sessionStorage 修订演示）位于独立目录
       当 以 DEV 或 VITE_LAB_DEMO=1 访问 /demo/research-lab/:nid 及 report
-      那么 labDemoMode.test.ts 与 labRouting.test.ts 验证演示可演练图交互、节点抽屉、报告与 cite、revisions、画布设置
+      那么 演示可演练图交互、节点抽屉、报告与 cite、revisions、画布设置
       而且 产品入口不链接 demo 且 Demo 类型与控制器不回流为产品页双模联合分支
   @req:r150
   规则: cl-prd-demo skill documents demo-first flow
@@ -508,7 +508,7 @@
 
     场景: sources-panel-no-deep-mode-residue
       假如 扫描 apps/web/src/features/workspace/domains/sources/ 的源码
-      当 运行 sourcesNoDeepModeToggle.test.ts 的负向静态扫描
+      当 运行来源面板残留文案的负向静态扫描
       那么 来源面板源码无 Fast/Deep 深研模式切换或深研队列主入口等残留文案
       而且 'Fast Research' 网搜通道元数据不被误报（positive control 通过）
   @req:r443
@@ -537,7 +537,7 @@
     图中 conclusion 节点带 role=conclusion（或既有 id 前缀识别）时 MUST NOT 作为可剪枝研究支路入口展示，与服务端剪枝保护一致。
   
     场景: conclusion-node-not-prunable
-      假如 图中存在 role=conclusion 的汇节点（labGraphGates.test）
+      假如 图中存在 role=conclusion 的汇节点
       当 经 labLayout 派生边动作
       那么 该节点的入边 canPrune/canFork 均为 false（node_conclusion_ 前缀识别同效）
       而且 role=research 的入边 canPrune=true（readOnly 时除外，对照）
@@ -548,7 +548,7 @@
     用户切换画布布局方向或小地图偏好生效时，MUST NOT 因此发出修改 research graph 的命令口请求。
   
     场景: canvas-preferences-are-client-only
-      假如 Lab 画布设置面板打开（LabCanvasSettings.test 的 MSW 全量请求记录器）
+      假如 Lab 画布设置面板打开且全量记录出站服务端请求
       当 用户切换布局方向/算法/连线/小地图偏好
       那么 记录器捕获不到任何修改 research graph 的服务端请求
 
@@ -559,7 +559,7 @@
 
     场景: compose-create-increments-active-badge
       假如 Lab 已接线 Eden 且 MSW mock listRuns 返回空列表（activeCount 为 0）
-      当 用户 Compose 创建 Run 成功（researchTasksBadge.compose.test.tsx 经 createResearchRun 并 mutate 任务列表）
+      当 用户 Compose 创建 Run 成功并刷新任务列表
       那么 任务列表包含新 Run 且 badge activeCount 从 0 相应增至 1
       而且 badge 以 testid research-tasks-badge 显示 1
   @req:r448
@@ -688,7 +688,7 @@
     P0：Eden Lab 用例 MUST 经稳定锚点（如 research-lab-graph testid）断言画布可见且至少渲染一个研究节点与一条边。
 
     场景: eden-graph-renders-nodes-edges
-      假如 e2e/tests/p0-eden-lab.spec.ts 的 P0 用例进入 Eden Lab 图作业台
+      假如 生产端到端 P0 用例进入 Eden Lab 图作业台
       当 以 research-lab-graph testid 定位画布并等待渲染稳定
       那么 断言画布可见且至少渲染一个研究节点与一条边
       而且 断言不依赖脆弱的实现选择器

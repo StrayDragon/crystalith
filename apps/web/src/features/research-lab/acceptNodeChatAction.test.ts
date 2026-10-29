@@ -1,3 +1,4 @@
+// covers: r116/r134（deep-research-ui）——接受节点对话提案映射到对应命令口或纯前端导航。
 import { describe, expect, it, rs } from '@rstest/core';
 
 import { acceptNodeChatAction } from './acceptNodeChatAction';

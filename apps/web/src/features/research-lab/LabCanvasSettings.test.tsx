@@ -1,3 +1,4 @@
+// covers: r117/r446（deep-research-ui）——画布偏好仅存客户端，切换不发出任何 research graph 服务端请求。
 import { beforeEach, expect, test } from '@rstest/core';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -6,7 +7,6 @@ import { server } from '../../test-utils/msw/server';
 import { TestProviders } from '../../test-utils/providers';
 import LabCanvasSettings from './LabCanvasSettings';
 
-// covers: r117
 // 画布偏好（方向 / 布局算法 / 连线 / 小地图）仅存客户端状态：
 // 切换偏好时 MUST NOT 发出任何修改 research graph 的服务端请求。
 

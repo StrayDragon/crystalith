@@ -1,3 +1,4 @@
+// covers: r99/r149（deep-research-ui）——深研唯一产品入口解析为 /research-lab/:nid（含 /report），/demo 前缀不落入产品路由。
 import { describe, expect, it } from '@rstest/core';
 
 import { parseResearchLabPath, researchLabPath, researchLabReportPath } from './labRouting';

@@ -1,3 +1,4 @@
+// covers: r141（deep-research-ui）——进度账本面板展示结构化事件且追加与 ledger seq 对齐。
 import { describe, expect, it } from '@rstest/core';
 
 import {

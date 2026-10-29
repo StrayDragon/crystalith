@@ -1,3 +1,4 @@
+// covers: r145（deep-research-ui）——深研 slash 命令导航 Lab（可选 ?rid=/?topic=）且由 GET /v2/commands kind=nav 暴露。
 import { describe, expect, it, rs } from '@rstest/core';
 
 import {

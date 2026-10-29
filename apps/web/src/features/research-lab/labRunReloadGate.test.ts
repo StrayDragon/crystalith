@@ -1,3 +1,4 @@
+// covers: r144（deep-research-ui）——恢复快照返回图作业台时经 GET ResearchRun 重载画布。
 import { beforeEach, describe, expect, it } from '@rstest/core';
 
 import {
