@@ -1,3 +1,4 @@
+// covers: r174（generation-core）——无证据 reason 区分与本地化回答。
 // generation-core r174 — distinct no-evidence reasons.
 // When evidence is false, retrieveAndJudge must settle on one of the spec'd
 // reasons (embedding_empty / no_vector_hits / no_valid_chunks / low_similarity)

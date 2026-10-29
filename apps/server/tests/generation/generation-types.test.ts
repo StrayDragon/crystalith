@@ -1,3 +1,4 @@
+// covers: r166/r205/r466/r185（generation-presets-and-constraints）——生成类型发现与装配：未知类型/SLIDES 400 拒绝与类型列表概览。
 // c122 typed-generation-framework — generation type registry endpoint + request
 // assembly validation + generation metadata echo.
 //

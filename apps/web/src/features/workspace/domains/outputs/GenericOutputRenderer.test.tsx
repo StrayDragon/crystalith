@@ -1,3 +1,4 @@
+// covers: r198/r199（output-rendering-and-typing）——通用渲染器 JSON 回退与规范布局递归渲染。
 import { expect, test, rs } from '@rstest/core';
 import { render, screen } from '@testing-library/react';
 

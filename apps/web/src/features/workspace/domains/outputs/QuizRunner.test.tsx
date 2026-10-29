@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import QuizRunner from './QuizRunner';
 import type { QuizQuestion } from './QuizRunner';
 
-// covers: r303
+// covers: r303（studio-output-types）
 // quiz 输出支持作答（选择/输入）→ 即时反馈（对/错 + 正确答案 + 解析）→
 // 全部完成后结果汇总（正确率与计数）→ 可重做。
 

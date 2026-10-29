@@ -1,3 +1,4 @@
+// covers: r204（output-rendering-and-typing）——ErrorCode→HTTP 状态细分映射（422/503/400）。
 // Unit tests for the shared error helper (c54).
 //
 // sendError MUST produce an ErrorEnvelope (errorCode + message + optional

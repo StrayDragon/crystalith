@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 
 import FlashcardViewer, { type FlashcardItem } from './FlashcardViewer';
 
-// covers: r301
+// covers: r301（studio-output-types）
 // flashcard 输出 MUST 支持翻面交互与上一张/下一张的学习进度导航。
 
 const ITEMS: FlashcardItem[] = [

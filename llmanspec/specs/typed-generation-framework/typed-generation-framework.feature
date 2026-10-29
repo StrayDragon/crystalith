@@ -9,7 +9,7 @@
     系统 MUST 以统一方式注册（内置生成类型在系统启动时装载）并向调用方发现可用的生成类型集合。
 
     场景: generation-types-registry-discovered-via-tools
-      假如 内置生成类型在启动时装入 OUTPUT_META 注册表（workspace-tools-discovery.test.ts）
+      假如 内置生成类型在启动时装入 OUTPUT_META 注册表
       当 调用方请求 GET /v2/workspace/tools
       那么 发现的生成类型集合与注册表一一对应（id/kind/label/outputType/prompt/renderDescriptor/frontendBundle 映射一致）
       而且 响应通过 shared WorkspaceToolsListResponseSchema 且 SLIDES 的 enabled 随预览探针可用性降级
@@ -19,7 +19,7 @@
     当前端需要渲染右侧生成入口时，系统 SHALL 提供可用生成类型列表（至少包含 id、displayName、输入要求概览、可选输出类型概览、完成语义概览）。
   
     场景: generation-types-list-endpoint
-      假如 generation-types 集成环境就绪（tests/generation/generation-types.test.ts）
+      假如 generation-types 集成环境就绪
       当 请求 GET /v2/generation-types
       那么 响应包含 qa/output/slides 三个类型且每项携带 id/displayName/输入要求概览/允许输出类型概览/默认输出类型/完成语义概览/允许控制项
 
@@ -96,7 +96,7 @@
     outputs pipeline 在 preference=quality 且 needsRepair 为真时 MUST 再跑一次生成修补以挽救可挽救输出；失败则保留原对象并走后续 postprocess/fallback；修补所处的管线阶段顺序见 generation-core r160/r165。
 
     场景: quality-preference-runs-repair-loop
-      假如 mock 生成器首次产出 needsRepair 为真的不完整对象（repair-loop.test.ts）
+      假如 mock 生成器首次产出 needsRepair 为真的不完整对象
       当 以 preference=quality 运行 outputs pipeline
       那么 第二次生成产出完整对象时被接受且不再有 _fallback
       而且 修补抛错或仍不完整时保留原对象走 fallback、preference=speed 则只跑一次生成

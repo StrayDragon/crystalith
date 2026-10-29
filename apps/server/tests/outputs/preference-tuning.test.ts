@@ -1,3 +1,4 @@
+// covers: r162/r163/r168（generation-core）——preference 调优表映射、显式参数覆盖与检索失败传播。
 // generation-core — preference tuning + explicit knobs + retrieval failure
 // propagation on the outputs pipeline:
 //   r162 — `preference` maps to retrieval defaults via the central tuning table

@@ -1,4 +1,4 @@
-// covers: r322
+// covers: r322（typed-generation-framework）
 // 生成类型的注册与发现：内置生成类型在系统启动时装载（OUTPUT_META 注册表），
 // GET /v2/workspace/tools 以统一方式向调用方发现该集合 —
 // 工具列表 MUST 与注册表一一对应（id/kind/label/outputType/renderDescriptor/

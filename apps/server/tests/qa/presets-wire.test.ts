@@ -1,3 +1,4 @@
+// covers: r26/r424（chat-prompt-presets）——stats fallback_markdown 纯文本落库与非法 JSON 回退文本 QA。
 // chat-prompt-presets wire tests — stats preset QA path over the in-process
 // Elysia app with a mutable 'ai' mock:
 //   r26  — stats fallback_markdown is persisted as plain assistant content

@@ -1,3 +1,4 @@
+// covers: r357（workspace-api-contract）——workspace tools 端点形状与可用性诊断稳定。
 // SLIDES availability diagnostics (probe-slides-availability).
 //
 // Pure branch coverage for buildSlidesDiagnostic + router integration where a
