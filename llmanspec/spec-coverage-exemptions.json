@@ -1,0 +1,257 @@
+{
+  "r66": {
+    "capability": "deep-research-runtime",
+    "reason": "无测试断言 web 与 chunk 统一为 evidence 行（page-evidence 只测 web 行）",
+    "seam": "work-unit(useNotebookSources=true) 跑通后断言 run 证据库含 chunk 行"
+  },
+  "r68": {
+    "capability": "deep-research-runtime",
+    "reason": "graph_patch 仅断言事件名，无 payload 级断言",
+    "seam": "run-sse 层对 prune/节点写回各断言一次 graph_patch payload（ResearchStreamEventSchema parse）"
+  },
+  "r86": {
+    "capability": "deep-research-runtime",
+    "reason": "空证据/模型彻底失败→missing 且 Run 不 failed 无运行时断言",
+    "seam": "runNodeWorkUnit mock searchWeb→[] 或 generateText throw"
+  },
+  "r91": {
+    "capability": "deep-research-runtime",
+    "reason": "fetchPage 复用共享抽取链无任何调用/断言",
+    "seam": "断言 work_unit 工具集含共享 fetchPageTool 或 mock 抽取链的 agent 调用"
+  },
+  "r98": {
+    "capability": "deep-research-runtime",
+    "reason": "预算用尽部分完成的报告披露无断言",
+    "seam": "report.ts markUnfinished：含 missing 节点出稿断言含预算用尽/未覆盖文案"
+  },
+  "r103": {
+    "capability": "deep-research-ui",
+    "reason": "Run 状态驱动主表面切换无整体测试",
+    "seam": "ResearchLabPage 按 runStatus 断言主表面与折叠态"
+  },
+  "r105": {
+    "capability": "deep-research-ui",
+    "reason": "剪枝/fork 二次确认与 Convert 淡化无测试（LabMutationDialogs 零测试）",
+    "seam": "LabMutationDialogs 渲染测试：确认步→命令口 POST；终态淡化"
+  },
+  "r110": {
+    "capability": "deep-research-ui",
+    "reason": "RESEARCH_BUDGET/INVALID_STATE→内联错误+toast 无测试",
+    "seam": "useEdenLabController mock reject AppHttpError 两码→断言 toast+内联"
+  },
+  "r113": {
+    "capability": "deep-research-ui",
+    "reason": "pruned 弱化渲染/faded 边/部分汇入失败脚注无断言",
+    "seam": "layoutWithElk 断言 edges[].data.faded 与结论 statusOverride"
+  },
+  "r114": {
+    "capability": "deep-research-ui",
+    "reason": "变更仅经命令口+服务端回写全链无断言",
+    "seam": "controller 调 pruneAlongEdge/forkAlongEdge→断言 POST 且以响应回写"
+  },
+  "r115": {
+    "capability": "deep-research-ui",
+    "reason": "role 缺失回退 id 前缀启发式无用例",
+    "seam": "researchNodeToLabNode 传 role undefined+前缀 id→断言推断"
+  },
+  "r153": {
+    "capability": "deep-research-ui",
+    "reason": "add-budget 入口触发 POST 无测试",
+    "seam": "controller running/budget confirm 调 addBudget→断言 addResearchBudget POST"
+  },
+  "r448": {
+    "capability": "deep-research-ui",
+    "reason": "终态后列表 status 更新且 badge 归零无测试",
+    "seam": "badge 式 MSW：awaiting_confirm→completed→badge 消失"
+  },
+  "r449": {
+    "capability": "deep-research-ui",
+    "reason": "顶栏取消→cancelled 全链无终态断言",
+    "seam": "controller 触发 cancel→断言 POST 且 runStatus=cancelled"
+  },
+  "r450": {
+    "capability": "deep-research-ui",
+    "reason": "任务抽屉行取消零测试（ResearchTasksDrawer 无测试文件）",
+    "seam": "ResearchTasksDrawer 渲染测试：行取消→cancelResearchRun POST"
+  },
+  "r459": {
+    "capability": "deep-research-ui",
+    "reason": "Lab 侧 ?topic= 预填消费无测试",
+    "seam": "controller 带 ?topic= 打开→Compose 预填且不发 createResearchRun"
+  },
+  "r387": {
+    "capability": "workspace-ui-core",
+    "reason": "顶栏入口集合无测试（App.test 仅断言解锁布局一项）",
+    "seam": "WorkspaceHeader 渲染测试断言切换器/锁/搜索入口可见"
+  },
+  "r396": {
+    "capability": "workspace-ui-core",
+    "reason": "命令面板零测试（快捷键用例仅测机制）",
+    "seam": "buildCommandPaletteCommands 纯函数+CommandPalette 渲染测试"
+  },
+  "r473": {
+    "capability": "workspace-ui-core",
+    "reason": "空态引导两子句无测试（仅连接错误有）",
+    "seam": "ChatPanel hasSources 两变体文案测试"
+  },
+  "r339": {
+    "capability": "web-ui-foundation",
+    "reason": "无测试断言 z-index 经 Layer token（全仓零 zIndex 断言）",
+    "seam": "shared/ui 静态锁：扫描无硬编码 z-index+样式壳经 useLayer"
+  },
+  "r340": {
+    "capability": "web-ui-foundation",
+    "reason": "共享 Dialog overlay 策略（portal/焦点圈闭/Esc/遮罩）无测试",
+    "seam": "Dialog.tsx 行为测试四件套"
+  },
+  "r382": {
+    "capability": "workspace-command-registry",
+    "reason": "GET /v2/commands 端点无真测试（前端仅 MSW mock）",
+    "seam": "server 路由测试 200+数组非空"
+  },
+  "r383": {
+    "capability": "workspace-command-registry",
+    "reason": "kind 枚举/未知 kind 容错无用例",
+    "seam": "useCommands 单测：未知 kind 忽略且其余可用"
+  },
+  "r384": {
+    "capability": "workspace-command-registry",
+    "reason": "自定义 preset 在命令表反映 trigger/source/enabled 无测试",
+    "seam": "server 集成：建 preset 后 GET /v2/commands 断言字段"
+  },
+  "r385": {
+    "capability": "workspace-command-registry",
+    "reason": "trigger 升序稳定排序无测试",
+    "seam": "server 路由：乱序插入后两次 GET 断言稳定升序"
+  },
+  "r347": {
+    "capability": "workspace-api-contract",
+    "reason": "无限流中间件触发方（仅信封能力存在）",
+    "seam": "限流中间件触发 429 断言 envelope.retryAfter"
+  },
+  "r349": {
+    "capability": "workspace-api-contract",
+    "reason": "跨 notebook GET session→404 无测试",
+    "seam": "notebook-isolation 加跨本 GET session 用例"
+  },
+  "r315": {
+    "capability": "studio-slides-workflow",
+    "reason": "/studio/slides/latest 端点零测试",
+    "seam": "多 draft 断言返回 updatedAt 最新"
+  },
+  "r188": {
+    "capability": "generation-presets-and-constraints",
+    "reason": "显式 generationTypeId 与不支持类型 400 无测试",
+    "seam": "POST presets generationTypeId=output→400 列支持类型"
+  },
+  "r208": {
+    "capability": "public-repo-hygiene",
+    "reason": "repo-hygiene.test.ts 已删（配置镜像清理），无替代",
+    "seam": "恢复静态检查或并入 release 冒烟"
+  },
+  "r210": {
+    "capability": "public-repo-hygiene",
+    "reason": "同上",
+    "seam": "模板字段静态检查"
+  },
+  "r212": {
+    "capability": "public-repo-hygiene",
+    "reason": "同上",
+    "seam": "build-release allowlist 静态检查"
+  },
+  "r214": {
+    "capability": "quality-and-regression",
+    "reason": "gate-composition 镜像段已删（Wave3 决策）",
+    "seam": "如需恢复在 meta 测试断言 lint 入口"
+  },
+  "r215": {
+    "capability": "quality-and-regression",
+    "reason": "同 r214",
+    "seam": "oxfmt 入口断言"
+  },
+  "r217": {
+    "capability": "quality-and-regression",
+    "reason": "qa 依赖 e2e 与 @p0 无断言",
+    "seam": "gate-composition qa deps 加 e2e 断言"
+  },
+  "r220": {
+    "capability": "quality-and-regression",
+    "reason": "同 r214",
+    "seam": "test:ci MSW+mock 门禁断言"
+  },
+  "r221": {
+    "capability": "quality-and-regression",
+    "reason": "同 r214",
+    "seam": "mock-report 入口断言"
+  },
+  "r236": {
+    "capability": "slides-workflow-plugins",
+    "reason": "插件契约面收窄（仅 buildSlidesConfigSchema 入契约）",
+    "seam": "扩契约+契约面完整性测试"
+  },
+  "r237": {
+    "capability": "slides-workflow-plugins",
+    "reason": "无多候选选择逻辑（implOf 定值）",
+    "seam": "实现选择器+歧义诊断测试"
+  },
+  "r245": {
+    "capability": "source-connectors",
+    "reason": "发现端点零测试",
+    "seam": "断言 200+connectorId/schema/diagnostics"
+  },
+  "r246": {
+    "capability": "source-connectors",
+    "reason": "POST bindings 成功路径无测试",
+    "seam": "connection-config 加合法 vaultPath 201 用例"
+  },
+  "r247": {
+    "capability": "source-connectors",
+    "reason": "快照优先（不建来源）零测试",
+    "seam": "POST snapshot 断言预览快照且零来源"
+  },
+  "r248": {
+    "capability": "source-connectors",
+    "reason": "import-scope 选择性导入零测试",
+    "seam": "POST import-scope 仅选中子集成"
+  },
+  "r269": {
+    "capability": "source-ingestion-management-and-tags",
+    "reason": "re-embed 非 failed→400 无测试",
+    "seam": "加 ready source re-embed→400 用例"
+  },
+  "r271": {
+    "capability": "source-ingestion-management-and-tags",
+    "reason": "tag 大小写不敏感唯一无测试（实现已有 toLowerCase）",
+    "seam": "BDD 加 Research/research 冲突场景"
+  },
+  "r272": {
+    "capability": "source-ingestion-management-and-tags",
+    "reason": "assign/remove 幂等无测试",
+    "seam": "重复 assign→200 用例"
+  },
+  "r28": {
+    "capability": "chat-ui-envelope",
+    "reason": "源码零 envelope 但无静态扫描锁定",
+    "seam": "静态扫描 apps/server/src 断言零生成"
+  },
+  "r29": {
+    "capability": "chat-ui-envelope",
+    "reason": "前端零解析但无扫描锁定",
+    "seam": "静态扫描 apps/web/src"
+  },
+  "r292": {
+    "capability": "source-ingestion-upload-and-url",
+    "reason": "from-url mode=link 分支零测试",
+    "seam": "mode=link 断言零 chunk vs fetch 产出 chunk"
+  },
+  "r304": {
+    "capability": "studio-output-types",
+    "reason": "timeline 详情展开交互无测试",
+    "seam": "TimelineViewer 交互用例"
+  },
+  "r207": {
+    "capability": "output-rendering-and-typing",
+    "reason": "convert-to-source 逐类型 markdown 渲染零测试",
+    "seam": "断言 chunk 文本为类型化 markdown"
+  }
+}

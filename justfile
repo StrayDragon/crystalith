@@ -167,7 +167,7 @@ check-bun:
 #   - `just test-bdd` — server BDD CRUD subset
 #   - `just type-aware-lint` — advisory type-aware oxlint
 # Requires Chromium once: `just e2e-install` (or system Chrome; see e2e recipe)
-qa: check check-env-examples check-app-schema check-i18n-keys check-spec-test-paths check-provider-deps audit-fallow audit-fallow-arch test test-web e2e
+qa: check check-env-examples check-app-schema check-i18n-keys check-spec-test-paths check-spec-covers check-provider-deps audit-fallow audit-fallow-arch test test-web e2e
     @echo "✅ QA passed"
 
 # Server + shared unit/integration tests — L0: 仅错误级应用日志 + 失败
@@ -242,6 +242,10 @@ check-i18n-keys:
 # Spec 场景禁止测试文件引用——出现即拒（绑定走代码侧 covers:rN；终态）
 check-spec-test-paths:
     bun scripts/check-spec-test-paths.ts
+
+# 有场景的 @req 必须有 covers 锚或豁免登记（spec-coverage-exemptions.json）
+check-spec-covers:
+    bun scripts/check-spec-covers.ts
 
 # Check provider registry sdk packages are declared in apps/server deps
 check-provider-deps:

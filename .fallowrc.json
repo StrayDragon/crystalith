@@ -14,7 +14,9 @@
     // c133 r495 MRL eval 手动入口（bun 直跑，非 *.test.ts）：录制向量 fixture 与
     // 三维对比 runner，报告落盘 reports/。
     "apps/server/tests/rag/mrl-eval/eval.ts",
-    "apps/server/tests/rag/mrl-eval/generate.ts"
+    "apps/server/tests/rag/mrl-eval/generate.ts",
+    // bun test 的 shared 包测试入口（fallow 未自动识别该 runner）
+    "packages/shared/test/**/*.test.ts"
   ],
   "workspaces": {
     "patterns": ["apps/server", "apps/web", "packages/*", "e2e"]
