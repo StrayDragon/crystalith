@@ -63,9 +63,132 @@ function statusAction(
   };
 }
 
+function statusGroupFor(node: LabNode): NodeQuickActionGroup | null {
+  const role = node.role ?? 'research';
+  if (role !== 'research' && role !== 'conclusion') return null;
+  const actions: NodeQuickAction[] = [
+    statusAction('clear', '明确', 'success', node.conclusionStatus),
+    statusAction('partial', '待完善', 'warning', node.conclusionStatus),
+    statusAction('missing', '无法结论', 'neutral', node.conclusionStatus),
+  ];
+  return { id: 'status', label: '定态', actions };
+}
+
+function forkQueryFor(node: LabNode): string {
+  return node.query ? `${node.query} · 对照角` : `${node.title} 对照`;
+}
+
+function researchStructureGroup(node: LabNode): NodeQuickActionGroup {
+  return {
+    id: 'structure',
+    label: '结构',
+    actions: [
+      {
+        id: 'rewrite',
+        label: '改查询',
+        title: '改写检索查询并触发 reshape',
+        tone: 'primary',
+        proposal: proposal('rewrite_query', '改写检索查询', '结构：改 query', {
+          query: node.query ?? '',
+        }),
+      },
+      {
+        id: 'fork',
+        label: '分叉对照',
+        title: '从同一父节点另开对照支路',
+        tone: 'primary',
+        proposal: proposal('fork_sibling', '分叉对照支路', '结构：fork', {
+          title: `对照：${node.title}`,
+          query: forkQueryFor(node),
+          summary: `从「${node.title}」分出的对照探索。`,
+        }),
+      },
+      {
+        id: 'prune',
+        label: '剪枝',
+        title: '剪掉本支路',
+        tone: 'danger',
+        proposal: proposal('prune_node', '剪枝本支路', '结构：prune'),
+      },
+    ],
+  };
+}
+
+function questionStructureGroup(node: LabNode): NodeQuickActionGroup {
+  return {
+    id: 'structure',
+    label: '结构',
+    actions: [
+      {
+        id: 'rewrite-intent',
+        label: '改意图',
+        title: '更新研究问题 / 意图',
+        tone: 'primary',
+        proposal: proposal('rewrite_query', '更新研究意图', '结构：改意图', {
+          query: node.conclusion ?? node.query ?? '',
+        }),
+      },
+    ],
+  };
+}
+
+function structureGroupFor(node: LabNode): NodeQuickActionGroup | null {
+  const role = node.role ?? 'research';
+  if (role === 'research') return researchStructureGroup(node);
+  if (role === 'question') return questionStructureGroup(node);
+  return null;
+}
+
+function confirmActions(node: LabNode): NodeQuickAction[] {
+  const role = node.role ?? 'research';
+  if (!(role === 'question' || role === 'conclusion')) return [];
+  return [
+    {
+      id: 'confirm-finish',
+      label: '结束出报告',
+      title: '确认结束并生成报告',
+      tone: 'success',
+      proposal: proposal('confirm_finish', '结束并出报告', '收束：finish'),
+    },
+    {
+      id: 'confirm-continue',
+      label: '继续深挖',
+      title: '确认后继续探索',
+      tone: 'primary',
+      proposal: proposal('confirm_continue', '继续深挖', '收束：continue'),
+    },
+  ];
+}
+
+function openReportAction(node: LabNode, reportAvailable?: boolean): NodeQuickAction | null {
+  if ((node.role ?? 'research') !== 'conclusion' || !reportAvailable) return null;
+  return {
+    id: 'open-report',
+    label: '打开报告',
+    title: '打开独立报告页',
+    tone: 'primary',
+    proposal: proposal('open_report', '打开报告页', '收束：报告'),
+  };
+}
+
+function closeGroupFor(
+  node: LabNode,
+  awaiting: boolean,
+  reportAvailable?: boolean,
+): NodeQuickActionGroup | null {
+  const actions: NodeQuickAction[] = [];
+  const report = openReportAction(node, reportAvailable);
+  if (report) actions.push(report);
+  if (awaiting) actions.push(...confirmActions(node));
+  return actions.length > 0 ? { id: 'close', label: '收束', actions } : null;
+}
+
 /**
  * Grouped procedural badges for the node chat composer.
  * Rows: 定态 | 结构 | 收束 — client-side, same ActionProposal ports.
+ *
+ * r105：completed/failed 终态 inspector 只读——只保留只读导航（打开报告），
+ * 不再提供剪枝/fork/定态/改查询等会改图的入口。
  */
 export function buildNodeQuickActionGroups(input: {
   node: LabNode;
@@ -73,106 +196,18 @@ export function buildNodeQuickActionGroups(input: {
   reportAvailable?: boolean;
 }): NodeQuickActionGroup[] {
   const { node, phase, reportAvailable } = input;
-  const role = node.role ?? 'research';
-  const awaiting = phase === 'awaiting_confirm';
-  const current = node.conclusionStatus;
+  if (phase === 'completed' || phase === 'failed') {
+    const group = closeGroupFor(node, false, reportAvailable);
+    return group ? [group] : [];
+  }
+
   const groups: NodeQuickActionGroup[] = [];
-
-  if (role === 'research' || role === 'conclusion') {
-    const statusActions: NodeQuickAction[] = [
-      statusAction('clear', '明确', 'success', current),
-      statusAction('partial', '待完善', 'warning', current),
-      statusAction('missing', '无法结论', 'neutral', current),
-    ];
-    groups.push({ id: 'status', label: '定态', actions: statusActions });
-  }
-
-  if (role === 'research') {
-    groups.push({
-      id: 'structure',
-      label: '结构',
-      actions: [
-        {
-          id: 'rewrite',
-          label: '改查询',
-          title: '改写检索查询并触发 reshape',
-          tone: 'primary',
-          proposal: proposal('rewrite_query', '改写检索查询', '结构：改 query', {
-            query: node.query ?? '',
-          }),
-        },
-        {
-          id: 'fork',
-          label: '分叉对照',
-          title: '从同一父节点另开对照支路',
-          tone: 'primary',
-          proposal: proposal('fork_sibling', '分叉对照支路', '结构：fork', {
-            title: `对照：${node.title}`,
-            query: node.query ? `${node.query} · 对照角` : `${node.title} 对照`,
-            summary: `从「${node.title}」分出的对照探索。`,
-          }),
-        },
-        {
-          id: 'prune',
-          label: '剪枝',
-          title: '剪掉本支路',
-          tone: 'danger',
-          proposal: proposal('prune_node', '剪枝本支路', '结构：prune'),
-        },
-      ],
-    });
-  }
-
-  if (role === 'question') {
-    groups.push({
-      id: 'structure',
-      label: '结构',
-      actions: [
-        {
-          id: 'rewrite-intent',
-          label: '改意图',
-          title: '更新研究问题 / 意图',
-          tone: 'primary',
-          proposal: proposal('rewrite_query', '更新研究意图', '结构：改意图', {
-            query: node.conclusion ?? node.query ?? '',
-          }),
-        },
-      ],
-    });
-  }
-
-  const closeActions: NodeQuickAction[] = [];
-  if (role === 'conclusion' && reportAvailable) {
-    closeActions.push({
-      id: 'open-report',
-      label: '打开报告',
-      title: '打开独立报告页',
-      tone: 'primary',
-      proposal: proposal('open_report', '打开报告页', '收束：报告'),
-    });
-  }
-  if (awaiting && (role === 'question' || role === 'conclusion')) {
-    closeActions.push(
-      {
-        id: 'confirm-finish',
-        label: '结束出报告',
-        title: '确认结束并生成报告',
-        tone: 'success',
-        proposal: proposal('confirm_finish', '结束并出报告', '收束：finish'),
-      },
-      {
-        id: 'confirm-continue',
-        label: '继续深挖',
-        title: '确认后继续探索',
-        tone: 'primary',
-        proposal: proposal('confirm_continue', '继续深挖', '收束：continue'),
-      },
-    );
-  }
-  if (closeActions.length) {
-    groups.push({ id: 'close', label: '收束', actions: closeActions });
-  }
-
+  const status = statusGroupFor(node);
+  if (status) groups.push(status);
+  const structure = structureGroupFor(node);
+  if (structure) groups.push(structure);
+  const close = closeGroupFor(node, phase === 'awaiting_confirm', reportAvailable);
+  if (close) groups.push(close);
   return groups;
 }
 

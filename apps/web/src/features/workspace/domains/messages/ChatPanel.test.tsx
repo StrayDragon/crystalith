@@ -261,11 +261,13 @@ test('chat panel still shows local messages while history is loading', async () 
 });
 
 // covers: r473
-test('chat empty state without sources guides uploading sources first', () => {
+test('chat empty state without sources guides the three source import paths', () => {
   renderChatPanel({ hasSources: false });
 
-  // 来源为空：引导上传来源（而非直接勾选来源的话术）
-  expect(screen.getByText('直接提问即可；上传来源后可基于文档回答。')).toBeInTheDocument();
+  // 来源为空：引导上传文件 / URL 导入 / 搜索导入（规格 r473 三路径枚举）
+  expect(
+    screen.getByText('直接提问即可；也可以上传文件、从 URL 导入或搜索导入来源，基于文档回答。'),
+  ).toBeInTheDocument();
   expect(screen.queryByText('直接提问，或勾选左侧来源后基于文档回答。')).not.toBeInTheDocument();
 });
 
@@ -274,9 +276,12 @@ test('chat empty state with sources offers the direct-ask session start', () => 
   const onSend = rs.fn();
   renderChatPanel({ hasSources: true, draft: '帮我把勾选的文档总结成要点', onSend });
 
-  // 已有来源、尚无会话：直接提问即开始会话（首条消息建会话）
+  // 已有来源、尚无会话：直接提问即开始会话（首条消息建会话），并提供「一键开始会话」明确入口
   expect(screen.getByText('直接提问，或勾选左侧来源后基于文档回答。')).toBeInTheDocument();
-  expect(screen.queryByText('直接提问即可；上传来源后可基于文档回答。')).not.toBeInTheDocument();
+  expect(
+    screen.queryByText('直接提问即可；也可以上传文件、从 URL 导入或搜索导入来源，基于文档回答。'),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '一键开始会话' })).toBeInTheDocument();
 
   const sendButton = screen.getByRole('button', { name: '发送' });
   expect(sendButton).not.toBeDisabled();

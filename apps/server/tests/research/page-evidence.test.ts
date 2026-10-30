@@ -1,4 +1,4 @@
-// covers: r92/r93/r439（deep-research-runtime）——maxPageFetches 公式与 pagesUsed 初始化/成功读页递增、fetchPage 同 URL 证据 content 升级保留 snippet 并按 token 预算截断、每节点读页软上限均分。
+// covers: r66/r92/r93/r439（deep-research-runtime）——maxPageFetches 公式与 pagesUsed 初始化/成功读页递增、fetchPage 同 URL 证据 content 升级保留 snippet 并按 token 预算截断、每节点读页软上限均分；retrieveSources 命中把 notebook chunk 统一为稳定 id 的 kind=chunk 证据行。
 /**
  * c107 — page evidence budget, ingest upgrade, token truncate, create maxPageFetches.
  */
@@ -23,7 +23,8 @@ installAiMock({ text: 'mocked research chat' });
 seedChatModel();
 
 import { countTokens, truncateToTokens } from '../../src/ai/tokenizer.ts';
-import { notebooks, researchRuns } from '../../src/db/schema.ts';
+import { insertChunk } from '../../src/db/chunks.ts';
+import { notebooks, researchRuns, sources } from '../../src/db/schema.ts';
 import {
   computeMaxPageFetches,
   computePageSoftCap,
@@ -342,5 +343,69 @@ describe('fork-run pages + content', () => {
     expect(copied?.content).toBe('full page body');
     expect(copied?.snippet).toBe('snip');
     expect(copied?.id).not.toBe(evId);
+  });
+});
+
+describe('r66: retrieveSources ingest lands a chunk evidence row pointing at the seeded chunk', () => {
+  it('unifies notebook chunk into the run evidence store with stable id and back-references', async () => {
+    // seed：真实来源 + chunk 行，retrieveSources 描述符引用的就是这一行。
+    const src = getOrm()
+      .insert(sources)
+      .values({
+        notebookId,
+        filename: 'page-ev-r66.md',
+        mimeType: 'text/markdown',
+        parserType: 'text',
+        status: 'ready',
+      })
+      .returning()
+      .get();
+    const chunkText = 'r66 追加：notebook chunk body for the evidence topic.';
+    const chunk = await insertChunk({ sourceId: src.id, chunkIndex: 0, text: chunkText });
+
+    const runId = getOrm()
+      .insert(researchRuns)
+      .values({
+        notebookId,
+        topic: 'r66 chunk evidence row',
+        status: 'running',
+        useNotebookSources: true,
+        sourceIds: [src.id],
+        allowWeb: false,
+        depth: 'shallow',
+        maxSearches: 5,
+        maxNodes: 10,
+        searchesUsed: 0,
+        maxPageFetches: 5,
+        pagesUsed: 0,
+        graph: {
+          nodes: [
+            { id: 'n_r66', role: 'research', title: '追加节点', conclusionStatus: 'pending' },
+          ],
+          edges: [],
+        },
+      })
+      .returning()
+      .get().id;
+
+    await ingestWorkToolResult(runId, notebookId, 'n_r66', 'retrieveSources', [
+      {
+        chunkId: chunk.id,
+        chunkIndex: 0,
+        sourceId: src.id,
+        sourceName: 'page-ev-r66.md',
+        text: chunkText,
+        score: 0.9,
+      },
+    ]);
+
+    const evidences = await listEvidences(runId);
+    const chunkEv = evidences.find((e) => e.kind === 'chunk');
+    expect(chunkEv).toBeDefined();
+    expect(chunkEv!.id).toMatch(/^ev_/u);
+    expect(chunkEv!.sourceId).toBe(src.id);
+    expect(chunkEv!.chunkId).toBe(String(chunk.id));
+    expect(chunkEv!.snippet).toBe(chunkText.slice(0, 500));
+    expect(chunkEv!.collectedAtNodeId).toBe('n_r66');
   });
 });

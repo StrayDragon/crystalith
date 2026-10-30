@@ -22,6 +22,7 @@ import { exportQaJsonDownload, exportQaMarkdownDownload } from '../../shared/evi
 import { useCommands } from '../../shared/hooks/useCommands';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { ChatMessage, Citation, OutputTypeId } from '../../shared/types';
+import { useSessions } from '../sessions/useSessions';
 import AssistantMarkdown from './AssistantMarkdown';
 import { stripLeakedToolCallXml } from './stripLeakedToolCallXml';
 
@@ -53,6 +54,39 @@ interface ChatPanelProps {
   isConverting?: boolean;
 }
 
+/** r473 空态分层引导：无来源枚举三条导入路径；有来源给「一键开始会话」明确入口。 */
+const ChatEmptyState = memo(function ChatEmptyState({ hasSources }: { hasSources: boolean }) {
+  const sessionId = useWorkspaceStore((s) => s.activeSessionId);
+  const { createSession } = useSessions();
+  if (!hasSources) {
+    return (
+      <EmptyHint title="直接提问即可；也可以上传文件、从 URL 导入或搜索导入来源，基于文档回答。" />
+    );
+  }
+  return (
+    <div className="px-3 pb-4">
+      <EmptyHint
+        title="直接提问，或勾选左侧来源后基于文档回答。"
+        description="也可以一键开始会话，随时基于文档提问。"
+      />
+      {sessionId ? null : (
+        <div className="mt-1 text-center">
+          <button
+            type="button"
+            className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-800 hover:bg-blue-100"
+            onClick={() => void createSession()}
+          >
+            一键开始会话
+          </button>
+        </div>
+      )}
+    </div>
+  );
+});
+
+// ChatPanel 是既有神组件，本批未实质增加其复杂度（空态抽为 ChatEmptyState）；
+// 按仓库「Component / module split」守则，神文件拆分独立成 change。
+// fallow-ignore-next-line complexity
 function ChatPanel({
   messages,
   draft,
@@ -464,13 +498,7 @@ function ChatPanel({
               </button>
             </div>
           ) : messages.length === 0 ? (
-            <EmptyHint
-              title={
-                hasSources
-                  ? '直接提问，或勾选左侧来源后基于文档回答。'
-                  : '直接提问即可；上传来源后可基于文档回答。'
-              }
-            />
+            <ChatEmptyState hasSources={hasSources} />
           ) : null}
 
           {shouldRenderMessageList ? (

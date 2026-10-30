@@ -53,6 +53,38 @@ describe('acceptNodeChatAction (r439)', () => {
     expect(pruneAlongEdge).toHaveBeenCalledWith('e1');
   });
 
+  it('terminal run rejects prune without hitting the command port (r105)', () => {
+    const pruneAlongEdge = rs.fn();
+    const proposal: LabNodeActionProposal = {
+      id: 'p-term',
+      kind: 'prune_node',
+      label: '剪枝',
+      rationale: 'r',
+      status: 'pending',
+    };
+    const ok = acceptNodeChatAction({
+      proposal,
+      node: nodes[1]!,
+      edges,
+      nodes,
+      mode: 'eden',
+      lab: {
+        pruneAlongEdge,
+        forkAlongEdge: rs.fn(),
+        editNode: rs.fn(),
+        setTopicDraft: rs.fn(),
+        finishReport: rs.fn(),
+        continueDig: rs.fn(),
+        addBudget: rs.fn(),
+        setConfirmChoice: rs.fn(),
+        runStatus: 'completed',
+      },
+      openReport: rs.fn(),
+    });
+    expect(ok).toBe(false);
+    expect(pruneAlongEdge).not.toHaveBeenCalled();
+  });
+
   it('accept rewrite_query calls editNode with query (PATCH seam)', () => {
     const editNode = rs.fn();
     const proposal: LabNodeActionProposal = {
