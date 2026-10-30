@@ -1,4 +1,4 @@
-// covers: r262/r264/r265（source-ingestion-management-and-tags）——列表过滤排序、chunks 升序、删除与 re-embed 一致性。
+// covers: r262/r264/r265/r269（source-ingestion-management-and-tags）——列表过滤排序、chunks 升序、删除与 re-embed 一致性。
 // c117 — source ingestion management bare rules:
 // - r262: source list query semantics are stable (exact tag filter + stable
 //   sort over date/name/size/type with asc/desc)
@@ -374,5 +374,25 @@ describe('r265: delete and re-embed keep storage and epochs consistent', () => {
 
     // Cross-notebook safety net: the foreign source is untouched.
     expect(vecCount(foreignSourceId)).toBe(0);
+  });
+});
+
+// covers: r269（source-ingestion-management-and-tags）——re-embed 仅限 failed 来源，其余 400。
+describe('r269 re-embed rejects non-failed sources', () => {
+  it('ready source re-embed → 400 INVALID_REQUEST', async () => {
+    const ready = getOrm()
+      .insert(sources)
+      .values({ notebookId, filename: 'ready-source.md', status: 'ready' })
+      .returning()
+      .get();
+    const res = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/sources/${ready.id}/re-embed`, {
+        method: 'POST',
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { errorCode: string; message: string };
+    expect(body.errorCode).toBe('INVALID_REQUEST');
+    expect(body.message).toContain('not in failed status');
   });
 });

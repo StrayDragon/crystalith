@@ -25,11 +25,6 @@
   规则: Rate limited responses use unified envelope and retryAfter
     系统 MUST 为 HTTP rate limiting 提供稳定的对外语义：返回 429，并在统一错误信封中暴露 `retryAfter` 指引。
 
-    场景: rate-limited-responses-use-unified-envelope
-      假如 服务端限流中间件就绪
-      当 触发限流并检查响应体
-      那么 响应使用统一错误 envelope 且 status 为 429
-      而且 envelope 携带 retryAfter 字段
   @req:r348
   规则: Health endpoints remain exempt from HTTP guardrails
     系统健康检查端点（`/health` 与 `/health/dependencies`）在 guardrails 启用语境下 MUST 保持可用于运维探活与诊断，不应因 guardrails 被拒绝；匿名可达性的 canonical 断言见 workspace-api-contract r345。

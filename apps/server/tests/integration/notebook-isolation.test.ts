@@ -155,3 +155,21 @@ describe('nested notebook paths', () => {
     expect(status).toBe(404);
   });
 });
+
+// covers: r349（workspace-api-contract）——跨 notebook GET session 404。
+describe('cross-notebook session isolation (r349)', () => {
+  it('GET session from wrong notebook → 404', async () => {
+    const nbA = getOrm().insert(notebooks).values({ name: 'iso-sess-a' }).returning().get().id;
+    const nbB = getOrm().insert(notebooks).values({ name: 'iso-sess-b' }).returning().get().id;
+    const sess = getOrm()
+      .insert(sessions)
+      .values({ notebookId: nbA, title: 'only-in-a' })
+      .returning()
+      .get();
+    const res = await app.handle(new Request(`${BASE}/v2/notebooks/${nbB}/sessions/${sess.id}`));
+    expect(res.status).toBe(404);
+    // Same session from correct notebook works
+    const ok = await app.handle(new Request(`${BASE}/v2/notebooks/${nbA}/sessions/${sess.id}`));
+    expect(ok.status).toBe(200);
+  });
+});

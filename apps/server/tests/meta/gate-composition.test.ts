@@ -1,4 +1,4 @@
-// covers: r213/r216/r218/r219/r223（quality-and-regression）+ r20/r21（bdd-test-harness）——BDD 为可选回归入口（qa 不依赖 test-bdd、配方独立可用）与集成测试经 just test 计入门禁。
+// covers: r213/r214/r215/r216/r217/r218/r219/r220/r221/r223（quality-and-regression）+ r20/r21（bdd-test-harness）——BDD 为可选回归入口（qa 不依赖 test-bdd、配方独立可用）与集成测试经 just test 计入门禁。
 import { describe, expect, it } from 'bun:test';
 // Gate composition lock — 结构性事实：just qa 门禁组成与 just test 范围。
 // 瘦身说明：原 r214/r215/r220/r221/r223 段（断言 package.json script 字符串、
@@ -51,6 +51,25 @@ describe('r213+r216+r218 just qa composition', () => {
     expect(check.deps).toContain('format-check');
     expect(recipe('check-env-examples').body).toContain('--check');
     expect(recipe('check-app-schema').body).toContain('--check');
+    // r217: e2e is part of the primary gate
+    expect(qa.deps).toContain('e2e');
+  });
+});
+
+describe('r214+r215 lint and format entrypoints', () => {
+  it('root lint script is oxlint and format uses oxfmt', () => {
+    const pkg = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8'));
+    expect(pkg.scripts.lint).toBe('oxlint');
+    expect(pkg.scripts['format:check']).toBe('oxfmt --check');
+    expect(pkg.scripts['format:write']).toBe('oxfmt --write');
+  });
+});
+
+describe('r220+r221 frontend test gates', () => {
+  it('test-web runs MSW strict mode and the mock-reason check', () => {
+    const testWeb = recipe('test-web');
+    expect(testWeb.body).toContain('RSTEST_MSW_ON_UNHANDLED=error');
+    expect(testWeb.body).toContain('--check-mock-reasons');
   });
 });
 

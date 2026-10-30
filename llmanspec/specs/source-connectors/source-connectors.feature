@@ -62,7 +62,7 @@
 
 @req:r251
   规则: Connector binding creation MUST validate connectionConfig against JSON schema
-    创建 connector binding 时 MUST 对 connectionConfig 做 JSON schema 校验，校验失败 MUST 返回 400（CONNECTOR_CONFIG_INVALID）
+    创建 connector binding 时 MUST 对 connectionConfig 做 JSON schema 校验，校验失败 MUST 返回 400（INVALID_REQUEST）
 
     场景: binding-config-schema-validation
       假如 一个空白笔记本
