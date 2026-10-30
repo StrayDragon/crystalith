@@ -19,7 +19,7 @@ import { AstBuilder, Parser, GherkinClassicTokenMatcher } from '@cucumber/gherki
 // Types
 // ---------------------------------------------------------------------------
 
-export type StepKind = 'given' | 'when' | 'then';
+type StepKind = 'given' | 'when' | 'then';
 
 /** HTTP-shaped response stored on ctx.response by When steps. */
 export interface BddResponse {
@@ -48,7 +48,7 @@ export interface TestContext {
   client: TestClient;
 }
 
-export type StepFn = (ctx: TestContext, ...args: (string | number)[]) => Promise<void> | void;
+type StepFn = (ctx: TestContext, ...args: (string | number)[]) => Promise<void> | void;
 
 interface StepDef {
   kind: StepKind;

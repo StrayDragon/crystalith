@@ -1,4 +1,4 @@
-// covers: r276/r277/r281（source-ingestion-summary-and-conversion）——转换 lineage 元数据、生命周期 epoch 与失败置 failed。
+// covers: r207（output-rendering-and-typing）+ r276/r277/r281（source-ingestion-summary-and-conversion）——转换 lineage 元数据、生命周期 epoch 与失败置 failed；r207 convert-to-source 逐类型 markdown 渲染转源（非原始 JSON 序列化）。
 // c117 — conversion bare rules:
 // - r276: conversation/output → source conversions keep traceable lineage metadata
 // - r277: conversion follows the source lifecycle (processing → ready only after embed)
@@ -39,7 +39,7 @@ mock.module('../../src/rag/embedder.ts', () => ({
 import { eq } from 'drizzle-orm';
 
 import { db } from '../../src/db/index.ts';
-import { messages, notebooks, sessions, sources } from '../../src/db/schema.ts';
+import { chunks, messages, notebooks, sessions, sources } from '../../src/db/schema.ts';
 import { getCached, setCached } from '../../src/rag/cache.ts';
 import { createApp } from '../../src/server.ts';
 import {
@@ -226,6 +226,67 @@ describe('r281: conversion does not mark ready when embedding fails', () => {
       expect(lines.some((l) => l.includes('convert embedding failed'))).toBe(true);
     } finally {
       embedShouldFail = false;
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// r207 — convert-to-source renders type-aware markdown, not raw JSON
+// ---------------------------------------------------------------------------
+
+describe('r207: convert-to-source type-aware markdown chunks', () => {
+  it('converts a PARAGRAPH output into heading + per-paragraph chunks, never raw JSON', async () => {
+    // PARAGRAPH 手动 content 创建路径：免 LLM、免 sourceIds（Studio「添加笔记」）。
+    const title = '活字印刷术笔记';
+    const paragraphs = [
+      '毕昇于北宋庆历年间发明泥活字印刷。',
+      '先雕制单字，再排版敷墨覆纸刷印。',
+      '此后朝鲜铸金属活字，欧洲古腾堡继而改进。',
+    ];
+    const created = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/outputs`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          generationTypeId: 'output',
+          type: 'PARAGRAPH',
+          content: { title, text: paragraphs.join('\n\n') },
+        }),
+      }),
+    );
+    expect(created.status).toBe(201);
+    const output = (await created.json()) as { id: number; type: string };
+    expect(output.type).toBe('PARAGRAPH');
+
+    const converted = await app.handle(
+      new Request(`${BASE}/v2/notebooks/${notebookId}/outputs/${output.id}/convert-to-source`, {
+        method: 'POST',
+      }),
+    );
+    expect(converted.status).toBe(201);
+    const result = (await converted.json()) as {
+      sourceId: number;
+      filename: string;
+      chunkCount: number;
+    };
+    expect(result.filename).toBe(`output-${output.id}-PARAGRAPH.md`);
+    expect(result.sourceId).toBeGreaterThan(0);
+
+    // 逐类型 markdown 渲染 + 按段落分块：# 标题 + 每段一个 chunk（各段 ≤500 字符）。
+    const rows = db()
+      .select()
+      .from(chunks)
+      .where(eq(chunks.sourceId, result.sourceId))
+      .orderBy(chunks.chunkIndex)
+      .all();
+    expect(rows.map((r) => r.text)).toEqual([`# ${title}`, ...paragraphs]);
+    expect(result.chunkCount).toBe(rows.length);
+
+    // 不使用原始 JSON 序列化：任何 chunk 都不含花括号 / JSON 字段名形态。
+    for (const r of rows) {
+      expect(r.text).not.toContain('{');
+      expect(r.text).not.toContain('"text"');
+      expect(r.text).not.toContain('"title"');
     }
   });
 });

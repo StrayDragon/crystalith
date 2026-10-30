@@ -1,13 +1,16 @@
-// covers: r286/r288/r289/r291/r298/r490/r491（source-ingestion-upload-and-url）——parser 能力路由、CSV 行分块、413 超限、去重门控、同名不同内容 409 提示（kind=filename 三分支/内容命中优先/门控关闭直建）与 replace 换源级联清理。
+// covers: r286/r288/r289/r291/r292/r298/r490/r491（source-ingestion-upload-and-url）——parser 能力路由、CSV 行分块、413 超限、from-url link/fetch 双模式、去重门控、同名不同内容 409 提示（kind=filename 三分支/内容命中优先/门控关闭直建）与 replace 换源级联清理。
 // c117 — upload contract bare rules:
 // - r286: supported formats are parser-driven (parsers listing + parserType routing)
 // - r288: .csv extension + text/csv MIME are recognized and handled by the CSV parser
 // - r289: CSV chunks by rows (markdown-table pages + csv_row_start/end metadata)
 // - r291: oversized uploads rejected with 413 before any source row is created
+// - r292: from-url mode=link registers the link without scraping the page body;
+//         mode=fetch extracts the page body into retrievable chunks
 // - r298: dedup gated by source_ingestion.dedup.enabled=false → skip dedup, create new
 import { afterAll, afterEach, beforeAll, describe, expect, it, mock } from 'bun:test';
 
 import { and, eq } from 'drizzle-orm';
+import { z } from 'zod';
 
 // Stub the 'ai' module before importing the server (worker loop starts on import).
 mock.module('ai', () => ({
@@ -26,8 +29,11 @@ import type { Elysia } from 'elysia';
 
 import { db } from '../../src/db/index.ts';
 import { chunks, notebooks, sources } from '../../src/db/schema.ts';
+import { pluginRegistry } from '../../src/plugins/registry.ts';
+import type { CrystalithPlugin } from '../../src/plugins/types.ts';
 import { createApp } from '../../src/server.ts';
 import { getDedupEnabled, getUploadMaxBytes, resetConfig } from '../../src/shared/config.ts';
+import type { ExtractedContent } from '../../src/shared/extraction/types.ts';
 import {
   getOrm,
   setupIntegrationEnv,
@@ -455,5 +461,128 @@ describe('r491: replace action', () => {
     expect(
       db().select({ id: chunks.id }).from(chunks).where(eq(chunks.sourceId, oldId)).all().length,
     ).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// r292 — from-url link vs fetch modes
+// ---------------------------------------------------------------------------
+
+// IP-literal hosts skip DNS resolution inside validateUrlForFetch — required
+// for hermetic from-url tests (same trick as extractor-selection.test.ts).
+const R292_LINK_URL = 'https://93.184.216.34/r292-link-only';
+const R292_FETCH_URL = 'https://93.184.216.34/r292-fetched-article';
+const R292_PAGE_TOKEN = 'Crystalith静态扫描锚文本X7Q9';
+const r292Attempts: string[] = [];
+
+// r292: fake extractor returns a canned page body so mode=fetch exercises the
+// real extraction→ingest pipeline without any outbound network call.
+function r292FakeExtractorPlugin(): CrystalithPlugin {
+  return {
+    id: 'extractor-r292-page',
+    kind: 'extractor',
+    displayName: 'r292 fake page extractor',
+    description: 'r292: returns a canned page body, no outbound network',
+    configSchema: z.object({}),
+    capabilities: [],
+    factory: async () => ({
+      name: 'r292-page',
+      isAvailable: () => true,
+      extract: async (): Promise<ExtractedContent> => {
+        r292Attempts.push('r292-page');
+        return {
+          title: 'r292 fetched page',
+          content: `<html><body><p>页面正文：${R292_PAGE_TOKEN}。</p></body></html>`,
+          extractorUsed: 'r292-page',
+        };
+      },
+    }),
+  };
+}
+
+async function postFromUrl(
+  notebookId: number,
+  payload: Record<string, unknown>,
+): Promise<{ status: number; body: unknown }> {
+  const res = await app.handle(
+    new Request(`${BASE}/v2/notebooks/${notebookId}/sources/from-url`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+  );
+  const text = await res.text();
+  let body: unknown = null;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = text;
+  }
+  return { status: res.status, body };
+}
+
+describe('r292: from-url link and fetch modes', () => {
+  beforeAll(() => {
+    pluginRegistry.register({ plugin: r292FakeExtractorPlugin(), source: 'builtin' });
+  });
+  afterAll(() => {
+    pluginRegistry.reset();
+  });
+
+  it('mode=link registers the URL without scraping the page body', async () => {
+    r292Attempts.length = 0;
+    const nb = makeNotebook('r292-link-mode');
+
+    const { status, body } = await postFromUrl(nb, {
+      url: R292_LINK_URL,
+      mode: 'link',
+      title: '登记链接',
+    });
+    expect(status).toBe(201);
+    const result = body as { sourceId: number; filename: string; mode: string };
+    expect(result.mode).toBe('link');
+    expect(result.filename).toBe('登记链接');
+
+    // 不抓取网页正文：提取器零调用。
+    expect(r292Attempts).toEqual([]);
+
+    const row = db().select().from(sources).where(eq(sources.id, result.sourceId)).get();
+    expect(row?.parserType).toBe('link');
+    expect(row?.status).toBe('ready');
+    expect(row?.metadata).toMatchObject({ url: R292_LINK_URL, mode: 'link' });
+
+    // 仅登记链接来源：单一登记 chunk 含 URL，不含网页正文 token。
+    const linkChunks = db().select().from(chunks).where(eq(chunks.sourceId, result.sourceId)).all();
+    expect(linkChunks).toHaveLength(1);
+    expect(linkChunks[0]?.text).toContain(R292_LINK_URL);
+    expect(linkChunks[0]?.text).not.toContain(R292_PAGE_TOKEN);
+  });
+
+  it('mode=fetch scrapes the page body into retrievable chunks', async () => {
+    r292Attempts.length = 0;
+    const nb = makeNotebook('r292-fetch-mode');
+
+    const { status, body } = await postFromUrl(nb, {
+      url: R292_FETCH_URL,
+      mode: 'fetch',
+      extractor: 'r292-page',
+    });
+    expect(status).toBe(200);
+    const result = body as {
+      sourceId: number;
+      chunkCount: number;
+      status: string;
+      extractedBy: string;
+    };
+    // 抓取动作真实发生（经由被固定的假提取器，无外网调用）。
+    expect(result.extractedBy).toBe('r292-page');
+    expect(r292Attempts).toEqual(['r292-page']);
+    expect(result.status).toBe('ready');
+    expect(result.chunkCount).toBeGreaterThan(0);
+
+    // 页面正文进入可检索分块。
+    const chunkRows = db().select().from(chunks).where(eq(chunks.sourceId, result.sourceId)).all();
+    expect(chunkRows.length).toBeGreaterThan(0);
+    expect(chunkRows.some((c) => c.text.includes(R292_PAGE_TOKEN))).toBe(true);
   });
 });

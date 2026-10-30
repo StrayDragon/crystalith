@@ -1,4 +1,4 @@
-// covers: r307/r308/r311/r312（studio-slides-workflow）——draft 围绕 input/outline/markdown 三阶段推进且逐阶段持久化、draft API 稳定合约（创建/生成/404）、无 outline 时 markdown 404、生成成功先落库再返回。
+// covers: r307/r308/r311/r312/r315（studio-slides-workflow）——draft 围绕 input/outline/markdown 三阶段推进且逐阶段持久化、draft API 稳定合约（创建/生成/404）、无 outline 时 markdown 404、生成成功先落库再返回、/latest 返回 updatedAt 最新的 draft。
 // Studio two-stage generation integration test.
 //
 // Exercises the full outline → markdown flow via the in-process Elysia app:
@@ -190,5 +190,43 @@ describe('studio two-stage generation', () => {
 
     const { status } = await post(`${slidesBase()}/${id}/markdown`);
     expect(status).toBe(404);
+  });
+
+  it('GET /studio/slides/latest returns the draft with the newest updatedAt (r315)', async () => {
+    // 创建 body 的 sourceIds 必填（SlideDraftCreateBodySchema min(1)）——只给 title 会 422。
+    const firstCreated = await post(slidesBase(), {
+      title: '较早草稿',
+      sourceIds: [sourceId],
+    });
+    expect(firstCreated.status).toBe(201);
+    const laterCreated = await post(slidesBase(), {
+      title: '较新草稿',
+      sourceIds: [sourceId],
+    });
+    expect(laterCreated.status).toBe(201);
+    const firstId = (firstCreated.body as { id: number }).id;
+    const laterId = (laterCreated.body as { id: number }).id;
+    expect(laterId).toBeGreaterThan(firstId);
+
+    // 把先建（id 更小）draft 的 updatedAt 拨到最晚：若排序真按 updatedAt desc，
+    // latest 必须返回它而非最大 id（timestamp 列为秒精度，用 >60s 差值规避同秒）。
+    const newest = new Date(Date.now() + 90_000);
+    const oldest = new Date(Date.now() - 90_000);
+    getOrm()
+      .update(studioSlides)
+      .set({ updatedAt: newest })
+      .where(eq(studioSlides.id, firstId))
+      .run();
+    getOrm()
+      .update(studioSlides)
+      .set({ updatedAt: oldest })
+      .where(eq(studioSlides.id, laterId))
+      .run();
+
+    const res = await app.handle(new Request(`${BASE}${slidesBase()}/latest`));
+    expect(res.status).toBe(200);
+    const slide = (await res.json()) as { id: number; updatedAt: string };
+    expect(slide.id).toBe(firstId);
+    expect(new Date(slide.updatedAt).getTime()).toBe(Math.floor(newest.getTime() / 1000) * 1000);
   });
 });

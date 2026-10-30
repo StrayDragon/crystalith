@@ -1,4 +1,4 @@
-// covers: r64/r73/r94/r431/r432（deep-research-runtime）——work-unit 步数/预算门控、非命令口图变更拒绝与 chat/Run 流事件分离。
+// covers: r64/r68/r73/r94/r431/r432（deep-research-runtime）——work-unit 步数/预算门控、graph_patch 增量载荷（upsert/remove 字段与 conclusionStatus/phase/EdgeKind）、非命令口图变更拒绝与 chat/Run 流事件分离。
 // c117 — deep-research runtime bare rules:
 // - r94: agent-chosen page reads — the work-unit tool loop is bounded by config
 //   workUnitMaxSteps, budgets are exposed to the agent, and the runtime never
@@ -70,13 +70,17 @@ mock.module('ai', () => ({
   isStepCount: (maxSteps: number) => ({ kind: 'stepCount', maxSteps }),
 }));
 
-import { ResearchNodeChatStreamEventSchema, ResearchStreamEventSchema } from '@crystalith/shared';
+import {
+  ResearchGraphPatch,
+  ResearchNodeChatStreamEventSchema,
+  ResearchStreamEventSchema,
+} from '@crystalith/shared';
 import { eq } from 'drizzle-orm';
 
 import { notebooks, researchRuns } from '../../src/db/schema.ts';
 import { createNodeChatSseResponse } from '../../src/features/research/node-chat.ts';
 import { createResearchSseResponse } from '../../src/features/research/run-sse.ts';
-import { runNodeWorkUnit } from '../../src/features/research/work-unit.ts';
+import { runNodeWorkUnit, writeBackNodeWork } from '../../src/features/research/work-unit.ts';
 import { createApp } from '../../src/server.ts';
 import { getWorkUnitMaxSteps } from '../../src/shared/config-research.ts';
 import { resetConfig } from '../../src/shared/config.ts';
@@ -393,5 +397,168 @@ describe('r432: chat SSE is separate from the run stream event set', () => {
     expect(allRunStream).not.toContain('event: chunk');
     expect(allRunStream).not.toContain('event: proposal');
     expect(allRunStream).not.toContain('event: done');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// r68 — graph_patch payload：增量 upsert + 节点/边字段
+// ---------------------------------------------------------------------------
+
+interface SseFrame {
+  event: string;
+  data: unknown;
+}
+
+function parseSseFrames(text: string): SseFrame[] {
+  const frames: SseFrame[] = [];
+  for (const block of text.split('\n\n')) {
+    const lines = block.split('\n');
+    const eventLine = lines.find((l) => l.startsWith('event: '));
+    const dataLine = lines.find((l) => l.startsWith('data: '));
+    if (!eventLine || !dataLine) continue;
+    try {
+      frames.push({ event: eventLine.slice(7).trim(), data: JSON.parse(dataLine.slice(6)) });
+    } catch {
+      // 跨 chunk 截断的半帧：跳过（后续 chunk 拼上后由整体文本重解析）
+    }
+  }
+  return frames;
+}
+
+describe('r68: graph_patch payload expresses incremental fields', () => {
+  // r68 是单条 SSE 流上的端到端断言流：采集/触发/逐补丁断言共享同一 reader
+  // 上下文，按断言拆分会复制易碎的流状态；断言密度即用例价值（Tier 1 测试，
+  // 仓库既有 fallow 抑制先例）。
+  // fallow-ignore-next-line complexity
+  it('write-back and prune patches parse via ResearchStreamEventSchema with conclusionStatus/phase; edges use closed EdgeKind', async () => {
+    const graph = {
+      nodes: [
+        { id: 'node_root_q', role: 'question', title: '问题', conclusionStatus: 'clear' },
+        {
+          id: 'n1',
+          role: 'research',
+          title: '支路A',
+          conclusionStatus: 'pending',
+          evidenceIds: [],
+        },
+        {
+          id: 'n2',
+          role: 'research',
+          title: '支路B',
+          conclusionStatus: 'pending',
+          evidenceIds: [],
+        },
+        { id: 'node_conclusion_1', role: 'conclusion', title: '结论', conclusionStatus: 'pending' },
+      ],
+      edges: [
+        {
+          id: 'e1',
+          source: 'node_root_q',
+          target: 'n1',
+          kind: 'decompose',
+          labelNote: '主拆解',
+        },
+        { id: 'e2', source: 'n1', target: 'n2', kind: 'refine' },
+        { id: 'm1', source: 'n2', target: 'node_conclusion_1', kind: 'merge' },
+      ],
+    };
+    const runId = seedRun(graph);
+
+    const res = await createResearchSseResponse(notebookId, runId);
+    const reader = (res.body as ReadableStream<Uint8Array>).getReader();
+    const decoder = new TextDecoder();
+    // 顺序读取器：超时不弃 read —— 被弃的挂起 read() 仍会消费一帧，导致丢帧。
+    // 复用同一个挂起 Promise，超时窗口过后下一次调用继续等它。
+    let pendingRead: Promise<string | null> | null = null;
+    const readChunk = async (ms: number): Promise<string | null> => {
+      pendingRead ??= reader
+        .read()
+        .then((r) => (r.done ? null : decoder.decode(r.value, { stream: true })));
+      const winner = await Promise.race([pendingRead, Bun.sleep(ms).then(() => null)]);
+      if (winner !== null) pendingRead = null;
+      return winner;
+    };
+
+    // 先让初始 replay（status + 全量 graph_patch）流出并建立订阅。
+    let text = '';
+    for (let i = 0; i < 6; i++) {
+      const chunk = await readChunk(150);
+      if (chunk === null) break;
+      text += chunk;
+    }
+
+    // ① 节点写回：增量 upsert 单节点（conclusionStatus/phase/evidenceIds）。
+    await writeBackNodeWork(runId, 'n1', ['ev_r68'], {
+      summary: '支路A 综合完成',
+      conclusionStatus: 'partial',
+    });
+
+    // ② prune：闭包 {n1,n2} 标记式 upsert（保留节点与 merge 边，r69 语义）。
+    const { pruneNode } = await import('../../src/features/research/node-actions.ts');
+    await pruneNode(notebookId, runId, 'n1');
+
+    // 收流直到看到 prune 补丁（或读尽）。
+    const sawPrunePatch = () =>
+      parseSseFrames(text).some(
+        (f) =>
+          f.event === 'graph_patch' &&
+          Array.isArray(
+            (f.data as { nodes?: Array<{ id?: string; conclusionStatus?: string }> }).nodes,
+          ) &&
+          (f.data as { nodes: Array<{ id: string; conclusionStatus: string }> }).nodes.some(
+            (n) => n.id === 'n2' && n.conclusionStatus === 'pruned',
+          ),
+      );
+    for (let i = 0; i < 14 && !sawPrunePatch(); i++) {
+      const chunk = await readChunk(150);
+      if (chunk !== null) text += chunk;
+    }
+    await reader.cancel();
+
+    // 每个 graph_patch 事件都用 shared ResearchStreamEventSchema 反解成功
+    //（闭集 EdgeKind / conclusionStatus 枚举由 schema 强制）。
+    const patches = parseSseFrames(text)
+      .filter((f) => f.event === 'graph_patch')
+      .map(
+        (f) =>
+          ResearchStreamEventSchema.parse({ event: 'graph_patch', data: f.data }) as {
+            event: 'graph_patch';
+            data: ResearchGraphPatch;
+          },
+      );
+    expect(patches.length).toBeGreaterThanOrEqual(2);
+
+    // 初始 replay 补丁：边携带闭集 kind 与可选 labelNote。
+    const replay = patches.find((p) => (p.data.nodes ?? []).some((n) => n.id === 'node_root_q'));
+    expect(replay).toBeDefined();
+    const replayEdge = replay!.data.edges?.find((e) => e.id === 'e1');
+    expect(replayEdge?.kind).toBe('decompose');
+    expect(replayEdge?.labelNote).toBe('主拆解');
+    expect(replay!.data.edges?.find((e) => e.id === 'm1')?.kind).toBe('merge');
+
+    // 写回补丁：仅 upsert n1，带 conclusionStatus/phase/evidenceIds；无 remove 列表。
+    const writeBack = patches.find((p) =>
+      (p.data.nodes ?? []).some((n) => n.id === 'n1' && n.conclusionStatus === 'partial'),
+    );
+    expect(writeBack).toBeDefined();
+    const wbNode = writeBack!.data.nodes!.find((n) => n.id === 'n1')!;
+    expect(wbNode.conclusionStatus).toBe('partial');
+    expect(wbNode.phase).toBe('idle');
+    expect(wbNode.evidenceIds).toEqual(['ev_r68']);
+    expect(writeBack!.data.removeNodeIds).toBeUndefined();
+    expect(writeBack!.data.removeEdgeIds).toBeUndefined();
+
+    // prune 补丁：闭包 {n1,n2} 全部标 pruned；标记式而非移除式（无 remove 列表）。
+    const prunePatch = patches.find((p) =>
+      (p.data.nodes ?? []).some((n) => n.id === 'n2' && n.conclusionStatus === 'pruned'),
+    );
+    expect(prunePatch).toBeDefined();
+    expect((prunePatch!.data.nodes ?? []).map((n) => n.id).sort()).toEqual(['n1', 'n2']);
+    for (const n of prunePatch!.data.nodes ?? []) {
+      expect(n.conclusionStatus).toBe('pruned');
+      expect(n.phase).toBe('idle');
+    }
+    expect(prunePatch!.data.removeNodeIds).toBeUndefined();
+    expect(prunePatch!.data.removeEdgeIds).toBeUndefined();
   });
 });
