@@ -158,16 +158,21 @@ type-aware-lint:
 check-bun:
     @command -v bun >/dev/null || (echo "bun not found on PATH" >&2; exit 1)
 
-# Primary PR gate: typecheck, lint, format-check, generated-config drift,
-# fallow changed-file audit (dead code/complexity/dupe/CSS 新增问题),
-# server+shared unit/integration, frontend Rstest (`test:ci`), Playwright @p0.
+# 全部静态检查聚合：typecheck/lint/format + 生成物/环境/i18n/provider 漂移
+# + spec 双门禁（check-spec-test-paths / check-spec-covers）+ fallow 架构环。
+# CI（ci.yml check job）与 qa 共用此入口——新增静态门禁只改这里，不动 ci.yml。
+check-static: check check-env-examples check-app-schema check-i18n-keys check-spec-test-paths check-spec-covers check-provider-deps audit-fallow-arch
+
+# Primary PR gate: 静态聚合（check-static）+ fallow changed-file audit
+# (dead code/complexity/dupe/CSS 新增问题), server+shared unit/integration,
+# frontend Rstest (`test:ci`), Playwright @p0.
 # Output minimized — only errors and warnings shown.
 #
 # Out of gate (run separately when relevant):
 #   - `just test-bdd` — server BDD CRUD subset
 #   - `just type-aware-lint` — advisory type-aware oxlint
 # Requires Chromium once: `just e2e-install` (or system Chrome; see e2e recipe)
-qa: check check-env-examples check-app-schema check-i18n-keys check-spec-test-paths check-spec-covers check-provider-deps audit-fallow audit-fallow-arch test test-web e2e
+qa: check-static audit-fallow test test-web e2e
     @echo "✅ QA passed"
 
 # Server + shared unit/integration tests — L0: 仅错误级应用日志 + 失败

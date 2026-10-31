@@ -11,7 +11,7 @@
     场景: lint-and-format-inside-just-check
       假如 检查 justfile 的 qa 与 check 配方
       当 检查 justfile 的 qa 与 check 配方组成
-      那么 qa 配方依赖 check 且 check 依赖 typecheck、lint、format-check
+      那么 qa 依赖 check-static 且其经 check 依赖 typecheck、lint、format-check
       而且 任一检查失败时主门禁以非 0 退出
   @req:r214
   规则: Frontend JS/TS lint uses Oxc entrypoints
@@ -56,7 +56,7 @@
     场景: drift-checks-gated-by-just-qa
       假如 检查 justfile 的 qa、check-env-examples 与 check-app-schema 配方
       当 检查 check-env-examples 与 check-app-schema 配方的 --check 形态
-      那么 qa 配方依赖 check-env-examples 与 check-app-schema
+      那么 qa 经 check-static 依赖 check-env-examples 与 check-app-schema
       而且 两个配方都以 --check 运行，发现漂移即非 0 退出
   @req:r219
   规则: Local default unit entrypoints are scoped

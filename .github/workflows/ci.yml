@@ -1,6 +1,7 @@
 name: CI
 
-# Test-acceptance gate — the CI equivalent of `just qa` (see justfile).
+# Test-acceptance gate — the CI equivalent of `just qa` (static checks
+# aggregate behind `just check-static`; see justfile).
 # All checks invoke `just` recipes so commands are SSOT with the local
 # toolchain (bun/node versions pinned by .bun-version / .node-version).
 # e2e is fully mocked (mock-openai-gateway, isolated ports/DB) and needs no
@@ -52,12 +53,8 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      # SSOT: 都调 just 配方(定义在 justfile, 与本地完全一致)
-      - run: just check
-      - run: just check-env-examples
-      - run: just check-app-schema
-      - run: just check-i18n-keys
-      - run: just check-provider-deps
+      # SSOT: 静态门禁聚合入口（justfile `check-static`）——新增静态检查只改 justfile
+      - run: just check-static
       # fallow changed-file gate(与本地 just qa 同一配方; PR 上自动 diff origin 分支)
       # 显式 --base: push 事件无 PR 语义时也稳定; fork PR 注解无需写权限
       - name: Fallow audit (changed files gate)

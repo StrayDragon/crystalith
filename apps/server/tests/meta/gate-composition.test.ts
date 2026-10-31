@@ -38,21 +38,29 @@ function recipe(name: string): Recipe {
 }
 
 describe('r213+r216+r218 just qa composition', () => {
-  it('qa pulls in check (typecheck/lint/format) + test + test-web + drift checks', () => {
+  it('qa = check-static + audit-fallow + test + test-web + e2e; check-static aggregates static gates', () => {
     const qa = recipe('qa');
-    expect(qa.deps).toContain('check');
+    expect(qa.deps).toContain('check-static');
     expect(qa.deps).toContain('test');
     expect(qa.deps).toContain('test-web');
-    expect(qa.deps).toContain('check-env-examples');
-    expect(qa.deps).toContain('check-app-schema');
+    // r217: e2e is part of the primary gate
+    expect(qa.deps).toContain('e2e');
+    // 静态聚合：qa 与 CI 共用的单一静态入口（新增静态门禁只改 check-static）
+    const cs = recipe('check-static');
+    expect(cs.deps).toContain('check');
+    expect(cs.deps).toContain('check-env-examples');
+    expect(cs.deps).toContain('check-app-schema');
+    expect(cs.deps).toContain('check-i18n-keys');
+    expect(cs.deps).toContain('check-spec-test-paths');
+    expect(cs.deps).toContain('check-spec-covers');
+    expect(cs.deps).toContain('check-provider-deps');
+    expect(cs.deps).toContain('audit-fallow-arch');
     const check = recipe('check');
     expect(check.deps).toContain('typecheck');
     expect(check.deps).toContain('lint');
     expect(check.deps).toContain('format-check');
     expect(recipe('check-env-examples').body).toContain('--check');
     expect(recipe('check-app-schema').body).toContain('--check');
-    // r217: e2e is part of the primary gate
-    expect(qa.deps).toContain('e2e');
   });
 });
 
