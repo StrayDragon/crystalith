@@ -1,1 +1,32 @@
-{}
+{
+  "r208": {
+    "capability": "public-repo-hygiene",
+    "reason": "repo-hygiene.test.ts 已删（配置镜像清理），无替代",
+    "seam": "恢复静态检查或并入 release 冒烟"
+  },
+  "r210": {
+    "capability": "public-repo-hygiene",
+    "reason": "repo-hygiene 测试已删，模板字段无机器检查",
+    "seam": "模板字段静态检查"
+  },
+  "r212": {
+    "capability": "public-repo-hygiene",
+    "reason": "repo-hygiene 测试已删；release 冒烟仅 boot+/health+建笔记本，不查工件组成",
+    "seam": "build-release allowlist 静态检查"
+  },
+  "r236": {
+    "capability": "slides-workflow-plugins",
+    "reason": "插件契约面收窄（仅 buildSlidesConfigSchema 入契约）",
+    "seam": "扩契约+契约面完整性测试"
+  },
+  "r237": {
+    "capability": "slides-workflow-plugins",
+    "reason": "无多候选选择逻辑（implOf 定值）",
+    "seam": "实现选择器+歧义诊断测试"
+  },
+  "r347": {
+    "capability": "workspace-api-contract",
+    "reason": "无限流中间件触发方（仅信封能力存在）",
+    "seam": "限流中间件触发 429 断言 envelope.retryAfter"
+  }
+}
