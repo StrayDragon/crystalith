@@ -26,6 +26,9 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+          # fallow 审计要 diff origin/<base_ref>（FALLOW_AUDIT_BASE），
+          # 默认 fetch-depth: 1 的 PR shallow clone 里没有该 ref
+          fetch-depth: 0
 
       - uses: oven-sh/setup-bun@v2
         with:

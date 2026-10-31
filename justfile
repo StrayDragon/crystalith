@@ -139,7 +139,7 @@ check: typecheck lint format-check
 # Fallow PR 审计 — 只对变更文件 gate（新增问题才 fail，继承问题豁免）。
 # L0: 仅 verdict + 摘要; L2: 全量报告。本地未提交时 scope=工作树 vs merge-base。
 # fallow 是 devDependency，经 `bun run` 走 node_modules/.bin（bun install 后即可用）。
-# CI (GitHub Actions) 用 `bun run fallow audit --base origin/$GITHUB_BASE_REF`，见 ci.yml。
+# CI (GitHub Actions) 经 FALLOW_AUDIT_BASE=origin/$GITHUB_BASE_REF 传 base（ci.yml 需非 shallow checkout），见 ci.yml。
 audit-fallow:
     @bun run fallow audit {{ _qfallow }}
 
