@@ -1,0 +1,61 @@
+// covers: r333/r336（web-extractor-plugins）——提取器清单字段形状与按可用性定默认。
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+
+import { pluginRegistry } from '../../src/plugins/registry.ts';
+import { resetConfig } from '../../src/shared/config.ts';
+import { getDefaultExtractor, listExtractorMetadata } from '../../src/shared/extraction/factory.ts';
+
+// Seed default-order plugin policy BEFORE first ensureLoaded — repo app.yaml
+// carries a `load_order: ["extractor-arxiv"]` trial that must not leak here.
+beforeAll(async () => {
+  resetConfig({
+    models: { defaults: { chat: 'test-chat' }, available: [] },
+    raw: {},
+  });
+  pluginRegistry.reset();
+  await pluginRegistry.ensureLoaded();
+});
+
+afterAll(() => {
+  pluginRegistry.reset();
+});
+
+describe('listExtractorMetadata field shape', () => {
+  it('each extractor has type, enabled, description, requiresService', () => {
+    const meta = listExtractorMetadata({});
+    for (const e of meta) {
+      expect(e.type).toBeDefined();
+      expect(typeof e.enabled).toBe('boolean');
+      expect(typeof e.description).toBe('string');
+      expect(e.description.length).toBeGreaterThan(0);
+      expect(typeof e.requiresService).toBe('boolean');
+      expect(typeof e.displayName).toBe('string');
+    }
+  });
+
+  it('readability does not require a service; jina/firecrawl do', () => {
+    const meta = listExtractorMetadata({});
+    const readability = meta.find((e) => e.name === 'readability')!;
+    const jina = meta.find((e) => e.name === 'jina')!;
+    const firecrawl = meta.find((e) => e.name === 'firecrawl')!;
+    expect(readability.requiresService).toBe(false);
+    expect(jina.requiresService).toBe(true);
+    expect(firecrawl.requiresService).toBe(true);
+  });
+
+  it('arxiv exposes urlPatterns; generic builtins do not', () => {
+    const meta = listExtractorMetadata({});
+    const arxiv = meta.find((e) => e.name === 'arxiv');
+    const readability = meta.find((e) => e.name === 'readability')!;
+    expect(arxiv?.urlPatterns?.length).toBeGreaterThan(0);
+    expect(readability.urlPatterns).toBeNull();
+  });
+});
+
+describe('getDefaultExtractor by availability', () => {
+  it('returns first available extractor', () => {
+    // With empty config, readability should be available (no key needed)
+    const def = getDefaultExtractor({});
+    expect(def).toBe('readability');
+  });
+});

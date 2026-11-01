@@ -33,7 +33,7 @@
     draft `running` 时 MUST 防并发重复（返回 busy 事件而非覆盖）；stale running（超过阈值；默认值来自 config schema）MUST 先清理再继续；清理 MUST 将 status 置为 IDLE、清空 errorMessage（置 null）并返回 bool，MUST NOT 写入非空诊断文案。
   
     场景: busy-guard-and-stale-cleanup
-      假如 studio 集成环境就绪且某 slide 处于非 stale 的 running 状态（tests/studio/deferred-lock.test.ts）
+      假如 某 slide 处于非 stale 的 running 生成状态
       当 再次发起该 slide 的生成流
       那么 返回 busy SSE 事件（携带 traceId/slideId）而非开启第二个流
       而且 对超过阈值的 stale running 执行清理时
@@ -84,7 +84,7 @@
     studio slide 序列化结果 MUST 返回 outputId（可为 null）与 generationConfig 字段（camelCase wire）；前端读 outputId 做 slide→output 跳转、读 generationConfig 复用配置
   
     场景: slide-serialization-carries-output-and-config
-      假如 studio 集成环境就绪（tests/studio/deferred-lock.test.ts）
+      假如 studio 生成环境就绪
       当 读取 slide 详情
       那么 序列化结果包含 camelCase 的 outputId（可为 null）与 generationConfig 字段
 
@@ -93,7 +93,7 @@
     studio SSE 的 done 事件 payload MUST 为 {traceId, slideId}（camelCase），MUST NOT 直接序列化整个 slide；且所有 SSE 事件 SHALL 携带 traceId 以支持关联/可观测性；outline/markdown 各生成阶段前 SHALL 发 toolcall 事件（对齐既有语义）
   
     场景: done-payload-is-traceid-and-slideid
-      假如 studio 集成环境就绪（tests/studio/deferred-lock.test.ts）
+      假如 studio 生成环境就绪
       当 生成流发出 done 事件
       那么 payload 键集恰为 {traceId, slideId} 且不含 markdown/generationConfig 等全量 slide 字段
 

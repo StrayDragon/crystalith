@@ -1,3 +1,4 @@
+// covers: r355/r379/r380（workspace-api-contract）——共享 Zod wire 契约 camelCase SSOT（含 CitationSchema）校验。
 // Cross-cutting smoke tests for the shared Zod schemas SSOT.
 // Guards against drift between the server route layer and the frontend eden
 // treaty client — both consume these schemas directly.

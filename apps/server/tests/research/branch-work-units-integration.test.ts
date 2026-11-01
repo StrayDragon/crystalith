@@ -1,3 +1,4 @@
+// covers: r81（deep-research-runtime）——各 research 节点逐 work-unit 检索/综合写回并记录 unit_started 账本，research→conclusion merge 边保留。
 /**
  * c94: after decompose, each research node gets a work-unit + evidence writeback.
  * Mocks AI / web-search before createApp.
@@ -66,7 +67,7 @@ async function waitForStatus(runId: number, wanted: string[], timeoutMs = 8000):
   throw new Error(`timeout status; last=${last}`);
 }
 
-describe('research branch work-units (c94)', () => {
+describe('research branch work-units)', () => {
   it('drains each research node with evidenceIds; merge edges remain', async () => {
     const create = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {

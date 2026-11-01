@@ -1,3 +1,4 @@
+// covers: r156（frontend-eden-migration）
 import { beforeEach, expect, test } from '@rstest/core';
 import { act, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';

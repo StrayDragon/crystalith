@@ -1,3 +1,4 @@
+// covers: r203（output-rendering-and-typing）+ r167（generation-core）——被引用 citation 子集按 camelCase wire 收集去重（仅被引用 chunk，按 chunkId 首现去重）。
 // Unit tests for collectCitedCitations — the content-tree walker that collects
 // the cited-subset of citations (v1 _collect_output_citations parity, P1-6).
 // Verifies dedup by chunkId, first-seen ordering, nested-tree traversal, and

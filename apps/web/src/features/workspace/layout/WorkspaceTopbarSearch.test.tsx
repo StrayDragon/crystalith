@@ -1,3 +1,4 @@
+// covers: r397（workspace-ui-core）——顶栏搜索入口打开锚定 E1 宽幅面板（KB/Fast 双模式、来源搜索输入与提交），Esc/遮罩关闭走统一策略。
 import type { SearchResponse } from '@crystalith/shared';
 import { beforeEach, expect, test, rs } from '@rstest/core';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';

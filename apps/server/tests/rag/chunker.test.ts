@@ -1,3 +1,4 @@
+// covers: r230（retrieval-and-cache）——带重叠滑动窗口分块、参数可配置。
 // Tests for the chunker (config-driven chunk_size, default 512 per v1 embedding.chunk_size).
 import { afterEach, describe, expect, it } from 'bun:test';
 

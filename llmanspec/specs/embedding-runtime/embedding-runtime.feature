@@ -10,7 +10,7 @@
 
     场景: config-rejects-invalid-embedding-block
       假如 app.yaml 的某个 embed 模型条目携带 embedding 块
-      当 运行 apps/server/tests/config.test.ts 的 embedding 声明解析用例（dims 非正整数 / prefixPreset 未知名 / 合法块）
+      当 装载携带 embedding 声明块的模型配置（非法 dims / 未知名 prefixPreset / 合法块各一）
       那么 非法块被拒绝并给出可读错误
       而且 合法块解析出的字段与声明一致并在 ModelInfo 中原样透出
 
@@ -20,7 +20,7 @@
 
     场景: preset-applies-both-roles
       假如 注入假 embed 模型并选择 embeddinggemma2 预设
-      当 运行 apps/server/tests/rag/embedding-engine.test.ts 的前缀用例
+      当 以查询与文档两种角色嵌入文本
       那么 query 侧输入为 "task: search result | query: {原文}"
       而且 document 侧输入为 "title: {title 或 none} | text: {原文}"
 
@@ -30,7 +30,7 @@
 
     场景: undeclared-model-zero-prefix-regression
       假如 默认 embedding 模型未携带任何 embedding 声明
-      当 运行 apps/server/tests/rag/embedding-engine.test.ts 的零前缀用例，并回归 rag/embed-similarity.test.ts 与 rag/unified-retrieval.test.ts 全量用例
+      当 模型未声明前缀预设时嵌入原文并回归既有检索行为
       那么 输入文本原样送达 provider（零前缀）
       而且 既有检索断言全部通过
 
@@ -40,7 +40,7 @@
 
     场景: provider-dim-mismatch-errors
       假如 假 embed 模型返回的向量长度与声明 dims 不符
-      当 运行 apps/server/tests/rag/embedding-engine.test.ts 的维度断言用例
+      当 provider 返回的向量维度与声明不一致
       那么 抛出的错误包含声明维度与实际维度
       而且 没有任何向量写入发生
 
@@ -61,7 +61,7 @@
 
     场景: migration-adds-metadata-with-defaults
       假如 存量库已包含 chunks 行
-      当 执行迁移后运行 apps/server/tests/db.test.ts 的元数据列用例
+      当 执行数据库迁移后检查 chunks 索引元数据列
       那么 新列存在且 modality 全为 text、origin_type 全为 source、origin_id 等于 source_id
       而且 FTS5 同步触发器行为不变（keyword 策略回归通过）
 

@@ -25,7 +25,7 @@ const events: LabProgressLedgerItem[] = [
   },
 ];
 
-describe('LabProgressBar ledger (c95)', () => {
+describe('LabProgressBar ledger)', () => {
   it('shows real pct and expandable ledger timeline', () => {
     render(
       <LayerProvider>

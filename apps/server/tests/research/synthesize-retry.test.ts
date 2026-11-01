@@ -1,3 +1,4 @@
+// covers: r62/r82/r83/r84/r85/r435/r436/r437（deep-research-runtime）——结构化 LLM 报告成稿（无启发式证据清单）、悬空 cite 剥离与全非法即 synthesize_failed、结案抛错置 failed、retry-synthesize 复用成稿且拒绝非结案失败/completed 态、modelId 创建持久化与重试写回。
 /**
  * c102 — LLM synthesize cite bind, failure, retry-synthesize, modelId persist.
  */
@@ -247,7 +248,7 @@ describe('validateAndBindCitations (unit)', () => {
   });
 });
 
-describe('research synthesize + retry (c102)', () => {
+describe('research synthesize + retry)', () => {
   it('create persists modelId and GET exposes failureReason alias', async () => {
     const res = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {

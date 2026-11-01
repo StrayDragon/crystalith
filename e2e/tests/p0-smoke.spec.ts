@@ -1,3 +1,4 @@
+// covers: r112/r344/r444（deep-research-ui + workspace-api-contract）——p0 冒烟以 testid 断言 Lab 入口可达；业务 API 请求路径均以 /v2 开头。
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -49,12 +50,28 @@ test.describe('@p0 workspace smoke', () => {
     await gotoWorkspace(page);
   });
 
-  test('A01: workspace shell mounts', async ({ page }) => {
+  // Surface inventory — 原 A01/A04/N02/S01/S05/C01/L02 七个纯存在性用例合并：
+  // 同一初始页面上的可见性/挂载断言集中检查（无交互、无状态依赖）；行为
+  // 断言（dialog 打开内容、输入、流程）仍在各自用例。
+  test('A01: workspace shell mounts with core surface inventory', async ({ page }) => {
     await expect(page.getByTestId(TestIds.workspaceRoot)).toBeVisible();
     await expect(page.getByTestId(TestIds.workspaceHeader)).toBeVisible();
     await expect(page.getByTestId(TestIds.sourcesPanel)).toBeVisible();
     await expect(page.getByTestId(TestIds.chatPanel)).toBeVisible();
     await expect(page.getByTestId(TestIds.studioPanel)).toBeVisible();
+    await expect(page.getByTestId(TestIds.onboardingBanner)).toHaveCount(0);
+    const create = page.getByTestId(TestIds.notebookCreateButton);
+    await expect(create).toBeVisible();
+    await expect(create).toHaveAttribute('aria-label', '新建笔记本');
+    await expect(create.locator('svg')).toBeVisible();
+    const count = page.getByTestId(TestIds.sourcesCount);
+    const empty = page.getByTestId(TestIds.sourcesEmpty);
+    await expect(count.or(empty).first()).toBeVisible();
+    await expect(page.getByTestId(TestIds.sourcesAdd)).toBeVisible();
+    await expect(page.getByTestId(TestIds.sourcesUploadInput)).toBeAttached();
+    await expect(page.getByTestId(TestIds.chatInput)).toBeVisible();
+    await expect(page.getByTestId(TestIds.chatSend)).toBeVisible();
+    await expect(page.getByTestId(TestIds.layoutLockToggle)).toBeVisible();
   });
 
   test('A02: API health via dev-server proxy', async ({ page }) => {
@@ -75,22 +92,11 @@ test.describe('@p0 workspace smoke', () => {
     }
   });
 
-  test('A04: onboarding banner is not shown', async ({ page }) => {
-    await expect(page.getByTestId(TestIds.onboardingBanner)).toHaveCount(0);
-  });
-
   test('N01: notebook switcher opens by testid', async ({ page }) => {
     await page.getByTestId(TestIds.notebookSwitcherTrigger).click();
     await expect(page.getByTestId(TestIds.notebookSwitcherOverlay)).toBeVisible();
     await expect(page.getByTestId(TestIds.notebookList)).toBeVisible();
     await page.keyboard.press('Escape');
-  });
-
-  test('N02: create notebook control is present and visible', async ({ page }) => {
-    const create = page.getByTestId(TestIds.notebookCreateButton);
-    await expect(create).toBeVisible();
-    await expect(create).toHaveAttribute('aria-label', '新建笔记本');
-    await expect(create.locator('svg')).toBeVisible();
   });
 
   test('N03: create notebook via API appears in switcher', async ({ page }) => {
@@ -104,12 +110,6 @@ test.describe('@p0 workspace smoke', () => {
     await expect(page.getByTestId(TestIds.notebookSwitcherOverlay)).toBeVisible();
     await expect(page.getByTestId(TestIds.notebookOption).first()).toBeVisible();
     await page.keyboard.press('Escape');
-  });
-
-  test('S01: sources panel empty or count visible', async ({ page }) => {
-    const count = page.getByTestId(TestIds.sourcesCount);
-    const empty = page.getByTestId(TestIds.sourcesEmpty);
-    await expect(count.or(empty).first()).toBeVisible();
   });
 
   test('S02: connectors dialog opens', async ({ page }) => {
@@ -133,11 +133,6 @@ test.describe('@p0 workspace smoke', () => {
     await expect(page.getByTestId(TestIds.urlImportModeLink)).toBeVisible();
     await expect(page.getByTestId(TestIds.urlImportModeFetch)).toBeVisible();
     await page.getByTestId(TestIds.urlImportCancel).click();
-  });
-
-  test('S05: upload controls exist', async ({ page }) => {
-    await expect(page.getByTestId(TestIds.sourcesAdd)).toBeVisible();
-    await expect(page.getByTestId(TestIds.sourcesUploadInput)).toBeAttached();
   });
 
   test('S06: topbar search panel opens with KB default + Fast mode reachable', async ({ page }) => {
@@ -183,9 +178,7 @@ test.describe('@p0 workspace smoke', () => {
     await expect(page.getByTestId(TestIds.sourceDetailTabRaw)).toBeVisible();
     await page.getByTestId(TestIds.sourceDetailClose).click();
     await expect(page.getByTestId(TestIds.sourceDetailDialog)).toHaveCount(0);
-  });
-
-  test('S09: source row exposes selectable checkbox', async ({ page }) => {
+    // 原 S09：播种行暴露可选 checkbox（依赖 S08 的播种，就近并入）。
     await expect(page.getByTestId(TestIds.sourceRowCheckbox).first()).toBeAttached({
       timeout: 20_000,
     });
@@ -230,11 +223,6 @@ test.describe('@p0 workspace smoke', () => {
     await page.keyboard.press('Escape');
   });
 
-  test('C01: chat input and send controls exist', async ({ page }) => {
-    await expect(page.getByTestId(TestIds.chatInput)).toBeVisible();
-    await expect(page.getByTestId(TestIds.chatSend)).toBeVisible();
-  });
-
   test('C02: session switcher opens', async ({ page }) => {
     await page.getByTestId(TestIds.sessionSwitcherTrigger).click();
     await expect(page.getByTestId(TestIds.sessionSwitcherOverlay)).toBeVisible();
@@ -273,10 +261,6 @@ test.describe('@p0 workspace smoke', () => {
     await expect(page.getByTestId(TestIds.commandPalette)).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId(TestIds.commandPalette)).toHaveCount(0);
-  });
-
-  test('L02: layout lock toggle is present', async ({ page }) => {
-    await expect(page.getByTestId(TestIds.layoutLockToggle)).toBeVisible();
   });
 
   test('L03: user menu opens diagnostics via testid', async ({ page }) => {

@@ -10,7 +10,7 @@
 
     场景: briefing-toc-navigation-and-fold
       假如 briefing 输出渲染 ReportViewer 的章节目录与可折叠章节
-      当 运行 ReportViewer.test.tsx 的目录与折叠用例
+      当 浏览该 briefing 输出并点击目录条目与折叠章节
       那么 点击目录条目滚动定位到对应章节
       而且 章节可折叠/展开且首章节默认展开
   @req:r300
@@ -19,7 +19,7 @@
 
     场景: guide-checklist-progress-cues
       假如 guide 输出渲染 GuideChecklist 的可勾选学习路径
-      当 运行 GuideChecklist.test.tsx 勾选/取消模块
+      当 勾选再取消某个学习模块
       那么 进度提示（已完成 n/N 与百分比）随之更新
       而且 勾选控件保持可用、可反复切换
   @req:r301
@@ -28,7 +28,7 @@
 
     场景: flashcard-flip-and-navigation
       假如 flashcard 输出渲染 FlashcardViewer 的卡片
-      当 运行 FlashcardViewer.test.tsx 的翻面与导航用例
+      当 翻面卡片并在卡片间前后导航
       那么 点击/空格键可翻面且 aria 状态同步切换
       而且 上一张/下一张（含左右键）驱动学习进度指示并在边界处禁用
   @req:r302
@@ -36,7 +36,7 @@
     mindmap 输出 MUST 支持只读浏览与节点折叠/展开控制。
   
     场景: mindmap-collapsible-read-only
-      假如 渲染含多级子节点的 mindmap 输出（MindmapViewer.test）
+      假如 渲染含多级子节点的 mindmap 输出
       当 点击分支节点折叠再展开
       那么 折叠后子节点隐藏并显示子节点计数、展开后还原
       而且 视图不提供任何编辑入口（只读）
@@ -46,7 +46,7 @@
     quiz 输出 MUST 支持作答、即时反馈与结果汇总查看。
   
     场景: quiz-answering-feedback-and-summary
-      假如 渲染含两道单选题的 quiz 输出（QuizRunner.test）
+      假如 渲染含两道单选题的 quiz 输出
       当 依次作答并提交
       那么 每题提交后立即显示对/错反馈（错题附正确答案与解析）
       而且 全部完成后显示正确率与答对计数的汇总并支持重做
@@ -74,7 +74,7 @@
     studio 的输出同步 MUST (1) 写 studioSlides.outputId 外键，(2) content schema 为 camelCase：content={title, engine, outline, markdown, slideId}。任何依赖 slide→output join 的 UI/查询 MUST 使用 outputId FK
 
     场景: studio-sync-writes-outputid-fk-and-camelcase-content
-      假如 studio 幻灯片经历输出同步（output-sync-fk.test.ts 的首次/重复/legacy 同步）
+      假如 studio 幻灯片经历首次、重复与 legacy 形态的输出同步
       当 同步完成并回读 studioSlides 与 outputs 行
       那么 studioSlides.outputId 外键被写入且 join 查询走 outputId
       而且 content 为 camelCase 全量形状 {title, engine, outline, markdown, slideId} 且重复同步复用同一 Output 行

@@ -1,3 +1,4 @@
+// covers: r52/r257/r258（data-and-storage + source-ingestion-core）
 // c123 — ingestion parser defects:
 //   r257 — deterministic parser selection + parserType recorded on the row
 //   r258 — core profile: txt/md/markdown/csv supported, others rejected

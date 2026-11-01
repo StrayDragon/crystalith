@@ -1,0 +1,585 @@
+// covers: r474（embedding-runtime）
+// Tests for the template-rendering config loader.
+import { afterEach, describe, expect, it } from 'bun:test';
+import { writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import {
+  loadConfig,
+  resetConfig,
+  getModelById,
+  getDefaultChatModel,
+  getSecurityPolicy,
+  getUploadMaxBytes,
+  getAiSettings,
+  getConcurrencySettings,
+  getEmbeddingSettings,
+  getContextWindowSettings,
+  getSearchSettings,
+  getSearxngHost,
+  getOptionalServices,
+  getCompletionOptions,
+} from '../../src/shared/config.ts';
+
+const TMP = join(tmpdir(), `crystalith-test-config-${process.pid}.yaml`);
+
+afterEach(() => {
+  resetConfig();
+  rmSync(TMP, { force: true });
+  delete process.env.CL_SEARXNG_HOST;
+  delete process.env.SEARXNG_HOST;
+  delete process.env.MY_CHAT_OVERRIDE;
+});
+
+describe('config: template rendering', () => {
+  it("renders {{ env.KEY | default('x') }} expressions", () => {
+    writeFileSync(
+      TMP,
+      `name: test
+models:
+  defaults:
+    chat: "{{ env.MY_CHAT | default('fallback-chat') }}"
+  available:
+    - id: "fallback-chat"
+      provider: "openai"
+      model: "gpt-4o"
+      displayName: "Fallback"
+      roles: [chat]
+`,
+    );
+    // Bun 1.4 / Node semantics: assigning undefined stores "undefined" — delete instead.
+    delete process.env.MY_CHAT;
+    const cfg = loadConfig(TMP);
+    expect(cfg.models.defaults.chat).toBe('fallback-chat');
+  });
+
+  it('picks up env override when set', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults:
+    chat: "{{ env.MY_CHAT_OVERRIDE | default('fb') }}"
+  available:
+    - id: "fb"
+      provider: "openai"
+      model: "m"
+      displayName: "F"
+      roles: [chat]
+    - id: "custom"
+      provider: "openai"
+      model: "m2"
+      displayName: "C"
+      roles: [chat]
+`,
+    );
+    process.env.MY_CHAT_OVERRIDE = 'custom';
+    const cfg = loadConfig(TMP);
+    resetConfig(cfg);
+    expect(cfg.models.defaults.chat).toBe('custom');
+    expect(getModelById('custom')).toBeDefined();
+    delete process.env.MY_CHAT_OVERRIDE;
+  });
+
+  it('validates models defaults exist in available', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults:
+    chat: "nonexistent"
+  available: []
+`,
+    );
+    expect(() => loadConfig(TMP)).toThrow();
+  });
+
+  it('returns empty config when file is missing', () => {
+    const cfg = loadConfig('data/does-not-exist.yaml');
+    expect(cfg.models.available).toEqual([]);
+  });
+
+  it('getDefaultChatModel falls back to first chat-role model', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available:
+    - id: "m1"
+      provider: "openai"
+      model: "gpt"
+      displayName: "M1"
+      roles: [chat]
+`,
+    );
+    const cfg = loadConfig(TMP);
+    resetConfig(cfg);
+    expect(getDefaultChatModel()?.id).toBe('m1');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// c25: SSRF security policy + upload max bytes config parsing
+// ---------------------------------------------------------------------------
+
+describe('config: security policy parsing', () => {
+  it('returns empty policy when security section is absent', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    // Now returns typed defaults instead of empty object (c63+ typed accessor).
+    expect(getSecurityPolicy()).toEqual({
+      allowlistOnly: false,
+      hostAllowlist: undefined,
+      domainAllowlist: undefined,
+      cidrAllowlist: undefined,
+      maxRedirects: 5,
+    });
+  });
+
+  it('parses allowlist_hosts as string array', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+source_ingestion:
+  url_fetch:
+    security:
+      allowlist_hosts:
+        - example.com
+        - trusted.org
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    const policy = getSecurityPolicy();
+    expect(policy.hostAllowlist).toEqual(['example.com', 'trusted.org']);
+  });
+
+  it('parses allowlist_only flag', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+source_ingestion:
+  url_fetch:
+    security:
+      allowlist_only: true
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    expect(getSecurityPolicy().allowlistOnly).toBe(true);
+  });
+
+  it('parses cidrAllowlist', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+source_ingestion:
+  url_fetch:
+    security:
+      allowlist_cidrs:
+        - "10.0.0.0/8"
+        - "192.168.0.0/16"
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    expect(getSecurityPolicy().cidrAllowlist).toEqual(['10.0.0.0/8', '192.168.0.0/16']);
+  });
+});
+
+describe('config: upload max bytes', () => {
+  it('returns 50 MB when config is absent', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    expect(getUploadMaxBytes()).toBe(50 * 1024 * 1024);
+  });
+
+  it('reads upload_max_bytes from app.http_guardrails', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+app:
+  http_guardrails:
+    upload_max_bytes: 1048576
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    expect(getUploadMaxBytes()).toBe(1048576);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// c40: AI / concurrency / embedding / search / completion_options config
+// ---------------------------------------------------------------------------
+
+describe('config: typed sections', () => {
+  it('returns defaults when sections are absent', () => {
+    writeFileSync(TMP, `models:\n  defaults: {}\n  available: []\n`);
+    resetConfig(loadConfig(TMP));
+    expect(getAiSettings()).toEqual({ timeout: 60, max_retries: 3 });
+    expect(getConcurrencySettings()).toEqual({ embedding: 8, vector_search: 8, llm_generate: 4 });
+    expect(getEmbeddingSettings()).toEqual({ chunk_size: 512, batch_size: 32 });
+    expect(getContextWindowSettings().max_tokens).toBe(8000);
+    expect(getCompletionOptions()).toEqual({});
+  });
+
+  it('parses ai section', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+ai:
+  timeout: 120
+  max_retries: 5
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    expect(getAiSettings()).toEqual({ timeout: 120, max_retries: 5 });
+  });
+
+  it('parses concurrency section', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+concurrency:
+  embedding: 4
+  vector_search: 6
+  llm_generate: 2
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    expect(getConcurrencySettings()).toEqual({ embedding: 4, vector_search: 6, llm_generate: 2 });
+  });
+
+  it('parses embedding section', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+embedding:
+  chunk_size: 800
+  batch_size: 64
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    expect(getEmbeddingSettings()).toEqual({ chunk_size: 800, batch_size: 64 });
+  });
+
+  it('parses search.searxng section (v1 key path, not search_engine)', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+search:
+  searxng:
+    host: http://my-searxng:8080
+    max_results: 5
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    const search = getSearchSettings();
+    expect(search.searxng.host).toBe('http://my-searxng:8080');
+    expect(search.searxng.max_results).toBe(5);
+    expect(getSearxngHost()).toBe('http://my-searxng:8080');
+  });
+
+  it('getSearxngHost falls back to env when config host is empty', () => {
+    writeFileSync(TMP, `models:\n  defaults: {}\n  available: []\n`);
+    resetConfig(loadConfig(TMP));
+    delete process.env.CL_SEARXNG_HOST;
+    process.env.SEARXNG_HOST = 'http://env-host:9090';
+    expect(getSearxngHost()).toBe('http://env-host:9090');
+  });
+
+  it('getOptionalServices SearXNG derives from getSearxngHost (ignores yaml endpoint)', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+search:
+  searxng:
+    host: http://ssot-host:8080
+    timeout: 5000
+optional_services:
+  searxng:
+    enabled: true
+    endpoint: http://stale-yaml-host:50201
+    timeout_s: 99
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    delete process.env.CL_SEARXNG_HOST;
+    delete process.env.SEARXNG_HOST;
+    const opt = getOptionalServices();
+    expect(opt.searxng.enabled).toBe(true);
+    expect(opt.searxng.endpoint).toBe('http://ssot-host:8080');
+    // Health probe is capped (≤10s); full search timeout is independent.
+    expect(opt.searxng.timeout_s).toBe(5);
+  });
+
+  it('getOptionalServices caps health probe timeout at 10s', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+search:
+  searxng:
+    host: http://ssot-host:8080
+    timeout: 300000
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    delete process.env.CL_SEARXNG_HOST;
+    delete process.env.SEARXNG_HOST;
+    expect(getSearchSettings().searxng.timeout).toBe(300_000);
+    expect(getOptionalServices().searxng.timeout_s).toBe(10);
+  });
+
+  it('getOptionalServices disables SearXNG when host is empty', () => {
+    writeFileSync(TMP, `models:\n  defaults: {}\n  available: []\n`);
+    resetConfig(loadConfig(TMP));
+    delete process.env.CL_SEARXNG_HOST;
+    delete process.env.SEARXNG_HOST;
+    const opt = getOptionalServices();
+    expect(opt.searxng.enabled).toBe(false);
+    expect(opt.searxng.endpoint).toBeUndefined();
+  });
+
+  it('parses completion_options section', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+completion_options:
+  temperature: 0.7
+  top_p: 0.9
+  stop: ["\\n\\n"]
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    const co = getCompletionOptions();
+    expect(co.temperature).toBe(0.7);
+    expect(co.top_p).toBe(0.9);
+    expect(co.stop).toEqual(['\n\n']);
+  });
+
+  it('returns defaults on invalid values (safeParse fallback)', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+ai:
+  timeout: -5
+  max_retries: "not-a-number"
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    // Invalid values fall back to defaults
+    expect(getAiSettings()).toEqual({ timeout: 60, max_retries: 3 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// c130: embedding capability declaration block (r474 — catalog SSOT)
+// ---------------------------------------------------------------------------
+
+describe('config: embedding capability declaration', () => {
+  it('parses a valid embedding block with all fields', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available:
+    - id: "emb-declared"
+      provider: "openai"
+      model: "bge-m3"
+      displayName: "Emb"
+      roles: [embed]
+      embedding:
+        dims: 1024
+        mrlDims: [256, 512]
+        textOnlyLoad: true
+        prefixPreset: "embeddinggemma2"
+`,
+    );
+    const cfg = loadConfig(TMP);
+    const emb = cfg.models.available[0]?.embedding;
+    expect(emb).toBeDefined();
+    expect(emb?.dims).toBe(1024);
+    expect(emb?.mrlDims).toEqual([256, 512]);
+    expect(emb?.textOnlyLoad).toBe(true);
+    expect(emb?.prefixPreset).toBe('embeddinggemma2');
+    // modalities 未声明时默认 ['text']
+    expect(emb?.modalities).toEqual(['text']);
+  });
+
+  it('rejects non-positive-integer dims', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available:
+    - id: "emb-bad-dims"
+      provider: "openai"
+      model: "bge-m3"
+      displayName: "Emb"
+      roles: [embed]
+      embedding:
+        dims: 0
+`,
+    );
+    expect(() => loadConfig(TMP)).toThrow();
+  });
+
+  it('rejects unknown prefixPreset name with a readable message', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available:
+    - id: "emb-bad-preset"
+      provider: "openai"
+      model: "bge-m3"
+      displayName: "Emb"
+      roles: [embed]
+      embedding:
+        dims: 1024
+        prefixPreset: "nonexistent"
+`,
+    );
+    expect(() => loadConfig(TMP)).toThrow(/nonexistent/);
+  });
+
+  it('parses entries without an embedding block unchanged (regression)', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available:
+    - id: "emb-legacy"
+      provider: "openai"
+      model: "bge-m3"
+      displayName: "Emb"
+      roles: [embed]
+    - id: "chat-legacy"
+      provider: "openai"
+      model: "gpt-4o"
+      displayName: "Chat"
+      roles: [chat]
+`,
+    );
+    const cfg = loadConfig(TMP);
+    expect(cfg.models.available).toHaveLength(2);
+    expect(cfg.models.available[0]?.embedding).toBeUndefined();
+    expect(cfg.models.available[1]?.embedding).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// c131: embeddinggemma2-gateway catalog entry (T1)
+// ---------------------------------------------------------------------------
+
+describe('config: embeddinggemma2-gateway catalog entry)', () => {
+  it('ships the eg2 entry with the full capability block and dedicated gateway', () => {
+    const cfg = loadConfig(join(import.meta.dir, '../../../../config/app.yaml'));
+    const entry = cfg.models.available.find((m) => m.id === 'embeddinggemma2-gateway');
+    expect(entry).toBeDefined();
+    expect(entry?.provider).toBe('openai-compatible');
+    expect(entry?.model).toBe('embeddinggemma-2');
+    expect(entry?.roles).toContain('embed');
+    expect(entry?.embedding).toMatchObject({
+      dims: 768,
+      mrlDims: [768, 512, 256, 128],
+      modalities: ['text'],
+      prefixPreset: 'embeddinggemma2',
+    });
+    // Dedicated anchor (env-driven; unset renders the NOT-SET placeholder —
+    // no assumed gateway address, set CL_EMBEDDING2_API_BASE for real).
+    expect(entry?.providerConfig?.baseUrl).toBe('NOT-SET');
+  });
+
+  it('defaults.embedding points at the eg2 entry (c131 T8 flip)', () => {
+    delete process.env.CL_DEFAULT_EMBEDDING_MODEL;
+    const cfg = loadConfig(join(import.meta.dir, '../../../../config/app.yaml'));
+    expect(cfg.models.defaults.embedding).toBe('embeddinggemma2-gateway');
+    // And that id actually resolves to the eg2 entry.
+    expect(cfg.models.available.find((m) => m.id === cfg.models.defaults.embedding)?.model).toBe(
+      'embeddinggemma-2',
+    );
+  });
+});
+
+// covers: r493（embedding-mrl-truncation）——MRL 截断配置开关：合法域 = 默认 embedding 模型声明的 mrlDims 成员。
+describe('mrl truncation config (r493)', () => {
+  const mrlYaml = (truncationLine: string, mrlBlock: string) => `models:
+  defaults:
+    embedding: egw
+  available:
+    - id: egw
+      provider: openai
+      model: gemma-test
+      displayName: EGW
+      description: test
+      roles: [embed]
+      capabilities: []
+      embedding:
+        dims: 768
+${mrlBlock}
+      providerConfig:
+        apiKey: test-key
+embedding:
+  truncation_dims: ${truncationLine}
+`;
+  const withMrl = '        mrlDims: [768, 512, 256, 128]';
+
+  it('rejects a target dims outside the declared mrlDims', () => {
+    writeFileSync(TMP, mrlYaml('300', withMrl));
+    expect(() => loadConfig(TMP)).toThrow(/不在模型 egw 声明的 mrlDims/);
+  });
+
+  it('accepts a member target and null/absent (default off)', () => {
+    writeFileSync(TMP, mrlYaml('256', withMrl));
+    expect(() => loadConfig(TMP)).not.toThrow();
+    resetConfig(loadConfig(TMP));
+    expect(getEmbeddingSettings().truncation_dims).toBe(256);
+
+    writeFileSync(TMP, mrlYaml('null', withMrl));
+    resetConfig(loadConfig(TMP));
+    expect(getEmbeddingSettings().truncation_dims ?? null).toBeNull();
+  });
+
+  it('rejects truncation when the default embedding model lacks mrlDims', () => {
+    writeFileSync(TMP, mrlYaml('256', '        prefixPreset: embeddinggemma2'));
+    expect(() => loadConfig(TMP)).toThrow(/声明 embedding.mrlDims/);
+  });
+
+  it('rejects non-integer truncation_dims with a readable type error (S2)', () => {
+    writeFileSync(TMP, mrlYaml('"256"', withMrl));
+    expect(() => loadConfig(TMP)).toThrow(/必须是正整数/);
+  });
+});

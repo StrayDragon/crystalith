@@ -12,14 +12,14 @@
       假如 一个空白笔记本
       当 发送 POST 请求"/v2/notebooks/{当前笔记本[id]}/sources"上传一个受支持的文本文件
       那么 响应状态码为201 且返回含 id 与 status 的来源对象
-      而且 轮询该来源直至状态为 ready（见 sources/ingest.test.ts upload 用例）
+      而且 轮询该来源直至状态为 ready
   @req:r286
   规则: Supported formats are parser-driven
     支持类型 MUST 由 parser 能力决定；无匹配 parser 的文件 MUST 返回 415 且不创建来源。
 
     场景: supported-formats-parser-driven
       假如 已注册 parser 各自声明可处理的 MIME 与扩展名
-      当 查询 /v2/sources/parsers 并上传 .md 与 .csv 文件（见 sources/c117-upload-contract.test.ts）
+      当 查询 /v2/sources/parsers 并上传 .md 与 .csv 文件
       那么 清单按 parser 能力给出 mimeTypes 与 extensions
       而且 上传按能力路由到匹配 parser 并在来源上记录 parserType
   @req:r287
@@ -57,7 +57,7 @@
 
     场景: csv-upload-parser-contract
       假如 一个空白笔记本
-      当 分别以 text/csv MIME 与缺失 MIME 的 .csv 扩展名上传 CSV（见 sources/c117-upload-contract.test.ts）
+      当 分别以 text/csv MIME 与缺失 MIME 的 .csv 扩展名上传 CSV
       那么 上传被 CSV parser 处理（parserType=csv）并落库
       而且 无 MIME 时按 .csv 扩展名识别并同样标记 ready
   @req:r289
@@ -66,7 +66,7 @@
 
     场景: csv-row-chunking
       假如 一个 120 行的 CSV 上传
-      当 查看其分块与 chunk metadata（见 sources/c117-upload-contract.test.ts）
+      当 查看其分块与 chunk metadata
       那么 切分为 3 个 50 行 markdown-table 分块且各自自带表头
       而且 csv_row_start/csv_row_end 元数据 1 起始且连续
   @req:r290
@@ -84,7 +84,7 @@
 
     场景: upload-max-bytes-413
       假如 config 将 upload_max_bytes 配置为小于上传体大小
-      当 上传超限文件（见 sources/c117-upload-contract.test.ts）
+      当 上传超限文件
       那么 返回 413 PAYLOAD_TOO_LARGE 且 details 含 maxBytes 与 uploadedBytes
       而且 不创建来源记录
   @req:r292
@@ -103,7 +103,7 @@
     场景: fetch-ssrf-validation
       假如 fetch 目标为私网 IP 或元数据地址
       当 发送 POST 请求"/v2/notebooks/{当前笔记本[id]}/sources/from-url"且 mode=fetch
-      那么 请求在发起网络调用前被拒绝（见 net/url-safety.test.ts 与 net/fetch-with-redirect-guard.test.ts）
+      那么 请求在发起网络调用前被拒绝
       而且 逐跳重定向落到私网目标同样被拦截
       而且 配置 allowlist_only 后非白名单主机被拒绝
   @req:r294
@@ -114,7 +114,7 @@
     当上传/URL 抓取的内容无匹配 parser（例如缺失对应插件）时，系统 MUST 返回 415 且 MUST 提供可机器读取的诊断信息（errorCode/message/details），其中 details MUST 包含恢复提示（例如需要安装/启用的 `parser-*` 插件 id）。
   
     场景: unsupported-format-415-diagnostics
-      假如 ingestion 集成环境就绪（tests/sources/parser-selection.test.ts）
+      假如 上传摄取管线就绪
       当 上传无匹配 parser 的文件（未知扩展名或未知显式 parserType）
       那么 415 信封 errorCode=UNSUPPORTED_MEDIA_TYPE 且 details 携带 mimeType/filename 与 parser-<ext> 形式的 pluginHint
 
@@ -124,7 +124,7 @@
 
     场景: extractor-errors-diagnosable
       假如 一个空白笔记本
-      当 以 mode=fetch 且 extractor="not-a-real-extractor" 发送 from-url 请求（见 sources/ingest.test.ts 业务层拒绝用例）
+      当 以 mode=fetch 且 extractor="not-a-real-extractor" 发送 from-url 请求
       那么 请求被拒绝且返回可机器读取的诊断信息
       而且 诊断信息说明发生了什么与如何恢复
   @req:r297
@@ -133,7 +133,7 @@
 
     场景: sources-search-real-web-contract
       假如 web search 引擎不可用
-      当 发送 POST 请求"/v2/notebooks/{当前笔记本[id]}/sources/search"（见 sources-search.test.ts c65 用例）
+      当 发送 POST 请求"/v2/notebooks/{当前笔记本[id]}/sources/search"
       那么 响应 status 为 service_error 且 message 为用户可读中文文案
       而且 仅当引擎正常应答且零命中时才返回 no_results
   @req:r298
@@ -142,7 +142,7 @@
 
     场景: dedup-gated-by-config
       假如 config 将 source_ingestion.dedup.enabled 设为 false
-      当 重复上传同一内容且不带 create_new（见 sources/c117-upload-contract.test.ts）
+      当 重复上传同一内容且不带 create_new
       那么 跳过去重直接创建新来源且不返回 409
       而且 默认门控开启时重复上传仍返回 409 CONFLICT
 

@@ -3,7 +3,7 @@ import { describe, expect, it } from '@rstest/core';
 import type { OutputItem } from './types';
 import { mergeOutputListWithCache, normalizeOutput } from './utils';
 
-describe('c72 output list merge / normalize', () => {
+describe('output list merge / normalize', () => {
   it('normalizes list rows without content as unloaded', () => {
     const item = normalizeOutput({
       id: 1,

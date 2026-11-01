@@ -1,3 +1,4 @@
+// covers: r181（generation-observability-and-guardrails）——并发与取消护栏：mutex 未释放时 runLoop 排队不抢占、释放后认领 work_unit、abort 按取消语义停止。
 /**
  * W3 runtime compliance locks:
  * - r98: runLoop MUST NOT claim the LLM mutex while a node chat holds it

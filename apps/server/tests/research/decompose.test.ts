@@ -1,3 +1,4 @@
+// covers: r433（deep-research-runtime）——规划钳制遵守 maxNodes/深度软上限，节点数不超预算。
 /**
  * c93 / r326 pure decompose helpers.
  *
@@ -49,7 +50,7 @@ function newId(prefix: string): string {
   return `${prefix}_${seq}`;
 }
 
-describe('research decompose (c93)', () => {
+describe('research decompose)', () => {
   it('suggestedMaxResearchLeaves follows depth soft caps', async () => {
     expect(suggestedMaxResearchLeaves('shallow')).toBe(4);
     expect(suggestedMaxResearchLeaves('medium')).toBe(8);

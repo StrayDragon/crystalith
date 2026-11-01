@@ -9,7 +9,7 @@
     对外业务 API MUST 使用 `/v2` 前缀；同一 major 内保持兼容。健康检查等运维端点 MAY 位于根路径。
 
     场景: business-api-paths-use-v2-prefix
-      假如 e2e 冒烟套件 p0-smoke.spec.ts 就绪
+      假如 覆盖全部业务域的对外 API 请求清单已就绪
       当 逐条发起其中的业务 API 请求
       那么 全部请求路径均以"/v2"开头
   @req:r346
@@ -96,7 +96,7 @@
     citation 对象 MUST 继续使用 camelCase（sourceId/sourceName/chunkId/chunkIndex/pageNumber/paragraphIndex/snippet/score），并与全局 wire camelCase 规则一致；MUST NOT 回退 snake_case。
 
     场景: citation-fields-remain-camel-case
-      假如 packages/shared/test/schemas.test.ts 覆盖 CitationSchema
+      假如 共享 Zod SSOT 中的 CitationSchema 就绪
       当 用含 sourceId/chunkIndex 的样例解析 citation 对象
       那么 解析结果保留 sourceId/sourceName/chunkId/chunkIndex/pageNumber/paragraphIndex/snippet/score 字段
       而且 citation 对象不出现 snake_case 字段名
@@ -113,7 +113,7 @@
     `/v2/workspace/tools` 与 outputs/slides 相关端点 MUST 保持可用与向后兼容；其中 `/v2/workspace/tools` 的"可用工具集合"允许随已安装/已启用插件变化而变化，但响应形状与字段语义 MUST 稳定。
 
     场景: workspace-tools-endpoint-shape-stable
-      假如 shared/slides-availability.test.ts 的集成环境就绪
+      假如 工作台工具端点集成环境就绪
       当 请求 GET /v2/workspace/tools
       那么 响应返回 tools 列表且响应形状与字段语义稳定
   @req:r358
@@ -325,7 +325,7 @@
     packages/shared 的 CitationSchema MUST 以 camelCase 字段作为 Zod SSOT，并驱动 OpenAPI/eden 类型；服务端序列化与前端消费 MUST 直接使用该 schema 推断类型，不得并行维护一套 snake_case Citation 线类型。
 
     场景: citation-schema-ssot-drives-wire-types
-      假如 packages/shared/test/schemas.test.ts 覆盖 CitationSchema
+      假如 共享 Zod SSOT 中的 CitationSchema 就绪
       当 检查该 Zod SSOT 推断的 OpenAPI 与 eden 类型
       那么 类型字段与 camelCase schema 推断一致
       而且 仓库不存在并行的 snake_case Citation 线类型
@@ -334,7 +334,7 @@
     除 URL path 与 SSE event 名称外，对外 HTTP/SSE JSON（请求体、查询参数键、响应体、流式 done/error data）的字段名 MUST 为 camelCase，并以 packages/shared Zod 为 SSOT；MUST NOT 再使用 notebook_id/source_ids/created_at/error_code 等 snake_case wire 别名。对 snake_case 输入系统 SHALL 按校验失败或忽略未知键处理，MUST NOT 同时接受两套字段名作为正式合约。DB 列名不受本要求约束；结构化 content payload 内部的标记键（如 `_postprocessed`、`citations_sanitized` 等 LLM 产出内容内标记）同样不属于 wire 合约字段，不在本约束范围内。
 
     场景: wire-fields-are-camel-case-end-to-end
-      假如 packages/shared 的 Zod wire 契约通过 schemas.test.ts 校验
+      假如 packages/shared 的 Zod wire 契约就绪
       当 检查请求体、响应体与 SSE done 事件的字段名
       那么 对外 JSON 字段均为 camelCase
       而且 notebook_id/error_code 等 snake_case 别名不再作为正式合约字段

@@ -250,7 +250,7 @@ Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `ope
 `just qa`（typecheck + lint + format-check + env/schema drift + **server/shared** tests + **web Rstest** + **e2e @p0**）必须全员通过才算一次成功的 PR。
 
 **门禁组成（与 `justfile` 一致）**：
-`check` → `check-env-examples` → `check-app-schema` → `check-i18n-keys` → `check-provider-deps` → `test`（`apps/server/tests/` + `packages/shared/test/`，`--parallel` 逐文件隔离，`--path-ignore-patterns` 排除 `bdd/`）→ `test-web`（`apps/web` `test:ci`）→ `e2e`。
+`check-static`（= `check` → `check-env-examples` → `check-app-schema` → `check-i18n-keys` → `check-spec-test-paths` → `check-spec-covers` → `check-provider-deps` → `audit-fallow-arch`；CI 静态段单点入口）→ `audit-fallow` → `test`（`apps/server/tests/` + `packages/shared/test/`，`--parallel` 逐文件隔离，`--path-ignore-patterns` 排除 `bdd/`）→ `test-web`（`apps/web` `test:ci`）→ `e2e`。
 
 **测试逐文件隔离纪律（`--parallel` implied `--isolate`）**：
 server 测试每个文件跑在自己的 fresh module registry / global / worker 进程里 —

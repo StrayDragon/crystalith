@@ -1,3 +1,4 @@
+// covers: r131（deep-research-ui）——SSE 断连重连可见状态（N/M 计数、不渲染伪造进度）与重试耗尽后的手动重试入口。
 /**
  * c64 / r13: stream interruption banner — reconnecting (N/M) state and
  * exhausted state with manual retry entry.
@@ -21,7 +22,7 @@ function renderBanner(props: {
   );
 }
 
-describe('LabStreamBanner (c64 / r13)', () => {
+describe('LabStreamBanner (r13)', () => {
   it('renders nothing while connected', () => {
     const { container } = renderBanner({
       streamState: 'ok',

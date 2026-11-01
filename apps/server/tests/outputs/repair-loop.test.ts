@@ -1,4 +1,4 @@
-// covers: r330
+// covers: r330（typed-generation-framework）
 // outputs pipeline：preference=quality 且 needsRepair 为真时 MUST 再跑一次生成修补
 // 以挽救可挽救输出；修补失败（抛错或仍不完整）则保留原对象并走后续
 // postprocess/fallback；preference!=quality 时不触发二次生成。

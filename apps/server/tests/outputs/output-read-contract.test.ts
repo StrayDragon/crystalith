@@ -1,4 +1,4 @@
-// covers: r202
+// covers: r202（output-rendering-and-typing）
 // POST /v2/notebooks/:nid/outputs MUST 返回 camelCase OutputRead 实体
 // （id/notebookId/type/prompt/chunkIds/content/createdAt/updatedAt），
 // 与 packages/shared OutputSchema wire 契约一致；MUST NOT 返回 snake_case

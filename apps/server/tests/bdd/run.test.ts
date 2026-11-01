@@ -1,3 +1,4 @@
+// covers: r19（bdd-test-harness）——BDD features 树维护中文 .feature（API 路径走 /v2 嵌套前缀），跳过白名单 SKIP_FEATURE_DIRS 在运行器入口显式声明。
 // BDD entry point — auto-scans all .feature files and runs them.
 //
 // Importing this module (via `bun test tests/bdd/run.test.ts`) registers the
@@ -14,25 +15,17 @@ import { runFeature } from './runner.ts';
 const FEATURES_DIR = join(import.meta.dirname, 'features');
 
 // Only feature files whose v2 router is at parity with the v1 contract run
-// for real. Domains requiring LLM backing, or whose v2 router diverges from
-// the v1 feature contract, are skipped at the feature level. This keeps BDD
-// green on the core CRUD surface while surfacing the rest as known gaps.
+// for real; the skip set below keeps non-parity domains out.
 //
-// To enable a domain: remove it from the set below and re-run. The failures
-// that appear map directly to v2 router work needed for v1 parity.
+// Pruned (test cleanup): commands / models / outputs / qa / source_connectors /
+// studio were v1-contract ports kept permanently skipped since the v2 port and
+// were removed together with their skip entries; research / templates dirs were
+// already gone. Do not re-add feature files without runnable routes (see c73
+// note below).
 //
 // Deleted (c73 dead HTTP — feature files removed, do not re-add without routes):
 //   citations (/citations/context), refine (/v2/refine*), tasks (/v2/tasks*)
-const SKIP_FEATURE_DIRS = new Set([
-  'commands', // depends on prompt-presets data
-  'models', // depends on config models (empty in tests)
-  'outputs', // LLM generation + missing step defs
-  'qa', // LLM-backed
-  'research', // LLM-backed
-  'source_connectors', // missing step defs + connector plugin infra
-  'studio', // LLM-backed Slidev generation
-  'templates', // depends on builtin seed data
-]);
+const SKIP_FEATURE_DIRS = new Set<string>([]);
 
 function collectFeatures(dir: string): string[] {
   const results: string[] = [];

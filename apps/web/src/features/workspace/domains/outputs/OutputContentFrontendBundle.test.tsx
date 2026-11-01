@@ -1,3 +1,4 @@
+// covers: r201/r462（output-rendering-and-typing）——frontendBundle 优先渲染与不可用安全回退。
 import { afterEach, beforeEach, expect, test, rs } from '@rstest/core';
 import { act, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';

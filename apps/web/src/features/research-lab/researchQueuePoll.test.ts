@@ -1,3 +1,4 @@
+// covers: r101（deep-research-ui）——队列存在非终态 Run 时 5s 短间隔轮询，全终态或空队列关闭轮询。
 import { describe, expect, it } from '@rstest/core';
 
 import {
@@ -7,7 +8,6 @@ import {
 } from './researchTaskTypes';
 import type { ResearchTaskListItem } from './researchTaskTypes';
 
-// covers: r101
 // Desk 队列轮询节流纯函数：存在非终态 Run → 短间隔（5s）；全终态/空队列 → 0
 // （关闭轮询）。
 

@@ -1,3 +1,4 @@
+// covers: r249（source-connectors）——同步应用须显式确认：未执行 sync_check 或 syncCheckId 过期时 409（SYNC_CHECK_REQUIRED/OUTDATED），不静默改写来源集合。
 // Sync-check apply error paths (regression: 409 SYNC_CHECK_REQUIRED used to
 // degrade to a plain-text 500 when the translation layer was removed).
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';

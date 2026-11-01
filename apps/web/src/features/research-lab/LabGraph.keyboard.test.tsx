@@ -1,3 +1,4 @@
+// covers: r106（deep-research-ui）——节点 inspector 与剪枝/fork 键盘可达，不依赖 hover。
 // Mock reason: renders real @xyflow/react + elkjs in jsdom (no network, no rs.* mocks beyond fns).
 import { afterAll, beforeAll, describe, expect, it, rs } from '@rstest/core';
 import { createEvent, fireEvent, render, screen } from '@testing-library/react';

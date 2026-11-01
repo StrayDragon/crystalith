@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 
 import GuideChecklist, { type GuideModule } from './GuideChecklist';
 
-// covers: r300
+// covers: r300（studio-output-types）
 // guide 输出 MUST 支持可勾选学习路径与进度提示（勾选后更新进度且保持交互可用）。
 
 const MODULES: GuideModule[] = [

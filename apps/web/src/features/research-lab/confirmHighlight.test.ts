@@ -1,8 +1,9 @@
+// covers: r107（deep-research-ui）——M1 确认高亮集合含分支节点及其直接邻居。
 import { describe, expect, it } from '@rstest/core';
 
 import { confirmHighlightIds } from './confirmHighlight';
 
-describe('confirmHighlightIds (c96)', () => {
+describe('confirmHighlightIds)', () => {
   it('includes branch and direct neighbors', () => {
     expect(
       confirmHighlightIds('b', [

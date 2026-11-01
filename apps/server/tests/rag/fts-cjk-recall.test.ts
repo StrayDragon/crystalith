@@ -1,3 +1,4 @@
+// covers: r487（global-search）——关键词通道中文召回（两字词/长短语/拉丁不回归）与历史块 text_tokens 回填及旧 FTS 表迁移。
 // c132 r487 — keyword-channel CJK recall over chunks.text_tokens:
 //   short (two-char) Chinese queries, longer phrases, latin no-regression,
 //   legacy-row backfill, and legacy-shape (raw `text`) chunks_fts migration.

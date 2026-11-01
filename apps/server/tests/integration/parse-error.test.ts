@@ -1,5 +1,5 @@
-// Regression: malformed JSON request bodies must return 400 INVALID_REQUEST
-// with the ErrorEnvelope shape — not the 500 INTERNAL_ERROR fallthrough.
+// covers: r346（workspace-api-contract）——非 SSE 错误统一信封：无法解析的请求体
+// 也 MUST 以 ErrorEnvelope 形状返回（400 INVALID_REQUEST），而非裸 500 兜底。
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 
 import { createApp } from '../../src/server.ts';

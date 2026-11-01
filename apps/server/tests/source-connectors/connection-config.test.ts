@@ -1,3 +1,4 @@
+// covers: r251（source-connectors）——binding 创建对 connectionConfig 做 JSON schema 校验：缺失必填 vaultPath/多余键 400 且错误信息点名缺失字段、不创建绑定。
 // Source connector connectionConfig validation (c53 / Wave D.1 regression).
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 

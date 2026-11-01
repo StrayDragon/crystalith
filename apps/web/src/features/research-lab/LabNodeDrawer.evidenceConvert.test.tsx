@@ -1,3 +1,4 @@
+// covers: r138/r453（deep-research-ui）——证据转化以 ResearchArtifactRef kind=evidence 调用 convert 端点。
 import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, render, screen } from '@testing-library/react';
 
@@ -46,7 +47,7 @@ const citations: Record<string, LabCitation> = {
   },
 };
 
-describe('LabNodeDrawer evidence convert (c91 / r445)', () => {
+describe('LabNodeDrawer evidence convert (r445)', () => {
   beforeEach(() => {
     runConvertToNote.mockReset();
     runConvertToSource.mockReset();

@@ -1,3 +1,4 @@
+// covers: r225（retrieval-and-cache）——超预算上下文按优先级截断且不产生孤立 citation。
 // Tests for the token-budgeted context window.
 import { describe, expect, it } from 'bun:test';
 

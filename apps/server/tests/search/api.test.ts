@@ -1,3 +1,4 @@
+// covers: r484（global-search）——单一混合搜索端点：全局范围跨笔记本、单笔记本范围收敛、分组计数与跳转上下文、originTypes 过滤与 topK 上限约束。
 // c132 (seam ①) — POST /v2/search wire contract over the integration app:
 // scope semantics (global crosses notebooks / notebook-limited), facets,
 // originTypes filtering, jump-context fields, degraded absence in the happy

@@ -1,3 +1,4 @@
+// covers: r434（deep-research-runtime）——已拆出活 research 支路时调度队列仅排 research 节点、跳过 question/conclusion 单元。
 import { describe, expect, it } from 'bun:test';
 
 import type { ResearchNode } from '@crystalith/shared';
@@ -18,7 +19,7 @@ function node(partial: Partial<ResearchNode> & Pick<ResearchNode, 'id' | 'title'
   };
 }
 
-describe('research-work-queue (c94)', () => {
+describe('research-work-queue)', () => {
   it('orderResearchNodesForWork preserves insertion order', async () => {
     const nodes: ResearchNode[] = [
       node({ id: 'q', role: 'question', title: 'Q', conclusionStatus: 'pending' }),

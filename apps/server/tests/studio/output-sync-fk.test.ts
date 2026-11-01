@@ -1,4 +1,4 @@
-// covers: r306
+// covers: r306（studio-output-types）
 // studio 输出同步（syncSlideOutput）MUST：
 //   (1) 写 studioSlides.outputId 外键；
 //   (2) content schema 为 camelCase：{title, engine, outline, markdown, slideId}；

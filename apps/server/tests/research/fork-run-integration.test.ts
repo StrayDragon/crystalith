@@ -1,3 +1,4 @@
+// covers: r89/r438（deep-research-runtime）——从 revision fork 派生新 Run：拷贝 graph/report/evidence 并重置预算、默认不自动 schedule，源 Run 与 revisions 保持不变。
 /**
  * c105 / r335: revision fork-run creates a new ResearchRun; source unchanged.
  */
@@ -66,7 +67,7 @@ async function waitForStatus(runId: number, wanted: string[], timeoutMs = 8000):
   throw new Error(`timeout status; last=${last}`);
 }
 
-describe('research revision fork-run (c105)', () => {
+describe('research revision fork-run)', () => {
   it('fork-creates-new-run-id + copies graph/report + remaps evidence; source unchanged', async () => {
     const create = await app.handle(
       new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {

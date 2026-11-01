@@ -53,7 +53,7 @@ function collectTokenClassesFromDist(): Set<string> {
   return found;
 }
 
-describe('c136 streamdown 样式供给 lock-test', () => {
+describe('streamdown 样式供给 lock-test', () => {
   it('白名单非空且无重复', () => {
     const whitelist = parseWhitelist();
     expect(whitelist.length).toBeGreaterThan(50);

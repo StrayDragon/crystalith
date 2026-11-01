@@ -1,3 +1,4 @@
+// covers: r109/r137/r139/r455/r456/r457（deep-research-ui）——转化经 convert-to-note/convert-to-source 命令口且以 toast 反馈。
 import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 
 const convertResearchToNote = rs.hoisted(() => rs.fn());

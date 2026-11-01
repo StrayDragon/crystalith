@@ -1,3 +1,4 @@
+// covers: r408（workspace-ui-panels）——上传控件接受 PDF 拖拽且 zip 预检拒绝。
 import { beforeEach, expect, test, rs } from '@rstest/core';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { forwardRef } from 'react';

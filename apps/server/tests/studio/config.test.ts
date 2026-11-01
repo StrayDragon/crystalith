@@ -1,3 +1,4 @@
+// covers: r318/r319（studio-slides-workflow）——generationConfig 展开为具体区间与本地化中文提示（不携带原始 token）；frontmatter 6-key 模板与 override 逐字采用/缺 title 补一行。
 // Tests for c56 studio config interpretation — range expansion, frontmatter
 // 6-key shape, override path, preference→retrieval tuning, and config_schema
 // completeness. Verifies v1 slides/config.py + generator.py parity.
@@ -13,7 +14,7 @@ import {
 import { buildConfigHints } from '../../src/features/studio/service.ts';
 import { buildFrontmatter } from '../../src/features/studio/theme-presets.ts';
 
-describe('c56: config range expansion (v1 config.py parity)', () => {
+describe('config range expansion (v1 config.py parity)', () => {
   it('expands quantity=detailed to the 12-18 range', () => {
     expect(resolveQuantityRange('detailed')).toEqual([12, 18]);
   });
@@ -51,7 +52,7 @@ describe('c56: config range expansion (v1 config.py parity)', () => {
   });
 });
 
-describe('c56: frontmatter 6-key shape (v1 THEME_PRESET_TEMPLATES parity)', () => {
+describe('frontmatter 6-key shape (v1 THEME_PRESET_TEMPLATES parity)', () => {
   it('emits theme: default for minimal-clean (not seriph/bricks)', () => {
     const fm = buildFrontmatter('minimal-clean');
     expect(fm).toContain('theme: default');
@@ -86,7 +87,7 @@ describe('c56: frontmatter 6-key shape (v1 THEME_PRESET_TEMPLATES parity)', () =
   });
 });
 
-describe('c56: frontmatter override path (v1 _normalize_frontmatter_override)', () => {
+describe('frontmatter override path (v1 _normalize_frontmatter_override)', () => {
   it('uses the override verbatim when frontmatter is non-empty', () => {
     const fm = buildFrontmatter('minimal-clean', null, 'theme: seriph\nbackground: black');
     expect(fm).toContain('theme: seriph');
@@ -121,7 +122,7 @@ describe('c56: frontmatter override path (v1 _normalize_frontmatter_override)', 
   });
 });
 
-describe('c56: preference → retrieval tuning (v1 SLIDES tuning table)', () => {
+describe('preference → retrieval tuning (v1 SLIDES tuning table)', () => {
   it('quality yields larger topK and lower minScore', () => {
     const q = resolveRetrievalTuning('quality');
     expect(q.topK).toBe(12);
@@ -141,7 +142,7 @@ describe('c56: preference → retrieval tuning (v1 SLIDES tuning table)', () => 
   });
 });
 
-describe('c56: buildSlidesConfigSchema completeness (workspace-api-contract r361)', () => {
+describe('buildSlidesConfigSchema completeness (workspace-api-contract r361)', () => {
   const schema = buildSlidesConfigSchema();
 
   it('returns all 7 options arrays non-empty', () => {

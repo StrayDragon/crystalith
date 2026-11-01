@@ -1,3 +1,4 @@
+// covers: r377/r378（workspace-api-contract）——outputs 列表省略完整正文（仅 title/preview 元数据），单条详情端点返回渲染所需全文。
 import { describe, expect, it, beforeAll, afterAll } from 'bun:test';
 
 import { eq } from 'drizzle-orm';
@@ -6,7 +7,7 @@ import { db } from '../../src/db/index.ts';
 import { notebooks, outputs } from '../../src/db/schema.ts';
 import { createApp } from '../../src/server.ts';
 
-describe('c72 output list omits full content', () => {
+describe('output list omits full content', () => {
   let app: ReturnType<typeof createApp>;
   let notebookId: number;
   let outputId: number;

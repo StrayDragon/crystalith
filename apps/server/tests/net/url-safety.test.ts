@@ -1,3 +1,4 @@
+// covers: r293（source-ingestion-upload-and-url）——SSRF 校验先行、allowlist_only 拒绝非白名单主机。
 // Tests for SSRF guard — allowlist enforcement (non-network paths).
 // The hostname→DNS path requires network; these tests cover the IP-literal and
 // allowlist-only branches that resolve without DNS.

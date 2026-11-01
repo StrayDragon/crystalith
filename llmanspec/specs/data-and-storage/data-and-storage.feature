@@ -19,7 +19,7 @@
 
     场景: sqlite-vec-knn-with-notebook-isolation
       假如 同一 SQLite 库内已写入多个 notebook 的 vec_chunks 向量
-      当 运行 apps/server/tests/db.test.ts 的 sqlite-vec 虚表用例
+      当 在同库多 notebook 向量上执行 KNN 检索
       那么 同进程内 KNN 检索按 distance 返回最近邻且不依赖外部向量服务
       而且 按 notebook_id 分区使不同 notebook 的向量互相隔离
   @req:r51
@@ -28,7 +28,7 @@
 
     场景: local-storage-round-trip
       假如 内容存储抽象就绪且单二进制下实现为本地文件系统路径
-      当 运行 apps/server/tests/shared/storage.test.ts 的 LocalStorage 用例
+      当 通过内容存储抽象写入并读回上传字节
       那么 save 后 fetch 可按 key 往返读出原始上传字节供 document_parse 重新解析
       而且 exists 与 delete 的返回语义一致
   @req:r52
@@ -36,6 +36,6 @@
     ingest MUST 通过 contentStorage 持久化来源原始字节，且来源 MUST 可按 sourceId 读回原始内容，以支撑后续再解析（document_parse 类能力）。v2 无任务队列（pipeline 有意同步），队列化 re-parse 需要时另立 capability。
 
     场景: raw-bytes-roundtrip-via-content-storage
-      假如 ingestion 集成环境就绪（tests/sources/parser-selection.test.ts）
+      假如 上传摄取管线就绪
       当 完成一次 upload ingest 并以 contentStorage.fetch(sourceId) 读回
       那么 读回字节与上传内容逐字节一致

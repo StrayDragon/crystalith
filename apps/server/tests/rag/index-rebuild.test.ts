@@ -1,3 +1,4 @@
+// covers: r480/r481/r482（embedding-index-ops）——异步重建（202 句柄/重入 409/全局维度模式/epoch 递增/中断恢复）、状态面诚实（rebuilding 带进度、dim_mismatch 带双值、interrupted）、调用方按分类降级（QA 提示/生成 409/research 空集）。
 // c131 r480/r481 — async index rebuild: notebook/global modes, reentry guard,
 // restart recovery, epoch bump, status surface (service + router wire).
 //

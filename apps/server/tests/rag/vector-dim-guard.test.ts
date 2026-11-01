@@ -1,3 +1,4 @@
+// covers: r478（embedding-runtime）——vec 表维度不一致 boot 警告不阻断、语义检索/向量写入明确报错指向重建入口、关键词 BM25 通道不受影响。
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 // c130 r478 — vec_chunks dimension-mismatch behavior:
 //   boot: initVecChunks warns (both values + rebuild guidance) but never blocks;

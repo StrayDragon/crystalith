@@ -1,4 +1,4 @@
-// covers: r261
+// covers: r261（source-ingestion-core）——search mode 仅通道元数据且零 ResearchRun 写入。
 // POST …/sources/search 的 mode 字段仅是网搜通道元数据（echo）：
 //   - mode='Deep Research'（或同义）被归一化为 'Fast Research'，不触发/冒充 ResearchRun；
 //   - 其他 mode 值按 caller 传入 echo；

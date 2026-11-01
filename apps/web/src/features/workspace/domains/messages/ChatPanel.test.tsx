@@ -1,3 +1,4 @@
+// covers: r399/r473（workspace-ui-panels、workspace-ui-core）——Chat 面板显式呈现流式反馈（停止/重试）与空态分层引导：无来源引导上传、已有来源给直接提问开始会话入口。
 import { beforeEach, expect, test, rs } from '@rstest/core';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -7,6 +8,7 @@ import { SWRConfig } from 'swr';
 
 import { server } from '../../../../test-utils/msw/server';
 import { TestProviders } from '../../../../test-utils/providers';
+import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { ChatMessage, Citation, OutputTypeId } from '../../shared/types';
 import ChatPanel from './ChatPanel';
 
@@ -257,4 +259,44 @@ test('chat panel still shows local messages while history is loading', async () 
   });
 
   expect(await screen.findByText('刚发出去的问题')).toBeTruthy();
+});
+
+// covers: r473
+test('chat empty state without sources guides the three source import paths', () => {
+  renderChatPanel({ hasSources: false });
+
+  // 来源为空：引导上传文件 / URL 导入 / 搜索导入（规格 r473 三路径枚举）
+  expect(
+    screen.getByText('直接提问即可；也可以上传文件、从 URL 导入或搜索导入来源，基于文档回答。'),
+  ).toBeInTheDocument();
+  expect(screen.queryByText('直接提问，或勾选左侧来源后基于文档回答。')).not.toBeInTheDocument();
+});
+
+// covers: r473
+test('chat empty state with sources offers the direct-ask session start', () => {
+  const onSend = rs.fn();
+  renderChatPanel({ hasSources: true, draft: '帮我把勾选的文档总结成要点', onSend });
+
+  // 已有来源、尚无会话：直接提问即开始会话（首条消息建会话），并提供「一键开始会话」明确入口
+  expect(screen.getByText('直接提问，或勾选左侧来源后基于文档回答。')).toBeInTheDocument();
+  expect(
+    screen.queryByText('直接提问即可；也可以上传文件、从 URL 导入或搜索导入来源，基于文档回答。'),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '一键开始会话' })).toBeInTheDocument();
+
+  const sendButton = screen.getByRole('button', { name: '发送' });
+  expect(sendButton).not.toBeDisabled();
+  fireEvent.click(sendButton);
+  expect(onSend).toHaveBeenCalledTimes(1);
+});
+
+// covers: r473
+test('chat empty state hides the session-start entry once a session is active', () => {
+  useWorkspaceStore.setState({ activeSessionId: 42 });
+  renderChatPanel({ hasSources: true });
+
+  // 反向分支锁定：已有会话时入口按钮不再渲染（避免与既有会话双入口并存）
+  expect(screen.queryByRole('button', { name: '一键开始会话' })).not.toBeInTheDocument();
+  expect(screen.getByText('直接提问，或勾选左侧来源后基于文档回答。')).toBeInTheDocument();
+  useWorkspaceStore.setState({ activeSessionId: null });
 });

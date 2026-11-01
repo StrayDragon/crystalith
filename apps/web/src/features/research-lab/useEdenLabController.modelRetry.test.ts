@@ -1,3 +1,4 @@
+// covers: r147（deep-research-ui）——create body 携带所选 modelId，结案失败可换模重试。
 import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 import { act, waitFor } from '@testing-library/react';
 

@@ -66,23 +66,30 @@ plugins:
 
 # ----------------------------------------------------------------------------
 # Providers (use YAML anchors for reuse)
+#
+# Gateway addresses follow the same placeholder convention as model names:
+# unset env renders the literal 'NOT-SET' — i.e. "not configured, set the
+# CL_* env for YOUR gateway". Nothing is assumed about where your gateway
+# runs; requests fail fast with that visible marker until configured.
 # ----------------------------------------------------------------------------
 providers:
   # OpenAI-compatible API (general-purpose: chat, embeddings via external API)
   openai_default: &openai_default
     apiKey: "{{ env.CL_CHAT_API_KEY | default('') }}"
-    baseUrl: "{{ env.CL_CHAT_API_BASE | default('http://127.0.0.1:50256/v1') }}"
+    baseUrl: "{{ env.CL_CHAT_API_BASE | default('NOT-SET') }}"
 
   # OpenAI-compatible embedding gateway (dedicated embedding server, e.g. OMLX)
   embed_gateway: &embed_gateway
     apiKey: "{{ env.CL_EMBEDDING_API_KEY | default('sk-local') }}"
-    baseUrl: "{{ env.CL_EMBEDDING_API_BASE | default('http://127.0.0.1:50256/v1') }}"
+    baseUrl: "{{ env.CL_EMBEDDING_API_BASE | default('NOT-SET') }}"
 
   # EmbeddingGemma 2 dedicated gateway (c131; keep separate so the bge-m3
-  # embed_gateway stays as fallback). Served by maas-embeddinggemma2.
+  # embed_gateway stays as fallback). Point CL_EMBEDDING2_API_BASE at your
+  # real eg2 gateway; until configured this entry carries the NOT-SET marker
+  # and embedding through it fails fast.
   eg2_gateway: &eg2_gateway
     apiKey: "{{ env.CL_EMBEDDING2_API_KEY | default('local') }}"
-    baseUrl: "{{ env.CL_EMBEDDING2_API_BASE | default('http://tufa:50233/v1') }}"
+    baseUrl: "{{ env.CL_EMBEDDING2_API_BASE | default('NOT-SET') }}"
 
   # OpenAI-compatible primary chat gateway (routed via CL_CHAT_API_BASE by default)
   # Default false: some think/grammar gateways reject json_schema ("failed to parse grammar").
@@ -90,7 +97,7 @@ providers:
   # (required for Studio structured outputs — MINDMAP/TIMELINE/etc.).
   chat_gateway: &chat_gateway
     apiKey: "{{ env.CL_CHAT_API_KEY | default('sk-local') }}"
-    baseUrl: "{{ env.CL_CHAT_API_BASE | default('http://127.0.0.1:50256/v1') }}"
+    baseUrl: "{{ env.CL_CHAT_API_BASE | default('NOT-SET') }}"
     supportsStructuredOutputs: false
 
 # ----------------------------------------------------------------------------

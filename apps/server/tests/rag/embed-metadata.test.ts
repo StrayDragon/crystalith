@@ -1,3 +1,4 @@
+// covers: r479（embedding-runtime）+ r483（embedding-index-ops）——indexSource 与直写向量路径（sessions convert / qa-to-source）均落 embedding_model/embedding_dims，重嵌刷新不残留旧值。
 // embedding-runtime r479 — indexSource stamps chunk embedding metadata
 // (embedding_model / embedding_dims), refreshes it on re-embed, and the source
 // filename reaches the engine as the document title through the facade.

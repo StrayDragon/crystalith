@@ -1,3 +1,4 @@
+// covers: r123（deep-research-ui）——Compose 说明/hint/示例文案按 eden 与 fixture 模式切换，eden 不把 fixture/xlsx 表述为权威。
 import { describe, expect, it } from '@rstest/core';
 
 import { labComposeDescription, labComposeExampleLabel, labComposeHint } from './LabComposePanel';

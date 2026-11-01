@@ -1,3 +1,4 @@
+// covers: r143/r458（deep-research-ui）——相位标签由 progress 事件与图状态共同推导并富化。
 import { describe, expect, it } from '@rstest/core';
 
 import { deriveEdenLabPhase, fixturePlaybackToRunStatus } from './deriveEdenLabPhase';
@@ -13,7 +14,7 @@ function ev(
   };
 }
 
-describe('deriveEdenLabPhase (c97)', () => {
+describe('deriveEdenLabPhase)', () => {
   it('status awaiting_confirm wins (r437)', () => {
     expect(
       deriveEdenLabPhase({

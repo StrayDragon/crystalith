@@ -570,7 +570,6 @@ function LabWorkbench({
 
         {!showCompose ? (
           <LabNodeDrawer
-            overlay
             mode="fixture"
             notebookId={notebookId}
             runId={null}

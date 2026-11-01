@@ -22,7 +22,7 @@
 
     场景: preference-maps-through-tuning-table
       假如 已用记录型假 embed 策略覆盖 registry 的 embed 注册
-      当 运行 apps/server/tests/outputs/preference-tuning.test.ts 的 preference 用例
+      当 分别以 preference=quality 与 speed 发起 outputs 生成
       那么 quality/speed 分别映射到 tuning 表对应 topK
       而且 缺省 preference 时落到 quality 行
   @req:r163
@@ -31,7 +31,7 @@
 
     场景: request-knobs-override-tuning-defaults
       假如 请求显式携带 topK=7 与 minScore=0.55（preference=speed）
-      当 运行 apps/server/tests/outputs/preference-tuning.test.ts 的 explicit knobs 用例
+      当 发起该 outputs 生成请求
       那么 检索按 topK=7 与 minScore=0.55 执行，覆盖 tuning 表值
       而且 缺省 minScore 时落到检索默认值
   @req:r164
@@ -50,7 +50,7 @@
     工具输出类型（FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING 等）由服务端静态注册表声明，不依赖外部插件加载。未知或不支持的输出类型 MUST 以统一错误信封（见 workspace-api-contract r346）400 拒绝：`details` MUST 携带 `outputType` 与 `supported` 列表，`message` MUST 可直接面向用户显示。
 
     场景: unsupported-output-type-rejected-with-registry-details
-      假如 generation-types 集成环境就绪（tests/generation/generation-types.test.ts）
+      假如 generation-types 集成环境就绪
       当 以未知输出类型发起 outputs 生成
       那么 400 信封的 details 携带该 outputType 与 supported 列表且列表不含 SLIDES
   @req:r167
@@ -67,7 +67,7 @@
 
     场景: retrieval-failure-propagates-or-scoped-fallback
       假如 embed 策略检索抛错
-      当 运行 apps/server/tests/outputs/preference-tuning.test.ts 的 retrieval failure 用例
+      当 分别在未选与已选来源下发起 outputs 生成
       那么 未选来源时请求以统一错误信封失败（Output retrieval failed）
       而且 已选来源时直接回退仅取所选来源的 chunk，不混入未选来源或全库 chunk
   @req:r169
@@ -92,7 +92,7 @@
 
     场景: inline-citation-backfill
       假如 QA 处于有证据路径且 answer 不含 [N] 形式内联引用
-      当 运行 apps/server/tests/qa/inline-citations.test.ts 的 backfill 用例
+      当 对该 answer 施加内联引用兜底
       那么 answer 追加 [1] 兜底标记，已含内联引用的 answer 原样保留
       而且 无证据路径（citations 为空）不注入兜底标记
   @req:r172
@@ -117,7 +117,7 @@
 
     场景: no-evidence-reasons-distinct-and-localized
       假如 分别以检索抛错、空命中与幽灵 chunk 假策略驱动 retrieveAndJudge
-      当 运行 apps/server/tests/qa/no-evidence-reasons.test.ts 的各 reason 用例
+      当 各路径完成无证据判定
       那么 embedding_empty/no_vector_hits/no_valid_chunks 各返回对应 reason 与本地化回答
       而且 四个规范 reason 的本地化回答两两不同且非空（low_similarity 含于映射表）
   @req:r175

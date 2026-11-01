@@ -1,3 +1,4 @@
+// covers: r121（deep-research-ui）——取消经 POST research/:rid/cancel 执行且终态后刷新任务 inbox。
 import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 
 const cancelResearchRun = rs.hoisted(() => rs.fn());

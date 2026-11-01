@@ -1,3 +1,4 @@
+// covers: r23/r24/r25/r422/r423（chat-prompt-presets）+ r188（generation-presets-and-constraints）+ r353（workspace-api-contract）——preset 白名单解析：未知/禁用确定性拒绝、custom 覆盖 systemPrompt、裸指令用法提示、开关无关确定性；QA question 内嵌 /prompt: 指令选择受控预设策略。
 // c122 — QA preset whitelist resolution across built-in + custom presets.
 //   r23  — unknown presets are rejected with the stable combined list
 //   r24  — custom preset systemPrompt overrides the QA system prompt

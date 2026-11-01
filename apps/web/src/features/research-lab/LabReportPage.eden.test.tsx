@@ -1,3 +1,4 @@
+// covers: r118/r125/r135/r136/r152/r451（deep-research-ui）——报告页以 GET research/:rid 返回的 report/citations 为权威渲染结构化 sections。
 import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
@@ -70,7 +71,7 @@ const sampleReport = {
   },
 };
 
-function stubReady(opts?: { working?: typeof sampleReport | null }) {
+function stubReady({ working }: { working?: typeof sampleReport | null } = {}) {
   getResearchRun.mockResolvedValue({
     id: 9,
     notebookId: 62,
@@ -82,8 +83,8 @@ function stubReady(opts?: { working?: typeof sampleReport | null }) {
   });
   getResearchReportView.mockResolvedValue({
     canonical: sampleReport,
-    working: opts?.working ?? undefined,
-    viewing: opts?.working ? 'working' : 'canonical',
+    working: working ?? undefined,
+    viewing: working ? 'working' : 'canonical',
   });
   listResearchRevisions.mockResolvedValue({
     items: [
@@ -103,7 +104,7 @@ function stubReady(opts?: { working?: typeof sampleReport | null }) {
   });
 }
 
-describe('LabReportPage eden revisions/convert (c89)', () => {
+describe('LabReportPage eden revisions/convert', () => {
   beforeEach(() => {
     getResearchRun.mockReset();
     getResearchReportView.mockReset();

@@ -1,3 +1,4 @@
+// covers: r145（deep-research-ui）——深研 slash 命令导航 Lab（可选 ?rid=/?topic=）且由 GET /v2/commands kind=nav 暴露。
 import { describe, expect, it, rs } from '@rstest/core';
 
 import {
@@ -6,7 +7,7 @@ import {
   parseResearchChatCommand,
 } from './researchChatCommands';
 
-describe('researchChatCommands (c99)', () => {
+describe('researchChatCommands)', () => {
   it('parses bare /research and /深研 as open_compose', () => {
     expect(parseResearchChatCommand('/research')).toEqual({
       type: 'open_compose',

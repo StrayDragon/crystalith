@@ -1,3 +1,4 @@
+// covers: r76（deep-research-runtime）——节点 chat 模型失败以 error 事件（errorCode+可读 message）与 chat_failed 账本诚实终结，stub 路径仅 CL_RESEARCH_E2E_STUB=1 可达且 progress 带 via=stub。
 /**
  * c63 / r12: node chat failure honesty.
  *
@@ -148,7 +149,7 @@ async function runChat(): Promise<SseFrame[]> {
   return parseFrames(await res.text());
 }
 
-describe('node chat failure honesty (c63 / r12)', () => {
+describe('node chat failure honesty (r12)', () => {
   it('agent rejection → error frame + chat_failed ledger, no stub chunks', async () => {
     (globalThis as Record<symbol | string, unknown>)[agentModeKey] = 'reject';
     // 刻意失败场景: 吞掉应用层 error 日志, 避免门禁输出把预期内的错误当误报

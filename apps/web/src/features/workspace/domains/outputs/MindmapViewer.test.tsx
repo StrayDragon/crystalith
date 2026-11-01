@@ -5,7 +5,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { LayerProvider } from '../../../../shared/layer';
 import { MindmapViewer, type MindmapData } from './MindmapViewer';
 
-// covers: r302
+// covers: r302（studio-output-types）
 // mindmap 输出支持只读浏览与节点折叠/展开控制：折叠后显示子节点计数，
 // 再次点击展开还原；视图不提供任何编辑入口。
 

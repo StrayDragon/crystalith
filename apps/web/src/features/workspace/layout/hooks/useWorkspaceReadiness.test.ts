@@ -1,3 +1,4 @@
+// covers: r394（workspace-ui-core）——computeWorkspaceReadiness 把连接/笔记本/来源加载/会话状态映射到分层引导空态而非空白。
 import { expect, test } from '@rstest/core';
 
 import { computeWorkspaceReadiness } from './useWorkspaceReadiness';

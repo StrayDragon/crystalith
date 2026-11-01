@@ -1,3 +1,4 @@
+// covers: r224/r233（retrieval-and-cache）+ r476（embedding-runtime）——outputs/slides/studio 统一经 registry embed 检索。
 // retrieval-and-cache — unified retrieval paths:
 //   r224 — outputs and slides reuse the same retrieval strategy family: both
 //          resolve through ragRegistry's 'embed' registration

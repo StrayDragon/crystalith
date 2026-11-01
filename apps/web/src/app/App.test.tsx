@@ -1,3 +1,4 @@
+// covers: r386（workspace-ui-core）——Workspace shell 挂载即同时呈现 Sources/Chat/Studio 核心模块与顶栏（布局锁定入口）。
 import { afterAll, beforeEach, expect, test, rs } from '@rstest/core';
 import { render, screen } from '@testing-library/react';
 import { SWRConfig } from 'swr';

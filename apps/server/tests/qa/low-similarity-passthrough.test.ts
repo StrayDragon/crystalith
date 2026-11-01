@@ -1,3 +1,4 @@
+// covers: r235（retrieval-and-cache）+ r172（generation-core）——sourceIds 过滤检索受可配置 minScore 门控；低相似度命中返回 citations=[] 且低分 chunk 不作为引用返回。
 // allow-low-similarity-qa — low-similarity QA no longer short-circuits:
 // it passes through ungrounded with a weak-grounding notice (c60 ungrounded
 // semantics reused).

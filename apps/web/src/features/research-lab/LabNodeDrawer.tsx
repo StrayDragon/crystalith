@@ -20,13 +20,15 @@ import {
 import type { LabCitation, LabNode, LabPhase } from './model/types';
 import { useNodeChat } from './useNodeChat';
 
+// 既有神组件：本批仅 +5 行（r105 终态只读收口），未实质增加复杂度；
+// 按仓库「Component / module split」守则，神文件拆分独立成 change。
+// fallow-ignore-next-line complexity
 export default function LabNodeDrawer({
   node,
   citations,
   phase,
   onClose,
   onEdit,
-  overlay,
   reportAvailable,
   onOpenReport,
   constraintsNote,
@@ -44,7 +46,6 @@ export default function LabNodeDrawer({
   phase: LabPhase;
   onClose: () => void;
   onEdit?: (nodeId: string, patch: Partial<LabNode>) => void;
-  overlay?: boolean;
   reportAvailable?: boolean;
   onOpenReport?: () => void;
   constraintsNote?: string | null;
@@ -120,6 +121,10 @@ export default function LabNodeDrawer({
     node.citationIds.length === 0 ? [] : resolveNodeCitations(node.citationIds, citations);
   const isConclusion = node.role === 'conclusion';
   const isQuestion = node.role === 'question';
+  // r105：completed/failed/cancelled 时图与 inspector MUST 只读——meta 页的编辑
+  // 入口（快速改查询 / askOnInterrupt）随之收口（badge/chat 提案闸在
+  // acceptNodeChatAction，图交互闸在 GRAPH_READ_ONLY_STATUSES）。
+  const runReadonly = phase === 'completed' || phase === 'failed';
   const showConfirm =
     phase === 'awaiting_confirm' && (isQuestion || isConclusion) && onConfirmFinish;
 
@@ -168,12 +173,9 @@ export default function LabNodeDrawer({
 
   return (
     <aside
-      className={
-        overlay
-          ? 'absolute top-3 right-3 bottom-3 flex w-[min(380px,calc(100%-1.5rem))] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white/95 shadow-xl backdrop-blur-sm'
-          : 'flex w-[380px] shrink-0 flex-col overflow-hidden border-l border-gray-200 bg-white'
-      }
-      style={overlay ? drawerLayerStyle : undefined}
+      // fallow-ignore-next-line css-broken-reference
+      className="absolute top-3 right-3 bottom-3 flex w-[min(380px,calc(100%-1.5rem))] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white/95 shadow-xl backdrop-blur-sm"
+      style={drawerLayerStyle}
       {...tid(TestIds.researchLabNodeDrawer)}
     >
       <div className="flex items-start justify-between gap-2 border-b border-gray-100 px-3 py-2.5">
@@ -441,12 +443,13 @@ export default function LabNodeDrawer({
                   type="button"
                   role="switch"
                   aria-checked={node.askOnInterrupt !== false}
+                  disabled={runReadonly}
                   onClick={() => {
                     onEdit(node.id, { askOnInterrupt: node.askOnInterrupt === false });
                   }}
                   className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors ${
                     node.askOnInterrupt !== false ? 'bg-teal-600' : 'bg-gray-300'
-                  }`}
+                  }${runReadonly ? ' cursor-not-allowed opacity-40' : ''}`}
                 >
                   <span
                     className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
@@ -584,7 +587,7 @@ export default function LabNodeDrawer({
             )}
           </section>
 
-          {onEdit && !isConclusion ? (
+          {onEdit && !isConclusion && !runReadonly ? (
             <section className="rounded-md border border-dashed border-gray-200 px-3 py-2">
               <p className="text-[11px] text-gray-500">
                 改检索查询会触发流程重塑（对应后端 reshape）；标题/摘要/结论仅覆盖展示字段。

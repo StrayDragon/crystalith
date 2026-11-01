@@ -1,3 +1,4 @@
+// covers: r171（generation-core）——QA 内联引用 [1] 兜底。
 // generation-core r171 — QA inline citation backfill.
 // ensureInlineCitations appends a [1] fallback marker only when the answer
 // carries no bracket citation at all and citations exist; the no-evidence

@@ -1,0 +1,17 @@
+{
+  "r236": {
+    "capability": "slides-workflow-plugins",
+    "reason": "插件契约面收窄（仅 buildSlidesConfigSchema 入契约）",
+    "seam": "扩契约+契约面完整性测试"
+  },
+  "r237": {
+    "capability": "slides-workflow-plugins",
+    "reason": "无多候选选择逻辑（implOf 定值）",
+    "seam": "实现选择器+歧义诊断测试"
+  },
+  "r347": {
+    "capability": "workspace-api-contract",
+    "reason": "无限流中间件触发方（仅信封能力存在）",
+    "seam": "限流中间件触发 429 断言 envelope.retryAfter"
+  }
+}

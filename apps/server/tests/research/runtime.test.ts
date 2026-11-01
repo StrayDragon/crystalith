@@ -1,3 +1,4 @@
+// covers: r54/r55/r57/r60/r61/r63/r65/r67/r70/r72/r74/r75/r77/r426/r429（deep-research-runtime）——Run 创建与 notebook 作用域列表、来源/外网开关默认与拒绝、convert 笔记/来源、活态 prune 与保护节点拒绝、approve_branch fork+merge、节点 PATCH、节点 chat 提案不改图、revisions 快照恢复与 cancel、completed 只读返回 RESEARCH_INVALID_STATE。
 // Deep Research runtime (c76) — create/validation/status/prune/convert tests.
 import { afterAll, beforeAll, describe, expect, it, mock } from 'bun:test';
 

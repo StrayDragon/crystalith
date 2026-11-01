@@ -1,3 +1,4 @@
+// covers: r259（source-ingestion-core）——向量写入完成后才置 ready、失败置 failed。
 // Embed timing test (c30) — verifies embedding completes before status=ready.
 //
 // Uses a call-order spy on EmbedStrategy.indexSource to prove that vectors
@@ -31,7 +32,7 @@ beforeAll(() => {
 
 afterAll(teardownIntegrationEnv);
 
-describe('embedding timing (c30: sync embed before ready)', () => {
+describe('embedding timing (sync embed before ready)', () => {
   it('marks ready only after indexSource completes', async () => {
     const orm = getOrm();
     const nb = orm.insert(notebooks).values({ name: 'timing-nb' }).returning().get();

@@ -1,3 +1,4 @@
+// covers: r206（output-rendering-and-typing）——导出支持 markdown/json 双格式且 markdown 按输出类型渲染为可读文档（非原始 JSON）。
 import { expect, test } from '@rstest/core';
 
 import type { OutputItem, OutputTypeId } from '../../shared/types';

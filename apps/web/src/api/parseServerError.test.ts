@@ -1,3 +1,4 @@
+// covers: r157（frontend-eden-migration）
 import { describe, expect, it } from '@rstest/core';
 
 import { parseServerError, summarizeErrorEnvelope } from './parseServerError';

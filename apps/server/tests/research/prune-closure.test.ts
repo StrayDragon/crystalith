@@ -1,3 +1,4 @@
+// covers: r69/r427/r428（deep-research-runtime）——排他父闭包剪枝：不沿 merge 边级联、root/conclusion 不入闭包、共享子节点因活父保留、独占子节点级联入闭包、保护节点剪枝返回空闭包。
 import { describe, expect, it } from 'bun:test';
 
 import type { ResearchEdge, ResearchNode } from '@crystalith/shared';

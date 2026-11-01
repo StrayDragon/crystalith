@@ -1,3 +1,4 @@
+// covers: r18（bdd-test-harness）——基于 @cucumber/gherkin 的 zh-CN BDD runner：规则块嵌套场景展平注册执行、与 bun:test 集成。
 import { describe, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 
@@ -18,7 +19,7 @@ import { AstBuilder, Parser, GherkinClassicTokenMatcher } from '@cucumber/gherki
 // Types
 // ---------------------------------------------------------------------------
 
-export type StepKind = 'given' | 'when' | 'then';
+type StepKind = 'given' | 'when' | 'then';
 
 /** HTTP-shaped response stored on ctx.response by When steps. */
 export interface BddResponse {
@@ -47,7 +48,7 @@ export interface TestContext {
   client: TestClient;
 }
 
-export type StepFn = (ctx: TestContext, ...args: (string | number)[]) => Promise<void> | void;
+type StepFn = (ctx: TestContext, ...args: (string | number)[]) => Promise<void> | void;
 
 interface StepDef {
   kind: StepKind;

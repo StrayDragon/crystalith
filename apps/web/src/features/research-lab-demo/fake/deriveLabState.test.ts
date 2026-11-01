@@ -26,26 +26,9 @@ describe('deriveLabState', () => {
     expect(forced.nodes.find((n) => n.role === 'conclusion')?.conclusionStatus).not.toBe('clear');
   });
 
-  it('prunes a research branch by fading exclusive descendants (keeps merge)', () => {
-    const scenario = getLabScenario('xlsx-lib');
-    const pruned = deriveLabState(scenario, 'completed', {
-      mutations: {
-        prunedNodeIds: ['n-libs'],
-        extraNodes: [],
-        extraEdges: [],
-        nodeEdits: {},
-        activityNotes: ['剪枝测试'],
-      },
-    });
-    expect(pruned.nodes.find((n) => n.id === 'n-libs')?.conclusionStatus).toBe('pruned');
-    // Shared child n-stream still has live parent n-perf — stay live (B).
-    expect(pruned.nodes.find((n) => n.id === 'n-stream')?.conclusionStatus).not.toBe('pruned');
-    expect(pruned.nodes.find((n) => n.id === 'conclusion')?.role).toBe('conclusion');
-    expect(pruned.edges.some((e) => e.source === 'n-libs' && e.kind === 'merge')).toBe(true);
-    expect(pruned.edges.some((e) => e.source === 'n-libs' && e.target === 'conclusion')).toBe(true);
-    expect(pruned.nodes.find((n) => n.id === 'conclusion')?.conclusion).toContain('部分汇入失败');
-    expect(pruned.activityLog.at(-1)).toBe('剪枝测试');
-  });
+  // 剪枝闭包语义（fade exclusive subtree / cascade / merge 保留）已迁至产品直测
+  // model/pruneClosure.test.ts；此处仅保留一条 deriveLabState 接线用例（下方
+  // 'prune fades exclusive subtree …'）。
 
   it('forks research into same conclusion sink', () => {
     const scenario = getLabScenario('xlsx-lib');
@@ -177,7 +160,7 @@ describe('deriveLabState', () => {
     expect(evaluated.nodes.find((n) => n.id === 'fork-1')?.conclusionStatus).toBe('partial');
   });
 
-  it('prune fades exclusive subtree and keeps merge into conclusion', () => {
+  it('wiring: prune marks the node, keeps shared child live, and keeps merge into conclusion', () => {
     const scenario = getLabScenario('xlsx-lib');
     const pruned = deriveLabState(scenario, 'completed', {
       mutations: {
@@ -194,23 +177,7 @@ describe('deriveLabState', () => {
     expect(pruned.edges.some((e) => e.source === 'n-libs' && e.target === 'conclusion')).toBe(true);
   });
 
-  it('prune cascades when child has no other live research parent', () => {
-    const scenario = getLabScenario('compliance');
-    const pruned = deriveLabState(scenario, 'completed', {
-      mutations: {
-        prunedNodeIds: ['n-data'],
-        extraNodes: [],
-        extraEdges: [],
-        nodeEdits: {},
-        activityNotes: [],
-      },
-    });
-    expect(pruned.nodes.find((n) => n.id === 'n-data')?.conclusionStatus).toBe('pruned');
-    expect(pruned.nodes.find((n) => n.id === 'n-minimize')?.conclusionStatus).toBe('pruned');
-    expect(pruned.edges.some((e) => e.source === 'n-minimize' && e.target === 'conclusion')).toBe(
-      true,
-    );
-  });
+  // cascade 场景（compliance）已随剪枝语义迁至 model/pruneClosure.test.ts 直测。
 });
 
 describe('advanceLabPlayback', () => {

@@ -22,7 +22,7 @@
 
     场景: stream-relay-through-sse
       假如 笔记本中有一篇来源且发起流式提问
-      当 以流式模式发起笔记本问答（tests/api-contract/qa-session-contract.test.ts 的 r369 stream done 断言）
+      当 以流式模式发起笔记本问答并等待流结束
       那么 streamText fullStream 经 Elysia SSE 中继返回 200
       而且 SSE Content-Type 为 text/event-stream
   @req:r14
@@ -31,7 +31,7 @@
 
     场景: token-counting-uses-gpt-tokenizer
       假如 AI 调用需要 token 计数与截断
-      当 运行 apps/server/tests/tokenizer.test.ts 的计数用例
+      当 对已知文本计算 token 数并按预算截断
       那么 countTokens/countMessageTokens/truncateToTokens 按 gpt-tokenizer 纯 JS 实现产出
       而且 主路径不依赖 tiktoken/wasm
   @req:r15
@@ -42,7 +42,7 @@
     宿主 MUST 通过单一 `CrystalithPlugin` 接口（id / kind / displayName / configSchema（Zod） / capabilities / factory）承载全部插件种类（output-type | extractor | parser | slides-workflow）的注册、发现与配置解析；extractor 与 slides-workflow 内置插件（含 studio slides config 表与网页提取器 factory）MUST 经同一 registry 注册路径生效，MUST NOT 存在绕过 registry 的平行内置注册形状。per-kind 行为契约（web-extractor-plugins、slides-workflow-plugins）作为 kind 层细化保持有效，MUST NOT 被本接口取代。 DEFERRED（迁移）：output-type 内置注册表（OUTPUT_META）迁移到该接口由后续 change 执行；迁移完成前 OUTPUT_META 是 output-type 的唯一过渡注册形态，期间 MUST NOT 引入第三套平行注册形状。
   
     场景: builtins-register-through-single-registry
-      假如 插件测试环境就绪（tests/plugins/registry.test.ts 的 r16 断言）
+      假如 内置插件按单一 CrystalithPlugin 路径装载
       当 检查 builtinPlugins 聚合与共享 pluginRegistry 消费路径
       那么 extractor 与 slides-workflow 内置插件同在一个聚合列表且每个都携带完整 CrystalithPlugin 合约形状
       而且 extractor 元数据经共享 registry 的 loadedByKind 派生（无平行注册形状）
@@ -53,7 +53,7 @@
 
     场景: plugin-load-failure-skips-without-blocking
       假如 多个插件按 plugins.enabled/load_order 从 node_modules 动态 import
-      当 运行 apps/server/tests/plugins/registry.test.ts 的 load semantics 用例
+      当 触发插件注册表装载并观察装载语义
       那么 allowlist 外、disabled 与 factory/import 失败的插件记入 diagnostics.plugins.skipped（PLUGIN_* errorCode）
       而且 其余插件继续加载生效且启动不被阻断
       而且 未提供运行时热插拔入口，安装/升级/禁用经重启 server 生效

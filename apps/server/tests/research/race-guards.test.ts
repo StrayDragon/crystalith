@@ -50,7 +50,7 @@ beforeAll(async () => {
 
 afterAll(teardownIntegrationEnv);
 
-describe('research race guards (c104/c108)', () => {
+describe('research race guards', () => {
   it('enterConfirm(budget) does not clobber live reexpand confirm', async () => {
     const created = await createRun(notebookId, {
       topic: 'race enterConfirm no-clobber',

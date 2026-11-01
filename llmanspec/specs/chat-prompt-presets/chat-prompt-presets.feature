@@ -10,7 +10,7 @@
 
     场景: prompt-directive-parsed-from-question
       假如 chat_prompt_presets_enabled=true 且 question 为 "/prompt:STATS 销售数据"
-      当 运行 apps/server/tests/qa/presets.test.ts 的 parsePromptDirective 用例
+      当 QA 入口解析提问中的 /prompt: 指令
       那么 解析出 preset=stats（统一小写）且 question 为去前缀后的查询文本
       而且 无指令时才回退 body 的 preset 字段
   @req:r422
@@ -19,7 +19,7 @@
     当 presets 功能启用且 `question` 为 `/prompt:<preset>`（无 query）时，系统 SHALL 返回 400 并提示用法与可用 preset 列表。
   
     场景: bare-directive-returns-usage-and-list
-      假如 qa-preset 集成环境就绪（tests/qa/preset-resolution.test.ts）
+      假如 qa-preset 集成环境就绪
       当 以 "/prompt:stats"（无 query）调用 QA
       那么 400 且 details 携带用法说明、触发的 presetId 与可用预设列表
 @req:r423
@@ -28,7 +28,7 @@
     `/prompt:` 指令语言不依赖可选特性开关：其解析与错误语义 MUST 在任何部署配置下保持一致（无 enabled/disabled 分支），MUST NOT 把指令静默当作普通 QA 文本处理（裸指令与未知预设见 r422/r23 的确定性 400）。
 
     场景: directive-deterministic-without-feature-flag
-      假如 默认配置（不存在 presets 特性开关字段，tests/qa/preset-resolution.test.ts）
+      假如 默认配置（不存在 presets 特性开关字段）
       当 以 "/prompt:stats 问题" 调用 QA
       那么 指令生效且回传 generation.presetId=stats
   @req:r23
@@ -36,7 +36,7 @@
     系统 MUST 将 preset 集合视为白名单（built-in + custom）。未知 preset MUST 被拒绝并返回可用 preset 列表（含 built-in 与 custom）。
 
     场景: unknown-preset-rejected-with-stable-list
-      假如 preset 白名单含 built-in 与 custom（tests/qa/preset-resolution.test.ts）
+      假如 preset 白名单含 built-in 与 custom
       当 以 "/prompt:不存在的预设 某个问题" 调用 QA
       那么 响应状态码为 400
       而且 错误信息返回可用 preset 列表
@@ -45,7 +45,7 @@
     系统 MUST 支持用户定义的 custom preset。对于 `/prompt:<preset> <query>`： - 若 `<preset>` 命中 custom preset 且 `enabled=true`，系统 MUST 使用该 preset 的 `systemPrompt` 覆盖 QA pipeline 的 system message。 - 系统 MUST 将 `<query>` 作为实际 QA question 执行（不包含 `/prompt:` 前缀）。
   
     场景: custom-preset-overrides-qa-system-prompt
-      假如 qa-preset 集成环境就绪且存在 enabled=true 的 custom preset（tests/qa/preset-resolution.test.ts）
+      假如 qa-preset 集成环境就绪且存在 enabled=true 的 custom preset
       当 以 "/prompt:<trigger> <query>" 调用 QA
       那么 该 preset 的 systemPrompt 覆盖 QA 系统消息（{{directive}} 占位与内置同法渲染）
       而且 <query> 作为实际 question 执行且 generation.presetId 回传 trigger
@@ -54,7 +54,7 @@
     当 preset 存在但 `enabled=false` 时，系统 MUST 拒绝该请求并返回确定性错误。
 
     场景: disabled-preset-rejected-deterministically
-      假如 存在 enabled=false 的 preset（如 disabled-test，tests/qa/preset-resolution.test.ts）
+      假如 存在 enabled=false 的 preset（如 disabled-test）
       当 以 "/prompt:disabled-test 某个问题" 调用 QA
       那么 响应状态码为 400
       而且 重复调用返回相同的确定性错误
@@ -64,7 +64,7 @@
 
     场景: stats-fallback-markdown-persisted
       假如 stats preset 的模型输出为合法的 chart/table JSON
-      当 运行 apps/server/tests/qa/presets-wire.test.ts 的 r26 用例（POST /v2/notebooks/:nid/qa）
+      当 经 POST /v2/notebooks/:nid/qa 发起该 stats 问答
       那么 响应 answer 即 fallback_markdown 的纯文本
       而且 assistant message 持久化的 content 与 answer 一致且不嵌 envelope
   @req:r27
@@ -73,7 +73,7 @@
 
     场景: stats-preset-parses-chart-table-json
       假如 stats preset 使用专用系统提示且模型输出含 fallback_markdown/chart/table 的 JSON
-      当 运行 apps/server/tests/qa/presets.test.ts 的 parseStatsPresetOutput 用例与 bdd stats 提问场景
+      当 stats 专用解析路径解析该模型输出
       那么 合法 JSON（snake_case 键）经专用解析路径产出 chart/table 结构
       而且 环绕散文或 code fence 中的 JSON 仍可被提取校验
   @req:r424
@@ -83,6 +83,6 @@
 
     场景: invalid-stats-json-falls-back-to-text
       假如 stats preset 的模型输出无法解析/校验为 stats JSON
-      当 运行 apps/server/tests/qa/presets-wire.test.ts 的 r424 用例
+      当 经 QA 端点发起该 stats 问答
       那么 回退文本生成的原文作为 answer 正常返回
       而且 citations/evidence/confidence 字段照常返回且对话可用

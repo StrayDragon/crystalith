@@ -1,3 +1,4 @@
+// covers: r226/r231（retrieval-and-cache）——multi-query seed 受上限约束并以 RRF 融合。
 // Tests for multi-query expansion + RRF fusion.
 import { describe, expect, it } from 'bun:test';
 

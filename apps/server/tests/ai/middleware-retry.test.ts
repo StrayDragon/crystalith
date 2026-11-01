@@ -1,4 +1,4 @@
-// covers: r183, r184
+// covers: r183/r184（generation-observability-and-guardrails）
 // AI 调用重试（ai/middleware.ts withRetry）：
 //   r183 — 解析并遵守 Retry-After 头；可重试状态码集合含 408/409/425/429/500/502/503/504
 //   r184 — total timeout 预算 + max delay 上限（退避不超过 maxDelayMs，总时间不超过预算）

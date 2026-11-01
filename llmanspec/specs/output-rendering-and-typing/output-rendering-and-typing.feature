@@ -10,7 +10,7 @@
 
     场景: unknown-plugin-type-decodes-to-safe-branch
       假如 输出类型来自插件且客户端类型系统不存在该类型
-      当 运行 outputPayload.test.ts 的 unknown/other 分支用例
+      当 客户端解码该输出 payload
       那么 decodeOutputItem 返回 null 且 normalizeOutputPayload 回退 UnknownOutputPayload（_fallback 标记 + 保留原始字段 + 警告合并）
       而且 编译期与运行期均不崩溃
   @req:r198
@@ -19,7 +19,7 @@
 
     场景: runtime-decode-falls-back-to-raw-json
       假如 GenericOutputRenderer 收到缺失 renderDescriptor 或未知 layout 的输出 content
-      当 运行 apps/web/src/features/workspace/domains/outputs/GenericOutputRenderer.test.tsx 的 JSON fallback 用例
+      当 通用渲染器渲染该 content
       那么 shape 不匹配时回退渲染 raw JSON 且组件不抛错崩溃
       而且 未知 layout 仅记录 console.warn 警告
   @req:r199
@@ -28,7 +28,7 @@
 
     场景: canonical-layouts-render-with-nested-fields
       假如 后端返回带 renderDescriptor 的输出 content
-      当 运行 GenericOutputRenderer.test.tsx 的 list/cards/timeline/sections/table/tree 布局用例
+      当 通用渲染器分别渲染 list/cards/timeline/sections/table/tree 各布局
       那么 各规范布局按 itemSchema 字段描述符渲染出标签与值
       而且 嵌套 children 字段描述符被递归渲染
   @req:r200
@@ -40,7 +40,7 @@
 
     场景: frontend-bundle-renderer-takes-priority
       假如 workspace store 已注册 QUIZ 类型的 frontendBundle（apiVersion v1）
-      当 运行 apps/web/src/features/workspace/domains/outputs/OutputContentFrontendBundle.test.tsx 的 bundle 渲染用例
+      当 OutputContent 渲染该输出
       那么 OutputContent 优先渲染 frontendBundle 的 render 导出
       而且 GenericOutputRenderer 与 Raw JSON 仅在 bundle 不可用时依次兜底
   @req:r462
@@ -50,7 +50,7 @@
 
     场景: unsupported-or-broken-bundle-safe-fallback
       假如 OutputContent 挂载了 frontendBundle 声明
-      当 运行 OutputContentFrontendBundle.test.tsx 的回退用例（apiVersion 非 v1 / 加载被拒 / 无 renderDescriptor）
+      当 分别以 apiVersion 非 v1、加载被拒与无 renderDescriptor 的形态渲染该输出
       那么 apiVersion 不受支持时跳过 bundle 回退到 renderDescriptor 通用渲染
       而且 加载/导出解析失败被 .catch 吸收并以 Raw JSON 作为最终安全回退
   @req:r202
@@ -59,7 +59,7 @@
 
     场景: post-outputs-returns-outputread-contract
       假如 笔记本内通过 POST /v2/notebooks/:nid/outputs 登记输出
-      当 运行 output-read-contract.test.ts 的 OutputRead 合同用例
+      当 读取该登记响应
       那么 响应按 packages/shared OutputSchema 解析通过且全字段 camelCase（id/notebookId/type/prompt/chunkIds/content/createdAt/updatedAt）
       而且 响应不含 snake_case 字段与裸 PipelineResult 形状（outputId/chunkCount/citations/warnings）
   @req:r203
@@ -68,7 +68,7 @@
 
     场景: export-json-citations-camelcase
       假如 输出 content 树叶子节点嵌入带 chunkIndex/pageNumber 的 citations
-      当 运行 apps/server/tests/outputs/collect-cited-citations.test.ts 的 cited-subset 遍历用例
+      当 收集输出内被引用的 citation 子集
       那么 收集结果保留 chunkIndex/pageNumber/paragraphIndex/score 等 camelCase 字段
       而且 GET /outputs/:id/export?format=json 的 citations 按该 wire 形状返回
   @req:r204
@@ -77,7 +77,7 @@
 
     场景: error-codes-map-to-granular-http-status
       假如 sendError 以各 ErrorCode 逐一调用
-      当 运行 apps/server/tests/shared/errors.test.ts 的 canonical status 用例
+      当 逐一触发各 ErrorCode 的错误响应
       那么 SCHEMA_VALIDATION_FAILED 映射 422 且 MODEL_UNAVAILABLE/MODEL_ERROR 映射 503
       而且 值错误映射 400 而非统一 500
   @req:r205
@@ -86,7 +86,7 @@
 
     场景: outputs-endpoint-rejects-slides-type
       假如 笔记本中有一篇来源
-      当 对 outputs 生成端点提交 type=SLIDES（tests/generation/generation-types.test.ts：合法类型 SLIDES 走专属 400 提示；未知类型走 supported 列表 400）
+      当 对 outputs 生成端点分别提交 type=SLIDES 与未知输出类型
       那么 响应状态码为 400
       而且 SLIDES 未被路由进通用 outputs pipeline
   @req:r206

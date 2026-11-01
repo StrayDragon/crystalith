@@ -166,6 +166,14 @@ export type ConcurrencySettings = z.infer<typeof ConcurrencySettingsSchema>;
 export const EmbeddingSettingsSchema = z.object({
   chunk_size: z.number().int().min(64).default(512).describe(desc('embedding.chunk_size')),
   batch_size: z.number().int().min(1).default(32).describe(desc('embedding.batch_size')),
+  // c133 r493：MRL 截断目标维度（可选；null/缺省 = 不截断，默认关闭）。
+  // 合法域 ∈ 默认 embedding 模型声明的 mrlDims —— 跨模型校验在 loadConfig。
+  truncation_dims: z
+    .number()
+    .int()
+    .positive()
+    .nullish()
+    .describe(desc('embedding.truncation_dims')),
 });
 export type EmbeddingSettings = z.infer<typeof EmbeddingSettingsSchema>;
 
@@ -262,6 +270,16 @@ export function getConcurrencySettings(): ConcurrencySettings {
 
 export function getEmbeddingSettings(): EmbeddingSettings {
   return parseSection(EmbeddingSettingsSchema, config().raw.embedding);
+}
+
+/**
+ * c133 r494：生效维度 —— 截断开启时为 truncation_dims，否则为默认模型声明维度。
+ * 引擎断言（embedding-engine）与 DB 层（vec_chunks 建表/重建/守卫）必须共用
+ * 同一口径，否则截断向量插不进按声明维度建的表（启动校验已保证 truncation
+ * 开启时默认模型必声明 mrlDims，故不存在「截断开启但无模型」的组合）。
+ */
+export function getEffectiveEmbeddingDims(): number | undefined {
+  return getEmbeddingSettings().truncation_dims ?? getDefaultEmbeddingModel()?.embedding?.dims;
 }
 
 export function getContextWindowSettings(): ContextWindowSettings {

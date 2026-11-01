@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 
 import ReportViewer, { type ReportSection } from './ReportViewer';
 
-// covers: r299
+// covers: r299（studio-output-types）
 // briefing 输出 MUST 支持章节目录导航与章节折叠/展开。
 
 const SECTIONS: ReportSection[] = [

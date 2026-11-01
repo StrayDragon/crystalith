@@ -42,6 +42,53 @@ const BASE = 'http://test.local';
 let app: InstanceType<typeof createApp>;
 let notebookId: number;
 
+interface RunBody {
+  status: string;
+  nodes?: Array<{ role?: string }>;
+}
+
+const TERMINAL_STATUSES = ['completed', 'cancelled', 'failed'] as const;
+
+function isTerminal(status: string): boolean {
+  return (TERMINAL_STATUSES as readonly string[]).includes(status);
+}
+
+function isLiveWindow(body: RunBody): boolean {
+  const hasResearch = (body.nodes ?? []).some((n) => n.role === 'research');
+  return hasResearch && (body.status === 'running' || body.status === 'awaiting_confirm');
+}
+
+async function fetchRun(id: number): Promise<RunBody> {
+  const res = await app.handle(new Request(`${BASE}/v2/notebooks/${notebookId}/research/${id}`));
+  return (await res.json()) as RunBody;
+}
+
+/** Poll the run until `isDone` holds; red-fails via timeout error. */
+async function pollRun(
+  id: number,
+  deadlineMs: number,
+  isDone: (b: RunBody) => boolean,
+): Promise<RunBody> {
+  const deadline = Date.now() + deadlineMs;
+  for (;;) {
+    const body = await fetchRun(id);
+    if (isDone(body)) return body;
+    if (Date.now() > deadline) throw new Error(`poll timeout, last status: ${body.status}`);
+    await Bun.sleep(40);
+  }
+}
+
+async function postJson(path: string, body: unknown): Promise<{ status: number; body: unknown }> {
+  const res = await app.handle(
+    new Request(`${BASE}${path}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  );
+  return { status: res.status, body: await res.json() };
+}
+
 beforeAll(() => {
   process.env.CL_RESEARCH_E2E_STUB = '1';
   setupIntegrationEnv();
@@ -54,77 +101,41 @@ afterAll(async () => {
   await teardownIntegrationEnv();
 });
 
-describe('e2e stub reexpand skip race (c108 R02)', () => {
+describe('e2e stub reexpand skip race (R02)', () => {
   it('live → request-reexpand → skip_reexpand → completed (not cancelled)', async () => {
-    const create = await app.handle(
-      new Request(`${BASE}/v2/notebooks/${notebookId}/research`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          topic: 'e2e reexpand skip path',
-          useNotebookSources: false,
-          allowWeb: true,
-          depth: 'shallow',
-        }),
-      }),
-    );
+    const create = await postJson(`/v2/notebooks/${notebookId}/research`, {
+      topic: 'e2e reexpand skip path',
+      useNotebookSources: false,
+      allowWeb: true,
+      depth: 'shallow',
+    });
     expect(create.status).toBe(201);
-    const { id } = (await create.json()) as { id: number };
+    const { id } = create.body as { id: number };
 
-    let live = false;
-    const liveDeadline = Date.now() + 10_000;
-    while (Date.now() < liveDeadline) {
-      const body = (await (
-        await app.handle(new Request(`${BASE}/v2/notebooks/${notebookId}/research/${id}`))
-      ).json()) as { status: string; nodes?: Array<{ role?: string }> };
-      const hasResearch = (body.nodes ?? []).some((n) => n.role === 'research');
-      if (hasResearch && (body.status === 'running' || body.status === 'awaiting_confirm')) {
-        live = true;
-        break;
-      }
-      if (body.status === 'completed' || body.status === 'cancelled' || body.status === 'failed') {
-        throw new Error(`terminal before live window: ${body.status}`);
-      }
-      await Bun.sleep(40);
-    }
-    expect(live).toBe(true);
-
-    const rr = await app.handle(
-      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${id}/request-reexpand`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: '{}',
-      }),
+    const liveOrTerminal = await pollRun(
+      id,
+      10_000,
+      (b) => isLiveWindow(b) || isTerminal(b.status),
     );
+    if (isTerminal(liveOrTerminal.status)) {
+      throw new Error(`terminal before live window: ${liveOrTerminal.status}`);
+    }
+
+    const rr = await postJson(`/v2/notebooks/${notebookId}/research/${id}/request-reexpand`, {});
     expect(rr.status).toBe(200);
-    const paused = (await rr.json()) as { status: string; confirmKind: string | null };
+    const paused = rr.body as { status: string; confirmKind: string | null };
     expect(paused.status).toBe('awaiting_confirm');
     expect(paused.confirmKind).toBe('reexpand');
 
     // Immediate skip while the aborted runLoop is still unwinding (no artificial delay).
-    const sk = await app.handle(
-      new Request(`${BASE}/v2/notebooks/${notebookId}/research/${id}/confirm`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'skip_reexpand' }),
-      }),
-    );
+    const sk = await postJson(`/v2/notebooks/${notebookId}/research/${id}/confirm`, {
+      action: 'skip_reexpand',
+    });
     expect(sk.status).toBe(200);
-    const skipped = (await sk.json()) as { status: string };
+    const skipped = sk.body as { status: string };
     expect(skipped.status).not.toBe('cancelled');
 
-    const endDeadline = Date.now() + 15_000;
-    let finalStatus = skipped.status;
-    while (Date.now() < endDeadline) {
-      const body = (await (
-        await app.handle(new Request(`${BASE}/v2/notebooks/${notebookId}/research/${id}`))
-      ).json()) as { status: string };
-      finalStatus = body.status;
-      if (body.status === 'completed' || body.status === 'cancelled' || body.status === 'failed') {
-        break;
-      }
-      await Bun.sleep(40);
-    }
-    expect(finalStatus).toBe('completed');
+    const final = await pollRun(id, 15_000, (b) => isTerminal(b.status));
+    expect(final.status).toBe('completed');
   });
 });

@@ -1,3 +1,4 @@
+// covers: r142/r151（deep-research-ui）——M1 确认动作经 Eden confirm 命令口执行。
 import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
@@ -60,7 +61,7 @@ rs.mock('./researchTasksCache', () => ({
 
 import { useEdenLabController } from './useEdenLabController';
 
-describe('eden confirm actions (c96)', () => {
+describe('eden confirm actions)', () => {
   beforeEach(() => {
     confirmResearchRun.mockReset();
     createResearchRun.mockReset();
@@ -114,7 +115,7 @@ describe('eden confirm actions (c96)', () => {
   });
 });
 
-describe('eden reexpand actions (c104)', () => {
+describe('eden reexpand actions)', () => {
   beforeEach(() => {
     confirmResearchRun.mockReset();
     createResearchRun.mockReset();

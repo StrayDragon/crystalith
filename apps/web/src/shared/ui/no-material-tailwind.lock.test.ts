@@ -1,3 +1,4 @@
+// covers: r342（web-ui-foundation）——静态扫描：运行时依赖与源码导入均不再引用 Material Tailwind React 包。
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 

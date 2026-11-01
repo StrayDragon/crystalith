@@ -1,3 +1,4 @@
+// covers: r22/r27（chat-prompt-presets）——/prompt: 指令解析（大小写归一、去前缀）与 stats 专用 JSON 解析路径。
 // QA presets — stats registry + parseStatsPresetOutput + /prompt: directive (c48 / Wave D.5).
 // c122: renderSystemPrompt/detectBarePromptDirective replace resolvePreset.
 import { describe, expect, it } from 'bun:test';

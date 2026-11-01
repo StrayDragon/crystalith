@@ -1,3 +1,4 @@
+// covers: r71/r90/r430（deep-research-runtime）——work-unit 内核波次排空全部 research 节点、per-Run LLM 队列串行化（跨 Run 不互斥）、进行中单元经 cancel 协作中止至 cancelled。
 /**
  * c106: parallel branch work-units — drain wave, per-run LLM queue, cancel.
  */
@@ -219,7 +220,7 @@ async function waitForStatus(runId: number, wanted: string[], timeoutMs = 10000)
   throw new Error(`timeout status; last=${last}`);
 }
 
-describe('c106 parallel branch units', () => {
+describe('parallel branch units', () => {
   it('getParallelBranchUnits clamps to 1..8 (config default 2)', async () => {
     expect(getParallelBranchUnits()).toBe(2);
   });

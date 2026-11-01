@@ -1,3 +1,4 @@
+// covers: r357/r359（workspace-api-contract）+ r320（studio-slides-workflow）——workspace tools 端点形状与可用性诊断稳定；diagnostics.slides 机器可读（稳定 errorCode+可执行 hint）；SLIDES 可用性由 config 声明的探针判定而非硬编码。
 // SLIDES availability diagnostics (probe-slides-availability).
 //
 // Pure branch coverage for buildSlidesDiagnostic + router integration where a

@@ -139,7 +139,7 @@ check: typecheck lint format-check
 # Fallow PR 审计 — 只对变更文件 gate（新增问题才 fail，继承问题豁免）。
 # L0: 仅 verdict + 摘要; L2: 全量报告。本地未提交时 scope=工作树 vs merge-base。
 # fallow 是 devDependency，经 `bun run` 走 node_modules/.bin（bun install 后即可用）。
-# CI (GitHub Actions) 用 `bun run fallow audit --base origin/$GITHUB_BASE_REF`，见 ci.yml。
+# CI (GitHub Actions) 经 FALLOW_AUDIT_BASE=origin/$GITHUB_BASE_REF 传 base（ci.yml 需非 shallow checkout），见 ci.yml。
 audit-fallow:
     @bun run fallow audit {{ _qfallow }}
 
@@ -158,16 +158,21 @@ type-aware-lint:
 check-bun:
     @command -v bun >/dev/null || (echo "bun not found on PATH" >&2; exit 1)
 
-# Primary PR gate: typecheck, lint, format-check, generated-config drift,
-# fallow changed-file audit (dead code/complexity/dupe/CSS 新增问题),
-# server+shared unit/integration, frontend Rstest (`test:ci`), Playwright @p0.
+# 全部静态检查聚合：typecheck/lint/format + 生成物/环境/i18n/provider 漂移
+# + spec 双门禁（check-spec-test-paths / check-spec-covers）+ fallow 架构环。
+# CI（ci.yml check job）与 qa 共用此入口——新增静态门禁只改这里，不动 ci.yml。
+check-static: check check-env-examples check-app-schema check-i18n-keys check-spec-test-paths check-spec-covers check-provider-deps audit-fallow-arch
+
+# Primary PR gate: 静态聚合（check-static）+ fallow changed-file audit
+# (dead code/complexity/dupe/CSS 新增问题), server+shared unit/integration,
+# frontend Rstest (`test:ci`), Playwright @p0.
 # Output minimized — only errors and warnings shown.
 #
 # Out of gate (run separately when relevant):
 #   - `just test-bdd` — server BDD CRUD subset
 #   - `just type-aware-lint` — advisory type-aware oxlint
 # Requires Chromium once: `just e2e-install` (or system Chrome; see e2e recipe)
-qa: check check-env-examples check-app-schema check-i18n-keys check-provider-deps audit-fallow audit-fallow-arch test test-web e2e
+qa: check-static audit-fallow test test-web e2e
     @echo "✅ QA passed"
 
 # Server + shared unit/integration tests — L0: 仅错误级应用日志 + 失败
@@ -238,6 +243,14 @@ check-app-schema:
 # Check every desc('key') in shared schemas exists in zh/index.json
 check-i18n-keys:
     bun scripts/check-i18n-keys.ts
+
+# Spec 场景禁止测试文件引用——出现即拒（绑定走代码侧 covers:rN；终态）
+check-spec-test-paths:
+    bun scripts/check-spec-test-paths.ts
+
+# 有场景的 @req 必须有 covers 锚或豁免登记（spec-coverage-exemptions.json）
+check-spec-covers:
+    bun scripts/check-spec-covers.ts
 
 # Check provider registry sdk packages are declared in apps/server deps
 check-provider-deps:

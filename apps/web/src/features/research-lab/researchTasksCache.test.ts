@@ -1,3 +1,4 @@
+// covers: r120（deep-research-ui）——任务列表随 Run 事件立即刷新且 activeCount 仅计非终态。
 import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 
 // Mock reason: isolate SWR global mutate so cache helpers stay unit-testable without a provider.

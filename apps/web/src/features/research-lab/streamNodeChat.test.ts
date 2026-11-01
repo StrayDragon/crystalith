@@ -1,3 +1,4 @@
+// covers: r133（deep-research-ui）——节点对话经独立 chat SSE 消费 chunk/proposal/done/error。
 import { beforeEach, describe, expect, it, rs } from '@rstest/core';
 
 const streamRequest = rs.hoisted(() => rs.fn());

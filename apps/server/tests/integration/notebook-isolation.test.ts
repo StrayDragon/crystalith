@@ -1,3 +1,4 @@
+// covers: r351/r370/r373/r470（workspace-api-contract）——嵌套路径 :nid 归属 SSOT（body notebookId 不一致 400、跨 notebook 访问 404 统一信封）与 session sharedStateRevision 乐观锁 409 走 AppHttpError。
 // c67 — notebook isolation: required notebookId + cross-notebook → 404.
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 
@@ -88,7 +89,7 @@ async function post(path: string, body: unknown) {
   return { status: res.status, body: parsed };
 }
 
-describe('c67/c69 notebook isolation (nested paths)', () => {
+describe('notebook isolation (nested paths)', () => {
   it('GET nested source cross-notebook → 404 ErrorEnvelope', async () => {
     const { status, body } = await get(`/v2/notebooks/${notebookB}/sources/${sourceId}`);
     expect(status).toBe(404);
@@ -117,7 +118,7 @@ describe('c67/c69 notebook isolation (nested paths)', () => {
   });
 });
 
-describe('c69 nested notebook paths', () => {
+describe('nested notebook paths', () => {
   it('GET nested outputs list for notebook A', async () => {
     const { status, body } = await get(`/v2/notebooks/${notebookA}/outputs`);
     expect(status).toBe(200);
@@ -152,5 +153,23 @@ describe('c69 nested notebook paths', () => {
   it('GET flat outputs alias is gone (c90)', async () => {
     const { status } = await get(`/v2/outputs?notebookId=${notebookA}`);
     expect(status).toBe(404);
+  });
+});
+
+// covers: r349（workspace-api-contract）——跨 notebook GET session 404。
+describe('cross-notebook session isolation (r349)', () => {
+  it('GET session from wrong notebook → 404', async () => {
+    const nbA = getOrm().insert(notebooks).values({ name: 'iso-sess-a' }).returning().get().id;
+    const nbB = getOrm().insert(notebooks).values({ name: 'iso-sess-b' }).returning().get().id;
+    const sess = getOrm()
+      .insert(sessions)
+      .values({ notebookId: nbA, title: 'only-in-a' })
+      .returning()
+      .get();
+    const res = await app.handle(new Request(`${BASE}/v2/notebooks/${nbB}/sessions/${sess.id}`));
+    expect(res.status).toBe(404);
+    // Same session from correct notebook works
+    const ok = await app.handle(new Request(`${BASE}/v2/notebooks/${nbA}/sessions/${sess.id}`));
+    expect(ok.status).toBe(200);
   });
 });
