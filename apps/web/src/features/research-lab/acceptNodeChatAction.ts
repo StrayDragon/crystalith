@@ -1,4 +1,5 @@
 import type { ResearchConclusionStatus } from '@crystalith/shared';
+import { RESEARCH_TERMINAL_STATUSES } from '@crystalith/shared';
 
 import { formatStatusChangeNote, mockEnrichAfterStatus } from './model/mockNodeEnrichment';
 /**
@@ -9,12 +10,16 @@ import type { LabNodeActionProposal } from './model/nodeChatTypes';
 import { findInboundEdgeForNode } from './model/proposeNodeChatTurn';
 import type { LabEdge, LabNode } from './model/types';
 
-const TERMINAL_RUN_STATUSES = new Set(['completed', 'failed', 'cancelled']);
+const TERMINAL_RUN_STATUSES = new Set<string>(RESEARCH_TERMINAL_STATUSES);
+// r105：终态 Run 只读——结构/意图提案与 confirm 类提案（finish/continue 在终态
+// 必然被服务端 RESEARCH_INVALID_STATE 拒绝）一律在执行前闸掉。
 const READONLY_PROPOSAL_KINDS = new Set([
   'prune_node',
   'fork_sibling',
   'rewrite_query',
   'set_status',
+  'confirm_finish',
+  'confirm_continue',
 ]);
 
 /** rewrite_query：question/root 改意图，其余改查询（PATCH seam）。 */

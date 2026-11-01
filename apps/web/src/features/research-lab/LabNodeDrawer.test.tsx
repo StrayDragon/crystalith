@@ -50,5 +50,49 @@ describe('r102 run detail layer keeps the desk mounted', () => {
   });
 });
 
-// overlay prop 已随死 API 面一并移除（产品与 demo 调用方原本均显式传 true）。
-// falsy 分支为死 API 面；prop 本身的移除另行处理。
+// r105：completed/failed/cancelled 时 inspector MUST 只读——meta 页编辑入口收口
+// （快速改查询隐藏、askOnInterrupt 开关禁用）；执行侧闸在 acceptNodeChatAction，
+// 图交互闸在 GRAPH_READ_ONLY_STATUSES。
+describe('r105 terminal run renders a read-only inspector', () => {
+  const pendingResearch: LabNode = {
+    ...NODE,
+    id: 'node_research_pending',
+    title: '研究节点乙',
+    conclusionStatus: 'pending',
+  };
+  const pendingQuestion: LabNode = {
+    ...pendingResearch,
+    id: 'node_question_pending',
+    title: '提问节点',
+    role: 'question',
+  };
+
+  function renderAt(phase: 'explore' | 'completed' | 'failed', n: LabNode) {
+    const view = render(
+      <LayerProvider>
+        <LabNodeDrawer node={n} phase={phase} citations={{}} onClose={() => {}} onEdit={() => {}} />
+      </LayerProvider>,
+    );
+    return view.unmount;
+  }
+
+  it('hides the quick edit-query entry in terminal phases, shows it while exploring', () => {
+    let unmount = renderAt('explore', pendingResearch);
+    expect(screen.getByRole('button', { name: '快速改查询…' })).toBeTruthy();
+    unmount();
+
+    unmount = renderAt('completed', pendingResearch);
+    expect(screen.queryByRole('button', { name: '快速改查询…' })).toBeNull();
+    unmount();
+
+    unmount = renderAt('failed', pendingResearch);
+    expect(screen.queryByRole('button', { name: '快速改查询…' })).toBeNull();
+    unmount();
+  });
+
+  it('disables the askOnInterrupt switch in terminal phases', () => {
+    renderAt('completed', pendingQuestion);
+    const switchEl = screen.getByRole('switch');
+    expect((switchEl as HTMLButtonElement).disabled).toBe(true);
+  });
+});
