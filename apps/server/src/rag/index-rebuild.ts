@@ -21,16 +21,20 @@ import {
   readVecTableDim,
   recreateVecChunks,
 } from '../db/vectors.ts';
-import { getDefaultEmbeddingModel } from '../shared/config.ts';
+import { getEffectiveEmbeddingDims } from '../shared/config.ts';
 import { AppHttpError, ErrorCode } from '../shared/errors.ts';
 import { logger } from '../shared/logger.ts';
 import { EmbedStrategy } from './embed-strategy.ts';
 
 export type IndexJobMode = 'notebook' | 'global';
 
-/** Declared dims of the default embedding model (fallback 1024, c130 r478). */
-function declaredEmbeddingDims(): number {
-  return getDefaultEmbeddingModel()?.embedding?.dims ?? DEFAULT_EMBEDDING_DIM;
+/**
+ * 生效维度（c133 r494）：截断开启时 = truncation_dims，否则 = 模型声明维度
+ * （fallback 1024，c130 r478 口径）。vec_chunks 的判定/重建与引擎产出共用
+ * 此口径——按声明维度判表会让截断向量永远插不进、重建也无法收敛。
+ */
+function effectiveEmbeddingDims(): number {
+  return getEffectiveEmbeddingDims() ?? DEFAULT_EMBEDDING_DIM;
 }
 
 interface ActiveJob {
@@ -66,6 +70,7 @@ export async function recoverInterruptedJobs(): Promise<void> {
 
 export interface IndexState {
   state: 'ready' | 'rebuilding' | 'dim_mismatch' | 'interrupted';
+  /** 期望维度（dim_mismatch 时给出）——截断开启时为截断目标，否则为声明维度（wire 名保持 declaredDims）。 */
   declaredDims?: number;
   tableDims?: number;
   progress?: { total: number; done: number; failed: number };
@@ -100,9 +105,9 @@ export async function getIndexState(notebookId: number): Promise<IndexState> {
   }
 
   const tableDims = await readVecTableDim(db());
-  const declared = declaredEmbeddingDims();
-  if (tableDims !== null && tableDims !== declared) {
-    return { state: 'dim_mismatch', declaredDims: declared, tableDims };
+  const expected = effectiveEmbeddingDims();
+  if (tableDims !== null && tableDims !== expected) {
+    return { state: 'dim_mismatch', declaredDims: expected, tableDims };
   }
 
   const lastJob = await client().get(
@@ -153,8 +158,8 @@ export async function startIndexRebuild(
     await pruneIndexJobs();
 
     const tableDims = await readVecTableDim(db());
-    const declared = declaredEmbeddingDims();
-    const mode: IndexJobMode = tableDims !== null && tableDims === declared ? 'notebook' : 'global';
+    const expected = effectiveEmbeddingDims();
+    const mode: IndexJobMode = tableDims !== null && tableDims === expected ? 'notebook' : 'global';
 
     const job = (await client().get(
       db().insert(indexJobs).values({ notebookId, mode, state: 'running' }).returning(),
@@ -188,8 +193,9 @@ async function runRebuild(
   try {
     if (mode === 'global') {
       // Destructive by policy (greenfield rebuild): all vectors go away, the
-      // table comes back at the declared width, every ready source re-embeds.
-      await recreateVecChunks(db(), declaredEmbeddingDims());
+      // table comes back at the effective width (c133 r494 — truncation-aware,
+      // so re-embedded truncated vectors fit), every ready source re-embeds.
+      await recreateVecChunks(db(), effectiveEmbeddingDims());
     }
 
     const targets =

@@ -272,6 +272,16 @@ export function getEmbeddingSettings(): EmbeddingSettings {
   return parseSection(EmbeddingSettingsSchema, config().raw.embedding);
 }
 
+/**
+ * c133 r494：生效维度 —— 截断开启时为 truncation_dims，否则为默认模型声明维度。
+ * 引擎断言（embedding-engine）与 DB 层（vec_chunks 建表/重建/守卫）必须共用
+ * 同一口径，否则截断向量插不进按声明维度建的表（启动校验已保证 truncation
+ * 开启时默认模型必声明 mrlDims，故不存在「截断开启但无模型」的组合）。
+ */
+export function getEffectiveEmbeddingDims(): number | undefined {
+  return getEmbeddingSettings().truncation_dims ?? getDefaultEmbeddingModel()?.embedding?.dims;
+}
+
 export function getContextWindowSettings(): ContextWindowSettings {
   return parseSection(ContextWindowSettingsSchema, config().raw.context_window);
 }

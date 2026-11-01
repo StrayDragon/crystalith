@@ -361,7 +361,7 @@
   "searchIndex.lastJob.failed": "该任务失败数",
   "searchIndex.lastJob": "最近一次重建任务摘要",
   "searchIndex.status.state": "索引状态：ready 就绪；rebuilding 重建中；dim_mismatch 维度不匹配；interrupted 上次重建被中断",
-  "searchIndex.status.declaredDims": "默认嵌入模型声明维度（dim_mismatch 时给出）",
+  "searchIndex.status.declaredDims": "期望维度（dim_mismatch 时给出）——MRL 截断开启时为截断目标维度，否则为默认嵌入模型声明维度",
   "searchIndex.status.tableDims": "vec_chunks 现表维度（dim_mismatch 时给出）",
   "searchIndex.status.jobId": "相关任务 id（rebuilding/interrupted 时给出）",
   "searchIndex.status.progress": "重建进度（rebuilding 时给出）",

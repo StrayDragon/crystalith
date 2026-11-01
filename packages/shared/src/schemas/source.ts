@@ -731,7 +731,10 @@ export const SearchIndexStatusSchema = z
       .nullable()
       .optional()
       .describe(
-        desc('searchIndex.status.declaredDims', '默认嵌入模型声明维度（dim_mismatch 时给出）'),
+        desc(
+          'searchIndex.status.declaredDims',
+          '期望维度（dim_mismatch 时给出）——MRL 截断开启时为截断目标维度，否则为默认嵌入模型声明维度',
+        ),
       ),
     tableDims: z
       .number()

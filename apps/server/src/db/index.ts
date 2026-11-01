@@ -12,7 +12,7 @@ import { drizzle, type BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import * as sqliteVec from 'sqlite-vec';
 
-import { getDataRoot, getDefaultEmbeddingModel } from '../shared/config.ts';
+import { getDataRoot, getEffectiveEmbeddingDims } from '../shared/config.ts';
 import { describeUnknownError } from '../shared/errors.ts';
 import { createDbClient, type DbClient } from './client.ts';
 import { ensureFtsIndex } from './fts';
@@ -145,10 +145,10 @@ export function createDb(path?: string): Orm {
   }
 
   // Provision the sqlite-vec virtual table (not managed by Drizzle).
-  // Declared dimension: default embedding model's embedding.dims, falling
-  // back to initVecChunks' DEFAULT_EMBEDDING_DIM (1024) when undeclared /
-  // no model configured (undefined → default parameter kicks in).
-  initVecChunks(orm, getDefaultEmbeddingModel()?.embedding?.dims);
+  // 生效维度（c133 r494）：截断开启时 = truncation_dims，否则 = 默认模型声明
+  // 维度；fallback DEFAULT_EMBEDDING_DIM (1024)（undeclared / 无模型配置，
+  // undefined → 默认参数生效）。与引擎断言共用 getEffectiveEmbeddingDims 口径。
+  initVecChunks(orm, getEffectiveEmbeddingDims());
 
   // c132 r487: keyword index over chunks.text_tokens — legacy-shape migrate +
   // token backfill + FTS rebuild (idempotent; see db/fts.ts).
