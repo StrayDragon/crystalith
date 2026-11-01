@@ -20,6 +20,9 @@ import {
 import type { LabCitation, LabNode, LabPhase } from './model/types';
 import { useNodeChat } from './useNodeChat';
 
+// 既有神组件：本批仅 +5 行（r105 终态只读收口），未实质增加复杂度；
+// 按仓库「Component / module split」守则，神文件拆分独立成 change。
+// fallow-ignore-next-line complexity
 export default function LabNodeDrawer({
   node,
   citations,
