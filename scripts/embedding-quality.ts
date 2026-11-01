@@ -1,14 +1,14 @@
 // c131 T7 — EmbeddingGemma 2 real-model quality gate (manual, NOT CI).
 //
-// Validates against a live gateway (default: maas-embeddinggemma2 at
-// tufa:50233; override with --base or CL_EMBEDDING2_API_BASE):
+// Validates against a live eg2 gateway (set --base or CL_EMBEDDING2_API_BASE;
+// the loopback default is an unreachable placeholder — public-repo hygiene):
 //   1. Prefix parity — the engine's client-side templates must produce vectors
 //      identical to the server-side model-suffix prompts (:SearchQuery /
 //      :Document), cos ≥ 0.999999.
 //   2. Self-retrieval — zh / zh+en / code corpora, top-1 hit rate per corpus.
 //   3. Latency baseline — single + batch×32 timings.
 //
-// Usage: bun scripts/embedding-quality.ts [--base http://host:port/v1]
+// Usage: bun scripts/embedding-quality.ts --base http://host:port/v1
 import { PREFIX_PRESETS } from '../apps/server/src/rag/embedding-engine.ts';
 
 const args = process.argv.slice(2);
@@ -16,7 +16,7 @@ const baseFlag = args.findIndex((a) => a === '--base');
 const BASE =
   baseFlag >= 0
     ? (args[baseFlag + 1] ?? '')
-    : (process.env.CL_EMBEDDING2_API_BASE ?? 'http://tufa:50233/v1');
+    : (process.env.CL_EMBEDDING2_API_BASE ?? 'http://127.0.0.1:50233/v1');
 const MODEL = 'embeddinggemma-2';
 const preset = PREFIX_PRESETS.embeddinggemma2;
 

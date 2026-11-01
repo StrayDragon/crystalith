@@ -79,10 +79,12 @@ providers:
     baseUrl: "{{ env.CL_EMBEDDING_API_BASE | default('http://127.0.0.1:50256/v1') }}"
 
   # EmbeddingGemma 2 dedicated gateway (c131; keep separate so the bge-m3
-  # embed_gateway stays as fallback). Served by maas-embeddinggemma2.
+  # embed_gateway stays as fallback). Point CL_EMBEDDING2_API_BASE at your
+  # real eg2 gateway; the loopback default is a placeholder (no reachable
+  # service) and embedding via this entry fails fast until configured.
   eg2_gateway: &eg2_gateway
     apiKey: "{{ env.CL_EMBEDDING2_API_KEY | default('local') }}"
-    baseUrl: "{{ env.CL_EMBEDDING2_API_BASE | default('http://tufa:50233/v1') }}"
+    baseUrl: "{{ env.CL_EMBEDDING2_API_BASE | default('http://127.0.0.1:50233/v1') }}"
 
   # OpenAI-compatible primary chat gateway (routed via CL_CHAT_API_BASE by default)
   # Default false: some think/grammar gateways reject json_schema ("failed to parse grammar").

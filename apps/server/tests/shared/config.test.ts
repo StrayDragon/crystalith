@@ -518,8 +518,9 @@ describe('config: embeddinggemma2-gateway catalog entry)', () => {
       modalities: ['text'],
       prefixPreset: 'embeddinggemma2',
     });
-    // Dedicated anchor (env-driven, defaults to the maas-embeddinggemma2 host).
-    expect(entry?.providerConfig?.baseUrl).toBe('http://tufa:50233/v1');
+    // Dedicated anchor (env-driven; the loopback default is an unreachable
+    // placeholder — public-repo hygiene, set CL_EMBEDDING2_API_BASE for real).
+    expect(entry?.providerConfig?.baseUrl).toBe('http://127.0.0.1:50233/v1');
   });
 
   it('defaults.embedding points at the eg2 entry (c131 T8 flip)', () => {
