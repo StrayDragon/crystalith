@@ -8,6 +8,7 @@ import { SWRConfig } from 'swr';
 
 import { server } from '../../../../test-utils/msw/server';
 import { TestProviders } from '../../../../test-utils/providers';
+import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { ChatMessage, Citation, OutputTypeId } from '../../shared/types';
 import ChatPanel from './ChatPanel';
 
@@ -287,4 +288,15 @@ test('chat empty state with sources offers the direct-ask session start', () => 
   expect(sendButton).not.toBeDisabled();
   fireEvent.click(sendButton);
   expect(onSend).toHaveBeenCalledTimes(1);
+});
+
+// covers: r473
+test('chat empty state hides the session-start entry once a session is active', () => {
+  useWorkspaceStore.setState({ activeSessionId: 42 });
+  renderChatPanel({ hasSources: true });
+
+  // 反向分支锁定：已有会话时入口按钮不再渲染（避免与既有会话双入口并存）
+  expect(screen.queryByRole('button', { name: '一键开始会话' })).not.toBeInTheDocument();
+  expect(screen.getByText('直接提问，或勾选左侧来源后基于文档回答。')).toBeInTheDocument();
+  useWorkspaceStore.setState({ activeSessionId: null });
 });

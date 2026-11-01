@@ -42,6 +42,8 @@ describe('fixtureLabSessionPort', () => {
   });
 
   it('is a fixture port whose createTask stamps the default scenario and delegates listing', () => {
+    // 常量自比较之外钉死字面量：demo 默认场景 id 改值（如换演示数据集）必须显式过测试。
+    expect(LAB_DEFAULT_FIXTURE_SCENARIO_ID).toBe('xlsx-lib');
     expect(fixtureLabSessionPort.kind).toBe('fixture');
     const task = fixtureLabSessionPort.createTask({ notebookId: 9, topic: 'xlsx' });
     expect(task.scenarioId).toBe(LAB_DEFAULT_FIXTURE_SCENARIO_ID);

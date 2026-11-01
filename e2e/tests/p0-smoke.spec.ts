@@ -63,6 +63,7 @@ test.describe('@p0 workspace smoke', () => {
     const create = page.getByTestId(TestIds.notebookCreateButton);
     await expect(create).toBeVisible();
     await expect(create).toHaveAttribute('aria-label', '新建笔记本');
+    await expect(create.locator('svg')).toBeVisible();
     const count = page.getByTestId(TestIds.sourcesCount);
     const empty = page.getByTestId(TestIds.sourcesEmpty);
     await expect(count.or(empty).first()).toBeVisible();

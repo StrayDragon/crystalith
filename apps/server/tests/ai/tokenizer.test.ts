@@ -1,4 +1,3 @@
-// covers: r15（architecture-plugin-and-agent）
 // Tests for the tokenizer (gpt-tokenizer).
 import { describe, expect, it } from 'bun:test';
 

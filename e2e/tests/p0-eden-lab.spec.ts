@@ -128,7 +128,7 @@ test.describe('@p0 Eden Lab production path', () => {
     }
   });
 
-  test('R02: live → request-reexpand → skip → completed (c104 / r459 / c108)', async ({
+  test('R02: live → request-reexpand → skip → completed (c104 / r151 / c108)', async ({
     page,
   }, testInfo) => {
     test.setTimeout(120_000);
