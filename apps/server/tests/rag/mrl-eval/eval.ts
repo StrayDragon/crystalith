@@ -9,11 +9,11 @@ import { chunks, notebooks, sources } from '../../../src/db/schema.ts';
 import { insertChunkVector, recreateVecChunks, searchVectors } from '../../../src/db/vectors.ts';
 import { CORPUS } from './corpus.ts';
 import { checkFixtureIntegrity, fixtureExists, loadFixture } from './fixture.ts';
-import { decayPct, ndcgAtK, recallAtK } from './metrics.ts';
+import { computeVerdict, decayPct, ndcgAtK, recallAtK, NOGO_DECAY_PCT } from './metrics.ts';
 import { QUERIES } from './queries.ts';
 import { sliceNormalize } from './truncate.ts';
 
-export const NOGO_DECAY_PCT = 5;
+export { NOGO_DECAY_PCT };
 export const EVAL_DIMS = [768, 512, 256];
 
 interface PerQuery {
@@ -148,13 +148,7 @@ function writeReports(results: DimResult[], decay256: number, verdict: string): 
   console.log(md);
 }
 
-/** go/no-go 判定（r495：256 维 recall@10 相对基线衰减 > 5% 即 no-go）。 */
-function computeVerdict(results: DimResult[]): { decay256: number; verdict: string } {
-  const baseline = results[0]!;
-  const at256 = results.find((r) => r.dims === 256);
-  const decay = at256 ? decayPct(baseline.recall10, at256.recall10) : 0;
-  return { decay256: decay, verdict: decay > NOGO_DECAY_PCT ? 'no-go' : 'go' };
-}
+/** go/no-go 判定在 metrics.computeVerdict（纯函数单测锁行为；缺 256 档硬失败）。 */
 
 /** 装载并校验 fixture（缺失/不完整即抛，错误信息指向录制命令）。 */
 function loadIntegralFixture() {
@@ -179,4 +173,4 @@ async function main(): Promise<void> {
   if (verdict === 'no-go') process.exit(1);
 }
 
-void main();
+await main();

@@ -1,14 +1,20 @@
 // 录制脚本：经真实网关把语料与查询嵌入为全维向量，落盘 vectors.fixture.json。
-// 用法：cd apps/server && bun tests/rag/mrl-eval/generate.ts
-// env：CL_MRL_EVAL_BASE / CL_MRL_EVAL_KEY / CL_MRL_EVAL_MODEL（见缺省）。
+// 用法：cd apps/server && CL_MRL_EVAL_BASE=<openai-compatible 网关> bun tests/rag/mrl-eval/generate.ts
+// env：CL_MRL_EVAL_BASE（必填）/ CL_MRL_EVAL_KEY / CL_MRL_EVAL_MODEL（见缺省）。
 // 前缀与 embedding-engine r475 的 embeddinggemma2 预设逐字一致（公平对比前提）。
 import { CORPUS } from './corpus.ts';
 import { saveFixture } from './fixture.ts';
 import { QUERIES } from './queries.ts';
 
-const BASE = process.env.CL_MRL_EVAL_BASE ?? 'http://tufa:50233/v1';
+const BASE = process.env.CL_MRL_EVAL_BASE;
 const KEY = process.env.CL_MRL_EVAL_KEY ?? 'local';
 const MODEL = process.env.CL_MRL_EVAL_MODEL ?? 'embeddinggemma-2';
+
+if (!BASE) {
+  throw new Error(
+    'CL_MRL_EVAL_BASE 未设置——录制需要指向 openai-compatible 嵌入网关（判定基准须用声明 ≥768 维且含 mrlDims 的模型）',
+  );
+}
 
 const docInput = (title: string, text: string) => `title: ${title} | text: ${text}`;
 const queryInput = (q: string) => `task: search result | query: ${q}`;
@@ -46,7 +52,6 @@ saveFixture({
   model: MODEL,
   dims,
   generatedAt: new Date().toISOString(),
-  gateway: BASE,
   docs,
   queries,
 });

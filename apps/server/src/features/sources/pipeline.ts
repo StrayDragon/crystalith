@@ -76,6 +76,19 @@ export interface IngestResult {
   errorMessage?: string;
 }
 
+/**
+ * c57/r266: per-stage actionable recovery hints. Keyed by the 4-stage error
+ * codes (PARSE_ERROR / EMBEDDING_FAILED / VECTOR_STORE_FAILED / INGESTION_FAILED);
+ * every code MUST carry a non-empty hint so failed sources surface an
+ * actionable fix suggestion in the UI.
+ */
+export const INGESTION_STAGE_RECOVERY_HINTS: Record<string, string> = {
+  PARSE_ERROR: '请检查文件格式是否受支持，或尝试转换为 PDF/HTML/TXT/CSV 格式',
+  EMBEDDING_FAILED: '请检查 embedding 模型配置是否正确，或尝试 re-embed',
+  VECTOR_STORE_FAILED: '向量存储写入失败，请检查 sqlite-vec 扩展是否正常加载',
+  INGESTION_FAILED: '摄取流程发生未知错误，请重试或检查日志',
+};
+
 // ---------------------------------------------------------------------------
 // Pipeline
 // ---------------------------------------------------------------------------
@@ -266,13 +279,10 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
           : stage === 'vector_store'
             ? 'VECTOR_STORE_FAILED'
             : 'INGESTION_FAILED';
-    // c57: recovery hints (v1-style, per-stage guidance)
-    const recoveryHints: Record<string, string> = {
-      PARSE_ERROR: '请检查文件格式是否受支持，或尝试转换为 PDF/HTML/TXT/CSV 格式',
-      EMBEDDING_FAILED: '请检查 embedding 模型配置是否正确，或尝试 re-embed',
-      VECTOR_STORE_FAILED: '向量存储写入失败，请检查 sqlite-vec 扩展是否正常加载',
-      INGESTION_FAILED: '摄取流程发生未知错误，请重试或检查日志',
-    };
+    // c57: recovery hints (v1-style, per-stage guidance). Exported so the
+    // diagnostics contract (r266: every stage code carries an actionable
+    // hint) is lockable from tests.
+    const recoveryHints = INGESTION_STAGE_RECOVERY_HINTS;
     await client().run(
       db()
         .update(sources)

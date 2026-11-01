@@ -9,7 +9,6 @@ export interface EvalFixture {
   model: string;
   dims: number;
   generatedAt: string;
-  gateway: string;
   docs: Record<string, number[]>;
   queries: Record<string, number[]>;
 }

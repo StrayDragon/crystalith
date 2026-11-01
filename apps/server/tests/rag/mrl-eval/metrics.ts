@@ -27,3 +27,30 @@ export function decayPct(baseline: number, candidate: number): number {
   if (baseline <= 0) return 0;
   return (1 - candidate / baseline) * 100;
 }
+
+/** r495 no-go 阈值：256 维 recall@10 相对基线衰减超过该百分比即 no-go。 */
+export const NOGO_DECAY_PCT = 5;
+
+export interface VerdictInput {
+  dims: number;
+  recall10: number;
+}
+
+/**
+ * go/no-go 判定（r495：256 维 recall@10 相对基线衰减 > 5% 即 no-go）。
+ * 256 档缺失时硬失败而非判 go——判据只在 256 档存在时才有意义（例如用
+ * 非 768 维模型重录 fixture 会静默缺档，缺档即 no-go 证据缺失）。
+ */
+export function computeVerdict(results: VerdictInput[]): { decay256: number; verdict: string } {
+  const baseline = results[0];
+  if (!baseline) throw new Error('eval 判据缺输入：results 为空');
+  const at256 = results.find((r) => r.dims === 256);
+  if (!at256) {
+    throw new Error(
+      `eval 判据缺档：results 中没有 256 维档（dims=[${results.map((r) => r.dims).join('/')}])——` +
+        '请用声明 ≥768 维的模型重录 fixture（bun tests/rag/mrl-eval/generate.ts），缺档不得判 go',
+    );
+  }
+  const decay = decayPct(baseline.recall10, at256.recall10);
+  return { decay256: decay, verdict: decay > NOGO_DECAY_PCT ? 'no-go' : 'go' };
+}

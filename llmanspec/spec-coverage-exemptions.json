@@ -1,19 +1,4 @@
 {
-  "r208": {
-    "capability": "public-repo-hygiene",
-    "reason": "repo-hygiene.test.ts 已删（配置镜像清理），无替代",
-    "seam": "恢复静态检查或并入 release 冒烟"
-  },
-  "r210": {
-    "capability": "public-repo-hygiene",
-    "reason": "repo-hygiene 测试已删，模板字段无机器检查",
-    "seam": "模板字段静态检查"
-  },
-  "r212": {
-    "capability": "public-repo-hygiene",
-    "reason": "repo-hygiene 测试已删；release 冒烟仅 boot+/health+建笔记本，不查工件组成",
-    "seam": "build-release allowlist 静态检查"
-  },
   "r236": {
     "capability": "slides-workflow-plugins",
     "reason": "插件契约面收窄（仅 buildSlidesConfigSchema 入契约）",

@@ -1,4 +1,4 @@
-// covers: r408（workspace-ui-panels）——splitUploadFiles：PDF 支持 / zip 预检拒绝 / 类型分派。
+// covers: r408（workspace-ui-panels）——splitUploadFiles：PDF/CSV 支持 / zip 预检拒绝 / 类型分派。
 import { expect, test } from '@rstest/core';
 
 import { formatSnapshotTimestamp } from './source-connector-utils';
@@ -6,11 +6,12 @@ import { splitUploadFiles } from './sources-panel-utils';
 
 test('splitUploadFiles separates supported and unsupported files', () => {
   const supportedFile = new File(['content'], 'notes.pdf', { type: 'application/pdf' });
+  const csvFile = new File(['a,b'], 'data.csv', { type: 'text/csv' });
   const unsupportedFile = new File(['content'], 'archive.zip', { type: 'application/zip' });
 
-  const { supported, unsupported } = splitUploadFiles([supportedFile, unsupportedFile]);
+  const { supported, unsupported } = splitUploadFiles([supportedFile, csvFile, unsupportedFile]);
 
-  expect(supported).toEqual([supportedFile]);
+  expect(supported).toEqual([supportedFile, csvFile]);
   expect(unsupported).toEqual([unsupportedFile]);
 });
 

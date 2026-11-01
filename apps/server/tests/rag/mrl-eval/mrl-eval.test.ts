@@ -3,7 +3,7 @@ import { describe, expect, it } from 'bun:test';
 
 import { CORPUS } from './corpus.ts';
 import { checkFixtureIntegrity, fixtureExists, loadFixture } from './fixture.ts';
-import { decayPct, ndcgAtK, recallAtK } from './metrics.ts';
+import { computeVerdict, decayPct, ndcgAtK, recallAtK } from './metrics.ts';
 import { QUERIES } from './queries.ts';
 import { l2Norm, sliceNormalize } from './truncate.ts';
 
@@ -31,6 +31,32 @@ describe('mrl-eval metrics', () => {
     expect(decayPct(1, 0.95)).toBeCloseTo(5, 5);
     expect(decayPct(0.8, 0.8)).toBe(0);
     expect(decayPct(0, 0.5)).toBe(0);
+  });
+
+  it('computeVerdict is go under the decay threshold and no-go over it', () => {
+    expect(
+      computeVerdict([
+        { dims: 768, recall10: 0.9 },
+        { dims: 256, recall10: 0.87 },
+      ]).verdict,
+    ).toBe('go');
+    expect(
+      computeVerdict([
+        { dims: 768, recall10: 0.9 },
+        { dims: 256, recall10: 0.8 },
+      ]).verdict,
+    ).toBe('no-go');
+  });
+
+  it('computeVerdict hard-fails when the 256 tier is absent (missing evidence is not a go)', () => {
+    expect(() => computeVerdict([{ dims: 768, recall10: 0.9 }])).toThrow(/256/);
+    expect(() =>
+      computeVerdict([
+        { dims: 768, recall10: 0.9 },
+        { dims: 512, recall10: 0.88 },
+      ]),
+    ).toThrow(/256/);
+    expect(() => computeVerdict([])).toThrow();
   });
 });
 
