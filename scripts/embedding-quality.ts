@@ -1,7 +1,7 @@
 // c131 T7 — EmbeddingGemma 2 real-model quality gate (manual, NOT CI).
 //
 // Validates against a live eg2 gateway (set --base or CL_EMBEDDING2_API_BASE;
-// the loopback default is an unreachable placeholder — public-repo hygiene):
+// no default is assumed — same NOT-SET discipline as config/app.yaml):
 //   1. Prefix parity — the engine's client-side templates must produce vectors
 //      identical to the server-side model-suffix prompts (:SearchQuery /
 //      :Document), cos ≥ 0.999999.
@@ -14,9 +14,13 @@ import { PREFIX_PRESETS } from '../apps/server/src/rag/embedding-engine.ts';
 const args = process.argv.slice(2);
 const baseFlag = args.findIndex((a) => a === '--base');
 const BASE =
-  baseFlag >= 0
-    ? (args[baseFlag + 1] ?? '')
-    : (process.env.CL_EMBEDDING2_API_BASE ?? 'http://127.0.0.1:50233/v1');
+  baseFlag >= 0 ? (args[baseFlag + 1] ?? '') : (process.env.CL_EMBEDDING2_API_BASE ?? '');
+if (!BASE) {
+  console.error(
+    '未配置 eg2 网关：请以 --base http://host:port/v1 或 CL_EMBEDDING2_API_BASE 指定你的 embedding 网关后再运行',
+  );
+  process.exit(1);
+}
 const MODEL = 'embeddinggemma-2';
 const preset = PREFIX_PRESETS.embeddinggemma2;
 
