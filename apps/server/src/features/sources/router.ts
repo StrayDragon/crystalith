@@ -64,7 +64,7 @@ import { batchDeleteSources, batchReembedSources } from './batch.service.ts';
 import { uploadDedupKey } from './dedup.ts';
 import { visibleSourcesOnly } from './derived-visibility.ts';
 import { ingestFromUrl } from './from-url.service.ts';
-import { listParsers } from './parser-registry.ts';
+import { listLoadedParsers } from './parser-registry.ts';
 import { ingestSource, precheckIngestInput } from './pipeline.ts';
 import {
   assignSourcesToTag,
@@ -347,7 +347,7 @@ async function handleSourceUpload(
   // r491: rule out certain-failure inputs (415 unsupported type / r290 empty
   // file) BEFORE any dedup-hit handling — a replace deletes the old source,
   // and a deterministic ingest failure after that would lose it for good.
-  precheckIngestInput({ filename: file.name, buffer, mimeType: file.type });
+  await precheckIngestInput({ filename: file.name, buffer, mimeType: file.type });
 
   // c44: Dedup check — gated by config (v1 source_ingestion.dedup.enabled)
   const dedupKey = getDedupEnabled() ? uploadDedupKey(buffer) : undefined;
@@ -708,12 +708,14 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   // List available parsers (global flat — do not nest)
   .get(
     '/sources/parsers',
-    () => {
-      return listParsers().map((p) => ({
-        id: p.id,
-        name: p.name,
-        mimeTypes: p.mimeTypes,
-        extensions: p.extensions,
+    async () => {
+      await pluginRegistry.ensureLoaded();
+      return listLoadedParsers().map(({ pluginId, parser }) => ({
+        id: parser.id,
+        name: parser.name,
+        mimeTypes: parser.mimeTypes,
+        extensions: parser.extensions,
+        pluginId,
       }));
     },
     { response: SourceParserListSchema },

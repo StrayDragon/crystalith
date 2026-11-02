@@ -293,6 +293,7 @@
   "source.from_url_response": "URL 导入响应",
   "source.id": "来源唯一标识（自增整数）",
   "source.ingest_result": "摄取结果",
+  "source.parser_plugin_id": "提供该解析器的插件 id",
   "source.qa_request": "单来源问答请求",
   "source.search_message": "补充文案；status=service_error 时 MUST 为用户可读中文错误文案",
   "source.search_mode": "网搜通道元数据（默认 Fast Research）；不是深度研究 / ResearchRun",

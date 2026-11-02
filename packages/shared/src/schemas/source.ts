@@ -461,6 +461,10 @@ export const SourceParserSchema = z.object({
   name: z.string(),
   mimeTypes: z.array(z.string()),
   extensions: z.array(z.string()),
+  pluginId: z
+    .string()
+    .optional()
+    .openapi({ description: desc('source.parser_plugin_id', '提供该解析器的插件 id') }),
 });
 export type SourceParser = z.infer<typeof SourceParserSchema>;
 

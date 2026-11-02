@@ -36,15 +36,8 @@
   "rules": {
     "unused-dependencies": "warn"
   },
-  // 动态 import() 的 provider SDK 与跨 workspace Eden treaty 均无法静态追踪
-  "ignoreDependencies": [
-    "@ai-sdk/anthropic",
-    "@ai-sdk/deepseek",
-    "@ai-sdk/google",
-    "@ai-sdk/openai",
-    "@ai-sdk/openai-compatible",
-    "@elysiajs/eden"
-  ],
+  // 跨 workspace Eden treaty 无法静态追踪；@ai-sdk/* 已在 providers.ts 静态 import
+  "ignoreDependencies": ["@elysiajs/eden"],
 
   "ignoreExports": [
     {

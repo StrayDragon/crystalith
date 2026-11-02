@@ -1,4 +1,4 @@
-// covers: r322（typed-generation-framework）+ r358（workspace-api-contract）——tools 列表由 core 输出类型注册表驱动且 SLIDES 不因不可用而从列表隐藏。
+// covers: r322（typed-generation-framework）+ r358（workspace-api-contract）+ r498（parser-plugins）——tools 列表由 core 输出类型注册表驱动且 SLIDES 不因不可用而从列表隐藏；diagnostics.plugins.loaded 含 builtin parsers 与已装 parser-docx。
 // 生成类型的注册与发现：内置生成类型在系统启动时装载（OUTPUT_META 注册表），
 // GET /v2/workspace/tools 以统一方式向调用方发现该集合 —
 // 工具列表 MUST 与注册表一一对应（id/kind/label/outputType/renderDescriptor/
@@ -90,5 +90,20 @@ describe('workspace tools discover the registered generation types (r322)', () =
     const byId = new Map(tools.map((t) => [t.id, t]));
     expect((byId.get('slides') as Record<string, unknown>).enabled).toBe(false);
     expect((byId.get('faq') as Record<string, unknown>).enabled).toBe(true);
+  });
+});
+
+describe('r498 parser plugins appear in workspace diagnostics', () => {
+  it('diagnostics.plugins.loaded includes builtin parsers and parser-docx', async () => {
+    const res = await app.handle(new Request(`${BASE}/v2/workspace/tools`));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      diagnostics: { plugins: { loaded: string[]; skipped: Record<string, unknown> } };
+    };
+    const loaded = body.diagnostics.plugins.loaded;
+    for (const id of ['parser-pdf', 'parser-html', 'parser-csv', 'parser-text', 'parser-docx']) {
+      expect(loaded).toContain(id);
+    }
+    expect(body.diagnostics.plugins.skipped['parser-docx']).toBeUndefined();
   });
 });

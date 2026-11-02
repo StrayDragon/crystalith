@@ -275,16 +275,32 @@ describe('r360/r361/r362 workspace tools descriptors', () => {
 
 describe('r372 process registry endpoints stay global flat', () => {
   it('GET /v2/sources/parsers returns the parser registry at the flat path', async () => {
-    // covers: r372
+    // covers: r372, r498
     const { status, body } = await get('/v2/sources/parsers');
     expect(status).toBe(200);
-    const parsers = body as Array<{ id: string; name: string; mimeTypes: string[] }>;
+    const parsers = body as Array<{
+      id: string;
+      name: string;
+      mimeTypes: string[];
+      extensions: string[];
+      pluginId?: string;
+    }>;
     expect(Array.isArray(parsers)).toBe(true);
     expect(parsers.length).toBeGreaterThan(0);
     for (const parser of parsers) {
       expect(typeof parser.id).toBe('string');
+      expect(typeof parser.name).toBe('string');
       expect(Array.isArray(parser.mimeTypes)).toBe(true);
+      expect(Array.isArray(parser.extensions)).toBe(true);
+      expect(typeof parser.pluginId).toBe('string');
     }
+    const byId = new Map(parsers.map((p) => [p.id, p]));
+    expect(byId.get('text')?.pluginId).toBe('parser-text');
+    expect(byId.get('pdf')?.pluginId).toBe('parser-pdf');
+    expect(byId.get('html')?.pluginId).toBe('parser-html');
+    expect(byId.get('csv')?.pluginId).toBe('parser-csv');
+    expect(byId.get('docx')?.pluginId).toBe('parser-docx');
+    expect(byId.get('docx')?.extensions).toContain('.docx');
   });
 
   it('parsers registry is not nested under /v2/notebooks/:nid', async () => {

@@ -27,6 +27,7 @@
     "@ai-sdk/openai-compatible": "^3.0.70",
     "@ai-sdk/provider": "^4.0.28",
     "@asteasolutions/zod-to-openapi": "^9.1.0",
+    "@crystalith-plugin/parser-docx": "workspace:*",
     "@crystalith/shared": "workspace:*",
     "@elysiajs/eden": "^1.4.9",
     "@elysiajs/openapi": "^1.4.16",

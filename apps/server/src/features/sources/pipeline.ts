@@ -10,6 +10,7 @@ import { eq } from 'drizzle-orm';
 import { insertChunk } from '../../db/chunks.ts';
 import { client, db } from '../../db/index.ts';
 import { sources } from '../../db/schema.ts';
+import { pluginRegistry } from '../../plugins/registry.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { chunkText } from '../../rag/chunker.ts';
 import { AppHttpError, ErrorCode } from '../../shared/errors.ts';
@@ -17,27 +18,13 @@ import { logger } from '../../shared/logger.ts';
 import { contentStorage } from '../../shared/storage.ts';
 import { preprocessMarkdown } from './markdown-preprocess.ts';
 import type { Parser } from './parser-registry.ts';
-import { guessMimeType, getParser, registerParser, selectParser } from './parser-registry.ts';
-import { csvParser } from './parsers/csv.ts';
-import { htmlParser } from './parsers/html.ts';
-import { pdfParser } from './parsers/pdf.ts';
-import { textParser } from './parsers/text.ts';
+import { getParser, guessMimeType, pluginIdForParser, selectParser } from './parser-registry.ts';
 
 /** r287 scope guard: markdown preprocessing applies to text/markdown inputs. */
 function isMarkdownDocument(mimeType: string, filename: string): boolean {
   if (mimeType === 'text/markdown' || mimeType === 'text/x-markdown') return true;
   return /\.md(?:own)?$/iu.test(filename);
 }
-
-// ---------------------------------------------------------------------------
-// Bootstrap: register built-in parsers once at module import.
-// ---------------------------------------------------------------------------
-
-registerParser(pdfParser);
-registerParser(htmlParser);
-// c46: CSV before text so it takes precedence
-registerParser(csvParser);
-registerParser(textParser);
 
 /** Async trigger: index source chunks via embed strategy (fire-and-forget). */
 async function triggerEmbedding(sourceId: number, notebookId: number): Promise<void> {
@@ -100,12 +87,13 @@ export const INGESTION_STAGE_RECOVERY_HINTS: Record<string, string> = {
  * certain-failure inputs before doing so. Returns the resolved parser for
  * reuse by ingestSource.
  */
-export function precheckIngestInput(input: {
+export async function precheckIngestInput(input: {
   filename: string;
   buffer: Uint8Array;
   mimeType?: string;
   parserType?: string;
-}): Parser {
+}): Promise<Parser> {
+  await pluginRegistry.ensureLoaded();
   const mimeType = input.mimeType ?? guessMimeType(input.filename);
   // r257: explicit parserType overrides resolve by registry id; otherwise
   // deterministic exact-MIME → extension selection. Unmatched inputs are
@@ -148,7 +136,7 @@ export function precheckIngestInput(input: {
  */
 export async function ingestSource(input: IngestInput): Promise<IngestResult> {
   const mimeType = input.mimeType ?? guessMimeType(input.filename);
-  const parser = precheckIngestInput(input);
+  const parser = await precheckIngestInput(input);
 
   // 1. Create source record in 'processing' state
   const sourceRow = (await client().get(
@@ -244,6 +232,7 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
       ...(result.metadata as Record<string, unknown>),
     };
     if (markdownFrontmatter) readyMetadata.frontmatter = markdownFrontmatter;
+    readyMetadata.parserPluginId = pluginIdForParser(parser);
     await client().run(
       db()
         .update(sources)

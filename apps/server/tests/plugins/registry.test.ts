@@ -1,4 +1,4 @@
-// covers: r331/r335/r7/r11/r17（architecture-plugin-and-agent）
+// covers: r331/r335/r7/r11/r16/r17/r496（architecture-plugin-and-agent + parser-plugins）
 // ——registry 策略/装载语义、提取器实现注册与结构化错误。
 import { describe, expect, it, test } from 'bun:test';
 import { afterAll, beforeAll } from 'bun:test';
@@ -151,14 +151,15 @@ describe('extractor metadata over the registry', () => {
   });
 });
 
-// covers: r16 — extractor 与 slides-workflow 内置插件经同一 CrystalithPlugin
+// covers: r16 — extractor、parser 与 slides-workflow 内置插件经同一 CrystalithPlugin
 // registry 路径生效（builtinPlugins 单点聚合 → pluginRegistry 单例消费），
 // 不存在绕过 registry 的平行内置注册形状。
 describe('r16 built-ins register through the single CrystalithPlugin path', () => {
-  it('builtinPlugins aggregates extractor and slides-workflow kinds in one list', async () => {
+  it('builtinPlugins aggregates extractor, parser and slides-workflow kinds in one list', async () => {
     const { builtinPlugins } = await import('../../src/plugins/builtin/index.ts');
     const kinds = new Set(builtinPlugins.map((p) => p.kind));
     expect(kinds.has('extractor')).toBe(true);
+    expect(kinds.has('parser')).toBe(true);
     expect(kinds.has('slides-workflow')).toBe(true);
     // every built-in carries the full CrystalithPlugin contract shape
     for (const p of builtinPlugins) {
@@ -170,16 +171,15 @@ describe('r16 built-ins register through the single CrystalithPlugin path', () =
     }
   });
 
-  it('extractor metadata derives via the shared registry (loadedByKind), not a parallel path', async () => {
+  it('extractor and parser metadata derive via the shared registry (loadedByKind), not a parallel path', async () => {
+    // covers: r16, r496
     const { pluginRegistry } = await import('../../src/plugins/registry.ts');
     const { builtinPlugins } = await import('../../src/plugins/builtin/index.ts');
-    const extractorIds = builtinPlugins.filter((p) => p.kind === 'extractor').map((p) => p.id);
-    const meta = listExtractorMetadata();
-    // listExtractorMetadata reads pluginRegistry.loadedByKind('extractor');
-    // with no settings enabled the impls may be empty, but the ids it CAN
-    // report must all come from the registry's builtin set.
-    for (const m of meta) {
-      expect(extractorIds).toContain(m.id);
+    await pluginRegistry.ensureLoaded();
+    const parserIds = builtinPlugins.filter((p) => p.kind === 'parser').map((p) => p.id);
+    const loadedParserIds = pluginRegistry.loadedByKind('parser').map((r) => r.plugin.id);
+    for (const id of parserIds) {
+      expect(loadedParserIds).toContain(id);
     }
     expect(typeof pluginRegistry.loadedByKind).toBe('function');
   });

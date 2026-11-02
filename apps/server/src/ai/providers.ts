@@ -1,14 +1,22 @@
-// Provider registry — config-driven model resolution via dynamic import.
+// Provider registry — config-driven model resolution.
 //
 // A whitelist maps `provider` keys to `{ sdk, factory }` npm package +
-// factory function names. `resolveModel(config)` dynamically imports the SDK
-// and returns a `LanguageModelV4`. No switch-case hardcoding — adding a
-// provider is one registry entry + one `bun add`.
+// factory function names. Known SDK factories are statically imported so
+// `bun build --compile` traces them into the single binary; fully-dynamic
+// `import(sdk)` is invisible to the bundler (same hole as plugin discovery).
+// `config.sdk` overrides still fall through to dynamic import when
+// node_modules is present. No provider-name switch-case — adding a provider
+// is one registry entry + one `bun add` + one static map entry.
 //
 // 90% of providers (local gateways, DeepSeek, Groq, Together, etc.) route
 // through `openai-compatible` via `createOpenAICompatible`. The `openai`
 // entry uses the official `@ai-sdk/openai` for Responses API + organization
 // support.
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createDeepSeek } from '@ai-sdk/deepseek';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import type { LanguageModelV4, EmbeddingModelV4 } from '@ai-sdk/provider';
 import type { ModelConfig } from '@crystalith/shared';
 
@@ -32,22 +40,54 @@ const KNOWN_PROVIDERS = {
 
 type ProviderFactory = (opts: Record<string, unknown>) => unknown;
 
+function asProviderFactory(fn: unknown, sdk: string, factory: string): ProviderFactory {
+  if (typeof fn !== 'function') {
+    throw new TypeError(`Factory '${factory}' not found in '${sdk}'`);
+  }
+  // eslint-disable-next-line typescript/no-unsafe-type-assertion -- c127 cast wall：dual-provider hoist 边界
+  return fn as ProviderFactory;
+}
+
+/** Compile-traced SDK factories. Keys must stay in lockstep with KNOWN_PROVIDERS.sdk. */
+const BUNDLED_PROVIDER_FACTORIES: Record<string, Record<string, ProviderFactory>> = {
+  '@ai-sdk/openai': {
+    createOpenAI: asProviderFactory(createOpenAI, '@ai-sdk/openai', 'createOpenAI'),
+  },
+  '@ai-sdk/anthropic': {
+    createAnthropic: asProviderFactory(createAnthropic, '@ai-sdk/anthropic', 'createAnthropic'),
+  },
+  '@ai-sdk/google': {
+    createGoogleGenerativeAI: asProviderFactory(
+      createGoogleGenerativeAI,
+      '@ai-sdk/google',
+      'createGoogleGenerativeAI',
+    ),
+  },
+  '@ai-sdk/deepseek': {
+    createDeepSeek: asProviderFactory(createDeepSeek, '@ai-sdk/deepseek', 'createDeepSeek'),
+  },
+  '@ai-sdk/openai-compatible': {
+    createOpenAICompatible: asProviderFactory(
+      createOpenAICompatible,
+      '@ai-sdk/openai-compatible',
+      'createOpenAICompatible',
+    ),
+  },
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-/** Dynamic SDK import + factory lookup — one cast wall at the module boundary. */
+/** Bundled factory first; dynamic import only for unknown sdk/factory overrides. */
 async function loadProviderFactory(sdk: string, factory: string): Promise<ProviderFactory> {
+  const bundled = BUNDLED_PROVIDER_FACTORIES[sdk]?.[factory];
+  if (bundled) return bundled;
   const mod: unknown = await import(sdk);
   if (!isRecord(mod)) {
     throw new TypeError(`Module '${sdk}' did not export an object`);
   }
-  const factoryFn = mod[factory];
-  if (typeof factoryFn !== 'function') {
-    throw new TypeError(`Factory '${factory}' not found in '${sdk}'`);
-  }
-  // eslint-disable-next-line typescript/no-unsafe-type-assertion -- c127 cast wall：dual-provider hoist 边界
-  return factoryFn as ProviderFactory;
+  return asProviderFactory(mod[factory], sdk, factory);
 }
 
 function resolveChatModel(provider: unknown, modelId: string, sdk: string): LanguageModelV4 {

@@ -1,6 +1,7 @@
 # language: zh-CN
 # capability: architecture-plugin-and-agent
 # purpose: 定义 v2 AI 运行时边界：Vercel AI SDK v7、@ai-sdk/* providers、generateObject/streamText、gpt-tokenizer；完整 ToolLoopAgent / maxSteps 产品化 MAY 延后（见 r11）；插件宿主以单一 CrystalithPlugin 接口承载注册/发现/配置（r16/r17）。
+# scope: apps/server/src
 
 功能: architecture-plugin-and-agent
 
@@ -39,15 +40,15 @@
     AI SDK middleware MUST 承载 LLM 调用的自动重试与结构化日志；OpenTelemetry tracer MAY 后续接入。重试策略细节（次数、指数退避）见 generation-observability-and-guardrails retry-honors-retry-after / retry-timeout-budget（canonical）。
   @req:r16
   规则: Plugin contracts share a single CrystalithPlugin SSOT
-    宿主 MUST 通过单一 `CrystalithPlugin` 接口（id / kind / displayName / configSchema（Zod） / capabilities / factory）承载全部插件种类（output-type | extractor | parser | slides-workflow）的注册、发现与配置解析；extractor 与 slides-workflow 内置插件（含 studio slides config 表与网页提取器 factory）MUST 经同一 registry 注册路径生效，MUST NOT 存在绕过 registry 的平行内置注册形状。per-kind 行为契约（web-extractor-plugins、slides-workflow-plugins）作为 kind 层细化保持有效，MUST NOT 被本接口取代。 DEFERRED（迁移）：output-type 内置注册表（OUTPUT_META）迁移到该接口由后续 change 执行；迁移完成前 OUTPUT_META 是 output-type 的唯一过渡注册形态，期间 MUST NOT 引入第三套平行注册形状。
-  
+    宿主 MUST 通过单一 `CrystalithPlugin` 接口（id / kind / displayName / configSchema（Zod） / capabilities / factory）承载全部插件种类（output-type | extractor | parser | slides-workflow）的注册、发现与配置解析；extractor、parser 与 slides-workflow 内置插件（含 studio slides config 表、网页提取器 factory 与文件解析器 factory）MUST 经同一 registry 注册路径生效，MUST NOT 存在绕过 registry 的平行内建注册形状。per-kind 行为契约（web-extractor-plugins、parser-plugins、slides-workflow-plugins）作为 kind 层细化保持有效，MUST NOT 被本接口取代。 DEFERRED（迁移）：output-type 内置注册表（OUTPUT_META）迁移到该接口由后续 change 执行；迁移完成前 OUTPUT_META 是 output-type 的唯一过渡注册形态，期间 MUST NOT 引入第三套平行注册形状。
+
     场景: builtins-register-through-single-registry
       假如 内置插件按单一 CrystalithPlugin 路径装载
       当 检查 builtinPlugins 聚合与共享 pluginRegistry 消费路径
-      那么 extractor 与 slides-workflow 内置插件同在一个聚合列表且每个都携带完整 CrystalithPlugin 合约形状
-      而且 extractor 元数据经共享 registry 的 loadedByKind 派生（无平行注册形状）
+      那么 extractor、parser 与 slides-workflow 内置插件同在一个聚合列表且每个都携带完整 CrystalithPlugin 合约形状
+      而且 extractor 与 parser 元数据经共享 registry 的 loadedByKind 派生（无平行注册形状）
 
-@req:r17
+  @req:r17
   规则: External plugins load from npm dependencies with restart semantics
     外部插件 MUST 以 npm 依赖形式分发（官方插件约定 scope `@crystalith-plugin/*`，MUST 为纯 JS 且不依赖 native addon），宿主在启动时按 `plugins.enabled`（allowlist）/ `plugins.disabled`（denylist）/ `plugins.load_order`（后加载者优先消解冲突）从 node_modules 动态 import 加载。系统 MUST NOT 提供运行时热插拔：安装、升级与禁用 MUST 以重启 server 生效。单个插件加载失败 MUST 记入 `/v2/workspace/tools` 的 `diagnostics.plugins.skipped`（含 errorCode/message/hint）并 MUST NOT 阻断启动。
 

@@ -1,4 +1,4 @@
-// covers: r52/r257/r258（data-and-storage + source-ingestion-core）
+// covers: r52/r257/r258/r496/r497/r498（data-and-storage + source-ingestion-core + parser-plugins）
 // c123 — ingestion parser defects:
 //   r257 — deterministic parser selection + parserType recorded on the row
 //   r258 — core profile: txt/md/markdown/csv supported, others rejected
@@ -51,6 +51,7 @@ import { eq } from 'drizzle-orm';
 import { chunks, notebooks, sources } from '../../src/db/schema.ts';
 import { preprocessMarkdown } from '../../src/features/sources/markdown-preprocess.ts';
 import { ingestSource } from '../../src/features/sources/pipeline.ts';
+import { pluginRegistry } from '../../src/plugins/registry.ts';
 import { resetConfig } from '../../src/shared/config.ts';
 import { contentStorage } from '../../src/shared/storage.ts';
 import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from '../helpers/integration.ts';
@@ -58,8 +59,9 @@ import { getOrm, setupIntegrationEnv, teardownIntegrationEnv } from '../helpers/
 const enc = (s: string) => new TextEncoder().encode(s);
 let notebookId: number;
 
-beforeAll(() => {
+beforeAll(async () => {
   setupIntegrationEnv();
+  pluginRegistry.reset();
   resetConfig({
     models: {
       defaults: { chat: 'test-chat', embedding: 'test-embed' },
@@ -86,6 +88,7 @@ beforeAll(() => {
     },
     raw: {},
   });
+  await pluginRegistry.ensureLoaded();
   notebookId = getOrm().insert(notebooks).values({ name: 'parser-sel' }).returning().get().id;
 });
 
@@ -130,6 +133,9 @@ describe('r257 deterministic parser selection', () => {
 
       const row = getOrm().select().from(sources).where(eq(sources.id, result.sourceId)).get();
       expect(row?.parserType).toBe(c.expected);
+      expect((row?.metadata as { parserPluginId?: string } | null)?.parserPluginId).toBe(
+        `parser-${c.expected}`,
+      );
     }
   });
 
@@ -173,19 +179,21 @@ describe('r257 deterministic parser selection', () => {
 describe('r258/r295 unsupported formats are rejected with diagnostics', () => {
   it('unknown extension → 415 with mimeType/filename/pluginHint in details', async () => {
     // covers: r258, r295
+    // .docx is a real parser plugin (r499, parser-docx.test.ts); keep this
+    // case on an extension no loaded parser claims.
     try {
-      await ingestSource({ buffer: enc('docx bytes'), filename: 'report.docx', notebookId });
+      await ingestSource({ buffer: enc('xyz bytes'), filename: 'report.xyz', notebookId });
       expect.unreachable();
     } catch (error) {
       const e = error as { code: string; details?: Record<string, unknown>; message?: string };
       expect(e.code).toBe('UNSUPPORTED_MEDIA_TYPE');
       expect(e.details?.mimeType).toBe('application/octet-stream');
-      expect(e.details?.filename).toBe('report.docx');
-      expect(e.details?.pluginHint).toBe('parser-docx');
-      expect(e.message).toContain('.docx');
+      expect(e.details?.filename).toBe('report.xyz');
+      expect(e.details?.pluginHint).toBe('parser-xyz');
+      expect(e.message).toContain('.xyz');
     }
     // No source row leaked by the rejection (r290-style determinism).
-    const rows = getOrm().select().from(sources).where(eq(sources.filename, 'report.docx')).all();
+    const rows = getOrm().select().from(sources).where(eq(sources.filename, 'report.xyz')).all();
     expect(rows).toHaveLength(0);
   });
 

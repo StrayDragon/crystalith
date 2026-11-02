@@ -196,7 +196,9 @@ Bun 的编译产物不内嵌这类运行期解析（如 jsdom → css-tree 的 `
 `import.meta.resolve` 定位的平台包（sqlite-vec 的 `.so`）在 `$bunfs` 内也不可见。
 构建 MUST 走 `apps/server/scripts/build-binary.ts`（Bun.build API：插件把 css-tree 字面量 JSON
 内联；注入 `CL_BUILD_VERSION`），sqlite-vec 回退加载二进制旁 `native/vec0.*`（`CL_SQLITE_VEC_PATH`
-可覆盖），Drizzle 迁移目录按「源码树 → 二进制旁 → CWD」解析。接入这类依赖后 MUST 跑
+可覆盖），Drizzle 迁移目录按「源码树 → 二进制旁 → CWD」解析。官方 `@ai-sdk/*` factory 与
+`@crystalith-plugin/*` 榜样 MUST 静态 import 进编译图（`providers.ts` / `plugins/loader.ts`）；
+运行期 `import(sdk)` 在 `$bunfs` 里解析不到。接入这类依赖后 MUST 跑
 `just build-binary` + 启动冒烟（`/health` + 建一次笔记本）验证。
 
 **分发边界**：Release 矩阵仅 Linux x64/arm64（`just release` 逐平台冒烟，产物质量门禁；不发布
@@ -222,7 +224,7 @@ Pluggable registry: Embed, BM25, Hybrid, Page Index. GraphRAG / HyDE / Self-RAG 
 
 ### Provider Registry
 
-Whitelist + dynamic `import()`, no switch-case. 90% of providers go through `openai-compatible`.
+Whitelist + static SDK factory map（`bun compile` 能追踪 `@ai-sdk/*`）+ `config.sdk` 覆盖时的动态 `import()` 回退。禁止按 provider 名 switch-case。90% of providers go through `openai-compatible`.
 
 `@ai-sdk/*` 六件套按 range 锁步、单份 hoist 已验证；若再遇 dual-provider hoist，参考 c127 design
 「cast wall 收敛」预案（该 change 正文已冻结：`llman-sdd archive thaw --change 2026-10-11-c127-deps-refresh-major-minor`）。

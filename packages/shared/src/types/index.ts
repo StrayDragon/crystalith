@@ -7,3 +7,4 @@
 // `export type *` mirrors every `export type X = z.infer<...>` declared in the
 // schemas barrel — keeping this file drift-free as schemas evolve.
 export type * from '../schemas/index.js';
+export type { CrystalithPlugin, CrystalithPluginContext, CrystalithPluginKind } from '../plugin.js';

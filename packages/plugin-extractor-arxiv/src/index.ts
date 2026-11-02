@@ -1,3 +1,4 @@
+import type { CrystalithPlugin, CrystalithPluginContext } from '@crystalith/shared';
 // @crystalith-plugin/extractor-arxiv — first exemplar external plugin.
 //
 // Extracts structured metadata + abstract markdown from arXiv abs pages via
@@ -13,10 +14,6 @@
 import { extractText, getDocumentProxy } from 'unpdf';
 import { z } from 'zod';
 
-import type {
-  CrystalithPlugin,
-  CrystalithPluginContext,
-} from '../../../apps/server/src/plugins/types.ts';
 import type {
   ExtractedContent,
   Extractor,

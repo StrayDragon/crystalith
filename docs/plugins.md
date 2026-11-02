@@ -2,7 +2,7 @@
 
 > 宿主契约见 `llmanspec/specs/architecture-plugin-and-agent`（r16/r17）；
 > 行为级契约按 kind 细化：extractor 见 `web-extractor-plugins`，
-> slides workflow 见 `slides-workflow-plugins`。
+> parser 见 `parser-plugins`，slides workflow 见 `slides-workflow-plugins`。
 
 ## 形态
 
@@ -10,7 +10,7 @@
 对象：
 
 ```ts
-import type { CrystalithPlugin } from 'crystalith/server'; // 类型随 server 包发布
+import type { CrystalithPlugin } from '@crystalith/shared';
 
 const plugin: CrystalithPlugin = {
   id: 'extractor-myreader', // 全局唯一；约定 `<kind>-<name>`
@@ -116,13 +116,14 @@ plugins:
 
 | kind              | 宿主接线                                                   | 对外承诺                       |
 | ----------------- | ---------------------------------------------------------- | ------------------------------ |
-| `extractor`       | ✅ 全链路（registry → fallback 编排 → diagnostics → 策略） | **v1 唯一开放的外部插件 kind** |
+| `extractor`       | ✅ 全链路（registry → fallback 编排 → diagnostics → 策略） | **开放**（第一份对外 kind）    |
+| `parser`          | ✅ 全链路（registry → ingestion 选择/415 → GET parsers）   | **开放**（第二种对外 kind）    |
 | `slides-workflow` | ⏳ 半接线（discovery/catalog 已通；生成链路未接 registry） | 暂不对外                       |
-| `parser`          | ❌ 未接线（ingestion 不消费 parser 插件）                  | 暂不对外                       |
-| `output-type`     | ❌ 按 r7 DEFERRED（OUTPUT_META 过渡）                      | 长期不开（前端 bundle 成本高） |
+| `output-type`     | ❌ 按 r16 DEFERRED（OUTPUT_META 过渡）                     | 长期不开（前端 bundle 成本高） |
 
-接口 union 里保留全部四个 kind = **兼容与扩展的口子**；但文档、指南、catalog
-宣传只覆盖 `extractor`——「能扩展」不等于「到处都能挂」。
+接口 union 里保留全部四个 kind = **兼容与扩展的口子**；文档、指南、catalog
+宣传覆盖 `extractor` 与 `parser`——「能扩展」不等于「到处都能挂」。`slides-workflow`
+与 `output-type` 仍关闭。
 
 > 注（probe-slides-availability）：`slides-workflow` 的**预览可用性探测**暂由宿主
 > 承担（`slides_preview` 配置 → `diagnostics.slides`），待生成链路接 registry
@@ -144,15 +145,23 @@ plugins:
   `@crystalith-plugin/extractor-arxiv`），bun workspaces symlink 进根
   node_modules → discovery 直接命中，无需发包即可联调；成熟后独立发 npm
 
-### 第二梯队（按序）
+### 第二梯队榜样：`@crystalith-plugin/parser-docx`（已实现，`c139-wire-parser-plugins`）
+
+- **需求**：讲义/论文 `.docx` 上传是真实摄取路径；未装插件时 415 已返回
+  `pluginHint: parser-docx`
+- **形态**：mammoth（纯 JS）把 Word MIME / `.docx` 转为可检索 markdown 正文；
+  旧 `.doc` 不承诺。未安装或 `plugins.disabled` 命中 → 稳定 415
+- **开发故事**：monorepo 内 `packages/plugin-parser-docx`，根 `workspace:*`
+  依赖 → discovery 命中。免启服调试：
+  `bun packages/plugin-parser-docx/scripts/try.ts path/to/file.docx`
+
+### 后续梯队（按序）
 
 1. `extractor-github`：raw 源取 README/文档，markdown 直出；优先级低于
    arxiv（readability 对 github 页面尚可用，增益相对小）
-2. `parser` 宿主接线（ingestion 按扩展名 consult parser 插件）→ 榜样
-   `parser-docx`（mammoth，纯 JS；讲义/论文上传是真实需求）
-3. `slides-workflow` 生成链路接 registry → 第二个 slides 插件（解锁 r102
+2. `slides-workflow` 生成链路接 registry → 第二个 slides 插件（解锁 r102
    「多候选 → 结构化诊断」的真实验证）
-4. `output-type`：维持关闭，等出现反复出现的、现有六类型表达不了的真实产出需求
+3. `output-type`：维持关闭，等出现反复出现的、现有六类型表达不了的真实产出需求
 
 ### 已评估并暂缓
 

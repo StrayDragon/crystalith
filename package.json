@@ -35,6 +35,7 @@
   },
   "devDependencies": {
     "@crystalith-plugin/extractor-arxiv": "workspace:*",
+    "@crystalith-plugin/parser-docx": "workspace:*",
     "fallow": "3.33.1",
     "oxfmt": "^0.73.0",
     "oxlint": "^1.88.0",

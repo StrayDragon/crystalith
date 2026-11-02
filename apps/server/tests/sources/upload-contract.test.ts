@@ -47,6 +47,8 @@ const BASE = 'http://test.local';
 beforeAll(async () => {
   setupIntegrationEnv();
   await stubEmbedding();
+  pluginRegistry.reset();
+  pluginRegistry.register({ plugin: r292FakeExtractorPlugin(), source: 'builtin' });
   app = createApp();
 });
 
@@ -522,13 +524,6 @@ async function postFromUrl(
 }
 
 describe('r292: from-url link and fetch modes', () => {
-  beforeAll(() => {
-    pluginRegistry.register({ plugin: r292FakeExtractorPlugin(), source: 'builtin' });
-  });
-  afterAll(() => {
-    pluginRegistry.reset();
-  });
-
   it('mode=link registers the URL without scraping the page body', async () => {
     r292Attempts.length = 0;
     const nb = makeNotebook('r292-link-mode');

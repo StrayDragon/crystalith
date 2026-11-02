@@ -26,14 +26,16 @@ mock.module('ai', () => ({
 
 import { eq } from 'drizzle-orm';
 import type { Elysia } from 'elysia';
+import { z } from 'zod';
 
 import { db } from '../../src/db/index.ts';
 import { notebooks, sources } from '../../src/db/schema.ts';
-import { registerParser } from '../../src/features/sources/parser-registry.ts';
 import {
   INGESTION_STAGE_RECOVERY_HINTS,
   ingestSource,
 } from '../../src/features/sources/pipeline.ts';
+import { pluginRegistry } from '../../src/plugins/registry.ts';
+import type { CrystalithPlugin } from '../../src/plugins/types.ts';
 import { EmbedStrategy } from '../../src/rag/embed-strategy.ts';
 import { createApp } from '../../src/server.ts';
 import {
@@ -53,15 +55,24 @@ let app: Elysia;
 beforeAll(async () => {
   setupIntegrationEnv();
   await stubEmbedding();
-  registerParser({
-    id: 'boom',
-    name: 'Boom',
-    mimeTypes: ['application/x-boom'],
-    extensions: ['.boom'],
-    parse: async () => {
-      throw new Error(BOOM_ERROR);
-    },
-  });
+  const boomParser: CrystalithPlugin = {
+    id: 'parser-boom',
+    kind: 'parser',
+    displayName: 'Boom',
+    configSchema: z.object({}),
+    capabilities: [],
+    factory: async () => ({
+      id: 'boom',
+      name: 'Boom',
+      mimeTypes: ['application/x-boom'],
+      extensions: ['.boom'],
+      parse: async () => {
+        throw new Error(BOOM_ERROR);
+      },
+    }),
+  };
+  pluginRegistry.reset();
+  pluginRegistry.register({ plugin: boomParser, source: 'external' });
   app = createApp();
 });
 
