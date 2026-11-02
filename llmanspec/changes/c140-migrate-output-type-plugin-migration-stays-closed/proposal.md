@@ -1,4 +1,5 @@
 ---
+title: output-type 内建迁入 CrystalithPlugin（仍不对 npm 开）
 depends_on:
   - c139-wire-parser-plugins
 ---

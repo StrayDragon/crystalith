@@ -1,4 +1,5 @@
 ---
+title: 本机 TextFold sidecar（折叠阅读，不进插件 kind）
 depends_on: []
 ---
 
