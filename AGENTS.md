@@ -27,7 +27,7 @@ crystalith/
 ├── packages/
 │   ├── shared/            # Zod schemas + types SSOT
 │   │   └── src/schemas/   # notebook, session, message, source, qa, output,
-│   │                      # studio, model, research (ResearchRun wire SSOT)；refine HTTP 已于 c73 移除
+│   │                      # studio, model, research (ResearchRun wire SSOT)
 │   └── crystalith-slidev/ # Slidev integration
 ├── config/                # Runtime config (app.yaml; keys via CL_* env)
 ├── llmanspec/             # Spec-driven development specs + changes
@@ -41,7 +41,7 @@ crystalith/
 - ✅ **Deep Research**：server `features/research/`（ResearchRun / SSE / budget / synthesize 等）已实现；wire Zod 在 `packages/shared/src/schemas/research.ts`
 - ✅ Frontend: all output renderers aligned with v1 interactive components
 - 🔬 **Research Lab**：产品 `research-lab/`（Eden）；演示 `research-lab-demo/`（`/demo/research-lab`，DEV / `VITE_LAB_DEMO`）；细则 `apps/web/AGENTS.md`
-- ✅ c14: `backend/py/` + `api/generated/` deleted；wire 类型走 Eden + `@crystalith/shared`（`shared-types.ts` 已移除）
+- ✅ c14: `backend/py/` + `api/generated/` deleted；wire 类型走 Eden + `@crystalith/shared`
 - 🚧 **c13** distribution — v1（web 模式 server 单二进制）已随 `v2.0.0-pre` 首发（linux-x64/arm64）：`just build-binary` / `just release`、静态 web 托管（`CL_WEB_DIST` 或二进制旁 `web/dist`）、tag 版本注入；Tauri 桌面端 delay，darwin/win32 暂缓（原因见「Single Binary」段；变更档案 `llmanspec/changes/archive/2026-09-09-ship-server-binary`）
 - 📦 作业法见 `.agents/skills/crystalith-ssot-qa-batches/`
 
@@ -123,7 +123,7 @@ packages/shared Zod（路由挂载）
 | `apps/server` 路由             | `body`/`query`/`params`/`response` 挂载 shared Zod → **运行时校验** + 喂给 `App`        | 平行 `z.object` 复制合约；Elysia `t.*`；`@elysiajs/swagger` |
 | `apps/server` 配置 yaml/env    | **必留** Root/config Zod（`shared/config.ts` + `app.schema.gen.json` 门禁）             | 把 HTTP 合约塞进 config                                     |
 | `apps/server` 内部 AI/tool     | 与对外合约一致 → shared；否则局部 schema，**禁止同名异形**                              | shared 一份、agent 又一份字段不同                           |
-| `apps/web`                     | **Eden 推断类型**；标称类型从 `@crystalith/shared`；UI-only 放 `workspace/shared/types` | 平行 wire DTO 文件（已删 `shared-types.ts`）                |
+| `apps/web`                     | **Eden 推断类型**；标称类型从 `@crystalith/shared`；UI-only 放 `workspace/shared/types` | 平行 wire DTO 文件                                          |
 | OpenAPI                        | 由同一份 Zod **实时**导出（Scalar `/openapi`）                                          | hey-api / `api/generated` 作为一等 TS client                |
 
 ```

@@ -42,13 +42,12 @@ rules, context, or conventions that AI agents should follow.
 - 正文横幅留给**非元信息**：如「本草案不实现」「前置 change 是 X」「与 Y 案的区别」等叙事说明。
 - 生命周期阶段用 `llman-sdd show` / `llman-sdd list` 查看推断的 stage（规约 sdd-workflow r93），**不要**在正文写 status 段，也**不要**在 frontmatter 写 `status` 字段（已被 CLI 拒绝，见规约 sdd-workflow r124）。
 
-## SDD 生命周期（llman-sdd 0.5）
+## SDD 生命周期
 
 ### 锁定规则（报告制，r135/S0）
 
 - 改/删既有 `规则:` 块只出 **WARNING**，不阻断 `validate` / `change archive` / `change diff`。
 - 报告按 `@req:<id>` 指明被改规则；控制点 = git 分支对比 + `llman-sdd review` / `change diff` 的报告浮现。
-- 已删除：`rules_touched` / `agent_acked` frontmatter、`@agent` tag、`--yes` 锁定确认语义（零兼容，无别名）。
 
 ### change archive 合并语义（r113/r142）
 
@@ -65,13 +64,12 @@ Spec workflow paths:
 
 - Canonical specs: `llmanspec/specs`
 - Active change workspaces: `llmanspec/changes` (archive: `llmanspec/changes/archive`)
-- v2 change id：`c<NN>-<verb>-<subject>`（`llmanspec/config.yaml` 的 `change_id.pattern` / `template` 机器校验与生成；取号扫描含 `changes/archive/freezed_changes.7z.archived` 内历史编号，next-id 当前为 **111**）
+- v2 change id：`c<NN>-<verb>-<subject>`（`llmanspec/config.yaml` 的 `change_id.pattern` / `template` 机器校验与生成；取号扫描含 `changes/archive/freezed_changes.7z.archived` 内历史编号）
 - All `c<NN>` changes are batch:all — must read all design.md before implementing any.
 - Do not archive a change solely because tasks.md marks ✅ — tasks.md may be incomplete.
 
 Spec-workflow-specific notes:
 
-- For v2, do NOT run `pnpm run api:sync` (v1 OpenAPI chain removed in v2).
 - OpenAPI: shared Zod → `z.toJSONSchema` assembled in `apps/server/src/openapi.ts` (Scalar); `extendZodWithOpenApi` for `.openapi()` metadata only. NOT `@elysiajs/swagger`.
 - OpenAPI 路由文案：`registerApiDoc.summary` 写中文业务说明（Scalar 标题故意用 path）；tag 说明见 `OPENAPI_TAG_DESCRIPTIONS`；详见根 `AGENTS.md`「OpenAPI / Scalar 路由文档」。
 - Stable entrypoints: `bun test`, `bun typecheck`.
@@ -86,9 +84,7 @@ spec 约束的是**可验证的稳定行为**，不是实现细节。写 require
 - **场景步骤是产品-技术桥梁**：Given/When/Then 必须描述系统可观察的行为
   （用户/调用方视角、产品可读），**禁止**以「运行 <测试文件路径> 的 X 用例」
   等形态把测试物理位置写进场景——测试文件自立，机器绑定唯一方向是代码侧
-  `// covers: rN` 反向锚点。存量违例：转写为行为步骤，或（行为已由测试独立
-  覆盖、场景无增量信息时）整场景移除。迁移由 `check-spec-test-paths` 门禁
-  看守，目标：场景内测试路径引用清零后门禁翻转为「出现即拒」。
+  `// covers: rN` 反向锚点（`check-spec-test-paths` 门禁出现即拒）。
 - **禁止**硬编码魔法数字作为 MUST 默认值（如 `topK 默认 8`、`800 字符分块`、
   `浅 20/24`）。行为语义（滑动窗口、预算映射、阈值方向）入 spec；数值默认值归
   config schema（`config/app.yaml`），spec 只写「默认值 MUST 可配置 / 来自配置」。
