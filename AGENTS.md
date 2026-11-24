@@ -1,16 +1,3 @@
-<!-- LLMANSPEC:START -->
-
-# LLMAN 规范驱动开发
-
-本项目使用 llman SDD。阅读 `llmanspec/config.yaml` 了解 SDD 命令行为配置，以及 `llmanspec/AGENTS.md` 获取项目附加规则。
-
-## SDD 流水线
-
-使用 `/llman-sdd-explore` 开始，然后按照 pipeline：`/llman-sdd-propose` → `/llman-sdd-apply` → `/llman-sdd-verify` → `/llman-sdd-archive`。
-
-保留此托管块，便于 `llman-sdd init --update` 刷新。
-<!-- LLMANSPEC:END -->
-
 # Crystalith v2 — AI Agent Guidelines
 
 > Bun + TypeScript rewrite (Elysia + React). **v1 Python SSOT (`backend/py/`) has been removed as of c14** — all behavior is now parity-confirmed in TypeScript.
@@ -227,7 +214,7 @@ Pluggable registry: Embed, BM25, Hybrid, Page Index. GraphRAG / HyDE / Self-RAG 
 Whitelist + static SDK factory map（`bun compile` 能追踪 `@ai-sdk/*`）+ `config.sdk` 覆盖时的动态 `import()` 回退。禁止按 provider 名 switch-case。90% of providers go through `openai-compatible`.
 
 `@ai-sdk/*` 六件套按 range 锁步、单份 hoist 已验证；若再遇 dual-provider hoist，参考 c127 design
-「cast wall 收敛」预案（该 change 正文已冻结：`llman-sdd archive thaw --change 2026-10-11-c127-deps-refresh-major-minor`）。
+「cast wall 收敛」预案（该 change 正文已冻结：`llman-sdd thaw --change 2026-10-11-c127-deps-refresh-major-minor`）。
 
 ### Other
 

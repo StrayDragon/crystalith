@@ -46,11 +46,11 @@ rules, context, or conventions that AI agents should follow.
 
 ### 锁定规则（报告制，r135/S0）
 
-- 改/删既有 `规则:` 块只出 **WARNING**，不阻断 `validate` / `change finalize` / `change diff`。
+- 改/删既有 `规则:` 块只出 **WARNING**，不阻断 `validate` / `change archive` / `change diff`。
 - 报告按 `@req:<id>` 指明被改规则；控制点 = git 分支对比 + `llman-sdd review` / `change diff` 的报告浮现。
 - 已删除：`rules_touched` / `agent_acked` frontmatter、`@agent` tag、`--yes` 锁定确认语义（零兼容，无别名）。
 
-### finalize / archive 合并语义（r113/r142）
+### change archive 合并语义（r113/r142）
 
 - **合并目标**：`--into` > 绑定 `base_branch` > 本地默认分支。
 - **合并方式**：`--method` > 配置 `sdd.merge_method`，**squash 缺省**（feature diff + docs rename 收敛为目标分支单个 commit）；需保留 feature 多 commit 历史时在 `llmanspec/config.yaml` 显式设 `sdd.merge_method: ff`。
